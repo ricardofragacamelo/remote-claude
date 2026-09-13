@@ -57,7 +57,7 @@ front** — sem tocar no Agent SDK. A integração com o Claude é o plano segui
 | Mobile Flutter com Riverpod, go_router, l10n, logging | F5 |
 | Playwright, primeiro e2e vertical | F6 |
 | Portões estáticos, cobertura, Sonar, CI | F7 |
-| `README.txt` com todos os comandos | F0 |
+| Seção **Comandos** no `README.md`, com todos os comandos | F0 |
 
 ### Não entra
 
@@ -80,7 +80,7 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Fundação do monorepo](F0-foundation.md) | workspace, tooling, hooks, `README.txt`, scripts de apoio | B-01…B-06, B-48, B-49, B-52 | 🔲 |
+| F0 | [Fundação do monorepo](F0-foundation.md) | workspace, tooling, hooks, catálogo de comandos, scripts de apoio | B-01…B-06, B-48, B-49, B-52 | 🔲 |
 | F1 | [Infraestrutura local](F1-infrastructure.md) | docker-compose, Keycloak, `start-local.mjs`, `clean.mjs` | B-07…B-10, B-50 | 🔲 |
 | F2 | [Contratos](F2-contracts.md) | JSON Schema → TS e Dart | B-11…B-14 | 🔲 |
 | F3 | [Backend esqueleto](F3-backend.md) | 4 camadas, health, WS, Drizzle, OIDC | B-15…B-23, B-51 | 🔲 |
@@ -124,7 +124,7 @@ Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 
 ```
 remote-claude/
-├── README.md · README.txt · AGENTS.md
+├── README.md · AGENTS.md
 ├── package.json · pnpm-workspace.yaml · tsconfig.base.json
 ├── docker-compose.yml · .env.example
 │
@@ -188,7 +188,7 @@ Regras para todo script: utilidade compartilhada em `scripts/lib/`, **código de
 honesto** (0 só quando passou), saída que diz **o que** falhou e **onde**, idempotente, e
 cleanup que roda mesmo em erro.
 
-Script novo entra neste catálogo e no `README.txt` **na mesma entrega**.
+Script novo entra neste catálogo e na seção **Comandos** do [README.md](../../../README.md#comandos) **na mesma entrega**.
 
 ### Dois deles merecem justificativa
 

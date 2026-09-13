@@ -87,7 +87,7 @@ Leia os dois no **início** da tarefa, não no fim.
 10. **Tarefa repetitiva vira script em `scripts/`**, não orquestração passo a passo pelo
     agente. Invoque o script e leia a saída. Se você está executando a mesma sequência de
     comandos pela **segunda** vez, ou escrevendo um script inline para conferir algo, pare e
-    crie o `.mjs`. Catálogo em `README.txt`.
+    crie o `.mjs`. Catálogo na seção **Comandos** do [README.md](README.md#comandos).
 11. **Antes de criar um arquivo, procure onde ele deveria estar.** A estrutura de pastas é
     normativa, não sugestão.
 

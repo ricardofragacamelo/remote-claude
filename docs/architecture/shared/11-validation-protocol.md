@@ -223,9 +223,10 @@ Dois sinais de que passou da hora:
 
 ### O catálogo
 
-Está em [scripts/README.txt](../../plans/00-bootstrap/README.md#catálogo-de-scripts) e é
-mantido ali. Script novo entra no catálogo na mesma entrega — script que ninguém encontra
-será reescrito por outra pessoa daqui a um mês.
+Está na seção **Comandos** do [README.md](../../../README.md#comandos), e o detalhe de
+implementação no [plano](../../plans/00-bootstrap/README.md#catálogo-de-scripts). Script novo
+entra nos dois na mesma entrega — script que ninguém encontra será reescrito por outra pessoa
+daqui a um mês.
 
 ---
 

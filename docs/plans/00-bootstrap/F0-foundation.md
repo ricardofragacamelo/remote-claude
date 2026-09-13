@@ -64,13 +64,14 @@ versionado.
 Nenhuma variável para credencial do Claude: ela é herdada de `~/.claude/`
 ([descoberta §2](../../discovery/01-descoberta-claude-agent-sdk.md)).
 
-### B-06 — `README.txt`
+### B-06 — Catálogo de comandos no `README.md`
 
-Todos os comandos disponíveis, com explicação, pré-requisitos e o que cada um deixa de pé ou
-derruba. Texto puro, sem markdown — é consulta rápida de terminal.
+Seção **Comandos** no `README.md` da raiz: todos os comandos disponíveis, com explicação,
+pré-requisitos e o que cada um deixa de pé ou derruba.
 
-Fica na raiz, ao lado do `README.md`. O `.md` explica **o que é o projeto**; o `.txt` explica
-**o que rodar**.
+Fica no `README.md`, não num arquivo à parte: é a primeira coisa que alguém abre ao chegar no
+repositório — pelo GitHub, inclusive —, e catálogo em arquivo separado é catálogo que
+ninguém encontra e ninguém atualiza.
 
 ### B-48 — `scripts/doctor.mjs`
 
