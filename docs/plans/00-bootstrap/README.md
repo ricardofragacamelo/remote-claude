@@ -80,7 +80,7 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Fundação do monorepo](F0-foundation.md) | workspace, tooling, hooks, catálogo de comandos, scripts de apoio | B-01…B-06, B-48, B-49, B-52 | 🔲 |
+| F0 | [Fundação do monorepo](F0-foundation.md) | workspace, tooling, hooks, catálogo de comandos, scripts de apoio | B-01…B-06, B-48, B-49, B-52 | ✅ |
 | F1 | [Infraestrutura local](F1-infrastructure.md) | docker-compose, Keycloak, `start-local.mjs`, `clean.mjs` | B-07…B-10, B-50 | 🔲 |
 | F2 | [Contratos](F2-contracts.md) | JSON Schema → TS e Dart | B-11…B-14 | 🔲 |
 | F3 | [Backend esqueleto](F3-backend.md) | 4 camadas, health, WS, Drizzle, OIDC | B-15…B-23, B-51 | 🔲 |
@@ -129,7 +129,9 @@ remote-claude/
 ├── docker-compose.yml · .env.example
 │
 ├── scripts/                       ← .mjs, executados direto pelo node
-│   ├── lib/                       findFreePort, waitForHttp, startProc, kill, compose, purge
+│   ├── lib/                       ui, exec, ports, markdown, docs-graph, env-example,
+│   │                              plan-template, plan-progress, findFreePort, waitForHttp,
+│   │                              startProc, kill, compose, purge
 │   ├── doctor.mjs                 pré-requisitos do ambiente
 │   ├── start-local.mjs            portas fixas, stack de desenvolvimento
 │   ├── run-e2e-local.mjs          portas aleatórias, efêmero, roda Playwright
@@ -138,11 +140,13 @@ remote-claude/
 │   ├── contracts.mjs              gera TS e Dart; --check
 │   ├── i18n-check.mjs             paridade de chaves en ↔ pt-BR
 │   ├── docs-check.mjs             links, âncoras e documento órfão
+│   ├── secrets-scan.mjs           gitleaks; --staged no pre-commit
 │   ├── db.mjs                     migrate · reset · seed
 │   ├── clean.mjs                  volumes órfãos, build, coverage
 │   ├── plan.mjs                   scaffold de plano · --progress
 │   └── tsconfig.json              checkJs — tipagem sem build
 │
+├── test/{unit,integration}/       ← scripts e configurações da raiz: lógica e contrato de saída
 ├── infra/keycloak/realm-remote-claude.json
 ├── packages/contracts/{schema,src,scripts}
 ├── backend/{src,test}
@@ -180,6 +184,7 @@ Todos em `.mjs`, executados direto pelo `node`, sem build.
 | `contracts.mjs` | B-12…B-14 | gera TS e Dart do schema; `--check` falha se dessincronizado | `pnpm contracts:generate` · `:check` |
 | `i18n-check.mjs` | B-45 | paridade de chaves, órfãs, params entre idiomas | `pnpm i18n:check` |
 | `docs-check.mjs` | B-49 | links e âncoras internas quebradas, documento órfão do índice | `pnpm docs:check` |
+| `secrets-scan.mjs` | B-04 | `gitleaks` no repositório ou só no que está no índice; cai na imagem Docker quando o binário não existe | `pnpm scan:secrets` |
 | `db.mjs` | B-51 | `migrate`, `reset`, `seed` | `pnpm db migrate` |
 | `clean.mjs` | B-50 | purga projetos e volumes compose órfãos, build, coverage | `pnpm clean` |
 | `plan.mjs` | B-52 | cria pasta de plano no [formato normativo](../README.md#formato-obrigatório); `--progress` recalcula os contadores | `pnpm plan new <nome>` |

@@ -1,0 +1,12 @@
+# Workspaces of the monorepo. `mobile/` is deliberately absent: Dart does not take part in a
+# Node workspace. See docs/architecture/shared/00-decisions.md (ADR-007).
+packages:
+  - 'packages/*'
+  - 'backend'
+  - 'web'
+  - 'e2e'
+
+# esbuild (a vitest dependency) needs its install script to fetch its native binary.
+# Every other package stays blocked from running install scripts.
+onlyBuiltDependencies:
+  - esbuild

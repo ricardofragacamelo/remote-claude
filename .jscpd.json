@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/kucherenko/jscpd/master/packages/jscpd/schema.json",
+  "threshold": 0,
+  "minTokens": 30,
+  "minLines": 5,
+  "reporters": ["consoleFull"],
+  "absolute": true,
+  "gitignore": true,
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/*.md",
+    "packages/contracts/src/**",
+    "**/*.g.dart",
+    "**/*.freezed.dart",
+    "**/migrations/**",
+    "**/*.module.ts",
+    "**/test/**",
+    "**/e2e/fixtures/**"
+  ]
+}

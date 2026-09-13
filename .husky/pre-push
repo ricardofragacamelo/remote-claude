@@ -1,0 +1,8 @@
+#!/bin/sh
+# What keeps a red CI from being a surprise: types, unit tests and duplicated lines.
+# Integration, e2e and the security scan stay in CI — they are too slow for a hook.
+set -e
+
+pnpm typecheck
+pnpm test:unit
+pnpm lint:dup

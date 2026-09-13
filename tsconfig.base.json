@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+
+  // Base configuration inherited by every TypeScript workspace.
+  // Strictness comes from docs/architecture/shared/09-code-quality.md and is not negotiable:
+  // loosening a flag here is an architecture decision and needs an ADR.
+  //
+  // `paths` below are resolved against the tsconfig that *declares* them unless the extending
+  // config sets `baseUrl`. Every workspace therefore sets `"baseUrl": "."` so the aliases
+  // resolve inside that workspace. Aliases come from docs/architecture/backend/02-folder-structure.md
+  // and docs/architecture/web/02-folder-structure.md.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true,
+
+    "paths": {
+      "@domain/*": ["src/domain/*"],
+      "@application/*": ["src/application/*"],
+      "@adapter/*": ["src/adapter/*"],
+      "@infra/*": ["src/infrastructure/*"],
+      "@shared/*": ["src/shared/*"],
+      "@/*": ["src/*"],
+      "@/features/*": ["src/features/*"],
+      "@/shared/*": ["src/shared/*"],
+      "@contracts": ["../packages/contracts/src"]
+    }
+  }
+}

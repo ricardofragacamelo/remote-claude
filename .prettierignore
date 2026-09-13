@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+coverage/
+test-results/
+playwright-report/
+pnpm-lock.yaml
+
+# Flutter has its own formatter (`dart format`); see docs/architecture/shared/09-code-quality.md.
+mobile/
+
+# Markdown is out of Prettier's reach on purpose. The documentation is hand-wrapped at 100
+# columns and carries code samples that are illustrative, not runnable — Prettier reflows the
+# tables and edits the samples (it adds trailing commas to JSON snippets, for instance).
+# What guards the documentation is `pnpm docs:check`: links, anchors and orphan documents.
+*.md

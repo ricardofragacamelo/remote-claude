@@ -6,8 +6,9 @@ Um backend Node conversa com o Claude local via Claude Agent SDK, recebe o strea
 e o distribui para dois canais — um front web e um app Flutter — que acompanham a sessão,
 enviam prompts e, principalmente, **aprovam as permissões de tool à distância**.
 
-> **Status:** arquitetura definida, implementação não iniciada.
-> Este repositório contém, por enquanto, a documentação que guia a construção.
+> **Status:** arquitetura definida; bootstrap em andamento — a
+> [F0](docs/plans/00-bootstrap/F0-foundation.md) (workspace, portões de qualidade, hooks e
+> scripts de apoio) está de pé. Ainda não há código de produto.
 
 ---
 
@@ -88,11 +89,16 @@ A documentação é fragmentada de propósito, com índices que roteiam por situ
 | Flutter | estável, só para o app mobile |
 
 ```bash
-pnpm doctor          # verifica tudo acima e as portas fixas — RODE ISTO PRIMEIRO
+pnpm doctor            # verifica tudo acima e as portas fixas — RODE ISTO PRIMEIRO
+pnpm doctor --strict   # aviso também reprova; é o que o CI usa
 ```
 
 Diz o que falta **e** como resolver. É o que evita depurar erro de ambiente como se fosse erro
 de código.
+
+Node, pnpm e Docker **reprovam**. Flutter, `gitleaks` e porta ocupada só **avisam**: nenhum
+deles impede o repositório de funcionar, e cada aviso diz o que afeta — porta ocupada, por
+exemplo, diz qual variável a move.
 
 ### Primeira vez
 
@@ -157,8 +163,8 @@ Isso não é entregar; é esconder.
 
 | Comando | Roda |
 |---|---|
-| `pnpm test:unit` | unit das três pontas — rápido, sem I/O |
-| `pnpm test:integration` | **exige Docker**: Postgres real via testcontainers, nunca SQLite, nunca mock |
+| `pnpm test:unit` | unit das três pontas **e dos scripts de `scripts/`** — rápido, sem I/O |
+| `pnpm test:integration` | **exige Docker**: Postgres real via testcontainers, nunca SQLite, nunca mock; e o contrato de saída dos scripts de `scripts/` |
 | `pnpm test:e2e` | sobe stack **efêmera em portas aleatórias**, roda Playwright, derruba tudo |
 | `pnpm test:coverage` | mínimo **90 % em statements, branches, functions e lines — por arquivo** |
 | `cd mobile && flutter test` | unit e widget do app |
@@ -179,7 +185,12 @@ Na cobertura não há média que compense: um arquivo em 70 % não é salvo por 
 | `pnpm lint:dup` | linhas repetidas (`jscpd`), teto de 3 % |
 | `pnpm typecheck` | `tsc --noEmit` strict — sem `any`, sem `dynamic` |
 | `pnpm format` / `format:check` | Prettier e `dart format` |
+| `pnpm scan:secrets` | `gitleaks` sobre o repositório; `--staged` só sobre o que está no índice |
 | `pnpm scan:security` | `gitleaks`, `semgrep`, scanner de dependência |
+
+`pnpm scan:secrets` é o que o hook de pre-commit roda. Se o `gitleaks` não estiver instalado,
+ele cai na imagem oficial via Docker — que já é pré-requisito do projeto. Não existindo nenhum
+dos dois, **falha**: portão que se pula sozinho não é portão.
 
 ### Contratos e tradução
 

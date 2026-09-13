@@ -15,7 +15,7 @@ Voltar para o [índice geral](../architecture/README.md).
 
 | # | Plano | Estado | Critério de conclusão |
 |---|---|---|---|
-| 00 | [Bootstrap](00-bootstrap/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0, com um e2e atravessando todas as camadas |
+| 00 | [Bootstrap](00-bootstrap/README.md) | 🔄 em andamento — F0 concluída | `pnpm verify:full` sai com código 0, com um e2e atravessando todas as camadas |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -79,12 +79,20 @@ O `README.md` **não** contém o detalhe das tasks. Isso mora no arquivo da fase
 | Depende de | fases anteriores |
 | Entrega | o que existe ao fim da fase |
 | Por quê | quando a ordem da fase não for óbvia |
-| **Tasks** | uma subseção `### B-nn — <título>` por task, com o suficiente para implementar |
+| **Tasks** | uma subseção `### B-nn — <título> <estado>` por task, com o suficiente para implementar |
 | Cenários cobertos | os `S-nn` que a fase fecha |
 | **Critério de conclusão** | o comando que prova a fase |
 
 Task descreve **o que** e **por quê**, não cola o código. Detalhe normativo vive em
 `docs/architecture` — a fase **aponta** para lá, não duplica.
+
+**O estado da task fica no fim do título**, com o mesmo vocabulário da fase: 🔲 não iniciada ·
+🔄 em andamento · ✅ concluída · ⛔ bloqueada. Sem marca, a task conta como 🔲 — ausência nunca
+é lida como concluída.
+
+É daqui que `pnpm plan progress` tira os contadores do `progress.md`. Marcar a task no arquivo
+da fase, onde o trabalho acontece, e derivar o resto é o que impede o diário de divergir do
+plano; contador mantido à mão é contador errado.
 
 ### `scenarios.md` — a matriz
 
@@ -102,6 +110,11 @@ concorrência, idempotência. Dimensão sem cenário exige **justificativa escri
 
 Estado por fase, contagem de tasks, contagem de cenários, **histórico de ciclos de validação**,
 decisões tomadas, escopo reduzido e acompanhamento de riscos.
+
+Os **contadores** — barras, linha de cada fase, total e contagem de cenários — são gerados por
+`pnpm plan progress` a partir dos arquivos de fase e do `scenarios.md`. O resto do arquivo é
+escrito à mão e o comando não toca nele. Editar um contador à mão é trabalho que a próxima
+execução descarta.
 
 ---
 

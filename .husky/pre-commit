@@ -1,0 +1,8 @@
+#!/bin/sh
+# Seconds, not minutes: formatting, lint and secret scan, over the touched files only.
+# The whole suite runs on pre-push. A slow hook is a hook the team learns to skip with
+# --no-verify — docs/architecture/shared/09-code-quality.md#onde-cada-portão-roda.
+set -e
+
+pnpm exec lint-staged
+node scripts/secrets-scan.mjs --staged

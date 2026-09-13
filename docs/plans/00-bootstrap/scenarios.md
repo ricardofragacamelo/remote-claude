@@ -112,7 +112,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 |---|---|---|---|---|---|---|
 | S-50 | variável obrigatória ausente → processo **não sobe** | err | integração | — | B-16 | ⬜ |
 | S-51 | variável com tipo inválido → **não sobe**, com mensagem acionável | err | integração | — | B-16 | ⬜ |
-| S-52 | `.env.example` cobre toda variável lida pelo código | eq | unit | — | B-05 | ⬜ |
+| S-52 | `.env.example` cobre toda variável lida pelo código | eq | unit | — | B-05 | ✅ |
 
 ## Stack e scripts — B-07…B-10, B-37
 
@@ -134,7 +134,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-61 | e2e vertical: login → WS → comando → evento renderizado | eq | e2e | — | B-39 | ⬜ |
 | S-62 | mesmo cenário no app Flutter | eq | e2e | — | B-40 | ⬜ |
 | S-63 | arquivo abaixo de 90 % em qualquer dimensão → `verify` falha | fron | unit | — | B-42 | ⬜ |
-| S-64 | `*.spec.ts` dentro de `src/` → lint falha | err | unit | — | B-41 | ⬜ |
+| S-64 | `*.spec.ts` dentro de `src/` → lint falha | err | unit | — | B-41 | ✅ |
 
 ## Análise estática — B-41, B-43, B-44
 
@@ -143,9 +143,9 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-65 | bloco duplicado acima do limiar → `jscpd` falha | fron | unit | — | B-43 | ⬜ |
 | S-66 | código gerado **não** conta como duplicação | eq | unit | — | B-43 | ⬜ |
 | S-67 | segredo commitado → `gitleaks` falha | err | unit | — | B-44 | ⬜ |
-| S-68 | `console.log` / `print()` em qualquer módulo → lint falha | err | unit | — | B-41 | ⬜ |
-| S-69 | `any` / `dynamic` → typecheck falha | err | unit | — | B-02 | ⬜ |
-| S-70 | supressão de regra sem justificativa → lint falha | err | unit | — | B-03 | ⬜ |
+| S-68 | `console.log` / `print()` em qualquer módulo → lint falha | err | unit | — | B-41 | ✅ |
+| S-69 | `any` / `dynamic` → typecheck falha | err | unit | — | B-02 | ✅ |
+| S-70 | supressão de regra sem justificativa → lint falha | err | unit | — | B-03 | ✅ |
 
 ## Protocolo de validação — B-46, B-47
 
@@ -159,11 +159,11 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-74 | `doctor` detecta pré-requisito faltando e diz como resolver | err | e2e | — | B-48 | ⬜ |
-| S-75 | `docs-check` reprova link interno quebrado, âncora inexistente e documento fora do índice | err | unit | — | B-49 | ⬜ |
+| S-74 | `doctor` detecta pré-requisito faltando e diz como resolver | err | e2e | — | B-48 | ✅ |
+| S-75 | `docs-check` reprova link interno quebrado, âncora inexistente e documento fora do índice | err | unit | — | B-49 | ✅ |
 | S-76 | `clean` remove volume órfão que o `compose ls` não enxerga | idem | e2e | — | B-50 | ⬜ |
 | S-77 | `db reset` é idempotente — rodar duas vezes deixa o mesmo estado | idem | integração | — | B-51 | ⬜ |
-| S-78 | `plan new` gera as 3 seções fixas mais um arquivo por fase | eq | unit | — | B-52 | ⬜ |
+| S-78 | `plan new` gera as 3 seções fixas mais um arquivo por fase | eq | unit | — | B-52 | ✅ |
 | S-79 | todo script sai com código ≠ 0 quando falha | err | e2e | — | B-46 | ⬜ |
 
 ---

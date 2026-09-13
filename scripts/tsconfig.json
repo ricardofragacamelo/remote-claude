@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+
+  // The scripts are plain `.mjs`: they must run on a freshly cloned repository, before
+  // anything is built. Typing comes from JSDoc plus `checkJs`, so `pnpm typecheck` holds them
+  // to the same strictness as the rest without a compilation step.
+  // See docs/plans/00-bootstrap/README.md ("Por que .mjs e não .ts nos scripts").
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    // Required by the aliases declared in tsconfig.base.json: they resolve against the
+    // baseUrl of whoever extends it. The scripts use none of them, but TypeScript still asks.
+    "baseUrl": ".",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.mjs", "../test/unit/scripts/**/*.mjs", "../*.config.mjs"]
+}
