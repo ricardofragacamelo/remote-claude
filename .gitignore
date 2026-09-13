@@ -1,0 +1,38 @@
+# dependências
+node_modules/
+.pnpm-store/
+
+# build
+dist/
+build/
+*.tsbuildinfo
+
+# ambiente
+.env
+.env.*
+!.env.example
+
+# cobertura e testes
+coverage/
+*.lcov
+test-results/
+playwright-report/
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/ios/Pods/
+mobile/android/.gradle/
+*.iml
+
+# editores e SO
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+*.log
+npm-debug.log*
