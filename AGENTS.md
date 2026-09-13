@@ -84,8 +84,12 @@ Leia os dois no **início** da tarefa, não no fim.
    valida token, nunca o emite. Nunca guarde token em `localStorage`.
 9. **Regra que não é verificada por máquina não existe.** Análise estática é obrigatória nos
    três módulos, e linha repetida é portão com limite.
-10. **Antes de criar um arquivo, procure onde ele deveria estar.** A estrutura de pastas é
-   normativa, não sugestão.
+10. **Tarefa repetitiva vira script em `scripts/`**, não orquestração passo a passo pelo
+    agente. Invoque o script e leia a saída. Se você está executando a mesma sequência de
+    comandos pela **segunda** vez, ou escrevendo um script inline para conferir algo, pare e
+    crie o `.mjs`. Catálogo em `README.txt`.
+11. **Antes de criar um arquivo, procure onde ele deveria estar.** A estrutura de pastas é
+    normativa, não sugestão.
 
 ---
 
@@ -106,6 +110,8 @@ abaixo tem o seu próprio roteador interno.
 | Saber **por que** uma tecnologia foi escolhida, ou propor trocá-la | [docs/architecture/shared/00-decisions.md](docs/architecture/shared/00-decisions.md) | sim |
 | Configurar ou suprimir lint, tipagem, duplicação ou quality gate | [docs/architecture/shared/09-code-quality.md](docs/architecture/shared/09-code-quality.md) | sim |
 | **Planejar uma fase/task, ou executar a validação** | [docs/architecture/shared/11-validation-protocol.md](docs/architecture/shared/11-validation-protocol.md) | sim |
+| Implementar uma fase, ou saber em que pé está o trabalho | [docs/plans/](docs/plans/README.md) — o plano corrente, sua fase e o `progress.md` | sim |
+| **Criar um plano novo** | [docs/plans/README.md](docs/plans/README.md) — o formato é normativo: fases em arquivos separados, tasks dentro de cada fase | sim |
 | **Dar uma tarefa por concluída** | [docs/architecture/shared/10-definition-of-done.md](docs/architecture/shared/10-definition-of-done.md) | sim |
 
 ### Gatilhos específicos
@@ -131,9 +137,11 @@ abaixo tem o seu próprio roteador interno.
 - Componente React chamando `api.ts` ou um service direto, sem passar por hook.
 - Teste ao lado do fonte, ou entrega que derruba a cobertura abaixo de 90 %.
 - Plano ou task sem matriz de cenários.
+- Plano fora do formato: fase sem arquivo próprio, task sem ID, critério de conclusão que não é um comando.
 - Entrega sem os três níveis de teste, ou com cenários só de caminho feliz.
 - Retomar a validação do portão que falhou, em vez de reiniciar do primeiro.
-- `query()` do Agent SDK sem `settingSources: []` ou sem o hook `PreToolUse`.
+- `query()` do Agent SDK sem `settingSources: ['project']` ou sem o hook `PreToolUse`.
+- Orquestrar à mão uma sequência que já é (ou deveria ser) um script de `scripts/`.
 - Bloco de código duplicado acima do limiar.
 - Regra de lint desativada, teste em `skip` ou limiar reduzido para o CI passar.
 - `catch` que engole o erro sem logar e sem re-lançar.

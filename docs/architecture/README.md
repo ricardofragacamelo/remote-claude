@@ -68,6 +68,16 @@ A cadeia `Component → Hook → Service → api.ts`, estrutura por feature, des
 
 Clean Architecture em Flutter, Riverpod, navegação, rede, logging, testes.
 
+### Planos — o trabalho em execução
+
+→ [../plans/README.md](../plans/README.md)
+
+O que está sendo construído, em fases, com rastreio e progresso. O formato de plano é
+**normativo**: três arquivos fixos (`README.md`, `scenarios.md`, `progress.md`) mais **um
+arquivo por fase**, cada fase contendo suas tasks.
+
+Arquitetura diz *como* construir; plano diz *o que* está sendo construído *agora*.
+
 ### Descoberta (não é arquitetura, é insumo)
 
 → [../discovery/01-descoberta-claude-agent-sdk.md](../discovery/01-descoberta-claude-agent-sdk.md)

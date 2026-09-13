@@ -177,6 +177,58 @@ iterações produzem contorno, não solução.
 
 ---
 
+## Automação: script, não orquestração pelo agente
+
+**Tarefa repetitiva vira script em `scripts/`. O agente invoca o script e lê a saída — não
+reexecuta os passos um a um.**
+
+### Por quê
+
+Um agente que orquestra doze comandos, interpreta doze saídas e decide o próximo passo gasta
+contexto e tokens a cada ciclo — e o ciclo de correção do
+[Estágio 3](#estágio-3--loop-de-correção) repete isso muitas vezes. Pior: o resultado varia
+conforme o que o agente lembrou de rodar naquela iteração.
+
+Um script resolve os dois problemas de uma vez:
+
+| | Agente orquestrando | Script |
+|---|---|---|
+| Custo por ciclo | doze idas e voltas | uma |
+| Determinismo | varia com o que o agente lembrou | idêntico sempre |
+| Fora do agente | não roda | a pessoa roda igual, e o CI também |
+| Revisável | não — vive no histórico da conversa | sim, está versionado |
+
+O terceiro item é o decisivo: **o que só o agente sabe fazer não existe para o resto do
+time**. Um portão que depende de um agente lembrar da sequência não é um portão.
+
+### A regra prática
+
+Se você se pegar executando a mesma sequência de comandos **pela segunda vez**, ela vira
+script. Não na terceira: na segunda.
+
+Dois sinais de que passou da hora:
+- você está encadeando comandos com `&&` e lendo cada saída para decidir o próximo;
+- você escreveu um `python3 - <<'PY'` inline para conferir alguma coisa.
+
+### Como escrever
+
+- `.mjs` em `scripts/`, executado direto pelo `node`, sem build — ver
+  [o plano de bootstrap](../../plans/00-bootstrap/README.md#por-que-mjs-e-não-ts-nos-scripts).
+- Utilidade compartilhada em `scripts/lib/`. Dois scripts com o mesmo trecho é exatamente o
+  que o portão de [linhas repetidas](09-code-quality.md#linhas-repetidas) pega.
+- **Código de saída honesto**: 0 só quando passou. Script que sempre sai 0 torna o portão
+  decorativo.
+- **Saída legível por humano e por agente**: diga o que falhou e onde, não só que falhou.
+- Idempotente, e com cleanup que roda mesmo em erro.
+
+### O catálogo
+
+Está em [scripts/README.txt](../../plans/00-bootstrap/README.md#catálogo-de-scripts) e é
+mantido ali. Script novo entra no catálogo na mesma entrega — script que ninguém encontra
+será reescrito por outra pessoa daqui a um mês.
+
+---
+
 ## Estágio 4 — Fechamento
 
 Todos os portões verdes:
@@ -208,6 +260,7 @@ Resumo operacional:
 1. **Planejou? Gere a matriz de cenários antes de codar.** Seis dimensões, todo caminho de
    erro incluído.
 2. **Implementou? Rode `pnpm verify`.** Não anuncie nada antes disso.
+2b. **Repetiu uma sequência de comandos? Vire script.** Na segunda vez, não na terceira.
 3. **Vermelho? Corrija e rode desde o portão 1.** Não retome do meio.
 4. **Verde no `verify`? Rode `pnpm verify:full`.** É o que define pronto.
 5. **Três ciclos sem progresso? Pare e escale.** Não contorne portão.
