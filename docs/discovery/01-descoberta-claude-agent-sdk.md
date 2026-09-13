@@ -378,6 +378,126 @@ todo comando auto-aprovado. A auditoria precisa ser ancorada no hook `PreToolUse
 Os scripts ficaram em `scratchpad/sdkprobe/`: `spike-init.mjs`, `spike-init-isolated.mjs`,
 `spike-hooks.mjs`. Todos usam streaming input mode, como será em produção.
 
+
+---
+
+## 8 — Segunda rodada de spikes (2026-09-13)
+
+Investigação das premissas que tinham ficado assumidas. Duas delas estavam **erradas** e
+mudaram a arquitetura.
+
+### 8.1 — `settingSources: []` desliga o `CLAUDE.md` do projeto
+
+A decisão da rodada anterior (§7.2) foi correta quanto ao risco, mas larga demais. Medido,
+escopo por escopo, num projeto com `CLAUDE.md` contendo uma instrução verificável:
+
+| `settingSources` | `canUseTool` respeitado | `CLAUDE.md` do projeto |
+|---|---|---|
+| omitido (default) | ❌ pulado | ✅ carregado |
+| `['user']` | ❌ pulado | ❌ ignorado |
+| **`['project']`** | **✅ chamado** | **✅ carregado** |
+| `['local']` | ✅ chamado | ❌ ignorado |
+| `[]` | ✅ chamado | ❌ ignorado |
+
+**`['project']` é a configuração correta**: preserva a aprovação humana **e** carrega o
+contexto do projeto. Com `[]`, as sessões do remote-claude ignorariam as instruções que o
+usuário escreveu para o próprio repositório — ficariam mensuravelmente piores que as do
+VSCode, no mesmo projeto, sem que ninguém tivesse decidido isso.
+
+**O que `user` traz junto, e por isso fica de fora:** os plugins e skills pessoais (57 → 54
+slash commands; sumiram `jar-explorer:*` e `skill-architect`) e — o ponto crítico — as regras
+`permissions.allow` de `~/.claude/settings.json`.
+
+### 8.2 — A assimetria `allow` vs `deny` entre escopos
+
+Detalhe de segurança que só apareceu ao testar os escopos separadamente:
+
+| Origem da regra | `allow` | `deny` |
+|---|---|---|
+| `user` (`~/.claude/settings.json`) | **aplicado** — fura o `canUseTool` | aplicado |
+| `project` (`.claude/settings.json` do repo) | **ignorado** | **aplicado** |
+
+Medido: com `deny: ["Write"]` no projeto e `settingSources: ['project']`, a tool `Write`
+ficou indisponível — o modelo recorreu a `ToolSearch` e `Bash` para contornar. Já o
+`allow: ["Write"]` do projeto **não** dispensou o `canUseTool`.
+
+Faz sentido como desenho de segurança: honrar `deny` de um repositório de terceiro é seguro
+(só restringe); honrar `allow` não é.
+
+> **Incerteza residual, não resolvida:** os diretórios de teste não constam em
+> `~/.claude.json` como confiados (`hasTrustDialogAccepted`). Não foi verificado se, num
+> diretório **já confiado** pelo usuário no CLI interativo, o `allow` de projeto passa a ser
+> aplicado — o que reabriria a brecha. Testar isso exigiria alterar o `~/.claude.json` do
+> usuário, o que não foi feito. **Verificar antes de ir para produção.**
+
+### 8.3 — `reinitialize()` não reentrega o pedido, e não precisamos dele
+
+A premissa mais crítica da arquitetura de reconexão estava **errada**.
+
+Medido: permissão pendente, `canUseTool` travado, `reinitialize()` chamado 10 s depois.
+Resultado: `reinitialize()` retornou com sucesso e o `canUseTool` **não foi invocado de
+novo** — uma única invocação na sessão inteira.
+
+E está correto que não tenha sido. O erro foi meu, no modelo mental:
+
+```
+[celular] ──(rede cai aqui)── [nosso backend] ──(este canal NÃO cai)── [CLI] ── Claude
+                                     │
+                              a Promise do canUseTool
+                              continua pendente aqui
+```
+
+O gap que o produto sofre é entre **o cliente móvel e o nosso backend**. O canal
+SDK↔CLI é stdio de um subprocesso local: ele **não quebra** quando o celular perde rede. A
+`Promise` do `canUseTool` fica pendente no nosso processo o tempo todo, e o próprio SDK
+deduplica requests em voo — por isso não reentrega: não há nada a recuperar.
+
+**Consequência:** a reentrega de permissão órfã é responsabilidade do **nosso** módulo
+`permission`, que já mantém o registro de pendentes e republica no `session.attach`.
+`reinitialize()` só seria relevante numa topologia em que o SDK fala com um CLI remoto — que
+não é a nossa. Ele sai do caminho crítico.
+
+### 8.4 — O CLI não impõe timeout próprio no `canUseTool`
+
+Permissão mantida pendurada por **150 s** sem resposta: o CLI não desistiu, não cancelou e
+não emitiu erro. Ao liberar, a sessão seguiu e terminou em `result: success`.
+
+**Consequência:** o timeout de 120 s do módulo `permission` é o **único** que existe, e é
+autoritativo. Sem ele, uma sessão fica pendurada indefinidamente. Confirma o desenho.
+
+### 8.5 — Custo de recurso por sessão
+
+Três sessões simultâneas, medindo RSS dos subprocessos:
+
+| Sessões | Processos | RSS adicional |
+|---|---|---|
+| 1 | +1 | +237 MB |
+| 2 | +2 | +475 MB |
+| 3 | +3 | +667 MB |
+
+**~222 MB e exatamente 1 processo por sessão**, crescimento linear. `query.close()` devolveu
+tudo ao baseline — sem processo órfão.
+
+Número concreto para o limite de sessões simultâneas: 10 sessões ≈ **2,2 GB**. O limite deve
+ser configurável e derivado da RAM da máquina, não um número fixo.
+
+### 8.6 — Segundo prompt durante um turno é enfileirado pelo SDK
+
+Medido: prompt enviado 1,5 s após o primeiro, com o turno em execução. O `push` foi aceito
+sem erro, e o resultado foram **dois turnos sequenciais** (`RESULT #1`, depois `RESULT #2`),
+cada um com sua resposta correta.
+
+**Consequência:** a regra "um turno por vez → `409`" é **política nossa**, não limitação do
+SDK. E é provavelmente a política errada: o enfileiramento nativo é exatamente o
+comportamento da UI do Claude Code — o usuário digita um complemento enquanto o Claude
+trabalha, e ele roda em seguida. Rejeitar com `409` entrega uma experiência pior do que a
+que vem de graça.
+
+### Como reproduzir
+
+Scripts em `scratchpad/sdkprobe/`: `inv-settings.mjs`, `inv-claudemd.mjs`, `inv-scopes.mjs`,
+`inv-deny.mjs`, `inv-reinit.mjs`, `inv-mem.mjs`, `inv-concurrent.mjs`.
+
 ---
 
 ## Versões verificadas

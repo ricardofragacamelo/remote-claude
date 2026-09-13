@@ -110,9 +110,13 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
 
 - **Entidades:** `Session`, `Turn`
 - **Estados:** `starting → idle → thinking → running → waitingPermission → idle → closed`
-- **Regras:** um turno por vez (segundo prompt concorrente → `409`); limite de sessões
-  simultâneas (cada uma é um subprocesso do CLI); `close()` sempre executa, mesmo em erro —
-  subprocesso vazado é vazamento de recurso real
+- **Regras:** limite de sessões simultâneas derivado da RAM (**~222 MB por sessão**, medido);
+  `close()` sempre executa, mesmo em erro — subprocesso vazado é vazamento de recurso real
+- **Prompt concorrente — decisão em aberto:** medido, o SDK **enfileira** um segundo prompt
+  enviado durante um turno, e o executa em seguida como um turno próprio, sem erro. Rejeitar
+  com `409` é política nossa, não limitação — e provavelmente a política errada: enfileirar é
+  exatamente o que a UI do Claude Code faz. Ver
+  [descoberta §8.6](../../discovery/01-descoberta-claude-agent-sdk.md#86--segundo-prompt-durante-um-turno-é-enfileirado-pelo-sdk)
 - **Erros:** `SESSION_NOT_FOUND`, `SESSION_ALREADY_RUNNING`, `SESSION_LOCKED`,
   `SESSION_LIMIT_REACHED`, `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT`
 - Ver [04-claude-integration.md](04-claude-integration.md).
@@ -150,7 +154,7 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
 - **Fonte dos eventos:** o hook **`PreToolUse`**, não o `canUseTool`. O hook dispara para
   **toda** invocação de tool; o `canUseTool` só para o que exige humano. Medido em spike: 6
   tool calls → 6 hooks → 2 `canUseTool`. Ancorar aqui é o que impede a trilha de perder toda
-  leitura de arquivo. Ver [ADR-011](../shared/00-decisions.md#adr-011--settingsources--obrigatório-e-auditoria-ancorada-no-hook-pretooluse).
+  leitura de arquivo. Ver [ADR-011](../shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse).
 - **Regras:** append-only, sem update, sem delete; registra `who`, `what`, `when`, `where`
   (device/IP), `input` exato da tool e a `decision`; falha de escrita de auditoria é `error`
   e **bloqueia** a autorização — sem trilha, não autoriza

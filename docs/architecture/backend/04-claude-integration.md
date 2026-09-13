@@ -75,7 +75,7 @@ O `for await` **é** a fonte do stream. Ele roda pela vida inteira da sessão.
 {
   cwd: workspace.path.value,              // ← "workspace" é isto
   additionalDirectories: workspace.extraDirs,
-  settingSources: [],                     // ← OBRIGATÓRIO. Ver abaixo.
+  settingSources: ['project'],            // ← OBRIGATÓRIO. Nem mais, nem menos.
   permissionMode: session.permissionMode,
   canUseTool: permissionBridge.handle,    // ← aprovação humana
   hooks: { PreToolUse: [auditHook] },     // ← trilha de auditoria (cobertura total)
@@ -99,7 +99,7 @@ Decisões tomadas:
 | `persistSession` | `true` | retomar do celular o que começou no VSCode |
 | `enableFileCheckpointing` | `true` | "desfazer" é rede de segurança quando se aprova de longe |
 | `allowDangerouslySkipPermissions` | **`false`, sempre** | desligaria o `canUseTool`, que é o produto |
-| `settingSources` | **`[]`, sempre** | ver [A armadilha do `settingSources`](#a-armadilha-do-settingsources) |
+| `settingSources` | **`['project']`, sempre** | ver [A armadilha do `settingSources`](#a-armadilha-do-settingsources) |
 | `pathToClaudeCodeExecutable` | binário do SDK | versões casadas; atualiza pelo npm junto com o SDK |
 
 `allowDangerouslySkipPermissions` nunca vira configurável. Um flag assim acaba ligado.
@@ -117,13 +117,30 @@ Claude Code no terminal — **auto-aprova a tool antes de o `canUseTool` ser cha
 No spike, com essa configuração presente na máquina, `Bash` e `Write` executaram e o
 `canUseTool` **não foi invocado nenhuma vez**. Sem erro, sem aviso.
 
-Isso desliga, em silêncio, o mecanismo sobre o qual o produto inteiro se apoia. Por isso
-`settingSources: []` é obrigatório e **não é configurável**.
+Isso desliga, em silêncio, o mecanismo sobre o qual o produto inteiro se apoia.
 
-A contrapartida, que é desejável: a sessão deixa de herdar as preferências pessoais do
-usuário. Quem decide permissão passa a ser exclusivamente o módulo `permission`.
+**Mas `[]` é largo demais** — e isso também foi medido. Escopo por escopo:
 
-> Existe uma regra de `semgrep` que reprova `query()` sem `settingSources: []`. Ver
+| `settingSources` | `canUseTool` respeitado | `CLAUDE.md` do projeto |
+|---|---|---|
+| omitido (default) | ❌ pulado | ✅ carregado |
+| `['user']` | ❌ pulado | ❌ ignorado |
+| **`['project']`** | **✅ chamado** | **✅ carregado** |
+| `[]` | ✅ chamado | ❌ ignorado |
+
+Com `[]`, as sessões **ignoram o `CLAUDE.md` do projeto** — ficariam piores que as do VSCode
+no mesmo repositório. `['project']` preserva as duas coisas, e é a configuração obrigatória.
+
+O escopo `user` é o perigoso: é dele que vêm as regras `permissions.allow` pessoais. O escopo
+`project` tem uma assimetria que joga a nosso favor — `deny` de projeto é aplicado, `allow`
+de projeto **não** dispensa o `canUseTool`. Ver
+[descoberta §8.2](../../discovery/01-descoberta-claude-agent-sdk.md#82--a-assimetria-allow-vs-deny-entre-escopos).
+
+> ⚠️ **Incerteza residual:** não foi verificado se, num diretório já marcado como confiado
+> (`hasTrustDialogAccepted`) no CLI interativo, o `allow` de projeto volta a ser aplicado.
+> **Verificar antes de produção.**
+
+> Existe uma regra de `semgrep` que reprova `query()` sem `settingSources: ['project']`. Ver
 > [qualidade](../shared/09-code-quality.md#segurança-estática).
 
 ---
@@ -162,7 +179,10 @@ autorizar cada `Read`), mas significa que **auditoria não pode se apoiar aqui**
 Quatro pontos que **não** são negociáveis:
 
 1. **Esta função bloqueia o loop do agente.** Enquanto ela não resolve, a sessão está parada.
-   Timeout é obrigatório — sem ele, uma sessão fica pendurada para sempre.
+   Timeout é obrigatório — **e o nosso é o único que existe**: medido, o CLI manteve uma
+   permissão pendurada por 150 s sem desistir nem emitir erro
+   ([descoberta §8.4](../../discovery/01-descoberta-claude-agent-sdk.md#84--o-cli-não-impõe-timeout-próprio-no-canusetool)).
+   Sem o nosso timeout, a sessão fica pendurada indefinidamente.
 2. **Idempotência por `requestId`.** Depois de um gap de transporte, `query.reinitialize()`
    reentrega os requests pendentes. Resolver duas vezes = executar a tool duas vezes.
 3. **Timeout nega.** `defaultTo: 'deny'`. Silêncio nunca autoriza.
@@ -240,9 +260,13 @@ apareceu algo novo para mapear.
 
 **Uma `query()` = um subprocesso do CLI.** N sessões = N processos.
 
+**Custo medido: ~222 MB de RSS e exatamente 1 processo por sessão**, com crescimento linear
+(3 sessões = +667 MB). `query.close()` devolveu tudo ao baseline, sem processo órfão. Ver
+[descoberta §8.5](../../discovery/01-descoberta-claude-agent-sdk.md#85--custo-de-recurso-por-sessão).
+
 | Regra | Por quê |
 |---|---|
-| Limite de sessões simultâneas (config) → `SESSION_LIMIT_REACHED` | cada uma é um processo real |
+| Limite de sessões simultâneas **derivado da RAM da máquina**, não fixo → `SESSION_LIMIT_REACHED` | ~222 MB cada; 10 sessões ≈ 2,2 GB |
 | `query.close()` **sempre** no finally, inclusive em erro | processo vazado não morre sozinho |
 | Sessão ociosa além do TTL é encerrada, com evento `session.closed` | libera recurso |
 | `onModuleDestroy` fecha todas as sessões | shutdown limpo |
@@ -253,17 +277,35 @@ Postgres — é estado de processo, morre com ele. O Postgres guarda metadado e 
 
 ---
 
-## Reconexão e requests órfãos
+## Reconexão e requests pendentes
 
-Quando um cliente reata depois de um gap:
+**Corrigido após spike.** A versão anterior deste documento mandava chamar
+`query.reinitialize()` na reconexão. Isso estava errado, e o erro era de modelo mental:
+
+```
+[celular] ──(a rede cai AQUI)── [nosso backend] ──(este canal NÃO cai)── [CLI] ── Claude
+                                       │
+                                a Promise do canUseTool
+                                segue pendente aqui
+```
+
+O gap que o produto sofre é entre **o cliente móvel e o nosso backend**. O canal SDK↔CLI é
+stdio de um subprocesso local — ele não quebra quando o celular perde rede. A `Promise` do
+`canUseTool` continua pendente no nosso processo o tempo todo.
+
+Medido: com uma permissão pendente, `reinitialize()` **não** reinvoca o `canUseTool` — e está
+certo, porque não há nada a recuperar. Ver
+[descoberta §8.3](../../discovery/01-descoberta-claude-agent-sdk.md#83--reinitialize-não-reentrega-o-pedido-e-não-precisamos-dele).
+
+**O fluxo correto na reconexão:**
 
 1. `session.attach` com `resumeFromSeq` → replay do ring buffer.
-2. O backend chama **`query.reinitialize()`**, que reentrega os `canUseTool` em que o loop
-   ainda está travado.
-3. O bridge deduplica por `requestId` e republica `permission.requested` para as connections.
+2. O módulo `permission` republica, do **seu próprio registro**, os requests ainda pendentes.
+3. O cliente responde; a `Promise` original resolve.
 
-Sem o passo 2, uma permissão pedida durante a queda fica órfã e a sessão trava para sempre.
-Ver [descoberta §3.3](../../discovery/01-descoberta-claude-agent-sdk.md).
+`reinitialize()` sai do caminho crítico. Ele serve a uma topologia que não é a nossa (SDK
+falando com um CLI remoto). A idempotência por `requestId` continua obrigatória — por causa
+de múltiplos clientes e de retry do cliente, não do SDK.
 
 ---
 

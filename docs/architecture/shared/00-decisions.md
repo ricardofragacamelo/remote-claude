@@ -192,14 +192,14 @@ Detalhes: [08-authentication.md](08-authentication.md).
 
 ---
 
-## ADR-011 — `settingSources: []` obrigatório, e auditoria ancorada no hook `PreToolUse`
+## ADR-011 — `settingSources: ['project']` obrigatório, e auditoria ancorada no hook `PreToolUse`
 
 **Status:** aceita · 2026-09-13 · **decorre de spike, não de leitura de tipos**
 
 Duas decisões que vieram de um mesmo experimento contra o Claude local. Ver
 [descoberta §7](../../discovery/01-descoberta-claude-agent-sdk.md#7--resultados-do-spike-2026-09-13).
 
-### A — Toda `query()` passa `settingSources: []`
+### A — Toda `query()` passa `settingSources: ['project']`
 
 **O problema:** omitindo `settingSources`, o SDK carrega as settings de `user`, `project` e
 `local` da máquina. Uma regra `allow` em `~/.claude/settings.json` (por exemplo
@@ -210,12 +210,27 @@ Medido: com essa configuração presente, `Bash` e `Write` executaram e o `canUs
 foi invocado nenhuma vez**. Sem erro, sem aviso. O mecanismo de aprovação sobre o qual o
 produto inteiro se apoia estava desligado por um arquivo de configuração pessoal.
 
-**A decisão:** `settingSources: []` é obrigatório e não configurável, verificado por regra de
-`semgrep`.
+**A primeira decisão foi `[]`, e estava larga demais.** Medição posterior mostrou que `[]`
+também desliga o **`CLAUDE.md` do projeto** — as sessões ignorariam as instruções do próprio
+repositório do usuário. Escopo por escopo:
 
-**Consequência aceita:** a sessão não herda preferências pessoais do usuário. É o
-comportamento desejado — quem decide permissão é o módulo `permission`, não o `settings.json`
-da máquina.
+| `settingSources` | `canUseTool` | `CLAUDE.md` |
+|---|---|---|
+| omitido | ❌ | ✅ |
+| `['user']` | ❌ | ❌ |
+| **`['project']`** | **✅** | **✅** |
+| `[]` | ✅ | ❌ |
+
+**A decisão:** `settingSources: ['project']` é obrigatório e não configurável, verificado por
+regra de `semgrep`. É o único escopo que preserva aprovação humana **e** contexto do projeto.
+
+**Consequência aceita:** a sessão não herda plugins, skills nem regras de permissão pessoais
+do usuário (`user`). Quem decide permissão é o módulo `permission`.
+
+**Incerteza residual:** o `allow` de escopo `project` não dispensou o `canUseTool` nos testes,
+mas os diretórios não estavam marcados como confiados (`hasTrustDialogAccepted`). Verificar em
+diretório confiado antes de produção. Ver
+[descoberta §8.2](../../discovery/01-descoberta-claude-agent-sdk.md#82--a-assimetria-allow-vs-deny-entre-escopos).
 
 ### B — Auditoria usa o hook `PreToolUse`, não o `canUseTool`
 
@@ -237,3 +252,27 @@ arquivo** nem comando auto-aprovado.
 **Consequência:** o hook registra e deixa passar; não decide. Num sistema com acesso ao
 filesystem do usuário, auditoria parcial é pior que ausência de auditoria, porque dá falsa
 confiança.
+
+---
+
+## ADR-012 — Reconexão não usa `reinitialize()`; o registro de pendentes é nosso
+
+**Status:** aceita · 2026-09-13 · **corrige a ADR-011 e o desenho de reconexão**
+
+O desenho anterior mandava chamar `query.reinitialize()` quando um cliente reatava, para
+recuperar permission requests órfãos. **Medição mostrou que isso não funciona — e que não é
+necessário.**
+
+O erro era de modelo mental: o gap acontece entre o **cliente móvel e o backend**. O canal
+SDK↔CLI é stdio de um subprocesso local e **não quebra** quando o celular perde rede. A
+`Promise` do `canUseTool` permanece pendente no nosso processo o tempo todo, e o SDK deduplica
+requests em voo — por isso não reentrega: não há o que recuperar.
+
+**A decisão:** a republicação de permissões pendentes na reconexão é responsabilidade do
+módulo `permission`, a partir do seu próprio registro, disparada pelo `session.attach`.
+`reinitialize()` sai do caminho crítico.
+
+**A idempotência por `requestId` continua obrigatória** — agora por causa de múltiplos
+clientes e de retry do cliente, não de reentrega do SDK.
+
+Ver [descoberta §8.3](../../discovery/01-descoberta-claude-agent-sdk.md#83--reinitialize-não-reentrega-o-pedido-e-não-precisamos-dele).

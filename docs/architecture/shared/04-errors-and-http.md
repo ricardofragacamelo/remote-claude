@@ -112,7 +112,7 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `WORKSPACE_NOT_FOUND` | 404 | workspace | Caminho não existe |
 | `WORKSPACE_NOT_A_DIRECTORY` | 422 | workspace | Caminho existe, mas é arquivo |
 | `SESSION_NOT_FOUND` | 404 | session | Sessão inexistente ou inacessível |
-| `SESSION_ALREADY_RUNNING` | 409 | session | Já há turno em execução |
+| `SESSION_ALREADY_RUNNING` | 409 | session | Já há turno em execução — política em revisão, ver [backend/03](../backend/03-modules.md#session) |
 | `SESSION_LOCKED` | 423 | session | Em uso exclusivo por outra connection |
 | `SESSION_LIMIT_REACHED` | 429 | session | Máximo de sessões simultâneas |
 | `PERMISSION_REQUEST_NOT_FOUND` | 404 | permission | `requestId` desconhecido |

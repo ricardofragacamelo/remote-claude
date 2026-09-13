@@ -231,7 +231,7 @@ formalidade:
 | `pnpm audit` / `osv-scanner` | dependência vulnerável nos três módulos |
 | `semgrep` | path traversal, injeção de comando, uso inseguro de `child_process`, JWT com `alg` do token, SQL concatenado |
 | Regra própria | `allowDangerouslySkipPermissions` fora de `false`; `permissionMode: 'bypassPermissions'` como default |
-| **Regra própria** | **`query()` sem `settingSources: []`** — omitir carrega as settings da máquina e desliga o `canUseTool` em silêncio. Ver [ADR-011](00-decisions.md#adr-011--settingsources--obrigatório-e-auditoria-ancorada-no-hook-pretooluse) |
+| **Regra própria** | **`query()` sem `settingSources: ['project']`** — omitir carrega o escopo `user` e desliga o `canUseTool` em silêncio; `[]` desliga o `CLAUDE.md` do projeto. Ver [ADR-011](00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) |
 | Regra própria | `hooks.PreToolUse` ausente na fábrica de `Options` — sem ele não há trilha de auditoria |
 
 As três últimas são específicas deste produto, e duas delas existem porque um spike mostrou

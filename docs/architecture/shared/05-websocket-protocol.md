@@ -189,9 +189,9 @@ Resposta:
 
 ### Regras não negociáveis
 
-1. **Idempotência por `requestId`.** O SDK pode reentregar o mesmo request após um gap de
-   transporte (`query.reinitialize()`). Segunda resolução do mesmo `requestId` é `ack`
-   silencioso, nunca erro, nunca dupla execução.
+1. **Idempotência por `requestId`.** Múltiplos clientes observam a mesma sessão, e o cliente
+   pode reenviar após reconectar. Segunda resolução do mesmo `requestId` é `ack` silencioso,
+   nunca erro, nunca dupla execução.
 2. **Primeira resposta vence.** Web e mobile podem responder ao mesmo tempo. A segunda
    recebe `ack` e o evento `permission.resolved` com o `resolvedBy` real.
 3. **Timeout nega.** Expirou → `deny` com `PERMISSION_REQUEST_EXPIRED`. Silêncio nunca
@@ -214,9 +214,9 @@ Cliente reconecta
 
 - `resumeFromSeq` menor que `oldestAvailableSeq` → `gap: true`. O cliente **descarta o
   estado local e recarrega o transcript por HTTP**. Não tente costurar buraco.
-- Ao reatar, o backend chama `query.reinitialize()` para recuperar permission requests
-  órfãos — o SDK reentrega os que ficaram travados. Ver
-  [descoberta §3.3](../../discovery/01-descoberta-claude-agent-sdk.md).
+- Ao reatar, o backend republica os permission requests ainda pendentes a partir do registro
+  do módulo `permission` — a `Promise` do `canUseTool` nunca foi perdida, só ficou sem quem
+  respondesse. Ver [ADR-012](00-decisions.md#adr-012--reconexão-não-usa-reinitialize-o-registro-de-pendentes-é-nosso).
 - Backoff de reconexão: exponencial com jitter, de 1 s a 30 s. Nunca reconecte em loop apertado.
 
 ---
