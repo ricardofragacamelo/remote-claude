@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/envelope.json",
+  "title": "Envelope",
+  "description": "Shape shared by every frame, in both directions. See docs/architecture/shared/05-websocket-protocol.md.",
+  "type": "object",
+  "required": ["v", "id", "kind", "type", "ts"],
+  "properties": {
+    "v": {
+      "type": "integer",
+      "const": 1,
+      "description": "Protocol version. Adding an optional field or a new event does not change it; removing a field, renaming a type or changing a meaning does."
+    },
+    "id": { "type": "string", "description": "ULID unique to this frame." },
+    "kind": {
+      "type": "string",
+      "enum": ["command", "event", "request", "response", "ack", "error"],
+      "description": "What the frame is. `request` travels server to client and demands an answer — that is the case the whole protocol is designed around."
+    },
+    "type": { "type": "string", "description": "What the frame is, within its kind." },
+    "ts": { "type": "string", "description": "ISO 8601 instant, in UTC." },
+    "traceId": {
+      "type": "string",
+      "description": "Correlates this frame with the server logs of the same operation."
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "`id` of the frame that caused this one."
+    },
+    "seq": {
+      "type": "integer",
+      "description": "Monotonic per session, on events only. This is what makes replay after a reconnect possible."
+    },
+    "payload": { "type": "object", "description": "Contents, defined per `type`." }
+  }
+}

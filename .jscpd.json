@@ -16,6 +16,7 @@
     "**/*.g.dart",
     "**/*.freezed.dart",
     "**/migrations/**",
+    "infra/**",
     "**/*.module.ts",
     "**/test/**",
     "**/e2e/fixtures/**"

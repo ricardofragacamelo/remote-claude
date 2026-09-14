@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -98,5 +99,74 @@ describe('plan.mjs', () => {
 
     expect(first.code).toBe(0);
     expect(second.stdout).toBe(first.stdout);
+  });
+});
+
+describe('clean.mjs', () => {
+  it('previews without removing anything, and says so', () => {
+    const result = runScript('clean.mjs', ['--dry-run']);
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain('dry run');
+  });
+
+  it('never offers to remove the development stack', () => {
+    const result = runScript('clean.mjs', ['--dry-run']);
+
+    expect(result.stdout).toContain('never touched');
+    expect(result.stdout).not.toContain('remote-claude_postgres-data');
+  });
+
+  it('leaves node_modules alone — the tree it runs against still has one afterwards', () => {
+    const before = fs.existsSync(path.join(repoRoot, 'node_modules'));
+    const result = runScript('clean.mjs', ['--dry-run']);
+
+    expect(result.stdout).not.toContain('node_modules');
+    expect(fs.existsSync(path.join(repoRoot, 'node_modules'))).toBe(before);
+  });
+});
+
+describe('start-local.mjs', () => {
+  it('fails, saying compose is missing, when docker is not reachable', () => {
+    const result = runScript('start-local.mjs', [], {
+      PATH: path.join(repoRoot, 'no-such-directory'),
+    });
+
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain('docker compose is not available');
+    expect(result.stdout).toContain('pnpm doctor');
+  });
+
+  it('refuses a port variable that is not a port, rather than binding the default', () => {
+    const result = runScript('start-local.mjs', [], { RC_WEB_PORT: 'nope' });
+
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain('RC_WEB_PORT');
+  });
+});
+
+describe('contracts.mjs', () => {
+  it('reports both targets in sync with the committed schema', () => {
+    const result = runScript('contracts.mjs', ['--check']);
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain('TypeScript');
+    expect(result.stdout).toContain('Dart');
+    expect(result.stdout).toContain('in sync');
+  });
+
+  it('is idempotent — generating twice writes nothing the second time', () => {
+    runScript('contracts.mjs');
+    const second = runScript('contracts.mjs');
+
+    expect(second.code).toBe(0);
+    expect(second.stdout).toContain('unchanged');
+    expect(second.stdout).not.toContain('written');
+  });
+
+  it('leaves the repository in sync after generating', () => {
+    runScript('contracts.mjs');
+
+    expect(runScript('contracts.mjs', ['--check']).code).toBe(0);
   });
 });

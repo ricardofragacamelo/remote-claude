@@ -81,8 +81,8 @@ verde.
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
 | F0 | [Fundação do monorepo](F0-foundation.md) | workspace, tooling, hooks, catálogo de comandos, scripts de apoio | B-01…B-06, B-48, B-49, B-52 | ✅ |
-| F1 | [Infraestrutura local](F1-infrastructure.md) | docker-compose, Keycloak, `start-local.mjs`, `clean.mjs` | B-07…B-10, B-50 | 🔲 |
-| F2 | [Contratos](F2-contracts.md) | JSON Schema → TS e Dart | B-11…B-14 | 🔲 |
+| F1 | [Infraestrutura local](F1-infrastructure.md) | docker-compose, Keycloak, `start-local.mjs`, `clean.mjs` | B-07…B-10, B-50 | ✅ |
+| F2 | [Contratos](F2-contracts.md) | JSON Schema → TS e Dart | B-11…B-14 | ✅ |
 | F3 | [Backend esqueleto](F3-backend.md) | 4 camadas, health, WS, Drizzle, OIDC | B-15…B-23, B-51 | 🔲 |
 | F4 | [Web esqueleto](F4-web.md) | cadeia do front, shadcn, i18n, login | B-24…B-30 | 🔲 |
 | F5 | [Mobile esqueleto](F5-mobile.md) | Flutter, Riverpod, l10n, login | B-31…B-36 | 🔲 |
@@ -231,7 +231,7 @@ de pé, e duas suítes em paralelo no CI.
 | R-01 | `allow` de projeto em diretório confiado pode furar o `canUseTool` | **aberto** — verificar antes de produção ([§8.2](../../discovery/01-descoberta-claude-agent-sdk.md#82--a-assimetria-allow-vs-deny-entre-escopos)) |
 | R-02 | `SESSION_ALREADY_RUNNING` (409) vs enfileirar o prompt | **aberto** — o SDK enfileira nativamente ([§8.6](../../discovery/01-descoberta-claude-agent-sdk.md#86--segundo-prompt-durante-um-turno-é-enfileirado-pelo-sdk)); decidir antes da F3 |
 | R-03 | Cobertura de 90 % desde o primeiro commit | risco de teste de fachada para bater número — [cobertura não é qualidade](../../architecture/shared/06-testing-strategy.md#cobertura-não-é-qualidade) |
-| R-04 | Flutter fora do workspace pnpm | o Dart gerado sai de sincronia em silêncio; B-14 precisa cobrir os dois |
+| R-04 | Flutter fora do workspace pnpm | **mitigado** — B-14 entregue, `pnpm contracts:check` cobre os dois alvos |
 | R-05 | Docker obrigatório no CI e no dev | testcontainers e compose não têm alternativa; aceito |
 
 ---

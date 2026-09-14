@@ -1,0 +1,123 @@
+{
+  "realm": "remote-claude",
+  "attributes": {
+    "rc.note": "Local and test OIDC provider. The audience mapper rides on each client instead of a shared client scope: declaring realm-level clientScopes REPLACES Keycloak built-ins (profile, email, roles), and the backend needs those claims. Auth0 never takes part in an automated test (ADR-010)."
+  },
+  "displayName": "remote-claude (local)",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "verifyEmail": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 2592000,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "clients": [
+    {
+      "clientId": "remote-claude-web",
+      "name": "remote-claude web",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "redirectUris": ["http://localhost:5173/*", "http://127.0.0.1:5173/*"],
+      "webOrigins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "remote-claude-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "https://api.remote-claude.local",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "remote-claude-mobile",
+      "name": "remote-claude mobile",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "redirectUris": ["br.com.remoteclaude.app://oauth/*", "http://localhost:*/*"],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "br.com.remoteclaude.app://oauth/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "remote-claude-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "https://api.remote-claude.local",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "dev",
+      "email": "dev@remote-claude.local",
+      "firstName": "Dev",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["default-roles-remote-claude"]
+    },
+    {
+      "username": "approver",
+      "email": "approver@remote-claude.local",
+      "firstName": "Approver",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "approver",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["default-roles-remote-claude"]
+    }
+  ]
+}

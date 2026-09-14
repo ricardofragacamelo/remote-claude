@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/error.json",
+  "title": "Error",
+  "description": "The error envelope, identical to the HTTP one. See docs/architecture/shared/04-errors-and-http.md.",
+  "x-kind": "error",
+  "x-type": "error",
+  "type": "object",
+  "required": ["code", "messageKey", "traceId"],
+  "properties": {
+    "code": {
+      "type": "string",
+      "description": "Stable, for client logic. Changing one is a breaking change."
+    },
+    "messageKey": {
+      "type": "string",
+      "description": "For display. The client translates it — the server never sends prose."
+    },
+    "params": {
+      "type": "object",
+      "description": "Interpolation values for the message key."
+    },
+    "traceId": {
+      "type": "string",
+      "description": "Lets a user report the problem and someone find it in the log."
+    },
+    "details": {
+      "type": "array",
+      "description": "Validation only: every invalid field, not just the first.",
+      "items": {
+        "type": "object",
+        "required": ["field", "rule"],
+        "properties": {
+          "field": { "type": "string" },
+          "rule": { "type": "string" }
+        }
+      }
+    }
+  }
+}

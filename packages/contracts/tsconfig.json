@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+
+  // `baseUrl` is required by the aliases declared in tsconfig.base.json: they resolve against
+  // the baseUrl of whoever extends it. See docs/plans/00-bootstrap/progress.md.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts"]
+}

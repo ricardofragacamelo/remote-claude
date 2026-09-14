@@ -48,6 +48,8 @@ importers:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@22.20.2)(yaml@2.9.1)
 
+  packages/contracts: {}
+
 packages:
 
   '@babel/helper-string-parser@7.29.7':

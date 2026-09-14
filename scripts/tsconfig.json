@@ -17,5 +17,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["**/*.mjs", "../test/unit/scripts/**/*.mjs", "../*.config.mjs"]
+  "include": ["**/*.mjs", "../test/**/*.mjs", "../*.config.mjs"]
 }

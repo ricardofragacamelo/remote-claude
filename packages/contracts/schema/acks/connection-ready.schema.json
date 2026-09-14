@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/acks/connection-ready.json",
+  "title": "ConnectionReady",
+  "description": "Answer to a successful handshake. An ack, not an event: it acknowledges the command that caused it.",
+  "x-kind": "ack",
+  "x-type": "connection.ready",
+  "type": "object",
+  "required": ["connectionId", "serverVersion", "limits"],
+  "properties": {
+    "connectionId": { "type": "string" },
+    "serverVersion": { "type": "string" },
+    "limits": {
+      "type": "object",
+      "description": "What this server will accept, so the client does not have to discover it by being refused.",
+      "required": ["maxFrameBytes", "replayBufferSize"],
+      "properties": {
+        "maxFrameBytes": { "type": "integer" },
+        "replayBufferSize": { "type": "integer" }
+      }
+    }
+  }
+}

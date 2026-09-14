@@ -11,9 +11,13 @@
   "scripts": {
     "prepare": "husky",
     "doctor": "node scripts/doctor.mjs",
+    "dev": "node scripts/start-local.mjs",
+    "clean": "node scripts/clean.mjs",
     "docs:check": "node scripts/docs-check.mjs",
     "plan": "node scripts/plan.mjs",
     "scan:secrets": "node scripts/secrets-scan.mjs",
+    "contracts:generate": "node scripts/contracts.mjs",
+    "contracts:check": "node scripts/contracts.mjs --check",
     "lint": "eslint .",
     "lint:dup": "jscpd",
     "typecheck": "tsc -p scripts/tsconfig.json --noEmit && pnpm -r --if-present typecheck",

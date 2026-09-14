@@ -6,6 +6,7 @@
  * machine running the tests.
  */
 
+import { resolveComposeCli } from './compose.mjs';
 import { meetsMinimum } from './version.mjs';
 
 /**
@@ -129,19 +130,26 @@ export async function inspectEnvironment(probes) {
     results.push({ name: 'docker', status: 'ok', detail: `server ${docker.stdout.trim()}` });
   }
 
-  const compose = probes.run('docker', ['compose', 'version']);
+  // Compose v2 ships in two shapes — the `docker compose` plugin and the standalone
+  // `docker-compose` binary — and they take the same arguments. Requiring the plugin
+  // specifically would fail a machine that has a perfectly usable Compose.
+  const compose = resolveComposeCli(probes.run);
   results.push(
-    compose.found && compose.code === 0
+    compose === null
       ? {
           name: 'docker compose',
-          status: 'ok',
-          detail: compose.stdout.trim().split('\n')[0] ?? '',
+          status: 'fail',
+          detail: 'neither the compose plugin nor the docker-compose binary answers',
+          fix: 'install the Docker Compose v2 plugin (docker-compose-plugin), or the docker-compose binary',
         }
       : {
           name: 'docker compose',
-          status: 'fail',
-          detail: 'the compose plugin does not answer',
-          fix: 'install the Docker Compose v2 plugin (docker-compose-plugin)',
+          status: 'ok',
+          detail:
+            probes
+              .run(compose.command, [...compose.args, 'version'])
+              .stdout.trim()
+              .split('\n')[0] ?? `${compose.command} ${compose.args.join(' ')}`.trim(),
         },
   );
 

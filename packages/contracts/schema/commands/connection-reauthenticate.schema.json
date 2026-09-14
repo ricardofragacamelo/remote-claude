@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/connection-reauthenticate.json",
+  "title": "ConnectionReauthenticate",
+  "description": "Renews the credential without reopening the socket. An access token expiring on an open connection does not drop it; failing to renew within the 60 s grace period closes it with 4401.",
+  "x-kind": "command",
+  "x-type": "connection.reauthenticate",
+  "type": "object",
+  "required": ["token"],
+  "properties": {
+    "token": { "type": "string", "description": "The renewed OIDC access token." }
+  }
+}

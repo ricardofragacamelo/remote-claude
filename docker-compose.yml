@@ -1,0 +1,75 @@
+# Local stack of remote-claude: the two services the walking skeleton needs, and nothing else.
+#
+# Every published port is a variable with a default. That is what lets `pnpm test:e2e` bring an
+# ephemeral copy of this same file up on random ports, under its own `--project-name`, while the
+# fixed-port `pnpm dev` stack keeps running — no second compose file to drift out of sync.
+# See docs/plans/00-bootstrap/README.md#portas.
+#
+# Every service has a healthcheck. Without one the scripts that wait for the stack degrade into
+# a disguised `sleep`, which is either too short on a cold machine or wasted time on a warm one.
+
+name: remote-claude
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    ports:
+      - '${RC_POSTGRES_PORT:-5432}:5432'
+    environment:
+      POSTGRES_USER: ${RC_POSTGRES_USER:-remote_claude}
+      POSTGRES_PASSWORD: ${RC_POSTGRES_PASSWORD:-remote_claude}
+      POSTGRES_DB: ${RC_POSTGRES_DB:-remote_claude}
+      # Deterministic collation, so an index built on a developer machine behaves like the one
+      # built in CI (docs/architecture/backend/05-persistence.md).
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    volumes:
+      # postgres:18 expects the mount one level up from where 13..17 did: the data lives in a
+      # version-named subdirectory of /var/lib/postgresql, which is what makes `pg_upgrade
+      # --link` possible without crossing a mount boundary. Mounting /var/lib/postgresql/data on
+      # 18 puts the cluster where the entrypoint does not look, and the container restart-loops.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${RC_POSTGRES_USER:-remote_claude} -d ${RC_POSTGRES_DB:-remote_claude}',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    restart: unless-stopped
+    # `start-dev` keeps the H2 store in the volume below, so the realm survives a restart, and
+    # skips the hostname/TLS requirements that only make sense in production. The realm is
+    # imported on every start; see infra/keycloak/realm-remote-claude.json.
+    command: ['start-dev', '--import-realm']
+    ports:
+      - '${RC_KEYCLOAK_PORT:-8180}:8080'
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${RC_KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${RC_KEYCLOAK_ADMIN_PASSWORD:-admin}
+      # Health lives on the management port (9000) since Keycloak 25; the healthcheck below is
+      # the only thing that reads it, so it is not published to the host.
+      KC_HEALTH_ENABLED: 'true'
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+      - ./infra/keycloak:/opt/keycloak/data/import:ro
+    healthcheck:
+      # The image has no curl and no wget — it is a micro base. Bash's /dev/tcp is what is left.
+      test:
+        [
+          'CMD-SHELL',
+          'exec 3<>/dev/tcp/127.0.0.1/9000 && printf "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && grep -q "\"status\": \"UP\"" <&3',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+
+volumes:
+  postgres-data:
+  keycloak-data:

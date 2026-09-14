@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/connection-authenticate.json",
+  "title": "ConnectionAuthenticate",
+  "description": "Opens the connection. Without it inside 5 seconds the server closes with 4401.",
+  "x-kind": "command",
+  "x-type": "connection.authenticate",
+  "type": "object",
+  "required": ["token", "locale", "client"],
+  "properties": {
+    "token": {
+      "type": "string",
+      "description": "OIDC access token. In the frame body, never in the query string — a query string leaks into proxy logs."
+    },
+    "locale": {
+      "type": "string",
+      "enum": ["en", "pt-BR"],
+      "description": "Language of this connection, not of the user."
+    },
+    "client": {
+      "type": "object",
+      "description": "Who is connecting, for diagnostics and for the deprecation window.",
+      "required": ["kind", "version"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["web", "mobile"] },
+        "version": { "type": "string" }
+      }
+    }
+  }
+}

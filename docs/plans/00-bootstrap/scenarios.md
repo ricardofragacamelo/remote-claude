@@ -16,10 +16,13 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-01 | schema alterado sem regenerar TS → `contracts:check` falha | err | unit | — | B-14 | ⬜ |
-| S-02 | schema alterado sem regenerar Dart → `contracts:check` falha | err | unit | — | B-14 | ⬜ |
-| S-03 | frame válido passa pelo guard gerado | eq | unit | — | B-12 | ⬜ |
-| S-04 | frame com campo desconhecido é aceito (forward-compat) | eq | unit | — | B-12 | ⬜ |
+| S-01 | schema alterado sem regenerar TS → `contracts:check` falha | err | unit | — | B-14 | ✅ |
+| S-02 | schema alterado sem regenerar Dart → `contracts:check` falha | err | unit | — | B-14 | ✅ |
+| S-03 | frame válido passa pelo guard gerado | eq | unit | — | B-12 | ✅ |
+| S-04 | frame com campo desconhecido é aceito (forward-compat) | eq | unit | — | B-12 | ✅ |
+| S-80 | envelope sem campo obrigatório é rejeitado pelo guard | err | unit | — | B-12 | ✅ |
+| S-81 | `contracts:generate` é idempotente — segunda execução não muda o gerado | idem | integração | — | B-12 | ✅ |
+| S-82 | schema com `kind` fora do enum do envelope → geração falha, não emite | err | unit | — | B-11 | ✅ |
 
 ## Idioma e i18n — B-27, B-34, B-45
 
@@ -113,19 +116,24 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-50 | variável obrigatória ausente → processo **não sobe** | err | integração | — | B-16 | ⬜ |
 | S-51 | variável com tipo inválido → **não sobe**, com mensagem acionável | err | integração | — | B-16 | ⬜ |
 | S-52 | `.env.example` cobre toda variável lida pelo código | eq | unit | — | B-05 | ✅ |
+| S-87 | variável interpolada no `docker-compose.yml` e ausente do `.env.example` → falha | err | unit | — | B-07 | ✅ |
 
 ## Stack e scripts — B-07…B-10, B-37
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-53 | `start-local` sobe tudo e imprime as URLs | eq | e2e | — | B-10 | ⬜ |
-| S-54 | Ctrl+C no `start-local` encerra web → backend → compose, **sem processo órfão** | est | e2e | — | B-10 | ⬜ |
-| S-55 | `start-local` preserva volumes (`stop`, não `down`) | est | e2e | — | B-10 | ⬜ |
+| S-53 | `start-local` sobe tudo e imprime as URLs | eq | e2e | — | B-10 | ✅ |
+| S-54 | Ctrl+C no `start-local` encerra web → backend → compose, **sem processo órfão** | est | e2e | — | B-10 | ✅ |
+| S-55 | `start-local` preserva volumes (`stop`, não `down`) | est | e2e | — | B-10 | ✅ |
 | S-56 | `run-e2e-local` aloca portas livres e não colide com o `start-local` de pé | conc | e2e | — | B-37 | ⬜ |
 | S-57 | `run-e2e-local` sai com o **código dos testes**, não com 0 fixo | err | e2e | — | B-37 | ⬜ |
 | S-58 | `run-e2e-local` remove volumes e o `.env` efêmero ao final | est | e2e | — | B-37 | ⬜ |
 | S-59 | projeto compose órfão de execução anterior é purgado no início | idem | e2e | — | B-37 | ⬜ |
-| S-60 | serviço que não sobe no prazo → erro claro e cleanup, sem pendurar | fron | e2e | — | B-09 | ⬜ |
+| S-60 | serviço que não sobe no prazo → erro claro e cleanup, sem pendurar | fron | e2e | — | B-09 | ✅ |
+| S-83 | compose é invocado pelo plugin `docker compose`, e cai no binário `docker-compose` quando o plugin não existe | eq | unit | — | B-09 | ✅ |
+| S-84 | `waitForHttp` detecta o processo morrer antes do health e falha na hora, sem esperar o timeout | err | unit | — | B-09 | ✅ |
+| S-85 | `kill` escala SIGTERM → SIGKILL quando o processo ignora o primeiro sinal | fron | unit | — | B-09 | ✅ |
+| S-86 | cleanup disparado duas vezes (SIGINT repetido) derruba a stack uma vez só | idem | unit | — | B-10 | ✅ |
 
 ## Testes e cobertura — B-38…B-40, B-42
 
@@ -161,7 +169,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 |---|---|---|---|---|---|---|
 | S-74 | `doctor` detecta pré-requisito faltando e diz como resolver | err | e2e | — | B-48 | ✅ |
 | S-75 | `docs-check` reprova link interno quebrado, âncora inexistente e documento fora do índice | err | unit | — | B-49 | ✅ |
-| S-76 | `clean` remove volume órfão que o `compose ls` não enxerga | idem | e2e | — | B-50 | ⬜ |
+| S-76 | `clean` remove volume órfão que o `compose ls` não enxerga | idem | e2e | — | B-50 | ✅ |
 | S-77 | `db reset` é idempotente — rodar duas vezes deixa o mesmo estado | idem | integração | — | B-51 | ⬜ |
 | S-78 | `plan new` gera as 3 seções fixas mais um arquivo por fase | eq | unit | — | B-52 | ✅ |
 | S-79 | todo script sai com código ≠ 0 quando falha | err | e2e | — | B-46 | ⬜ |

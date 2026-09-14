@@ -6,9 +6,11 @@ Um backend Node conversa com o Claude local via Claude Agent SDK, recebe o strea
 e o distribui para dois canais — um front web e um app Flutter — que acompanham a sessão,
 enviam prompts e, principalmente, **aprovam as permissões de tool à distância**.
 
-> **Status:** arquitetura definida; bootstrap em andamento — a
+> **Status:** arquitetura definida; bootstrap em andamento — estão de pé a
 > [F0](docs/plans/00-bootstrap/F0-foundation.md) (workspace, portões de qualidade, hooks e
-> scripts de apoio) está de pé. Ainda não há código de produto.
+> scripts de apoio), a [F1](docs/plans/00-bootstrap/F1-infrastructure.md) (`pnpm dev` sobe
+> Postgres e Keycloak) e a [F2](docs/plans/00-bootstrap/F2-contracts.md) (o protocolo WebSocket
+> em JSON Schema, gerando TypeScript e Dart). Ainda não há backend nem front.
 
 ---
 
@@ -85,7 +87,7 @@ A documentação é fragmentada de propósito, com índices que roteiam por situ
 |---|---|
 | Node | ≥ 22 |
 | pnpm | ≥ 9 |
-| Docker | rodando — testcontainers e docker compose não têm alternativa |
+| Docker | rodando, com Compose v2 — serve tanto o plugin `docker compose` quanto o binário `docker-compose` |
 | Flutter | estável, só para o app mobile |
 
 ```bash
@@ -128,6 +130,12 @@ silencioso.
 PostgreSQL  localhost:5432        Backend  http://localhost:3000
 Keycloak    http://localhost:8180 Web      http://localhost:5173
 ```
+
+Enquanto `backend/` e `web/` não existirem (F3 e F4), ele sobe a metade que existe e diz
+`not created yet` na outra — em vez de falhar num diretório ausente.
+
+Porta ocupada não é caso raro: cada uma sai de uma variável (`RC_POSTGRES_PORT` e companhia),
+e `pnpm doctor` avisa **antes** de você descobrir pelo erro do compose.
 
 Ctrl+C encerra web → backend → `docker compose stop`. **Preserva os volumes**: o banco local
 sobrevive ao Ctrl+C, porque perdê-lo a cada encerramento é atrito diário.

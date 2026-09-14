@@ -114,3 +114,23 @@ export function findEnvReads(rootDir, sourceDirs) {
 export function undeclaredReads(reads, declared) {
   return reads.filter((read) => !declared.has(read.name));
 }
+
+/**
+ * Variables a Compose file interpolates.
+ *
+ * `docker-compose.yml` reads the environment just like the code does, and a variable that only
+ * the compose file knows about is exactly the kind that goes undocumented — no `process.env`
+ * anywhere for the scan above to find. Matches `${NAME}`, `${NAME:-default}` and `${NAME-x}`.
+ *
+ * @param {string} content
+ * @returns {string[]}
+ */
+export function interpolatedVariables(content) {
+  const INTERPOLATION = /\$\{([A-Z][A-Z0-9_]*)(?::?[-+?][^}]*)?\}/g;
+
+  return [
+    ...new Set(
+      [...content.matchAll(INTERPOLATION)].map((match) => match[1]).filter((n) => n !== undefined),
+    ),
+  ];
+}

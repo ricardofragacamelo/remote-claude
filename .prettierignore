@@ -14,3 +14,7 @@ mobile/
 # tables and edits the samples (it adds trailing commas to JSON snippets, for instance).
 # What guards the documentation is `pnpm docs:check`: links, anchors and orphan documents.
 *.md
+
+# Generated from packages/contracts/schema/ by `pnpm contracts:generate`, which formats its own
+# output. What guards it is `pnpm contracts:check`, which fails when it drifts from the schema.
+packages/contracts/src/protocol.ts
