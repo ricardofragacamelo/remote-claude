@@ -1,0 +1,82 @@
+# The gates of the validation protocol, as CI runs them.
+#
+# Same commands a person runs by hand — `pnpm verify` and `pnpm verify:full` — because a gate
+# that exists only in a workflow file is a gate nobody can reproduce when it goes red.
+# See docs/architecture/shared/11-validation-protocol.md and
+# docs/architecture/shared/06-testing-strategy.md#portões-de-ci.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Nightly, for the expensive checks that do not belong on the critical path.
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  FLUTTER_VERSION: '3.44.4'
+
+jobs:
+  # Gates 1-7: cheap, and they answer within a couple of minutes of a push.
+  fast:
+    name: gates 1-7
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks and the Sonar quality gate both compare against the history.
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: prerequisites
+        run: pnpm doctor --strict
+
+      - name: gates 1-7
+        run: pnpm verify
+
+  # Gates 8-11 on a pull request: the expensive half, where Docker is a hard requirement.
+  full:
+    name: gates 8-11
+    runs-on: ubuntu-latest
+    needs: fast
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: browsers for the end-to-end suite
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: gates 1-11
+        run: pnpm verify:full
+
+  # Against the real Claude Code on a real machine. Never on a pull request: it is slow, it is
+  # not hermetic, and a flake there would teach everybody to ignore a red build.
+  smoke-live:
+    name: smoke-live
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - name: not yet
+        run: |
+          echo "smoke-live arrives with the Agent SDK; the bootstrap does not talk to Claude."
+          echo "See docs/plans/00-bootstrap/README.md#escopo."

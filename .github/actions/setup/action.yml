@@ -1,0 +1,38 @@
+# Everything both jobs need before they can run a gate.
+#
+# A composite action rather than the same eight steps twice: the duplication gate objected, and
+# it was right — two copies of the install sequence is two places for the Node version and the
+# Flutter version to drift apart.
+
+name: setup
+description: Node, pnpm, Flutter and the dependencies of every module.
+
+inputs:
+  node-version:
+    description: Node version, matching the engines field of package.json.
+    required: true
+  flutter-version:
+    description: Flutter version, matching the SDK constraint of mobile/pubspec.yaml.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+
+    - uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ inputs.flutter-version }}
+        channel: stable
+        cache: true
+
+    - name: install
+      shell: bash
+      run: |
+        pnpm install --frozen-lockfile
+        cd mobile && flutter pub get
