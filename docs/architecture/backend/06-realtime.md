@@ -138,7 +138,7 @@ Estar conectado não basta. Cada comando verifica:
 | Ação | Quem pode |
 |---|---|
 | `session.attach` | connection cujo usuário tem acesso à sessão |
-| `session.prompt` | qualquer connection anexada (serializado — concorrente vira `409`) |
+| `session.prompt` | qualquer connection anexada — prompt concorrente é **enfileirado** ([R-02](../../plans/00-bootstrap/progress.md#decisões-tomadas-durante-a-execução)) |
 | `permission.resolve` | qualquer connection anexada — vale a primeira |
 | `session.close` | apenas o dono da sessão |
 

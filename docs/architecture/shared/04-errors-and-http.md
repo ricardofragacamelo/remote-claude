@@ -73,7 +73,7 @@ novo sem esses três campos não compila.
 | `401` | `UNAUTHENTICATED` | Sem credencial, ou token inválido/expirado |
 | `403` | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN` | Autenticado, mas não pode. **Workspace fora da allowlist mora aqui.** |
 | `404` | `SESSION_NOT_FOUND` | Recurso não existe, ou o requisitante não pode saber que existe |
-| `409` | `SESSION_ALREADY_RUNNING` | Conflito com o estado atual |
+| `409` | `CONFLICT` | Conflito com o estado atual |
 | `410` | `PERMISSION_REQUEST_EXPIRED` | Existiu, não existe mais, e não volta |
 | `413` | `PAYLOAD_TOO_LARGE` | Prompt ou upload acima do limite |
 | `422` | `WORKSPACE_NOT_A_DIRECTORY` | Sintaxe válida, semântica impossível |
@@ -112,7 +112,6 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `WORKSPACE_NOT_FOUND` | 404 | workspace | Caminho não existe |
 | `WORKSPACE_NOT_A_DIRECTORY` | 422 | workspace | Caminho existe, mas é arquivo |
 | `SESSION_NOT_FOUND` | 404 | session | Sessão inexistente ou inacessível |
-| `SESSION_ALREADY_RUNNING` | 409 | session | Já há turno em execução — política em revisão, ver [backend/03](../backend/03-modules.md#session) |
 | `SESSION_LOCKED` | 423 | session | Em uso exclusivo por outra connection |
 | `SESSION_LIMIT_REACHED` | 429 | session | Máximo de sessões simultâneas |
 | `PERMISSION_REQUEST_NOT_FOUND` | 404 | permission | `requestId` desconhecido |
@@ -121,8 +120,15 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `CLAUDE_UNAVAILABLE` | 502 | session | Subprocesso do CLI falhou |
 | `CLAUDE_TIMEOUT` | 504 | session | Sem resposta no prazo |
 | `RATE_LIMITED` | 429 | — | Limite nosso ou do plano Claude |
+| `PAYLOAD_TOO_LARGE` | 413 | — | Corpo ou frame acima do limite anunciado |
 | `INVALID_INPUT` | 400 | — | Falha de validação; detalhe em `details[]` |
+| `FORBIDDEN` | 403 | — | Autenticado, e ainda assim não pode |
+| `NOT_FOUND` | 404 | — | Rota ou recurso inexistente, sem dono de módulo |
 | `INTERNAL_ERROR` | 500 | — | Não previsto |
+
+**`SESSION_ALREADY_RUNNING` não existe mais.** Um segundo prompt durante um turno é
+**enfileirado**, não rejeitado — [R-02, decidido](../../plans/00-bootstrap/progress.md#decisões-tomadas-durante-a-execução).
+Ver [backend/03](../backend/03-modules.md#session).
 
 ---
 
@@ -134,8 +140,8 @@ WS não tem status code. O envelope de erro viaja no frame, e o mapeamento HTTP 
 ```jsonc
 {
   "v": 1, "type": "error", "id": "...", "correlationId": "<id do comando>",
-  "payload": { "error": { "code": "SESSION_ALREADY_RUNNING", "httpEquivalent": 409,
-                          "messageKey": "session.error.alreadyRunning", "traceId": "..." } }
+  "payload": { "error": { "code": "SESSION_NOT_FOUND", "httpEquivalent": 404,
+                          "messageKey": "session.error.notFound", "traceId": "..." } }
 }
 ```
 

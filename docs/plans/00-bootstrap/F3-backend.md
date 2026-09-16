@@ -27,7 +27,7 @@ operação.
 
 ## Tarefas
 
-### B-15 — Árvore de camadas
+### B-15 — Árvore de camadas ✅
 
 `src/domain/`, `src/application/`, `src/adapter/`, `src/infrastructure/`, com domínio dentro
 de cada uma — [backend/02](../../architecture/backend/02-folder-structure.md).
@@ -35,12 +35,12 @@ de cada uma — [backend/02](../../architecture/backend/02-folder-structure.md).
 Barris por domínio e por camada. Aliases `@domain/*`, `@application/*`, `@adapter/*`,
 `@infra/*`, `@shared/*`.
 
-### B-16 — Config validada no boot
+### B-16 — Config validada no boot ✅
 
 Schema de env validado na subida. Variável ausente ou inválida **impede o processo de subir**,
 com mensagem que diz qual variável e o que se esperava. Nunca default silencioso.
 
-### B-17 — Logger pino + interceptor de I/O
+### B-17 — Logger pino + interceptor de I/O ✅
 
 Schema de campos de [03](../../architecture/shared/03-logging.md), `traceId` em
 `AsyncLocalStorage`. Interceptor loga `http.request`/`http.response` e `ws.inbound`/`ws.outbound`
@@ -50,7 +50,7 @@ em `debug`, com `durationMs` na saída.
 
 Redação configurada no logger, não a critério de quem loga.
 
-### B-18 — Erro de domínio + exception filter
+### B-18 — Erro de domínio + exception filter ✅
 
 Classe base com `code`, `messageKey`, `params` — erro novo sem os três não compila.
 Exception filter único mapeia domínio → HTTP, conforme
@@ -58,12 +58,12 @@ Exception filter único mapeia domínio → HTTP, conforme
 
 `domain/` não conhece HTTP.
 
-### B-19 — Drizzle + primeira migration
+### B-19 — Drizzle + primeira migration ✅
 
 Schema em `infrastructure/database/schema/`, migration versionada, aplicada no start atrás de
 **advisory lock**. Tabela `sessions` mínima. Repositório devolve entity, nunca row.
 
-### B-20 — Validação de token OIDC
+### B-20 — Validação de token OIDC ✅
 
 `adapter/outbound/identity/`: discovery em `/.well-known/openid-configuration`, cache de JWKS
 com recarga em `kid` desconhecido, allowlist de `alg` (`RS256`/`ES256`).
@@ -71,12 +71,12 @@ com recarga em `kid` desconhecido, allowlist de `alg` (`RS256`/`ES256`).
 **Nunca aceite o `alg` do token, nunca `none`** — é a vulnerabilidade clássica de JWT.
 Resposta `401` não revela qual validação falhou; o log revela.
 
-### B-21 — `GET /health`
+### B-21 — `GET /health` ✅
 
 Sem autenticação. É o que os scripts usam no `waitForHttp`. Checa banco com `SELECT 1`, nunca
 query de negócio.
 
-### B-22 — Gateway WS + handshake
+### B-22 — Gateway WS + handshake ✅
 
 `connection.authenticate` em até 5 s, senão `4401`. `connection.ready` com `connectionId`.
 Códigos de fechamento de [05](../../architecture/shared/05-websocket-protocol.md#códigos-de-fechamento).
@@ -84,12 +84,12 @@ Códigos de fechamento de [05](../../architecture/shared/05-websocket-protocol.m
 Frame validado contra o schema gerado. Erro de comando responde `error` e **não derruba o
 socket**.
 
-### B-23 — Fatia vertical
+### B-23 — Fatia vertical ✅
 
 `session.ping` → `session.pong`, com `seq` atribuído **em um único ponto** (o hub) e
 monotônico por sessão.
 
-### B-51 — `scripts/db.mjs`
+### B-51 — `scripts/db.mjs` ✅
 
 `migrate`, `reset` e `seed` num comando só, contra a instância do `start-local`.
 

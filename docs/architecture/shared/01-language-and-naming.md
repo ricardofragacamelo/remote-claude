@@ -110,7 +110,7 @@ permission.resolve       ✅
 
 ```
 WORKSPACE_NOT_ALLOWED       ✅
-SESSION_ALREADY_RUNNING     ✅
+SESSION_LIMIT_REACHED       ✅
 PERMISSION_REQUEST_EXPIRED  ✅
 INVALID_INPUT               ⚠️  só quando realmente genérico
 ERROR                       ❌

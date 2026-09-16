@@ -33,12 +33,12 @@ Rodam nesta ordem: o mais barato primeiro, para o feedback chegar rápido.
 | Preocupação | Backend | Web | Mobile |
 |---|---|---|---|
 | Formatação | Prettier | Prettier | `dart format` |
-| Lint | ESLint (flat config) | ESLint (flat config) | `dart analyze` + `custom_lint` |
+| Lint | ESLint (flat config) | ESLint (flat config) | `dart analyze` |
 | Tipagem | `tsc --noEmit` (strict) | `tsc --noEmit` (strict) | analyzer em modo strict |
-| Arquitetura | `dependency-cruiser` | `eslint-plugin-boundaries` | `import_lint` |
+| Arquitetura | `dependency-cruiser` | ESLint `no-restricted-imports` por escopo | `import_lint` |
 | Complexidade | SonarQube | SonarQube | SonarQube (plugin Dart) |
-| **Linhas repetidas** | SonarQube + `jscpd` | SonarQube + `jscpd` | SonarQube + `dart_code_metrics` |
-| Dependência vulnerável | `pnpm audit` + `osv-scanner` | idem | `dart pub outdated` + `osv-scanner` |
+| **Linhas repetidas** | SonarQube + `jscpd` | SonarQube + `jscpd` | SonarQube + `jscpd` (tokeniza Dart) |
+| Dependência vulnerável | `pnpm audit` | idem | `dart pub outdated` |
 | Segredo commitado | `gitleaks` | `gitleaks` | `gitleaks` |
 | Padrão inseguro | `semgrep` | `semgrep` | `semgrep` |
 
@@ -108,7 +108,7 @@ Cada regra estrutural desta documentação tem um verificador. **A violação qu
 | `identity-is-isolated` | SDK de provedor de identidade fora de `adapter/outbound/identity/` | [08](08-authentication.md) |
 | `no-test-in-src` | `*.spec.ts` dentro de `src/` | [06](06-testing-strategy.md) |
 
-### Web — `eslint-plugin-boundaries`
+### Web — ESLint `no-restricted-imports` por escopo
 
 | Regra | Proíbe | Documento |
 |---|---|---|
@@ -121,9 +121,14 @@ Cada regra estrutural desta documentação tem um verificador. **A violação qu
 
 | Regra | Proíbe |
 |---|---|
-| `domain-is-pure` | `flutter/*`, `dio`, `riverpod` em `domain/` |
-| `presentation-cannot-reach-data` | `presentation/` importando `data/` direto, sem passar pelo domínio |
-| `no-cross-feature-internals` | caminho profundo entre features |
+| `domain_is_pure_*` | `flutter/*`, `dio`, `riverpod`, `web_socket_channel` em `domain/` |
+| `presentation_cannot_reach_data` | `presentation/` importando `data/` direto, sem passar pelo domínio |
+| `no_cross_feature_internals_*` | caminho profundo entre features — só o barril |
+| `core_cannot_import_features` | `core/` conhecendo uma feature; a seta aponta sempre para `core/` |
+
+`import_lint` **lista as violações e sai 0 de qualquer jeito**. Ele roda atrás de
+`scripts/mobile.mjs arch`, que lê a saída e sai com a verdade — portão que não consegue
+reprovar é pior que portão nenhum.
 
 ### Regras comuns às três
 
@@ -184,7 +189,7 @@ validação de workspace**. Uma checagem replicada e corrigida pela metade é um
 |---|---|---|
 | Backend | SonarQube (CPD) + `jscpd` | 30 tokens / 5 linhas |
 | Web | SonarQube (CPD) + `jscpd` | 30 tokens / 5 linhas |
-| Mobile | SonarQube (plugin Dart) + `dart_code_metrics` | 30 tokens / 5 linhas |
+| Mobile | SonarQube (plugin Dart) + `jscpd` | 30 tokens / 5 linhas |
 
 `jscpd` roda também em pre-push, com saída rápida — é mais barato descobrir antes do PR.
 
@@ -228,7 +233,7 @@ formalidade:
 | Checagem | Alvo |
 |---|---|
 | `gitleaks` | segredo commitado — roda em **pre-commit** e no CI |
-| `pnpm audit` / `osv-scanner` | dependência vulnerável nos três módulos |
+| `pnpm audit` | dependência vulnerável, `high` para cima |
 | `semgrep` | path traversal, injeção de comando, uso inseguro de `child_process`, JWT com `alg` do token, SQL concatenado |
 | Regra própria | `allowDangerouslySkipPermissions` fora de `false`; `permissionMode: 'bypassPermissions'` como default |
 | **Regra própria** | **`query()` sem `settingSources: ['project']`** — omitir carrega o escopo `user` e desliga o `canUseTool` em silêncio; `[]` desliga o `CLAUDE.md` do projeto. Ver [ADR-011](00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) |
@@ -252,7 +257,7 @@ atualização de segurança em prioridade.
 | **Pre-push** | typecheck + unit + `jscpd` | evita CI vermelho por descuido |
 | **CI, todo push** | lint, typecheck, unit, cobertura, regras de arquitetura, i18n | |
 | **CI, todo PR** | tudo acima + integração + e2e + SonarQube + segurança | |
-| **Nightly** | `osv-scanner` completo, `semgrep` completo, `smoke-live` | checagem cara, fora do caminho crítico |
+| **Nightly** | `semgrep` completo e `smoke-live` | checagem cara, fora do caminho crítico |
 
 Pre-commit **não** roda a suíte inteira. Hook lento é hook que o time aprende a pular com
 `--no-verify`.

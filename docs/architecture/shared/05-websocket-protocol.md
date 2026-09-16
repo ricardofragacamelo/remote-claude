@@ -96,6 +96,7 @@ Regras:
 |---|---|---|
 | `connection.authenticate` | `{ token, locale, client }` | handshake |
 | `connection.reauthenticate` | `{ token }` | renova a credencial sem reabrir o socket |
+| `session.ping` | `{ sessionId?, nonce }` | fatia vertical do bootstrap: atravessa as camadas sem tocar no Agent SDK. Sem `sessionId`, abre uma sessão |
 | `session.start` | `{ workspacePath, model?, permissionMode?, resumeSessionId? }` | abre sessão |
 | `session.attach` | `{ sessionId }` | observa sessão existente |
 | `session.detach` | `{ sessionId }` | para de observar |
@@ -108,7 +109,11 @@ Regras:
 | `permission.resolve` | *(é `response`, não command — ver abaixo)* | |
 
 Todo comando recebe `ack` ou `error`. `ack` significa **aceito**, não **concluído** — o
-resultado chega como `event`.
+resultado chega como `event`. O ack genérico é `command.accepted { command }`; `session.attach`
+responde `session.attached { sessionId, replayed, oldestAvailableSeq, gap }`.
+
+**Ordem garantida:** o `ack` sai antes de qualquer frame causado pelo comando. Um cliente nunca vê
+o resultado antes de saber que o comando foi aceito.
 
 ---
 
@@ -130,6 +135,7 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `permission.resolved` | `{ requestId, decision, resolvedBy, auto }` | derivado |
 | `turn.completed` | `{ turnId, usage, costUsd, durationMs }` | `result` |
 | `session.closed` | `{ sessionId, reason }` | fim do generator |
+| `session.pong` | `{ sessionId, pingedAt, pingCount, nonce }` | resposta do `session.ping` do bootstrap |
 | `error` | envelope de erro | qualquer falha |
 
 **`seq` é obrigatório em todo `event`**, monotônico por sessão. É o que viabiliza o replay.
@@ -236,7 +242,7 @@ N connections podem observar 1 sessão. Todas recebem **todos** os eventos.
 | Ação | Quem pode |
 |---|---|
 | Observar eventos | toda connection com `session.attach` |
-| Enviar prompt | qualquer uma (serializado pelo backend; concorrente vira `409`) |
+| Enviar prompt | qualquer uma — um prompt que chega durante um turno é **enfileirado** e roda em seguida, como faz a UI do Claude Code ([R-02](../../plans/00-bootstrap/progress.md#decisões-tomadas-durante-a-execução)) |
 | Responder permissão | qualquer uma — vale a primeira |
 | Interromper | qualquer uma |
 | Fechar sessão | apenas o dono da sessão |

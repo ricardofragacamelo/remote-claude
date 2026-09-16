@@ -112,12 +112,13 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
 - **Estados:** `starting → idle → thinking → running → waitingPermission → idle → closed`
 - **Regras:** limite de sessões simultâneas derivado da RAM (**~222 MB por sessão**, medido);
   `close()` sempre executa, mesmo em erro — subprocesso vazado é vazamento de recurso real
-- **Prompt concorrente — decisão em aberto:** medido, o SDK **enfileira** um segundo prompt
-  enviado durante um turno, e o executa em seguida como um turno próprio, sem erro. Rejeitar
-  com `409` é política nossa, não limitação — e provavelmente a política errada: enfileirar é
-  exatamente o que a UI do Claude Code faz. Ver
+- **Prompt concorrente — enfileira**
+  ([R-02, decidido](../../plans/00-bootstrap/progress.md#decisões-tomadas-durante-a-execução)):
+  um prompt que chega durante um turno entra na fila e roda em seguida, como turno próprio. É o
+  que o SDK já faz nativamente, medido em spike, e é o comportamento da UI do Claude Code —
+  rejeitar com `409` era política nossa, e era a errada. Ver
   [descoberta §8.6](../../discovery/01-descoberta-claude-agent-sdk.md#86--segundo-prompt-durante-um-turno-é-enfileirado-pelo-sdk)
-- **Erros:** `SESSION_NOT_FOUND`, `SESSION_ALREADY_RUNNING`, `SESSION_LOCKED`,
+- **Erros:** `SESSION_NOT_FOUND`, `SESSION_LOCKED`,
   `SESSION_LIMIT_REACHED`, `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT`
 - Ver [04-claude-integration.md](04-claude-integration.md).
 

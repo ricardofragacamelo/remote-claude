@@ -14,7 +14,8 @@ Isso só acontece quando lint, tipagem, arquitetura, duplicação, unit, cobertu
 integração, e2e, segurança e contratos estiverem todos verdes. Ver
 [Definition of Done](../../architecture/shared/10-definition-of-done.md).
 
-Arquivos irmãos: [matriz de cenários](scenarios.md) · [progresso](progress.md).
+Arquivos irmãos: [matriz de cenários](scenarios.md) · [decisões em aberto](decisions.md) ·
+[progresso](progress.md).
 
 ---
 
@@ -83,11 +84,11 @@ verde.
 | F0 | [Fundação do monorepo](F0-foundation.md) | workspace, tooling, hooks, catálogo de comandos, scripts de apoio | B-01…B-06, B-48, B-49, B-52 | ✅ |
 | F1 | [Infraestrutura local](F1-infrastructure.md) | docker-compose, Keycloak, `start-local.mjs`, `clean.mjs` | B-07…B-10, B-50 | ✅ |
 | F2 | [Contratos](F2-contracts.md) | JSON Schema → TS e Dart | B-11…B-14 | ✅ |
-| F3 | [Backend esqueleto](F3-backend.md) | 4 camadas, health, WS, Drizzle, OIDC | B-15…B-23, B-51 | 🔲 |
-| F4 | [Web esqueleto](F4-web.md) | cadeia do front, shadcn, i18n, login | B-24…B-30 | 🔲 |
-| F5 | [Mobile esqueleto](F5-mobile.md) | Flutter, Riverpod, l10n, login | B-31…B-36 | 🔲 |
-| F6 | [Scripts e e2e](F6-scripts-e2e.md) | `run-e2e-local.mjs`, Playwright, e2e vertical | B-37…B-40 | 🔲 |
-| F7 | [Portões e CI](F7-gates-ci.md) | estática, cobertura, `verify`, pipeline | B-41…B-47 | 🔲 |
+| F3 | [Backend esqueleto](F3-backend.md) | 4 camadas, health, WS, Drizzle, OIDC | B-15…B-23, B-51 | ✅ |
+| F4 | [Web esqueleto](F4-web.md) | cadeia do front, shadcn, i18n, login | B-24…B-30 | ✅ |
+| F5 | [Mobile esqueleto](F5-mobile.md) | Flutter, Riverpod, l10n, login | B-31…B-36 | ✅ |
+| F6 | [Scripts e e2e](F6-scripts-e2e.md) | `run-e2e-local.mjs`, Playwright, e2e vertical | B-37…B-40 | ✅ |
+| F7 | [Portões e CI](F7-gates-ci.md) | estática, cobertura, `verify`, pipeline | B-41…B-47 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 
@@ -130,13 +131,18 @@ remote-claude/
 │
 ├── scripts/                       ← .mjs, executados direto pelo node
 │   ├── lib/                       ui, exec, ports, markdown, docs-graph, env-example,
-│   │                              plan-template, plan-progress, findFreePort, waitForHttp,
-│   │                              startProc, kill, compose, purge
+│   │                              plan-template, plan-progress, gates, verify, files,
+│   │                              lcov, i18n, import-lint, agent-sdk-rules, coverage,
+│   │                              findFreePort, waitForHttp, startProc, kill, compose,
+│   │                              local-stack (compose up + espera, compartilhado)
 │   ├── doctor.mjs                 pré-requisitos do ambiente
 │   ├── start-local.mjs            portas fixas, stack de desenvolvimento
-│   ├── run-e2e-local.mjs          portas aleatórias, efêmero, roda Playwright
+│   ├── run-e2e-local.mjs          portas aleatórias, efêmero, roda Playwright (ou o Flutter)
 │   ├── verify.mjs                 portões 1-7
 │   ├── verify-full.mjs            portões 1-11
+│   ├── verify-workspace.mjs       os portões 1-7 de um workspace só
+│   ├── mobile.mjs                 os portões do Flutter, com código de saída honesto
+│   ├── scan-security.mjs          segredo, dependência, padrão inseguro, regras do produto
 │   ├── contracts.mjs              gera TS e Dart; --check
 │   ├── i18n-check.mjs             paridade de chaves en ↔ pt-BR
 │   ├── docs-check.mjs             links, âncoras e documento órfão
@@ -149,10 +155,11 @@ remote-claude/
 ├── test/{unit,integration}/       ← scripts e configurações da raiz: lógica e contrato de saída
 ├── infra/keycloak/realm-remote-claude.json
 ├── packages/contracts/{schema,src,scripts}
+├── packages/config/src            recusa de ambiente inválido, compartilhada back ↔ web
 ├── backend/{src,test}
 ├── web/{src,test}
-├── mobile/{lib,test,integration_test}
-└── e2e/{specs,scenarios,fixtures}
+├── mobile/{lib,test,integration_test}   ← fora do workspace pnpm; ver ADR-007
+└── e2e/{specs,scenarios,fixtures,smoke-live}
 ```
 
 ### Por que `.mjs` e não `.ts` nos scripts
@@ -178,9 +185,12 @@ Todos em `.mjs`, executados direto pelo `node`, sem build.
 |---|---|---|---|
 | `doctor.mjs` | B-48 | verifica pré-requisitos: versão do node, pnpm, docker, flutter, portas livres | `pnpm doctor` |
 | `start-local.mjs` | B-10 | sobe a stack de desenvolvimento, portas fixas | `pnpm dev` |
-| `run-e2e-local.mjs` | B-37 | sobe stack efêmera, roda e2e, derruba tudo | `pnpm test:e2e` |
+| `run-e2e-local.mjs` | B-37 | sobe stack efêmera, roda e2e, derruba tudo | `pnpm test:e2e` · `:mobile` |
 | `verify.mjs` | B-46 | portões 1-7 | `pnpm verify` |
 | `verify-full.mjs` | B-46 | portões 1-11 | `pnpm verify:full` |
+| `mobile.mjs` | B-41, B-42, B-40 | os portões do Flutter com **código de saída honesto**: `format`, `format:check`, `analyze`, `arch`, `test:unit`, `test:widget`, `coverage`, `test:e2e` | `node scripts/mobile.mjs arch` |
+| `scan-security.mjs` | B-44 | segredo, dependência vulnerável, padrão inseguro e as regras próprias do produto | `pnpm scan:security` |
+| `verify-workspace.mjs` | B-15, B-24 | os mesmos portões, de um workspace só, parando no primeiro vermelho | `pnpm --filter backend verify` |
 | `contracts.mjs` | B-12…B-14 | gera TS e Dart do schema; `--check` falha se dessincronizado | `pnpm contracts:generate` · `:check` |
 | `i18n-check.mjs` | B-45 | paridade de chaves, órfãs, params entre idiomas | `pnpm i18n:check` |
 | `docs-check.mjs` | B-49 | links e âncoras internas quebradas, documento órfão do índice | `pnpm docs:check` |
@@ -229,10 +239,12 @@ de pé, e duas suítes em paralelo no CI.
 | # | Assunto | Estado |
 |---|---|---|
 | R-01 | `allow` de projeto em diretório confiado pode furar o `canUseTool` | **aberto** — verificar antes de produção ([§8.2](../../discovery/01-descoberta-claude-agent-sdk.md#82--a-assimetria-allow-vs-deny-entre-escopos)) |
-| R-02 | `SESSION_ALREADY_RUNNING` (409) vs enfileirar o prompt | **aberto** — o SDK enfileira nativamente ([§8.6](../../discovery/01-descoberta-claude-agent-sdk.md#86--segundo-prompt-durante-um-turno-é-enfileirado-pelo-sdk)); decidir antes da F3 |
+| R-02 | Prompt concorrente: rejeitar ou enfileirar | **decidido** — enfileira, como o SDK já faz ([§8.6](../../discovery/01-descoberta-claude-agent-sdk.md#86--segundo-prompt-durante-um-turno-é-enfileirado-pelo-sdk)). `SESSION_ALREADY_RUNNING` saiu do catálogo |
 | R-03 | Cobertura de 90 % desde o primeiro commit | risco de teste de fachada para bater número — [cobertura não é qualidade](../../architecture/shared/06-testing-strategy.md#cobertura-não-é-qualidade) |
 | R-04 | Flutter fora do workspace pnpm | **mitigado** — B-14 entregue, `pnpm contracts:check` cobre os dois alvos |
 | R-05 | Docker obrigatório no CI e no dev | testcontainers e compose não têm alternativa; aceito |
+| R-06 | Cobertura do Flutter só mede **linhas** | **aceito e registrado** — o `lcov.info` do `package:coverage` só carrega `DA`; `branches` e `functions` não existem para medir nesta ponta ([progresso](progress.md#escopo-reduzido-ou-adiado)) |
+| R-07 | e2e do mobile fora do portão obrigatório | **decidido** — emulador + build Gradle custa minutos e gigabytes, e a primeira execução inviabilizou a máquina. `pnpm test:e2e:mobile` roda sob demanda; ver [F6](F6-scripts-e2e.md#o-e2e-do-mobile-não-é-portão) |
 
 ---
 

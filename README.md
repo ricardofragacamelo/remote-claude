@@ -88,7 +88,7 @@ A documentação é fragmentada de propósito, com índices que roteiam por situ
 | Node | ≥ 22 |
 | pnpm | ≥ 9 |
 | Docker | rodando, com Compose v2 — serve tanto o plugin `docker compose` quanto o binário `docker-compose` |
-| Flutter | estável, só para o app mobile |
+| Flutter | 3.44+ — o módulo `mobile/` faz parte dos portões, não é opcional |
 
 ```bash
 pnpm doctor            # verifica tudo acima e as portas fixas — RODE ISTO PRIMEIRO
@@ -121,7 +121,9 @@ silencioso.
 |---|---|
 | `pnpm dev` | sobe a stack de desenvolvimento em **portas fixas** |
 | `pnpm db reset` | derruba, recria, migra e popula — a sequência que ninguém lembra na ordem certa |
-| `pnpm db seed` | só popula |
+| `pnpm db seed` | só popula; rodar duas vezes não muda nada |
+| `pnpm --filter backend verify` | os portões 1-7 só do backend — o ciclo curto enquanto se mexe nele |
+| `pnpm --filter web verify` | os mesmos, só do web |
 | `pnpm clean` | purga projetos e **volumes docker órfãos**, `dist/`, `coverage/`, relatórios |
 
 `pnpm dev` deixa de pé:
@@ -131,8 +133,8 @@ PostgreSQL  localhost:5432        Backend  http://localhost:3000
 Keycloak    http://localhost:8180 Web      http://localhost:5173
 ```
 
-Enquanto `backend/` e `web/` não existirem (F3 e F4), ele sobe a metade que existe e diz
-`not created yet` na outra — em vez de falhar num diretório ausente.
+Um workspace que ainda não existe — o Flutter, hoje — faz o script dizer `not created yet` e
+subir o resto, em vez de falhar num diretório ausente.
 
 Porta ocupada não é caso raro: cada uma sai de uma variável (`RC_POSTGRES_PORT` e companhia),
 e `pnpm doctor` avisa **antes** de você descobrir pelo erro do compose.
@@ -174,15 +176,27 @@ Isso não é entregar; é esconder.
 | `pnpm test:unit` | unit das três pontas **e dos scripts de `scripts/`** — rápido, sem I/O |
 | `pnpm test:integration` | **exige Docker**: Postgres real via testcontainers, nunca SQLite, nunca mock; e o contrato de saída dos scripts de `scripts/` |
 | `pnpm test:e2e` | sobe stack **efêmera em portas aleatórias**, roda Playwright, derruba tudo |
+| `pnpm test:e2e:mobile` | a mesma stack, com o `integration_test` do Flutter — **exige emulador**, e não é portão |
 | `pnpm test:coverage` | mínimo **90 % em statements, branches, functions e lines — por arquivo** |
 | `cd mobile && flutter test` | unit e widget do app |
-| `cd mobile && flutter test integration_test` | e2e do app, exige emulador |
 
 `pnpm test:e2e` sai com o **código dos testes**, não com 0 fixo — senão o CI fica verde com
 teste vermelho. E pode rodar com o `pnpm dev` de pé, porque usa portas aleatórias e um projeto
 compose próprio.
 
+O e2e do **mobile** é o mesmo cenário no app real, e roda por `pnpm test:e2e:mobile`. Ele está
+fora do `pnpm verify:full` e fora do CI de pull request de propósito: emulador mais build Gradle
+custa minutos e gigabytes, e verificação cara demais para caber no ciclo é verificação que
+alguém desliga. Está declarado em vez de escondido —
+[por quê](docs/architecture/shared/06-testing-strategy.md#por-que-o-e2e-de-mobile-não-bloqueia).
+Nenhum dos dois se auto-pula: sem navegador ou sem device, cada um **falha**.
+
 Na cobertura não há média que compense: um arquivo em 70 % não é salvo por outro em 99 %.
+
+No Flutter a barra é sobre **linhas**, e só sobre linhas: o `lcov.info` que o
+`package:coverage` escreve carrega `DA` e nada mais — não há `BRDA` nem `FN`, então `branches`
+e `functions` não existem para medir nesta ponta. Está registrado no
+[progresso do bootstrap](docs/plans/00-bootstrap/progress.md), não escondido.
 
 ### Qualidade, individualmente
 
@@ -194,11 +208,25 @@ Na cobertura não há média que compense: um arquivo em 70 % não é salvo por 
 | `pnpm typecheck` | `tsc --noEmit` strict — sem `any`, sem `dynamic` |
 | `pnpm format` / `format:check` | Prettier e `dart format` |
 | `pnpm scan:secrets` | `gitleaks` sobre o repositório; `--staged` só sobre o que está no índice |
-| `pnpm scan:security` | `gitleaks`, `semgrep`, scanner de dependência |
+| `pnpm scan:security` | segredo, dependência vulnerável, padrão inseguro **e as regras do produto** |
+| `pnpm i18n:check` | paridade de chaves `en` ↔ `pt-BR`, chave órfã, params que não sobrevivem à tradução |
+| `node scripts/mobile.mjs <tarefa>` | os mesmos portões só do Flutter: `format`, `format:check`, `analyze`, `arch`, `test:unit`, `test:widget`, `coverage`, `test:e2e` |
 
 `pnpm scan:secrets` é o que o hook de pre-commit roda. Se o `gitleaks` não estiver instalado,
 ele cai na imagem oficial via Docker — que já é pré-requisito do projeto. Não existindo nenhum
-dos dois, **falha**: portão que se pula sozinho não é portão.
+dos dois, **falha**: portão que se pula sozinho não é portão. O `scan:security` usa o mesmo
+padrão para o `semgrep`.
+
+As **regras do produto** do `scan:security` não existem em nenhum scanner genérico: `query()`
+sem `settingSources: ['project']`, `query()` sem o hook `PreToolUse`,
+`allowDangerouslySkipPermissions` diferente de `false` e `permissionMode: 'bypassPermissions'`.
+Cada uma delas abre um furo **em silêncio** — sem erro, sem aviso — e por isso a regra existe
+antes do código que ela protege.
+
+O `scripts/mobile.mjs` existe porque o ferramental Dart não devolve código de saída honesto:
+`import_lint` lista as violações e **sai 0 de qualquer jeito**, e `flutter test --coverage`
+escreve um relatório que nada lê. Cada portão do Flutter passa por um invólucro que lê a saída
+e sai com a verdade.
 
 ### Contratos e tradução
 
@@ -216,11 +244,20 @@ então este portão é o único que o protege.
 | Comando | Faz |
 |---|---|
 | `pnpm docs:check` | link quebrado, âncora inexistente, documento fora do índice |
-| `pnpm plan new <nome>` | cria pasta de plano no formato normativo |
-| `pnpm plan progress` | recalcula os contadores do `progress.md` |
+| `pnpm plan new <nome>` | cria pasta de plano no formato normativo, já indexada e no progresso geral |
+| `pnpm plan progress` | recalcula os contadores do `progress.md` do plano **e** do progresso geral |
 
 `docs:check` existe porque nenhum outro portão pega isso, e a documentação **é** a interface
 do agente de IA com o projeto: um índice desatualizado a torna inútil em silêncio.
+
+### Integração contínua
+
+`.github/workflows/ci.yml` roda **os mesmos comandos** desta seção: `pnpm verify` em todo push,
+`pnpm verify:full` em pull request e à noite. Portão que só existe no arquivo de workflow é
+portão que ninguém consegue reproduzir quando fica vermelho.
+
+`smoke-live` — contra o Claude real — **não roda em PR**: é lento, não é hermético, e um flake
+ali ensina o time a ignorar build vermelho.
 
 ### Sobre adicionar comandos
 

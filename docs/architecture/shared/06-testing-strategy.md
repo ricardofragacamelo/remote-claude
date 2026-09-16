@@ -140,7 +140,9 @@ Fica em `e2e/`, na raiz.
 
 > O e2e de mobile não cabe em `e2e/`: exige emulador e toolchain Dart. Fica em
 > `mobile/integration_test/`, mas os **cenários** são escritos em `e2e/scenarios/` e
-> compartilhados, para que web e mobile testem o mesmo comportamento.
+> compartilhados, para que web e mobile testem o mesmo comportamento. Eles viajam até o app por
+> `--dart-define`, não por leitura de arquivo: num device não existe repositório para ler.
+> Ele **não é portão obrigatório** — ver [por quê](#por-que-o-e2e-de-mobile-não-bloqueia).
 
 **E2E não usa o Claude de verdade.** O Agent SDK é substituído por um fake roteirizado.
 Teste e2e precisa ser determinístico; o Claude não é — e cada execução custa dinheiro.
@@ -202,8 +204,17 @@ coverage: {
 }
 ```
 
-No Flutter, o equivalente é `flutter test --coverage` com verificação do `lcov.info` no CI,
-nas mesmas quatro dimensões.
+No Flutter, o equivalente é `flutter test --coverage` com verificação do `lcov.info` —
+`node scripts/mobile.mjs coverage`, que lê o relatório e sai com a verdade, porque o
+`flutter test` sozinho escreve o arquivo e para por aí.
+
+**Nesta ponta a barra é sobre `lines`, e só.** O `lcov.info` que o `package:coverage` escreve
+carrega registros `DA` e nada mais: não há `BRDA` nem `FN`, então `branches` e `functions` não
+existem para medir em Dart. Está registrado como risco R-06 do
+[plano de bootstrap](../../plans/00-bootstrap/README.md#riscos-e-decisões-em-aberto), não
+escondido — e o que compensa a falta é a
+[matriz de cenários](../../plans/00-bootstrap/scenarios.md): é ela, não o número, que garante
+que o caminho de erro foi exercitado.
 
 ### A cobertura é medida sobre unit + integração juntos
 
@@ -275,7 +286,21 @@ Escrever teste onde não há risco só cria custo de manutenção:
 | Cobertura ≥ 90 % em 4 dimensões, por arquivo | todo push | sim |
 | Integração (testcontainers) | todo PR | sim |
 | E2E web + API | todo PR | sim |
-| E2E mobile | PR que toca `mobile/` | sim |
+| E2E mobile | sob demanda (`pnpm test:e2e:mobile`) | **não** — ver abaixo |
 | Paridade de chaves i18n | todo push | sim |
 | Contrato WS ↔ Dart gerado | todo push | sim |
 | `smoke-live` contra o Claude real | nightly + manual | não (abre issue) |
+
+### Por que o e2e de mobile não bloqueia
+
+Ele **existe**, é escrito, e roda com um comando: `pnpm test:e2e:mobile` sobe a mesma stack
+efêmera e executa o `integration_test` contra ela. O que ele não é, é obrigatório.
+
+Emulador mais build Gradle custa minutos e gigabytes por execução — o suficiente para inviabilizar
+a máquina de quem está desenvolvendo. Verificação cara demais para caber no ciclo de correção é
+verificação que alguém acaba desligando, e portão desligado é pior que portão declarado opcional.
+Está declarado, com o custo dito: [R-07 do plano de bootstrap](../../plans/00-bootstrap/README.md#riscos-e-decisões-em-aberto).
+
+O que compensa a falta: o mesmo cenário roda no navegador, contra o mesmo backend, em todo PR —
+e os **cenários** são um arquivo só, lido pelas duas pontas ([`e2e/scenarios/`](#e2e--o-sistema-inteiro-pela-porta-do-usuário)),
+de modo que uma expectativa nova chega às duas de uma vez.
