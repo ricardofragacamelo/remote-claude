@@ -1,0 +1,60 @@
+{
+  "common": {
+    "action": {
+      "retry": "Try again"
+    },
+    "error": {
+      "unexpected": "Something went wrong on our side.",
+      "offline": "The backend could not be reached.",
+      "invalidInput": "The request was not valid.",
+      "notFound": "That does not exist.",
+      "forbidden": "You are not allowed to do that.",
+      "payloadTooLarge": "That is larger than the server accepts.",
+      "rateLimited": "Too many requests. Try again in a moment.",
+      "traceLabel": "Trace {{traceId}}"
+    }
+  },
+  "auth": {
+    "error": {
+      "unauthenticated": "Please sign in again.",
+      "tokenExpired": "Your session expired.",
+      "invalidState": "The sign-in reply did not match the request."
+    },
+    "signIn": {
+      "title": "Sign in to continue",
+      "description": "remote-claude runs Claude Code on your own machine, so it asks who you are first.",
+      "action": "Sign in"
+    },
+    "callback": {
+      "pending": "Finishing sign-in…"
+    }
+  },
+  "connection": {
+    "error": {
+      "unsupportedVersion": "This build speaks an older protocol. Update the app."
+    },
+    "status": {
+      "idle": "Not connected",
+      "connecting": "Connecting…",
+      "ready": "Connected",
+      "reconnecting": "Reconnecting…",
+      "closed": "Disconnected"
+    }
+  },
+  "session": {
+    "error": {
+      "notFound": "That session no longer exists.",
+      "invalidSessionId": "{{sessionId}} is not a session identifier."
+    },
+    "ping": {
+      "title": "Round trip",
+      "description": "One command across every layer: the gateway, the use case, the rule, the database and back as an event.",
+      "action": "Send ping",
+      "pending": "Waiting for the pong…",
+      "empty": "No round trip yet. Send one to see the whole chain work.",
+      "result": "Pong {{count}} at {{at}}",
+      "sequence": "Sequence {{seq}}",
+      "sessionLabel": "Session {{sessionId}}"
+    }
+  }
+}

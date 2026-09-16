@@ -1,0 +1,60 @@
+{
+  "common": {
+    "action": {
+      "retry": "Tentar de novo"
+    },
+    "error": {
+      "unexpected": "Algo deu errado do nosso lado.",
+      "offline": "Não foi possível falar com o backend.",
+      "invalidInput": "A requisição não era válida.",
+      "notFound": "Isso não existe.",
+      "forbidden": "Você não tem permissão para isso.",
+      "payloadTooLarge": "Isso é maior do que o servidor aceita.",
+      "rateLimited": "Requisições demais. Tente de novo em instantes.",
+      "traceLabel": "Rastreio {{traceId}}"
+    }
+  },
+  "auth": {
+    "error": {
+      "unauthenticated": "Entre novamente, por favor.",
+      "tokenExpired": "Sua sessão expirou.",
+      "invalidState": "A resposta do login não corresponde ao pedido."
+    },
+    "signIn": {
+      "title": "Entre para continuar",
+      "description": "O remote-claude executa o Claude Code na sua própria máquina, por isso pergunta quem é você antes.",
+      "action": "Entrar"
+    },
+    "callback": {
+      "pending": "Concluindo o login…"
+    }
+  },
+  "connection": {
+    "error": {
+      "unsupportedVersion": "Esta versão fala um protocolo antigo. Atualize o aplicativo."
+    },
+    "status": {
+      "idle": "Sem conexão",
+      "connecting": "Conectando…",
+      "ready": "Conectado",
+      "reconnecting": "Reconectando…",
+      "closed": "Desconectado"
+    }
+  },
+  "session": {
+    "error": {
+      "notFound": "Essa sessão não existe mais.",
+      "invalidSessionId": "{{sessionId}} não é um identificador de sessão."
+    },
+    "ping": {
+      "title": "Ida e volta",
+      "description": "Um comando por todas as camadas: o gateway, o caso de uso, a regra, o banco e a volta como evento.",
+      "action": "Enviar ping",
+      "pending": "Aguardando o pong…",
+      "empty": "Nenhuma ida e volta ainda. Envie uma para ver a cadeia inteira funcionar.",
+      "result": "Pong {{count}} às {{at}}",
+      "sequence": "Sequência {{seq}}",
+      "sessionLabel": "Sessão {{sessionId}}"
+    }
+  }
+}

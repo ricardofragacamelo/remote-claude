@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+
+  // Same two reasons as the backend, for a different runtime: the inherited aliases need a local
+  // baseUrl, and `Preserve` is the module setting a bundler understands. Vite resolves the
+  // specifiers; nothing here is ever fed to node directly.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "module": "Preserve",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+
+    // The two runner configs read the coverage bar from `scripts/lib/coverage.mjs`, which runs
+    // without a build like every other script. Allowing JS is what lets the type checker see it.
+    "allowJs": true,
+    "checkJs": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "test/**/*.ts",
+    "test/**/*.tsx",
+    "*.ts",
+    "../scripts/lib/coverage.mjs"
+  ]
+}

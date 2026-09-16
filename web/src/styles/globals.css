@@ -1,0 +1,77 @@
+@import 'tailwindcss';
+
+/*
+ * Theme tokens.
+ *
+ * Every colour is a **role**, never a shade: `--destructive`, not `--red-500`. A literal colour in
+ * a component breaks the dark theme and makes a rebrand a search-and-replace across the codebase.
+ *
+ * The two themes define the **same** variables. A colour that exists only under `.dark` is a
+ * colour that disappears in light mode — see docs/architecture/web/03-ui-system.md.
+ * Dark is not optional here: this is a developer tool.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --radius-lg: var(--radius);
+}
+
+:root {
+  --background: oklch(99% 0 0);
+  --foreground: oklch(20% 0.01 260);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(20% 0.01 260);
+  --muted: oklch(96% 0.005 260);
+  --muted-foreground: oklch(50% 0.015 260);
+  --primary: oklch(55% 0.16 265);
+  --primary-foreground: oklch(99% 0 0);
+  --destructive: oklch(55% 0.21 27);
+  --destructive-foreground: oklch(99% 0 0);
+  --border: oklch(90% 0.008 260);
+  --ring: oklch(55% 0.16 265);
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: oklch(17% 0.01 260);
+  --foreground: oklch(96% 0.005 260);
+  --card: oklch(21% 0.012 260);
+  --card-foreground: oklch(96% 0.005 260);
+  --muted: oklch(26% 0.012 260);
+  --muted-foreground: oklch(70% 0.015 260);
+  --primary: oklch(70% 0.14 265);
+  --primary-foreground: oklch(17% 0.01 260);
+  --destructive: oklch(65% 0.19 27);
+  --destructive-foreground: oklch(17% 0.01 260);
+  --border: oklch(30% 0.012 260);
+  --ring: oklch(70% 0.14 265);
+  --radius: 0.625rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /* An invisible focus ring in a dialog that authorises shell commands is a real hazard. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
