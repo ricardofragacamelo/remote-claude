@@ -33,13 +33,18 @@ export function meetsMinimum(raw, minimum) {
     return false;
   }
 
-  for (let index = 0; index < 3; index += 1) {
-    const left = actual[index] ?? 0;
-    const right = required[index] ?? 0;
-    if (left !== right) {
-      return left > right;
-    }
+  // Destructured rather than indexed in a loop: both are triples by construction, and an index
+  // would need a `?? 0` for a position that cannot be missing — a branch nothing can ever take.
+  const [major, minor, patch] = actual;
+  const [minMajor, minMinor, minPatch] = required;
+
+  if (major !== minMajor) {
+    return major > minMajor;
   }
 
-  return true;
+  if (minor !== minMinor) {
+    return minor > minMinor;
+  }
+
+  return patch >= minPatch;
 }

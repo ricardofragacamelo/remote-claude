@@ -16,15 +16,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
 
+import { repoRoot } from './lib/paths.mjs';
 import { purgeStaleProjects, resolveComposeCli } from './lib/compose.mjs';
 import { findDisposable } from './lib/disposable.mjs';
 import { run } from './lib/exec.mjs';
 import { PROJECT_PREFIX, projectName } from './lib/stack.mjs';
 import { dim, fail, hint, info, line, ok, title, warn } from './lib/ui.mjs';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dryRun = process.argv.includes('--dry-run');
 const project = projectName(process.env);
 

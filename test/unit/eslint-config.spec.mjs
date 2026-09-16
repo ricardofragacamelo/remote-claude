@@ -2,7 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ESLint } from 'eslint';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 /**
  * The lint rules of docs/architecture/shared/09-code-quality.md, exercised against the real
@@ -17,8 +17,17 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 /** @type {ESLint} */
 let eslint;
 
-beforeAll(() => {
+// Resolving the flat configuration costs several seconds, and it happens on the **first** lint,
+// not in the constructor — so without a warm-up here the first `it` pays for it and trips the
+// default 5 s deadline. A test whose result depends on which one ran first is flaky by
+// construction; see cycle 26 in docs/plans/00-bootstrap/progress.md.
+vi.setConfig({ hookTimeout: 120_000 });
+
+beforeAll(async () => {
   eslint = new ESLint({ cwd: repoRoot });
+  await eslint.lintText('export const warmUp = 1;\n', {
+    filePath: path.join(repoRoot, 'web/src/warm-up.ts'),
+  });
 });
 
 /**

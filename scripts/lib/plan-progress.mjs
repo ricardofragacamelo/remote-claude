@@ -3,7 +3,7 @@
  *
  * The counters used to be kept by hand, which is the same as saying they were wrong. The source
  * of truth is the state marker at the end of each `### B-nn` heading, and the state column of
- * `scenarios.md`.
+ * `scenarios.md` and `decisions.md`.
  *
  * Every function here is a pure string transformation, so the suite can drive it without a
  * plan on disk.
@@ -11,6 +11,7 @@
 
 const TASK_HEADING = /^###\s+(B-\d+)\b(.*)$/;
 const SCENARIO_ROW = /^\|\s*(S-\d+)\s*\|.*\|\s*([⬜🟡✅⛔])\s*\|\s*$/u;
+const DECISION_ROW = /^\|\s*(D-\d+)\s*\|.*\|\s*([🔲🔄✅⛔])\s*\|\s*$/u;
 const TASK_STATES = ['🔲', '🔄', '✅', '⛔'];
 const SCENARIO_STATES = ['⬜', '🟡', '✅', '⛔'];
 const BAR_WIDTH = 20;
@@ -21,6 +22,15 @@ const PHASE_LABEL = {
   '🔄': 'em andamento',
   '✅': 'concluída',
   '⛔': 'bloqueada',
+};
+
+/** The same four states, agreeing with "plano" instead of "fase". */
+/** @type {Record<string, string>} */
+const PLAN_LABEL = {
+  '🔲': 'não iniciado',
+  '🔄': 'em andamento',
+  '✅': 'concluído',
+  '⛔': 'bloqueado',
 };
 
 /**
@@ -46,7 +56,14 @@ const PHASE_LABEL = {
  * @property {number} taskDone
  * @property {string} taskRange
  * @property {string} state
- * @property {{ total: number, counts: Record<string, number> }} scenarios
+ * @property {Tally} scenarios
+ * @property {Tally} decisions
+ */
+
+/**
+ * @typedef {object} Tally
+ * @property {number} total
+ * @property {Record<string, number>} counts how many are in each state
  */
 
 /**
@@ -66,43 +83,74 @@ export function parseTasks(content) {
       continue;
     }
 
-    const title = (heading[2] ?? '').trim();
+    // Both groups of TASK_HEADING are mandatory, so a match always fills them; a `?? ''` here
+    // would be a branch nothing can take, and an untakeable branch is a lie in the report.
+    const title = String(heading[2]).trim();
     const marker = TASK_STATES.find((state) => title.endsWith(state));
-    tasks.push({ id: heading[1] ?? '', state: marker ?? '🔲' });
+    tasks.push({ id: String(heading[1]), state: marker ?? '🔲' });
   }
 
   return tasks;
 }
 
 /**
- * Scenario counts, taken from the state column of the matrix.
+ * How many rows of a table are in each state, counting an ID only once.
+ *
+ * Both matrices of a plan — the scenarios and the open decisions — are one row per ID with the
+ * state in the last column, so one counter serves the two.
  *
  * @param {string} content
- * @returns {{ total: number, counts: Record<string, number> }}
+ * @param {RegExp} rowPattern captures the ID and the state
+ * @param {readonly string[]} states every state the table can carry
+ * @returns {Tally}
  */
-export function parseScenarios(content) {
+function countByState(content, rowPattern, states) {
   /** @type {Record<string, number>} */
-  const counts = Object.fromEntries(SCENARIO_STATES.map((state) => [state, 0]));
+  const counts = Object.fromEntries(states.map((state) => [state, 0]));
   /** @type {Set<string>} */
   const seen = new Set();
 
   for (const rawLine of content.split('\n')) {
-    const row = SCENARIO_ROW.exec(rawLine);
+    const row = rowPattern.exec(rawLine);
     if (row === null) {
       continue;
     }
 
-    const id = row[1] ?? '';
+    const id = String(row[1]);
     if (seen.has(id)) {
       continue;
     }
     seen.add(id);
 
-    const state = row[2] ?? '⬜';
-    counts[state] = (counts[state] ?? 0) + 1;
+    // The row matched, so the state is one of `states`, and `counts` was seeded with all of them.
+    const state = String(row[2]);
+    counts[state] = Number(counts[state]) + 1;
   }
 
   return { total: seen.size, counts };
+}
+
+/**
+ * Scenario counts, taken from the state column of the matrix.
+ *
+ * @param {string} content
+ * @returns {Tally}
+ */
+export function parseScenarios(content) {
+  return countByState(content, SCENARIO_ROW, SCENARIO_STATES);
+}
+
+/**
+ * Decision counts, taken from the state column of `decisions.md`.
+ *
+ * A decision nobody tracks is a decision taken by default, and by omission — which is how a
+ * plan starts building on an answer nobody gave.
+ *
+ * @param {string} content
+ * @returns {Tally}
+ */
+export function parseDecisions(content) {
+  return countByState(content, DECISION_ROW, TASK_STATES);
 }
 
 /**
@@ -145,7 +193,9 @@ export function formatTaskRange(ids) {
 
   /** @type {string[]} */
   const parts = [];
-  let start = numbers[0] ?? 0;
+  // The empty case returned above, so there is a first number; a `?? 0` here would be a branch
+  // nothing can take.
+  let start = Number(numbers[0]);
   let previous = start;
 
   for (const value of numbers.slice(1)) {
@@ -163,17 +213,20 @@ export function formatTaskRange(ids) {
 }
 
 /**
- * @param {readonly Task[]} tasks
+ * The state of a whole from the state of its parts — of a phase from its tasks, and of the
+ * project from its plans. Blocked wins; done requires everyone; anything started is ongoing.
+ *
+ * @param {ReadonlyArray<{ state: string }>} parts
  * @returns {string}
  */
-function stateOf(tasks) {
-  if (tasks.some((task) => task.state === '⛔')) {
+function stateOf(parts) {
+  if (parts.some((part) => part.state === '⛔')) {
     return '⛔';
   }
-  if (tasks.length > 0 && tasks.every((task) => task.state === '✅')) {
+  if (parts.length > 0 && parts.every((part) => part.state === '✅')) {
     return '✅';
   }
-  if (tasks.some((task) => task.state !== '🔲')) {
+  if (parts.some((part) => part.state !== '🔲')) {
     return '🔄';
   }
   return '🔲';
@@ -182,9 +235,10 @@ function stateOf(tasks) {
 /**
  * @param {ReadonlyArray<{ index: number, file: string, content: string }>} phaseFiles
  * @param {string} scenariosContent
+ * @param {string} [decisionsContent] `decisions.md`, when the plan already has one
  * @returns {PlanSummary}
  */
-export function summarizePlan(phaseFiles, scenariosContent) {
+export function summarizePlan(phaseFiles, scenariosContent, decisionsContent = '') {
   const phases = phaseFiles
     .map((phase) => {
       const tasks = parseTasks(phase.content);
@@ -208,6 +262,7 @@ export function summarizePlan(phaseFiles, scenariosContent) {
     taskRange: formatTaskRange(allTasks.map((task) => task.id)),
     state: stateOf(allTasks),
     scenarios: parseScenarios(scenariosContent),
+    decisions: parseDecisions(decisionsContent),
   };
 }
 
@@ -223,17 +278,101 @@ function progressBar(done, total) {
 }
 
 /**
- * @param {PlanSummary} summary
+ * @typedef {object} BarRow
+ * @property {string} label what the bar is about, e.g. `F3` or `01-live-session`
+ * @property {number} done
+ * @property {number} total
+ * @property {string} state one of 🔲 🔄 ✅ ⛔
+ * @property {string} stateLabel the state in words
+ */
+
+/**
+ * One bar per row, aligned by the widest label.
+ *
+ * @param {readonly BarRow[]} rows
  * @returns {string}
  */
-function barsBlock(summary) {
-  return summary.phases
-    .map((phase) => {
-      const { bar, percent } = progressBar(phase.done, phase.tasks.length);
+function barsBlock(rows) {
+  const width = rows.reduce((widest, row) => Math.max(widest, row.label.length), 0);
+
+  return rows
+    .map((row) => {
+      const { bar, percent } = progressBar(row.done, row.total);
       const percentLabel = `${String(percent).padStart(3, ' ')}%`;
-      return `F${phase.index} ${bar} ${percentLabel}   ${phase.state} ${PHASE_LABEL[phase.state] ?? ''}`;
+
+      return `${row.label.padEnd(width)} ${bar} ${percentLabel}   ${row.state} ${row.stateLabel}`;
     })
     .join('\n');
+}
+
+/**
+ * @param {PlanSummary} summary
+ * @returns {BarRow[]}
+ */
+function phaseBars(summary) {
+  return summary.phases.map((phase) => ({
+    label: `F${phase.index}`,
+    done: phase.done,
+    total: phase.tasks.length,
+    state: phase.state,
+    // `stateOf` answers one of the four states, and PHASE_LABEL carries all four.
+    stateLabel: String(PHASE_LABEL[phase.state]),
+  }));
+}
+
+/**
+ * `| [Matriz](scenarios.md) | 8 | 1 | 0 | 7 | 0 |`
+ *
+ * @param {string} link the first cell, already in Markdown
+ * @param {Tally} tally
+ * @param {readonly string[]} states the column order
+ * @returns {string}
+ */
+function countsRow(link, tally, states) {
+  // `countByState` seeds every state, so each of these is a number.
+  const cells = states.map((state) => Number(tally.counts[state])).join(' | ');
+
+  return `| ${link} | ${tally.total} | ${cells} |`;
+}
+
+/**
+ * A rewriter over one progress document, collecting the anchors it could not find.
+ *
+ * The plan's `progress.md` and the general one are rewritten the same way: a handful of
+ * anchored replacements, and a refusal to half-update when an anchor is gone.
+ *
+ * @param {string} content
+ * @param {string} what the document, for the error message
+ */
+function rewriterOf(content, what) {
+  /** @type {string[]} */
+  const missing = [];
+  let result = content;
+
+  return {
+    /**
+     * @param {RegExp} pattern
+     * @param {string} replacement
+     * @param {string} anchor
+     */
+    replace(pattern, replacement, anchor) {
+      if (!pattern.test(result)) {
+        missing.push(anchor);
+        return;
+      }
+      result = result.replace(pattern, replacement);
+    },
+
+    /** @returns {string} */
+    finish() {
+      if (missing.length > 0) {
+        throw new Error(
+          `${what} is not in the normative format — could not find: ${missing.join(', ')}`,
+        );
+      }
+      return result;
+    },
+  };
 }
 
 /**
@@ -248,22 +387,8 @@ function barsBlock(summary) {
  * @returns {string}
  */
 export function applyProgress(content, summary, options) {
-  /** @type {string[]} */
-  const missing = [];
-  let result = content;
-
-  /**
-   * @param {RegExp} pattern
-   * @param {string} replacement
-   * @param {string} what
-   */
-  const replaceOnce = (pattern, replacement, what) => {
-    if (!pattern.test(result)) {
-      missing.push(what);
-      return;
-    }
-    result = result.replace(pattern, replacement);
-  };
+  const rewriter = rewriterOf(content, 'progress.md');
+  const replaceOnce = rewriter.replace;
 
   replaceOnce(
     /^\*\*Última atualização:\*\*.*$/m,
@@ -273,7 +398,7 @@ export function applyProgress(content, summary, options) {
 
   replaceOnce(
     /(## Estado atual[\s\S]*?```\n)[\s\S]*?(\n```)/,
-    `$1${barsBlock(summary)}$2`,
+    `$1${barsBlock(phaseBars(summary))}$2`,
     'progress bar block under "Estado atual"',
   );
 
@@ -292,18 +417,155 @@ export function applyProgress(content, summary, options) {
     'total row',
   );
 
-  const { counts, total } = summary.scenarios;
   replaceOnce(
     /^\|\s*\[Matriz\]\(scenarios\.md\)\s*\|.*$/m,
-    `| [Matriz](scenarios.md) | ${total} | ${counts['⬜'] ?? 0} | ${counts['🟡'] ?? 0} | ${counts['✅'] ?? 0} | ${counts['⛔'] ?? 0} |`,
+    countsRow('[Matriz](scenarios.md)', summary.scenarios, SCENARIO_STATES),
     'scenario counts row',
   );
 
-  if (missing.length > 0) {
-    throw new Error(
-      `progress.md is not in the normative format — could not find: ${missing.join(', ')}`,
+  replaceOnce(
+    /^\|\s*\[Decisões\]\(decisions\.md\)\s*\|.*$/m,
+    countsRow('[Decisões](decisions.md)', summary.decisions, TASK_STATES),
+    'decision counts row',
+  );
+
+  return rewriter.finish();
+}
+
+/**
+ * @typedef {object} PlanEntry
+ * @property {string} dir plan directory, e.g. `01-live-session`
+ * @property {PlanSummary} summary
+ */
+
+/**
+ * @typedef {object} OverallPlan
+ * @property {string} dir
+ * @property {number} phasesDone
+ * @property {number} phaseTotal
+ * @property {number} taskDone
+ * @property {number} taskTotal
+ * @property {number} scenarioTotal
+ * @property {number} scenarioDone scenarios in the ✅ state
+ * @property {number} decisionTotal
+ * @property {number} decisionDone decisions already taken
+ * @property {string} state
+ */
+
+/**
+ * @typedef {object} OverallSummary
+ * @property {OverallPlan[]} plans
+ * @property {number} phasesDone
+ * @property {number} phaseTotal
+ * @property {number} taskDone
+ * @property {number} taskTotal
+ * @property {number} scenarioDone
+ * @property {number} scenarioTotal
+ * @property {number} decisionDone
+ * @property {number} decisionTotal
+ * @property {string} state
+ */
+
+/**
+ * The whole road seen at once: one line per plan, and the totals.
+ *
+ * @param {readonly PlanEntry[]} plans in the order they appear on disk
+ * @returns {OverallSummary}
+ */
+export function summarizeOverall(plans) {
+  const rows = plans.map((plan) => ({
+    dir: plan.dir,
+    phasesDone: plan.summary.phases.filter((phase) => phase.state === '✅').length,
+    phaseTotal: plan.summary.phases.length,
+    taskDone: plan.summary.taskDone,
+    taskTotal: plan.summary.taskTotal,
+    scenarioTotal: plan.summary.scenarios.total,
+    // `countByState` seeds every state, so these are numbers.
+    scenarioDone: Number(plan.summary.scenarios.counts['✅']),
+    decisionTotal: plan.summary.decisions.total,
+    decisionDone: Number(plan.summary.decisions.counts['✅']),
+    state: plan.summary.state,
+  }));
+
+  /** @param {(plan: OverallPlan) => number} pick */
+  const total = (pick) => rows.reduce((sum, row) => sum + pick(row), 0);
+
+  return {
+    plans: rows,
+    phasesDone: total((row) => row.phasesDone),
+    phaseTotal: total((row) => row.phaseTotal),
+    taskDone: total((row) => row.taskDone),
+    taskTotal: total((row) => row.taskTotal),
+    scenarioDone: total((row) => row.scenarioDone),
+    scenarioTotal: total((row) => row.scenarioTotal),
+    decisionDone: total((row) => row.decisionDone),
+    decisionTotal: total((row) => row.decisionTotal),
+    // A plan carries the same four states a task does, so the same rule aggregates them.
+    state: stateOf(rows),
+  };
+}
+
+/**
+ * Rewrites the counters of `docs/plans/progress.md` — the general progress, across plans.
+ *
+ * It exists because the per-plan diary answers "how is this plan going" and nobody was
+ * answering "how is the project going". Kept by hand, that answer would be wrong by the second
+ * week; so it is derived from the same source as everything else — the task markers in the
+ * phase files and the state column of each matrix.
+ *
+ * @param {string} content
+ * @param {OverallSummary} overall
+ * @param {{ date: string }} options
+ * @returns {string}
+ */
+export function applyOverallProgress(content, overall, options) {
+  const rewriter = rewriterOf(content, 'docs/plans/progress.md');
+  const replaceOnce = rewriter.replace;
+
+  replaceOnce(
+    /^\*\*Última atualização:\*\*.*$/m,
+    `**Última atualização:** ${options.date}`,
+    '"Última atualização" line',
+  );
+
+  const bars = overall.plans.map((plan) => ({
+    label: plan.dir,
+    done: plan.taskDone,
+    total: plan.taskTotal,
+    state: plan.state,
+    // `stateOf` answers one of the four states, and PLAN_LABEL carries all four.
+    stateLabel: String(PLAN_LABEL[plan.state]),
+  }));
+
+  replaceOnce(
+    /(## Panorama[\s\S]*?```\n)[\s\S]*?(\n```)/,
+    `$1${barsBlock(bars)}$2`,
+    'progress bar block under "Panorama"',
+  );
+
+  for (const plan of overall.plans) {
+    // Only the five-column row of the panel, ending in a state marker: the same document links
+    // to every plan from prose tables, and a looser pattern rewrites one of those instead.
+    replaceOnce(
+      new RegExp(
+        `^\\|\\s*(\\[[^\\]]*\\]\\(${plan.dir}/README\\.md\\))\\s*\\|[^|]*\\|[^|]*\\|[^|]*\\|[^|]*\\|\\s*[🔲🔄✅⛔]\\s*\\|\\s*$`,
+        'mu',
+      ),
+      `| $1 | ${plan.phasesDone}/${plan.phaseTotal} | ${plan.taskDone}/${plan.taskTotal} | ` +
+        `${plan.scenarioDone}/${plan.scenarioTotal} | ${plan.decisionDone}/${plan.decisionTotal} | ` +
+        `${plan.state} |`,
+      `table row for ${plan.dir}`,
     );
   }
 
-  return result;
+  replaceOnce(
+    /^\|\s*\*\*Total\*\*\s*\|.*$/m,
+    `| **Total** | **${overall.phasesDone}/${overall.phaseTotal}** | ` +
+      `**${overall.taskDone}/${overall.taskTotal}** | ` +
+      `**${overall.scenarioDone}/${overall.scenarioTotal}** | ` +
+      `**${overall.decisionDone}/${overall.decisionTotal}** | ${overall.state} |`,
+    'total row',
+  );
+
+  return rewriter.finish();
 }

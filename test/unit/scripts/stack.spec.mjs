@@ -5,8 +5,14 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  E2E_PROJECT_PREFIX,
+  MOBILE_REDIRECT_URL,
+  dartDefines,
   PORT_VARIABLES,
   PROJECT_NAME,
+  e2eDotEnv,
+  e2eProjectName,
+  ephemeralEnvironment,
   loadDotEnv,
   projectName,
   resolvePorts,
@@ -139,5 +145,150 @@ describe('workspaceStatus', () => {
     fs.writeFileSync(path.join(dir, 'web/package.json'), '{"name":"web","scripts":{"dev":"vite"}}');
 
     expect(workspaceStatus(dir, 'web')).toEqual({ ready: true });
+  });
+});
+
+describe('the ephemeral stack of an e2e run', () => {
+  const ports = { postgres: 51_001, keycloak: 51_002, backend: 51_003, web: 51_004 };
+
+  it('names a project of its own, never the development one', () => {
+    const project = e2eProjectName(ports.backend);
+
+    expect(project).toBe(`${PROJECT_NAME}-e2e-51003`);
+    expect(project.startsWith(E2E_PROJECT_PREFIX)).toBe(true);
+
+    // The purge scans that prefix. The development project must not be inside it, or `pnpm
+    // test:e2e` would tear down the stack somebody has running in another terminal.
+    expect(PROJECT_NAME.startsWith(E2E_PROJECT_PREFIX)).toBe(false);
+  });
+
+  it('gives two runs two different projects', () => {
+    expect(e2eProjectName(51_003)).not.toBe(e2eProjectName(51_004));
+  });
+
+  it('points the database URL at the port compose actually published', () => {
+    const env = ephemeralEnvironment(ports);
+
+    expect(env.RC_POSTGRES_PORT).toBe('51001');
+    expect(env.DATABASE_URL).toContain('@localhost:51001/');
+    expect(env.DATABASE_URL.startsWith('postgresql://')).toBe(true);
+  });
+
+  it('pins the credentials instead of inheriting whatever the machine has in .env', () => {
+    const env = ephemeralEnvironment(ports);
+
+    expect(env.RC_POSTGRES_USER).toBe('remote_claude');
+    expect(env.RC_POSTGRES_DB).toBe('remote_claude');
+    expect(env.DATABASE_URL).toContain('remote_claude:remote_claude@');
+  });
+
+  it('derives the issuer from the Keycloak port it was given', () => {
+    expect(ephemeralEnvironment(ports).OIDC_ISSUER).toBe(
+      'http://localhost:51002/realms/remote-claude',
+    );
+  });
+
+  it('declares every variable the backend refuses to start without', () => {
+    const declared = Object.keys(ephemeralEnvironment(ports));
+
+    // The backend's schema has no default anywhere: a variable missing here is a process that
+    // does not start, and an e2e run that fails for a reason that looks nothing like its cause.
+    for (const { variable } of PORT_VARIABLES) {
+      expect(declared, variable).toContain(variable);
+    }
+
+    for (const variable of ['NODE_ENV', 'LOG_LEVEL', 'OIDC_AUDIENCE', 'OIDC_CLIENT_ID_WEB']) {
+      expect(declared, variable).toContain(variable);
+    }
+  });
+
+  it('writes a .env the suite can read, with the websocket URL derived from the backend one', () => {
+    const written = e2eDotEnv(ports);
+    const values = Object.fromEntries(
+      written
+        .split('\n')
+        .filter((row) => row.trim() !== '' && !row.startsWith('#'))
+        .map((row) => row.split('=', 2)),
+    );
+
+    expect(values['RC_WEB_URL']).toBe('http://localhost:51004');
+    expect(values['RC_BACKEND_URL']).toBe('http://localhost:51003');
+    expect(values['RC_WS_URL']).toBe('ws://localhost:51003/ws');
+    expect(values['RC_OIDC_ISSUER']).toBe('http://localhost:51002/realms/remote-claude');
+  });
+
+  it('says in the file itself that it is generated, so nobody commits one', () => {
+    expect(e2eDotEnv(ports).split('\n')[0]).toMatch(/^#.*deleted when the run ends/);
+  });
+});
+
+describe('dartDefines', () => {
+  const ports = { postgres: 51_001, keycloak: 51_002, backend: 51_003, web: 51_004 };
+
+  /** The `e2e/.env` of a run, as the Flutter end reads it back. */
+  function dotEnv() {
+    return Object.fromEntries(
+      e2eDotEnv(ports)
+        .split('\n')
+        .filter((row) => row.trim() !== '' && !row.startsWith('#'))
+        .map((row) => row.split('=', 2)),
+    );
+  }
+
+  /** The defines as a map, which is how they are read rather than how they are passed. */
+  function definesOf(scenario = '{}', version = '1.2.3') {
+    const argv = dartDefines(dotEnv(), scenario, version);
+    /** @type {Record<string, string>} */
+    const values = {};
+
+    for (let index = 0; index < argv.length; index += 2) {
+      const [name, value] = String(argv[index + 1]).split('=', 2);
+      values[String(name)] = String(value);
+    }
+
+    return { argv, values };
+  }
+
+  it('passes each value as its own `--dart-define` pair', () => {
+    const { argv } = definesOf();
+
+    expect(argv.filter((argument) => argument === '--dart-define')).toHaveLength(argv.length / 2);
+    expect(argv[0]).toBe('--dart-define');
+  });
+
+  it('points the app at the same stack the browser suite reads from e2e/.env', () => {
+    const { values } = definesOf();
+
+    expect(values['RC_API_URL']).toBe('http://localhost:51003');
+    expect(values['RC_WS_URL']).toBe('ws://localhost:51003/ws');
+    expect(values['RC_OIDC_ISSUER']).toBe('http://localhost:51002/realms/remote-claude');
+  });
+
+  it('signs in as the **mobile** client, not the browser one', () => {
+    expect(definesOf().values['RC_OIDC_CLIENT_ID']).toBe('remote-claude-mobile');
+  });
+
+  it('carries the deep link the realm registers for the app', () => {
+    expect(definesOf().values['RC_OIDC_REDIRECT_URL']).toBe(MOBILE_REDIRECT_URL);
+    expect(MOBILE_REDIRECT_URL.startsWith('br.com.remoteclaude.app://')).toBe(true);
+  });
+
+  it('compiles the shared scenario in, because a device has no repository to read it from', () => {
+    const scenario = JSON.stringify({ id: 'S-62', expect: { firstSeq: 1 } });
+
+    expect(definesOf(scenario).values['RC_SCENARIO']).toBe(scenario);
+  });
+
+  it('reports the version it was given', () => {
+    expect(definesOf('{}', '9.9.9').values['RC_APP_VERSION']).toBe('9.9.9');
+  });
+
+  it('answers an empty value rather than `undefined` when the .env is missing one', () => {
+    // `undefined` would reach the command line as the four letters "undefined", and the app would
+    // start with a URL that looks valid and points nowhere.
+    const argv = dartDefines({}, '{}', '1.0.0');
+
+    expect(argv).not.toContain('RC_API_URL=undefined');
+    expect(argv).toContain('RC_API_URL=');
   });
 });

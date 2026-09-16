@@ -1,0 +1,9 @@
+{
+  "id": "S-27",
+  "title": "reconnect with resumeFromSeq and receive the missed events, in order and once",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "missedWhileAway": 2,
+    "gap": false
+  }
+}

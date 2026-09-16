@@ -13,21 +13,14 @@
  * Usage: `pnpm dev`
  */
 
-import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
 
+import { repoRoot } from './lib/paths.mjs';
+import { resolveComposeCli } from './lib/compose.mjs';
+import { run } from './lib/exec.mjs';
+import { bringUp, composeRunner, stillPending } from './lib/local-stack.mjs';
+import { cleanupOnce, kill, onTermination, startProc } from './lib/proc.mjs';
 import {
-  allHealthy,
-  composeArgv,
-  parseComposePs,
-  pendingServices,
-  resolveComposeCli,
-} from './lib/compose.mjs';
-import { run, runAttached } from './lib/exec.mjs';
-import { cleanupOnce, kill, startProc } from './lib/proc.mjs';
-import {
-  SERVICES,
   loadDotEnv,
   projectName,
   resolvePorts,
@@ -35,12 +28,7 @@ import {
   workspaceStatus,
 } from './lib/stack.mjs';
 import { bold, cyan, dim, fail, hint, info, line, ok, title, warn } from './lib/ui.mjs';
-import { WaitError, waitForHttp, waitUntil } from './lib/wait.mjs';
-
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-
-/** Services get this long to report healthy before the script gives up and cleans up. */
-const STACK_TIMEOUT_MS = 180_000;
+import { WaitError } from './lib/wait.mjs';
 
 /** The workspaces started in watch mode, in start order. Torn down in reverse. */
 const WATCHED = ['backend', 'web'];
@@ -53,7 +41,7 @@ const children = [];
  *
  * `pnpm dev` is a foreground command: it stays until Ctrl+C, and Ctrl+C is what stops the stack.
  * Without this it would exit the moment `main` returns whenever there is no watch process to
- * keep the event loop alive — which is exactly the state of the repository before F3 and F4 —
+ * keep the event loop alive — a workspace that does not exist yet, or one whose dev server dies —
  * leaving the containers up and no way to stop them but `docker`.
  *
  * @type {NodeJS.Timeout | null}
@@ -67,28 +55,8 @@ loadDotEnv(repoRoot);
 const composeCli = resolveComposeCli((command, args) => run(command, args, { timeoutMs: 20_000 }));
 const project = projectName(process.env);
 
-/**
- * One compose call against the development project.
- *
- * @param {readonly string[]} args
- * @param {{ attached?: boolean }} [options]
- * @returns {import('./lib/exec.mjs').RunResult}
- */
-function compose(args, options = {}) {
-  if (composeCli === null) {
-    return { found: false, code: 127, stdout: '', stderr: 'no compose' };
-  }
-
-  const argv = composeArgv(composeCli, project, args);
-  const invoke = options.attached === true ? runAttached : run;
-
-  return invoke(argv.command, argv.args, { cwd: repoRoot, timeoutMs: STACK_TIMEOUT_MS });
-}
-
-/** @returns {import('./lib/compose.mjs').ServiceStatus[]} */
-function serviceStatuses() {
-  return parseComposePs(compose(['ps', '--all', '--format', 'json']).stdout);
-}
+/** One compose call against the development project. */
+const compose = composeRunner(composeCli, project, { cwd: repoRoot });
 
 /**
  * @param {ReturnType<typeof serviceUrls>} urls
@@ -147,25 +115,7 @@ async function main() {
 
   info(`compose: ${`${composeCli.command} ${composeCli.args.join(' ')}`.trimEnd()}`);
 
-  const up = compose(['up', '--detach', '--remove-orphans'], { attached: true });
-  if (up.code !== 0) {
-    fail(`compose up failed with exit ${String(up.code)}`);
-    hint('the output above is compose’s own; `pnpm doctor` checks the environment around it');
-    return 1;
-  }
-
-  await waitUntil({
-    target: `services ${SERVICES.join(', ')}`,
-    timeoutMs: STACK_TIMEOUT_MS,
-    intervalMs: 1_000,
-    probe: () => Promise.resolve(allHealthy(serviceStatuses(), SERVICES)),
-  });
-  ok('postgres', urls.postgres);
-
-  // Healthy is not the same as ready to serve: Keycloak answers /health/ready before it has
-  // finished importing the realm, and the realm is what every client actually talks to.
-  await waitForHttp(urls.discovery, { timeoutMs: STACK_TIMEOUT_MS, intervalMs: 1_000 });
-  ok('keycloak', urls.realm);
+  await bringUp(compose, urls);
 
   /** @type {string[]} */
   const running = [];
@@ -193,13 +143,8 @@ async function main() {
   return null;
 }
 
-for (const signalName of /** @type {NodeJS.Signals[]} */ (['SIGINT', 'SIGTERM', 'SIGHUP'])) {
-  process.on(signalName, () => {
-    void shutdown().then(() => {
-      process.exit(0);
-    });
-  });
-}
+// Ctrl+C is the documented way to stop `pnpm dev`, so stopping cleanly is a success.
+onTermination(shutdown, 0);
 
 try {
   const code = await main();
@@ -211,9 +156,13 @@ try {
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 
-  if (error instanceof WaitError && composeCli !== null) {
-    const pending = pendingServices(serviceStatuses(), SERVICES);
-    if (pending.length > 0) {
+  if (composeCli !== null) {
+    // Whatever went wrong, the useful next step is the same: compose has already printed its own
+    // diagnosis above, and what this adds is which service never made it.
+    hint('the output above is compose’s own; `pnpm doctor` checks the environment around it');
+
+    const pending = stillPending(compose);
+    if (error instanceof WaitError && pending.length > 0) {
       hint(`still not up: ${pending.join(', ')} — \`${composeCli.command} logs\` says why`);
     }
   }

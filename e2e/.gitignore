@@ -1,0 +1,5 @@
+# Written by scripts/run-e2e-local.mjs with the addresses of one ephemeral run, and deleted when
+# that run ends. A committed copy would point every later run at ports nothing listens on.
+.env
+test-results/
+playwright-report/

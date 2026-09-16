@@ -73,7 +73,8 @@ function planReadme(spec) {
 pnpm verify:full     # sai com código 0
 \`\`\`
 
-Arquivos irmãos: [matriz de cenários](scenarios.md) · [progresso](progress.md).
+Arquivos irmãos: [matriz de cenários](scenarios.md) · [decisões em aberto](decisions.md) ·
+[progresso](progress.md).
 
 ---
 
@@ -204,6 +205,65 @@ O protocolo exige justificar dimensão vazia, não omiti-la.
  * @param {PlanSpec} spec
  * @returns {string}
  */
+function decisions(spec) {
+  const sections = spec.phases
+    .map((phase, index) => {
+      const rows =
+        index === 0
+          ? `| D-01 | *(a pergunta a responder)* | *(o que falta saber antes)* | B-01 | — | 🔲 |`
+          : `| — | *(nenhuma decisão em aberto — confirme ao planejar a fase)* | — | — | — | — |`;
+
+      return `## F${index} — ${titleize(phase)}
+
+| ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
+|---|---|---|---|---|---|
+${rows}
+`;
+    })
+    .join('\n');
+
+  return `# Plano ${spec.number} — Decisões em aberto e gaps
+
+Toda decisão que este plano ainda não tomou, e todo gap que impede tomá-la. Existe para
+**facilitar a decisão** — e para que nenhuma seja tomada por omissão, que é como um plano acaba
+construído sobre uma resposta que ninguém deu.
+
+Plano: [README.md](README.md) · Cenários: [scenarios.md](scenarios.md) · Progresso: [progress.md](progress.md)
+
+**Estado:** 🔲 aberta · 🔄 em análise · ✅ decidida · ⛔ travada por terceiro
+
+Decisão em aberto **não** impede planejar; impede **começar a fase** que depende dela.
+
+---
+
+${sections}
+---
+
+## Ao decidir
+
+1. Marque a linha com ✅ e preencha **Resultado**: a data, a escolha e o que ela muda.
+2. Atualize o documento normativo correspondente — ou abra uma
+   [ADR](../../architecture/shared/00-decisions.md), quando a decisão muda uma escolha de
+   arquitetura. Decisão registrada só aqui é decisão que o resto do repositório não conhece.
+3. Rode \`pnpm plan progress\`: o contador desta tabela sai daqui, no
+   [progresso do plano](progress.md) e no [progresso geral](../progress.md).
+4. Decisão que **bloqueia** fase sai da tabela de bloqueios do
+   [progresso geral](../progress.md) no mesmo momento.
+
+## Convenções
+
+- \`D-nn\` é sequencial **no plano inteiro** e nunca é reaproveitado — decisão descartada mantém
+  o número, com o motivo em **Resultado**.
+- Fase sem decisão em aberto **diz isso**, com uma linha própria. Silêncio não é ausência.
+- Decisão descoberta durante a execução entra aqui; a mudança que ela causou no plano vai para o
+  [progresso](progress.md). Uma é a escolha, a outra é o efeito.
+`;
+}
+
+/**
+ * @param {PlanSpec} spec
+ * @returns {string}
+ */
 function progress(spec) {
   const bars = spec.phases
     .map((_, index) => `F${index} ${'░'.repeat(20)}   0%   🔲 não iniciada`)
@@ -218,7 +278,8 @@ function progress(spec) {
 Onde estamos, e o histórico de validação. O [plano](README.md) é o contrato; **este arquivo é
 o diário**. Não misture: plano que vira diário perde a função de contrato.
 
-Os contadores abaixo são recalculados por \`pnpm plan progress\` — não os mantenha à mão.
+Os contadores abaixo são recalculados por \`pnpm plan progress\`, que na mesma execução atualiza
+o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ---
 
@@ -250,6 +311,17 @@ ${rows}
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
 | [Matriz](scenarios.md) | 0 | 0 | 0 | 0 | 0 |
+
+---
+
+## Decisões
+
+Decisão em aberto impede **começar** a fase que depende dela — ver
+[decisions.md](decisions.md).
+
+| | Total | 🔲 | 🔄 | ✅ | ⛔ |
+|---|---|---|---|---|---|
+| [Decisões](decisions.md) | 0 | 0 | 0 | 0 | 0 |
 
 ---
 
@@ -297,10 +369,16 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 ## Como atualizar
 
 1. Ao **começar** uma fase: estado → 🔄 aqui e no [índice do plano](README.md#fases).
-2. Ao **concluir** uma tarefa: marque a task com ✅ no arquivo da fase e rode \`pnpm plan progress\`.
+2. Ao **concluir** uma tarefa: marque a task com ✅ no arquivo da fase e rode \`pnpm plan progress\`
+   — ele reescreve os contadores **deste** arquivo e os do [progresso geral](../progress.md).
+   Progresso de fase é registrado nos dois lugares, sempre.
 3. A cada **ciclo de correção**: uma linha no histórico de validação.
 4. Ao **concluir** uma fase: 🔄 → ✅, somente com \`pnpm verify\` verde.
-5. Ao **bloquear**: ⛔ com o motivo, e escale — não fique em três ciclos sem progresso.
+5. Ao **concluir o plano**, ou ao mover escopo para outro: uma linha no histórico do
+   [progresso geral](../progress.md) — é ele que responde em que pé o projeto está.
+6. Ao **bloquear**: ⛔ com o motivo, e escale — não fique em três ciclos sem progresso. Bloqueio
+   que impede uma fase de começar entra também na tabela de decisões em aberto do
+   [progresso geral](../progress.md).
 `;
 }
 
@@ -351,7 +429,7 @@ pnpm verify
 }
 
 /**
- * Every file of a new plan, in the normative format.
+ * Every file of a new plan, in the normative format: four fixed files, one per phase.
  *
  * @param {PlanSpec} spec
  * @returns {GeneratedFile[]}
@@ -360,6 +438,7 @@ export function buildPlanFiles(spec) {
   return [
     { name: 'README.md', content: planReadme(spec) },
     { name: 'scenarios.md', content: scenarios(spec) },
+    { name: 'decisions.md', content: decisions(spec) },
     { name: 'progress.md', content: progress(spec) },
     ...spec.phases.map((phase, index) => ({
       name: `F${index}-${phase}.md`,
@@ -378,17 +457,51 @@ export function buildPlanFiles(spec) {
  */
 export function withPlanIndexed(indexContent, spec) {
   const row = `| ${spec.number} | [${titleize(spec.slug)}](${spec.number}-${spec.slug}/README.md) | 🔲 não iniciado | \`pnpm verify:full\` sai com código 0 |`;
-  const lines = indexContent.split('\n');
+
+  return withRowAppended(indexContent, /^\|\s*\d{2}\s*\|/, row, 'docs/plans/README.md');
+}
+
+/**
+ * Adds the new plan to the general progress in `docs/plans/progress.md`.
+ *
+ * A plan that only updates its own diary leaves the project-wide answer wrong, and a counter
+ * nobody can trust is a counter nobody reads. The row goes in empty; `pnpm plan progress`
+ * fills it in the same run.
+ *
+ * @param {string} progressContent
+ * @param {PlanSpec} spec
+ * @returns {string}
+ */
+export function withPlanInOverallProgress(progressContent, spec) {
+  const row =
+    `| [${spec.number} — ${titleize(spec.slug)}](${spec.number}-${spec.slug}/README.md) ` +
+    `| 0/0 | 0/0 | 0/0 | 🔲 |`;
+
+  return withRowAppended(progressContent, /^\|\s*\[\d{2}\s*—/u, row, 'docs/plans/progress.md');
+}
+
+/**
+ * Inserts a row right after the last one that matches — the tables of both documents are
+ * ordered by plan number, and a new plan is always the last.
+ *
+ * @param {string} content
+ * @param {RegExp} rowPattern what an existing row looks like
+ * @param {string} row
+ * @param {string} what the document, for the error message
+ * @returns {string}
+ */
+function withRowAppended(content, rowPattern, row, what) {
+  const lines = content.split('\n');
 
   let lastRow = -1;
   for (const [index, text] of lines.entries()) {
-    if (/^\|\s*\d{2}\s*\|/.test(text)) {
+    if (rowPattern.test(text)) {
       lastRow = index;
     }
   }
 
   if (lastRow === -1) {
-    throw new Error('docs/plans/README.md has no plan table to append to');
+    throw new Error(`${what} has no plan table to append to`);
   }
 
   lines.splice(lastRow + 1, 0, row);

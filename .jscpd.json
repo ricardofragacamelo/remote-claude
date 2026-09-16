@@ -13,6 +13,7 @@
     "**/coverage/**",
     "**/*.md",
     "packages/contracts/src/**",
+    "web/src/shared/components/ui/**",
     "**/*.g.dart",
     "**/*.freezed.dart",
     "**/migrations/**",

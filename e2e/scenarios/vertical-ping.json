@@ -1,0 +1,10 @@
+{
+  "id": "S-61",
+  "title": "sign in, open the socket, send a command, and see the event rendered",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "connectionStatus": "ready",
+    "firstSeq": 1,
+    "pingCounts": [1, 2]
+  }
+}

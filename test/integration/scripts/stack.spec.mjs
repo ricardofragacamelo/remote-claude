@@ -131,10 +131,11 @@ describe('start-local.mjs, against real docker', () => {
     expect(discovery.issuer).toContain('/realms/remote-claude');
   });
 
-  it('says which halves of the stack do not exist yet, instead of failing on them', () => {
-    // backend/ and web/ arrive in F3 and F4; until then `pnpm dev` still has a job to do.
-    expect(output).toMatch(/backend — (not created yet|watch)/);
-    expect(output).toMatch(/web — (not created yet|watch)/);
+  it('reports every workspace it can start, and says so when one is not there yet', () => {
+    // A workspace that does not exist is a line saying so, never a crash on a missing directory:
+    // `pnpm dev` still has the infrastructure half to bring up.
+    expect(output).toMatch(/backend\s+(watch|— not created yet)/);
+    expect(output).toMatch(/web\s+(watch|— not created yet)/);
   });
 
   it('leaves no container running after Ctrl+C, and keeps the volumes', async () => {

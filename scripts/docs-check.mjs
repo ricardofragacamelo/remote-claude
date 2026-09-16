@@ -9,14 +9,11 @@
  * Usage: `pnpm docs:check`
  */
 
-import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
 
+import { repoRoot } from './lib/paths.mjs';
 import { inspectDocs } from './lib/docs-graph.mjs';
 import { bold, dim, fail, hint, line, ok, title } from './lib/ui.mjs';
-
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function main() {
   title('docs-check');

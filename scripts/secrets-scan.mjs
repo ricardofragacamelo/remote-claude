@@ -12,14 +12,12 @@
  * Usage: `pnpm scan:secrets` · `pnpm scan:secrets --staged` (what the pre-commit hook runs)
  */
 
-import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
 
+import { repoRoot } from './lib/paths.mjs';
 import { commandExists, runAttached } from './lib/exec.mjs';
 import { fail, hint, info, line, ok, title } from './lib/ui.mjs';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const IMAGE = 'zricethezav/gitleaks:v8.18.4';
 
 const staged = process.argv.includes('--staged');

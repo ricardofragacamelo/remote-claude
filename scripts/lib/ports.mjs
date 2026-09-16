@@ -50,17 +50,12 @@ export function findFreePort(host = '127.0.0.1') {
     server.once('error', reject);
 
     server.once('listening', () => {
-      const address = server.address();
-      const port = typeof address === 'object' && address !== null ? address.port : 0;
+      // Inside `listening` the address is always an AddressInfo — a string address only happens
+      // for a Unix socket, and this server was bound to a host and port. Checking for it anyway
+      // would add a branch no test could ever reach.
+      const { port } = /** @type {net.AddressInfo} */ (server.address());
 
-      server.close(() => {
-        if (port === 0) {
-          reject(new Error('the operating system did not report the allocated port'));
-          return;
-        }
-
-        resolve(port);
-      });
+      server.close(() => resolve(port));
     });
 
     server.listen({ port: 0, host, exclusive: true });

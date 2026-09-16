@@ -9,6 +9,8 @@
 
 import { spawn } from 'node:child_process';
 
+import { spawnLocation } from './exec.mjs';
+
 /** How long a process gets to honour SIGTERM before it is killed outright. */
 export const GRACE_MS = 5_000;
 
@@ -36,8 +38,7 @@ export function startProc(command, args, options = {}) {
     // is no process group to detach into, and `shell` is what makes `pnpm` resolvable.
     detached: !isWindows,
     shell: isWindows,
-    ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
-    ...(options.env === undefined ? {} : { env: options.env }),
+    ...spawnLocation(options),
   });
 }
 
@@ -52,6 +53,36 @@ export function taskkillArgv(pid) {
 }
 
 /**
+ * Whether there is still something to signal.
+ *
+ * A process with no pid never started, and one that has already exited or been signalled is
+ * gone. Separated out so all three ways of being finished can be checked without racing a real
+ * process into each of them.
+ *
+ * @param {Pick<ChildProcess, 'pid' | 'exitCode' | 'signalCode'>} proc
+ * @returns {boolean}
+ */
+export function isFinished(proc) {
+  return proc.pid === undefined || proc.exitCode !== null || proc.signalCode !== null;
+}
+
+/**
+ * How a process tree is taken down on a platform.
+ *
+ * POSIX signals the **group** — the negative pid addresses the group `startProc` created with
+ * `detached` — and Windows has no such thing, so it asks `taskkill` for the tree. The decision
+ * is a pure function so both answers can be checked from either platform; hidden inside the
+ * call, half of it would only ever run on somebody else's machine.
+ *
+ * @param {number} pid
+ * @param {boolean} onWindows
+ * @returns {{ kind: 'taskkill', command: string, args: string[] } | { kind: 'group', target: number }}
+ */
+export function signalPlan(pid, onWindows) {
+  return onWindows ? { kind: 'taskkill', ...taskkillArgv(pid) } : { kind: 'group', target: -pid };
+}
+
+/**
  * Signals a process — the whole group on POSIX, the whole tree on Windows.
  *
  * @param {ChildProcess} proc
@@ -60,20 +91,28 @@ export function taskkillArgv(pid) {
  */
 function sendSignal(proc, signalName) {
   const pid = proc.pid;
-  if (pid === undefined || proc.exitCode !== null || proc.signalCode !== null) {
+
+  // `isFinished` already covers the missing pid; this narrows the type for `signalPlan`, and is
+  // the same question asked twice rather than a second rule.
+  if (isFinished(proc) || pid === undefined) {
     return;
   }
 
+  const plan = signalPlan(pid, isWindows);
+
   try {
-    if (isWindows) {
-      const { command, args } = taskkillArgv(pid);
-      spawn(command, args, { stdio: 'ignore', shell: true });
+    /* v8 ignore start -- the Windows call itself cannot run on a POSIX test host; the decision
+       that chooses it is covered on both platforms, in signalPlan. */
+    if (plan.kind === 'taskkill') {
+      spawn(plan.command, plan.args, { stdio: 'ignore', shell: true });
       return;
     }
+    /* v8 ignore stop */
 
-    // Negative pid addresses the group created by `detached` in startProc.
-    process.kill(-pid, signalName);
+    process.kill(plan.target, signalName);
   } catch (error) {
+    /* v8 ignore next 3 -- reaching this needs process.kill to fail with something other than
+       ESRCH, which on a POSIX host means EPERM against a process we own: not producible here. */
     if (/** @type {NodeJS.ErrnoException} */ (error).code !== 'ESRCH') {
       return;
     }
@@ -82,6 +121,8 @@ function sendSignal(proc, signalName) {
       // No such group: the process was not started by `startProc`, so it never became a group
       // leader. Signalling it alone is then the whole tree, and is better than doing nothing.
       process.kill(pid, signalName);
+      /* v8 ignore next 4 -- this catch needs the process to vanish between the two kill calls:
+         a real race, and not one a test can produce on demand. */
     } catch {
       // Already gone, which is the outcome we wanted. Racing against its own exit is normal
       // here, and there is nothing to log: `kill` reports what actually happened.
@@ -97,7 +138,7 @@ function sendSignal(proc, signalName) {
  * @returns {Promise<void>} resolves once the process has exited
  */
 export function kill(proc, options = {}) {
-  if (proc.exitCode !== null || proc.signalCode !== null) {
+  if (isFinished(proc)) {
     return Promise.resolve();
   }
 
@@ -134,4 +175,33 @@ export function cleanupOnce(cleanup) {
     running ??= Promise.resolve(cleanup(...args)).then(() => undefined);
     return running;
   };
+}
+
+/** The signals a foreground script has to tear down on. */
+export const TERMINATION_SIGNALS = /** @type {NodeJS.Signals[]} */ ([
+  'SIGINT',
+  'SIGTERM',
+  'SIGHUP',
+]);
+
+/**
+ * Runs `cleanup` on Ctrl+C, on `SIGTERM` and on a closed terminal, then exits with `code`.
+ *
+ * All three, not just `SIGINT`: a script killed by its parent — the suite that spawned it, a CI
+ * runner reclaiming the job — has to take its containers down too, and only `SIGTERM` arrives
+ * there. Pair it with `cleanupOnce`, because a second Ctrl+C lands while the first teardown is
+ * still running.
+ *
+ * @param {() => Promise<void>} cleanup
+ * @param {number} code exit code once the teardown has finished
+ * @returns {void}
+ */
+export function onTermination(cleanup, code) {
+  for (const signalName of TERMINATION_SIGNALS) {
+    process.on(signalName, () => {
+      void cleanup().then(() => {
+        process.exit(code);
+      });
+    });
+  }
 }

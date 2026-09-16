@@ -1,0 +1,10 @@
+{
+  "id": "S-28",
+  "title": "resume from before the ring buffer and be told to reload instead of being half-fed",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "gap": true,
+    "replayed": 0,
+    "overflowMargin": 10
+  }
+}

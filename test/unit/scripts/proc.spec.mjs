@@ -2,7 +2,16 @@ import { spawn } from 'node:child_process';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { cleanupOnce, kill, startProc, taskkillArgv } from '../../../scripts/lib/proc.mjs';
+import {
+  TERMINATION_SIGNALS,
+  cleanupOnce,
+  isFinished,
+  kill,
+  onTermination,
+  signalPlan,
+  startProc,
+  taskkillArgv,
+} from '../../../scripts/lib/proc.mjs';
 
 /** @type {import('node:child_process').ChildProcess[]} */
 const spawned = [];
@@ -155,5 +164,103 @@ describe('cleanupOnce', () => {
     await cleanupOnce(teardown)('SIGINT');
 
     expect(teardown).toHaveBeenCalledWith('SIGINT');
+  });
+});
+
+describe('kill — the default grace period', () => {
+  it('terminates a process that was not given a grace period of its own', async () => {
+    const proc = startProc(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+      stdio: 'ignore',
+    });
+
+    // No `graceMs`: the default is what the escalation timer has to fall back to.
+    await kill(proc);
+
+    expect(proc.exitCode !== null || proc.signalCode !== null).toBe(true);
+  });
+
+  it('is a no-op for a process that has already gone', async () => {
+    const proc = startProc(process.execPath, ['-e', ''], { stdio: 'ignore' });
+    await new Promise((resolve) => proc.once('exit', resolve));
+
+    await expect(kill(proc)).resolves.toBeUndefined();
+  });
+});
+
+describe('isFinished', () => {
+  it('knows a process that never started', () => {
+    expect(isFinished({ pid: undefined, exitCode: null, signalCode: null })).toBe(true);
+  });
+
+  it('knows a process that exited on its own', () => {
+    expect(isFinished({ pid: 1, exitCode: 0, signalCode: null })).toBe(true);
+  });
+
+  it('knows a process that was signalled', () => {
+    expect(isFinished({ pid: 1, exitCode: null, signalCode: 'SIGKILL' })).toBe(true);
+  });
+
+  it('knows one that is still running', () => {
+    expect(isFinished({ pid: 1, exitCode: null, signalCode: null })).toBe(false);
+  });
+});
+
+describe('signalPlan', () => {
+  it('addresses the process group on POSIX, by the negative pid', () => {
+    expect(signalPlan(4321, false)).toEqual({ kind: 'group', target: -4321 });
+  });
+
+  it('asks taskkill for the whole tree on Windows, where there is no group', () => {
+    expect(signalPlan(4321, true)).toEqual({
+      kind: 'taskkill',
+      command: 'taskkill',
+      args: ['/pid', '4321', '/t', '/f'],
+    });
+  });
+});
+
+describe('onTermination', () => {
+  /** @type {(() => void)[]} */
+  const installed = [];
+
+  afterEach(() => {
+    for (const signalName of TERMINATION_SIGNALS) {
+      process.removeAllListeners(signalName);
+    }
+    installed.length = 0;
+    vi.restoreAllMocks();
+  });
+
+  it('tears down on Ctrl+C, on SIGTERM and on a closed terminal', () => {
+    // Not only SIGINT: a script killed by its parent — the suite that spawned it, a CI runner
+    // reclaiming the job — has to take its containers down too, and only SIGTERM arrives there.
+    onTermination(() => Promise.resolve(), 0);
+
+    for (const signalName of TERMINATION_SIGNALS) {
+      expect(process.listenerCount(signalName), signalName).toBe(1);
+    }
+  });
+
+  it('exits with the code it was given, once the teardown has finished', async () => {
+    /** @type {string[]} */
+    const order = [];
+    /** @param {number | string | null | undefined} code @returns {never} */
+    const record = (code) => {
+      order.push(`exit ${String(code)}`);
+      return /** @type {never} */ (undefined);
+    };
+
+    const exit = vi.spyOn(process, 'exit').mockImplementation(record);
+
+    onTermination(async () => {
+      await Promise.resolve();
+      order.push('torn down');
+    }, 130);
+
+    process.emit('SIGINT');
+    await vi.waitFor(() => expect(order).toHaveLength(2));
+
+    expect(order).toEqual(['torn down', 'exit 130']);
+    exit.mockRestore();
   });
 });

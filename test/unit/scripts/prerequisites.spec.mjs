@@ -158,3 +158,45 @@ describe('version', () => {
     expect(meetsMinimum('21.99.99', '22')).toBe(false);
   });
 });
+
+describe('inspectEnvironment — the paths a broken machine takes', () => {
+  it('fails a tool that is installed but answers with an error', async () => {
+    const results = await inspectEnvironment(
+      probesWith({ pnpm: { found: true, code: 1, stdout: '', stderr: 'corepack is confused' } }),
+    );
+
+    expect(check(results, 'pnpm')).toMatchObject({ status: 'fail', detail: 'exited with 1' });
+  });
+
+  it('fails when docker is not installed at all, and says why it is not optional', async () => {
+    const results = await inspectEnvironment(
+      probesWith({ 'docker info': { found: false, code: 127, stdout: '', stderr: '' } }),
+    );
+
+    expect(check(results, 'docker')).toMatchObject({ status: 'fail', detail: 'not found on PATH' });
+    expect(check(results, 'docker')?.fix).toContain('testcontainers');
+  });
+
+  it('fails when neither shape of Compose answers', async () => {
+    const results = await inspectEnvironment(
+      probesWith({ 'docker compose': { found: false, code: 127, stdout: '', stderr: '' } }),
+    );
+
+    expect(check(results, 'docker compose')).toMatchObject({ status: 'fail' });
+    expect(check(results, 'docker compose')?.fix).toContain('docker-compose');
+  });
+
+  it('reports the version Compose gave, whichever shape answered', async () => {
+    const results = await inspectEnvironment(probesWith());
+
+    expect(check(results, 'docker compose')?.detail).toContain('Docker Compose version');
+  });
+
+  it('warns when flutter answers with an error rather than failing the machine', async () => {
+    const results = await inspectEnvironment(
+      probesWith({ flutter: { found: true, code: 2, stdout: '', stderr: 'broken install' } }),
+    );
+
+    expect(check(results, 'flutter')?.status).toBe('warn');
+  });
+});

@@ -5,6 +5,7 @@ import {
   isValidSlug,
   titleize,
   withPlanIndexed,
+  withPlanInOverallProgress,
 } from '../../../scripts/lib/plan-template.mjs';
 
 const spec = { number: '01', slug: 'claude-integration', phases: ['discovery', 'streaming'] };
@@ -16,17 +17,28 @@ describe('buildPlanFiles', () => {
     expect(names).toEqual([
       'README.md',
       'scenarios.md',
+      'decisions.md',
       'progress.md',
       'F0-discovery.md',
       'F1-streaming.md',
     ]);
   });
 
-  it('generates only the three fixed files plus one phase for a single-phase plan', () => {
+  it('generates only the four fixed files plus one phase for a single-phase plan', () => {
     const names = buildPlanFiles({ ...spec, phases: ['foundation'] }).map((file) => file.name);
 
-    expect(names).toHaveLength(4);
+    expect(names).toHaveLength(5);
     expect(names.at(-1)).toBe('F0-foundation.md');
+  });
+
+  it('gives the decisions file one section per phase, and says when a phase has none', () => {
+    const content =
+      buildPlanFiles(spec).find((file) => file.name === 'decisions.md')?.content ?? '';
+
+    expect(content).toContain('## F0 — Discovery');
+    expect(content).toContain('## F1 — Streaming');
+    expect(content).toContain('| D-01 |');
+    expect(content).toContain('nenhuma decisão em aberto');
   });
 
   it('gives the plan README the sections the format requires', () => {
@@ -103,5 +115,29 @@ describe('slug handling', () => {
   it('turns a slug into a title', () => {
     expect(titleize('claude-integration')).toBe('Claude integration');
     expect(titleize('bootstrap')).toBe('Bootstrap');
+  });
+});
+
+describe('withPlanInOverallProgress', () => {
+  const overall = [
+    '| Plano | Fases | Tarefas | Cenários | Estado |',
+    '|---|---|---|---|---|',
+    '| [00 — Bootstrap](00-bootstrap/README.md) | 8/8 | 52/52 | 118/119 | ✅ |',
+    '| **Total** | **8/8** | **52/52** | **118/119** | ✅ |',
+  ].join('\n');
+
+  it('adds the new plan right after the last one, above the total', () => {
+    const lines = withPlanInOverallProgress(overall, spec).split('\n');
+
+    expect(lines[3]).toBe(
+      '| [01 — Claude integration](01-claude-integration/README.md) | 0/0 | 0/0 | 0/0 | 🔲 |',
+    );
+    expect(lines[4]).toContain('**Total**');
+  });
+
+  it('refuses a document with no plan table — a plan outside the map is a plan nobody follows', () => {
+    expect(() => withPlanInOverallProgress('# Progresso geral\n', spec)).toThrow(
+      /docs\/plans\/progress\.md has no plan table/,
+    );
   });
 });
