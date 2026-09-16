@@ -74,11 +74,11 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Device](F0-device.md) | registro, aprovação, revogação e a tela de devices | B-01…B-07 | 🔲 |
-| F1 | [Push](F1-push.md) | notificação traduzida, disparada e cancelada na hora certa | B-08…B-13 | 🔲 |
+| F0 | [Device](F0-device.md) | registro, aprovação, revogação, expiração do pendente e a tela de devices | B-01…B-07, B-30 | 🔲 |
+| F1 | [Push](F1-push.md) | notificação traduzida, disparada e cancelada na hora certa | B-08…B-13, B-31, B-32 | 🔲 |
 | F2 | [Sessão no app](F2-mobile-session.md) | socket, ciclo de vida e o stream nas telas | B-14…B-19 | 🔲 |
-| F3 | [Permissão no app](F3-mobile-permission.md) | a tela que autoriza, com biometria e deep link | B-20…B-25 | 🔲 |
-| F4 | [E2E](F4-e2e.md) | permissão pelo celular, corrida e multi-cliente | B-26…B-29 | 🔲 |
+| F3 | [Permissão no app](F3-mobile-permission.md) | a tela que autoriza, com biometria, deep link e extensão do prazo | B-20…B-25, B-33 | 🔲 |
+| F4 | [E2E](F4-e2e.md) | permissão pelo celular, corrida e multi-cliente, em imagem fixada | B-26…B-29, B-34 | 🔲 |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 
@@ -93,20 +93,27 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Requisito | Tarefas | Documento normativo | Cenários |
 |---|---|---|---|
 | Device precisa de aprovação explícita antes do primeiro uso | B-01…B-05, B-07 | [08-authentication](../../architecture/shared/08-authentication.md#device-e-o-canal-mobile) | S-01…S-06, S-11…S-13 |
+| O mesmo aparelho em duas contas não herda aprovação | B-02 | [backend/05-persistence](../../architecture/backend/05-persistence.md#o-device-do-celular) | S-02, S-59 |
+| Pendente que ninguém aprovou não envelhece na lista | B-30 | [08-authentication](../../architecture/shared/08-authentication.md#device-e-o-canal-mobile) | S-60 |
 | Revogação alcança socket aberto e mata a credencial | B-04 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#handshake) | S-07…S-10 |
 | Aprovação parte de uma sessão já confiável | B-06 | [mobile/07-auth](../../architecture/mobile/07-auth.md) | S-06 |
 | Push só quando ninguém está observando, e some quando resolve | B-08, B-10 | [backend/03-modules](../../architecture/backend/03-modules.md#notification) | S-15, S-16, S-21…S-25 |
 | Push vai traduzido — a única exceção da regra de i18n | B-11 | [02-i18n](../../architecture/shared/02-i18n.md) | S-17, S-18 |
 | Push nunca carrega conteúdo de arquivo nem output | B-12 | [mobile/03-state-and-data](../../architecture/mobile/03-state-and-data.md) | S-19, S-20 |
 | Nome de provedor não vaza para fora da configuração | B-09 | [AGENTS.md](../../../AGENTS.md) | S-26 |
+| Token rotacionado não derruba a aprovação nem some calado | B-09, B-31 | [backend/03-modules](../../architecture/backend/03-modules.md#notification) | S-61, S-62 |
+| Vários pedidos na bandeja continuam abrindo o card certo | B-10 | [backend/03-modules](../../architecture/backend/03-modules.md#notification) | S-63 |
+| Negar a notificação do SO não deixa o produto mudo | B-32 | [mobile/04-ui](../../architecture/mobile/04-ui.md#quando-o-usuário-nega-a-notificação-do-so) | S-64 |
 | As três regras do stream, também no app | B-15 | [mobile/03-state-and-data](../../architecture/mobile/03-state-and-data.md) | S-28…S-31 |
 | O socket cai em background, e isso é correto | B-16 | [mobile/03-state-and-data](../../architecture/mobile/03-state-and-data.md) | S-32…S-35 |
 | Telas do app com os quatro estados e sem literal | B-17…B-19 | [mobile/04-ui](../../architecture/mobile/04-ui.md), [02-i18n](../../architecture/shared/02-i18n.md) | S-36…S-38 |
 | A tela de permissão do celular, e o toque acidental | B-20…B-22, B-24 | [mobile/04-ui](../../architecture/mobile/04-ui.md#a-tela-de-permissão) | S-39…S-44, S-48, S-49 |
 | Abrir pelo push revalida no servidor, nunca renderiza o payload | B-23 | [mobile/03-state-and-data](../../architecture/mobile/03-state-and-data.md) | S-45…S-47 |
 | Logout desregistra o push e não deixa dado do usuário anterior | B-25 | [mobile/07-auth](../../architecture/mobile/07-auth.md) | S-50 |
+| Quem decide de longe pode pedir mais prazo, sem escolher o número | B-33 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#estender-o-prazo-é-mexer-na-única-proteção-que-existe) | S-65, S-66 |
 | Os cenários e2e que só existem com duas pontas | B-26…B-28 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md#cenários-e2e-obrigatórios) | S-51…S-57 |
 | O e2e do app roda sem inviabilizar a máquina | B-29 | [F6 do bootstrap](../00-bootstrap/F6-scripts-e2e.md) | S-58 |
+| O resultado do e2e é comparável entre duas máquinas | B-34 | [mobile/06-testing](../../architecture/mobile/06-testing.md#e2e) | S-67 |
 
 Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 

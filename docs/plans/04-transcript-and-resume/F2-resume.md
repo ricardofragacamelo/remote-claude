@@ -25,10 +25,15 @@ para não misturar o que veio do histórico com o que está chegando.
 O contrato do replay não muda; o que muda é de onde o cliente pega a parte antiga — do
 transcript (F0), não do ring buffer.
 
-### B-12 — Retomar a sessão do VSCode 🔲
+### B-12 — Retomar a sessão criada fora 🔲
 
 É a promessa que justifica `persistSession: true`: começar no editor e continuar do celular.
 Ela precisa funcionar de verdade, não só listar.
+
+Sessão externa retoma **por fork** (`resume` + `forkSession: true`), sessão nossa retoma
+in-place ([D-04](decisions.md#d-04--duas-bocas-no-mesmo-arquivo)). Não existe detecção de
+"aberta agora no editor" — a regra não depende dela. A UI diz que a continuação vive num id
+novo e que o editor não verá as respostas.
 
 ### B-13 — Os erros da retomada 🔲
 

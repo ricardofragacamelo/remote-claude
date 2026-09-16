@@ -500,16 +500,182 @@ Scripts em `scratchpad/sdkprobe/`: `inv-settings.mjs`, `inv-claudemd.mjs`, `inv-
 
 ---
 
+## 9 — Terceira rodada de spikes (2026-09-16)
+
+Feita para fechar as decisões do [plano 04](../plans/04-transcript-and-resume/decisions.md).
+Quatro dos sete gaps eram **mensuráveis nesta máquina** e não precisavam de opinião. Só o
+§9.5 gastou token; o resto é leitura local.
+
+### 9.1 — O store real de sessões
+
+`~/.claude/projects/`, medido inteiro:
+
+| | |
+|---|---|
+| workspaces | 22 |
+| sessões | 298 |
+| tamanho total | 668 MB |
+| sessões por workspace | p50 = **1**, máx = **154** |
+| linhas por sessão | p50 = 333, p90 = 1698, p99 = 3353, máx = 5099 |
+| bytes por sessão | p50 = 1,0 MB, p90 = 4,3 MB, máx = 12,7 MB |
+| sessões sem `cwd` | **55** — 18 % |
+
+O store tem transcript de projeto de cliente. É o argumento que fechou o
+[D-01](../plans/04-transcript-and-resume/decisions.md#d-01--o-que-aparece-de-fora): o que a
+allowlist cerca para executar, ela cerca para ler.
+
+### 9.2 — `limit`/`offset` não reduzem o trabalho do servidor
+
+Na maior sessão do store (12,7 MB, 5099 linhas):
+
+| chamada | tempo | heap |
+|---|---|---|
+| `getSessionMessages` sem limite | 66 ms | ~30 MB |
+| `limit: 1` | 47 ms | ~29 MB |
+| `limit: 50, offset: 0` | 63 ms | ~30 MB |
+| `limit: 50` na cauda | 44 ms | ~29 MB |
+| `offset` além do fim | 37 ms | devolve `[]` |
+| id inexistente | 2 ms | devolve `[]` |
+
+**O parse do JSONL é integral em toda chamada** — o SDK reconstrói a cadeia de `parentUuid`
+antes de cortar a fatia. Consequência de arquitetura: **paginação protege o cliente, não o
+servidor.** Quem protege o servidor é cache — e o `lastModified` do `listSessions` é a chave de
+invalidação pronta — mais limite de leituras concorrentes.
+
+Dois detalhes que valem contrato:
+
+- as 5099 linhas viram **803 mensagens**: ~16,5 KB por mensagem, porque o payload carrega input
+  e output de tool. Página de 50 seria ~800 KB no celular;
+- `offset` conta **mensagens**, não linhas (verificado), e a mesma página pedida duas vezes
+  devolve o mesmo conteúdo;
+- **`[]` não distingue "vazia" de "não existe".** Quem distingue é `getSessionInfo`, que devolve
+  `undefined`.
+
+### 9.3 — `SDKSessionInfo` não tem origem
+
+Os campos são `sessionId`, `summary`, `lastModified`, `fileSize`, `customTitle`, `firstPrompt`,
+`gitBranch`, `cwd`, `tag`, `createdAt`. **Nenhum diz de onde a sessão veio.**
+
+E `includeProgrammatic: false` devolveu as **mesmas 298** sessões, então nem o diff entre as
+duas listas separa o que é nosso do que é do editor. Quem quiser rotular a origem tira isso do
+**próprio banco** — é nossa se temos linha dela. Por isso o rótulo honesto é "externa", e não
+"VSCode": pode ter vindo do terminal.
+
+Custo da listagem: `listSessions({})` = **281 ms** para 298 sessões; `listSessions({ dir })` =
+**21 ms**. A ordem default é `lastModified` descendente, e `limit`/`offset` são uma janela
+estável sobre ela — mas a ordem **muda sob escrita concorrente**, o que apareceu dentro do
+próprio probe, em menos de um segundo. Offset cru pula e duplica linha; cursor sobre
+`(lastModified, sessionId)` não.
+
+`includeWorktrees` é `true` por padrão, então `listSessions({ dir })` pode devolver sessão cujo
+`cwd` está fora do `dir` pedido. Filtro confiável é sobre o `cwd` devolvido.
+
+### 9.4 — Não há como saber que uma sessão está aberta no editor
+
+Os locks ficam em `~/.claude/ide/`, **um por instância de IDE**, nomeados por PID, e guardam
+credencial — nosso backend não deveria lê-los. Eles não dizem qual `sessionId` está aberto.
+Havia 7 processos do Claude da extensão do VSCode rodando durante a medição, e nenhum caminho
+suportado ligando processo a sessão.
+
+Logo, "recusar retomada se a sessão estiver aberta no editor" **não é implementável**. O que o
+SDK oferece no lugar é `resume` + `forkSession: true`: continua a conversa num `sessionId` novo,
+sem nunca escrever no arquivo que o outro consumidor pode estar usando. `forkSession` copia o
+transcript remapeando os UUIDs, e **não** copia o histórico de undo.
+
+O risco que o fork elimina não é cosmético: dois escritores no mesmo JSONL bifurcam a cadeia de
+`parentUuid`, e `getSessionMessages` reconstrói **uma** cadeia — um dos lados desaparece da
+leitura, em silêncio. Base do
+[D-04](../plans/04-transcript-and-resume/decisions.md#d-04--duas-bocas-no-mesmo-arquivo).
+
+### 9.5 — `rewindFiles()` sobrescreve alteração manual, o `dryRun` não avisa, e não há filtro por arquivo
+
+Único spike pago desta rodada (≈ US$ 0,21, três execuções — duas morreram em erro do script).
+Sessão real com `enableFileCheckpointing: true`, `cwd` num repositório descartável:
+
+```text
+turno 1: a sessão escreve  a.txt = "ONE"   e  b.txt = "BEE"
+turno 2: a sessão altera   a.txt = "TWO"
+à mão:                     a.txt = "EXTERNAL EDIT BY THE USER"
+à mão:                     c.txt, que a sessão nunca tocou
+
+rewindFiles(prompt do turno 2, { dryRun: true })
+  → { canRewind: true, filesChanged: ["a.txt"], insertions: 1, deletions: 1 }
+rewindFiles(prompt do turno 2)
+  → { canRewind: true, skippedLinks: 0 }
+
+depois: a.txt = "ONE"      b.txt = "BEE"      c.txt intacto
+```
+
+**Sobrescreve em silêncio**, e o `dryRun` **não denuncia**: ele reporta um reverte de uma linha,
+de aparência trivial, porque as contagens são calculadas contra o checkpoint e não têm como
+saber que o conteúdo atual foi escrito pelo usuário. Confirmação construída só sobre o `dryRun`
+é tranquilizadora e destrutiva — é o
+[D-06](../plans/04-transcript-and-resume/decisions.md#d-06--desfazer-sem-destruir).
+
+O store de backup é `~/.claude/file-history/<sessionId>/<hash>@v1`: **conteúdo puro**, sem
+metadado do arquivo vivo. Então o CLI só sabe "difere ou não", nunca "quem alterou" — e quem
+quiser a distinção grava hash e mtime por conta própria, no hook `PostToolUse`.
+
+Mais quatro achados do mesmo spike:
+
+- **o alvo do rewind é mensagem de _prompt_.** No transcript, `tool_result` também tem
+  `type: 'user'`; apontar para um deles devolve `"No file checkpoint found for this message."`;
+- **as duas formas de erro são diferentes:** com alvo inválido, o `dryRun` **devolve**
+  `{ canRewind: false, error }` e a chamada real **lança**, com
+  `errorClass: 'control_request_failed'`;
+- o alcance é do checkpoint escolhido, não da sessão toda: `b.txt`, escrito no turno 1, não
+  voltou;
+- **rewind repetido é idempotente**: a segunda chamada idêntica devolve `canRewind: true` e não
+  muda o disco. E arquivo que a sessão nunca tocou não é alcançado.
+
+E o que a assinatura não oferece, e decidiu o desenho: **`rewindFiles(userMessageId, { dryRun })`
+não aceita filtro de arquivo.** Uma chamada reverte **todos** os arquivos divergentes daquele
+checkpoint, e não há como pedir "todos menos este". Somando ao achado de que ele sobrescreve
+alteração manual em silêncio, "preservar o arquivo que o usuário editou e reverter o resto" é
+**impossível** em cima dessa API.
+
+Sobra também que `rewindFiles` é método de `Query`: exige **sessão viva**. Rewind de sessão
+encerrada só existe se o store for nosso.
+
+Os dois fatos juntos são a base do desenho de store próprio — chaveado por `prompt_id`, que o
+`BaseHookInput` entrega em **todo** hook ("UUID correlating a user prompt with all subsequent
+events until the next prompt"), sem exigir leitura do transcript.
+
+Armadilha de script, que vale para o nosso adapter: **sair do `for await` do `Query` aborta a
+query**. O primeiro spike morreu com `Operation aborted` porque o laço dava `return` ao receber
+o `result`. Um consumidor só, para toda a vida da sessão, e os turnos se coordenam por promise.
+
+### 9.6 — `supportedCommands()` traz comando morto e interno
+
+54 comandos nesta instalação com `settingSources: ['project']` — a rodada anterior mediu 57.
+A contagem varia por instalação, versão e skills instalados, o que sustenta a proibição de lista
+fixa. Cada item traz `name`, `description` e `argumentHint`.
+
+A lista crua **não é apresentável como está**: `agents` tem descrição começando em `(removed)`,
+`extra-usage` vem como `Renamed to /usage-credits`, dois comandos têm prefixo `__`
+(`__remote-workflow`, `workflow-launch-exec`) e `heapdump` despeja o heap em `~/Desktop`.
+Filtrar por **metadado** — prefixo e descrição — envelhece bem; filtrar por nome é a lista fixa
+de novo.
+
+Chamar `supportedCommands()` não custa token: basta abrir a `query()` e nunca ceder prompt.
+
+### Como reproduzir
+
+Scripts em `scratchpad/sdkprobe/`: `measure-store.mjs`, `probe-pagination.mjs`,
+`probe-listing.mjs`, `probe-limit.mjs`, `probe-commands.mjs`, `spike-rewind.mjs`.
+
+---
+
 ## Versões verificadas
 
 | Item | Versão |
 |---|---|
-| `@anthropic-ai/claude-agent-sdk` | 0.3.270 |
-| Claude Code CLI (PATH) | 2.1.226 |
+| `@anthropic-ai/claude-agent-sdk` | 0.3.270 na descoberta · **0.3.273** na rodada de 2026-09-16 |
+| Claude Code CLI (PATH) | 2.1.226 — e **2.1.273** na extensão do VSCode: há dois binários na máquina |
 | Node | v24.16.0 |
 | npm | 11.13.0 |
 | Flutter / Dart | presentes em `~/middleware/flutter/flutter/bin` |
-| Data da descoberta | 2026-09-13 |
+| Data da descoberta | 2026-09-13 · terceira rodada de spikes em 2026-09-16 |
 
 Fontes: `sdk.d.ts` (9221 linhas) e `README.md` do pacote, inspecionados localmente.
 Doc oficial: <https://platform.claude.com/docs/en/agent-sdk/overview>

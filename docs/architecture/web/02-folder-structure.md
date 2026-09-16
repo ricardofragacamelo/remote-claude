@@ -40,7 +40,8 @@ web/
 │   │   │   └── index.ts            superfície pública da feature
 │   │   │
 │   │   ├── workspace/
-│   │   ├── permission/
+│   │   ├── permission/             pedido, escolha de escopo e as regras persistidas
+│   │   ├── audit/                  consulta da trilha
 │   │   ├── transcript/
 │   │   └── auth/
 │   │

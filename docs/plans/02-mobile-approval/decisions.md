@@ -281,25 +281,32 @@ terceiro, para que a lacuna apareça agora e não no dia da instalação.
 
 ---
 
-## Propagação pendente
+## Propagação
 
-Decisão registrada só aqui é decisão que o resto do repositório não conhece. Estas ainda **não**
-foram levadas ao documento normativo:
+Decisão registrada só aqui é decisão que o resto do repositório não conhece. Estas viraram
+**regra** no documento normativo, em 2026-09-16:
 
-| Decisão | Documento a atualizar |
+| Decisão | Onde virou regra |
 |---|---|
-| D-01 | [08-authentication](../../architecture/shared/08-authentication.md#device-e-o-canal-mobile) — o `installId` entra no fluxo de registro, que hoje lista só nome, plataforma, push token e locale |
-| D-04, D-05 | [backend/03-modules](../../architecture/backend/03-modules.md#notification) — o push vai para todos os aparelhos aprovados, e falha do provedor é `warn` sem segundo canal |
-| D-10 | [backend/05-persistence](../../architecture/backend/05-persistence.md) — o índice único composto do device, junto da migration que o cria |
-| D-12 | [README do plano](README.md#escopo) — "só Android" entra no **Não entra**; e [mobile/06-testing](../../architecture/mobile/06-testing.md), que descreve o `integration_test` sem dizer em que plataforma ele roda |
-| D-14, D-16 | [mobile/04-ui](../../architecture/mobile/04-ui.md#a-tela-de-permissão) — a ação de estender no card, e o estado de notificação negada |
-| D-09 | [README.md](../../../README.md#comandos) e [scripts/mobile.mjs](../../../scripts/mobile.mjs) — a imagem fixada, dita onde o comando é documentado |
-| D-02, D-08 | nada a propagar — a escolha **já** é o que o normativo diz ([08-authentication](../../architecture/shared/08-authentication.md#device-e-o-canal-mobile), [mobile/04-ui](../../architecture/mobile/04-ui.md#a-tela-de-permissão)) |
+| D-01, D-10, D-11 | [08-authentication](../../architecture/shared/08-authentication.md#device-e-o-canal-mobile) — `installId` no fluxo de registro, unicidade em `(userId, installId)`, e o pendente expirando em 7 dias |
+| D-04, D-05, D-13, D-15 | [backend/03-modules](../../architecture/backend/03-modules.md#notification) — push para todos os aparelhos aprovados, uma notificação por pedido, falha do provedor como `warn` sem segundo canal, e o token recusado apagado com o device mantido |
+| D-07 | [mobile/07-auth](../../architecture/mobile/07-auth.md) — aparelho sem biometria **e** sem PIN não aprova, e a tela diz por quê |
+| D-08 | [mobile/04-ui](../../architecture/mobile/04-ui.md#a-tela-de-permissão) — dois passos só para `destructive`, apoiado no `riskHint` que falha fechado |
+| D-09, D-12 | [mobile/06-testing](../../architecture/mobile/06-testing.md#e2e) — a suíte é Android, o iOS compila sem ser exercitado, e a imagem é API 35 |
+| D-10 | [backend/05-persistence](../../architecture/backend/05-persistence.md#o-device-do-celular) — o índice único composto, nascendo composto na migration |
+| D-14, D-16 | [mobile/04-ui](../../architecture/mobile/04-ui.md#a-tela-de-permissão) — a ação de estender no card, e a tela de notificação negada |
+| D-02 | nada a propagar — a escolha **já** é o que o normativo diz ([08-authentication](../../architecture/shared/08-authentication.md#device-e-o-canal-mobile)) |
 
-**Tarefas que as decisões criaram, e que ainda não estão nas fases nem na matriz:** expiração do
-pendente (F0, com D-11), reenvio e descarte do push token (F1, com D-13), estado de notificação
-negada (F1, com D-14), ação de estender o prazo no card (F3, com D-16) e a imagem de emulador
-fixada (F4, com D-09). [S-02](scenarios.md) também muda de texto por causa de D-10.
+"Só Android" já está no **Não entra** do [README do plano](README.md#escopo). Segue pendente, e
+**não** é documento de arquitetura: a imagem API 35 dita no
+[README.md](../../../README.md#comandos) junto de [scripts/mobile.mjs](../../../scripts/mobile.mjs)
+— e isso é a entrega de **B-34**, não trabalho de propagação.
+
+**Tarefas que as decisões criaram, e que já estão nas fases e na matriz:** **B-30** (expiração do
+pendente, F0, de D-11), **B-31** (reenvio e descarte do push token, F1, de D-13), **B-32** (estado
+de notificação negada, F1, de D-14), **B-33** (estender o prazo no card, F3, de D-16) e **B-34**
+(imagem de emulador fixada, F4, de D-09). [S-02](scenarios.md) também teve o texto corrigido por
+causa de D-10 — sem o *"do mesmo usuário"*, ele passaria verde com a chave errada.
 
 ---
 

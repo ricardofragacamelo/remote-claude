@@ -49,6 +49,12 @@ ele manteve uma permissão pendurada por 150 s sem desistir nem emitir erro
 
 **Timeout nega. Silêncio nunca autoriza.** `options.signal` é respeitado.
 
+O prazo é **extensível** ([D-09](decisions.md#d-09--estender-o-que-já-é-o-único-timeout)): o
+comando já existe desde a F0, e aqui ele ganha efeito — incremento e teto vêm da configuração, e
+cada cenário **fixa o valor que usa**, ou deixa de ser determinístico. Estender é mexer na única
+proteção contra sessão pendurada, então o teto é rígido: atingido, responde erro, e a UI mostra
+que não há mais extensão.
+
 ### B-28 — Registro de pendentes e republicação no attach 🔲
 
 O gap que o produto sofre é entre cliente e backend; o canal SDK↔CLI não cai junto. A `Promise`
@@ -65,11 +71,27 @@ Ao reatar, quem republica os pendentes é o **nosso** registro.
 Segunda resolução do mesmo `requestId` é `ack` silencioso — nunca erro, nunca dupla execução.
 Quem não está anexado à sessão leva `PERMISSION_NOT_OWNED`.
 
+`permission.extend` fecha o mesmo round-trip: `permission.extended` sai para todas as connections
+que observam, com o novo `expiresAt` e o `remainingExtensions`. Extensão que chega depois de o
+pedido ter sido resolvido ou expirado é **erro**, não no-op silencioso — quem estendeu precisa
+saber que não estendeu. Web e celular podem estender o mesmo pedido: a operação é idempotente por
+`requestId`.
+
 ### B-30 — `riskHint` e sugestões de escopo 🔲
 
 O `riskHint` é derivado **no backend**, a partir da tool e do input, para a UI decidir o
 destaque sem reimplementar a classificação em duas pontas. `suggestions` traz os escopos
 disponíveis; `once` é o default.
+
+A regra é **lista fixa por tool _mais_ heurística sobre o input**, e ela **falha fechado**
+([D-08](decisions.md#d-08--classificar-risco-sem-mentir)): comando que a heurística **não
+reconhece** é marcado como `destructive`, nunca como seguro. O caso que importa é `Bash` — um
+falso negativo ali é um `rm -rf` com a mesma aparência de um `ls`. Falso positivo incomoda; falso
+negativo é o acidente.
+
+Não é detalhe de UI: é essa garantia que sustenta a confirmação em dois passos do app valer só
+para `destructive` ([plano 02 · D-08](../02-mobile-approval/decisions.md)). Se ela deixar de
+falhar fechado, aquela decisão reabre.
 
 ### B-31 — Eventos de domínio: destravar, auditar, notificar 🔲
 
@@ -84,7 +106,7 @@ Comunicação entre módulos é por porta ou evento, nunca importando o interior
 
 ## Cenários cobertos
 
-S-50…S-65.
+S-50…S-65, S-91…S-95.
 
 ---
 

@@ -32,6 +32,10 @@ explica por quê.
 Contra o Claude real: `supportedCommands()` devolve a lista da instalação, e `/init` termina em
 sucesso passando pelo pedido de `Write`.
 
+O `/init` roda contra uma **fixture gerada na execução** — `git init` em tmpdir, um arquivo, um
+commit, teardown no fim ([D-07](decisions.md#d-07--onde-o-init-pode-escrever)). Nunca um repo
+fixo, que acumularia o `CLAUDE.md` da execução anterior, e nunca o nosso.
+
 É o único teste que pega uma mudança de comportamento do CLI antes do usuário.
 
 ---

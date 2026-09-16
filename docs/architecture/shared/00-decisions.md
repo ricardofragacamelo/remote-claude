@@ -276,3 +276,49 @@ módulo `permission`, a partir do seu próprio registro, disparada pelo `session
 clientes e de retry do cliente, não de reentrega do SDK.
 
 Ver [descoberta §8.3](../../discovery/01-descoberta-claude-agent-sdk.md#83--reinitialize-não-reentrega-o-pedido-e-não-precisamos-dele).
+
+---
+
+## ADR-013 — O desfazer não usa `rewindFiles()`; o store de checkpoint é nosso
+
+**Status:** aceita · 2026-09-16 · **muda o mecanismo do desfazer, não a promessa**
+
+O desenho anterior ligava `enableFileCheckpointing: true` para usar `query.rewindFiles()` como
+o desfazer do produto. **Medição contra o Claude real mostrou que essa API não sustenta a
+promessa** — e um dos três motivos é a própria assinatura, não comportamento:
+
+1. **sobrescreve alteração manual, em silêncio.** Arquivo que o usuário editou à mão depois do
+   checkpoint volta ao conteúdo do checkpoint, com `canRewind: true` e `skippedLinks: 0`;
+2. **`dryRun: true` não denuncia isso** — as contagens são calculadas contra o checkpoint, e um
+   reverte destrutivo aparece como `insertions: 1, deletions: 1`;
+3. **não aceita filtro de arquivo.** Uma chamada reverte todos os divergentes do checkpoint.
+
+O terceiro é o que fecha a questão: "preservar o que o usuário editou e reverter o resto" não é
+difícil sobre essa API — é **impossível**. E o desfazer existe justamente para ser rede de
+segurança de quem aprova de longe; rede que destrói trabalho manual é risco, não rede.
+
+**A decisão:** o store de checkpoint é nosso. Do SDK usamos só os hooks —
+`UserPromptSubmit` abre o checkpoint do turno, `PreToolUse` guarda o conteúdo anterior no
+primeiro toque de cada caminho, `PostToolUse` guarda hash e mtime do resultado, e
+`PostToolUseFailure` não guarda nada. A chave é `(session_id, prompt_id, path)`, e o
+`prompt_id` vem do `BaseHookInput` em todo hook — então o turno de um snapshot é sabido **sem
+ler o transcript**, o que preserva a regra de nunca fazer parser do JSONL.
+
+O revert é arquivo por arquivo: restaura o que está como a sessão deixou, **preserva** o que
+divergiu, e informa os dois.
+
+**O que passou a ser nossa responsabilidade**, e não era antes:
+
+| | Por quê |
+|---|---|
+| Recusar symlink, hard link, arquivo não regular e pai que deixou de resolver | era o `skippedLinks` do SDK; sem isso, restaurar é caminho para escrever fora do workspace |
+| Restauração atômica por arquivo — temporário no mesmo diretório, depois `rename` | falha no meio deixando arquivo truncado é pior que não ter revertido |
+| Teto e purga do store de snapshots | referência medida: o store equivalente do CLI ocupa 6,6 MB para 54 sessões |
+
+**`enableFileCheckpointing: true` continua ligado**, e deixa de ser load-bearing: ele preserva o
+`/rewind` do próprio usuário no editor. E o desfazer deixou de exigir sessão viva —
+`rewindFiles` era método de `Query`, nosso store não é —, então "sessão fechada não desfaz"
+passou de limitação a **política**.
+
+Ver [descoberta §9.5](../../discovery/01-descoberta-claude-agent-sdk.md#95--rewindfiles-sobrescreve-alteração-manual-o-dryrun-não-avisa-e-não-há-filtro-por-arquivo)
+e [D-06 do plano 04](../../plans/04-transcript-and-resume/decisions.md#d-06--desfazer-sem-destruir).

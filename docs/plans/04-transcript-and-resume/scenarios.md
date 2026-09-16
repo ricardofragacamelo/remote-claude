@@ -26,6 +26,11 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-08 | ler enquanto a sessão viva grava não corrompe a página | conc | integração | — | B-04 | ⬜ |
 | S-09 | parser próprio de JSONL → `lint:arch` reprova | err | unit | — | B-01 | ⬜ |
 | S-10 | sessão que termina durante a leitura fecha a página sem erro | est | integração | — | B-01 | ⬜ |
+| S-54 | sessão sem `cwd` é excluída da lista — não há como provar que é de workspace liberado | fron | integração | — | B-02 | ⬜ |
+| S-55 | sessão de worktree cujo `cwd` está fora da allowlist não aparece | err | integração | — | B-04 | ⬜ |
+| S-56 | sessão inexistente distingue-se de sessão vazia — `getSessionInfo` decide | err | integração | `NOT_FOUND` | B-04 | ⬜ |
+| S-57 | duas páginas pedidas sob escrita viva não pulam nem duplicam mensagem | conc | integração | — | B-04 | ⬜ |
+| S-64 | o cache do transcript é invalidado quando o `lastModified` muda | idem | integração | — | B-04 | ⬜ |
 
 ## Telas de histórico — B-06…B-09
 
@@ -54,6 +59,8 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-26 | retomar acima do limite de sessões simultâneas | fron | integração | `SESSION_LIMIT_REACHED` | B-13 | ⬜ |
 | S-27 | a retomada entra em `audit` | eq | integração | — | B-10 | ⬜ |
 | S-28 | nenhuma mensagem de transcript é copiada para o Postgres → `lint:arch` reprova | err | unit | — | B-11 | ⬜ |
+| S-58 | retomar sessão **externa** cria `sessionId` novo e não escreve no transcript de origem | est | integração | — | B-12 | ⬜ |
+| S-59 | retomar sessão **nossa** mantém o mesmo `sessionId` e preserva o histórico de undo | est | integração | — | B-10 | ⬜ |
 
 ## Slash commands — B-14…B-17
 
@@ -67,6 +74,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-34 | comando inexistente digitado pelo usuário → erro traduzido | err | integração | `INVALID_INPUT` | B-15 | ⬜ |
 | S-35 | a lista é cacheada e invalidada quando a versão do CLI muda | idem | integração | — | B-17 | ⬜ |
 | S-36 | duas sessões pedindo a lista ao mesmo tempo fazem **uma** chamada | conc | integração | — | B-17 | ⬜ |
+| S-60 | comando interno (`__`) ou morto (`(removed)`, `Renamed to`) não aparece no menu | eq | integração | — | B-15 | ⬜ |
 
 ## Desfazer — B-18…B-21
 
@@ -81,6 +89,12 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-43 | desfazer com um turno em execução é recusado | conc | integração | `SESSION_LOCKED` | B-21 | ⬜ |
 | S-44 | falha no meio do rewind informa o que foi e o que não foi revertido | err | integração | `INTERNAL_ERROR` | B-21 | ⬜ |
 | S-45 | o comando de rewind existe nas três pontas → `contracts:check` verde | eq | unit | — | B-18 | ⬜ |
+| S-61 | alvo de rewind que não é checkpoint nosso é recusado | err | unit | `INVALID_INPUT` | B-21 | ⬜ |
+| S-62 | falha no meio da restauração informa o que voltou e o que não voltou | err | integração | `INTERNAL_ERROR` | B-21 | ⬜ |
+| S-63 | arquivo alterado fora da sessão é **preservado**, e os demais revertem | est | integração | — | B-21 | ⬜ |
+| S-65 | caminho que virou symlink, hard link ou arquivo não regular é recusado, não restaurado | err | integração | — | B-21 | ⬜ |
+| S-66 | restauração é atômica: falha na escrita não deixa arquivo truncado | err | integração | — | B-21 | ⬜ |
+| S-67 | store de snapshots respeita o teto, e a purga não apaga o que uma sessão viva ainda alcança | fron | integração | — | B-21 | ⬜ |
 
 ## E2E — B-22…B-25
 

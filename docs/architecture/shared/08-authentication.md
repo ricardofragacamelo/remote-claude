@@ -114,6 +114,17 @@ sub (claim do provedor)  ─────►  User.externalId   (chave estável, 
   tabela local. Não dependa de role vinda do provedor — isso acopla o modelo de acesso ao
   fornecedor.
 
+**O sistema é multiusuário desde a primeira migration**, mesmo instalado numa máquina pessoal.
+`userId` é `NOT NULL` em workspace, audit e permission, e **toda** query é escopada. Não é
+antecipação de um requisito futuro: trilha de auditoria é append-only, e retrofitar escopo nela
+seria migração de dados numa tabela que o desenho proíbe reescrever. Daí decorrem três regras que
+aparecem em cada módulo:
+
+- a **raiz de workspace** declara quem a usa, e raiz de outro responde 404;
+- a **regra de permissão** é sempre de **um** usuário, nunca da máquina — `always` significa "em
+  qualquer projeto **deste** usuário";
+- a **trilha** é lida só pelo dono, e a de outro responde 404.
+
 ---
 
 ## Device e o canal mobile
@@ -123,7 +134,7 @@ registro explícito antes do primeiro uso:
 
 ```
 login OIDC bem-sucedido
-   → app registra o device (nome, plataforma, push token, locale)
+   → app registra o device (installId, nome, plataforma, push token, locale)
    → device entra como "pendente"
    → aprovação a partir de uma sessão já confiável (web)
    → só então pode responder permission requests
@@ -131,6 +142,24 @@ login OIDC bem-sucedido
 
 Motivo: o token OIDC prova *quem* é. O registro de device prova *de onde*. Como a decisão
 autorizada executa comando na máquina, as duas coisas são necessárias.
+
+**A identidade do aparelho é o `installId`**, gerado pelo app na primeira execução e guardado no
+armazenamento seguro — não um identificador do SO. O identificador do SO é estável demais numa
+direção: persiste depois de desinstalar, o que é questão de privacidade. O `installId` some com o
+app, e a reinstalação aparece como aparelho novo, com o antigo visível na lista para ser
+revogado.
+
+**A unicidade é o par `(userId, installId)`**, não o `installId` sozinho. Com multiusuário, o
+registro do usuário B no mesmo celular sobrescreveria a linha já aprovada do usuário A —
+aprovação herdada em silêncio, que é o oposto do que o registro existe para garantir.
+
+**Aprovar device é só pelo web.** Se um aparelho aprovado pudesse aprovar outro, um celular
+comprometido aprovaria o próximo. O preço está dito: o primeiro aparelho depende de um navegador.
+Reabrir isso é **ADR**, não decisão de plano.
+
+**O pendente expira em 7 dias** e sai da lista; registrar de novo é abrir o app. Lista longa de
+pendentes é como se aprova por cansaço o aparelho errado, meses depois. Não há teto de aparelhos
+por usuário — o número não é o problema, a idade é.
 
 Revogar um device invalida os refresh tokens dele imediatamente e é registrado em `audit`.
 

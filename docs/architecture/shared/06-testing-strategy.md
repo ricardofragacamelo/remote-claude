@@ -147,8 +147,18 @@ Fica em `e2e/`, na raiz.
 **E2E não usa o Claude de verdade.** O Agent SDK é substituído por um fake roteirizado.
 Teste e2e precisa ser determinístico; o Claude não é — e cada execução custa dinheiro.
 
-Existe **uma** suíte separada, `e2e/smoke-live/`, que roda contra o Claude real. Não roda em
-PR: roda sob demanda e no nightly. É o que detecta quebra de contrato do SDK.
+**Os roteiros do fake não são escritos à mão.** São capturados de execuções reais do SDK e
+commitados como fixtures — inclusive a assimetria medida no spike, em que 6 tool calls
+produziram 6 hooks e apenas 2 `canUseTool`. Fake escrito de memória prova que **o fake**
+funciona: ele não pode ser otimista a respeito de um stream que ele mesmo inventou. Gravar
+fixture é, portanto, ferramenta do repositório, não tarefa manual.
+
+Existe **uma** suíte separada, `e2e/smoke-live/`, que roda contra o Claude real. Não roda em PR
+e **não roda em nightly**: roda **sob demanda**, porque não há credencial do Claude no CI nem
+máquina ligada à noite. A consequência está dita e não é confortável — o risco de o fake divergir
+do SDK real passa a ser mitigado por **disciplina**, então rodar o `smoke-live` é item explícito
+do Definition of Done de qualquer mudança no adapter do Claude. Se não estiver escrito lá, não
+acontece.
 
 ---
 
@@ -289,7 +299,7 @@ Escrever teste onde não há risco só cria custo de manutenção:
 | E2E mobile | sob demanda (`pnpm test:e2e:mobile`) | **não** — ver abaixo |
 | Paridade de chaves i18n | todo push | sim |
 | Contrato WS ↔ Dart gerado | todo push | sim |
-| `smoke-live` contra o Claude real | nightly + manual | não (abre issue) |
+| `smoke-live` contra o Claude real | **sob demanda** — sem nightly | não (abre issue) |
 
 ### Por que o e2e de mobile não bloqueia
 

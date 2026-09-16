@@ -46,6 +46,15 @@ Não conhece React. Nunca reconecte em laço apertado.
 Conversa, status da sessão e composer (React Hook Form + Zod). Os quatro estados de tela, e a
 sessão ativa **na URL** — colar o link em outro dispositivo tem que reproduzir a tela.
 
+Abrir `/sessions/:id` de uma sessão **já encerrada** mostra o estado terminal (motivo, hora)
+**e** faz replay do que o ring buffer ainda tiver, rotulado como **parcial**
+([D-10](decisions.md#d-10--abrir-o-que-já-acabou)). Sem o rótulo, ausência de conteúdo é lida
+como ausência de atividade — pior do que não mostrar nada.
+
+São **dois ramos, os dois reais**: buffer presente e buffer perdido. O segundo não é caso de
+borda; é o que acontece depois de todo restart do backend. O histórico de verdade continua sendo
+o [plano 04](../04-transcript-and-resume/README.md).
+
 ### B-35 — Execução de tool visível 🔲
 
 `tool.started` / `tool.progress` / `tool.completed` viram um card com o comando exato,
@@ -77,7 +86,7 @@ markup no valor — [02-i18n](../../architecture/shared/02-i18n.md).
 
 ## Cenários cobertos
 
-S-66…S-75.
+S-66…S-75, S-96, S-97.
 
 ---
 

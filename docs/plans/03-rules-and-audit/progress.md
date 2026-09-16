@@ -11,7 +11,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-15
+**Última atualização:** 2026-09-16
 **Bloqueios:** nenhum
 
 ```
@@ -43,7 +43,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 46 | 46 | 0 | 0 | 0 |
+| [Matriz](scenarios.md) | 52 | 52 | 0 | 0 | 0 |
 
 ---
 
@@ -54,7 +54,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 7 | 7 | 0 | 0 | 0 |
+| [Decisões](decisions.md) | 8 | 0 | 0 | 8 | 0 |
 
 ---
 
@@ -98,7 +98,7 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 | R-01 | Regra larga demais reintroduz o furo do `settingSources` | 🔲 aberto | matcher é regra pura, com fronteiras próprias (S-05…S-07) |
 | R-02 | `always` é, na prática, "não me pergunte mais" | 🔲 aberto | a tela diz isso sem eufemismo (S-17), e revogar é um clique |
 | R-03 | Trilha grande torna consulta lenta e purga longa | 🔲 aberto | índice desenhado com a consulta (B-14); purga em lote (S-38) |
-| R-04 | Purga e append-only convivem mal | 🔲 aberto | purga por janela, com papel próprio, e auditada (B-19) |
+| R-04 | Purga e append-only convivem mal | 🔲 aberto | D-08: trigger barra `DELETE` dentro do piso; purga por janela, sob lock, auditada (B-19) |
 
 ---
 

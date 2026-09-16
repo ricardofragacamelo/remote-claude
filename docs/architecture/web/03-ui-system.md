@@ -145,7 +145,35 @@ Quando chega `permission.requested`:
 - Mostre a contagem regressiva até `expiresAt` — silêncio nega.
 - Botão de negar recebe o foco inicial quando `defaultToNo`.
 - O escopo (`once` / `session` / `project` / `always`) é escolha explícita, com `once` default.
+  Cada opção diz **o que significa**, sem eufemismo e sem sigla — "não perguntar de novo neste
+  projeto", "não perguntar de novo em lugar nenhum" —, com a validade da regra à vista.
+- Daqui se **chega à lista de regras**. É um dos dois pontos de entrada obrigatórios dela.
 - Resolvida em outro dispositivo → o card se atualiza sozinho mostrando quem resolveu.
+
+### Regras — onde a autorização é retirada
+
+Regra de permissão é autorização **antecipada** para executar comando na máquina do usuário.
+`always` significa, na prática, "não me pergunte mais".
+
+- A lista mora em **rota própria** (`/rules`), não numa seção de configurações. A promessa é que
+  revogar está a um clique; dentro de configurações fica a três.
+- Dois pontos de entrada, e não só a rota: a **escolha de escopo** na tela de permissão, e a
+  entrada com `auto: true` na **trilha** — os dois lugares onde a dúvida de fato nasce.
+- A linha mostra escopo, tool, padrão, autor, data e **validade**, com sinal para a regra perto
+  de expirar. Sem o aviso, a sessão volta a perguntar sem explicação: perde-se a comodidade e não
+  se explica a perda.
+- Regra **expirada continua listada**, marcada como tal. Regra revogada some.
+- Revogar é ação direta, idempotente na UI: duplo clique revoga uma vez.
+
+### Trilha de auditoria
+
+Responde a uma pergunta só: **"o que foi executado na minha máquina sem me perguntar?"**
+
+- Filtros por sessão, tool, decisão e período; paginação por **cursor**, nunca por offset.
+- Da entrada auto-resolvida se **abre a regra** que a resolveu — inclusive quando já foi
+  revogada, e aí a tela explica o estado em vez de mostrar um vazio sem motivo.
+- O detalhe mostra o `input` exato da tool. Nunca o conteúdo de arquivo lido pela tool `Read`:
+  a trilha guarda `path` e tamanho, e é isso que a tela recebe.
 
 ### Stream de mensagens
 

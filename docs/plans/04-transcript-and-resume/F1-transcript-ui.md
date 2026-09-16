@@ -22,8 +22,13 @@ Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅
 
 ### B-06 — Lista de sessões no web 🔲
 
-Com filtro por workspace e a **origem** visível. Sessão criada no VSCode aparecendo é feature,
-e a UI precisa dizer isso — senão parece dado vazando de outro lugar.
+**Dois níveis** ([D-03](decisions.md#d-03--a-forma-da-lista)): os workspaces da allowlist, e
+dentro de cada um as suas sessões — com paginação própria, porque um workspace pode ter mais de
+150. Sessão criada fora aparecendo é feature, e a UI precisa dizer isso — senão parece dado
+vazando de outro lugar.
+
+O rótulo é **"externa"**, não "VSCode", e vem do nosso banco: o SDK não informa procedência
+([D-01](decisions.md#d-01--o-que-aparece-de-fora)).
 
 ### B-07 — Leitura do transcript, e a recarga do `gap` 🔲
 

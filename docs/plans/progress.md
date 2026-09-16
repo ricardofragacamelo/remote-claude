@@ -35,13 +35,13 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | Plano | Fases | Tarefas | Cenários | Decisões | Estado |
 |---|---|---|---|---|---|
 | [00 — Bootstrap](00-bootstrap/README.md) | 8/8 | 52/52 | 118/119 | 5/6 | ✅ |
-| [01 — Sessão viva](01-live-session/README.md) | 0/7 | 0/43 | 0/84 | 12/13 | 🔲 |
-| [02 — Aprovação pelo celular](02-mobile-approval/README.md) | 0/5 | 0/29 | 0/58 | 16/17 | 🔲 |
-| [03 — Regras e trilha](03-rules-and-audit/README.md) | 0/5 | 0/23 | 0/46 | 0/7 | 🔲 |
-| [04 — Histórico e retomada](04-transcript-and-resume/README.md) | 0/6 | 0/25 | 0/53 | 0/7 | 🔲 |
+| [01 — Sessão viva](01-live-session/README.md) | 0/7 | 0/47 | 0/108 | 12/13 | 🔲 |
+| [02 — Aprovação pelo celular](02-mobile-approval/README.md) | 0/5 | 0/34 | 0/67 | 16/17 | 🔲 |
+| [03 — Regras e trilha](03-rules-and-audit/README.md) | 0/5 | 0/23 | 0/52 | 8/8 | 🔲 |
+| [04 — Histórico e retomada](04-transcript-and-resume/README.md) | 0/6 | 0/25 | 0/67 | 7/7 | 🔲 |
 | [05 — Endurecimento e operação](05-hardening-operations/README.md) | 0/5 | 0/24 | 0/46 | 0/8 | 🔲 |
 | [06 — Distribuição](06-distribution/README.md) | 0/4 | 0/19 | 0/38 | 0/7 | 🔲 |
-| **Total** | **8/40** | **52/215** | **118/444** | **33/65** | 🔄 |
+| **Total** | **8/40** | **52/224** | **118/497** | **48/66** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 

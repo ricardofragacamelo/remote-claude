@@ -23,16 +23,31 @@ Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅
 ### B-01 — `PermissionRule` no domínio 🔲
 
 Escopo (`session`, `project`, `always`), tool, padrão de input, autor, validade e a decisão.
-Pertence a um usuário — regra de um nunca resolve o pedido de outro.
+Pertence a um usuário — regra de um nunca resolve o pedido de outro
+([D-03](decisions.md#d-03--de-quem-é-a-regra)).
+
+O padrão usa a **gramática do próprio Claude Code** — `Bash(git status)` casa exato,
+`Bash(git status:*)` casa o prefixo, `Bash` casa a tool inteira; sem glob e sem regex
+([D-01](decisions.md#d-01--a-sintaxe-é-a-superfície-de-ataque)). É a mesma gramática que a B-04
+devolve ao SDK: sintaxe diferente é a nossa metade e a dele casando conjuntos diferentes.
+Padrão fora da gramática é recusado na **criação** (S-47), e o prefixo respeita fronteira de
+token — `git status:*` não cobre `git statusx` (S-48).
+
+Toda regra tem `expiresAt`, com default e teto vindos de configuração
+([D-02](decisions.md#d-02--regra-que-expira)). Regra expirada não resolve nada (S-12) e **não
+some da lista**: fica marcada como expirada, porque "sumiu" e "deixou de valer" são coisas
+diferentes para quem procura o que autorizou.
 
 `session` já existe desde a [F4 do plano 01](../01-live-session/F4-permission.md); o que nasce
 aqui é o que **sobrevive** à sessão.
 
 ### B-02 — Tabela `permission_rules` e migration 🔲
 
-Migration versionada. Regra viva de escopo `session` continua em memória: o que vai para o
-banco é o que precisa sobreviver ao processo
+Migration versionada, com `user_id` e `expires_at` **`NOT NULL`**. Regra viva de escopo
+`session` continua em memória: o que vai para o banco é o que precisa sobreviver ao processo
 ([persistência](../../architecture/backend/05-persistence.md)).
+
+Validade acima do teto configurado é recusada na criação, não truncada em silêncio (S-49).
 
 ### B-03 — Auto-resolução antes de notificar 🔲
 
@@ -66,7 +81,7 @@ Conflito entre regra e `permissionMode` da sessão resolve pelo mais restritivo.
 
 ## Cenários cobertos
 
-S-01…S-14.
+S-01…S-14, S-47…S-49.
 
 ---
 

@@ -34,6 +34,11 @@ timeout continua sendo quem decide no silêncio.
 
 ### B-10 — Quando disparar, e quando cancelar 🔲
 
+Vai para **todos os aparelhos aprovados** do usuário, e é **uma notificação por pedido**, não uma
+agrupada ([D-04](decisions.md#d-04--todos-ou-o-último), [D-15](decisions.md#d-15--três-pedidos-na-bandeja)):
+é o que preserva o deep link por `requestId` e faz o toque abrir no card certo. O agrupamento
+nativo do Android cuida da aparência.
+
 Dispara quando **nenhuma** connection do usuário está observando aquela sessão. Cancela quando
 a permissão resolve ou expira — pelo evento de domínio `permission.resolved`, já publicado na
 [F4 do plano 01](../01-live-session/F4-permission.md).
@@ -64,11 +69,35 @@ toque abrindo o deep link, e `push.received` / `push.opened` no log —
 
 Push token nunca vai inteiro para o log; só os seis últimos caracteres.
 
+### B-31 — O token que morre calado 🔲
+
+O app **reenvia o token a cada renovação** do provedor, e o backend **apaga o token que o
+provedor recusa mantendo o device aprovado** ([D-13](decisions.md#d-13--o-token-que-morre-calado)).
+
+O token era registrado no login e desregistrado no logout, sem nada entre os dois — e o FCM troca
+o token e devolve "não registrado" para o antigo. Tratar isso como `warn`, que é o certo para um
+blip, é o errado para uma condição permanente: a aprovação de longe para de chegar e ninguém
+sabe.
+
+Revogar o device seria cobrar nova aprovação pelo web a cada troca de token do SO.
+
+### B-32 — Quando o usuário nega a notificação do SO 🔲
+
+Estado próprio na UI: o app **explica com todas as letras** que sem notificação a aprovação só
+acontece com ele aberto, e oferece o atalho para as configurações do SO
+([D-14](decisions.md#d-14--o-usuário-que-nega-a-notificação)).
+
+É o único caminho que faz o plano inteiro perder a função sem nada falhar. Recusar o aparelho
+seria tirar o produto de quem apenas prefere abrir o app; ficar silencioso seria pior — o usuário
+concluiria que o produto não notifica. O `patrol` dirige o diálogo do SO
+([mobile/06-testing](../../architecture/mobile/06-testing.md)), então o caminho real é
+exercitável.
+
 ---
 
 ## Cenários cobertos
 
-S-15…S-26.
+S-15…S-26, S-61…S-64.
 
 ---
 

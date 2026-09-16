@@ -64,11 +64,24 @@ Pular o desregistro faz o aparelho continuar recebendo notificação de permiss�
 qual ele saiu — e invalidar os providers é o que impede dado do usuário anterior de aparecer
 para o próximo.
 
+### B-33 — Estender o prazo pelo celular 🔲
+
+Ação no card, ao lado da contagem regressiva ([D-16](decisions.md#d-16--estender-pelo-celular)).
+O comando `permission.extend` nasceu na [F0 do plano 01](../01-live-session/F0-contract.md) e o
+app não tinha como usá-lo — B-20 desenhava a contagem e mais nada.
+
+Quem decide de longe é quem tem menos contexto para decidir depressa, e a alternativa — deixar
+expirar e esperar o Claude perguntar de novo — é pior para a mesma sessão.
+
+**O app manda o comando, não escolhe o número:** incremento e teto vêm da configuração do
+backend. Os dois casos de borda são obrigatórios: teto atingido, e extensão que chega depois de
+o pedido já ter sido resolvido.
+
 ---
 
 ## Cenários cobertos
 
-S-39…S-50.
+S-39…S-50, S-65, S-66.
 
 ---
 

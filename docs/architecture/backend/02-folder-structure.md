@@ -70,7 +70,10 @@ backend/
 │   │   │       └── permission/
 │   │   └── outbound/
 │   │       ├── claude/                  agent-sdk.adapter.ts, sdk-message.mapper.ts
+│   │       │                             hooks/ audit.hook.ts (trilha), file-state.hook.ts
+│   │       │                             e checkpoint.hook.ts (o antes e o depois de cada escrita)
 │       ├── identity/                oidc-discovery.ts, jwks-cache.ts, token-verifier.ts
+│   │       ├── checkpoint/              file-snapshot.store.ts — o blob do snapshot em disco
 │   │       ├── persistence/
 │   │       │   ├── session/             drizzle-session.repository.ts, session.mapper.ts
 │   │       │   ├── permission/

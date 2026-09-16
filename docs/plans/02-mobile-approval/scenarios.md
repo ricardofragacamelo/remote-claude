@@ -17,7 +17,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
 | S-01 | registro de aparelho novo nasce **pendente** | eq | integração | — | B-03 | ⬜ |
-| S-02 | registro repetido do mesmo `installId` atualiza, não duplica | idem | integração | — | B-02 | ⬜ |
+| S-02 | registro repetido do mesmo `installId` **do mesmo usuário** atualiza, não duplica | idem | integração | — | B-02 | ⬜ |
 | S-03 | device pendente **pode** observar sessão | eq | integração | — | B-05 | ⬜ |
 | S-04 | device pendente tentando resolver permissão | err | integração | `DEVICE_NOT_REGISTERED` | B-05 | ⬜ |
 | S-05 | device revogado tentando resolver permissão | err | integração | `DEVICE_REVOKED` | B-05 | ⬜ |
@@ -30,6 +30,8 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-12 | registro sem push token é aceito — o aparelho ainda serve para observar | fron | unit | — | B-01 | ⬜ |
 | S-13 | registro, aprovação e revogação entram em `audit` | eq | integração | — | B-03 | ⬜ |
 | S-14 | push token nunca aparece inteiro no log — só os seis últimos | err | unit | — | B-07 | ⬜ |
+| S-59 | mesmo `installId` de **outro** usuário cria linha própria, sem herdar aprovação | err | integração | — | B-02 | ⬜ |
+| S-60 | pendente no 6º dia continua aprovável; no 8º sumiu, e expirar duas vezes não muda nada | fron | integração | — | B-30 | ⬜ |
 
 ## Push — B-08…B-13
 
@@ -47,6 +49,10 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-24 | o mesmo `requestId` não gera dois pushes | idem | integração | — | B-10 | ⬜ |
 | S-25 | dois aparelhos aprovados do mesmo usuário recebem o push | conc | integração | — | B-10 | ⬜ |
 | S-26 | nome do provedor de push fora da configuração → `scan:security` falha | err | unit | — | B-09 | ⬜ |
+| S-61 | token recusado pelo provedor é apagado e o **device continua aprovado** | err | integração | — | B-09 | ⬜ |
+| S-62 | reenviar o mesmo token não duplica linha | idem | integração | — | B-31 | ⬜ |
+| S-63 | três pedidos pendentes geram três notificações, cada uma cancelada com o seu `requestId` | conc | integração | — | B-10 | ⬜ |
+| S-64 | notificação negada no SO → o app explica e oferece o atalho, sem bloquear o uso | est | integração | — | B-32 | ⬜ |
 
 ## Sessão no app — B-14…B-19
 
@@ -81,6 +87,8 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-48 | card em `pending` não aceita segundo toque | est | widget | — | B-24 | ⬜ |
 | S-49 | resolvida em outro aparelho → o card se atualiza sozinho | conc | integração | — | B-24 | ⬜ |
 | S-50 | logout desregistra o push token, fecha o socket e invalida os providers | est | integração | — | B-25 | ⬜ |
+| S-65 | estender pelo card adia o prazo, e o teto atingido desabilita a ação com motivo | fron | integração | — | B-33 | ⬜ |
+| S-66 | estender pedido já resolvido não revive o card | err | integração | `PERMISSION_REQUEST_NOT_FOUND` | B-33 | ⬜ |
 
 ## E2E — B-26…B-29
 
@@ -94,6 +102,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-56 | revogar com o app aberto → socket cai com `4401` e a UI explica | est | e2e | `DEVICE_REVOKED` | B-28 | ⬜ |
 | S-57 | push que chega depois do `expiresAt` não abre card acionável | fron | e2e | `PERMISSION_REQUEST_EXPIRED` | B-28 | ⬜ |
 | S-58 | `pnpm test:e2e:mobile` sai 0 dentro do teto de memória novo | idem | e2e | — | B-29 | ⬜ |
+| S-67 | a suíte sobe na imagem fixada (API 35), e o diálogo de notificação do SO aparece | eq | e2e | — | B-34 | ⬜ |
 
 ---
 

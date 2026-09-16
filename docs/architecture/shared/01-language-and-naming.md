@@ -131,5 +131,7 @@ Use **estes** termos. Sinônimo inventado vira ambiguidade em três linguagens.
 | **Permission request** | Pergunta do Claude ("posso usar esta tool?") aguardando humano | "notificação" |
 | **Permission rule** | Regra persistida que auto-resolve requests futuros | "permission request" |
 | **Transcript** | Histórico persistido de uma sessão (JSONL do Claude) | "log" |
+| **Sessão externa** | Sessão que **não** foi criada por nós — VSCode ou terminal. É o rótulo da UI, e sai do nosso banco: o SDK não informa procedência | "sessão do VSCode" (pode ter vindo do terminal) |
+| **Checkpoint** | Snapshot **nosso** dos arquivos de um turno, chaveado por `prompt_id`, que o desfazer restaura | o store do CLI em `~/.claude/file-history/`, que é o `/rewind` do usuário |
 | **Tool** | Capacidade do Claude (Bash, Edit, Read…) | "comando", "função" |
 | **Device** | Instalação do app mobile registrada para push | "user", "connection" |

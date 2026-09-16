@@ -89,10 +89,10 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Contrato](F0-contract.md) | comandos, eventos e o round-trip de permissão em schema, TS e Dart | B-01…B-06 | 🔲 |
+| F0 | [Contrato](F0-contract.md) | o spike bloqueante, e comandos, eventos e o round-trip de permissão em schema, TS e Dart | B-01…B-06, B-45 | 🔲 |
 | F1 | [Workspace](F1-workspace.md) | allowlist, HTTP e seletor no web | B-07…B-11 | 🔲 |
-| F2 | [Runtime da sessão](F2-session-runtime.md) | adapter do Agent SDK, sessão, fan-out e replay | B-12…B-20 | 🔲 |
-| F3 | [Auditoria](F3-audit.md) | trilha append-only de toda invocação de tool | B-21…B-24 | 🔲 |
+| F2 | [Runtime da sessão](F2-session-runtime.md) | adapter do Agent SDK, sessão, fan-out e replay | B-12…B-20, B-44 | 🔲 |
+| F3 | [Auditoria](F3-audit.md) | trilha append-only de toda invocação de tool, e o checkpoint de arquivo que o desfazer consome | B-21…B-24, B-46, B-47 | 🔲 |
 | F4 | [Permissão](F4-permission.md) | `canUseTool`, timeout que nega, idempotência | B-25…B-31 | 🔲 |
 | F5 | [Web da sessão](F5-web-session.md) | stream, tools, fila de permissão, controles | B-32…B-38 | 🔲 |
 | F6 | [E2E e smoke-live](F6-e2e.md) | cenários obrigatórios e a primeira spec contra o Claude real | B-39…B-43 | 🔲 |
@@ -109,17 +109,23 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 
 | Requisito | Tarefas | Documento normativo | Cenários |
 |---|---|---|---|
-| Contrato WS de sessão e permissão, versionado e nas três pontas | B-01…B-06 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) | S-01…S-08 |
+| Contrato WS de sessão e permissão, versionado e nas três pontas | B-01…B-06 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) | S-01…S-08, S-85…S-87 |
+| O furo do diretório confiado é medido **antes** de qualquer código | B-45 | [04-claude-integration](../../architecture/backend/04-claude-integration.md#a-armadilha-do-settingsources) | S-98 |
 | Allowlist de workspace é a primeira linha de defesa | B-07…B-11 | [backend/03-modules](../../architecture/backend/03-modules.md) | S-09…S-20 |
-| Uma `query()` por sessão, streaming input, sem vazar subprocesso | B-12…B-17 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) | S-21…S-31, S-39 |
+| Uma `query()` por sessão, streaming input, sem vazar subprocesso | B-12…B-17 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) | S-21…S-31, S-39, S-88 |
+| O fake é confrontado com o SDK real: roteiro gravado, não escrito | B-44 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-89, S-90 |
 | `SDKMessage` nunca vaza cru; variante nova não derruba a sessão | B-15 | [ADR-006](../../architecture/shared/00-decisions.md#adr-006--protocolo-próprio-não-sdkmessage-cru) | S-24…S-27 |
 | Fan-out com `seq` único, ring buffer e replay sem buraco | B-18, B-19 | [backend/06-realtime](../../architecture/backend/06-realtime.md) | S-32…S-38 |
 | Toda invocação de tool auditada, append-only | B-21…B-24 | [ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) | S-40…S-49 |
+| O checkpoint de arquivo — o antes e o depois de cada escrita — para o desfazer do plano 04 não destruir trabalho manual | B-46, B-47 | [backend/05-persistence](../../architecture/backend/05-persistence.md#o-que-vai-no-banco-e-o-que-não-vai) | S-99…S-108 |
 | `canUseTool` bloqueia, tem timeout que nega e é idempotente | B-25…B-31 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) | S-50…S-65 |
+| O prazo é extensível sem deixar de ser a única proteção | B-27, B-29 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#estender-o-prazo-é-mexer-na-única-proteção-que-existe) | S-91…S-94 |
+| `riskHint` é derivado no backend e **falha fechado** | B-30 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) | S-62, S-95 |
 | Reconexão republica pendentes do nosso registro, sem `reinitialize()` | B-28 | [ADR-012](../../architecture/shared/00-decisions.md#adr-012--reconexão-não-usa-reinitialize-o-registro-de-pendentes-é-nosso) | S-58, S-59 |
 | As três regras do stream no cliente | B-32, B-33 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md) | S-66…S-69, S-73 |
 | Fila de permissão na UI, sem duplo clique e sem card zumbi | B-36 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md) | S-70…S-72 |
 | Nenhum texto hardcoded, cadeia do front respeitada | B-34…B-38 | [02-i18n](../../architecture/shared/02-i18n.md), [web/01](../../architecture/web/01-architecture.md) | S-74, S-75 |
+| Sessão encerrada abre com o que existe, rotulado como parcial | B-34 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#reconexão-e-replay) | S-96, S-97 |
 | Os cenários e2e obrigatórios que este plano alcança | B-39, B-40 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md#cenários-e2e-obrigatórios) | S-76…S-82 |
 | Quebra de contrato do SDK é detectada, não descoberta em produção | B-41 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-83 |
 | O contrato novo não quebra o app já entregue | B-43 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) | S-84 |

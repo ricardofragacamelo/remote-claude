@@ -37,10 +37,17 @@ Uma mensagem lida do histórico chega ao cliente no mesmo formato de `message.co
 `tool.completed`. Dois formatos para a mesma coisa significaria dois redutores no front — e o
 segundo é o que fica desatualizado.
 
-### B-04 — Autorização e paginação 🔲
+### B-04 — Autorização, paginação e cache 🔲
 
-Só o dono lê. Transcript grande é paginado por cursor desde o primeiro dia: carregar uma
-conversa de horas de uma vez estoura memória no servidor e trava a UI no celular.
+Só o dono lê, e só workspace da allowlist aparece ([D-01](decisions.md#d-01--o-que-aparece-de-fora)).
+
+Transcript grande é paginado por cursor desde o primeiro dia — 25 mensagens, teto 100, pela
+cauda —, mas **a paginação protege o cliente, não o servidor**: medido, `limit`/`offset` não
+reduzem o trabalho do SDK, que reparsa o JSONL inteiro a cada chamada (~30 MB de heap, com ou
+sem limite). Quem protege o servidor é o cache por `sessionId` + `lastModified`, mais limite de
+leituras concorrentes ([D-02](decisions.md#d-02--o-tamanho-da-página-e-quem-ela-protege)).
+
+Cursor, e não offset cru: a ordem do `listSessions` muda sob escrita concorrente.
 
 ### B-05 — Erros e logging desta borda 🔲
 

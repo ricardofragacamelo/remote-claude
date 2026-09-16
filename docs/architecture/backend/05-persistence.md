@@ -18,6 +18,28 @@ Voltar para o [índice do backend](README.md).
 mesmo arquivo que o VSCode usa. Copiar para o Postgres cria duas fontes de verdade que
 divergem. Leia via funções do SDK. Ver [04-claude-integration.md](04-claude-integration.md).
 
+**O que o banco guarda sobre sessão de Claude é procedência, não conteúdo:** que *nós*
+iniciamos aquele `sessionId`. O SDK não informa a origem de uma sessão, e é esse registro que
+permite rotular "nossa" e "externa" na lista — e escolher a estratégia de retomada. Uma linha
+de metadado não é duplicar transcript.
+
+**E guarda o estado em que a sessão deixou cada arquivo** — caminho, hash e mtime, gravados no
+hook `PostToolUse`. É o que permite ao desfazer distinguir "como a sessão deixou" de "alterado
+à mão depois", porque o store de checkpoint do CLI guarda conteúdo puro e não sabe quem
+escreveu. Ver [04-claude-integration.md](04-claude-integration.md#desfazer-arquivos--o-store-é-nosso).
+
+Esse registro é **tabela própria, dona é `session`**, e **não** entra na trilha de auditoria:
+a linha é sobrescrita a cada nova escrita no mesmo arquivo, e a trigger append-only da trilha
+aborta `UPDATE` — misturar as duas quebraria uma das duas garantias. Uma é "o que resultou,
+agora"; a outra é "o que aconteceu, para sempre".
+
+**E guarda o conteúdo anterior**, por turno, chaveado por `(session_id, prompt_id, path)`: é o
+snapshot que o desfazer restaura, arquivo por arquivo. Ele existe porque o `rewindFiles()` do
+SDK não aceita filtro de arquivo — reverter alguns e preservar outros só é possível com store
+próprio. Conteúdo grande **não** vai para o Postgres: a linha guarda o metadado e aponta para o
+blob em disco, com teto e purga que nunca alcança sessão viva (referência medida: o store
+equivalente do CLI ocupa 6,6 MB para 54 sessões).
+
 ---
 
 ## Drizzle, não Prisma nem TypeORM
@@ -114,6 +136,44 @@ Colunas de auditoria em toda tabela: `created_at`, `updated_at`. Onde houver ato
 
 **Índice é decisão explícita.** Toda FK usada em join tem índice; toda coluna de filtro
 frequente tem índice; índice novo entra junto com a query que o justifica, na mesma migration.
+
+### O device do celular
+
+A unicidade do aparelho é o **índice único composto `(user_id, install_id)`**, não o `install_id`
+sozinho. A identidade é do aparelho, mas a aprovação é do usuário: com a chave simples, o
+registro do usuário B no mesmo celular sobrescreveria a linha já aprovada do usuário A, e a
+aprovação seria herdada em silêncio. O índice nasce composto na migration que cria a tabela —
+depois seria migração em tabela com dado. Ver
+[08-authentication](../shared/08-authentication.md#device-e-o-canal-mobile).
+
+### A trilha de auditoria
+
+A tabela de auditoria foge de duas convenções acima, e foge de propósito.
+
+**Ela tem um sequencial próprio** — `seq bigint`, gerado pelo banco — **além** do `id uuid`. O
+`uuid` continua sendo a PK; o `seq` existe porque a consulta paginada precisa de uma ordenação
+total e monotônica, e `at` não é nenhuma das duas: dois registros caem no mesmo milissegundo, e
+o relógio da máquina do usuário pode ser ajustado para trás. `at` filtra, `seq` ordena. Ver
+[a consulta](03-modules.md#audit).
+
+**Ela é protegida por trigger, não por convenção:**
+
+```
+BEFORE UPDATE → aborta sempre
+BEFORE DELETE → aborta se a linha estiver dentro do piso de retenção (90 dias)
+```
+
+A trigger vale para **quem quer que** esteja conectado — nenhum papel restrito, nenhuma segunda
+string de conexão. É o que torna o append-only uma propriedade do banco em vez de uma promessa
+do código, e é também o que dá passagem à purga: ela apaga fora do piso, e só fora dele.
+
+O piso (90 dias) mora na trigger e é imutável em tempo de execução. A janela efetiva mora na
+configuração e só pode ser ≥ piso. **Uma decide o que a purga tenta apagar, a outra decide o que
+o banco deixa apagar** — e é a segunda que sobrevive a um bug nosso, a uma migration distraída
+ou a um `DELETE` digitado à mão.
+
+A trigger é barreira, não permissão: quem tem o papel de owner pode desligá-la. Ela impede o
+acidente e o bug, não o ato deliberado de quem já controla o banco.
 
 ---
 

@@ -13,7 +13,7 @@ contagem de cenários — saem de `pnpm plan progress`, lidos dos arquivos de fa
 
 **Fase corrente:** nenhuma — **F0…F7 concluídas**, B-40 fechada com a primeira execução verde do
 `integration_test` do Flutter
-**Última atualização:** 2026-09-15
+**Última atualização:** 2026-09-16
 **Bloqueios:** nenhum. Um achado em aberto, que não bloqueia o plano: **S-119** — o app envia
 `session.detach`, comando que não existe em `packages/contracts` nem no backend, e volta como
 `INVALID_INPUT`/`unknownCommand`. Não foi corrigido aqui porque comando WS é contrato e se muda

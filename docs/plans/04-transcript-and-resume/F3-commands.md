@@ -33,8 +33,12 @@ Comando ou endpoint novo é mudança de contrato: schema, TS, Dart e o
 
 ### B-15 — Menu nas duas pontas 🔲
 
-A UI monta a partir da resposta. Instalação sem um comando não o mostra; instalação sem
-nenhum continua utilizável — a caixa de prompt não depende do menu.
+A UI monta a partir da resposta, como lista buscável. Instalação sem um comando não o mostra;
+instalação sem nenhum continua utilizável — a caixa de prompt não depende do menu.
+
+Filtra interno (`__`) e morto (`(removed)`, `Renamed to`) por **metadado**, nunca por nome, e
+põe um grupo de sugeridos por cima ([D-05](decisions.md#d-05--o-menu-é-descoberta-não-fronteira)).
+O menu é descoberta, não fronteira: impedir comando é regra de deny.
 
 ### B-16 — `/init` pelo fluxo normal 🔲
 

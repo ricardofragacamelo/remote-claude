@@ -30,12 +30,15 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-12 | regra expirada não resolve nada | fron | unit | — | B-01 | ⬜ |
 | S-13 | criação e revogação de regra entram em `audit` | eq | integração | — | B-05 | ⬜ |
 | S-14 | regra de outro usuário não resolve o meu pedido — ele continua perguntando | err | integração | — | B-01 | ⬜ |
+| S-47 | padrão fora da gramática é recusado na criação | err | unit | `PERMISSION_RULE_PATTERN_INVALID` | B-01 | ⬜ |
+| S-48 | `Bash(git status:*)` casa `git status --short` e **não** casa `git statusx` | fron | unit | — | B-01 | ⬜ |
+| S-49 | validade acima do teto configurado é recusada na criação | fron | integração | `PERMISSION_RULE_EXPIRY_TOO_LONG` | B-02 | ⬜ |
 
 ## Telas de regra — B-07…B-10
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-15 | a lista mostra escopo, tool, padrão, autor e data | eq | integração | — | B-07 | ⬜ |
+| S-15 | a lista mostra escopo, tool, padrão, autor, data e validade | eq | integração | — | B-07 | ⬜ |
 | S-16 | revogar na tela remove a linha e a próxima execução pergunta | est | integração | — | B-07 | ⬜ |
 | S-17 | escolher `always` exibe o alcance com todas as letras, sem eufemismo | eq | integração | — | B-08 | ⬜ |
 | S-18 | sem nenhuma regra, a tela mostra o estado vazio | fron | integração | — | B-07 | ⬜ |
@@ -58,6 +61,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-30 | registro auto-resolvido aparece com `auto: true` e o id da regra | eq | integração | — | B-15 | ⬜ |
 | S-31 | o `traceId` liga a entrada da trilha ao log e ao evento | eq | integração | — | B-15 | ⬜ |
 | S-32 | a tela da trilha trata carregando, erro, vazio e conteúdo | eq | integração | — | B-13 | ⬜ |
+| S-50 | da entrada com `auto: true` se chega à regra — inclusive à já revogada, com o estado explicado | est | integração | — | B-15 | ⬜ |
 
 ## Retenção — B-16…B-19
 
@@ -71,6 +75,8 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-38 | purga concorrente com escrita não bloqueia a trilha | conc | integração | — | B-17 | ⬜ |
 | S-39 | a própria purga vira registro, com janela e contagem | eq | integração | — | B-19 | ⬜ |
 | S-40 | purga que falha sai com código ≠ 0 e diz o que não apagou | err | e2e | — | B-18 | ⬜ |
+| S-51 | job e comando manual simultâneos: uma purga roda, a outra sai com 0 sem apagar nada | conc | integração | — | B-17 | ⬜ |
+| S-52 | `DELETE` direto dentro da janela é recusado **pelo banco**, com o papel da aplicação | err | integração | — | B-17 | ⬜ |
 
 ## E2E — B-20…B-23
 

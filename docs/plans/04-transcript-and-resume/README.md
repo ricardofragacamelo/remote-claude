@@ -25,6 +25,7 @@ Duas decisões já tomadas tornam este plano pequeno em código e grande em valo
 | Decisão | Consequência aqui |
 |---|---|
 | `persistSession: true` desde o [plano 01](../01-live-session/F2-session-runtime.md) | o histórico **já existe** em `~/.claude/projects/`; falta ler |
+| A [B-46 do plano 01](../01-live-session/F3-audit.md) grava como a sessão deixou cada arquivo | a F4 tem linha de base para **não** desfazer sobre alteração manual ([D-06](decisions.md#d-06--desfazer-sem-destruir)) |
 | O transcript **não** é copiado para o Postgres | não há sincronização a escrever, nem duas fontes para divergir ([backend/05](../../architecture/backend/05-persistence.md)) |
 
 E há uma consequência de produto que precisa ser tratada como feature, não como acidente: **as
@@ -84,17 +85,17 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Requisito | Tarefas | Documento normativo | Cenários |
 |---|---|---|---|
 | Histórico vem das funções do SDK, nunca de parser próprio de JSONL | B-01, B-03 | [backend/03-modules](../../architecture/backend/03-modules.md#transcript) | S-01, S-02, S-09 |
-| Sessão do VSCode aparece, com a origem visível | B-02, B-06 | [backend/03-modules](../../architecture/backend/03-modules.md#transcript) | S-01, S-11 |
-| Histórico grande é paginado, e a leitura não trava o que está vivo | B-04 | [backend/05-persistence](../../architecture/backend/05-persistence.md) | S-03, S-06…S-08, S-10 |
+| Sessão criada fora aparece, com a origem visível — e só dentro da allowlist | B-02, B-06 | [backend/03-modules](../../architecture/backend/03-modules.md#transcript) | S-01, S-11, S-54, S-55 |
+| Histórico grande é paginado e cacheado, e a leitura não trava o que está vivo | B-04 | [backend/05-persistence](../../architecture/backend/05-persistence.md) | S-03, S-06…S-08, S-10, S-56, S-57, S-64 |
 | Transcript de outro dono não é acessível, e falha do SDK é `502` | B-04, B-05 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) | S-04, S-05 |
 | A recarga por `gap: true` finalmente tem de onde recarregar | B-07 | [backend/06-realtime](../../architecture/backend/06-realtime.md#ring-buffer-e-replay) | S-14, S-15 |
 | Telas de histórico nas duas pontas, traduzidas | B-06, B-08, B-09 | [web/01](../../architecture/web/01-architecture.md), [mobile/04-ui](../../architecture/mobile/04-ui.md) | S-11…S-13, S-16…S-18 |
 | Retomar continua a conversa, sem duplicar sessão viva | B-10, B-11 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) | S-19, S-21, S-24, S-25 |
-| Retomar a sessão que começou no VSCode | B-12 | [backend/03-modules](../../architecture/backend/03-modules.md#transcript) | S-20 |
+| Retomar a sessão que começou fora — por fork, nunca escrevendo no transcript de origem | B-12 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) | S-20, S-58, S-59 |
 | Retomada respeita allowlist, limite e erros conhecidos | B-13 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) | S-22, S-23, S-26…S-28 |
-| Slash commands vêm da instalação, sem lista hardcoded | B-14, B-15, B-17 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd) | S-29…S-31, S-35, S-36 |
+| Slash commands vêm da instalação, sem lista hardcoded, e sem os internos e mortos | B-14, B-15, B-17 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd) | S-29…S-31, S-35, S-36, S-60 |
 | `/init` passa pelo fluxo normal de permissão | B-16 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd) | S-32…S-34 |
-| Desfazer tem alcance explícito, é auditado e não roda no meio de um turno | B-18…B-21 | [backend/03-modules](../../architecture/backend/03-modules.md#audit) | S-37…S-45 |
+| Desfazer tem alcance explícito, é auditado, não roda no meio de um turno e não destrói alteração manual | B-18…B-21 | [backend/03-modules](../../architecture/backend/03-modules.md#audit) | S-37…S-45, S-61…S-63 |
 | O ciclo provado pela porta do usuário, e o comando real pelo smoke-live | B-22…B-25 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-46…S-53 |
 
 Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
@@ -113,7 +114,8 @@ backend/src/
 ├── application/transcript/ports/
 ├── adapter/
 │   ├── inbound/http/transcript/
-│   └── outbound/claude/           transcript.adapter · commands.adapter · rewind.adapter
+│   └── outbound/claude/           transcript.adapter · commands.adapter
+│   └── outbound/checkpoint/       o revert é nosso — ver ADR-013
 └── …
 
 web/src/features/{transcript,session}/
@@ -128,9 +130,9 @@ e2e/{scenarios,specs,smoke-live}/
 | # | Assunto | Estado |
 |---|---|---|
 | R-01 | O formato do JSONL é **interno do Claude** e muda sem aviso | por isso só as funções do SDK são usadas (B-01), e por isso o `smoke-live` cobre esta ponta (B-25) |
-| R-02 | Sessão do VSCode aparecendo pode confundir — o usuário não a criou aqui | é feature declarada; a origem fica visível na lista (S-11) |
-| R-03 | `rewindFiles()` mexe no **disco do usuário** | alcance explícito na UI, recusa durante turno, e registro em `audit` (B-19…B-21) |
-| R-04 | Transcript longo pode estourar memória ao ser lido de uma vez | paginação desde o primeiro dia (B-04), e parsing fora da thread de UI no app |
+| R-02 | Sessão criada fora aparecendo pode confundir — o usuário não a criou aqui | é feature declarada, restrita à allowlist ([D-01](decisions.md#d-01--o-que-aparece-de-fora)); a origem fica visível na lista (S-11), vinda do **nosso** banco, porque o SDK não a informa |
+| R-03 | O desfazer mexe no **disco do usuário** — e o `rewindFiles()` do SDK sobrescreve alteração manual em silêncio, sem filtro por arquivo (medido) | por isso o mecanismo é **nosso**: snapshot por turno e revert por arquivo, preservando o divergente ([D-06](decisions.md#d-06--desfazer-sem-destruir)); mais alcance explícito na UI, recusa durante turno, restauração atômica, segurança de link e registro em `audit` (B-19…B-21) |
+| R-04 | Transcript longo estoura memória a **cada** leitura: `limit`/`offset` não reduzem o trabalho do SDK — medido | a paginação (B-04) protege o cliente; o servidor se protege com cache por `lastModified` e limite de leituras concorrentes ([D-02](decisions.md#d-02--o-tamanho-da-página-e-quem-ela-protege)), e o parsing fica fora da thread de UI no app |
 | R-05 | Retomar sessão que já está viva poderia abrir um segundo subprocesso | retomada de sessão viva é `attach`, não `start` (S-24) — e isso é regra, não otimização |
 
 ---

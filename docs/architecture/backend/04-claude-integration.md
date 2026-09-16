@@ -86,7 +86,7 @@ O `for await` **é** a fonte do stream. Ele roda pela vida inteira da sessão.
   maxTurns: config.session.maxTurns,
   resume: session.resumeFrom,
   persistSession: true,                   // mantém o JSONL, compartilhado com o VSCode
-  enableFileCheckpointing: true,          // habilita rewindFiles()
+  enableFileCheckpointing: true,          // o /rewind do usuário no editor, não o nosso desfazer
   abortController,
 }
 ```
@@ -97,7 +97,7 @@ Decisões tomadas:
 |---|---|---|
 | `includePartialMessages` | `true` | sem deltas a UI trava em "pensando…" por minutos |
 | `persistSession` | `true` | retomar do celular o que começou no VSCode |
-| `enableFileCheckpointing` | `true` | "desfazer" é rede de segurança quando se aprova de longe |
+| `enableFileCheckpointing` | `true` | preserva o `/rewind` do próprio usuário no editor; o **nosso** desfazer não depende dele — ver [Desfazer arquivos](#desfazer-arquivos--o-store-é-nosso) |
 | `allowDangerouslySkipPermissions` | **`false`, sempre** | desligaria o `canUseTool`, que é o produto |
 | `settingSources` | **`['project']`, sempre** | ver [A armadilha do `settingSources`](#a-armadilha-do-settingsources) |
 | `pathToClaudeCodeExecutable` | binário do SDK | versões casadas; atualiza pelo npm junto com o SDK |
@@ -191,6 +191,37 @@ Quatro pontos que **não** são negociáveis:
 O retorno é `{ behavior: 'allow', updatedPermissions? }` ou `{ behavior: 'deny', message }`.
 `updatedPermissions` é como o "sempre permitir" vira regra do lado do Claude.
 
+### A regra fala a gramática do Claude, não uma nossa
+
+A `PermissionRule` que persistimos e o `PermissionUpdate` que devolvemos ao SDK descrevem **o
+mesmo conjunto de comandos**, e por isso usam a **mesma gramática** — a das settings do Claude
+Code:
+
+| Padrão | Casa |
+|---|---|
+| `Bash` | toda invocação da tool |
+| `Bash(git status)` | `git status`, e só |
+| `Bash(git status:*)` | `git status`, `git status --short`, `git status -b` |
+
+Sem glob (`Bash(git *)` liberaria `git push --force`) e sem expressão regular — poder demais
+para uma decisão de segurança tomada num toque de celular, e nenhuma UI consegue mostrar o
+alcance real de uma regex.
+
+A razão não é só restringir. É que o `ruleContent` guardado é **literalmente** o que vai para o
+`PermissionUpdate`: gramática própria exigiria tradução, e tradução que erra por um caractere faz
+a nossa metade liberar o que a do Claude não libera — ou o contrário, que é pior. Duas respostas
+para a mesma pergunta.
+
+Duas consequências que não são detalhe de implementação:
+
+1. **o padrão é validado na criação da regra**, não no primeiro casamento: fora da gramática é
+   `PERMISSION_RULE_PATTERN_INVALID`, e não uma regra que nunca casa nada — ou que casa demais;
+2. **o prefixo respeita fronteira de token.** `Bash(git status:*)` não cobre `git statusx`. É o
+   furo que passa despercebido num matcher escrito com igualdade de string.
+
+O casamento é **regra pura do domínio**, sem I/O: é o que permite testá-lo por fronteira e é
+dele que a UI tira o texto de alcance que mostra ao usuário.
+
 ---
 
 ## A trilha de auditoria é o hook, não o `canUseTool`
@@ -228,6 +259,27 @@ const auditHook: HookCallback = async (input, toolUseId) => {
 
 O hook **registra e deixa passar**; ele não decide. Decisão é do `canUseTool`. Falha de
 escrita da auditoria bloqueia a execução — ver [03-modules.md](03-modules.md#audit).
+
+### O hook irmão: `PostToolUse`, para o que resultou
+
+O `PreToolUse` registra a **intenção** — é a trilha. Para tool que escreve em arquivo, um
+`PostToolUse` grava o **resultado**: caminho, hash e mtime de como a sessão deixou o arquivo.
+
+Sem isso, o desfazer não tem como distinguir "como a sessão deixou" de "o usuário editou à mão
+depois" — e `rewindFiles()` sobrescreve o segundo em silêncio
+([§9.5](../../discovery/01-descoberta-claude-agent-sdk.md#95--rewindfiles-sobrescreve-alteração-manual-o-dryrun-não-avisa-e-não-há-filtro-por-arquivo)).
+Detalhes em [Desfazer arquivos](#desfazer-arquivos--o-store-é-nosso).
+
+Três diferenças em relação ao hook da trilha, e nenhuma é detalhe:
+
+| | trilha (`PreToolUse`) | estado do arquivo (`PostToolUse`) |
+|---|---|---|
+| quando | antes da execução | depois, porque o hash só existe então |
+| tabela | append-only, imutável | sobrescrita por arquivo — **não** é a tabela da trilha |
+| falha ao gravar | **bloqueia** a autorização | não bloqueia: o desfazer fica conservador, e isso é aceitável |
+
+`PostToolUseFailure` **não** atualiza nada: tool que falhou não mexeu no arquivo, e gravar o
+hash ali criaria uma linha de base falsa.
 
 ---
 
@@ -275,6 +327,12 @@ apareceu algo novo para mapear.
 O registro de sessões vivas é **em memória** (`Map<SessionId, SessionRunner>`), não no
 Postgres — é estado de processo, morre com ele. O Postgres guarda metadado e auditoria.
 
+**Um consumidor só para o `Query`, pela vida toda da sessão.** Sair do `for await` — um
+`return` ao receber o `result`, por exemplo — **aborta a query**: a chamada seguinte falha com
+`Operation aborted`. O `SessionRunner` consome o stream num laço único e coordena os turnos por
+promise; nenhum outro ponto do código itera aquele `Query`. Custou um spike descobrir
+([§9.5](../../discovery/01-descoberta-claude-agent-sdk.md#95--rewindfiles-sobrescreve-alteração-manual-o-dryrun-não-avisa-e-não-há-filtro-por-arquivo)).
+
 ---
 
 ## Reconexão e requests pendentes
@@ -313,8 +371,19 @@ de múltiplos clientes e de retry do cliente, não do SDK.
 
 O requisito de "gerar readme, AGENTS.md" se resolve com os próprios comandos do Claude Code.
 `query.supportedCommands()` lista o que a instalação oferece, e a UI monta a partir disso —
-**não** mantenha lista hardcoded, ela varia por instalação e por versão (57 comandos na
-instalação atual, 54 com `settingSources: []`).
+**não** mantenha lista hardcoded, ela varia por instalação, por versão e pelos skills
+instalados (57 comandos numa medição, **54** na seguinte, com `settingSources: ['project']`).
+Cada item traz `name`, `description` e `argumentHint`. Chamar não custa token: abre-se a
+`query()` e nunca se cede prompt.
+
+**A lista crua não é apresentável.** Ela inclui comando morto — descrição começando em
+`(removed)` ou `Renamed to …` — e interno, de prefixo `__`. O filtro é por **metadado**, nunca
+por nome: lista de nomes é a lista hardcoded de volta, e envelhece na próxima versão do CLI.
+Ver [descoberta §9.6](../../discovery/01-descoberta-claude-agent-sdk.md#96--supportedcommands-traz-comando-morto-e-interno).
+
+**O cache da lista é chaveado pela versão do binário que o SDK spawna** — não pela do `PATH`.
+Uma máquina com o CLI do `PATH` e o da extensão do VSCode em versões diferentes é o caso comum,
+não o exótico; cachear pela versão errada serve o menu de outra instalação.
 
 **Confirmado por spike:** enviar `"/init"` como prompt **dispara o comando**. A sessão explora
 o projeto com `Bash`/`Read` e escreve o arquivo com `Write`, terminando em `result: success`.
@@ -322,6 +391,86 @@ Ver [descoberta §7.1](../../discovery/01-descoberta-claude-agent-sdk.md#71--ini
 
 Consequência prática: o comando passa pelo fluxo normal de permissão. Gerar um `AGENTS.md`
 vai pedir autorização de `Write` — e isso é correto, é escrita no projeto do usuário.
+
+---
+
+## Retomada — fork fora, in-place dentro
+
+`resume` continua a conversa **no mesmo arquivo**. Como o JSONL é compartilhado com o VSCode e
+com o terminal, isso significa que pode haver dois escritores no mesmo transcript — e o dano
+não é cosmético: a cadeia de `parentUuid` bifurca, `getSessionMessages` reconstrói **uma**
+cadeia, e um dos lados desaparece da leitura em silêncio.
+
+**Não há como detectar que uma sessão está aberta no editor.** Os locks de `~/.claude/ide/` são
+por instância de IDE, nomeados por PID, e guardam credencial — o backend **não os lê**. Eles não
+dizem qual `sessionId` está aberto. Logo, a regra não pode depender de detecção:
+
+| Sessão | Como retomamos | Por quê |
+|---|---|---|
+| **nossa** (temos linha dela no banco) | `resume` puro | um `sessionId`, um transcript, histórico de undo preservado |
+| **externa** (VSCode, terminal) | `resume` + `forkSession: true` | nunca escrevemos no arquivo que outro consumidor pode estar usando |
+
+Duas consequências que a UI precisa dizer, não esconder:
+
+- a continuação de sessão externa vive num **`sessionId` novo**, e o editor não verá as
+  respostas dadas do celular. A promessa é editor → celular, e sempre foi só essa;
+- **fork não copia o histórico de undo.** Coincide com o limite que o desfazer já tinha — só
+  alcança o que aquela sessão tocou —, então nada se perde além do que já não era prometido.
+
+Isso promove a procedência de detalhe de UI a **invariante de correção**: origem errada
+significa escrever no transcript de outro consumidor. Ver
+[descoberta §9.4](../../discovery/01-descoberta-claude-agent-sdk.md#94--não-há-como-saber-que-uma-sessão-está-aberta-no-editor).
+
+---
+
+## Desfazer arquivos — o store é nosso
+
+"Desfazer" é a rede de segurança que torna aceitável aprovar um `Write` pelo celular. O caminho
+óbvio era `rewindFiles()` do SDK, e **ele não serve**. Três fatos, os dois primeiros medidos
+contra o Claude real
+([§9.5](../../discovery/01-descoberta-claude-agent-sdk.md#95--rewindfiles-sobrescreve-alteração-manual-o-dryrun-não-avisa-e-não-há-filtro-por-arquivo)):
+
+1. **sobrescreve alteração manual, em silêncio.** Arquivo que o usuário editou à mão depois do
+   checkpoint volta ao conteúdo do checkpoint, com `canRewind: true` e `skippedLinks: 0`;
+2. **`dryRun: true` não denuncia isso** — devolve contagens calculadas contra o checkpoint, e um
+   reverte destrutivo parece trivial ali;
+3. **não aceita filtro de arquivo.** Uma chamada reverte todos os divergentes do checkpoint.
+   "Preservar o que o usuário editou e reverter o resto" não é implementável sobre essa API.
+
+Então o mecanismo é nosso, e do SDK usamos só os hooks:
+
+| Hook | O que guarda |
+|---|---|
+| `UserPromptSubmit` | abre o checkpoint do turno: `prompt_id` e o texto do prompt, que rotula o ponto de desfazer |
+| `PreToolUse` | no primeiro toque do turno num caminho, o **conteúdo anterior** — ou "ausente", para poder apagar o que o turno criou |
+| `PostToolUse` | hash e mtime do **resultado**: a linha de base da divergência |
+| `PostToolUseFailure` | nada — tool que falhou não mexeu no arquivo |
+
+A chave é `(session_id, prompt_id, path)`. O `prompt_id` vem do `BaseHookInput` em **todo** hook
+("UUID correlating a user prompt with all subsequent events until the next prompt"), então o
+turno de um snapshot é sabido sem ler o transcript.
+
+Desfazer para um `prompt_id`, então, é: para cada caminho que aquele turno tocou, comparar o
+estado atual com o que a sessão deixou —
+
+| Situação | O que fazemos |
+|---|---|
+| igual ao que a sessão deixou | restaura o snapshot |
+| **diferente** — alguém editou depois | **preserva**, e o resultado diz qual arquivo e por quê |
+| virou symlink, hard link ou arquivo não regular, ou o pai deixou de resolver | recusa: sem essa checagem, restaurar é caminho para escrever fora do workspace |
+| não foi snapshotado (acima do limite de tamanho) | preserva, e a UI não promete o que não pode cumprir |
+
+Mais três regras que o revert próprio obriga:
+
+- **restauração atômica** por arquivo: temporário no mesmo diretório, depois `rename`. Falha no
+  meio deixando arquivo truncado é pior que não ter revertido;
+- **resultado parcial é first-class:** o evento carrega revertidos **e** preservados, com motivo
+  — não um booleano;
+- **não exige sessão viva.** `rewindFiles` era método de `Query`; nosso store não é. "Sessão
+  fechada não desfaz" permanece como **política**, não como limitação.
+
+`enableFileCheckpointing: true` continua ligado, porque é o `/rewind` do próprio usuário no
+editor. Ele não é mais o nosso mecanismo.
 
 ---
 

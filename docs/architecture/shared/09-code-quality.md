@@ -193,6 +193,12 @@ validação de workspace**. Uma checagem replicada e corrigida pela metade é um
 
 `jscpd` roda também em pre-push, com saída rápida — é mais barato descobrir antes do PR.
 
+**`infra/**` fica de fora da medição.** É configuração declarativa de um produto de terceiro
+(realm, client, mapper), onde a repetição é o formato e não a duplicação que o portão existe para
+pegar — extrair "duplicação" de um arquivo de configuração de terceiro é piorar a legibilidade
+para agradar a uma métrica. É a única exclusão por categoria; qualquer outra é supressão pontual,
+com justificativa, pelas regras acima.
+
 A detecção é **cross-file e cross-módulo dentro de cada ponta**: copiar de `features/session`
 para `features/permission` é exatamente o caso que precisa ser pego.
 

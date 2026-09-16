@@ -53,16 +53,16 @@ script que ninguém encontra é reescrito por outra pessoa daqui a um mês.
 
 Fora do portão de PR, por decisão: custa dinheiro e não é determinístico.
 
-### B-42 — R-01 fechado: o diretório confiado 🔲
+### B-42 — R-01 provado pela porta do usuário 🔲
 
-**Bloqueante, e a primeira coisa a rodar nesta fase.** Verificar, num diretório já marcado como
-confiado (`hasTrustDialogAccepted`) pelo CLI interativo, se um `allow` de projeto volta a
-dispensar o `canUseTool`.
+**A medição não acontece aqui.** Ela foi antecipada para **B-45, antes da F0**
+([D-11](decisions.md#d-11--o-furo-que-invalidaria-o-produto)): descobrir um furo de premissa
+depois da F4 pronta custaria o plano inteiro.
 
-Se voltar, o produto tem um furo por onde toda a aprovação escapa, e o plano **para** até
-existir mitigação. O resultado — qualquer que seja — vira registro em
-[progress.md](progress.md) e atualização de
-[04-claude-integration](../../architecture/backend/04-claude-integration.md#a-armadilha-do-settingsources).
+O que esta task prova é a **mitigação**, em e2e: com um diretório marcado como confiado, o
+backend limpa ou recusa a marca antes de abrir sessão, e o `canUseTool` continua sendo chamado —
+a aprovação humana não escapa. Vale mesmo que B-45 tenha medido que o furo não existe; a
+mitigação foi adotada de qualquer forma, e o que não é exercitado apodrece.
 
 ### B-43 — O app segue verde contra o contrato novo 🔲
 
@@ -77,7 +77,7 @@ Roda com o emulador cercado por cgroup, pela receita da
 
 ## Cenários cobertos
 
-S-76…S-84.
+S-76…S-84, S-98.
 
 ---
 

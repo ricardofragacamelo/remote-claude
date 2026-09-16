@@ -77,7 +77,7 @@ novo sem esses três campos não compila.
 | `410` | `PERMISSION_REQUEST_EXPIRED` | Existiu, não existe mais, e não volta |
 | `413` | `PAYLOAD_TOO_LARGE` | Prompt ou upload acima do limite |
 | `422` | `WORKSPACE_NOT_A_DIRECTORY` | Sintaxe válida, semântica impossível |
-| `423` | `SESSION_LOCKED` | Sessão em uso exclusivo por outra connection |
+| `423` | `SESSION_LOCKED` | Sessão em uso exclusivo por outra connection, **ou com um turno em execução** — é o que recusa o desfazer no meio de um turno |
 | `429` | `RATE_LIMITED` | Limite nosso **ou** do plano Claude. Inclua `Retry-After`. |
 
 `400` vs `422`: `400` é "não consegui entender"; `422` é "entendi e é impossível".
@@ -117,6 +117,8 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `PERMISSION_REQUEST_NOT_FOUND` | 404 | permission | `requestId` desconhecido |
 | `PERMISSION_REQUEST_EXPIRED` | 410 | permission | Timeout — foi negado automaticamente |
 | `PERMISSION_NOT_OWNED` | 403 | permission | Quem respondeu não é quem podia responder |
+| `PERMISSION_RULE_PATTERN_INVALID` | 400 | permission | Padrão fora da gramática de regra |
+| `PERMISSION_RULE_EXPIRY_TOO_LONG` | 422 | permission | Validade pedida acima do teto configurado |
 | `CLAUDE_UNAVAILABLE` | 502 | session | Subprocesso do CLI falhou |
 | `CLAUDE_TIMEOUT` | 504 | session | Sem resposta no prazo |
 | `RATE_LIMITED` | 429 | — | Limite nosso ou do plano Claude |

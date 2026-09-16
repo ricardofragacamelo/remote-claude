@@ -111,6 +111,11 @@ O app fica desbloqueado no bolso; aprovar execução de comando destrutivo merec
 mais. Isso é complementar à [confirmação em dois passos](04-ui.md#a-tela-de-permissão), não
 substituto — uma protege contra toque acidental, a outra contra aparelho nas mãos erradas.
 
+Aparelho **sem biometria e sem PIN** não aprova permissão: a tela recusa, diz **por quê** e
+mostra o caminho para configurar o bloqueio do dispositivo. Observar sessão continua permitido —
+a mesma assimetria do device pendente, que vê e não decide. Botão desabilitado sem motivo é regra
+de segurança que parece bug.
+
 Biometria indisponível ou recusada → cai para o PIN do dispositivo, nunca para "aprovar
 direto".
 

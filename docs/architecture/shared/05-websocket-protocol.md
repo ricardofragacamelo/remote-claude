@@ -96,7 +96,7 @@ Regras:
 |---|---|---|
 | `connection.authenticate` | `{ token, locale, client }` | handshake |
 | `connection.reauthenticate` | `{ token }` | renova a credencial sem reabrir o socket |
-| `session.ping` | `{ sessionId?, nonce }` | fatia vertical do bootstrap: atravessa as camadas sem tocar no Agent SDK. Sem `sessionId`, abre uma sessão |
+| `diag.ping` | `{ sessionId?, nonce }` | diagnóstico do gateway: atravessa as camadas sem tocar no Agent SDK. Sem `sessionId`, abre uma sessão |
 | `session.start` | `{ workspacePath, model?, permissionMode?, resumeSessionId? }` | abre sessão |
 | `session.attach` | `{ sessionId }` | observa sessão existente |
 | `session.detach` | `{ sessionId }` | para de observar |
@@ -106,6 +106,7 @@ Regras:
 | `session.setModel` | `{ sessionId, model }` | troca o modelo em execução |
 | `session.close` | `{ sessionId }` | encerra e libera o subprocesso |
 | `session.setLocale` | `{ locale }` | muda o idioma da connection |
+| `permission.extend` | `{ requestId }` | estende o prazo do pedido pendente. O cliente **não** escolha o número: incremento e teto vêm da configuração do backend |
 | `permission.resolve` | *(é `response`, não command — ver abaixo)* | |
 
 Todo comando recebe `ack` ou `error`. `ack` significa **aceito**, não **concluído** — o
@@ -135,10 +136,38 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `permission.resolved` | `{ requestId, decision, resolvedBy, auto }` | derivado |
 | `turn.completed` | `{ turnId, usage, costUsd, durationMs }` | `result` |
 | `session.closed` | `{ sessionId, reason }` | fim do generator |
-| `session.pong` | `{ sessionId, pingedAt, pingCount, nonce }` | resposta do `session.ping` do bootstrap |
+| `diag.pong` | `{ sessionId, pingedAt, pingCount, nonce }` | resposta do `diag.ping` |
+| `permission.extended` | `{ requestId, expiresAt, remainingExtensions }` | derivado do `permission.extend` |
 | `error` | envelope de erro | qualquer falha |
 
 **`seq` é obrigatório em todo `event`**, monotônico por sessão. É o que viabiliza o replay.
+
+### `diag.*` é diagnóstico, não sessão
+
+O par nasceu como fatia vertical do bootstrap e **fica**: é o smoke mais barato do gateway
+inteiro, e o único que não exige subprocesso do Claude. Vive fora do namespace de sessão de
+propósito — `diag` diz que é diagnóstico, e o nome é o que impede a fatia de virar API pública
+sem dono.
+
+> **Renomeação em trânsito.** O bootstrap entregou o par como `session.ping`/`session.pong`, e é
+> assim que ele está no código das três pontas hoje. O nome acima é o contrato; ele passa a valer
+> na [B-01 do plano 01](../../plans/01-live-session/F0-contract.md), que registra os schemas no
+> namespace novo, e no mobile na mesma entrega — contrato quebrado em uma ponta só é bug.
+> Enquanto a B-01 não fecha, o que roda é o nome antigo.
+
+### Estender o prazo é mexer na única proteção que existe
+
+O CLI **não** impõe timeout próprio: medido, uma permissão ficou 150 s pendurada sem que nada
+desistisse ([descoberta §8.4](../../discovery/01-descoberta-claude-agent-sdk.md#84--o-cli-não-impõe-timeout-próprio-no-canusetool)).
+O nosso é o único que existe, e por isso o contrato carrega **só o comando**:
+
+- **valor e teto vêm da configuração** do backend, nunca do cliente. Web e app mandam
+  `permission.extend` e recebem o novo `expiresAt`;
+- extensão que chega depois de o pedido ter sido resolvido ou expirado é `error`, não no-op
+  silencioso — `PERMISSION_REQUEST_NOT_FOUND` ou `PERMISSION_REQUEST_EXPIRED`;
+- teto atingido responde `error`, e a UI mostra que não há mais extensão;
+- as duas pontas podem estender o mesmo pedido: a operação é idempotente por `requestId`, e o
+  `remainingExtensions` é o que a UI usa para não prometer o que não existe.
 
 ---
 
@@ -224,6 +253,12 @@ Cliente reconecta
   do módulo `permission` — a `Promise` do `canUseTool` nunca foi perdida, só ficou sem quem
   respondesse. Ver [ADR-012](00-decisions.md#adr-012--reconexão-não-usa-reinitialize-o-registro-de-pendentes-é-nosso).
 - Backoff de reconexão: exponencial com jitter, de 1 s a 30 s. Nunca reconecte em loop apertado.
+- **O buffer sobrevive ao encerramento da sessão** — até o restart do processo, ou até o ring
+  reciclar. Abrir uma sessão já encerrada mostra o estado terminal (motivo, hora) **e** o replay
+  do que ainda houver, que o cliente **rotula como parcial**. Sem o rótulo, ausência de conteúdo
+  é lida como ausência de atividade, o que é pior do que não mostrar nada. Os dois ramos são
+  reais: buffer presente e buffer perdido — o segundo é o que acontece depois de todo restart do
+  backend. Histórico de verdade é transcript, não replay.
 
 ---
 

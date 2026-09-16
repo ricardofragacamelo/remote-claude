@@ -42,11 +42,25 @@ execução passou com a cerca de cgroup por fora
 Este plano roda o emulador muitas vezes. Ajustar o teto para algo que caiba numa máquina de
 desenvolvimento, e provar que a suíte continua verde, é trabalho desta fase.
 
+### B-34 — A imagem do emulador, fixada 🔲
+
+**API 35**, fixada em [scripts/mobile.mjs](../../../scripts/mobile.mjs) e dita na seção
+**Comandos** do [README.md](../../../README.md#comandos), na mesma entrega
+([D-09](decisions.md#d-09--o-emulador-reprodutível)).
+
+Hoje o script exige "um device" e nada mais, o que basta para rodar e não basta para um resultado
+comparável entre duas máquinas: API level diferente muda permissão de notificação, biometria e
+deep link — exatamente o que esta fase exercita. API 33 é o piso para o diálogo de permissão de
+notificação existir; em imagem mais antiga o cenário de B-32 não aparece, e a suíte passa sem
+provar nada.
+
+Uma imagem só, não duas: a suíte já é a mais cara do repositório.
+
 ---
 
 ## Cenários cobertos
 
-S-51…S-58.
+S-51…S-58, S-67.
 
 ---
 

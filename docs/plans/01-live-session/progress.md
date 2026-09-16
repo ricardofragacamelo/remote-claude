@@ -11,7 +11,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-15
+**Última atualização:** 2026-09-16
 **Bloqueios:** nenhum ainda. **R-01 é bloqueante por desenho**: a B-42 precisa rodar antes de
 qualquer sessão real contra um diretório confiado.
 
@@ -33,14 +33,14 @@ F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | Fase | Tarefas | Concluídas | Estado |
 |---|---|---|---|
-| [F0](F0-contract.md) | B-01…B-06 | 0/6 | 🔲 |
+| [F0](F0-contract.md) | B-01…B-06, B-45 | 0/7 | 🔲 |
 | [F1](F1-workspace.md) | B-07…B-11 | 0/5 | 🔲 |
-| [F2](F2-session-runtime.md) | B-12…B-20 | 0/9 | 🔲 |
-| [F3](F3-audit.md) | B-21…B-24 | 0/4 | 🔲 |
+| [F2](F2-session-runtime.md) | B-12…B-20, B-44 | 0/10 | 🔲 |
+| [F3](F3-audit.md) | B-21…B-24, B-46, B-47 | 0/6 | 🔲 |
 | [F4](F4-permission.md) | B-25…B-31 | 0/7 | 🔲 |
 | [F5](F5-web-session.md) | B-32…B-38 | 0/7 | 🔲 |
 | [F6](F6-e2e.md) | B-39…B-43 | 0/5 | 🔲 |
-| **Total** | **B-01…B-43** | **0/43** | 🔲 |
+| **Total** | **B-01…B-47** | **0/47** | 🔲 |
 
 ---
 
@@ -48,7 +48,7 @@ F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 84 | 84 | 0 | 0 | 0 |
+| [Matriz](scenarios.md) | 108 | 108 | 0 | 0 | 0 |
 
 ---
 

@@ -30,6 +30,11 @@ A porta em `application/session/ports/`; o fake em `backend/test/fakes/agent-sdk
 `SDKMessage` roteirizados a partir de um script declarativo (uma lista de mensagens, com
 pausas controladas por fake timer).
 
+**Os roteiros não são escritos à mão** ([D-04](decisions.md#d-04--o-fake-e-o-que-ele-pode-mentir)):
+são fixtures capturadas de execuções reais do SDK por **B-44**, e commitadas — inclusive o
+`6 tool calls → 6 hooks → 2 canUseTool` medido no spike. Fake escrito de memória prova que o
+fake funciona. B-44 fecha **antes** desta task.
+
 **Vem primeiro de propósito.** Sem ele não existe teste de integração determinístico, não
 existe e2e, e a cobertura de 90 % em `adapter/outbound/claude/` seria impossível sem gastar
 cota e rede — [estratégia de testes](../../architecture/shared/06-testing-strategy.md#integração--componentes-reais-conversando).
@@ -80,8 +85,13 @@ Regra pura, sem I/O, e é o arquivo onde a cobertura de `branches` mais importa.
 **Prompt concorrente enfileira** — é o que o SDK já faz, foi medido, e rejeitar com `409` era
 política nossa e era a errada ([R-02 do bootstrap](../00-bootstrap/progress.md#decisões-tomadas-durante-a-execução)).
 
-O limite de sessões simultâneas existe aqui como **número configurado**, com
-`SESSION_LIMIT_REACHED`. Derivá-lo da RAM é o [plano 05](../05-hardening-operations/README.md).
+O limite de sessões simultâneas existe aqui como **número configurado**, com default de **10**
+([D-05](decisions.md#d-05--o-teto-por-default) — ~222 MB por sessão, 1 processo por sessão,
+medidos). Derivá-lo da RAM é o [plano 05](../05-hardening-operations/README.md).
+
+Por ser número concreto, o **limite atingido deixa de ser caso de borda improvável**: a 11ª
+sessão é recusada com `SESSION_LIMIT_REACHED` traduzido e **sem subprocesso órfão** — caminho
+obrigatório desta fase, não cenário opcional.
 
 ### B-18 — Hub, ring buffer e replay 🔲
 
@@ -108,11 +118,23 @@ redação conforme [a tabela desta borda](../../architecture/backend/04-claude-i
 
 Conteúdo de arquivo lido pela tool `Read` **nunca** vai para o log — só `path` e `bytes`.
 
+### B-44 — Gravador de fixtures do Agent SDK 🔲
+
+Ferramenta do repositório que executa o SDK real contra um workspace descartável e grava o
+stream como fixture versionada, consumida por B-12.
+
+Nasceu de [D-04](decisions.md#d-04--o-fake-e-o-que-ele-pode-mentir) e **não existia no plano**:
+sem ela, "fixtures gravadas" é intenção, e o fake volta a ser escrito de memória — que é
+exatamente o [R-02](README.md#riscos-e-decisões-em-aberto). Regravar é um comando, não uma
+sessão de transcrição manual.
+
+Roda sob demanda, como o `smoke-live`: exige o Claude logado na máquina.
+
 ---
 
 ## Cenários cobertos
 
-S-21…S-39.
+S-21…S-39, S-88…S-90.
 
 ---
 

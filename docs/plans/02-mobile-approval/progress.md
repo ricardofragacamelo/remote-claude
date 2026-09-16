@@ -32,12 +32,12 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | Fase | Tarefas | Concluídas | Estado |
 |---|---|---|---|
-| [F0](F0-device.md) | B-01…B-07 | 0/7 | 🔲 |
-| [F1](F1-push.md) | B-08…B-13 | 0/6 | 🔲 |
+| [F0](F0-device.md) | B-01…B-07, B-30 | 0/8 | 🔲 |
+| [F1](F1-push.md) | B-08…B-13, B-31, B-32 | 0/8 | 🔲 |
 | [F2](F2-mobile-session.md) | B-14…B-19 | 0/6 | 🔲 |
-| [F3](F3-mobile-permission.md) | B-20…B-25 | 0/6 | 🔲 |
-| [F4](F4-e2e.md) | B-26…B-29 | 0/4 | 🔲 |
-| **Total** | **B-01…B-29** | **0/29** | 🔲 |
+| [F3](F3-mobile-permission.md) | B-20…B-25, B-33 | 0/7 | 🔲 |
+| [F4](F4-e2e.md) | B-26…B-29, B-34 | 0/5 | 🔲 |
+| **Total** | **B-01…B-34** | **0/34** | 🔲 |
 
 ---
 
@@ -45,7 +45,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 58 | 58 | 0 | 0 | 0 |
+| [Matriz](scenarios.md) | 67 | 67 | 0 | 0 | 0 |
 
 ---
 

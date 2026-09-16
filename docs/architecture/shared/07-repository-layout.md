@@ -101,6 +101,10 @@ interior de um workspace para "facilitar" transforma e2e em teste de integraçã
 
 Orquestram; não contêm lógica. Cada workspace tem os seus equivalentes.
 
+São **`.mjs`, tipados por JSDoc com `checkJs`** — nunca `.ts`. Script que precisa de um passo de
+build quebra exatamente quando mais se precisa dele: quando o build está quebrado. A tipagem
+continua sendo verificada pelo `typecheck`, sem transpilação no caminho.
+
 | Script | Faz |
 |---|---|
 | `pnpm dev` | sobe Postgres, backend e web em watch |
@@ -119,11 +123,28 @@ Orquestram; não contêm lógica. Cada workspace tem os seus equivalentes.
 
 - Config por **variável de ambiente**, validada no boot com schema. Variável ausente ou
   inválida **impede o processo de subir** — nunca caia em default silencioso.
+- **Exceção: a allowlist de raízes de workspace mora em arquivo de configuração**, não em
+  variável. Ela é a primeira linha de defesa do produto e cresce com comentário e com o dono de
+  cada raiz — ver [workspace](../backend/03-modules.md#workspace). Vale o mesmo regime: arquivo
+  ausente, ilegível ou fora do schema derruba o boot, e a **recarga é explícita**, nunca um watch
+  silencioso.
 - `.env.example` versionado, com **toda** variável e um comentário do que faz.
 - `.env` real **nunca** versionado.
 - O backend **não** precisa de credencial do Claude: herda o login do usuário em
   `~/.claude/.credentials.json`. Não crie variável para isso. Ver
   [descoberta §2](../../discovery/01-descoberta-claude-agent-sdk.md).
+
+### Configuração que carrega decisão de segurança falha fechada
+
+Algumas variáveis não são preferência: elas movem a fronteira de segurança do produto. Essas têm
+**piso ou teto no código**, e valor fora dele **derruba o boot** — não é aviso, não é ajuste
+silencioso para o limite.
+
+| Configuração | Restrição | Por quê |
+|---|---|---|
+| Validade da regra de permissão — default e **teto** | teto obrigatório; pedido acima é recusado com `PERMISSION_RULE_EXPIRY_TOO_LONG` | regra sem validade sobrevive à razão que a criou; teto é o que força a revisão periódica |
+| Janela de retenção da trilha | **≥ 90 dias**, o piso que a trigger da tabela também aplica | ver [a trilha](../backend/05-persistence.md#a-trilha-de-auditoria) — piso que se pode baixar por variável de ambiente não é piso |
+| Intervalo do job de purga, e o seu desligamento | desligar é explícito, e o boot loga em `warn` | promessa de retenção não pode morrer em silêncio |
 
 ---
 

@@ -104,6 +104,17 @@ precisam provar o mesmo comportamento. Ver
 `patrol` quando o cenário exige o SO: permissão de notificação, toque na notificação, aba de
 login externa do OIDC.
 
+**A suíte roda em Android, e só.** O app continua compilando para iOS, mas push, biometria e
+`integration_test` **nunca são exercitados lá** — é escopo declarado, não descuido: iOS exigiria
+conta de desenvolvedor paga, certificado APNs e um runner próprio. Tratar iOS como coberto
+porque compila é a forma mais fácil de descobrir o contrário na mão do usuário.
+
+**A imagem do emulador é fixada: API 35.** Resultado comparável entre duas máquinas depende
+disso — API level diferente muda permissão de notificação, biometria e deep link, que é
+exatamente o que esta suíte exercita. API 33 é o piso para o diálogo de permissão de notificação
+existir; em imagem mais antiga, o cenário simplesmente não aparece e a suíte passa sem provar
+nada. Uma imagem só, não duas: a suíte já é a mais cara do repositório.
+
 ---
 
 ## Cenários obrigatórios do mobile

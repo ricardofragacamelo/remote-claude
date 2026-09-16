@@ -24,6 +24,9 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-06 | `v` maior que o suportado no handshake → fecha `4426` com `supportedVersions` | fron | integração | — | B-04 | ⬜ |
 | S-07 | `contracts:generate` é idempotente — segunda execução não muda o gerado | idem | integração | — | B-04 | ⬜ |
 | S-08 | comando inexistente → `error` no frame e o socket **permanece aberto** | err | integração | `INVALID_INPUT` | B-06 | ⬜ |
+| S-85 | `diag.ping` responde `diag.pong` com o mesmo `nonce` | eq | integração | — | B-01 | ⬜ |
+| S-86 | `session.ping`, o nome antigo, deixa de existir no contrato | err | integração | `INVALID_INPUT` | B-01 | ⬜ |
+| S-87 | `permission.extend` sem `requestId` é recusado pelo schema | err | unit | `INVALID_INPUT` | B-01 | ⬜ |
 
 ## Workspace e allowlist — B-07…B-11
 
@@ -65,8 +68,11 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-37 | `attach` repetido da mesma connection não duplica entrega | idem | integração | — | B-19 | ⬜ |
 | S-38 | `session.close` por quem não é dono da sessão | err | integração | `FORBIDDEN` | B-19 | ⬜ |
 | S-39 | `query()` sem `settingSources: ['project']` ou sem o hook → `scan:security` falha | err | unit | — | B-13 | ⬜ |
+| S-88 | 11ª sessão com o teto em 10: recusada, traduzida e **sem subprocesso órfão** | fron | integração | `SESSION_LIMIT_REACHED` | B-17 | ⬜ |
+| S-89 | fixture regravada do mesmo roteiro produz o mesmo arquivo | idem | integração | — | B-44 | ⬜ |
+| S-90 | fixture gravada reproduz `6 tool calls → 6 hooks → 2 canUseTool` | eq | integração | — | B-44 | ⬜ |
 
-## Auditoria — B-21…B-24
+## Auditoria — B-21…B-24, B-46, B-47
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
@@ -80,6 +86,16 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-47 | mesmo `toolUseId` reentregue não duplica registro | idem | integração | — | B-23 | ⬜ |
 | S-48 | duas tools concorrentes geram dois registros, sem sobrescrita | conc | integração | — | B-22 | ⬜ |
 | S-49 | `input` acima do limite de truncamento vai **inteiro** para a trilha, truncado só no log | fron | unit | — | B-21 | ⬜ |
+| S-99 | `Write` aprovado grava caminho, hash e mtime do resultado | eq | integração | — | B-46 | ⬜ |
+| S-100 | duas escritas no mesmo arquivo deixam **uma** linha, com o estado mais recente | idem | integração | — | B-46 | ⬜ |
+| S-101 | tool que **falhou** não atualiza o estado do arquivo | err | integração | — | B-46 | ⬜ |
+| S-102 | falha ao gravar o estado **não** bloqueia a autorização — ao contrário da trilha | err | integração | — | B-46 | ⬜ |
+| S-103 | o estado do arquivo não vai para a tabela de auditoria, que segue recusando `UPDATE` | err | integração | — | B-46 | ⬜ |
+| S-104 | o primeiro toque do turno num caminho guarda o conteúdo anterior; o segundo **não** sobrescreve o snapshot | idem | integração | — | B-47 | ⬜ |
+| S-105 | arquivo criado pelo turno é registrado como "ausente antes", para poder ser apagado no desfazer | est | integração | — | B-47 | ⬜ |
+| S-106 | dois turnos que tocam o mesmo arquivo geram dois checkpoints, um por `prompt_id` | eq | integração | — | B-47 | ⬜ |
+| S-107 | a purga respeita o teto e **não** apaga snapshot que uma sessão viva ainda alcança | fron | integração | — | B-47 | ⬜ |
+| S-108 | arquivo acima do limite não é snapshotado, e fica registrado como não garantido | fron | integração | — | B-47 | ⬜ |
 
 ## Permissão — B-25…B-31
 
@@ -101,6 +117,11 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-63 | timeout com `defaultToNo` ausente continua negando — silêncio nunca autoriza | err | unit | `PERMISSION_REQUEST_EXPIRED` | B-27 | ⬜ |
 | S-64 | `permission.resolved` chega a todas as connections, inclusive quem respondeu | eq | integração | — | B-29 | ⬜ |
 | S-65 | a decisão vira registro de auditoria com `resolvedBy` e o `input` exato | eq | integração | — | B-31 | ⬜ |
+| S-91 | `permission.extend` adia o `expiresAt` e o pedido sobrevive ao prazo original | est | integração | — | B-27 | ⬜ |
+| S-92 | teto de extensões atingido → erro, e `remainingExtensions` chega a zero | fron | integração | `INVALID_INPUT` | B-27 | ⬜ |
+| S-93 | estender pedido já resolvido é **erro**, não no-op silencioso | err | integração | `PERMISSION_REQUEST_NOT_FOUND` | B-29 | ⬜ |
+| S-94 | web e celular estendem o mesmo pedido juntos → uma extensão, não duas | conc | integração | — | B-29 | ⬜ |
+| S-95 | comando que a heurística **não reconhece** vira `destructive`, não seguro | fron | unit | — | B-30 | ⬜ |
 
 ## Web da sessão — B-32…B-38
 
@@ -116,6 +137,8 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-73 | reconexão usa backoff com jitter e nunca entra em laço apertado | fron | unit | — | B-33 | ⬜ |
 | S-74 | literal apresentável nas telas novas → `lint` e `i18n:check` falham | err | unit | — | B-38 | ⬜ |
 | S-75 | componente novo chamando service ou `api.ts` direto → `lint:arch` falha | err | unit | — | B-34 | ⬜ |
+| S-96 | sessão encerrada com buffer vivo: estado terminal + replay **rotulado como parcial** | est | integração | — | B-34 | ⬜ |
+| S-97 | sessão encerrada com buffer perdido: só o estado terminal, e a tela diz isso | fron | integração | — | B-34 | ⬜ |
 
 ## E2E e smoke-live — B-39…B-43
 
@@ -130,6 +153,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-82 | abrir workspace fora da allowlist pela porta do usuário | err | e2e | `WORKSPACE_NOT_ALLOWED` | B-40 | ⬜ |
 | S-83 | `smoke-live`: sessão real responde e **nenhum** `SDKMessage` cai no ramo desconhecido | eq | e2e | — | B-41 | ⬜ |
 | S-84 | o `integration_test` do app segue verde com o contrato novo, sem `INVALID_INPUT` | idem | e2e | — | B-43 | ⬜ |
+| S-98 | diretório marcado como confiado: o backend limpa a marca e o `canUseTool` continua sendo chamado | err | e2e | — | B-42 | ⬜ |
 
 ---
 

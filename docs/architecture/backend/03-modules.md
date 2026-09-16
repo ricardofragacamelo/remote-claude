@@ -102,6 +102,16 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
 - **Entidades:** `Workspace`, `WorkspacePath` (VO)
 - **Regras:** **allowlist de raízes permitidas** — o caminho é normalizado e precisa estar
   dentro de uma raiz configurada. Bloqueia `..`, symlink que escapa, e caminho relativo.
+  - A allowlist vem de **arquivo de configuração**, não de variável de ambiente nem de tabela
+    administrável pela UI: mudá-la exige acesso ao disco da máquina, e a lista fica legível e
+    comentável quando crescer. Arquivo ausente, ilegível ou fora do schema **derruba o boot**, e
+    a recarga é **explícita** — nunca um watch silencioso, porque allowlist que encolhe debaixo
+    de uma sessão aberta move a fronteira de segurança sem ninguém decidir isso.
+  - **Cada raiz declara quem a usa** (o `sub` do OIDC). Com multiusuário, allowlist global
+    significaria que qualquer pessoa autenticada alcança toda raiz — o escopo existiria na
+    trilha e na permissão, mas não no acesso, que é onde importa.
+  - Raiz que **existe e não é do usuário** responde `WORKSPACE_NOT_FOUND` (404), nunca 403:
+    403 confirma a existência de um caminho que o usuário não deveria saber que existe.
 - **Erros:** `WORKSPACE_NOT_ALLOWED`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`
 - **Nota:** esta é a primeira linha de defesa do sistema. A regra é pura, sem I/O, e tem
   cobertura mínima de 90 %. Ver [01-clean-architecture.md](01-clean-architecture.md).
@@ -110,7 +120,11 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
 
 - **Entidades:** `Session`, `Turn`
 - **Estados:** `starting → idle → thinking → running → waitingPermission → idle → closed`
-- **Regras:** limite de sessões simultâneas derivado da RAM (**~222 MB por sessão**, medido);
+- **Regras:** limite de sessões simultâneas **configurado, com default de 10** (~222 MB por
+  sessão e exatamente 1 processo por sessão, medidos em spike — o default assume máquina alvo
+  folgada). Derivar o limite da RAM disponível é trabalho posterior; enquanto não existe, o
+  número é explícito e não teórico, e a **recusa da sessão além do teto** é caminho obrigatório:
+  `SESSION_LIMIT_REACHED` traduzido, e **nenhum subprocesso órfão**.
   `close()` sempre executa, mesmo em erro — subprocesso vazado é vazamento de recurso real
 - **Prompt concorrente — enfileira**
   ([R-02, decidido](../../plans/00-bootstrap/progress.md#decisões-tomadas-durante-a-execução)):
@@ -132,7 +146,30 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   - `deny` exige `reason`
   - regra persistida (`scope: session|project|always`) auto-resolve requests futuros **antes**
     de notificar alguém
-- **Erros:** `PERMISSION_REQUEST_NOT_FOUND`, `PERMISSION_REQUEST_EXPIRED`, `PERMISSION_NOT_OWNED`
+  - **a regra é de um usuário**, nunca da máquina: `userId` entra no casamento, não só na
+    criação. Regra de um jamais resolve o pedido de outro
+  - o padrão de input usa a **gramática das settings do Claude Code** — `Bash(git status)` casa
+    exato, `Bash(git status:*)` casa o prefixo, `Bash` casa a tool inteira. Sem glob, sem regex:
+    é a mesma gramática que volta ao SDK em `updatedPermissions`, e sintaxe própria faria as duas
+    metades casarem conjuntos diferentes de comando
+    ([a ponte](04-claude-integration.md#a-ponte-de-permissão))
+  - **padrão fora da gramática é recusado na criação**, não guardado como regra que nunca casa —
+    e o prefixo respeita fronteira de token: `git status:*` não cobre `git statusx`
+  - **toda regra expira.** `expiresAt` é obrigatório; valor default e teto vêm de configuração, e
+    pedido acima do teto é recusado, nunca truncado em silêncio. Regra expirada não resolve nada
+    e **continua na lista**, marcada — "sumiu" e "deixou de valer" são coisas diferentes para
+    quem procura o que autorizou
+  - o casamento é **regra pura do domínio**: é dele que a UI tira o texto de alcance
+  - `riskHint` é **derivado no backend** — as duas pontas não podem divergir —, por lista fixa
+    por tool **mais** heurística sobre o input, e **falha fechado**: comando que a heurística não
+    reconhece é marcado como destrutivo, nunca como seguro. Falso positivo incomoda; falso
+    negativo é o acidente. É essa garantia que sustenta a confirmação em dois passos do app valer
+    só para `destructive` ([mobile/04-ui](../mobile/04-ui.md#a-tela-de-permissão))
+  - o prazo do pedido pode ser **estendido** pela UI, com incremento e teto vindos da
+    configuração — o cliente manda o comando, não escolhe o número
+    ([contrato WS](../shared/05-websocket-protocol.md#estender-o-prazo-é-mexer-na-única-proteção-que-existe))
+- **Erros:** `PERMISSION_REQUEST_NOT_FOUND`, `PERMISSION_REQUEST_EXPIRED`, `PERMISSION_NOT_OWNED`,
+  `PERMISSION_RULE_PATTERN_INVALID`, `PERMISSION_RULE_EXPIRY_TOO_LONG`
 - Ver [contrato WS](../shared/05-websocket-protocol.md#o-fluxo-de-permissão).
 
 ### `transcript`
@@ -140,8 +177,24 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
 - **Regras:** o transcript vive no JSONL do Claude (`~/.claude/projects/`), **não** no
   Postgres. O backend lê via funções do SDK (`listSessions`, `getSessionMessages`) — não
   faça parser do JSONL na mão; o formato é interno do Claude Code.
-- **Consequência importante:** as sessões criadas no VSCode aparecem aqui. É feature, e
-  precisa ser tratada como tal na UI (mostrar a origem).
+- **Consequência importante:** as sessões criadas fora aparecem aqui. É feature, e precisa ser
+  tratada como tal na UI (mostrar a origem).
+- **A listagem é por workspace da allowlist**, um `listSessions({ dir })` por vez — nunca
+  `listSessions({})`. A mesma cerca que vale para executar vale para ler: o store tem
+  transcript de todo projeto da máquina, inclusive os que ninguém liberou.
+- **`includeWorktrees: false`, e o filtro é sobre o `cwd` devolvido.** O default do SDK é
+  `true`, e o worktree de um repositório liberado é outro caminho em disco — fora da entrada da
+  allowlist. Sessão **sem `cwd` é excluída**, por falha fechada: não há como provar de onde é.
+- **A origem não vem do SDK.** `SDKSessionInfo` não tem campo de procedência, e
+  `includeProgrammatic` não separa o que é nosso. A origem sai do **nosso** banco — é nossa se
+  temos linha dela —, e o rótulo é "externa", não "VSCode": pode ter vindo do terminal.
+- **`[]` não é "não existe".** `getSessionMessages` devolve lista vazia tanto para sessão vazia
+  quanto para id inexistente; quem distingue é `getSessionInfo`, que devolve `undefined`. Sem
+  isso não há como responder `NOT_FOUND` com honestidade.
+- **A leitura é cacheada, não só paginada.** `limit`/`offset` cortam o que vai para o cliente e
+  **não** reduzem o trabalho do SDK — medido, ~30 MB de heap por chamada, com ou sem limite.
+  Cache por `sessionId` + `lastModified`, e limite de leituras concorrentes. Ver
+  [descoberta §9.2](../../discovery/01-descoberta-claude-agent-sdk.md#92--limitoffset-não-reduzem-o-trabalho-do-servidor).
 
 ### `notification`
 
@@ -149,6 +202,20 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   push de permissão traz `expiresAt` e é cancelado quando a permissão resolve; payload já
   vai **traduzido**, no `Device.locale` — é a única exceção da regra de i18n
 - **Nunca** coloque conteúdo de arquivo ou output de comando no push.
+- **Vai para todos os aparelhos aprovados** do usuário, não só para o último ativo: notificar só
+  o mais recente falha exatamente quando o aparelho ficou para trás, e permissão que ninguém vê
+  é sessão parada até o timeout negar sozinho.
+- **Uma notificação por pedido**, não uma agrupada: é o que preserva o deep link por `requestId`
+  e faz o toque abrir no card certo. O agrupamento nativo do SO cuida da aparência, e o
+  cancelamento continua sendo por `requestId`.
+- **Falha do provedor é `warn`, sem segundo canal.** O pedido continua válido no web e o timeout
+  continua decidindo no silêncio. O preço está dito: push que falha com ninguém no navegador
+  deixa a permissão esperar o prazo inteiro sem ninguém saber.
+- **Token recusado pelo provedor é apagado, e o device continua aprovado** — ele volta a receber
+  quando o app abrir. Revogar o device cobraria nova aprovação pelo web a cada rotação de token
+  do SO. O app reenvia o token a cada renovação, e reenviar o mesmo token não duplica linha.
+- O nome do provedor **não sai da configuração** — nem em log, nem em tipo, nem em nome de
+  classe.
 
 ### `audit`
 
@@ -159,7 +226,33 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
 - **Regras:** append-only, sem update, sem delete; registra `who`, `what`, `when`, `where`
   (device/IP), `input` exato da tool e a `decision`; falha de escrita de auditoria é `error`
   e **bloqueia** a autorização — sem trilha, não autoriza
-- Retenção mínima: 90 dias.
+- **Falha de escrita não derruba a sessão na primeira vez.** A primeira nega a tool, loga `error`
+  e emite evento de erro na UI, com a sessão viva — um blip de rede ou um restart de container
+  não pode custar o trabalho de ninguém. A **segunda falha consecutiva** encerra a sessão, com
+  motivo explícito; uma escrita bem-sucedida zera o contador. Evita os dois extremos: a sessão
+  zumbi, em que nada passa e o usuário fica tentando, e a morte por soluço.
+- **Escopo de leitura:** cada usuário lê a própria trilha. Trilha de outro responde `404`, não
+  `403` — 403 confirma a existência do que o requisitante não deveria saber que existe.
+- **Ordenação e paginação:** cursor **keyset descendente** sobre `seq`, o sequencial próprio da
+  tabela; `at` é coluna de **filtro**, nunca de ordenação. Timestamp ordena mal por dois motivos
+  independentes — empate no mesmo milissegundo e relógio da máquina ajustado para trás —, e o
+  sentido descendente é o que fecha o terceiro: escrita nova só entra **acima** da janela já
+  lida, nunca dentro dela. Ascendente pularia linha, porque transação com `seq` menor pode
+  commitar depois de uma maior. Os índices seguem a ordenação: `(user_id, seq DESC)` e
+  `(session_id, seq DESC)`.
+- **A consulta nunca devolve conteúdo de arquivo** lido pela tool `Read` — a trilha guarda
+  `path` e tamanho, e é isso que sai.
+- **Retenção:** piso de **90 dias**, e o piso vive na trigger da tabela, não na intenção do
+  código — ver [persistência](05-persistence.md#a-trilha-de-auditoria). A janela efetiva vem de
+  configuração e só pode ser ≥ piso; valor abaixo **impede o processo de subir**.
+- **Purga:** um job interno do backend, em intervalo configurado, apagando **por janela de
+  tempo** e em lote — sem bloquear a escrita da trilha, que bloquearia a autorização. O
+  subcomando manual chama a **mesma rotina de aplicação**, não uma segunda implementação, e a
+  rotina roda sob advisory lock: duas purgas simultâneas sobre a mesma janela perdem lote. A
+  purga é **ela mesma auditada** — janela, contagem e quem disparou (`job` ou `cli`). Operação
+  que apaga trilha sem deixar rastro é o buraco óbvio do desenho.
+- O job é desligável **por configuração, nunca por acidente**: desligado, o backend loga em
+  `warn` no boot que a retenção passou a depender de alguém rodar o comando.
 
 ---
 

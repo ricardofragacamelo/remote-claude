@@ -125,7 +125,7 @@ scripts/db.mjs                                     subcomando de purga da trilha
 | R-01 | **O casamento de regra é a superfície de ataque deste plano.** Uma regra larga demais (`Bash(*)`) reintroduz o problema que o `settingSources: ['project']` resolveu | mitigação: o matcher é regra **pura**, com cenários de fronteira próprios (S-05…S-07), e a UI mostra o alcance com todas as letras |
 | R-02 | Escopo `always` é, na prática, "não me pergunte mais" | a tela precisa dizer isso sem eufemismo, e a revogação precisa estar a um clique — S-17 |
 | R-03 | Trilha grande torna a consulta lenta e a purga longa | índice desenhado com a consulta (B-14), purga em lote que não bloqueia escrita (S-38) |
-| R-04 | Purga e append-only convivem mal: quem pode apagar poderia reescrever | a purga roda com papel próprio, por janela de tempo, e é ela mesma auditada (B-19) |
+| R-04 | Purga e append-only convivem mal: quem pode apagar poderia reescrever | a trigger do plano 01 passa a barrar `DELETE` **dentro** do piso de 90 dias ([D-08](decisions.md#d-08--quem-pode-apagar-a-trilha-append-only)) — o piso vira invariante do banco. A purga apaga por janela, em lote, sob lock, e é ela mesma auditada (B-19) |
 
 ---
 

@@ -106,8 +106,10 @@ Ataca o R-02 na raiz: o fake não pode ser otimista a respeito de um stream que 
 O `smoke-live` (B-41) continua sendo quem confronta a escolha com a realidade, agora como segunda
 linha e não como única.
 
-**Tarefa que esta decisão cria:** o gravador de fixtures, que hoje não existe no plano. Entra
-como **B-12b** na F2, antes de B-12 poder fechar.
+**Tarefa que esta decisão cria:** o gravador de fixtures, que não existia no plano. Entra como
+**[B-44](F2-session-runtime.md)** na F2, antes de B-12 poder fechar. O número vem do fim da
+numeração, e não de um sufixo tipo `B-12b`: o contador de tarefas lê `### B-nn`, e um sufixo
+sairia da conta em silêncio.
 
 ### D-05 — o teto por default
 
@@ -238,9 +240,10 @@ Se em diretório confiado o `allow` passar a valer, toda a aprovação humana es
 
 **Decidido — o quando, não o quê:**
 
-- o spike roda **antes da F0**, não em B-42. Descobrir um furo de premissa depois da F4 pronta
-  custa o plano inteiro; o spike custa um diretório descartável, um backup do `~/.claude.json` e
-  a restauração no fim;
+- o spike roda **antes da F0**, não em B-42 — é a **[B-45](F0-contract.md)**, a primeira task do
+  plano. Descobrir um furo de premissa depois da F4 pronta custa o plano inteiro; o spike custa
+  um diretório descartável, um backup do `~/.claude.json` e a restauração no fim. A B-42 passa a
+  provar a **mitigação** em e2e, não a medir o furo;
 - **a mitigação é adotada de qualquer forma** — o backend limpa ou recusa a marca de confiança
   antes de abrir sessão. A medição decide apenas se ela é obrigatória ou redundante, nunca se
   ela existe.
@@ -261,22 +264,28 @@ não acontece.
 
 ---
 
-## Propagação pendente
+## Propagação
 
-Decisão registrada só aqui é decisão que o resto do repositório não conhece. Estas ainda **não**
-foram levadas ao documento normativo:
+Decisão registrada só aqui é decisão que o resto do repositório não conhece. Todas viraram
+**regra** no documento normativo correspondente, em 2026-09-16:
 
-| Decisão | Documento a atualizar |
+| Decisão | Onde virou regra |
 |---|---|
-| D-01, D-09 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) — `diag.*` e o comando de extensão |
-| D-03, D-13 | [backend/03-modules](../../architecture/backend/03-modules.md) (`workspace`, escopo por usuário) e [08-authentication](../../architecture/shared/08-authentication.md) |
-| D-02, D-13 | [07-repository-layout](../../architecture/shared/07-repository-layout.md#configuração-e-segredo) — o arquivo de allowlist e o seu schema |
-| D-06, D-07 | [backend/03-modules](../../architecture/backend/03-modules.md#audit) e [backend/05-persistence](../../architecture/backend/05-persistence.md) |
-| D-04, D-12 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) — fixtures gravadas e `smoke-live` sob demanda |
-| D-05, D-08, D-10 | as fases correspondentes ([F2](F2-session-runtime.md), [F4](F4-permission.md), [F5](F5-web-session.md)) e a [matriz de cenários](scenarios.md) |
+| D-01, D-09 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#diag-é-diagnóstico-não-sessão) — `diag.ping`/`diag.pong` renomeados nas tabelas, e `permission.extend`/`permission.extended` com valor e teto na configuração |
+| D-03, D-13 | [08-authentication](../../architecture/shared/08-authentication.md#identidade-e-o-modelo-local) — multiusuário desde a primeira migration — e [backend/03-modules](../../architecture/backend/03-modules.md#workspace) — a raiz declara quem a usa, e raiz de outro é 404 |
+| D-02, D-13 | [07-repository-layout](../../architecture/shared/07-repository-layout.md#configuração-e-segredo) — a allowlist em arquivo, como exceção declarada à regra de variável de ambiente |
+| D-05 | [backend/03-modules](../../architecture/backend/03-modules.md#session) — teto de 10 sessões configurado, e a recusa como caminho obrigatório |
+| D-06, D-07 | [backend/05-persistence](../../architecture/backend/05-persistence.md#a-trilha-de-auditoria) — a trigger — e [backend/03-modules](../../architecture/backend/03-modules.md#audit) — nega sempre, encerra na segunda falha consecutiva |
+| D-04, D-12 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) — fixtures capturadas do SDK real, e `smoke-live` **sob demanda, sem nightly**, corrigindo a tabela de portões |
+| D-08 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) — `riskHint` derivado no backend, por lista **mais** heurística, falhando fechado |
+| D-10 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#reconexão-e-replay) — o buffer sobrevive ao encerramento, e o replay é rotulado como parcial |
 
-Tarefas novas que as decisões criaram, e que ainda não estão nas fases: **B-12b** (gravador de
-fixtures do SDK, F2) e o **spike de D-11** (antes da F0).
+Segue pendente, e **não** é documento de arquitetura: levar D-05, D-08 e D-10 às fases
+correspondentes ([F2](F2-session-runtime.md), [F4](F4-permission.md), [F5](F5-web-session.md)) e
+à [matriz de cenários](scenarios.md).
+
+Tarefas que as decisões criaram, e que **já estão** nas fases: **B-44** (gravador de fixtures do
+SDK, F2) e **B-45** (spike do diretório confiado, F0 — a primeira do plano).
 
 ---
 

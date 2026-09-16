@@ -31,13 +31,26 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 `session.setPermissionMode`, `session.setModel`, `session.close`, `session.setLocale`, com os
 payloads da [tabela de comandos](../../architecture/shared/05-websocket-protocol.md#comandos-cliente--servidor).
 
-`session.detach` fecha a dívida S-119 do bootstrap. `session.ping` **permanece** — é a fatia
-vertical que prova o trilho sem o SDK, e continua sendo o teste mais barato do gateway.
+`session.detach` fecha a dívida S-119 do bootstrap.
+
+O par do bootstrap **permanece e é renomeado**: `session.ping`/`session.pong` viram
+`diag.ping`/`diag.pong` ([D-01](decisions.md#d-01--o-destino-da-fatia-vertical-do-bootstrap)).
+Continua sendo o smoke mais barato do gateway — o único que não exige subprocesso do Claude —, e
+o nome novo é o que impede a fatia de virar API pública sem dono. A renomeação custa nada
+**agora**, porque nada foi construído em cima; o mobile recebe a mudança na mesma entrega
+(B-43), porque contrato quebrado em uma ponta só é bug.
+
+Entra também `permission.extend`
+([D-09](decisions.md#d-09--estender-o-que-já-é-o-único-timeout)): o comando nasce **aqui**, com
+o resto do contrato, e não na F4 — contrato alterado no meio do plano é quebra. O payload é
+`{ requestId }` e nada mais: **incremento e teto vêm da configuração do backend**, porque o
+nosso timeout é a única proteção contra sessão pendurada e o cliente não escolhe o número.
 
 ### B-02 — Schemas dos eventos de sessão 🔲
 
 `session.started`, `session.statusChanged`, `message.delta`, `message.completed`,
-`tool.started`, `tool.progress`, `tool.completed`, `turn.completed`, `session.closed`.
+`tool.started`, `tool.progress`, `tool.completed`, `turn.completed`, `session.closed`,
+`diag.pong` e `permission.extended` (`{ requestId, expiresAt, remainingExtensions }`).
 
 `seq` é **obrigatório** em todo `event` — o schema precisa cobrar isso, não a boa vontade de
 quem emite.
@@ -75,11 +88,28 @@ Contrato alterado sem atualizar o documento é o anti-padrão listado no [AGENTS
 Backend, web e mobile importam o contrato novo e seguem verdes. O app **não** ganha tela nesta
 fase; ele apenas para de enviar um comando que não existe.
 
+### B-45 — Spike do diretório confiado, antes de tudo 🔲
+
+**A primeira coisa a rodar no plano**, antes de qualquer schema
+([D-11](decisions.md#d-11--o-furo-que-invalidaria-o-produto)). Verificar, num diretório já
+marcado como confiado (`hasTrustDialogAccepted`) pelo CLI interativo, se um `allow` de projeto
+volta a dispensar o `canUseTool`.
+
+Está aqui, e não na [F6](F6-e2e.md), porque descobrir um furo de premissa depois da F4 pronta
+custa o plano inteiro; o spike custa um diretório descartável, um backup do `~/.claude.json` e a
+restauração no fim.
+
+**A mitigação é adotada de qualquer forma** — o backend limpa ou recusa a marca de confiança
+antes de abrir sessão. A medição decide se ela é obrigatória ou redundante, nunca se ela existe.
+O resultado, qualquer que seja, vira registro em [progress.md](progress.md), fecha a linha de
+[D-11](decisions.md) e atualiza
+[04-claude-integration](../../architecture/backend/04-claude-integration.md#a-armadilha-do-settingsources).
+
 ---
 
 ## Cenários cobertos
 
-S-01…S-08.
+S-01…S-08, S-85…S-87.
 
 ---
 

@@ -31,6 +31,12 @@ revoked`). Ancorado no `User`, que por sua vez é ancorado no `sub` — nunca no
 
 ### B-02 — Tabela `devices` e migration 🔲
 
+O índice único é **composto: `(user_id, install_id)`**
+([D-10](decisions.md#d-10--o-mesmo-aparelho-duas-contas)), e nasce composto — depois seria
+migration em tabela com dado. Com a chave simples, o registro do usuário B no mesmo celular
+sobrescreveria a linha já aprovada do usuário A: aprovação herdada em silêncio, que é o oposto
+do que esta fase existe para garantir.
+
 Migration versionada; identidade estável do aparelho (um `installId` gerado pelo app) para que
 reinstalar não crie um device fantasma a cada abertura.
 
@@ -69,11 +75,23 @@ pendente, observa sessões e tem os controles de aprovação **desabilitados, co
 Esconder o motivo transforma regra de segurança em bug aparente
 ([mobile/07-auth](../../architecture/mobile/07-auth.md)).
 
+### B-30 — O pendente que ninguém aprovou expira 🔲
+
+Registro pendente há mais de **7 dias** sai da lista
+([D-11](decisions.md#d-11--o-pendente-esquecido)). Registrar de novo é abrir o app.
+
+A máquina de estados era `pending → approved → revoked`, sem saída para o aparelho que ninguém
+aprovou — ele ficaria na lista para sempre, e lista longa de pendentes é como se aprova por
+cansaço o aparelho errado, meses depois. Sem teto de aparelhos: o número não é o problema, a
+idade é.
+
+Expirar duas vezes não muda nada, e o aparelho no 6º dia continua aprovável.
+
 ---
 
 ## Cenários cobertos
 
-S-01…S-14.
+S-01…S-14, S-59, S-60.
 
 ---
 

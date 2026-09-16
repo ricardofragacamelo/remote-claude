@@ -11,7 +11,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-15
+**Última atualização:** 2026-09-16
 **Bloqueios:** nenhum
 
 ```
@@ -45,7 +45,7 @@ F5 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 53 | 53 | 0 | 0 | 0 |
+| [Matriz](scenarios.md) | 67 | 67 | 0 | 0 | 0 |
 
 ---
 
@@ -56,7 +56,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 7 | 7 | 0 | 0 | 0 |
+| [Decisões](decisions.md) | 7 | 0 | 0 | 7 | 0 |
 
 ---
 
@@ -98,9 +98,9 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 | # | Risco | Estado | Observação |
 |---|---|---|---|
 | R-01 | O formato do JSONL é interno do Claude e muda sem aviso | 🔲 aberto | só funções do SDK (B-01); `smoke-live` cobre esta ponta (B-25) |
-| R-02 | Sessão do VSCode aparecendo pode confundir | 🔲 aberto | é feature declarada; a origem fica visível (S-11) |
-| R-03 | `rewindFiles()` mexe no disco do usuário | 🔲 aberto | alcance explícito, recusa durante turno, auditoria (B-19…B-21) |
-| R-04 | Transcript longo pode estourar memória | 🔲 aberto | paginação desde o primeiro dia (B-04) |
+| R-02 | Sessão criada fora aparecendo pode confundir | 🔲 aberto | feature declarada, restrita à allowlist (D-01); origem vem do nosso banco — o SDK não a informa (S-11) |
+| R-03 | O desfazer mexe no disco do usuário | 🔄 medido | spike confirmou que o `rewindFiles()` sobrescreve em silêncio, que o `dryRun` não avisa e que não há filtro por arquivo; por isso o mecanismo é nosso (D-06), e herdamos segurança de link e restauração atômica |
+| R-04 | Transcript longo estoura memória a cada leitura | 🔄 medido | `limit`/`offset` não reduzem o trabalho do SDK (~30 MB por chamada); mitigação é cache por `lastModified` e limite de leituras concorrentes (D-02) |
 | R-05 | Retomar sessão viva abriria um segundo subprocesso | 🔲 aberto | retomada de sessão viva é `attach` (S-24) |
 
 ---
