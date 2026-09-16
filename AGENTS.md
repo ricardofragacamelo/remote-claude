@@ -110,7 +110,7 @@ abaixo tem o seu próprio roteador interno.
 | Saber **por que** uma tecnologia foi escolhida, ou propor trocá-la | [docs/architecture/shared/00-decisions.md](docs/architecture/shared/00-decisions.md) | sim |
 | Configurar ou suprimir lint, tipagem, duplicação ou quality gate | [docs/architecture/shared/09-code-quality.md](docs/architecture/shared/09-code-quality.md) | sim |
 | **Planejar uma fase/task, ou executar a validação** | [docs/architecture/shared/11-validation-protocol.md](docs/architecture/shared/11-validation-protocol.md) | sim |
-| Implementar uma fase, ou saber em que pé está o trabalho | [docs/plans/](docs/plans/README.md) — o plano corrente, sua fase e o `progress.md` | sim |
+| Implementar uma fase, ou saber em que pé está o trabalho | [docs/plans/](docs/plans/README.md) — o plano corrente, sua fase, o `progress.md` dele e o [progresso geral](docs/plans/progress.md) | sim |
 | **Criar um plano novo** | [docs/plans/README.md](docs/plans/README.md) — o formato é normativo: fases em arquivos separados, tasks dentro de cada fase | sim |
 | **Dar uma tarefa por concluída** | [docs/architecture/shared/10-definition-of-done.md](docs/architecture/shared/10-definition-of-done.md) | sim |
 
@@ -137,7 +137,9 @@ abaixo tem o seu próprio roteador interno.
 - Componente React chamando `api.ts` ou um service direto, sem passar por hook.
 - Teste ao lado do fonte, ou entrega que derruba a cobertura abaixo de 90 %.
 - Plano ou task sem matriz de cenários.
-- Plano fora do formato: fase sem arquivo próprio, task sem ID, critério de conclusão que não é um comando.
+- Plano fora do formato: fase sem arquivo próprio, task sem ID, critério de conclusão que não é um comando, ou sem `decisions.md`.
+- Fase que avança sem atualizar o `progress.md` do plano **e** o progresso geral.
+- Decisão tomada sem registro no `decisions.md` do plano — decisão sem rastro é decisão que se toma de novo.
 - Entrega sem os três níveis de teste, ou com cenários só de caminho feliz.
 - Retomar a validação do portão que falhou, em vez de reiniciar do primeiro.
 - `query()` do Agent SDK sem `settingSources: ['project']` ou sem o hook `PreToolUse`.
