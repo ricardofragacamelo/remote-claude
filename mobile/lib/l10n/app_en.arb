@@ -1,0 +1,123 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "remote-claude",
+  "@appTitle": { "description": "Name of the application, shown in the task switcher" },
+
+  "commonActionRetry": "Try again",
+  "@commonActionRetry": { "description": "Recovery action offered by the error view" },
+
+  "commonActionSignOut": "Sign out",
+  "@commonActionSignOut": { "description": "Ends the session on this device" },
+
+  "commonErrorUnexpected": "Something went wrong on our side.",
+  "@commonErrorUnexpected": { "description": "Failure with no better explanation to give" },
+
+  "commonErrorOffline": "The backend could not be reached.",
+  "@commonErrorOffline": { "description": "The request never reached a server" },
+
+  "commonErrorInvalidInput": "The request was not valid.",
+  "@commonErrorInvalidInput": { "description": "The server rejected the payload" },
+
+  "commonErrorNotFound": "That does not exist.",
+  "@commonErrorNotFound": { "description": "The addressed resource is gone or never existed" },
+
+  "commonErrorForbidden": "You are not allowed to do that.",
+  "@commonErrorForbidden": { "description": "Authenticated, but not authorised" },
+
+  "commonErrorPayloadTooLarge": "That is larger than the server accepts.",
+  "@commonErrorPayloadTooLarge": { "description": "The frame or body exceeded the limit" },
+
+  "commonErrorRateLimited": "Too many requests. Try again in a moment.",
+  "@commonErrorRateLimited": { "description": "The caller was throttled" },
+
+  "commonErrorTraceLabel": "Trace {traceId}",
+  "@commonErrorTraceLabel": {
+    "description": "Shown on the error view so a user report can be found in the logs",
+    "placeholders": { "traceId": { "type": "String" } }
+  },
+
+  "authErrorUnauthenticated": "Please sign in again.",
+  "@authErrorUnauthenticated": { "description": "The credential is missing or rejected" },
+
+  "authErrorTokenExpired": "Your session expired.",
+  "@authErrorTokenExpired": { "description": "The access token is past its expiry" },
+
+  "authErrorInvalidState": "The sign-in reply did not match the request.",
+  "@authErrorInvalidState": { "description": "The authorization response failed validation" },
+
+  "authSignInTitle": "Sign in to continue",
+  "@authSignInTitle": { "description": "Heading of the sign-in screen" },
+
+  "authSignInDescription": "remote-claude runs Claude Code on your own machine, so it asks who you are first.",
+  "@authSignInDescription": { "description": "Why the application asks for a sign-in" },
+
+  "authSignInAction": "Sign in",
+  "@authSignInAction": { "description": "Opens the provider in the system browser" },
+
+  "authSignInPending": "Finishing sign-in…",
+  "@authSignInPending": { "description": "Shown while the token exchange is in flight" },
+
+  "connectionErrorUnsupportedVersion": "This build speaks an older protocol. Update the app.",
+  "@connectionErrorUnsupportedVersion": { "description": "The server closed the socket with 4426" },
+
+  "connectionStatusIdle": "Not connected",
+  "@connectionStatusIdle": { "description": "Connection state: nothing has been opened yet" },
+
+  "connectionStatusConnecting": "Connecting…",
+  "@connectionStatusConnecting": { "description": "Connection state: the socket is opening" },
+
+  "connectionStatusReady": "Connected",
+  "@connectionStatusReady": { "description": "Connection state: the handshake succeeded" },
+
+  "connectionStatusReconnecting": "Reconnecting…",
+  "@connectionStatusReconnecting": { "description": "Connection state: waiting out the backoff" },
+
+  "connectionStatusClosed": "Disconnected",
+  "@connectionStatusClosed": { "description": "Connection state: closed and not retrying" },
+
+  "sessionPingTitle": "Round trip",
+  "@sessionPingTitle": { "description": "Heading of the walking skeleton screen" },
+
+  "sessionPingDescription": "One command across every layer: the gateway, the use case, the rule, the database and back as an event.",
+  "@sessionPingDescription": { "description": "What the round trip proves" },
+
+  "sessionPingAction": "Send ping",
+  "@sessionPingAction": { "description": "Sends the session.ping command" },
+
+  "sessionPingPending": "Waiting for the pong…",
+  "@sessionPingPending": { "description": "Shown while a ping is in flight" },
+
+  "sessionPingEmpty": "No round trip yet. Send one to see the whole chain work.",
+  "@sessionPingEmpty": { "description": "Empty state of the round-trip list" },
+
+  "sessionPingResult": "Pong {count} at {at}",
+  "@sessionPingResult": {
+    "description": "One received pong: how many times the session was pinged, and when",
+    "placeholders": {
+      "count": { "type": "int" },
+      "at": { "type": "String" }
+    }
+  },
+
+  "sessionPingSequence": "Sequence {seq}",
+  "@sessionPingSequence": {
+    "description": "The seq the hub assigned to the event",
+    "placeholders": { "seq": { "type": "int" } }
+  },
+
+  "sessionPingSessionLabel": "Session {sessionId}",
+  "@sessionPingSessionLabel": {
+    "description": "Identifier of the session on screen",
+    "placeholders": { "sessionId": { "type": "String" } }
+  },
+
+  "sessionErrorNotFound": "That session no longer exists.",
+  "@sessionErrorNotFound": { "description": "The server answered SESSION_NOT_FOUND" },
+
+  "sessionErrorInvalidSessionId": "{sessionId} is not a session identifier.",
+  "@sessionErrorInvalidSessionId": {
+    "description": "The session id failed validation before any call",
+    "placeholders": { "sessionId": { "type": "String" } }
+  }
+}
