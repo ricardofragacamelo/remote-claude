@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-attach.json",
+  "title": "SessionAttach",
+  "description": "Starts observing a session. On a reconnect it also asks for the events missed while the socket was down.",
+  "x-kind": "command",
+  "x-type": "session.attach",
+  "type": "object",
+  "required": ["sessionId"],
+  "properties": {
+    "sessionId": { "type": "string", "description": "Session to observe." },
+    "resumeFromSeq": {
+      "type": "integer",
+      "description": "Highest `seq` the client already has. The server replays from the next one, or answers `gap: true` when that sequence has fallen out of the buffer."
+    }
+  }
+}

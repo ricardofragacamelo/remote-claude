@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/acks/session-attached.json",
+  "title": "SessionAttached",
+  "description": "Answer to `session.attach`. Says what was replayed and whether anything was lost.",
+  "x-kind": "ack",
+  "x-type": "session.attached",
+  "type": "object",
+  "required": ["sessionId", "replayed", "oldestAvailableSeq", "gap"],
+  "properties": {
+    "sessionId": { "type": "string" },
+    "replayed": {
+      "type": "integer",
+      "description": "How many buffered events follow this ack."
+    },
+    "oldestAvailableSeq": {
+      "type": "integer",
+      "description": "Lowest `seq` still in the buffer; 0 when the buffer is empty."
+    },
+    "gap": {
+      "type": "boolean",
+      "description": "The requested sequence had already fallen out of the buffer. The client drops its local state and reloads over HTTP — it never stitches a partial hole."
+    }
+  }
+}

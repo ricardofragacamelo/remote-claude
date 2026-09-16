@@ -145,6 +145,13 @@ export function emitDart(model) {
   const blocks = [
     BANNER,
     '',
+    // `dart format` and this emitter disagree about how to indent an initialiser list, and both
+    // are right by their own rules. Rather than let them rewrite each other — a formatting run
+    // would put `contracts:check` out of sync, and regenerating would put `format:check` out of
+    // sync — the formatter is told to leave generated territory alone. The analyzer already
+    // excludes it, for the same reason.
+    '// dart format off',
+    '',
     '/// The protocol version this build speaks.',
     'const int protocolVersion = 1;',
     '',

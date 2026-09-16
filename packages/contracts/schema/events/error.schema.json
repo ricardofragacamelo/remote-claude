@@ -24,6 +24,10 @@
       "type": "string",
       "description": "Lets a user report the problem and someone find it in the log."
     },
+    "httpEquivalent": {
+      "type": "integer",
+      "description": "The status this error would carry over HTTP. A WebSocket frame has no status line, and the mapping in docs/architecture/shared/04-errors-and-http.md holds on both transports."
+    },
     "details": {
       "type": "array",
       "description": "Validation only: every invalid field, not just the first.",

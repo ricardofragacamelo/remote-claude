@@ -10,15 +10,13 @@
  * Usage: `pnpm contracts:generate` · `pnpm contracts:check`
  */
 
-import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
 
+import { repoRoot } from './lib/paths.mjs';
 import { ContractError } from './lib/contracts-model.mjs';
 import { drift, targets, write } from './lib/contracts-io.mjs';
 import { dim, fail, hint, line, ok, title } from './lib/ui.mjs';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');
 
 function main() {

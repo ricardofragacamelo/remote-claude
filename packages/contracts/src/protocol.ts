@@ -6,10 +6,15 @@ export const PROTOCOL_VERSION = 1;
 
 /** Every `type` the generated frames cover, for exhaustiveness at the call site. */
 export const FRAME_TYPES = [
+  'command.accepted',
   'connection.ready',
+  'session.attached',
   'connection.authenticate',
   'connection.reauthenticate',
+  'session.attach',
+  'session.ping',
   'error',
+  'session.pong',
 ] as const;
 
 /** Shape shared by every frame, in both directions. See docs/architecture/shared/05-websocket-protocol.md. */
@@ -28,10 +33,18 @@ export interface Envelope {
   readonly traceId?: string;
   /** `id` of the frame that caused this one. */
   readonly correlationId?: string;
+  /** Session the frame belongs to, when it belongs to one. It is what fan-out routes on, and what ties the many traces of a conversation together. */
+  readonly sessionId?: string;
   /** Monotonic per session, on events only. This is what makes replay after a reconnect possible. */
   readonly seq?: number;
   /** Contents, defined per `type`. */
   readonly payload?: Readonly<Record<string, unknown>>;
+}
+
+/** A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream. */
+export interface CommandAcceptedPayload {
+  /** `type` of the command being acknowledged. */
+  readonly command: string;
 }
 
 /** What this server will accept, so the client does not have to discover it by being refused. */
@@ -46,6 +59,17 @@ export interface ConnectionReadyPayload {
   readonly serverVersion: string;
   /** What this server will accept, so the client does not have to discover it by being refused. */
   readonly limits: ConnectionReadyPayloadLimits;
+}
+
+/** Answer to `session.attach`. Says what was replayed and whether anything was lost. */
+export interface SessionAttachedPayload {
+  readonly sessionId: string;
+  /** How many buffered events follow this ack. */
+  readonly replayed: number;
+  /** Lowest `seq` still in the buffer; 0 when the buffer is empty. */
+  readonly oldestAvailableSeq: number;
+  /** The requested sequence had already fallen out of the buffer. The client drops its local state and reloads over HTTP — it never stitches a partial hole. */
+  readonly gap: boolean;
 }
 
 /** Who is connecting, for diagnostics and for the deprecation window. */
@@ -70,6 +94,22 @@ export interface ConnectionReauthenticatePayload {
   readonly token: string;
 }
 
+/** Starts observing a session. On a reconnect it also asks for the events missed while the socket was down. */
+export interface SessionAttachPayload {
+  /** Session to observe. */
+  readonly sessionId: string;
+  /** Highest `seq` the client already has. The server replays from the next one, or answers `gap: true` when that sequence has fallen out of the buffer. */
+  readonly resumeFromSeq?: number;
+}
+
+/** The vertical slice of the bootstrap: it crosses every layer without touching the Agent SDK. Omitting `sessionId` opens a session; sending one pings that session. */
+export interface SessionPingPayload {
+  /** Session to ping. Absent opens a new one, and the pong carries the id it got. */
+  readonly sessionId?: string;
+  /** Echoed back in the pong, so a client can tell its own round trip from someone else's on the same session. */
+  readonly nonce: string;
+}
+
 export interface ErrorPayloadDetailsItem {
   readonly field: string;
   readonly rule: string;
@@ -85,8 +125,21 @@ export interface ErrorPayload {
   readonly params?: Readonly<Record<string, unknown>>;
   /** Lets a user report the problem and someone find it in the log. */
   readonly traceId: string;
+  /** The status this error would carry over HTTP. A WebSocket frame has no status line, and the mapping in docs/architecture/shared/04-errors-and-http.md holds on both transports. */
+  readonly httpEquivalent?: number;
   /** Validation only: every invalid field, not just the first. */
   readonly details?: readonly ErrorPayloadDetailsItem[];
+}
+
+/** Result of `session.ping`, carrying the `seq` the hub assigned. Like every event it is fanned out to every connection observing the session, not only to the one that asked. */
+export interface SessionPongPayload {
+  readonly sessionId: string;
+  /** ISO 8601 instant in UTC, read from the server clock. */
+  readonly pingedAt: string;
+  /** How many times this session has been pinged, counting this one. */
+  readonly pingCount: number;
+  /** Echo of the nonce the command carried. */
+  readonly nonce: string;
 }
 
 /** Whether `value` carries every required field of {@link Envelope}. Unknown fields are accepted. */
@@ -103,6 +156,19 @@ export function isEnvelope(value: unknown): value is Envelope {
     typeof record['kind'] !== 'string' ||
     typeof record['type'] !== 'string' ||
     typeof record['ts'] !== 'string'
+  );
+}
+
+/** Whether `value` carries every required field of {@link CommandAcceptedPayload}. Unknown fields are accepted. */
+export function isCommandAcceptedPayload(value: unknown): value is CommandAcceptedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['command'] !== 'string'
   );
 }
 
@@ -132,6 +198,22 @@ export function isConnectionReadyPayload(value: unknown): value is ConnectionRea
     typeof record['connectionId'] !== 'string' ||
     typeof record['serverVersion'] !== 'string' ||
     !isConnectionReadyPayloadLimits(record['limits'])
+  );
+}
+
+/** Whether `value` carries every required field of {@link SessionAttachedPayload}. Unknown fields are accepted. */
+export function isSessionAttachedPayload(value: unknown): value is SessionAttachedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['sessionId'] !== 'string' ||
+    typeof record['replayed'] !== 'number' ||
+    typeof record['oldestAvailableSeq'] !== 'number' ||
+    typeof record['gap'] !== 'boolean'
   );
 }
 
@@ -177,6 +259,32 @@ export function isConnectionReauthenticatePayload(value: unknown): value is Conn
   );
 }
 
+/** Whether `value` carries every required field of {@link SessionAttachPayload}. Unknown fields are accepted. */
+export function isSessionAttachPayload(value: unknown): value is SessionAttachPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['sessionId'] !== 'string'
+  );
+}
+
+/** Whether `value` carries every required field of {@link SessionPingPayload}. Unknown fields are accepted. */
+export function isSessionPingPayload(value: unknown): value is SessionPingPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['nonce'] !== 'string'
+  );
+}
+
 /** Whether `value` carries every required field of {@link ErrorPayloadDetailsItem}. Unknown fields are accepted. */
 export function isErrorPayloadDetailsItem(value: unknown): value is ErrorPayloadDetailsItem {
   if (typeof value !== 'object' || value === null) {
@@ -206,6 +314,42 @@ export function isErrorPayload(value: unknown): value is ErrorPayload {
   );
 }
 
+/** Whether `value` carries every required field of {@link SessionPongPayload}. Unknown fields are accepted. */
+export function isSessionPongPayload(value: unknown): value is SessionPongPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['sessionId'] !== 'string' ||
+    typeof record['pingedAt'] !== 'string' ||
+    typeof record['pingCount'] !== 'number' ||
+    typeof record['nonce'] !== 'string'
+  );
+}
+
+/** A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream. */
+export interface CommandAcceptedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'ack';
+  readonly type: 'command.accepted';
+  readonly payload: CommandAcceptedPayload;
+}
+
+/** Whether `value` is a {@link CommandAcceptedFrame}. */
+export function isCommandAcceptedFrame(value: unknown): value is CommandAcceptedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'ack' &&
+    value.type === 'command.accepted' &&
+    isCommandAcceptedPayload(value.payload)
+  );
+}
+
 /** Answer to a successful handshake. An ack, not an event: it acknowledges the command that caused it. */
 export interface ConnectionReadyFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'ack';
@@ -223,6 +367,26 @@ export function isConnectionReadyFrame(value: unknown): value is ConnectionReady
     value.kind === 'ack' &&
     value.type === 'connection.ready' &&
     isConnectionReadyPayload(value.payload)
+  );
+}
+
+/** Answer to `session.attach`. Says what was replayed and whether anything was lost. */
+export interface SessionAttachedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'ack';
+  readonly type: 'session.attached';
+  readonly payload: SessionAttachedPayload;
+}
+
+/** Whether `value` is a {@link SessionAttachedFrame}. */
+export function isSessionAttachedFrame(value: unknown): value is SessionAttachedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'ack' &&
+    value.type === 'session.attached' &&
+    isSessionAttachedPayload(value.payload)
   );
 }
 
@@ -266,6 +430,46 @@ export function isConnectionReauthenticateFrame(value: unknown): value is Connec
   );
 }
 
+/** Starts observing a session. On a reconnect it also asks for the events missed while the socket was down. */
+export interface SessionAttachFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.attach';
+  readonly payload: SessionAttachPayload;
+}
+
+/** Whether `value` is a {@link SessionAttachFrame}. */
+export function isSessionAttachFrame(value: unknown): value is SessionAttachFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.attach' &&
+    isSessionAttachPayload(value.payload)
+  );
+}
+
+/** The vertical slice of the bootstrap: it crosses every layer without touching the Agent SDK. Omitting `sessionId` opens a session; sending one pings that session. */
+export interface SessionPingFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.ping';
+  readonly payload: SessionPingPayload;
+}
+
+/** Whether `value` is a {@link SessionPingFrame}. */
+export function isSessionPingFrame(value: unknown): value is SessionPingFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.ping' &&
+    isSessionPingPayload(value.payload)
+  );
+}
+
 /** The error envelope, identical to the HTTP one. See docs/architecture/shared/04-errors-and-http.md. */
 export interface ErrorFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'error';
@@ -283,5 +487,25 @@ export function isErrorFrame(value: unknown): value is ErrorFrame {
     value.kind === 'error' &&
     value.type === 'error' &&
     isErrorPayload(value.payload)
+  );
+}
+
+/** Result of `session.ping`, carrying the `seq` the hub assigned. Like every event it is fanned out to every connection observing the session, not only to the one that asked. */
+export interface SessionPongFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'session.pong';
+  readonly payload: SessionPongPayload;
+}
+
+/** Whether `value` is a {@link SessionPongFrame}. */
+export function isSessionPongFrame(value: unknown): value is SessionPongFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'session.pong' &&
+    isSessionPongPayload(value.payload)
   );
 }

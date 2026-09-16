@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/acks/command-accepted.json",
+  "title": "CommandAccepted",
+  "description": "A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream.",
+  "x-kind": "ack",
+  "x-type": "command.accepted",
+  "type": "object",
+  "required": ["command"],
+  "properties": {
+    "command": { "type": "string", "description": "`type` of the command being acknowledged." }
+  }
+}

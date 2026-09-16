@@ -53,10 +53,15 @@ describe('the generated protocol surface', () => {
 
   it('lists the frame types of the walking skeleton', () => {
     expect([...FRAME_TYPES].sort()).toEqual([
+      'command.accepted',
       'connection.authenticate',
       'connection.ready',
       'connection.reauthenticate',
       'error',
+      'session.attach',
+      'session.attached',
+      'session.ping',
+      'session.pong',
     ]);
   });
 });

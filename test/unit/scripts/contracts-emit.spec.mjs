@@ -162,3 +162,101 @@ describe('both emitters', () => {
     expect(dart.endsWith('\n\n')).toBe(false);
   });
 });
+
+/**
+ * A second command, written to reach the shapes the first one does not: an **optional** nested
+ * object, an optional array of objects, a free-form record, and a numeric `const`.
+ *
+ * They are all shapes the real contract already uses or will use — an optional `details[]` on
+ * the error frame, a numeric protocol version — and each one emits differently in both
+ * languages. A shape nobody generated is a shape nobody knows generates correctly.
+ */
+const optionals = {
+  source: 'events/optional.schema.json',
+  schema: {
+    title: 'Optional',
+    'x-kind': 'event',
+    'x-type': 'optional.happened',
+    type: 'object',
+    required: ['status', 'ok', 'meta', 'tags'],
+    properties: {
+      status: { type: 'integer', const: 413 },
+      ok: { type: 'boolean' },
+      meta: { type: 'object' },
+      tags: { type: 'array', items: { type: 'string' } },
+      client: {
+        type: 'object',
+        required: ['kind'],
+        properties: { kind: { type: 'string' } },
+      },
+      details: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['field'],
+          properties: { field: { type: 'string' } },
+        },
+      },
+      labels: { type: 'array', items: { type: 'string' } },
+      params: { type: 'object' },
+    },
+  },
+};
+
+const optionalModel = buildModel(envelope, [optionals]);
+const optionalTypeScript = emitTypeScript(optionalModel);
+const optionalDart = emitDart(optionalModel);
+
+describe('the shapes an optional field takes', () => {
+  it('reads an optional nested object only when it is there — Dart', () => {
+    expect(optionalDart).toContain(
+      "json['client'] == null ? null : OptionalPayloadClient.fromJson",
+    );
+  });
+
+  it('reads an optional array of objects only when it is there — Dart', () => {
+    expect(optionalDart).toContain("json['details'] == null ? null :");
+    expect(optionalDart).toContain('.map((item) => OptionalPayloadDetailsItem.fromJson');
+  });
+
+  it('reads an optional array of scalars the same way — Dart', () => {
+    expect(optionalDart).toContain("json['labels'] == null ? null :");
+    expect(optionalDart).toContain('item! as String');
+  });
+
+  it('writes an optional nested object through the null-aware call — Dart', () => {
+    expect(optionalDart).toContain('client?.toJson()');
+    expect(optionalDart).toContain('details?.map((item) => item.toJson())');
+  });
+
+  it('gives a numeric const the numeric type, not the string one — Dart', () => {
+    expect(optionalDart).toContain('final int status;');
+    expect(optionalDart).toContain("json['status']! as int");
+  });
+
+  it('gives a numeric const the numeric literal type — TypeScript', () => {
+    expect(optionalTypeScript).toContain('readonly status: 413;');
+  });
+
+  it('checks a numeric const by value in the guard — TypeScript', () => {
+    expect(optionalTypeScript).toContain('!== 413');
+  });
+
+  it('guards every required shape, not only the ones with a scalar type', () => {
+    expect(optionalTypeScript).toContain("typeof record['ok'] !== 'boolean'");
+    expect(optionalTypeScript).toContain("typeof record['meta'] !== 'object'");
+    expect(optionalTypeScript).toContain("!Array.isArray(record['tags'])");
+  });
+
+  it('types a free-form record as a map in both languages', () => {
+    expect(optionalDart).toContain('Map<String, Object?>? params');
+    expect(optionalTypeScript).toContain('Readonly<Record<string, unknown>>');
+  });
+
+  it('types an array of objects as a list of them in both languages', () => {
+    expect(optionalDart).toContain('List<OptionalPayloadDetailsItem>? details');
+    expect(optionalTypeScript).toContain(
+      'readonly details?: readonly OptionalPayloadDetailsItem[];',
+    );
+  });
+});

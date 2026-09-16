@@ -27,6 +27,10 @@
       "type": "string",
       "description": "`id` of the frame that caused this one."
     },
+    "sessionId": {
+      "type": "string",
+      "description": "Session the frame belongs to, when it belongs to one. It is what fan-out routes on, and what ties the many traces of a conversation together."
+    },
     "seq": {
       "type": "integer",
       "description": "Monotonic per session, on events only. This is what makes replay after a reconnect possible."
