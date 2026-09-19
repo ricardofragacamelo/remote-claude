@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/message-delta.json",
+  "title": "MessageDelta",
+  "description": "A fragment of the assistant's answer, from the SDK's `stream_event`. The client accumulates by `messageId`; it never concatenates blindly in arrival order.",
+  "x-kind": "event",
+  "x-type": "message.delta",
+  "type": "object",
+  "required": ["messageId", "delta"],
+  "properties": {
+    "messageId": {
+      "type": "string",
+      "description": "What the fragments of one message are grouped by."
+    },
+    "delta": { "type": "string", "description": "The text of this fragment, and only of this one." }
+  }
+}

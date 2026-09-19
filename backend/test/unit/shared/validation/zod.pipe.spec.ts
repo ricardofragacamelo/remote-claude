@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { InputValidationError } from '@shared/errors/input-validation.error';
-import { ZodBodyPipe } from '@shared/validation/zod.pipe';
+import { ZodPipe } from '@shared/validation/zod.pipe';
 
-const pipe = new ZodBodyPipe(z.object({ code: z.string().min(1) }));
+const pipe = new ZodPipe(z.object({ code: z.string().min(1) }));
 
-describe('ZodBodyPipe', () => {
+describe('ZodPipe', () => {
   it('passes a valid body through, parsed', () => {
     expect(pipe.transform({ code: 'abc', extra: 1 })).toEqual({ code: 'abc' });
   });

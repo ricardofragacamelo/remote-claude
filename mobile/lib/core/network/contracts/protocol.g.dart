@@ -13,10 +13,32 @@ const List<String> frameTypes = <String>[
   'session.attached',
   'connection.authenticate',
   'connection.reauthenticate',
+  'diag.ping',
+  'permission.extend',
   'session.attach',
-  'session.ping',
+  'session.close',
+  'session.detach',
+  'session.interrupt',
+  'session.prompt',
+  'session.setLocale',
+  'session.setModel',
+  'session.setPermissionMode',
+  'session.start',
+  'diag.pong',
   'error',
-  'session.pong',
+  'message.completed',
+  'message.delta',
+  'permission.extended',
+  'permission.requested',
+  'permission.resolved',
+  'session.closed',
+  'session.started',
+  'session.statusChanged',
+  'tool.completed',
+  'tool.progress',
+  'tool.started',
+  'turn.completed',
+  'permission.resolve',
 ];
 
 /// `kind` of a command.accepted frame.
@@ -49,17 +71,77 @@ const String connectionReauthenticateKind = 'command';
 /// `type` of a connection.reauthenticate frame.
 const String connectionReauthenticateType = 'connection.reauthenticate';
 
+/// `kind` of a diag.ping frame.
+const String diagPingKind = 'command';
+
+/// `type` of a diag.ping frame.
+const String diagPingType = 'diag.ping';
+
+/// `kind` of a permission.extend frame.
+const String permissionExtendKind = 'command';
+
+/// `type` of a permission.extend frame.
+const String permissionExtendType = 'permission.extend';
+
 /// `kind` of a session.attach frame.
 const String sessionAttachKind = 'command';
 
 /// `type` of a session.attach frame.
 const String sessionAttachType = 'session.attach';
 
-/// `kind` of a session.ping frame.
-const String sessionPingKind = 'command';
+/// `kind` of a session.close frame.
+const String sessionCloseKind = 'command';
 
-/// `type` of a session.ping frame.
-const String sessionPingType = 'session.ping';
+/// `type` of a session.close frame.
+const String sessionCloseType = 'session.close';
+
+/// `kind` of a session.detach frame.
+const String sessionDetachKind = 'command';
+
+/// `type` of a session.detach frame.
+const String sessionDetachType = 'session.detach';
+
+/// `kind` of a session.interrupt frame.
+const String sessionInterruptKind = 'command';
+
+/// `type` of a session.interrupt frame.
+const String sessionInterruptType = 'session.interrupt';
+
+/// `kind` of a session.prompt frame.
+const String sessionPromptKind = 'command';
+
+/// `type` of a session.prompt frame.
+const String sessionPromptType = 'session.prompt';
+
+/// `kind` of a session.setLocale frame.
+const String sessionSetLocaleKind = 'command';
+
+/// `type` of a session.setLocale frame.
+const String sessionSetLocaleType = 'session.setLocale';
+
+/// `kind` of a session.setModel frame.
+const String sessionSetModelKind = 'command';
+
+/// `type` of a session.setModel frame.
+const String sessionSetModelType = 'session.setModel';
+
+/// `kind` of a session.setPermissionMode frame.
+const String sessionSetPermissionModeKind = 'command';
+
+/// `type` of a session.setPermissionMode frame.
+const String sessionSetPermissionModeType = 'session.setPermissionMode';
+
+/// `kind` of a session.start frame.
+const String sessionStartKind = 'command';
+
+/// `type` of a session.start frame.
+const String sessionStartType = 'session.start';
+
+/// `kind` of a diag.pong frame.
+const String diagPongKind = 'event';
+
+/// `type` of a diag.pong frame.
+const String diagPongType = 'diag.pong';
 
 /// `kind` of a error frame.
 const String errorKind = 'error';
@@ -67,11 +149,83 @@ const String errorKind = 'error';
 /// `type` of a error frame.
 const String errorType = 'error';
 
-/// `kind` of a session.pong frame.
-const String sessionPongKind = 'event';
+/// `kind` of a message.completed frame.
+const String messageCompletedKind = 'event';
 
-/// `type` of a session.pong frame.
-const String sessionPongType = 'session.pong';
+/// `type` of a message.completed frame.
+const String messageCompletedType = 'message.completed';
+
+/// `kind` of a message.delta frame.
+const String messageDeltaKind = 'event';
+
+/// `type` of a message.delta frame.
+const String messageDeltaType = 'message.delta';
+
+/// `kind` of a permission.extended frame.
+const String permissionExtendedKind = 'event';
+
+/// `type` of a permission.extended frame.
+const String permissionExtendedType = 'permission.extended';
+
+/// `kind` of a permission.requested frame.
+const String permissionRequestedKind = 'request';
+
+/// `type` of a permission.requested frame.
+const String permissionRequestedType = 'permission.requested';
+
+/// `kind` of a permission.resolved frame.
+const String permissionResolvedKind = 'event';
+
+/// `type` of a permission.resolved frame.
+const String permissionResolvedType = 'permission.resolved';
+
+/// `kind` of a session.closed frame.
+const String sessionClosedKind = 'event';
+
+/// `type` of a session.closed frame.
+const String sessionClosedType = 'session.closed';
+
+/// `kind` of a session.started frame.
+const String sessionStartedKind = 'event';
+
+/// `type` of a session.started frame.
+const String sessionStartedType = 'session.started';
+
+/// `kind` of a session.statusChanged frame.
+const String sessionStatusChangedKind = 'event';
+
+/// `type` of a session.statusChanged frame.
+const String sessionStatusChangedType = 'session.statusChanged';
+
+/// `kind` of a tool.completed frame.
+const String toolCompletedKind = 'event';
+
+/// `type` of a tool.completed frame.
+const String toolCompletedType = 'tool.completed';
+
+/// `kind` of a tool.progress frame.
+const String toolProgressKind = 'event';
+
+/// `type` of a tool.progress frame.
+const String toolProgressType = 'tool.progress';
+
+/// `kind` of a tool.started frame.
+const String toolStartedKind = 'event';
+
+/// `type` of a tool.started frame.
+const String toolStartedType = 'tool.started';
+
+/// `kind` of a turn.completed frame.
+const String turnCompletedKind = 'event';
+
+/// `type` of a turn.completed frame.
+const String turnCompletedType = 'turn.completed';
+
+/// `kind` of a permission.resolve frame.
+const String permissionResolveKind = 'response';
+
+/// `type` of a permission.resolve frame.
+const String permissionResolveType = 'permission.resolve';
 
 /// Shape shared by every frame, in both directions. See docs/architecture/shared/05-websocket-protocol.md.
 class Envelope {
@@ -164,6 +318,18 @@ class Envelope {
 
     return json;
   }
+}
+
+/// Whether [json] satisfies the conditional requirements of [Envelope].
+///
+/// `seq` is also required when `kind` is
+/// `event` — replay is built on `seq`, and an event without one is a hole nobody can detect afterwards, so the schema is what charges it rather than the goodwill of whoever emits.
+bool envelopeConditionalsHold(Map<String, Object?> json) {
+  if (json['kind'] == 'event' && json['seq'] is! int) {
+    return false;
+  }
+
+  return true;
 }
 
 /// A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream.
@@ -381,6 +547,63 @@ class ConnectionReauthenticatePayload {
   }
 }
 
+/// Diagnostics of the gateway: it crosses every layer without touching the Agent SDK, and is the only smoke test that needs no Claude subprocess. It lives outside the session namespace on purpose — `diag` says it is diagnostics, which is what keeps the slice from becoming a public API with no owner. Omitting `sessionId` opens a session; sending one pings that session.
+class DiagPingPayload {
+  const DiagPingPayload({
+    this.sessionId,
+    required this.nonce,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DiagPingPayload.fromJson(Map<String, Object?> json) => DiagPingPayload(
+        sessionId: json['sessionId'] as String?,
+        nonce: json['nonce']! as String,
+      );
+
+  /// Session to ping. Absent opens a new one, and the pong carries the id it got.
+  final String? sessionId;
+
+  /// Echoed back in the pong, so a client can tell its own round trip from someone else's on the same session.
+  final String nonce;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'nonce': nonce,
+    };
+
+    if (sessionId != null) {
+      json['sessionId'] = sessionId;
+    }
+
+    return json;
+  }
+}
+
+/// Extends the deadline of a pending permission request. The payload carries **only** the request: the increment and the ceiling come from the backend configuration, because our timeout is the only protection against a hung session and the client does not get to choose that number. Idempotent by `requestId` — web and phone may both extend the same request.
+class PermissionExtendPayload {
+  const PermissionExtendPayload({
+    required this.requestId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionExtendPayload.fromJson(Map<String, Object?> json) => PermissionExtendPayload(
+        requestId: json['requestId']! as String,
+      );
+
+  /// The pending request to extend.
+  final String requestId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'requestId': requestId,
+    };
+
+    return json;
+  }
+}
+
 /// Starts observing a session. On a reconnect it also asks for the events missed while the socket was down.
 class SessionAttachPayload {
   const SessionAttachPayload({
@@ -414,34 +637,314 @@ class SessionAttachPayload {
   }
 }
 
-/// The vertical slice of the bootstrap: it crosses every layer without touching the Agent SDK. Omitting `sessionId` opens a session; sending one pings that session.
-class SessionPingPayload {
-  const SessionPingPayload({
-    this.sessionId,
+/// Ends the session and releases its subprocess. Unlike every other command of the session, only the owner may send it.
+class SessionClosePayload {
+  const SessionClosePayload({
+    required this.sessionId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionClosePayload.fromJson(Map<String, Object?> json) => SessionClosePayload(
+        sessionId: json['sessionId']! as String,
+      );
+
+  final String sessionId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+    };
+
+    return json;
+  }
+}
+
+/// Stops observing a session. The counterpart of `session.attach`: without it, a client that moved on keeps receiving a stream it no longer shows.
+class SessionDetachPayload {
+  const SessionDetachPayload({
+    required this.sessionId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionDetachPayload.fromJson(Map<String, Object?> json) => SessionDetachPayload(
+        sessionId: json['sessionId']! as String,
+      );
+
+  /// Session to stop observing.
+  final String sessionId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+    };
+
+    return json;
+  }
+}
+
+/// Interrupts the running turn — `query.interrupt()`. Any connection watching the session may send it.
+class SessionInterruptPayload {
+  const SessionInterruptPayload({
+    required this.sessionId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionInterruptPayload.fromJson(Map<String, Object?> json) => SessionInterruptPayload(
+        sessionId: json['sessionId']! as String,
+      );
+
+  final String sessionId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+    };
+
+    return json;
+  }
+}
+
+class SessionPromptPayloadAttachmentsItem {
+  const SessionPromptPayloadAttachmentsItem({
+    required this.path,
+    this.mediaType,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionPromptPayloadAttachmentsItem.fromJson(Map<String, Object?> json) => SessionPromptPayloadAttachmentsItem(
+        path: json['path']! as String,
+        mediaType: json['mediaType'] as String?,
+      );
+
+  /// Path inside the session's workspace.
+  final String path;
+
+  final String? mediaType;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+    };
+
+    if (mediaType != null) {
+      json['mediaType'] = mediaType;
+    }
+
+    return json;
+  }
+}
+
+/// Sends one turn. A prompt that arrives while a turn is running is **queued** and runs next, the way the Claude Code UI does it — it is never refused.
+class SessionPromptPayload {
+  const SessionPromptPayload({
+    required this.sessionId,
+    required this.text,
+    this.attachments,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionPromptPayload.fromJson(Map<String, Object?> json) => SessionPromptPayload(
+        sessionId: json['sessionId']! as String,
+        text: json['text']! as String,
+        attachments: json['attachments'] == null ? null : (json['attachments']! as List<Object?>).map((item) => SessionPromptPayloadAttachmentsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final String sessionId;
+
+  /// What the user typed.
+  final String text;
+
+  /// Files carried with the prompt.
+  final List<SessionPromptPayloadAttachmentsItem>? attachments;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+      'text': text,
+    };
+
+    if (attachments != null) {
+      json['attachments'] = attachments?.map((item) => item.toJson()).toList(growable: false);
+    }
+
+    return json;
+  }
+}
+
+/// Changes the language of **this connection**, not of the user. A phone in Portuguese and a browser in English watch the same session at the same time.
+class SessionSetLocalePayload {
+  const SessionSetLocalePayload({
+    required this.locale,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionSetLocalePayload.fromJson(Map<String, Object?> json) => SessionSetLocalePayload(
+        locale: json['locale']! as String,
+      );
+
+  /// Language of this connection.
+  final String locale;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'locale': locale,
+    };
+
+    return json;
+  }
+}
+
+/// Changes the model of a running session.
+class SessionSetModelPayload {
+  const SessionSetModelPayload({
+    required this.sessionId,
+    required this.model,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionSetModelPayload.fromJson(Map<String, Object?> json) => SessionSetModelPayload(
+        sessionId: json['sessionId']! as String,
+        model: json['model']! as String,
+      );
+
+  final String sessionId;
+
+  /// Model identifier, as the Agent SDK names it.
+  final String model;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+      'model': model,
+    };
+
+    return json;
+  }
+}
+
+/// Changes the permission mode of a running session.
+class SessionSetPermissionModePayload {
+  const SessionSetPermissionModePayload({
+    required this.sessionId,
+    required this.mode,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionSetPermissionModePayload.fromJson(Map<String, Object?> json) => SessionSetPermissionModePayload(
+        sessionId: json['sessionId']! as String,
+        mode: json['mode']! as String,
+      );
+
+  final String sessionId;
+
+  /// The mode to switch to.
+  final String mode;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+      'mode': mode,
+    };
+
+    return json;
+  }
+}
+
+/// Opens a session on a workspace. The path is checked against the allowlist before anything else happens — it is the first line of defence, not a hint.
+class SessionStartPayload {
+  const SessionStartPayload({
+    required this.workspacePath,
+    this.model,
+    this.permissionMode,
+    this.resumeSessionId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionStartPayload.fromJson(Map<String, Object?> json) => SessionStartPayload(
+        workspacePath: json['workspacePath']! as String,
+        model: json['model'] as String?,
+        permissionMode: json['permissionMode'] as String?,
+        resumeSessionId: json['resumeSessionId'] as String?,
+      );
+
+  /// Absolute path of the workspace. Outside the allowlist it is refused with WORKSPACE_NOT_ALLOWED, and a root that exists but belongs to someone else answers 404, never 403.
+  final String workspacePath;
+
+  /// Model to open with. Absent means the server default.
+  final String? model;
+
+  /// Permission mode to open with. Absent means the server default.
+  final String? permissionMode;
+
+  /// Session of the Agent SDK to resume instead of starting fresh.
+  final String? resumeSessionId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'workspacePath': workspacePath,
+    };
+
+    if (model != null) {
+      json['model'] = model;
+    }
+
+    if (permissionMode != null) {
+      json['permissionMode'] = permissionMode;
+    }
+
+    if (resumeSessionId != null) {
+      json['resumeSessionId'] = resumeSessionId;
+    }
+
+    return json;
+  }
+}
+
+/// Result of `diag.ping`, carrying the `seq` the hub assigned. Like every event it is fanned out to every connection observing the session, not only to the one that asked.
+class DiagPongPayload {
+  const DiagPongPayload({
+    required this.sessionId,
+    required this.pingedAt,
+    required this.pingCount,
     required this.nonce,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory SessionPingPayload.fromJson(Map<String, Object?> json) => SessionPingPayload(
-        sessionId: json['sessionId'] as String?,
+  factory DiagPongPayload.fromJson(Map<String, Object?> json) => DiagPongPayload(
+        sessionId: json['sessionId']! as String,
+        pingedAt: json['pingedAt']! as String,
+        pingCount: json['pingCount']! as int,
         nonce: json['nonce']! as String,
       );
 
-  /// Session to ping. Absent opens a new one, and the pong carries the id it got.
-  final String? sessionId;
+  final String sessionId;
 
-  /// Echoed back in the pong, so a client can tell its own round trip from someone else's on the same session.
+  /// ISO 8601 instant in UTC, read from the server clock.
+  final String pingedAt;
+
+  /// How many times this session has been pinged, counting this one.
+  final int pingCount;
+
+  /// Echo of the nonce the command carried.
   final String nonce;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+      'pingedAt': pingedAt,
+      'pingCount': pingCount,
       'nonce': nonce,
     };
-
-    if (sessionId != null) {
-      json['sessionId'] = sessionId;
-    }
 
     return json;
   }
@@ -537,43 +1040,638 @@ class ErrorPayload {
   }
 }
 
-/// Result of `session.ping`, carrying the `seq` the hub assigned. Like every event it is fanned out to every connection observing the session, not only to the one that asked.
-class SessionPongPayload {
-  const SessionPongPayload({
-    required this.sessionId,
-    required this.pingedAt,
-    required this.pingCount,
-    required this.nonce,
+class MessageCompletedPayloadContentItem {
+  const MessageCompletedPayloadContentItem({
+    required this.type,
+    this.text,
+    this.toolUseId,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory SessionPongPayload.fromJson(Map<String, Object?> json) => SessionPongPayload(
+  factory MessageCompletedPayloadContentItem.fromJson(Map<String, Object?> json) => MessageCompletedPayloadContentItem(
+        type: json['type']! as String,
+        text: json['text'] as String?,
+        toolUseId: json['toolUseId'] as String?,
+      );
+
+  /// Block kind — `text`, `tool_use`, `tool_result` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped.
+  final String type;
+
+  final String? text;
+
+  final String? toolUseId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'type': type,
+    };
+
+    if (text != null) {
+      json['text'] = text;
+    }
+
+    if (toolUseId != null) {
+      json['toolUseId'] = toolUseId;
+    }
+
+    return json;
+  }
+}
+
+/// A message is finished, with its content as blocks. It supersedes whatever the deltas of the same `messageId` accumulated — a client that missed a delta is made whole here.
+class MessageCompletedPayload {
+  const MessageCompletedPayload({
+    required this.messageId,
+    required this.role,
+    this.promptedBy,
+    required this.content,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory MessageCompletedPayload.fromJson(Map<String, Object?> json) => MessageCompletedPayload(
+        messageId: json['messageId']! as String,
+        role: json['role']! as String,
+        promptedBy: json['promptedBy'] as String?,
+        content: (json['content']! as List<Object?>).map((item) => MessageCompletedPayloadContentItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final String messageId;
+
+  final String role;
+
+  /// Who sent it, on a `user` message. It is what lets the UI say "you sent this from your phone" instead of showing an authorless turn.
+  final String? promptedBy;
+
+  /// The blocks of the message, in order.
+  final List<MessageCompletedPayloadContentItem> content;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'messageId': messageId,
+      'role': role,
+      'content': content.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    if (promptedBy != null) {
+      json['promptedBy'] = promptedBy;
+    }
+
+    return json;
+  }
+}
+
+/// A fragment of the assistant's answer, from the SDK's `stream_event`. The client accumulates by `messageId`; it never concatenates blindly in arrival order.
+class MessageDeltaPayload {
+  const MessageDeltaPayload({
+    required this.messageId,
+    required this.delta,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory MessageDeltaPayload.fromJson(Map<String, Object?> json) => MessageDeltaPayload(
+        messageId: json['messageId']! as String,
+        delta: json['delta']! as String,
+      );
+
+  /// What the fragments of one message are grouped by.
+  final String messageId;
+
+  /// The text of this fragment, and only of this one.
+  final String delta;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'messageId': messageId,
+      'delta': delta,
+    };
+
+    return json;
+  }
+}
+
+/// The deadline of a pending request moved. Fanned out to every connection, because the phone and the browser are looking at the same countdown.
+class PermissionExtendedPayload {
+  const PermissionExtendedPayload({
+    required this.requestId,
+    required this.expiresAt,
+    required this.remainingExtensions,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionExtendedPayload.fromJson(Map<String, Object?> json) => PermissionExtendedPayload(
+        requestId: json['requestId']! as String,
+        expiresAt: json['expiresAt']! as String,
+        remainingExtensions: json['remainingExtensions']! as int,
+      );
+
+  final String requestId;
+
+  /// The new deadline, ISO 8601 in UTC.
+  final String expiresAt;
+
+  /// How many extensions are left before the configured ceiling. It is what stops the UI promising an extension that no longer exists.
+  final int remainingExtensions;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'requestId': requestId,
+      'expiresAt': expiresAt,
+      'remainingExtensions': remainingExtensions,
+    };
+
+    return json;
+  }
+}
+
+class PermissionRequestedPayloadSuggestionsItem {
+  const PermissionRequestedPayloadSuggestionsItem({
+    required this.scope,
+    required this.labelKey,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRequestedPayloadSuggestionsItem.fromJson(Map<String, Object?> json) => PermissionRequestedPayloadSuggestionsItem(
+        scope: json['scope']! as String,
+        labelKey: json['labelKey']! as String,
+      );
+
+  final String scope;
+
+  /// An i18n key. The server never sends prose.
+  final String labelKey;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'scope': scope,
+      'labelKey': labelKey,
+    };
+
+    return json;
+  }
+}
+
+/// The one `request` that travels server to client, and the reason the whole protocol is a socket instead of a stream: `canUseTool` has blocked the agent loop and it stays blocked until somebody answers or the deadline passes. Answered with the `permission.resolve` response.
+class PermissionRequestedPayload {
+  const PermissionRequestedPayload({
+    required this.requestId,
+    required this.toolUseId,
+    required this.toolName,
+    required this.title,
+    this.description,
+    required this.input,
+    required this.riskHint,
+    required this.defaultToNo,
+    required this.expiresAt,
+    this.suggestions,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRequestedPayload.fromJson(Map<String, Object?> json) => PermissionRequestedPayload(
+        requestId: json['requestId']! as String,
+        toolUseId: json['toolUseId']! as String,
+        toolName: json['toolName']! as String,
+        title: json['title']! as String,
+        description: json['description'] as String?,
+        input: json['input']! as Map<String, Object?>,
+        riskHint: json['riskHint']! as String,
+        defaultToNo: json['defaultToNo']! as bool,
+        expiresAt: json['expiresAt']! as String,
+        suggestions: json['suggestions'] == null ? null : (json['suggestions']! as List<Object?>).map((item) => PermissionRequestedPayloadSuggestionsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// Idempotency is by **this** field, never by `toolUseId`.
+  final String requestId;
+
+  /// The invocation this request is about, tying it to the `tool.started` already on screen.
+  final String toolUseId;
+
+  final String toolName;
+
+  /// Short label of what is being asked, derived by the backend.
+  final String title;
+
+  /// The detail a human needs to decide — the command line, the path being written.
+  final String? description;
+
+  /// The exact input the tool would run with. What is shown is what executes.
+  final Map<String, Object?> input;
+
+  /// Derived in the backend, by a per-tool list **plus** a heuristic over the input, and it fails closed: a command the heuristic does not recognise is marked `destructive`. A false positive is an annoyance; a false negative is the accident.
+  final String riskHint;
+
+  /// The UI pre-selects refusal. Silence never authorises.
+  final bool defaultToNo;
+
+  /// When the request is denied automatically, ISO 8601 in UTC. Ours is the only timeout there is — the CLI imposes none.
+  final String expiresAt;
+
+  /// Scopes the UI may offer beyond a one-off yes.
+  final List<PermissionRequestedPayloadSuggestionsItem>? suggestions;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'requestId': requestId,
+      'toolUseId': toolUseId,
+      'toolName': toolName,
+      'title': title,
+      'input': input,
+      'riskHint': riskHint,
+      'defaultToNo': defaultToNo,
+      'expiresAt': expiresAt,
+    };
+
+    if (description != null) {
+      json['description'] = description;
+    }
+
+    if (suggestions != null) {
+      json['suggestions'] = suggestions?.map((item) => item.toJson()).toList(growable: false);
+    }
+
+    return json;
+  }
+}
+
+/// A permission request is settled. It reaches **every** connection, including the one that answered — that is how a second client learns it lost the race, and who won it.
+class PermissionResolvedPayload {
+  const PermissionResolvedPayload({
+    required this.requestId,
+    required this.decision,
+    required this.auto,
+    this.resolvedBy,
+    this.resolvedFrom,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionResolvedPayload.fromJson(Map<String, Object?> json) => PermissionResolvedPayload(
+        requestId: json['requestId']! as String,
+        decision: json['decision']! as String,
+        auto: json['auto']! as bool,
+        resolvedBy: json['resolvedBy'] as String?,
+        resolvedFrom: json['resolvedFrom'] as String?,
+      );
+
+  /// The request that was settled. A client matches it against the card it is showing, never against `toolUseId`.
+  final String requestId;
+
+  /// What was decided. First answer wins, so this is the decision that reached `canUseTool`, not necessarily the one this client sent.
+  final String decision;
+
+  /// The server decided it, with nobody answering — the deadline passed, or a session-scoped rule matched. Silence never authorises, so an automatic decision is always `deny` unless a rule allowed it.
+  final bool auto;
+
+  /// Who answered. Required whenever `auto` is false, so "approved on your phone 2 min ago" is something the UI can actually say.
+  final String? resolvedBy;
+
+  /// Which client answered.
+  final String? resolvedFrom;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'requestId': requestId,
+      'decision': decision,
+      'auto': auto,
+    };
+
+    if (resolvedBy != null) {
+      json['resolvedBy'] = resolvedBy;
+    }
+
+    if (resolvedFrom != null) {
+      json['resolvedFrom'] = resolvedFrom;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] satisfies the conditional requirements of [PermissionResolvedPayload].
+///
+/// `resolvedBy` is also required when `auto` is
+/// `false` — a decision a human made has an author; only the automatic deny has none.
+bool permissionResolvedPayloadConditionalsHold(Map<String, Object?> json) {
+  if (json['auto'] == false && json['resolvedBy'] is! String) {
+    return false;
+  }
+
+  return true;
+}
+
+/// The session ended and its subprocess is gone. The replay buffer **survives** this event — opening a closed session shows the terminal state plus whatever the ring still holds, labelled as partial.
+class SessionClosedPayload {
+  const SessionClosedPayload({
+    required this.sessionId,
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionClosedPayload.fromJson(Map<String, Object?> json) => SessionClosedPayload(
         sessionId: json['sessionId']! as String,
-        pingedAt: json['pingedAt']! as String,
-        pingCount: json['pingCount']! as int,
-        nonce: json['nonce']! as String,
+        reason: json['reason']! as String,
       );
 
   final String sessionId;
 
-  /// ISO 8601 instant in UTC, read from the server clock.
-  final String pingedAt;
-
-  /// How many times this session has been pinged, counting this one.
-  final int pingCount;
-
-  /// Echo of the nonce the command carried.
-  final String nonce;
+  /// Why it ended. `auditUnavailable` is the second consecutive audit write failure — a session that cannot be recorded does not keep running.
+  final String reason;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'sessionId': sessionId,
-      'pingedAt': pingedAt,
-      'pingCount': pingCount,
-      'nonce': nonce,
+      'reason': reason,
     };
 
     return json;
   }
+}
+
+/// The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` — an SDKMessage is never emitted raw (ADR-006).
+class SessionStartedPayload {
+  const SessionStartedPayload({
+    required this.sessionId,
+    required this.workspacePath,
+    required this.model,
+    required this.permissionMode,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionStartedPayload.fromJson(Map<String, Object?> json) => SessionStartedPayload(
+        sessionId: json['sessionId']! as String,
+        workspacePath: json['workspacePath']! as String,
+        model: json['model']! as String,
+        permissionMode: json['permissionMode']! as String,
+      );
+
+  final String sessionId;
+
+  /// The workspace the session runs in, already normalised and already inside the allowlist.
+  final String workspacePath;
+
+  final String model;
+
+  final String permissionMode;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+      'workspacePath': workspacePath,
+      'model': model,
+      'permissionMode': permissionMode,
+    };
+
+    return json;
+  }
+}
+
+/// Where the session stands. Derived by us, not read off a single SDK message.
+class SessionStatusChangedPayload {
+  const SessionStatusChangedPayload({
+    required this.status,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionStatusChangedPayload.fromJson(Map<String, Object?> json) => SessionStatusChangedPayload(
+        status: json['status']! as String,
+      );
+
+  /// `waitingPermission` is the one that matters: the agent loop is blocked on a human.
+  final String status;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'status': status,
+    };
+
+    return json;
+  }
+}
+
+/// A tool invocation ended, from the `tool_result` the SDK reports on a `user` message.
+class ToolCompletedPayload {
+  const ToolCompletedPayload({
+    required this.toolUseId,
+    required this.status,
+    this.summary,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ToolCompletedPayload.fromJson(Map<String, Object?> json) => ToolCompletedPayload(
+        toolUseId: json['toolUseId']! as String,
+        status: json['status']! as String,
+        summary: json['summary'] as String?,
+      );
+
+  final String toolUseId;
+
+  /// `denied` is not a failure of the tool: it is a human having said no, and the UI reads the two differently.
+  final String status;
+
+  /// A short result for the timeline. The full output is the transcript's job, not this event's.
+  final String? summary;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'toolUseId': toolUseId,
+      'status': status,
+    };
+
+    if (summary != null) {
+      json['summary'] = summary;
+    }
+
+    return json;
+  }
+}
+
+/// Output of a tool while it is still running, from the SDK's `tool_progress`.
+class ToolProgressPayload {
+  const ToolProgressPayload({
+    required this.toolUseId,
+    required this.chunk,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ToolProgressPayload.fromJson(Map<String, Object?> json) => ToolProgressPayload(
+        toolUseId: json['toolUseId']! as String,
+        chunk: json['chunk']! as String,
+      );
+
+  final String toolUseId;
+
+  /// This fragment of the output, and only this one.
+  final String chunk;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'toolUseId': toolUseId,
+      'chunk': chunk,
+    };
+
+    return json;
+  }
+}
+
+/// A tool invocation began. Emitted for **every** tool, including the ones no human was asked about — the audit trail is anchored on the same hook, for exactly that reason (ADR-011).
+class ToolStartedPayload {
+  const ToolStartedPayload({
+    required this.toolUseId,
+    required this.toolName,
+    required this.input,
+    this.title,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ToolStartedPayload.fromJson(Map<String, Object?> json) => ToolStartedPayload(
+        toolUseId: json['toolUseId']! as String,
+        toolName: json['toolName']! as String,
+        input: json['input']! as Map<String, Object?>,
+        title: json['title'] as String?,
+      );
+
+  /// The SDK's id for this invocation. It is what ties started, progress and completed together.
+  final String toolUseId;
+
+  final String toolName;
+
+  /// The exact input the tool was called with.
+  final Map<String, Object?> input;
+
+  /// A short human label for the invocation, already derived by the backend.
+  final String? title;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'toolUseId': toolUseId,
+      'toolName': toolName,
+      'input': input,
+    };
+
+    if (title != null) {
+      json['title'] = title;
+    }
+
+    return json;
+  }
+}
+
+/// A turn finished, from the SDK's `result`. It is what closes the turn in the UI and what carries its cost.
+class TurnCompletedPayload {
+  const TurnCompletedPayload({
+    required this.turnId,
+    this.promptedBy,
+    required this.usage,
+    required this.costUsd,
+    required this.durationMs,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TurnCompletedPayload.fromJson(Map<String, Object?> json) => TurnCompletedPayload(
+        turnId: json['turnId']! as String,
+        promptedBy: json['promptedBy'] as String?,
+        usage: json['usage']! as Map<String, Object?>,
+        costUsd: json['costUsd']! as String,
+        durationMs: json['durationMs']! as int,
+      );
+
+  final String turnId;
+
+  /// Who sent the prompt this turn answered.
+  final String? promptedBy;
+
+  /// Token counts as the SDK reports them. An open map on purpose — the SDK adds fields to it, and a closed shape here would drop them.
+  final Map<String, Object?> usage;
+
+  /// Cost of the turn, as a decimal string. A string and not a number because money through a float is money that rounds where nobody looked.
+  final String costUsd;
+
+  final int durationMs;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'turnId': turnId,
+      'usage': usage,
+      'costUsd': costUsd,
+      'durationMs': durationMs,
+    };
+
+    if (promptedBy != null) {
+      json['promptedBy'] = promptedBy;
+    }
+
+    return json;
+  }
+}
+
+/// The answer to `permission.requested`, carrying its `id` in `correlationId`. Resolving the same `requestId` twice is a silent ack and **one** execution, never an error and never a double run — several clients watch one session, and a client may resend after reconnecting.
+class PermissionResolvePayload {
+  const PermissionResolvePayload({
+    required this.requestId,
+    required this.decision,
+    this.scope,
+    this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionResolvePayload.fromJson(Map<String, Object?> json) => PermissionResolvePayload(
+        requestId: json['requestId']! as String,
+        decision: json['decision']! as String,
+        scope: json['scope'] as String?,
+        reason: json['reason'] as String?,
+      );
+
+  /// The request being answered. Idempotency keys on it, so resending after a reconnect costs nothing.
+  final String requestId;
+
+  /// Yes or no. There is no third value: silence is handled by the deadline, and it denies.
+  final String decision;
+
+  /// How far the decision reaches. Absent means `once`. Only `once` and `session` exist in this plan — `project` and `always` are persisted rules, and they arrive with the rules module.
+  final String? scope;
+
+  /// Why it was refused. Required whenever `decision` is `deny` — the schema carries the condition, so no end has to remember it.
+  final String? reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'requestId': requestId,
+      'decision': decision,
+    };
+
+    if (scope != null) {
+      json['scope'] = scope;
+    }
+
+    if (reason != null) {
+      json['reason'] = reason;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] satisfies the conditional requirements of [PermissionResolvePayload].
+///
+/// `reason` is also required when `decision` is
+/// `deny` — the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from.
+bool permissionResolvePayloadConditionalsHold(Map<String, Object?> json) {
+  if (json['decision'] == 'deny' && json['reason'] is! String) {
+    return false;
+  }
+
+  return true;
 }

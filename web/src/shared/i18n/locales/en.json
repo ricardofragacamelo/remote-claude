@@ -44,7 +44,9 @@
   "session": {
     "error": {
       "notFound": "That session no longer exists.",
-      "invalidSessionId": "{{sessionId}} is not a session identifier."
+      "invalidSessionId": "{{sessionId}} is not a session identifier.",
+      "claudeUnavailable": "Claude stopped responding on this machine.",
+      "forbidden": "That session belongs to somebody else."
     },
     "ping": {
       "title": "Round trip",
@@ -55,6 +57,132 @@
       "result": "Pong {{count}} at {{at}}",
       "sequence": "Sequence {{seq}}",
       "sessionLabel": "Session {{sessionId}}"
+    },
+    "status": {
+      "starting": "Starting",
+      "idle": "Idle",
+      "thinking": "Thinking",
+      "running": "Running a tool",
+      "waitingPermission": "Waiting for you",
+      "closed": "Ended"
+    },
+    "role": {
+      "assistant": "Claude",
+      "user": "You"
+    },
+    "toolStatus": {
+      "running": "Running",
+      "succeeded": "Done",
+      "failed": "Failed",
+      "denied": "Refused"
+    },
+    "closeReason": {
+      "closedByUser": "you ended it",
+      "completed": "it finished",
+      "failed": "Claude stopped responding",
+      "auditUnavailable": "the audit trail could not be written",
+      "shutdown": "the backend shut down"
+    },
+    "starter": {
+      "title": "Start a session",
+      "description": "Claude runs on this machine, in the folder you choose above.",
+      "action": "Start session",
+      "pending": "Starting…",
+      "chooseWorkspace": "Choose a folder above first."
+    },
+    "screen": {
+      "title": "Session",
+      "sessionLabel": "Session {{sessionId}}",
+      "conversation": "Conversation",
+      "tools": "Tools",
+      "emptyTitle": "Nothing yet",
+      "emptyDescription": "Send a prompt below to start the conversation.",
+      "partial": "This is only what the server still had in memory, not the whole conversation.",
+      "ended": "This session ended at {{at}} because {{reason}}.",
+      "turn": "Last turn cost {{cost}} and took {{ms}} ms."
+    },
+    "composer": {
+      "label": "Prompt",
+      "placeholder": "Ask Claude to do something in this folder…",
+      "send": "Send"
+    },
+    "controls": {
+      "interrupt": "Interrupt",
+      "close": "End session",
+      "closeNotOwner": "Only the browser that opened this session can end it."
+    }
+  },
+  "workspace": {
+    "error": {
+      "invalidPath": "That is not a usable path.",
+      "notAllowed": "This installation does not allow {{path}}.",
+      "notFound": "{{path}} does not exist.",
+      "notADirectory": "{{path}} is a file, not a folder.",
+      "forbidden": "That folder is not yours to open."
+    },
+    "selector": {
+      "title": "Workspace",
+      "description": "Claude runs inside the folder you pick here, and nowhere else.",
+      "loading": "Loading the folders you may use…",
+      "lastUsed": "Last opened {{at}}",
+      "neverUsed": "Never opened",
+      "emptyTitle": "No folder is available to you",
+      "emptyDescription": "The allowlist of this machine does not mention your account yet. Whoever installed remote-claude can add a folder to it."
+    }
+  },
+  "permission": {
+    "queue": {
+      "title": "Waiting for you",
+      "description": "Claude has stopped and will not run these until you answer.",
+      "emptyTitle": "Nothing to decide",
+      "emptyDescription": "Claude asks here before it runs anything that needs your word.",
+      "lastAuto": "The last request was {{decision}} automatically.",
+      "lastBy": "The last request was {{decision}} by {{who}}."
+    },
+    "card": {
+      "label": "Permission for {{tool}}",
+      "remaining": "{{seconds}} s left",
+      "deny": "Refuse",
+      "extend": "Give me more time",
+      "sending": "Sending your answer…"
+    },
+    "risk": {
+      "read": "Reads something",
+      "write": "Changes a file",
+      "destructive": "Could destroy something"
+    },
+    "scope": {
+      "once": "Allow once",
+      "session": "Allow for this session"
+    },
+    "decision": {
+      "allow": "allowed",
+      "deny": "refused"
+    },
+    "tool": {
+      "Bash": "Run a shell command",
+      "Write": "Write a file",
+      "Edit": "Edit a file",
+      "MultiEdit": "Edit several files",
+      "NotebookEdit": "Edit a notebook",
+      "Read": "Read a file",
+      "WebFetch": "Fetch a page",
+      "unknown": "Use {{tool}}"
+    },
+    "error": {
+      "requestNotFound": "That request is no longer open.",
+      "requestExpired": "That request ran out of time.",
+      "notOwned": "You are not watching that session.",
+      "reasonRequired": "A refusal needs a reason.",
+      "extensionLimitReached": "That request cannot be extended again.",
+      "scopeUnsupported": "This build cannot grant that scope.",
+      "rulePatternInvalid": "That rule pattern is not valid.",
+      "ruleExpiryTooLong": "That rule would last longer than this installation allows."
+    }
+  },
+  "audit": {
+    "error": {
+      "unavailable": "The audit trail could not be written, so nothing was allowed to run."
     }
   }
 }

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/tool-completed.json",
+  "title": "ToolCompleted",
+  "description": "A tool invocation ended, from the `tool_result` the SDK reports on a `user` message.",
+  "x-kind": "event",
+  "x-type": "tool.completed",
+  "type": "object",
+  "required": ["toolUseId", "status"],
+  "properties": {
+    "toolUseId": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["succeeded", "failed", "denied"],
+      "description": "`denied` is not a failure of the tool: it is a human having said no, and the UI reads the two differently."
+    },
+    "summary": {
+      "type": "string",
+      "description": "A short result for the timeline. The full output is the transcript's job, not this event's."
+    }
+  }
+}

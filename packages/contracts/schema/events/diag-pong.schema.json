@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/diag-pong.json",
+  "title": "DiagPong",
+  "description": "Result of `diag.ping`, carrying the `seq` the hub assigned. Like every event it is fanned out to every connection observing the session, not only to the one that asked.",
+  "x-kind": "event",
+  "x-type": "diag.pong",
+  "type": "object",
+  "required": ["sessionId", "pingedAt", "pingCount", "nonce"],
+  "properties": {
+    "sessionId": { "type": "string" },
+    "pingedAt": {
+      "type": "string",
+      "description": "ISO 8601 instant in UTC, read from the server clock."
+    },
+    "pingCount": {
+      "type": "integer",
+      "description": "How many times this session has been pinged, counting this one."
+    },
+    "nonce": { "type": "string", "description": "Echo of the nonce the command carried." }
+  }
+}

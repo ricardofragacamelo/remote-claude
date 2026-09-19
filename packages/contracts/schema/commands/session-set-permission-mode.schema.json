@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-set-permission-mode.json",
+  "title": "SessionSetPermissionMode",
+  "description": "Changes the permission mode of a running session.",
+  "x-kind": "command",
+  "x-type": "session.setPermissionMode",
+  "type": "object",
+  "required": ["sessionId", "mode"],
+  "properties": {
+    "sessionId": { "type": "string" },
+    "mode": {
+      "type": "string",
+      "enum": ["default", "acceptEdits", "bypassPermissions", "plan"],
+      "description": "The mode to switch to."
+    }
+  }
+}

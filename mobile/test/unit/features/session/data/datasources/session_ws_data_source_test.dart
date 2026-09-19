@@ -70,7 +70,7 @@ void main() {
     await ready();
     final Future<SessionUpdate> first = repository.updates.first;
 
-    socket().deliver(sessionPong(sessionId: 'ses-1', seq: 1));
+    socket().deliver(diagPong(sessionId: 'ses-1', seq: 1));
 
     expect(await first, isA<PongReceived>());
   });
@@ -80,7 +80,7 @@ void main() {
     repository.follow('ses-1', () => 0);
     final Future<SessionUpdate> first = repository.updates.first;
 
-    socket().deliver(sessionPong(sessionId: 'ses-1', seq: 2));
+    socket().deliver(diagPong(sessionId: 'ses-1', seq: 2));
 
     expect((await first as PongReceived).pong.seq, 2);
   });
@@ -111,7 +111,7 @@ void main() {
     await ready();
 
     expect(repository.ping(sessionId: 'ses-1', nonce: 'n-1'), isTrue);
-    expect(socket().sent.last, contains('session.ping'));
+    expect(socket().sent.last, contains('diag.ping'));
     expect(socket().sent.last, contains('n-1'));
     expect(socket().sent.last, contains('ses-1'));
   });
@@ -166,6 +166,6 @@ void main() {
     await ready();
     await source.dispose();
 
-    expect(() => socket().deliver(sessionPong(sessionId: 'ses-1', seq: 1)), returnsNormally);
+    expect(() => socket().deliver(diagPong(sessionId: 'ses-1', seq: 1)), returnsNormally);
   });
 }

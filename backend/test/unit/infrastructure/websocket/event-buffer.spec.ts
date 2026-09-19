@@ -7,7 +7,7 @@ const event = (seq: number): Envelope => ({
   v: 1,
   id: `id-${String(seq)}`,
   kind: 'event',
-  type: 'session.pong',
+  type: 'diag.pong',
   ts: '2026-09-13T12:00:00.000Z',
   seq,
   payload: {},

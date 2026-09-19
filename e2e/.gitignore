@@ -1,5 +1,10 @@
 # Written by scripts/run-e2e-local.mjs with the addresses of one ephemeral run, and deleted when
 # that run ends. A committed copy would point every later run at ports nothing listens on.
 .env
+
+# The backend's own log of one live run, read by `smoke-live/` for the line the mapper writes when
+# the SDK sends a variant this build has never seen. Deleted when the run ends.
+.backend.log
+
 test-results/
 playwright-report/

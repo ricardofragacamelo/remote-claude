@@ -1,0 +1,9 @@
+{
+  "id": "S-98",
+  "title": "a directory marked as trusted does not let a tool through without a human",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "toolName": "Write"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "id": "S-80",
+  "title": "away long enough to overflow the ring buffer: the server says gap, and nothing is stitched",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "text-turn",
+    "gap": true,
+    "replayed": 0,
+    "overflowMargin": 50
+  }
+}

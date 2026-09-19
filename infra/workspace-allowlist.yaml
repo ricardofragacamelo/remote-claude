@@ -1,0 +1,25 @@
+# The roots this installation will let Claude run in — the first line of defence of the product.
+#
+# `cwd` of the Agent SDK's `query()` is a path that cleared this file, so a root listed here is a
+# directory Claude may read, write and run commands in. Add one deliberately.
+#
+# This is the one piece of configuration that is not an environment variable. It lives on disk so
+# that changing it means having access to the machine, and so that it can carry a comment per root
+# saying why it is here — see docs/plans/01-live-session/decisions.md#d-02.
+#
+# Changes are picked up on an explicit reload, never by a watcher: an allowlist that shrinks
+# underneath an open session moves the security boundary without anybody deciding to.
+#
+# `users` holds OIDC subjects (`sub`), not e-mails: an address changes, and some providers let a
+# freed one be reused. The two below are the fixed ids of the local Keycloak realm users.
+#
+# This file is the development default. A real installation points RC_WORKSPACE_ALLOWLIST_FILE at
+# its own copy, outside the repository.
+
+roots:
+  - path: /tmp/remote-claude-workspaces
+    label: Scratch
+    # `dev` and `approver` of infra/keycloak/realm-remote-claude.json.
+    users:
+      - 00000000-0000-4000-8000-000000000001
+      - 00000000-0000-4000-8000-000000000002

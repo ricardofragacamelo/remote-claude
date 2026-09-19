@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-start.json",
+  "title": "SessionStart",
+  "description": "Opens a session on a workspace. The path is checked against the allowlist before anything else happens — it is the first line of defence, not a hint.",
+  "x-kind": "command",
+  "x-type": "session.start",
+  "type": "object",
+  "required": ["workspacePath"],
+  "properties": {
+    "workspacePath": {
+      "type": "string",
+      "description": "Absolute path of the workspace. Outside the allowlist it is refused with WORKSPACE_NOT_ALLOWED, and a root that exists but belongs to someone else answers 404, never 403."
+    },
+    "model": {
+      "type": "string",
+      "description": "Model to open with. Absent means the server default."
+    },
+    "permissionMode": {
+      "type": "string",
+      "enum": ["default", "acceptEdits", "bypassPermissions", "plan"],
+      "description": "Permission mode to open with. Absent means the server default."
+    },
+    "resumeSessionId": {
+      "type": "string",
+      "description": "Session of the Agent SDK to resume instead of starting fresh."
+    }
+  }
+}

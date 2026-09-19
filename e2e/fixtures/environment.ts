@@ -25,6 +25,24 @@ export interface E2eEnvironment {
   readonly issuer: string;
   /** Public client the web front authenticates with. */
   readonly clientId: string;
+
+  /**
+   * Where the backend of this run reads the CLI's configuration.
+   *
+   * Isolated from the developer's own: the backend clears a directory's trust mark before it
+   * opens a session there, and a run that did that to somebody's real `~/.claude.json` would be
+   * a test editing their editor.
+   */
+  readonly claudeConfigDir: string;
+
+  /**
+   * The backend's own log of this run.
+   *
+   * Read by `smoke-live/` and by nothing else, for one line: the warning the mapper writes when
+   * the SDK sends a message variant this build has never seen. A contract break that only shows
+   * up as a log line nobody reads is a contract break that reaches production quietly.
+   */
+  readonly backendLog: string;
 }
 
 const VARIABLES: Record<keyof E2eEnvironment, string> = {
@@ -34,6 +52,8 @@ const VARIABLES: Record<keyof E2eEnvironment, string> = {
   keycloakUrl: 'RC_KEYCLOAK_URL',
   issuer: 'RC_OIDC_ISSUER',
   clientId: 'RC_OIDC_CLIENT_ID',
+  claudeConfigDir: 'RC_CLAUDE_CONFIG_DIR',
+  backendLog: 'RC_BACKEND_LOG',
 };
 
 /** Loads `e2e/.env` into `process.env`, if the file is there. */

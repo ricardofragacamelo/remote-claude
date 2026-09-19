@@ -29,6 +29,7 @@ import {
 } from './lib/stack.mjs';
 import { bold, cyan, dim, fail, hint, info, line, ok, title, warn } from './lib/ui.mjs';
 import { WaitError } from './lib/wait.mjs';
+import { ensureDeclaredRoots } from './lib/workspaces.mjs';
 
 /** The workspaces started in watch mode, in start order. Torn down in reverse. */
 const WATCHED = ['backend', 'web'];
@@ -51,6 +52,10 @@ let foreground = null;
 // Before anything reads the environment: compose loads `.env` on its own, node does not, and
 // the ports printed in the URL board have to be the ones compose actually published.
 loadDotEnv(repoRoot);
+
+// The backend refuses to start when a root of the allowlist does not exist. Creating the
+// development roots here is what keeps that rule from turning a fresh clone into a boot failure.
+ensureDeclaredRoots();
 
 const composeCli = resolveComposeCli((command, args) => run(command, args, { timeoutMs: 20_000 }));
 const project = projectName(process.env);

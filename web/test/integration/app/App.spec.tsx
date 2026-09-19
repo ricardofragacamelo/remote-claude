@@ -8,7 +8,7 @@ import { useAuthStore } from '@/features/auth';
 import * as authService from '@/features/auth/services/auth.service';
 import { AppError } from '@/shared/api/errors';
 import { navigation } from '@/shared/lib/navigation';
-import { render, translator } from '../../support/render';
+import { render, renderRouted, translator } from '../../support/render';
 
 const t = translator('en');
 
@@ -23,18 +23,20 @@ describe('the shell', () => {
     vi.restoreAllMocks();
   });
 
-  it('waits rather than deciding, while the sign-in is still unknown', () => {
+  it('waits rather than deciding, while the sign-in is still unknown', async () => {
     vi.spyOn(authService, 'renewSession').mockImplementation(() => new Promise(() => undefined));
 
-    render(<App />);
+    renderRouted(<App />);
 
-    expect(screen.getByLabelText(t('auth.callback.pending'))).toBeInTheDocument();
+    // `findBy` and not `getBy`: the router resolves its first route asynchronously, so the shell
+    // is mounted one tick after the render call rather than inside it.
+    expect(await screen.findByLabelText(t('auth.callback.pending'))).toBeInTheDocument();
   });
 
   it('signs the visitor in from the refresh cookie when there is one', async () => {
     vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
 
-    render(<App />);
+    renderRouted(<App />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: t('session.ping.action') })).toBeInTheDocument();
@@ -44,7 +46,7 @@ describe('the shell', () => {
   it('asks the visitor to sign in when there is no session to resume', async () => {
     vi.spyOn(authService, 'renewSession').mockRejectedValue(new AppError('X', 'k', 't'));
 
-    render(<App />);
+    renderRouted(<App />);
 
     await waitFor(() => {
       expect(screen.getByText(t('auth.signIn.title'))).toBeInTheDocument();
@@ -53,7 +55,7 @@ describe('the shell', () => {
 
   it('has no accessibility violation', async () => {
     vi.spyOn(authService, 'renewSession').mockRejectedValue(new AppError('X', 'k', 't'));
-    const { container } = render(<App />);
+    const { container } = renderRouted(<App />);
 
     await waitFor(() => {
       expect(screen.getByText(t('auth.signIn.title'))).toBeInTheDocument();

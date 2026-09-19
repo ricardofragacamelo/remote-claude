@@ -10,8 +10,8 @@ import { scenario } from '../scenarios';
  * ```
  * OIDC sign-in (PKCE, state validated)
  *  → the socket opens and the handshake is authenticated
- *  → session.ping goes out
- *  → session.pong comes back with a seq
+ *  → diag.ping goes out
+ *  → diag.pong comes back with a seq
  *  → the screen renders it, translated
  * ```
  *

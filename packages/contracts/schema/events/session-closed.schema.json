@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/session-closed.json",
+  "title": "SessionClosed",
+  "description": "The session ended and its subprocess is gone. The replay buffer **survives** this event — opening a closed session shows the terminal state plus whatever the ring still holds, labelled as partial.",
+  "x-kind": "event",
+  "x-type": "session.closed",
+  "type": "object",
+  "required": ["sessionId", "reason"],
+  "properties": {
+    "sessionId": { "type": "string" },
+    "reason": {
+      "type": "string",
+      "enum": ["closedByUser", "completed", "failed", "auditUnavailable", "shutdown"],
+      "description": "Why it ended. `auditUnavailable` is the second consecutive audit write failure — a session that cannot be recorded does not keep running."
+    }
+  }
+}

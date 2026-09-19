@@ -24,7 +24,7 @@ não registro.
 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 
-### B-21 — Domínio `audit` 🔲
+### B-21 — Domínio `audit` ✅
 
 Registro imutável com `who`, `what`, `when`, `where` (device/IP), o `input` **exato** da tool e
 a `decision` — [backend/03](../../architecture/backend/03-modules.md#audit).
@@ -32,7 +32,7 @@ a `decision` — [backend/03](../../architecture/backend/03-modules.md#audit).
 Sem update, sem delete: a entidade não tem setter, e o repositório não expõe operação que não
 seja escrita ou leitura.
 
-### B-22 — Tabela append-only e migration 🔲
+### B-22 — Tabela append-only e migration ✅
 
 O append-only é garantido **no banco**, não só na intenção do código: uma trigger na tabela
 aborta a escrita destrutiva para **quem quer que** esteja conectado
@@ -51,7 +51,7 @@ ordenação estável da consulta paginada do
 ordena. Ela nasce **aqui** porque acrescentar coluna depois é mexer numa tabela que esta fase
 protege contra alteração; agora custa uma linha de DDL.
 
-### B-23 — Hook `PreToolUse` ligado ao módulo 🔲
+### B-23 — Hook `PreToolUse` ligado ao módulo ✅
 
 `adapter/outbound/claude/audit-hook.ts`: registra e **deixa passar** (`{ continue: true }`).
 Ele não decide — decisão é do `canUseTool`, e confundir os dois é o buraco que esta fase
@@ -60,13 +60,13 @@ existe para fechar.
 O hook é `audit` write-only para os outros módulos: todo mundo escreve, ninguém lê de dentro
 do fluxo.
 
-### B-24 — Falha de escrita bloqueia a autorização 🔲
+### B-24 — Falha de escrita bloqueia a autorização ✅
 
 Sem trilha, não autoriza. A falha é `error` no log e chega à UI como evento de erro — falha
 silenciosa aqui significaria execução sem registro, que é exatamente o que não pode acontecer
 num sistema que roda `Bash` na máquina do usuário.
 
-### B-46 — `PostToolUse`: o estado em que a sessão deixou cada arquivo 🔲
+### B-46 — `PostToolUse`: o estado em que a sessão deixou cada arquivo ✅
 
 Entrou depois, e por um motivo externo a esta fase: o
 [D-06 do plano 04](../04-transcript-and-resume/decisions.md#d-06--desfazer-sem-destruir) mediu
@@ -98,7 +98,7 @@ escrito.
 > verificado por spike — então entra como complemento possível da B-46, nunca como substituto.
 > Trocar o mecanismo pela assinatura do tipo é o erro que o spike do D-06 acabou de expor.
 
-### B-47 — O store de checkpoint: o conteúdo anterior, por turno 🔲
+### B-47 — O store de checkpoint: o conteúdo anterior, por turno ✅
 
 A B-46 grava **como a sessão deixou** o arquivo. Para desfazer é preciso o outro lado: **como o
 arquivo estava antes**. E ele não pode vir do store do CLI — o

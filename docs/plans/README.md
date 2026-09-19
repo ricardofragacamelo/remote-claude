@@ -16,7 +16,7 @@ Voltar para o [índice geral](../architecture/README.md).
 | # | Plano | Estado | Critério de conclusão |
 |---|---|---|---|
 | 00 | [Bootstrap](00-bootstrap/README.md) | ✅ concluído | `pnpm verify:full` saiu com código 0, com um e2e atravessando todas as camadas |
-| 01 | [Sessão viva](01-live-session/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:live` saem com código 0 |
+| 01 | [Sessão viva](01-live-session/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:live` saíram com código 0 |
 | 02 | [Aprovação pelo celular](02-mobile-approval/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 | 03 | [Regras e trilha](03-rules-and-audit/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
 | 04 | [Histórico e retomada](04-transcript-and-resume/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:live` saem com código 0 |

@@ -1,55 +1,83 @@
 import type { UserId } from '@domain/auth';
-import { Pong } from '../value-objects/pong.value-object';
+import type { WorkspacePath } from '@domain/workspace';
+import { InvalidSessionTransitionError } from '../errors/invalid-session-transition.error';
+import { SessionClosedError } from '../errors/session-closed.error';
+import type { PermissionMode } from '../value-objects/permission-mode.value-object';
 import type { SessionId } from '../value-objects/session-id.value-object';
+import { canTransition } from '../value-objects/session-status.value-object';
+import type { SessionStatus } from '../value-objects/session-status.value-object';
 
-/** The persisted shape of a session, as the mapper on either side of the repository sees it. */
-export interface SessionSnapshot {
+/** Why a session ended. The contract carries the same five. */
+export type SessionCloseReason =
+  'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown';
+
+/** What opening a session needs to know. */
+export interface SessionOpening {
   readonly id: SessionId;
   readonly ownerId: UserId;
+  readonly workspace: WorkspacePath;
+  readonly model: string;
+  readonly permissionMode: PermissionMode;
   readonly openedAt: Date;
-  readonly lastPingedAt: Date;
-  readonly pingCount: number;
 }
 
 /**
- * A session of the walking skeleton.
+ * A live session of Claude.
  *
- * Deliberately trivial in business terms and complete in structure: the value of the slice is in
- * the rail it proves, not in what it computes. The rule it does own — the pong carries the
- * instant the injected clock reported, and the count is the entity's to increment — is enough to
- * show that the rule lives here and not in the gateway.
+ * It is a rule and no I/O: the subprocess, the socket and the database are all somewhere else, and
+ * what lives here is the question "may this session do that now?". That is why the state machine
+ * is worth having at all — it is the one place where "a prompt arrived while a tool was running"
+ * has a single answer, instead of one answer per call site.
+ *
+ * It is **not** persisted. A live session is process state and dies with the process; the database
+ * holds provenance and the audit trail, never the runner. See
+ * docs/architecture/backend/06-realtime.md.
  */
 export class Session {
   private constructor(
     readonly id: SessionId,
     readonly ownerId: UserId,
+    readonly workspace: WorkspacePath,
     readonly openedAt: Date,
-    private lastPinged: Date,
-    private pings: number,
+    private currentModel: string,
+    private currentMode: PermissionMode,
+    private currentStatus: SessionStatus,
+    private reason: SessionCloseReason | null,
   ) {}
 
-  /** A session that has just been opened and never pinged. */
-  static open(id: SessionId, ownerId: UserId, now: Date): Session {
-    return new Session(id, ownerId, now, now, 0);
-  }
-
-  /** Rehydrates a session the repository read back. */
-  static restore(snapshot: SessionSnapshot): Session {
+  /** A session that has been asked for and whose subprocess is not up yet. */
+  static open(opening: SessionOpening): Session {
     return new Session(
-      snapshot.id,
-      snapshot.ownerId,
-      snapshot.openedAt,
-      snapshot.lastPingedAt,
-      snapshot.pingCount,
+      opening.id,
+      opening.ownerId,
+      opening.workspace,
+      opening.openedAt,
+      opening.model,
+      opening.permissionMode,
+      'starting',
+      null,
     );
   }
 
-  get lastPingedAt(): Date {
-    return this.lastPinged;
+  get status(): SessionStatus {
+    return this.currentStatus;
   }
 
-  get pingCount(): number {
-    return this.pings;
+  get model(): string {
+    return this.currentModel;
+  }
+
+  get permissionMode(): PermissionMode {
+    return this.currentMode;
+  }
+
+  /** Why it ended, or `null` while it has not. */
+  get closeReason(): SessionCloseReason | null {
+    return this.reason;
+  }
+
+  get isClosed(): boolean {
+    return this.currentStatus === 'closed';
   }
 
   /** Whether this session belongs to `userId`. */
@@ -58,25 +86,84 @@ export class Session {
   }
 
   /**
-   * Records a ping and answers the pong it produced.
+   * Moves the machine **if** it allows the move, and says whether it did.
    *
-   * @param now instant from the clock — the entity never reads the wall clock itself
-   * @param nonce echoed back so a client can recognise its own round trip
+   * This is the door the event stream comes through, and it is separate from {@link moveTo} on
+   * purpose. A status derived from somebody else's stream is an **observation**, not a command:
+   * if the SDK ever reorders its messages, or emits one we read differently, the honest outcome
+   * is to keep the status we had and carry on — the same survival rule the mapper applies to a
+   * variant it does not know. A session on the user's machine must not end because a message
+   * arrived in an order this build did not expect.
+   *
+   * {@link moveTo} stays strict, because a transition asked for by our own code is a claim about
+   * our own logic, and a wrong one there is a bug worth failing on.
    */
-  ping(now: Date, nonce: string): Pong {
-    this.pings += 1;
-    this.lastPinged = now;
+  observe(status: SessionStatus): boolean {
+    if (status === this.currentStatus) {
+      return true;
+    }
 
-    return new Pong(this.id, now, this.pings, nonce);
+    if (!canTransition(this.currentStatus, status)) {
+      return false;
+    }
+
+    this.currentStatus = status;
+    return true;
   }
 
-  snapshot(): SessionSnapshot {
-    return {
-      id: this.id,
-      ownerId: this.ownerId,
-      openedAt: this.openedAt,
-      lastPingedAt: this.lastPinged,
-      pingCount: this.pings,
-    };
+  /**
+   * Moves the machine.
+   *
+   * Asking for the status it already has is a no-op and not an error: the SDK reports the same
+   * thing twice often enough — two tools in a row both report `running` — and treating that as a
+   * violation would turn ordinary streams into crashes.
+   *
+   * @throws {InvalidSessionTransitionError} when the move is not one the machine makes
+   */
+  moveTo(status: SessionStatus): void {
+    if (status === this.currentStatus) {
+      return;
+    }
+
+    if (!canTransition(this.currentStatus, status)) {
+      throw new InvalidSessionTransitionError(this.id.value, this.currentStatus, status);
+    }
+
+    this.currentStatus = status;
+  }
+
+  /**
+   * Ends the session.
+   *
+   * Idempotent, and deliberately so: closing is what runs in a `finally`, in a shutdown hook and
+   * from a command, and any two of those can happen at once. The **first** reason is the one that
+   * sticks — the later one is a consequence of the first, and overwriting would replace the cause
+   * with its effect.
+   */
+  close(reason: SessionCloseReason): void {
+    if (this.isClosed) {
+      return;
+    }
+
+    this.currentStatus = 'closed';
+    this.reason = reason;
+  }
+
+  /** @throws {SessionClosedError} when the session is over */
+  setModel(model: string): void {
+    this.refuseIfClosed();
+    this.currentModel = model;
+  }
+
+  /** @throws {SessionClosedError} when the session is over */
+  setPermissionMode(mode: PermissionMode): void {
+    this.refuseIfClosed();
+    this.currentMode = mode;
+  }
+
+  private refuseIfClosed(): void {
+    if (this.isClosed) {
+      throw new SessionClosedError(this.id.value);
+    }
   }
 }

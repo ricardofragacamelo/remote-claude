@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/turn-completed.json",
+  "title": "TurnCompleted",
+  "description": "A turn finished, from the SDK's `result`. It is what closes the turn in the UI and what carries its cost.",
+  "x-kind": "event",
+  "x-type": "turn.completed",
+  "type": "object",
+  "required": ["turnId", "usage", "costUsd", "durationMs"],
+  "properties": {
+    "turnId": { "type": "string" },
+    "promptedBy": { "type": "string", "description": "Who sent the prompt this turn answered." },
+    "usage": {
+      "type": "object",
+      "description": "Token counts as the SDK reports them. An open map on purpose — the SDK adds fields to it, and a closed shape here would drop them."
+    },
+    "costUsd": {
+      "type": "string",
+      "description": "Cost of the turn, as a decimal string. A string and not a number because money through a float is money that rounds where nobody looked."
+    },
+    "durationMs": { "type": "integer" }
+  }
+}

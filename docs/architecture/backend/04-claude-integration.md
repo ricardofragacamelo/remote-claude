@@ -132,16 +132,48 @@ Com `[]`, as sessões **ignoram o `CLAUDE.md` do projeto** — ficariam piores q
 no mesmo repositório. `['project']` preserva as duas coisas, e é a configuração obrigatória.
 
 O escopo `user` é o perigoso: é dele que vêm as regras `permissions.allow` pessoais. O escopo
-`project` tem uma assimetria que joga a nosso favor — `deny` de projeto é aplicado, `allow`
-de projeto **não** dispensa o `canUseTool`. Ver
+`project` tem uma assimetria que **só vale em diretório não confiado** — `deny` de projeto é
+aplicado, `allow` de projeto não dispensa o `canUseTool`. Ver
 [descoberta §8.2](../../discovery/01-descoberta-claude-agent-sdk.md#82--a-assimetria-allow-vs-deny-entre-escopos).
 
-> ⚠️ **Incerteza residual:** não foi verificado se, num diretório já marcado como confiado
-> (`hasTrustDialogAccepted`) no CLI interativo, o `allow` de projeto volta a ser aplicado.
-> **Verificar antes de produção.**
+### Diretório confiado fura o `canUseTool` — medido
 
-> Existe uma regra de `semgrep` que reprova `query()` sem `settingSources: ['project']`. Ver
-> [qualidade](../shared/09-code-quality.md#segurança-estática).
+**A assimetria acima desaparece quando o diretório está confiado.** Medido em 2026-09-18
+([B-45](../../plans/01-live-session/F0-contract.md), SDK `0.3.277`), com `settingSources:
+['project']` e `.claude/settings.json` do projeto contendo `"permissions": { "allow": ["Write"] }`:
+
+| `hasTrustDialogAccepted` do diretório | `canUseTool` chamado | hook `PreToolUse` chamado | arquivo escrito |
+|---|---|---|---|
+| `false` | ✅ **sim** | ✅ sim | sim |
+| `true` | ❌ **não** | ✅ sim | sim |
+
+Dois braços, dois ciclos cada, resultado idêntico. Com o diretório confiado, a tool executou
+**sem que ninguém fosse consultado** — sem erro e sem aviso.
+
+Três consequências, e nenhuma delas é opcional:
+
+1. **A mitigação é obrigatória, não redundante.** O backend limpa ou recusa a marca de confiança
+   antes de abrir sessão. Era a decisão adotada "de qualquer forma"; a medição diz que sem ela o
+   produto não tem aprovação humana.
+2. **[ADR-011](../shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) se confirma.** O hook `PreToolUse` foi chamado nos dois braços. Auditoria
+   ancorada no `canUseTool` teria perdido exatamente a invocação que ninguém autorizou — que é a
+   que mais importa registrar.
+3. **`options.allowedTools` com nome simples também fura.** Descoberto no mesmo spike: uma entrada
+   como `allowedTools: ['Write']` auto-aprova a tool antes do callback, e o próprio SDK avisa
+   (`CLAUDE_SDK_CAN_USE_TOOL_SHADOWED`). A fábrica de opções não pode usar nomes simples ali.
+
+> Existe uma regra própria que reprova `query()` sem `settingSources: ['project']` e sem o hook
+> `PreToolUse`. Ver [qualidade](../shared/09-code-quality.md#segurança-estática).
+>
+> A regra lê **código**, não prosa: comentários são apagados antes da busca, porque este projeto
+> explica o SDK por escrito e um portão que acusa a explicação é um portão que se aprende a
+> ignorar. Strings ficam, porque é dentro de uma que mora o `['project']` que a regra exige.
+>
+> **A regra sozinha não basta, e por um motivo que este código criou.** A fábrica de `Query`
+> existe para que o teste possa injetar um stream roteirizado, e com ela o único `query(` literal
+> do backend passou a ser um passthrough. Então `realQueryFactory` **recusa** opções sem as duas
+> coisas (`UnsafeSdkOptionsError`): a máquina lê a chamada literal, e o processo não alcança o
+> subprocesso sem passar por ela. Uma verifica, a outra impede.
 
 ---
 
@@ -243,6 +275,20 @@ tool_use emitidos : 6  [Bash, Bash, Read, Read, Bash, Write]
 PreToolUse hook   : 6  ← cobertura total
 canUseTool        : 2  ← só Bash "perigoso" e Write
 ```
+
+**Remedido em 2026-09-19, com o gravador de fixtures** (`pnpm fixtures:record`, SDK `0.3.277`),
+sobre um prompt diferente:
+
+```
+tool_use emitidos : 4  [Read, Bash, Read, Write]
+PreToolUse hook   : 4  ← cobertura total
+canUseTool        : 1  ← só Write
+```
+
+Os **números** dependem do prompt e não se repetem; a **assimetria** se repete, e é ela que a
+ADR-011 afirma. A fixture está commitada em `backend/test/fakes/agent-sdk/fixtures/tool-turn.json`
+e é o que o fake replica — o dia em que hook e `canUseTool` cobrirem o mesmo conjunto, é esse
+arquivo que denuncia.
 
 Ancorar a trilha em `canUseTool` deixaria de fora **toda leitura de arquivo** e todo comando
 auto-aprovado. Num sistema que dá acesso ao filesystem do usuário, isso é inaceitável.

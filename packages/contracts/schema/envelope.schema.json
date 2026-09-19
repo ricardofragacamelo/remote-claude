@@ -5,6 +5,13 @@
   "description": "Shape shared by every frame, in both directions. See docs/architecture/shared/05-websocket-protocol.md.",
   "type": "object",
   "required": ["v", "id", "kind", "type", "ts"],
+  "x-required-when": [
+    {
+      "field": "seq",
+      "when": { "field": "kind", "equals": "event" },
+      "because": "replay is built on `seq`, and an event without one is a hole nobody can detect afterwards, so the schema is what charges it rather than the goodwill of whoever emits"
+    }
+  ],
   "properties": {
     "v": {
       "type": "integer",

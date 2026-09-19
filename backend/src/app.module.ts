@@ -1,16 +1,21 @@
 import { Module } from '@nestjs/common';
 import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 import { DomainExceptionFilter } from '@shared/errors/domain-exception.filter';
 import { IoLoggingInterceptor } from '@shared/logging/io-logging.interceptor';
 import { TraceMiddleware } from '@shared/logging/trace.middleware';
 import { AuthModule } from '@infra/modules/auth.module';
+import { AuditModule } from '@infra/modules/audit.module';
 import { DatabaseModule } from '@infra/modules/database.module';
 import { GatewayModule } from '@infra/modules/gateway.module';
 import { HealthModule } from '@infra/modules/health.module';
 import { PlatformModule } from '@infra/modules/platform.module';
+import { DiagModule } from '@infra/modules/diag.module';
+import { PermissionModule } from '@infra/modules/permission.module';
 import { SessionModule } from '@infra/modules/session.module';
+import { WorkspaceModule } from '@infra/modules/workspace.module';
 
 /**
  * Composition root.
@@ -20,7 +25,21 @@ import { SessionModule } from '@infra/modules/session.module';
  * and that both halves of every I/O edge are logged without anyone remembering to do it.
  */
 @Module({
-  imports: [PlatformModule, DatabaseModule, AuthModule, HealthModule, SessionModule, GatewayModule],
+  imports: [
+    // The internal bus for domain events. `permission.resolved` has three consumers and none of
+    // them may be called directly — see docs/architecture/backend/03-modules.md.
+    EventEmitterModule.forRoot(),
+    PlatformModule,
+    DatabaseModule,
+    AuthModule,
+    HealthModule,
+    WorkspaceModule,
+    AuditModule,
+    DiagModule,
+    PermissionModule,
+    SessionModule,
+    GatewayModule,
+  ],
   providers: [
     { provide: APP_FILTER, useClass: DomainExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: IoLoggingInterceptor },

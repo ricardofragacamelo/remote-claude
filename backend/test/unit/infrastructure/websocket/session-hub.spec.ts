@@ -34,13 +34,13 @@ describe('SessionHub', () => {
   });
 
   it('numbers the first event of a session 1', () => {
-    expect(hub.publish('s1', { type: 'session.pong', payload: {} }).seq).toBe(1);
+    expect(hub.publish('s1', { type: 'diag.pong', payload: {} }).seq).toBe(1);
   });
 
   it('numbers strictly upwards, per session', () => {
-    const first = hub.publish('s1', { type: 'session.pong', payload: {} });
-    const other = hub.publish('s2', { type: 'session.pong', payload: {} });
-    const second = hub.publish('s1', { type: 'session.pong', payload: {} });
+    const first = hub.publish('s1', { type: 'diag.pong', payload: {} });
+    const other = hub.publish('s2', { type: 'diag.pong', payload: {} });
+    const second = hub.publish('s1', { type: 'diag.pong', payload: {} });
 
     expect([first.seq, second.seq]).toEqual([1, 2]);
     expect(other.seq).toBe(1);
@@ -49,7 +49,7 @@ describe('SessionHub', () => {
   it('never hands out the same sequence twice under concurrent publication', () => {
     const seqs = Array.from(
       { length: 200 },
-      () => hub.publish('s1', { type: 'session.pong', payload: {} }).seq,
+      () => hub.publish('s1', { type: 'diag.pong', payload: {} }).seq,
     );
 
     expect(new Set(seqs).size).toBe(200);
@@ -64,7 +64,7 @@ describe('SessionHub', () => {
     registry.register('c2', alsoWatching).attached.add('s1');
     registry.register('c3', elsewhere).attached.add('s2');
 
-    hub.publish('s1', { type: 'session.pong', payload: {} });
+    hub.publish('s1', { type: 'diag.pong', payload: {} });
 
     expect(watching.sent).toHaveLength(1);
     expect(alsoWatching.sent).toHaveLength(1);
@@ -72,7 +72,7 @@ describe('SessionHub', () => {
   });
 
   it('keeps the event for replay even when nobody is watching', () => {
-    hub.publish('s1', { type: 'session.pong', payload: {} });
+    hub.publish('s1', { type: 'diag.pong', payload: {} });
 
     expect(hub.replay('s1', 0).events).toHaveLength(1);
   });
@@ -88,7 +88,7 @@ describe('SessionHub', () => {
     registry.register('c1', dead).attached.add('s1');
     registry.register('c2', alive).attached.add('s1');
 
-    expect(() => hub.publish('s1', { type: 'session.pong', payload: {} })).not.toThrow();
+    expect(() => hub.publish('s1', { type: 'diag.pong', payload: {} })).not.toThrow();
     expect(alive.sent).toHaveLength(1);
   });
 
@@ -101,7 +101,7 @@ describe('SessionHub', () => {
     };
     registry.register('c1', dead).attached.add('s1');
 
-    hub.publish('s1', { type: 'session.pong', payload: {} });
+    hub.publish('s1', { type: 'diag.pong', payload: {} });
 
     expect(registry.get('c1')).toBeNull();
     expect(log.withOp('ws.outbound').some((line) => line['level'] === 'warn')).toBe(true);
@@ -111,7 +111,7 @@ describe('SessionHub', () => {
     const socket = spySocket();
     registry.register('c1', socket).attached.add('s1');
 
-    hub.publish('s1', { type: 'session.pong', payload: { nonce: 'n' } });
+    hub.publish('s1', { type: 'diag.pong', payload: { nonce: 'n' } });
 
     expect(log.withOp('ws.outbound')[0]).toMatchObject({ connectionId: 'c1', seq: 1 });
   });
@@ -133,8 +133,8 @@ describe('SessionHub', () => {
   });
 
   it('answers a replay request out of the buffer', () => {
-    hub.publish('s1', { type: 'session.pong', payload: {} });
-    hub.publish('s1', { type: 'session.pong', payload: {} });
+    hub.publish('s1', { type: 'diag.pong', payload: {} });
+    hub.publish('s1', { type: 'diag.pong', payload: {} });
 
     expect(hub.replay('s1', 1).events.map((frame) => frame.seq)).toEqual([2]);
   });
@@ -142,7 +142,7 @@ describe('SessionHub', () => {
   it('delivers a frame to one connection on request', () => {
     const socket = spySocket();
     const connection = registry.register('c1', socket);
-    const frame = hub.publish('s1', { type: 'session.pong', payload: {} });
+    const frame = hub.publish('s1', { type: 'diag.pong', payload: {} });
 
     hub.deliver(connection, frame);
 
@@ -153,7 +153,7 @@ describe('SessionHub', () => {
     const socket = spySocket();
     registry.register('c1', socket).attached.add('s1');
 
-    hub.publish('s1', { type: 'session.pong', payload: { blob: 'x'.repeat(20_000) } });
+    hub.publish('s1', { type: 'diag.pong', payload: { blob: 'x'.repeat(20_000) } });
 
     expect(log.withOp('ws.outbound')[0]).toMatchObject({ truncated: true });
   });

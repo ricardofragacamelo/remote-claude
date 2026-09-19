@@ -9,7 +9,7 @@ function pong(seq: number, nonce = `n${String(seq)}`): Envelope {
     v: 1,
     id: `srv-${String(seq)}`,
     kind: 'event',
-    type: 'session.pong',
+    type: 'diag.pong',
     ts: '2026-09-13T12:00:00.000Z',
     seq,
     sessionId: '01J0',

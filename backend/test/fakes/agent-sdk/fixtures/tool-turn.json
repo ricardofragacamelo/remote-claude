@@ -1,0 +1,2288 @@
+{
+  "$comment": "Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. Do not edit by hand — re-record instead. See docs/plans/01-live-session/F2-session-runtime.md.",
+  "name": "tool-turn",
+  "why": "the 6 tool calls → 6 PreToolUse hooks → 2 canUseTool asymmetry the audit trail rests on",
+  "prompt": "Read notes.md, then run `ls` in this directory, then read notes.md again, then write a file called summary.md containing one line summarising notes.md. Work through it step by step and do not ask me anything.",
+  "recordedAt": "2026-09-19",
+  "sdkVersion": "0.3.277",
+  "counts": {
+    "messages": 111,
+    "preToolUse": 4,
+    "canUseTool": 1
+  },
+  "preToolUse": [
+    {
+      "toolName": "Read",
+      "toolUseId": "toolu_01NLyNonqrTV5G8abkAX5UpD"
+    },
+    {
+      "toolName": "Bash",
+      "toolUseId": "toolu_01XRgMhcbn5bruiAojzFqK9K"
+    },
+    {
+      "toolName": "Read",
+      "toolUseId": "toolu_01KuFfLRvj9TcMpDw2XCuFz3"
+    },
+    {
+      "toolName": "Write",
+      "toolUseId": "toolu_0163zLG2PtDSvb4vLncpjMoF"
+    }
+  ],
+  "canUseTool": [
+    {
+      "toolName": "Write",
+      "input": {
+        "file_path": "/workspace/summary.md",
+        "content": "The project has two goals: safety and speed.\n"
+      }
+    }
+  ],
+  "stderr": [],
+  "messages": [
+    {
+      "type": "system",
+      "subtype": "init",
+      "cwd": "/workspace",
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "tools": [
+        "Task",
+        "Artifact",
+        "ArtifactComments",
+        "ArtifactData",
+        "AskUserQuestion",
+        "Bash",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DesignSync",
+        "Edit",
+        "EnterPlanMode",
+        "EnterWorktree",
+        "ExitPlanMode",
+        "ExitWorktree",
+        "ListAgents",
+        "Monitor",
+        "NotebookEdit",
+        "PushNotification",
+        "Read",
+        "RemoteTrigger",
+        "ReportFindings",
+        "ScheduleWakeup",
+        "SendMessage",
+        "ShareOnboardingGuide",
+        "Skill",
+        "TaskStop",
+        "ToolSearch",
+        "WebFetch",
+        "WebSearch",
+        "Workflow",
+        "Write"
+      ],
+      "mcp_servers": [],
+      "model": "claude-opus-5[1m]",
+      "permissionMode": "default",
+      "slash_commands": [
+        "deep-research",
+        "design",
+        "slides",
+        "design-sync",
+        "dataviz",
+        "artifact-diagramming",
+        "artifact-capabilities",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator",
+        "advisor",
+        "agents",
+        "auto-mode-setup",
+        "autocompact",
+        "clear",
+        "color",
+        "compact",
+        "config",
+        "output-style",
+        "context",
+        "effort",
+        "fast",
+        "heapdump",
+        "init",
+        "mcp",
+        "import",
+        "model",
+        "__remote-workflow",
+        "workflow-launch-exec",
+        "reload-plugins",
+        "reload-skills",
+        "rename",
+        "security-review",
+        "usage-credits",
+        "extra-usage",
+        "usage",
+        "insights",
+        "recap",
+        "skill-doctor",
+        "goal",
+        "design-consent",
+        "design-revoke",
+        "list-agents",
+        "team-onboarding"
+      ],
+      "terminal_slash_commands": ["doctor", "color", "reload-plugins"],
+      "apiKeySource": "none",
+      "claude_code_version": "2.1.277",
+      "output_style": "default",
+      "agents": [
+        "claude",
+        "claude-code-guide",
+        "Explore",
+        "general-purpose",
+        "Plan",
+        "statusline-setup"
+      ],
+      "skills": [
+        "deep-research",
+        "design",
+        "slides",
+        "design-sync",
+        "dataviz",
+        "artifact-diagramming",
+        "artifact-capabilities",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator"
+      ],
+      "plugins": [
+        {
+          "name": "agents-md",
+          "path": "builtin",
+          "source": "agents-md@builtin"
+        }
+      ],
+      "capabilities": ["interrupt_receipt_v1", "interrupt_cancel_queued_v1", "msg_lifecycle_v1"],
+      "analytics_disabled": false,
+      "product_feedback_disabled": false,
+      "uuid": "e4bb3f61-dda0-470e-acdd-ac02cd1fefb5",
+      "memory_paths": {
+        "auto": "/home/ricardocamelo/.claude/projects/-tmp-rc-fixture-MIM3vo/memory/"
+      },
+      "scratchpad_path": "/tmp/claude-1000/-tmp-rc-fixture-MIM3vo/6b41b192-a41b-46c2-b8d7-5098d8c825be/scratchpad",
+      "messaging_socket_path": "/run/user/1000/cc-socks/1275535.sock",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "unknown"
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "d60f1cb5-dfa0-495b-b3e4-72774e5e4664"
+    },
+    {
+      "type": "rate_limit_event",
+      "rate_limit_info": {
+        "status": "allowed",
+        "resetsAt": 1789789800,
+        "rateLimitType": "five_hour",
+        "overageStatus": "rejected",
+        "overageDisabledReason": "member_zero_credit_limit",
+        "isUsingOverage": false,
+        "unifiedWindows": {
+          "five_hour": {
+            "utilization": 0.29,
+            "resetsAt": 1789789800
+          },
+          "seven_day": {
+            "utilization": 0.15,
+            "resetsAt": 1790269200
+          }
+        }
+      },
+      "uuid": "9dae962f-c316-476d-9387-d441ee14ce00",
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011CfBt3dW7fvcFMjaRBuCFa",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4529,
+            "cache_read_input_tokens": 22814,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4529
+            },
+            "output_tokens": 1,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "8d699b00-ef17-4db0-8d10-aae3e77e80ba",
+      "ttft_ms": 1975
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "text",
+          "text": ""
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "e3ed1701-d5f2-4bcd-b177-02b18023367f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "I"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "5ef63413-6842-42fa-8baf-22ecca03f635"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "'ll work"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "d36ab4a4-889c-475e-afab-756630a9ab5b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " through these"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "85e6a41a-d2e6-4cfc-a679-083aa437a2dd"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " steps in order."
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "208fb0db-b48e-4a8f-8e1c-1c82971d7415"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfBt3dW7fvcFMjaRBuCFa",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "I'll work through these steps in order."
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 4529,
+          "cache_read_input_tokens": 22814,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 4529
+          },
+          "output_tokens": 1,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "2ee68080-497b-4e81-a257-fe03ecb2b06e",
+      "timestamp": "2026-09-19T00:50:47.581Z",
+      "request_id": "req_011CfBt3d54zHkTgbNrRpvPd"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_stop",
+        "index": 0
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "8eff9204-3a3e-446f-92a4-77185c3bd562"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 1,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01NLyNonqrTV5G8abkAX5UpD",
+          "name": "Read",
+          "input": {},
+          "caller": {
+            "type": "direct"
+          }
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "61ae23e3-8acb-436d-b311-19dbee6fc30a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": ""
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "1f562a92-ffbd-4798-ae50-3da540557452"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "{\"file_path\": \"/"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "0e0587a9-0ce4-493c-995c-05744865a58d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "tmp/r"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "b3de9d6e-838c-48cb-8026-62ebd0870173"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "c-fix"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "bc913236-2e86-4156-af47-bc635972dab4"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "ture-MI"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "8320f5cd-7c6f-4ce7-bf1d-c111b7f41217"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "M3v"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "eb73b2ef-6949-4360-8ef5-378b155e627a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "o/notes.md"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "20bac634-b9d9-4ebe-853b-b6204a0535d0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\"}"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "743e7e4d-0eea-4d57-9bb4-7d80337e16f3"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfBt3dW7fvcFMjaRBuCFa",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01NLyNonqrTV5G8abkAX5UpD",
+            "name": "Read",
+            "input": {
+              "file_path": "/workspace/notes.md"
+            },
+            "caller": {
+              "type": "direct"
+            }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 4529,
+          "cache_read_input_tokens": 22814,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 4529
+          },
+          "output_tokens": 1,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "46039db4-3681-445e-abaf-6d6fcfc2f62b",
+      "timestamp": "2026-09-19T00:50:48.297Z",
+      "request_id": "req_011CfBt3d54zHkTgbNrRpvPd",
+      "wire_tool_inputs": {
+        "toolu_01NLyNonqrTV5G8abkAX5UpD": {
+          "file_path": "/workspace/notes.md"
+        }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_stop",
+        "index": 1
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "e4238dd0-242f-4396-b468-a69560cd5a16"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 4529,
+          "cache_read_input_tokens": 22814,
+          "output_tokens": 82,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 82,
+              "cache_read_input_tokens": 22814,
+              "cache_creation_input_tokens": 4529,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 4529
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": {
+          "applied_edits": []
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "48db6f1a-99ce-436c-a2f9-12686d6682c9"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_stop"
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "5b15eb82-6796-4ed7-a329-637320cdea78"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_01NLyNonqrTV5G8abkAX5UpD",
+            "type": "tool_result",
+            "content": "1\tThe project has two goals: be safe, and be fast.\n2\t"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "4d83c408-cbd1-42af-9b42-877b3409b88c",
+      "timestamp": "2026-09-19T00:50:48.339Z",
+      "tool_use_result": {
+        "type": "text",
+        "file": {
+          "filePath": "/workspace/notes.md",
+          "content": "The project has two goals: be safe, and be fast.\n",
+          "numLines": 2,
+          "startLine": 1,
+          "totalLines": 2
+        }
+      }
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "1e08b840-acc6-4b16-a596-2c8647a8f0dd"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011CfBt3sT1VqqAiKrQ3c5oS",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 2247,
+            "cache_read_input_tokens": 27343,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 2247
+            },
+            "output_tokens": 17,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "2fd533ed-03a0-40d6-9e0b-6efde9e2cdc8",
+      "ttft_ms": 1369
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01XRgMhcbn5bruiAojzFqK9K",
+          "name": "Bash",
+          "input": {},
+          "caller": {
+            "type": "direct"
+          }
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "ba9fc648-ee1f-4566-b2dd-38dbd39d7e96"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": ""
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "c5b6c37c-8a1d-4f3c-a8bc-17964ad871e6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "{\"command\": \"ls"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "f77612d2-91fa-4ad4-b2a5-0b3bf674ab31"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\", \"description\": \"List files in current direct"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "58ed579c-0d32-497e-9462-eade755d4846"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "ory"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "79d7eda6-8e37-4213-ad0c-6b924de2006f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\"}"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "70ca05af-c7d9-4013-96fe-fe8fd7172077"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfBt3sT1VqqAiKrQ3c5oS",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01XRgMhcbn5bruiAojzFqK9K",
+            "name": "Bash",
+            "input": {
+              "command": "ls",
+              "description": "List files in current directory"
+            },
+            "caller": {
+              "type": "direct"
+            }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2247,
+          "cache_read_input_tokens": 27343,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 2247
+          },
+          "output_tokens": 17,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "a56dd2f8-58a8-4ee4-9980-bbaf867460e8",
+      "timestamp": "2026-09-19T00:50:50.198Z",
+      "request_id": "req_011CfBt3rkqSAhC26cDegrFG",
+      "wire_tool_inputs": {
+        "toolu_01XRgMhcbn5bruiAojzFqK9K": {
+          "command": "ls",
+          "description": "List files in current directory"
+        }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_stop",
+        "index": 0
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "1bd712ad-fa5f-476e-b48c-c3a4a51f020b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2247,
+          "cache_read_input_tokens": 27343,
+          "output_tokens": 74,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 74,
+              "cache_read_input_tokens": 27343,
+              "cache_creation_input_tokens": 2247,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 2247
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": {
+          "applied_edits": []
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "4805ff40-0eae-452c-bf58-7819192b10d0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_stop"
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "ec1a081c-0b99-4bc1-8e57-7fae5152bb03"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_01XRgMhcbn5bruiAojzFqK9K",
+            "type": "tool_result",
+            "content": "notes.md",
+            "is_error": false
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "7dce0d10-28bd-4b51-88c9-11f11234bd50",
+      "timestamp": "2026-09-19T00:50:50.273Z",
+      "tool_use_result": {
+        "stdout": "notes.md",
+        "stderr": "",
+        "interrupted": false,
+        "isImage": false,
+        "noOutputExpected": false
+      }
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "6d5b6335-9f63-45fb-b1ee-5708c8c2a7ad"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011CfBt41DaL31SWtF3vWHhh",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 107,
+            "cache_read_input_tokens": 29590,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 107
+            },
+            "output_tokens": 16,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "a9cc02d5-20f7-4318-923d-0c3687fb13f2",
+      "ttft_ms": 1068
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01KuFfLRvj9TcMpDw2XCuFz3",
+          "name": "Read",
+          "input": {},
+          "caller": {
+            "type": "direct"
+          }
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "8160d523-837c-439d-954e-66105fb4141a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": ""
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "9572dc02-d833-4cab-ae59-83a255775343"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "{\"file_path\": \"/tmp"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "d20189ff-57a9-4277-a73d-213fb20b7ad4"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "/rc"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "369d88fc-fd29-41c6-97c9-92f23f319722"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "-f"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "d16b0976-6e23-4f0d-b1e1-f37a481cf245"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "ixture-MI"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "5a600454-0c03-4855-a642-da2504e04a29"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "M3v"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "98feb921-da36-4bb0-bbaa-a5b7592a7ee8"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "o"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "ae687ce9-9954-4658-b862-349402dfe6be"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "/notes.md"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "843c3033-9d44-4682-9cb0-8727c08c02c6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\"}"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "cb5ead82-ff64-40c4-ba42-c8a1e0a2e713"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfBt41DaL31SWtF3vWHhh",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01KuFfLRvj9TcMpDw2XCuFz3",
+            "name": "Read",
+            "input": {
+              "file_path": "/workspace/notes.md"
+            },
+            "caller": {
+              "type": "direct"
+            }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 107,
+          "cache_read_input_tokens": 29590,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 107
+          },
+          "output_tokens": 16,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "cb9a66e4-0286-44d6-8112-32b60328c277",
+      "timestamp": "2026-09-19T00:50:51.911Z",
+      "request_id": "req_011CfBt3zkJdHviSDPp2mv6o",
+      "wire_tool_inputs": {
+        "toolu_01KuFfLRvj9TcMpDw2XCuFz3": {
+          "file_path": "/workspace/notes.md"
+        }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_stop",
+        "index": 0
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "ef43c0b9-f09a-489a-bf90-fb00fdff9941"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_01KuFfLRvj9TcMpDw2XCuFz3",
+            "type": "tool_result",
+            "content": "Wasted call — file unchanged since your last Read. Refer to that earlier tool_result instead."
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "ad89a5c0-1a18-4995-ae4c-4abb9e1b7490",
+      "timestamp": "2026-09-19T00:50:51.923Z",
+      "tool_use_result": {
+        "type": "file_unchanged",
+        "file": {
+          "filePath": "/workspace/notes.md"
+        }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 107,
+          "cache_read_input_tokens": 29590,
+          "output_tokens": 70,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 70,
+              "cache_read_input_tokens": 29590,
+              "cache_creation_input_tokens": 107,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 107
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": {
+          "applied_edits": []
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "7619283c-6754-4621-ad05-354ce68ce95d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_stop"
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "a2492121-0a5c-4e47-a9b6-5a925dbe0473"
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "ac92d096-b8ea-400a-a50a-60f2a27a630b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011CfBt48QRtXiXzBWkVH2mq",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 131,
+            "cache_read_input_tokens": 29697,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 131
+            },
+            "output_tokens": 3,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "38dd89c1-7381-4813-81da-b027e073a5f4",
+      "ttft_ms": 1063
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "thinking",
+          "thinking": "",
+          "signature": ""
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "f4dcfa14-4b1a-4ad8-9f26-d6485bacdb9c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "thinking_delta",
+          "thinking": "",
+          "estimated_tokens": null
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "661c541d-34ab-46da-b3f5-b0b8159c6fbb"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "signature_delta",
+          "signature": "CAISxgIKpgEIERgCKkCeOoUQokuatcD8Z7cUYcuyIoJ13EwYLnKlf50SywWnrRJtrjWId7GnhRUnmJWvGrMdIIHtCrE98Pf8Hfm3BQgSMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ5NjZjNTdhMy04M2I1LTRhNWMtYjU2NC03Nzg4MmQ3NjJmMjhyEFUcqGZrxDNyfNKdebXgBi6IAQGoAe24t9UGsAECEgxl5HMWvPfUE5XaySIaDCX1pU3Fr6R9YSNPGyIwPVLvraBNfQiZL654hZktaO3W3fMX6Ifd6AMb7itRHSn165HOS7IRrJP9qhJe5p/LKk21Dtjc2bqAu1JMFa/rmHookPAYIn1HDkMCpR0o7+grWEcnyOevUDhsu7HN+BCUHhzv4UXyTEqi0kaIjJCIbFMiEC2MgCbevq9loeczSBgB"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "803e715a-dd69-4a18-be1c-630740337eae"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfBt48QRtXiXzBWkVH2mq",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "",
+            "signature": "CAISxgIKpgEIERgCKkCeOoUQokuatcD8Z7cUYcuyIoJ13EwYLnKlf50SywWnrRJtrjWId7GnhRUnmJWvGrMdIIHtCrE98Pf8Hfm3BQgSMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ5NjZjNTdhMy04M2I1LTRhNWMtYjU2NC03Nzg4MmQ3NjJmMjhyEFUcqGZrxDNyfNKdebXgBi6IAQGoAe24t9UGsAECEgxl5HMWvPfUE5XaySIaDCX1pU3Fr6R9YSNPGyIwPVLvraBNfQiZL654hZktaO3W3fMX6Ifd6AMb7itRHSn165HOS7IRrJP9qhJe5p/LKk21Dtjc2bqAu1JMFa/rmHookPAYIn1HDkMCpR0o7+grWEcnyOevUDhsu7HN+BCUHhzv4UXyTEqi0kaIjJCIbFMiEC2MgCbevq9loeczSBgB"
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 131,
+          "cache_read_input_tokens": 29697,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 131
+          },
+          "output_tokens": 3,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "0a11b733-19bd-4965-910a-a4b48cbb4778",
+      "timestamp": "2026-09-19T00:50:53.669Z",
+      "request_id": "req_011CfBt47tRPSmDWGGnd8M7Y"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_stop",
+        "index": 0
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "d175b6ed-dee1-4392-b447-4bf04f28e766"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 1,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_0163zLG2PtDSvb4vLncpjMoF",
+          "name": "Write",
+          "input": {},
+          "caller": {
+            "type": "direct"
+          }
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "37a39a47-77c0-4c03-9342-20a292f9237a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": ""
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "930eb3e8-ef54-4930-b89b-92e2ddcd4d28"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "{\"file_path\": \"/tmp/rc"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "d718e2e1-2124-47dd-af96-840929520728"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "-fixture-MIM"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "e5ed9beb-8bc5-4c39-b991-a4a9771e0796"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "3vo/summary.md"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "117b606f-0c63-47b2-9c23-de5f32414dec"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\", \"content\": \"The project has two"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "f483a194-f247-48ab-929f-d008dbfaea9e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": " goals: safety and speed"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "c5b03d99-704f-45f4-994f-ada9fef62d3d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": ".\\n"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "19c93670-7a6a-4eb1-9cc4-cb2a672fec1d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\"}"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "21a215b9-b6a3-4a20-a703-5001d5d0035d"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfBt48QRtXiXzBWkVH2mq",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_0163zLG2PtDSvb4vLncpjMoF",
+            "name": "Write",
+            "input": {
+              "file_path": "/workspace/summary.md",
+              "content": "The project has two goals: safety and speed.\n"
+            },
+            "caller": {
+              "type": "direct"
+            }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 131,
+          "cache_read_input_tokens": 29697,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 131
+          },
+          "output_tokens": 3,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "7f3842e9-2540-4458-a99e-5f92f9a56322",
+      "timestamp": "2026-09-19T00:50:54.203Z",
+      "request_id": "req_011CfBt47tRPSmDWGGnd8M7Y",
+      "wire_tool_inputs": {
+        "toolu_0163zLG2PtDSvb4vLncpjMoF": {
+          "file_path": "/workspace/summary.md",
+          "content": "The project has two goals: safety and speed.\n"
+        }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_stop",
+        "index": 1
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "6cf30b0a-9196-4880-a8c7-3a22f3a33605"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 131,
+          "cache_read_input_tokens": 29697,
+          "output_tokens": 129,
+          "output_tokens_details": {
+            "thinking_tokens": 24
+          },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 129,
+              "cache_read_input_tokens": 29697,
+              "cache_creation_input_tokens": 131,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 131
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": {
+          "applied_edits": []
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "d73b15f4-6a4d-453c-aed9-5dc2acff5067"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_stop"
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "2408ced4-e1e6-4f19-92c8-a75f878b8a42"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_0163zLG2PtDSvb4vLncpjMoF",
+            "type": "tool_result",
+            "content": "File created successfully at: /workspace/summary.md (file state is current in your context — no need to Read it back)"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "a64882d2-ccb5-42c9-84ab-84b93cf6b966",
+      "timestamp": "2026-09-19T00:50:54.237Z",
+      "tool_use_result": {
+        "type": "create",
+        "filePath": "/workspace/summary.md",
+        "content": "The project has two goals: safety and speed.\n",
+        "structuredPatch": [],
+        "originalFile": null,
+        "userModified": false
+      }
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "4c27fa27-7334-4b50-8c1f-9e81beb59e93"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011CfBt4JFGe6kgv3Qf8Kfgo",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 205,
+            "cache_read_input_tokens": 29828,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 205
+            },
+            "output_tokens": 3,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "0fc4e226-6ef6-44c2-9384-9df74cfde5ab",
+      "ttft_ms": 1220
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "text",
+          "text": ""
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "44ea8c43-6774-426f-a8a9-d747c8435495"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "Done,"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "10b70c0c-3931-4de9-9010-4003a2b427a7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " in order:\n\n1. **"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "f7b5a120-a44f-4e5a-8cae-68877cd41f08"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "Read not"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "97556402-7a8a-4637-bc4d-efa912387b28"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "es.md** —"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "7f129cac-6cc5-43f0-b96b-e8f646fe07f2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " one line: \""
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "1ec0de60-d854-456c-a139-a60eefd14007"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "The project has two goals: be"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "083c0d5d-d576-4f00-b03a-fbb453cfb866"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " safe, and be f"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "083d4003-ff32-43c5-a2d6-bf0ecf545422"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "ast.\"\n2. **`"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "dda54779-bd7c-4ef3-b694-a415cb6e1d2e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "ls`** — only `not"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "536e915a-2ca7-4a82-9452-d1cb7783f893"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "es.md` was"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "c466f898-30af-4787-a993-4b64f4778c3c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " in the directory.\n3."
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "e69d8e08-cf2a-49ae-ab59-1806ff9a6228"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " **Re-read notes."
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "e31baf2d-a74e-4245-ab13-096c0645addb"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "md** — the harness bloc"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "43cb23d7-23b2-4a34-ac9d-546cefcd499a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "ked it"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "f61217da-ff86-4f34-81eb-5d1022ce9a33"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " as a w"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "3c4b313b-acef-4aea-88c7-be00574ec7a6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "asted call since"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "90d6ad15-3336-462d-a45f-4b7ba4d00b10"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " the file h"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "025efd82-229c-4877-8441-f05e935c9509"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "adn't changed,"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "35650e6c-9835-45ab-8b00-abc6ae40bd8a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " so the"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "964a0da3-b081-49d9-b69e-347b8eff35f6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " content"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "d4aac29a-65ce-4819-aac3-04b3d36c6295"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " from step"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "a4e1b930-dce7-4c87-bce1-d173bb739cb2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " 1 still"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "3b321c12-c3b0-4622-afdc-51b8593d42a8"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " stands.\n4. **"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "5ef2d370-b9cb-40d4-a23c-32c45e3e72ce"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "Wrote summ"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "031299db-e8c5-4788-9195-ae68a702f8ae"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "ary.md** — `The project"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "00fcd00e-8eca-4f29-89d7-bd5eb1727881"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " has two goals: safety and"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "ac7e6e95-39c8-43e1-a7bc-a7d9205681fd"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " speed.`"
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "3c146891-ec78-4658-b304-42b14ef4df05"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfBt4JFGe6kgv3Qf8Kfgo",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Done, in order:\n\n1. **Read notes.md** — one line: \"The project has two goals: be safe, and be fast.\"\n2. **`ls`** — only `notes.md` was in the directory.\n3. **Re-read notes.md** — the harness blocked it as a wasted call since the file hadn't changed, so the content from step 1 still stands.\n4. **Wrote summary.md** — `The project has two goals: safety and speed.`"
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 205,
+          "cache_read_input_tokens": 29828,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 205
+          },
+          "output_tokens": 3,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "uuid": "9a424bee-7bfa-48ab-80c1-3d9b33c7a4b4",
+      "timestamp": "2026-09-19T00:50:57.079Z",
+      "request_id": "req_011CfBt4HnEecuy738E11K9c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_stop",
+        "index": 0
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "86a95164-c36d-478f-a564-e500edfa25a3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 205,
+          "cache_read_input_tokens": 29828,
+          "output_tokens": 141,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 141,
+              "cache_read_input_tokens": 29828,
+              "cache_creation_input_tokens": 205,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 205
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": {
+          "applied_edits": []
+        }
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "455a2926-e360-4b44-8419-446773c1758e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_stop"
+      },
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "parent_tool_use_id": null,
+      "uuid": "5cdf73c2-51dd-4cd3-8cd8-bf958e888d13"
+    },
+    {
+      "duration_api_ms": 12720,
+      "stop_reason": "end_turn",
+      "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
+      "total_cost_usd": 0.155299,
+      "usage": {
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 7219,
+        "cache_read_input_tokens": 139272,
+        "output_tokens": 496,
+        "output_tokens_details": {
+          "thinking_tokens": 24
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 7219,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 141,
+            "cache_read_input_tokens": 29828,
+            "cache_creation_input_tokens": 205,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 205
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "modelUsage": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 943,
+          "outputTokens": 16,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.001023,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-haiku-4-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 10,
+          "outputTokens": 496,
+          "cacheReadInputTokens": 139272,
+          "cacheCreationInputTokens": 7219,
+          "webSearchRequests": 0,
+          "costUSD": 0.154276,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 64000,
+          "thinkingTokens": 24,
+          "canonicalModel": "claude-opus-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "permission_denials": [],
+      "terminal_reason": "completed",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "preference",
+      "subagent_stats": {
+        "spawned": 0,
+        "requested": {
+          "background": 0,
+          "foreground": 0,
+          "unset": 0
+        },
+        "started_in_background": 0,
+        "max_depth": 0,
+        "spawned_by_subagents": 0,
+        "completed": 0,
+        "failed": 0,
+        "killed": {
+          "parent": 0,
+          "user": 0,
+          "system": 0
+        },
+        "refused": {
+          "depth_limit": 0,
+          "concurrency_limit": 0,
+          "budget": 0
+        },
+        "by_type": {}
+      },
+      "is_error": false,
+      "num_turns": 5,
+      "subtype": "success",
+      "api_error_status": null,
+      "result": "Done, in order:\n\n1. **Read notes.md** — one line: \"The project has two goals: be safe, and be fast.\"\n2. **`ls`** — only `notes.md` was in the directory.\n3. **Re-read notes.md** — the harness blocked it as a wasted call since the file hadn't changed, so the content from step 1 still stands.\n4. **Wrote summary.md** — `The project has two goals: safety and speed.`",
+      "ttft_ms": 2526,
+      "type": "result",
+      "duration_ms": 12066,
+      "uuid": "1dcecbe0-ac0e-4255-a26d-f0e67f9895ec",
+      "ttft_stream_ms": 2059,
+      "time_to_request_ms": 84,
+      "first_content_frame_ms": 2060,
+      "queued_turn_count": 0,
+      "result_index": 0
+    }
+  ]
+}

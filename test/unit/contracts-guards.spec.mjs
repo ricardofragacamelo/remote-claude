@@ -7,6 +7,9 @@ import {
   isConnectionReadyFrame,
   isEnvelope,
   isErrorPayload,
+  isPermissionExtendPayload,
+  isPermissionRequestedFrame,
+  isPermissionResolvePayload,
 } from '../../packages/contracts/src/index.js';
 
 /**
@@ -51,18 +54,51 @@ describe('the generated protocol surface', () => {
     expect(PROTOCOL_VERSION).toBe(1);
   });
 
-  it('lists the frame types of the walking skeleton', () => {
+  it('lists every frame type of the contract', () => {
     expect([...FRAME_TYPES].sort()).toEqual([
       'command.accepted',
       'connection.authenticate',
       'connection.ready',
       'connection.reauthenticate',
+      'diag.ping',
+      'diag.pong',
       'error',
+      'message.completed',
+      'message.delta',
+      'permission.extend',
+      'permission.extended',
+      'permission.requested',
+      'permission.resolve',
+      'permission.resolved',
       'session.attach',
       'session.attached',
-      'session.ping',
-      'session.pong',
+      'session.close',
+      'session.closed',
+      'session.detach',
+      'session.interrupt',
+      'session.prompt',
+      'session.setLocale',
+      'session.setModel',
+      'session.setPermissionMode',
+      'session.start',
+      'session.started',
+      'session.statusChanged',
+      'tool.completed',
+      'tool.progress',
+      'tool.started',
+      'turn.completed',
     ]);
+  });
+
+  /** S-86 — the bootstrap's name is gone, not deprecated alongside the new one. */
+  it('no longer carries the name the bootstrap used', () => {
+    expect(FRAME_TYPES).not.toContain('session.ping');
+    expect(FRAME_TYPES).not.toContain('session.pong');
+  });
+
+  /** S-01 — the command the web client has been sending since the walking skeleton. */
+  it('carries session.detach, the debt the bootstrap left open', () => {
+    expect(FRAME_TYPES).toContain('session.detach');
   });
 });
 
@@ -205,5 +241,162 @@ describe('isErrorPayload', () => {
 
   it('rejects an error with no traceId — nobody could find it in the log', () => {
     expect(isErrorPayload({ code: 'X', messageKey: 'y' })).toBe(false);
+  });
+});
+
+/**
+ * S-03 — `seq` is mandatory on every `event`.
+ *
+ * It is the envelope's own rule, declared as `x-required-when` in the schema and generated into
+ * both the TypeScript guard and the Dart predicate. Replay is built on `seq`: an event without one
+ * is a hole that nothing downstream can detect afterwards, so the contract charges it at the edge
+ * rather than trusting whoever emits.
+ */
+describe('the envelope requires seq on an event, and only on an event', () => {
+  /** @param {Record<string, unknown>} overrides */
+  const eventFrame = (overrides = {}) => ({
+    v: 1,
+    id: '01J',
+    kind: 'event',
+    type: 'diag.pong',
+    ts: 'now',
+    sessionId: 'sess_1',
+    seq: 7,
+    ...overrides,
+  });
+
+  it('accepts an event carrying seq', () => {
+    expect(isEnvelope(eventFrame())).toBe(true);
+  });
+
+  it('rejects an event with no seq', () => {
+    expect(isEnvelope(without(eventFrame(), 'seq'))).toBe(false);
+  });
+
+  it('rejects an event whose seq is not a number', () => {
+    expect(isEnvelope(eventFrame({ seq: '7' }))).toBe(false);
+  });
+
+  it('accepts seq zero, which is a sequence and not an absence', () => {
+    expect(isEnvelope(eventFrame({ seq: 0 }))).toBe(true);
+  });
+
+  it('asks for no seq on an ack', () => {
+    expect(isEnvelope({ v: 1, id: '01J', kind: 'ack', type: 'connection.ready', ts: 'now' })).toBe(
+      true,
+    );
+  });
+
+  it('asks for no seq on a command, a request, a response or an error', () => {
+    for (const kind of ['command', 'request', 'response', 'error']) {
+      expect(isEnvelope({ v: 1, id: '01J', kind, type: 'whatever', ts: 'now' })).toBe(true);
+    }
+  });
+});
+
+/**
+ * S-05 — `reason` is mandatory when the decision is `deny`.
+ *
+ * Conditional in the schema rather than validation scattered across three ends: the reason goes
+ * into the audit trail and back to Claude as a message, and a rule written once per language is a
+ * rule that holds in two of them.
+ */
+describe('isPermissionResolvePayload', () => {
+  it('accepts an allow with no reason', () => {
+    expect(isPermissionResolvePayload({ requestId: 'req_1', decision: 'allow' })).toBe(true);
+  });
+
+  it('accepts a deny carrying its reason', () => {
+    expect(
+      isPermissionResolvePayload({ requestId: 'req_1', decision: 'deny', reason: 'not this path' }),
+    ).toBe(true);
+  });
+
+  it('rejects a deny with no reason', () => {
+    expect(isPermissionResolvePayload({ requestId: 'req_1', decision: 'deny' })).toBe(false);
+  });
+
+  it('rejects a deny whose reason is not a string', () => {
+    expect(isPermissionResolvePayload({ requestId: 'req_1', decision: 'deny', reason: 7 })).toBe(
+      false,
+    );
+  });
+
+  it('rejects a resolution with no requestId — idempotency has nothing to key on', () => {
+    expect(isPermissionResolvePayload({ decision: 'allow' })).toBe(false);
+  });
+
+  it('accepts a scope it has never heard of, like every other enum at runtime', () => {
+    expect(
+      isPermissionResolvePayload({ requestId: 'req_1', decision: 'allow', scope: 'fortnight' }),
+    ).toBe(true);
+  });
+});
+
+/** S-87 — the extend command carries the request and nothing else. */
+describe('isPermissionExtendPayload', () => {
+  it('accepts an extension naming its request', () => {
+    expect(isPermissionExtendPayload({ requestId: 'req_1' })).toBe(true);
+  });
+
+  it('rejects an extension with no requestId', () => {
+    expect(isPermissionExtendPayload({})).toBe(false);
+  });
+
+  it('ignores an increment the client tried to choose — the number is the backend’s', () => {
+    expect(isPermissionExtendPayload({ requestId: 'req_1', byMs: 600_000 })).toBe(true);
+  });
+});
+
+/**
+ * The one `request` that travels server to client. Its `kind` is what the whole protocol was
+ * designed around, so the guard has to hold it apart from an event.
+ */
+describe('isPermissionRequestedFrame', () => {
+  /** @param {Record<string, unknown>} overrides */
+  const requested = (overrides = {}) => ({
+    v: 1,
+    id: '01J',
+    kind: 'request',
+    type: 'permission.requested',
+    ts: 'now',
+    sessionId: 'sess_1',
+    payload: {
+      requestId: 'req_1',
+      toolUseId: 'toolu_1',
+      toolName: 'Bash',
+      title: 'Run shell command',
+      input: { command: 'rm -rf build/' },
+      riskHint: 'destructive',
+      defaultToNo: true,
+      expiresAt: '2026-09-13T12:02:00.000Z',
+    },
+    ...overrides,
+  });
+
+  it('accepts the request as the backend sends it', () => {
+    expect(isPermissionRequestedFrame(requested())).toBe(true);
+  });
+
+  it('needs no seq, because a request is not an event', () => {
+    expect(isPermissionRequestedFrame(requested())).toBe(true);
+  });
+
+  it('rejects it when the deadline is missing — ours is the only timeout there is', () => {
+    const frame = requested();
+    expect(
+      isPermissionRequestedFrame({ ...frame, payload: without(frame.payload, 'expiresAt') }),
+    ).toBe(false);
+  });
+
+  it('rejects it when riskHint is missing, rather than letting the UI guess', () => {
+    const frame = requested();
+    expect(
+      isPermissionRequestedFrame({ ...frame, payload: without(frame.payload, 'riskHint') }),
+    ).toBe(false);
+  });
+
+  it('rejects the same payload sent as an event', () => {
+    expect(isPermissionRequestedFrame(requested({ kind: 'event', seq: 1 }))).toBe(false);
   });
 });

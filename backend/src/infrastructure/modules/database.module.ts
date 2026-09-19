@@ -2,11 +2,15 @@ import { Global, Inject, Injectable, Module } from '@nestjs/common';
 import type { OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import type pg from 'pg';
 
+import { CLOCK } from '@application/shared';
+import type { Clock } from '@domain/shared';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
 import { openDatabase } from '../database/connection';
-import type { DatabaseConnection } from '../database/connection';
+import type { Database, DatabaseConnection } from '../database/connection';
+import { PERSISTENCE_CONTEXT } from '../database/persistence-context';
+import type { PersistenceContext } from '../database/persistence-context';
 import { DATABASE, DATABASE_CONNECTION, DATABASE_POOL } from '../database/database.tokens';
 import { migrate } from '../database/migrator';
 
@@ -56,8 +60,17 @@ export class DatabaseLifecycle implements OnModuleInit, OnApplicationShutdown {
       inject: [DATABASE_CONNECTION],
       useFactory: (connection: DatabaseConnection) => connection.db,
     },
+    {
+      provide: PERSISTENCE_CONTEXT,
+      inject: [DATABASE, CLOCK, LOGGER],
+      useFactory: (db: Database, clock: Clock, logger: Logger): PersistenceContext => ({
+        db,
+        clock,
+        logger,
+      }),
+    },
     DatabaseLifecycle,
   ],
-  exports: [DATABASE, DATABASE_POOL],
+  exports: [DATABASE, DATABASE_POOL, PERSISTENCE_CONTEXT],
 })
 export class DatabaseModule {}

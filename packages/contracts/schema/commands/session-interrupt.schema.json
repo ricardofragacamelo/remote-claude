@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-interrupt.json",
+  "title": "SessionInterrupt",
+  "description": "Interrupts the running turn — `query.interrupt()`. Any connection watching the session may send it.",
+  "x-kind": "command",
+  "x-type": "session.interrupt",
+  "type": "object",
+  "required": ["sessionId"],
+  "properties": { "sessionId": { "type": "string" } }
+}

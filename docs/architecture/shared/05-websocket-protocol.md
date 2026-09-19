@@ -128,14 +128,14 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `session.started` | `{ sessionId, workspacePath, model, permissionMode }` | `system:init` |
 | `session.statusChanged` | `{ status }` — `idle`·`thinking`·`running`·`waitingPermission`·`closed` | derivado |
 | `message.delta` | `{ messageId, delta }` | `stream_event` |
-| `message.completed` | `{ messageId, role, content[] }` | `assistant` / `user` |
+| `message.completed` | `{ messageId, role, content[], promptedBy? }` | `assistant` / `user` |
 | `tool.started` | `{ toolUseId, toolName, input, title? }` | `assistant` (tool_use) |
 | `tool.progress` | `{ toolUseId, chunk }` | `tool_progress` |
-| `tool.completed` | `{ toolUseId, status, summary? }` | `user` (tool_result) |
+| `tool.completed` | `{ toolUseId, status, summary? }` — `succeeded`·`failed`·`denied` | `user` (tool_result) |
 | `permission.requested` | ver abaixo | `canUseTool` |
-| `permission.resolved` | `{ requestId, decision, resolvedBy, auto }` | derivado |
-| `turn.completed` | `{ turnId, usage, costUsd, durationMs }` | `result` |
-| `session.closed` | `{ sessionId, reason }` | fim do generator |
+| `permission.resolved` | `{ requestId, decision, auto, resolvedBy?, resolvedFrom? }` | derivado |
+| `turn.completed` | `{ turnId, usage, costUsd, durationMs, promptedBy? }` | `result` |
+| `session.closed` | `{ sessionId, reason }` — `closedByUser`·`completed`·`failed`·`auditUnavailable`·`shutdown` | fim do generator |
 | `diag.pong` | `{ sessionId, pingedAt, pingCount, nonce }` | resposta do `diag.ping` |
 | `permission.extended` | `{ requestId, expiresAt, remainingExtensions }` | derivado do `permission.extend` |
 | `error` | envelope de erro | qualquer falha |
@@ -149,11 +149,10 @@ inteiro, e o único que não exige subprocesso do Claude. Vive fora do namespace
 propósito — `diag` diz que é diagnóstico, e o nome é o que impede a fatia de virar API pública
 sem dono.
 
-> **Renomeação em trânsito.** O bootstrap entregou o par como `session.ping`/`session.pong`, e é
-> assim que ele está no código das três pontas hoje. O nome acima é o contrato; ele passa a valer
-> na [B-01 do plano 01](../../plans/01-live-session/F0-contract.md), que registra os schemas no
-> namespace novo, e no mobile na mesma entrega — contrato quebrado em uma ponta só é bug.
-> Enquanto a B-01 não fecha, o que roda é o nome antigo.
+O bootstrap entregou o par como `session.ping`/`session.pong`; a renomeação foi feita na
+[B-01 do plano 01](../../plans/01-live-session/F0-contract.md), nas três pontas na mesma entrega.
+O nome antigo **não existe mais** no contrato — não há período de convivência, porque nada havia
+sido construído em cima dele.
 
 ### Estender o prazo é mexer na única proteção que existe
 
@@ -206,12 +205,15 @@ Payload de `permission.requested`:
   "title": "Run shell command",
   "description": "rm -rf build/",
   "input": { "command": "rm -rf build/" },
-  "riskHint": "destructive",      // derivado no backend, para a UI decidir o destaque
+  "riskHint": "destructive",      // read | write | destructive — derivado no backend
   "defaultToNo": true,
-  "suggestions": [ { "scope": "session", "label": "…" } ],
+  "suggestions": [ { "scope": "session", "labelKey": "permission.scope.session" } ],
   "expiresAt": "2026-09-13T12:02:00.000Z"
 }
 ```
+
+`labelKey` e não `label`: o servidor **nunca** manda prosa, nem dentro de uma sugestão. Ver
+[i18n](02-i18n.md).
 
 Resposta:
 
@@ -221,6 +223,9 @@ Resposta:
                "scope": "once",         // once | session | project | always
                "reason": "..." } }      // obrigatório quando decision = deny
 ```
+
+A obrigatoriedade condicional do `reason` é **do schema**, não de validação espalhada pelo
+código — ver [campo obrigatório por condição](#campo-obrigatório-por-condição).
 
 ### Regras não negociáveis
 
@@ -282,8 +287,15 @@ N connections podem observar 1 sessão. Todas recebem **todos** os eventos.
 | Interromper | qualquer uma |
 | Fechar sessão | apenas o dono da sessão |
 
-`resolvedBy` e `promptedBy` sempre identificam o autor, para a UI mostrar "aprovado no
-celular por você há 2 min".
+`resolvedBy` e `promptedBy` identificam o autor, para a UI mostrar "aprovado no celular por você
+há 2 min". Eles viajam **no evento resultante**, não no comando: `promptedBy` em
+`message.completed` (papel `user`) e em `turn.completed`; `resolvedBy` em `permission.resolved`,
+ao lado de `resolvedFrom`, que diz de qual cliente veio a resposta.
+
+A exceção é a decisão automática — prazo vencido, ou regra de escopo `session` que já valia.
+Nela não há autor, e é por isso que `resolvedBy` é obrigatório **apenas quando `auto` é
+`false`**. Turno sem autor visível é pior do que turno com autor "sistema": some a informação de
+que ninguém decidiu aquilo.
 
 ---
 
@@ -295,6 +307,37 @@ celular por você há 2 min".
 - Remover campo, renomear `type` ou mudar semântica **incrementa `v`**.
 - O servidor suporta `v` atual e `v-1` durante uma janela de depreciação (o app publicado na
   loja não atualiza sozinho).
+
+### Campo obrigatório por condição
+
+Duas regras do contrato não são "este campo é obrigatório", e sim "este campo é obrigatório
+**quando**":
+
+| Onde | Regra | Por quê |
+|---|---|---|
+| envelope | `seq` é obrigatório quando `kind` é `event` | replay é construído sobre `seq`; evento sem ele é um buraco que ninguém detecta depois |
+| `permission.resolve` | `reason` é obrigatório quando `decision` é `deny` | a razão vai para a auditoria e volta ao Claude como mensagem |
+| `permission.resolved` | `resolvedBy` é obrigatório quando `auto` é `false` | decisão que um humano tomou tem autor; só a negação automática não tem |
+
+Elas vivem **no schema**, na extensão `x-required-when`, e o gerador as emite nos dois alvos — em
+TypeScript como uma cláusula dentro do guard, em Dart como um predicado ao lado da classe:
+
+```jsonc
+"x-required-when": [
+  { "field": "reason",
+    "when": { "field": "decision", "equals": "deny" },
+    "because": "a razão vai para a auditoria e volta ao Claude como mensagem" }
+]
+```
+
+O `because` é obrigatório: regra que ninguém consegue revisar é regra que ninguém mantém.
+
+**Por que não validar isso em cada ponta.** Uma regra escrita à mão em três linguagens é uma
+regra que vale em duas delas — e a que fica para trás é sempre a que ninguém compila junto. O
+gerador recusa uma condição sobre campo não declarado, sobre campo já obrigatório (nunca
+dispararia) e sem `because`.
+
+---
 
 **Fonte da verdade:** `packages/contracts/`, em JSON Schema.
 TypeScript (backend + web) importa o pacote; **Dart é gerado** a partir do mesmo schema.

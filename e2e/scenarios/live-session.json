@@ -1,0 +1,13 @@
+{
+  "id": "S-76",
+  "title": "authenticate, list the workspaces, open a session, prompt it and read the whole answer",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "text-turn",
+    "statusWhileAnswering": "thinking",
+    "statusWhenDone": "idle"
+  }
+}

@@ -51,7 +51,7 @@ class SessionWsDataSource implements SessionSubscriber {
 
   /// Sends a ping.
   bool ping({String? sessionId, required String nonce}) =>
-      _client.command('session.ping', <String, Object?>{'sessionId': ?sessionId, 'nonce': nonce});
+      _client.command('diag.ping', <String, Object?>{'sessionId': ?sessionId, 'nonce': nonce});
 
   @override
   void onEvent(Envelope frame) => _onFrame(frame);

@@ -150,8 +150,10 @@ depois seria migração em tabela com dado. Ver
 
 A tabela de auditoria foge de duas convenções acima, e foge de propósito.
 
-**Ela tem um sequencial próprio** — `seq bigint`, gerado pelo banco — **além** do `id uuid`. O
-`uuid` continua sendo a PK; o `seq` existe porque a consulta paginada precisa de uma ordenação
+**Ela tem um sequencial próprio** — `seq bigint`, gerado pelo banco — **além** do `id`. O
+identificador continua sendo a PK, e é um ULID em coluna `text` como as outras identidades deste
+schema: ele é cunhado pelo `IdGenerator` do domínio, e um default do banco significaria que é o
+banco quem decide quem é a entrada; o `seq` existe porque a consulta paginada precisa de uma ordenação
 total e monotônica, e `at` não é nenhuma das duas: dois registros caem no mesmo milissegundo, e
 o relógio da máquina do usuário pode ser ajustado para trás. `at` filtra, `seq` ordena. Ver
 [a consulta](03-modules.md#audit).
@@ -162,6 +164,12 @@ o relógio da máquina do usuário pode ser ajustado para trás. `at` filtra, `s
 BEFORE UPDATE → aborta sempre
 BEFORE DELETE → aborta se a linha estiver dentro do piso de retenção (90 dias)
 ```
+
+E um índice único sobre `(session_id, tool_use_id)`: o SDK reentrega uma invocação pendente depois
+de um gap de transporte, e uma segunda linha faria a trilha afirmar que o comando rodou duas
+vezes. Ele é total e não parcial, apoiado no `NULLS DISTINCT` que é o default do PostgreSQL —
+`tool_use_id` é nulo quando o SDK não deu um, duas linhas sem id não colidem, e uma lacuna na
+trilha é pior que uma duplicata.
 
 A trigger vale para **quem quer que** esteja conectado — nenhum papel restrito, nenhuma segunda
 string de conexão. É o que torna o append-only uma propriedade do banco em vez de uma promessa

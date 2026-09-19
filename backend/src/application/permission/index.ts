@@ -1,0 +1,23 @@
+/** Public surface of the `permission` use cases. */
+export { PermissionRegistry } from './permission-registry';
+export { answerableRequest } from './answerable-request';
+export type { Answerer } from './answerable-request';
+export { PermissionDeadlines } from './permission-deadlines';
+export type { DeadlineFailureReporter } from './permission-deadlines';
+export { PermissionSettlement } from './settle-permission';
+export type { SettlementOptions } from './settle-permission';
+export type { PermissionSettings } from './permission-settings';
+export { RequestPermissionUseCase } from './request-permission.use-case';
+export type { PermissionOutcome } from './request-permission.use-case';
+export { ResolvePermissionUseCase } from './resolve-permission.use-case';
+export { ExtendPermissionUseCase } from './extend-permission.use-case';
+export type { ExtendPermissionCommand } from './extend-permission.use-case';
+export { EndSessionPermissionsUseCase } from './end-session-permissions.use-case';
+export type { RequestPermissionCommand } from './commands/request-permission.command';
+export type { ResolvePermissionCommand } from './commands/resolve-permission.command';
+export type { PermissionBroadcaster, PermissionFrame } from './ports/permission-broadcaster.port';
+export { PERMISSION_BROADCASTER } from './ports/permission-broadcaster.port';
+export type { PermissionEvents, PermissionResolvedEvent } from './ports/permission-events.port';
+export { PERMISSION_EVENTS } from './ports/permission-events.port';
+export type { PermissionRequestRepository } from './ports/permission-request.repository';
+export { PERMISSION_REQUEST_REPOSITORY } from './ports/permission-request.repository';

@@ -11,10 +11,32 @@ export const FRAME_TYPES = [
   'session.attached',
   'connection.authenticate',
   'connection.reauthenticate',
+  'diag.ping',
+  'permission.extend',
   'session.attach',
-  'session.ping',
+  'session.close',
+  'session.detach',
+  'session.interrupt',
+  'session.prompt',
+  'session.setLocale',
+  'session.setModel',
+  'session.setPermissionMode',
+  'session.start',
+  'diag.pong',
   'error',
-  'session.pong',
+  'message.completed',
+  'message.delta',
+  'permission.extended',
+  'permission.requested',
+  'permission.resolved',
+  'session.closed',
+  'session.started',
+  'session.statusChanged',
+  'tool.completed',
+  'tool.progress',
+  'tool.started',
+  'turn.completed',
+  'permission.resolve',
 ] as const;
 
 /** Shape shared by every frame, in both directions. See docs/architecture/shared/05-websocket-protocol.md. */
@@ -94,6 +116,20 @@ export interface ConnectionReauthenticatePayload {
   readonly token: string;
 }
 
+/** Diagnostics of the gateway: it crosses every layer without touching the Agent SDK, and is the only smoke test that needs no Claude subprocess. It lives outside the session namespace on purpose — `diag` says it is diagnostics, which is what keeps the slice from becoming a public API with no owner. Omitting `sessionId` opens a session; sending one pings that session. */
+export interface DiagPingPayload {
+  /** Session to ping. Absent opens a new one, and the pong carries the id it got. */
+  readonly sessionId?: string;
+  /** Echoed back in the pong, so a client can tell its own round trip from someone else's on the same session. */
+  readonly nonce: string;
+}
+
+/** Extends the deadline of a pending permission request. The payload carries **only** the request: the increment and the ceiling come from the backend configuration, because our timeout is the only protection against a hung session and the client does not get to choose that number. Idempotent by `requestId` — web and phone may both extend the same request. */
+export interface PermissionExtendPayload {
+  /** The pending request to extend. */
+  readonly requestId: string;
+}
+
 /** Starts observing a session. On a reconnect it also asks for the events missed while the socket was down. */
 export interface SessionAttachPayload {
   /** Session to observe. */
@@ -102,11 +138,77 @@ export interface SessionAttachPayload {
   readonly resumeFromSeq?: number;
 }
 
-/** The vertical slice of the bootstrap: it crosses every layer without touching the Agent SDK. Omitting `sessionId` opens a session; sending one pings that session. */
-export interface SessionPingPayload {
-  /** Session to ping. Absent opens a new one, and the pong carries the id it got. */
-  readonly sessionId?: string;
-  /** Echoed back in the pong, so a client can tell its own round trip from someone else's on the same session. */
+/** Ends the session and releases its subprocess. Unlike every other command of the session, only the owner may send it. */
+export interface SessionClosePayload {
+  readonly sessionId: string;
+}
+
+/** Stops observing a session. The counterpart of `session.attach`: without it, a client that moved on keeps receiving a stream it no longer shows. */
+export interface SessionDetachPayload {
+  /** Session to stop observing. */
+  readonly sessionId: string;
+}
+
+/** Interrupts the running turn — `query.interrupt()`. Any connection watching the session may send it. */
+export interface SessionInterruptPayload {
+  readonly sessionId: string;
+}
+
+export interface SessionPromptPayloadAttachmentsItem {
+  /** Path inside the session's workspace. */
+  readonly path: string;
+  readonly mediaType?: string;
+}
+
+/** Sends one turn. A prompt that arrives while a turn is running is **queued** and runs next, the way the Claude Code UI does it — it is never refused. */
+export interface SessionPromptPayload {
+  readonly sessionId: string;
+  /** What the user typed. */
+  readonly text: string;
+  /** Files carried with the prompt. */
+  readonly attachments?: readonly SessionPromptPayloadAttachmentsItem[];
+}
+
+/** Changes the language of **this connection**, not of the user. A phone in Portuguese and a browser in English watch the same session at the same time. */
+export interface SessionSetLocalePayload {
+  /** Language of this connection. */
+  readonly locale: 'en' | 'pt-BR';
+}
+
+/** Changes the model of a running session. */
+export interface SessionSetModelPayload {
+  readonly sessionId: string;
+  /** Model identifier, as the Agent SDK names it. */
+  readonly model: string;
+}
+
+/** Changes the permission mode of a running session. */
+export interface SessionSetPermissionModePayload {
+  readonly sessionId: string;
+  /** The mode to switch to. */
+  readonly mode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+}
+
+/** Opens a session on a workspace. The path is checked against the allowlist before anything else happens — it is the first line of defence, not a hint. */
+export interface SessionStartPayload {
+  /** Absolute path of the workspace. Outside the allowlist it is refused with WORKSPACE_NOT_ALLOWED, and a root that exists but belongs to someone else answers 404, never 403. */
+  readonly workspacePath: string;
+  /** Model to open with. Absent means the server default. */
+  readonly model?: string;
+  /** Permission mode to open with. Absent means the server default. */
+  readonly permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+  /** Session of the Agent SDK to resume instead of starting fresh. */
+  readonly resumeSessionId?: string;
+}
+
+/** Result of `diag.ping`, carrying the `seq` the hub assigned. Like every event it is fanned out to every connection observing the session, not only to the one that asked. */
+export interface DiagPongPayload {
+  readonly sessionId: string;
+  /** ISO 8601 instant in UTC, read from the server clock. */
+  readonly pingedAt: string;
+  /** How many times this session has been pinged, counting this one. */
+  readonly pingCount: number;
+  /** Echo of the nonce the command carried. */
   readonly nonce: string;
 }
 
@@ -131,18 +233,161 @@ export interface ErrorPayload {
   readonly details?: readonly ErrorPayloadDetailsItem[];
 }
 
-/** Result of `session.ping`, carrying the `seq` the hub assigned. Like every event it is fanned out to every connection observing the session, not only to the one that asked. */
-export interface SessionPongPayload {
-  readonly sessionId: string;
-  /** ISO 8601 instant in UTC, read from the server clock. */
-  readonly pingedAt: string;
-  /** How many times this session has been pinged, counting this one. */
-  readonly pingCount: number;
-  /** Echo of the nonce the command carried. */
-  readonly nonce: string;
+export interface MessageCompletedPayloadContentItem {
+  /** Block kind — `text`, `tool_use`, `tool_result` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped. */
+  readonly type: string;
+  readonly text?: string;
+  readonly toolUseId?: string;
 }
 
-/** Whether `value` carries every required field of {@link Envelope}. Unknown fields are accepted. */
+/** A message is finished, with its content as blocks. It supersedes whatever the deltas of the same `messageId` accumulated — a client that missed a delta is made whole here. */
+export interface MessageCompletedPayload {
+  readonly messageId: string;
+  readonly role: 'assistant' | 'user';
+  /** Who sent it, on a `user` message. It is what lets the UI say "you sent this from your phone" instead of showing an authorless turn. */
+  readonly promptedBy?: string;
+  /** The blocks of the message, in order. */
+  readonly content: readonly MessageCompletedPayloadContentItem[];
+}
+
+/** A fragment of the assistant's answer, from the SDK's `stream_event`. The client accumulates by `messageId`; it never concatenates blindly in arrival order. */
+export interface MessageDeltaPayload {
+  /** What the fragments of one message are grouped by. */
+  readonly messageId: string;
+  /** The text of this fragment, and only of this one. */
+  readonly delta: string;
+}
+
+/** The deadline of a pending request moved. Fanned out to every connection, because the phone and the browser are looking at the same countdown. */
+export interface PermissionExtendedPayload {
+  readonly requestId: string;
+  /** The new deadline, ISO 8601 in UTC. */
+  readonly expiresAt: string;
+  /** How many extensions are left before the configured ceiling. It is what stops the UI promising an extension that no longer exists. */
+  readonly remainingExtensions: number;
+}
+
+export interface PermissionRequestedPayloadSuggestionsItem {
+  readonly scope: 'once' | 'session' | 'project' | 'always';
+  /** An i18n key. The server never sends prose. */
+  readonly labelKey: string;
+}
+
+/** The one `request` that travels server to client, and the reason the whole protocol is a socket instead of a stream: `canUseTool` has blocked the agent loop and it stays blocked until somebody answers or the deadline passes. Answered with the `permission.resolve` response. */
+export interface PermissionRequestedPayload {
+  /** Idempotency is by **this** field, never by `toolUseId`. */
+  readonly requestId: string;
+  /** The invocation this request is about, tying it to the `tool.started` already on screen. */
+  readonly toolUseId: string;
+  readonly toolName: string;
+  /** Short label of what is being asked, derived by the backend. */
+  readonly title: string;
+  /** The detail a human needs to decide — the command line, the path being written. */
+  readonly description?: string;
+  /** The exact input the tool would run with. What is shown is what executes. */
+  readonly input: Readonly<Record<string, unknown>>;
+  /** Derived in the backend, by a per-tool list **plus** a heuristic over the input, and it fails closed: a command the heuristic does not recognise is marked `destructive`. A false positive is an annoyance; a false negative is the accident. */
+  readonly riskHint: 'read' | 'write' | 'destructive';
+  /** The UI pre-selects refusal. Silence never authorises. */
+  readonly defaultToNo: boolean;
+  /** When the request is denied automatically, ISO 8601 in UTC. Ours is the only timeout there is — the CLI imposes none. */
+  readonly expiresAt: string;
+  /** Scopes the UI may offer beyond a one-off yes. */
+  readonly suggestions?: readonly PermissionRequestedPayloadSuggestionsItem[];
+}
+
+/** A permission request is settled. It reaches **every** connection, including the one that answered — that is how a second client learns it lost the race, and who won it. */
+export interface PermissionResolvedPayload {
+  /** The request that was settled. A client matches it against the card it is showing, never against `toolUseId`. */
+  readonly requestId: string;
+  /** What was decided. First answer wins, so this is the decision that reached `canUseTool`, not necessarily the one this client sent. */
+  readonly decision: 'allow' | 'deny';
+  /** The server decided it, with nobody answering — the deadline passed, or a session-scoped rule matched. Silence never authorises, so an automatic decision is always `deny` unless a rule allowed it. */
+  readonly auto: boolean;
+  /** Who answered. Required whenever `auto` is false, so "approved on your phone 2 min ago" is something the UI can actually say. */
+  readonly resolvedBy?: string;
+  /** Which client answered. */
+  readonly resolvedFrom?: 'web' | 'mobile';
+}
+
+/** The session ended and its subprocess is gone. The replay buffer **survives** this event — opening a closed session shows the terminal state plus whatever the ring still holds, labelled as partial. */
+export interface SessionClosedPayload {
+  readonly sessionId: string;
+  /** Why it ended. `auditUnavailable` is the second consecutive audit write failure — a session that cannot be recorded does not keep running. */
+  readonly reason: 'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown';
+}
+
+/** The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` — an SDKMessage is never emitted raw (ADR-006). */
+export interface SessionStartedPayload {
+  readonly sessionId: string;
+  /** The workspace the session runs in, already normalised and already inside the allowlist. */
+  readonly workspacePath: string;
+  readonly model: string;
+  readonly permissionMode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+}
+
+/** Where the session stands. Derived by us, not read off a single SDK message. */
+export interface SessionStatusChangedPayload {
+  /** `waitingPermission` is the one that matters: the agent loop is blocked on a human. */
+  readonly status: 'idle' | 'thinking' | 'running' | 'waitingPermission' | 'closed';
+}
+
+/** A tool invocation ended, from the `tool_result` the SDK reports on a `user` message. */
+export interface ToolCompletedPayload {
+  readonly toolUseId: string;
+  /** `denied` is not a failure of the tool: it is a human having said no, and the UI reads the two differently. */
+  readonly status: 'succeeded' | 'failed' | 'denied';
+  /** A short result for the timeline. The full output is the transcript's job, not this event's. */
+  readonly summary?: string;
+}
+
+/** Output of a tool while it is still running, from the SDK's `tool_progress`. */
+export interface ToolProgressPayload {
+  readonly toolUseId: string;
+  /** This fragment of the output, and only this one. */
+  readonly chunk: string;
+}
+
+/** A tool invocation began. Emitted for **every** tool, including the ones no human was asked about — the audit trail is anchored on the same hook, for exactly that reason (ADR-011). */
+export interface ToolStartedPayload {
+  /** The SDK's id for this invocation. It is what ties started, progress and completed together. */
+  readonly toolUseId: string;
+  readonly toolName: string;
+  /** The exact input the tool was called with. */
+  readonly input: Readonly<Record<string, unknown>>;
+  /** A short human label for the invocation, already derived by the backend. */
+  readonly title?: string;
+}
+
+/** A turn finished, from the SDK's `result`. It is what closes the turn in the UI and what carries its cost. */
+export interface TurnCompletedPayload {
+  readonly turnId: string;
+  /** Who sent the prompt this turn answered. */
+  readonly promptedBy?: string;
+  /** Token counts as the SDK reports them. An open map on purpose — the SDK adds fields to it, and a closed shape here would drop them. */
+  readonly usage: Readonly<Record<string, unknown>>;
+  /** Cost of the turn, as a decimal string. A string and not a number because money through a float is money that rounds where nobody looked. */
+  readonly costUsd: string;
+  readonly durationMs: number;
+}
+
+/** The answer to `permission.requested`, carrying its `id` in `correlationId`. Resolving the same `requestId` twice is a silent ack and **one** execution, never an error and never a double run — several clients watch one session, and a client may resend after reconnecting. */
+export interface PermissionResolvePayload {
+  /** The request being answered. Idempotency keys on it, so resending after a reconnect costs nothing. */
+  readonly requestId: string;
+  /** Yes or no. There is no third value: silence is handled by the deadline, and it denies. */
+  readonly decision: 'allow' | 'deny';
+  /** How far the decision reaches. Absent means `once`. Only `once` and `session` exist in this plan — `project` and `always` are persisted rules, and they arrive with the rules module. */
+  readonly scope?: 'once' | 'session' | 'project' | 'always';
+  /** Why it was refused. Required whenever `decision` is `deny` — the schema carries the condition, so no end has to remember it. */
+  readonly reason?: string;
+}
+
+/**
+ * Whether `value` carries every required field of {@link Envelope}. Unknown fields are accepted.
+ *
+ * `seq` is also required when `kind` is `event` — replay is built on `seq`, and an event without one is a hole nobody can detect afterwards, so the schema is what charges it rather than the goodwill of whoever emits.
+ */
 export function isEnvelope(value: unknown): value is Envelope {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -155,11 +400,14 @@ export function isEnvelope(value: unknown): value is Envelope {
     typeof record['id'] !== 'string' ||
     typeof record['kind'] !== 'string' ||
     typeof record['type'] !== 'string' ||
-    typeof record['ts'] !== 'string'
+    typeof record['ts'] !== 'string' ||
+    (record['kind'] === 'event' && typeof record['seq'] !== 'number')
   );
 }
 
-/** Whether `value` carries every required field of {@link CommandAcceptedPayload}. Unknown fields are accepted. */
+/**
+ * Whether `value` carries every required field of {@link CommandAcceptedPayload}. Unknown fields are accepted.
+ */
 export function isCommandAcceptedPayload(value: unknown): value is CommandAcceptedPayload {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -172,7 +420,9 @@ export function isCommandAcceptedPayload(value: unknown): value is CommandAccept
   );
 }
 
-/** Whether `value` carries every required field of {@link ConnectionReadyPayloadLimits}. Unknown fields are accepted. */
+/**
+ * Whether `value` carries every required field of {@link ConnectionReadyPayloadLimits}. Unknown fields are accepted.
+ */
 export function isConnectionReadyPayloadLimits(value: unknown): value is ConnectionReadyPayloadLimits {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -186,7 +436,9 @@ export function isConnectionReadyPayloadLimits(value: unknown): value is Connect
   );
 }
 
-/** Whether `value` carries every required field of {@link ConnectionReadyPayload}. Unknown fields are accepted. */
+/**
+ * Whether `value` carries every required field of {@link ConnectionReadyPayload}. Unknown fields are accepted.
+ */
 export function isConnectionReadyPayload(value: unknown): value is ConnectionReadyPayload {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -201,7 +453,9 @@ export function isConnectionReadyPayload(value: unknown): value is ConnectionRea
   );
 }
 
-/** Whether `value` carries every required field of {@link SessionAttachedPayload}. Unknown fields are accepted. */
+/**
+ * Whether `value` carries every required field of {@link SessionAttachedPayload}. Unknown fields are accepted.
+ */
 export function isSessionAttachedPayload(value: unknown): value is SessionAttachedPayload {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -217,7 +471,9 @@ export function isSessionAttachedPayload(value: unknown): value is SessionAttach
   );
 }
 
-/** Whether `value` carries every required field of {@link ConnectionAuthenticatePayloadClient}. Unknown fields are accepted. */
+/**
+ * Whether `value` carries every required field of {@link ConnectionAuthenticatePayloadClient}. Unknown fields are accepted.
+ */
 export function isConnectionAuthenticatePayloadClient(value: unknown): value is ConnectionAuthenticatePayloadClient {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -231,7 +487,9 @@ export function isConnectionAuthenticatePayloadClient(value: unknown): value is 
   );
 }
 
-/** Whether `value` carries every required field of {@link ConnectionAuthenticatePayload}. Unknown fields are accepted. */
+/**
+ * Whether `value` carries every required field of {@link ConnectionAuthenticatePayload}. Unknown fields are accepted.
+ */
 export function isConnectionAuthenticatePayload(value: unknown): value is ConnectionAuthenticatePayload {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -246,7 +504,9 @@ export function isConnectionAuthenticatePayload(value: unknown): value is Connec
   );
 }
 
-/** Whether `value` carries every required field of {@link ConnectionReauthenticatePayload}. Unknown fields are accepted. */
+/**
+ * Whether `value` carries every required field of {@link ConnectionReauthenticatePayload}. Unknown fields are accepted.
+ */
 export function isConnectionReauthenticatePayload(value: unknown): value is ConnectionReauthenticatePayload {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -259,7 +519,39 @@ export function isConnectionReauthenticatePayload(value: unknown): value is Conn
   );
 }
 
-/** Whether `value` carries every required field of {@link SessionAttachPayload}. Unknown fields are accepted. */
+/**
+ * Whether `value` carries every required field of {@link DiagPingPayload}. Unknown fields are accepted.
+ */
+export function isDiagPingPayload(value: unknown): value is DiagPingPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['nonce'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionExtendPayload}. Unknown fields are accepted.
+ */
+export function isPermissionExtendPayload(value: unknown): value is PermissionExtendPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['requestId'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionAttachPayload}. Unknown fields are accepted.
+ */
 export function isSessionAttachPayload(value: unknown): value is SessionAttachPayload {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -272,8 +564,10 @@ export function isSessionAttachPayload(value: unknown): value is SessionAttachPa
   );
 }
 
-/** Whether `value` carries every required field of {@link SessionPingPayload}. Unknown fields are accepted. */
-export function isSessionPingPayload(value: unknown): value is SessionPingPayload {
+/**
+ * Whether `value` carries every required field of {@link SessionClosePayload}. Unknown fields are accepted.
+ */
+export function isSessionClosePayload(value: unknown): value is SessionClosePayload {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -281,11 +575,154 @@ export function isSessionPingPayload(value: unknown): value is SessionPingPayloa
   const record = value as Readonly<Record<string, unknown>>;
 
   return !(
+    typeof record['sessionId'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionDetachPayload}. Unknown fields are accepted.
+ */
+export function isSessionDetachPayload(value: unknown): value is SessionDetachPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['sessionId'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionInterruptPayload}. Unknown fields are accepted.
+ */
+export function isSessionInterruptPayload(value: unknown): value is SessionInterruptPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['sessionId'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionPromptPayloadAttachmentsItem}. Unknown fields are accepted.
+ */
+export function isSessionPromptPayloadAttachmentsItem(value: unknown): value is SessionPromptPayloadAttachmentsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['path'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionPromptPayload}. Unknown fields are accepted.
+ */
+export function isSessionPromptPayload(value: unknown): value is SessionPromptPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['sessionId'] !== 'string' ||
+    typeof record['text'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionSetLocalePayload}. Unknown fields are accepted.
+ */
+export function isSessionSetLocalePayload(value: unknown): value is SessionSetLocalePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['locale'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionSetModelPayload}. Unknown fields are accepted.
+ */
+export function isSessionSetModelPayload(value: unknown): value is SessionSetModelPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['sessionId'] !== 'string' ||
+    typeof record['model'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionSetPermissionModePayload}. Unknown fields are accepted.
+ */
+export function isSessionSetPermissionModePayload(value: unknown): value is SessionSetPermissionModePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['sessionId'] !== 'string' ||
+    typeof record['mode'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionStartPayload}. Unknown fields are accepted.
+ */
+export function isSessionStartPayload(value: unknown): value is SessionStartPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['workspacePath'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link DiagPongPayload}. Unknown fields are accepted.
+ */
+export function isDiagPongPayload(value: unknown): value is DiagPongPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['sessionId'] !== 'string' ||
+    typeof record['pingedAt'] !== 'string' ||
+    typeof record['pingCount'] !== 'number' ||
     typeof record['nonce'] !== 'string'
   );
 }
 
-/** Whether `value` carries every required field of {@link ErrorPayloadDetailsItem}. Unknown fields are accepted. */
+/**
+ * Whether `value` carries every required field of {@link ErrorPayloadDetailsItem}. Unknown fields are accepted.
+ */
 export function isErrorPayloadDetailsItem(value: unknown): value is ErrorPayloadDetailsItem {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -299,7 +736,9 @@ export function isErrorPayloadDetailsItem(value: unknown): value is ErrorPayload
   );
 }
 
-/** Whether `value` carries every required field of {@link ErrorPayload}. Unknown fields are accepted. */
+/**
+ * Whether `value` carries every required field of {@link ErrorPayload}. Unknown fields are accepted.
+ */
 export function isErrorPayload(value: unknown): value is ErrorPayload {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -314,8 +753,133 @@ export function isErrorPayload(value: unknown): value is ErrorPayload {
   );
 }
 
-/** Whether `value` carries every required field of {@link SessionPongPayload}. Unknown fields are accepted. */
-export function isSessionPongPayload(value: unknown): value is SessionPongPayload {
+/**
+ * Whether `value` carries every required field of {@link MessageCompletedPayloadContentItem}. Unknown fields are accepted.
+ */
+export function isMessageCompletedPayloadContentItem(value: unknown): value is MessageCompletedPayloadContentItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['type'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link MessageCompletedPayload}. Unknown fields are accepted.
+ */
+export function isMessageCompletedPayload(value: unknown): value is MessageCompletedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['messageId'] !== 'string' ||
+    typeof record['role'] !== 'string' ||
+    !Array.isArray(record['content'])
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link MessageDeltaPayload}. Unknown fields are accepted.
+ */
+export function isMessageDeltaPayload(value: unknown): value is MessageDeltaPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['messageId'] !== 'string' ||
+    typeof record['delta'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionExtendedPayload}. Unknown fields are accepted.
+ */
+export function isPermissionExtendedPayload(value: unknown): value is PermissionExtendedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['requestId'] !== 'string' ||
+    typeof record['expiresAt'] !== 'string' ||
+    typeof record['remainingExtensions'] !== 'number'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRequestedPayloadSuggestionsItem}. Unknown fields are accepted.
+ */
+export function isPermissionRequestedPayloadSuggestionsItem(value: unknown): value is PermissionRequestedPayloadSuggestionsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['scope'] !== 'string' ||
+    typeof record['labelKey'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRequestedPayload}. Unknown fields are accepted.
+ */
+export function isPermissionRequestedPayload(value: unknown): value is PermissionRequestedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['requestId'] !== 'string' ||
+    typeof record['toolUseId'] !== 'string' ||
+    typeof record['toolName'] !== 'string' ||
+    typeof record['title'] !== 'string' ||
+    typeof record['input'] !== 'object' || record['input'] === null ||
+    typeof record['riskHint'] !== 'string' ||
+    typeof record['defaultToNo'] !== 'boolean' ||
+    typeof record['expiresAt'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionResolvedPayload}. Unknown fields are accepted.
+ *
+ * `resolvedBy` is also required when `auto` is `false` — a decision a human made has an author; only the automatic deny has none.
+ */
+export function isPermissionResolvedPayload(value: unknown): value is PermissionResolvedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['requestId'] !== 'string' ||
+    typeof record['decision'] !== 'string' ||
+    typeof record['auto'] !== 'boolean' ||
+    (record['auto'] === false && typeof record['resolvedBy'] !== 'string')
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionClosedPayload}. Unknown fields are accepted.
+ */
+export function isSessionClosedPayload(value: unknown): value is SessionClosedPayload {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -324,9 +888,126 @@ export function isSessionPongPayload(value: unknown): value is SessionPongPayloa
 
   return !(
     typeof record['sessionId'] !== 'string' ||
-    typeof record['pingedAt'] !== 'string' ||
-    typeof record['pingCount'] !== 'number' ||
-    typeof record['nonce'] !== 'string'
+    typeof record['reason'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionStartedPayload}. Unknown fields are accepted.
+ */
+export function isSessionStartedPayload(value: unknown): value is SessionStartedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['sessionId'] !== 'string' ||
+    typeof record['workspacePath'] !== 'string' ||
+    typeof record['model'] !== 'string' ||
+    typeof record['permissionMode'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionStatusChangedPayload}. Unknown fields are accepted.
+ */
+export function isSessionStatusChangedPayload(value: unknown): value is SessionStatusChangedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['status'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link ToolCompletedPayload}. Unknown fields are accepted.
+ */
+export function isToolCompletedPayload(value: unknown): value is ToolCompletedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['toolUseId'] !== 'string' ||
+    typeof record['status'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link ToolProgressPayload}. Unknown fields are accepted.
+ */
+export function isToolProgressPayload(value: unknown): value is ToolProgressPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['toolUseId'] !== 'string' ||
+    typeof record['chunk'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link ToolStartedPayload}. Unknown fields are accepted.
+ */
+export function isToolStartedPayload(value: unknown): value is ToolStartedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['toolUseId'] !== 'string' ||
+    typeof record['toolName'] !== 'string' ||
+    typeof record['input'] !== 'object' || record['input'] === null
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link TurnCompletedPayload}. Unknown fields are accepted.
+ */
+export function isTurnCompletedPayload(value: unknown): value is TurnCompletedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['turnId'] !== 'string' ||
+    typeof record['usage'] !== 'object' || record['usage'] === null ||
+    typeof record['costUsd'] !== 'string' ||
+    typeof record['durationMs'] !== 'number'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionResolvePayload}. Unknown fields are accepted.
+ *
+ * `reason` is also required when `decision` is `deny` — the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from.
+ */
+export function isPermissionResolvePayload(value: unknown): value is PermissionResolvePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['requestId'] !== 'string' ||
+    typeof record['decision'] !== 'string' ||
+    (record['decision'] === 'deny' && typeof record['reason'] !== 'string')
   );
 }
 
@@ -430,6 +1111,46 @@ export function isConnectionReauthenticateFrame(value: unknown): value is Connec
   );
 }
 
+/** Diagnostics of the gateway: it crosses every layer without touching the Agent SDK, and is the only smoke test that needs no Claude subprocess. It lives outside the session namespace on purpose — `diag` says it is diagnostics, which is what keeps the slice from becoming a public API with no owner. Omitting `sessionId` opens a session; sending one pings that session. */
+export interface DiagPingFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'diag.ping';
+  readonly payload: DiagPingPayload;
+}
+
+/** Whether `value` is a {@link DiagPingFrame}. */
+export function isDiagPingFrame(value: unknown): value is DiagPingFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'diag.ping' &&
+    isDiagPingPayload(value.payload)
+  );
+}
+
+/** Extends the deadline of a pending permission request. The payload carries **only** the request: the increment and the ceiling come from the backend configuration, because our timeout is the only protection against a hung session and the client does not get to choose that number. Idempotent by `requestId` — web and phone may both extend the same request. */
+export interface PermissionExtendFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'permission.extend';
+  readonly payload: PermissionExtendPayload;
+}
+
+/** Whether `value` is a {@link PermissionExtendFrame}. */
+export function isPermissionExtendFrame(value: unknown): value is PermissionExtendFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'permission.extend' &&
+    isPermissionExtendPayload(value.payload)
+  );
+}
+
 /** Starts observing a session. On a reconnect it also asks for the events missed while the socket was down. */
 export interface SessionAttachFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'command';
@@ -450,23 +1171,183 @@ export function isSessionAttachFrame(value: unknown): value is SessionAttachFram
   );
 }
 
-/** The vertical slice of the bootstrap: it crosses every layer without touching the Agent SDK. Omitting `sessionId` opens a session; sending one pings that session. */
-export interface SessionPingFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+/** Ends the session and releases its subprocess. Unlike every other command of the session, only the owner may send it. */
+export interface SessionCloseFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'command';
-  readonly type: 'session.ping';
-  readonly payload: SessionPingPayload;
+  readonly type: 'session.close';
+  readonly payload: SessionClosePayload;
 }
 
-/** Whether `value` is a {@link SessionPingFrame}. */
-export function isSessionPingFrame(value: unknown): value is SessionPingFrame {
+/** Whether `value` is a {@link SessionCloseFrame}. */
+export function isSessionCloseFrame(value: unknown): value is SessionCloseFrame {
   if (!isEnvelope(value)) {
     return false;
   }
 
   return (
     value.kind === 'command' &&
-    value.type === 'session.ping' &&
-    isSessionPingPayload(value.payload)
+    value.type === 'session.close' &&
+    isSessionClosePayload(value.payload)
+  );
+}
+
+/** Stops observing a session. The counterpart of `session.attach`: without it, a client that moved on keeps receiving a stream it no longer shows. */
+export interface SessionDetachFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.detach';
+  readonly payload: SessionDetachPayload;
+}
+
+/** Whether `value` is a {@link SessionDetachFrame}. */
+export function isSessionDetachFrame(value: unknown): value is SessionDetachFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.detach' &&
+    isSessionDetachPayload(value.payload)
+  );
+}
+
+/** Interrupts the running turn — `query.interrupt()`. Any connection watching the session may send it. */
+export interface SessionInterruptFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.interrupt';
+  readonly payload: SessionInterruptPayload;
+}
+
+/** Whether `value` is a {@link SessionInterruptFrame}. */
+export function isSessionInterruptFrame(value: unknown): value is SessionInterruptFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.interrupt' &&
+    isSessionInterruptPayload(value.payload)
+  );
+}
+
+/** Sends one turn. A prompt that arrives while a turn is running is **queued** and runs next, the way the Claude Code UI does it — it is never refused. */
+export interface SessionPromptFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.prompt';
+  readonly payload: SessionPromptPayload;
+}
+
+/** Whether `value` is a {@link SessionPromptFrame}. */
+export function isSessionPromptFrame(value: unknown): value is SessionPromptFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.prompt' &&
+    isSessionPromptPayload(value.payload)
+  );
+}
+
+/** Changes the language of **this connection**, not of the user. A phone in Portuguese and a browser in English watch the same session at the same time. */
+export interface SessionSetLocaleFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.setLocale';
+  readonly payload: SessionSetLocalePayload;
+}
+
+/** Whether `value` is a {@link SessionSetLocaleFrame}. */
+export function isSessionSetLocaleFrame(value: unknown): value is SessionSetLocaleFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.setLocale' &&
+    isSessionSetLocalePayload(value.payload)
+  );
+}
+
+/** Changes the model of a running session. */
+export interface SessionSetModelFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.setModel';
+  readonly payload: SessionSetModelPayload;
+}
+
+/** Whether `value` is a {@link SessionSetModelFrame}. */
+export function isSessionSetModelFrame(value: unknown): value is SessionSetModelFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.setModel' &&
+    isSessionSetModelPayload(value.payload)
+  );
+}
+
+/** Changes the permission mode of a running session. */
+export interface SessionSetPermissionModeFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.setPermissionMode';
+  readonly payload: SessionSetPermissionModePayload;
+}
+
+/** Whether `value` is a {@link SessionSetPermissionModeFrame}. */
+export function isSessionSetPermissionModeFrame(value: unknown): value is SessionSetPermissionModeFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.setPermissionMode' &&
+    isSessionSetPermissionModePayload(value.payload)
+  );
+}
+
+/** Opens a session on a workspace. The path is checked against the allowlist before anything else happens — it is the first line of defence, not a hint. */
+export interface SessionStartFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.start';
+  readonly payload: SessionStartPayload;
+}
+
+/** Whether `value` is a {@link SessionStartFrame}. */
+export function isSessionStartFrame(value: unknown): value is SessionStartFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.start' &&
+    isSessionStartPayload(value.payload)
+  );
+}
+
+/** Result of `diag.ping`, carrying the `seq` the hub assigned. Like every event it is fanned out to every connection observing the session, not only to the one that asked. */
+export interface DiagPongFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'diag.pong';
+  readonly payload: DiagPongPayload;
+}
+
+/** Whether `value` is a {@link DiagPongFrame}. */
+export function isDiagPongFrame(value: unknown): value is DiagPongFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'diag.pong' &&
+    isDiagPongPayload(value.payload)
   );
 }
 
@@ -490,22 +1371,262 @@ export function isErrorFrame(value: unknown): value is ErrorFrame {
   );
 }
 
-/** Result of `session.ping`, carrying the `seq` the hub assigned. Like every event it is fanned out to every connection observing the session, not only to the one that asked. */
-export interface SessionPongFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+/** A message is finished, with its content as blocks. It supersedes whatever the deltas of the same `messageId` accumulated — a client that missed a delta is made whole here. */
+export interface MessageCompletedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'event';
-  readonly type: 'session.pong';
-  readonly payload: SessionPongPayload;
+  readonly type: 'message.completed';
+  readonly payload: MessageCompletedPayload;
 }
 
-/** Whether `value` is a {@link SessionPongFrame}. */
-export function isSessionPongFrame(value: unknown): value is SessionPongFrame {
+/** Whether `value` is a {@link MessageCompletedFrame}. */
+export function isMessageCompletedFrame(value: unknown): value is MessageCompletedFrame {
   if (!isEnvelope(value)) {
     return false;
   }
 
   return (
     value.kind === 'event' &&
-    value.type === 'session.pong' &&
-    isSessionPongPayload(value.payload)
+    value.type === 'message.completed' &&
+    isMessageCompletedPayload(value.payload)
+  );
+}
+
+/** A fragment of the assistant's answer, from the SDK's `stream_event`. The client accumulates by `messageId`; it never concatenates blindly in arrival order. */
+export interface MessageDeltaFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'message.delta';
+  readonly payload: MessageDeltaPayload;
+}
+
+/** Whether `value` is a {@link MessageDeltaFrame}. */
+export function isMessageDeltaFrame(value: unknown): value is MessageDeltaFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'message.delta' &&
+    isMessageDeltaPayload(value.payload)
+  );
+}
+
+/** The deadline of a pending request moved. Fanned out to every connection, because the phone and the browser are looking at the same countdown. */
+export interface PermissionExtendedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'permission.extended';
+  readonly payload: PermissionExtendedPayload;
+}
+
+/** Whether `value` is a {@link PermissionExtendedFrame}. */
+export function isPermissionExtendedFrame(value: unknown): value is PermissionExtendedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'permission.extended' &&
+    isPermissionExtendedPayload(value.payload)
+  );
+}
+
+/** The one `request` that travels server to client, and the reason the whole protocol is a socket instead of a stream: `canUseTool` has blocked the agent loop and it stays blocked until somebody answers or the deadline passes. Answered with the `permission.resolve` response. */
+export interface PermissionRequestedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'request';
+  readonly type: 'permission.requested';
+  readonly payload: PermissionRequestedPayload;
+}
+
+/** Whether `value` is a {@link PermissionRequestedFrame}. */
+export function isPermissionRequestedFrame(value: unknown): value is PermissionRequestedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'request' &&
+    value.type === 'permission.requested' &&
+    isPermissionRequestedPayload(value.payload)
+  );
+}
+
+/** A permission request is settled. It reaches **every** connection, including the one that answered — that is how a second client learns it lost the race, and who won it. */
+export interface PermissionResolvedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'permission.resolved';
+  readonly payload: PermissionResolvedPayload;
+}
+
+/** Whether `value` is a {@link PermissionResolvedFrame}. */
+export function isPermissionResolvedFrame(value: unknown): value is PermissionResolvedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'permission.resolved' &&
+    isPermissionResolvedPayload(value.payload)
+  );
+}
+
+/** The session ended and its subprocess is gone. The replay buffer **survives** this event — opening a closed session shows the terminal state plus whatever the ring still holds, labelled as partial. */
+export interface SessionClosedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'session.closed';
+  readonly payload: SessionClosedPayload;
+}
+
+/** Whether `value` is a {@link SessionClosedFrame}. */
+export function isSessionClosedFrame(value: unknown): value is SessionClosedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'session.closed' &&
+    isSessionClosedPayload(value.payload)
+  );
+}
+
+/** The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` — an SDKMessage is never emitted raw (ADR-006). */
+export interface SessionStartedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'session.started';
+  readonly payload: SessionStartedPayload;
+}
+
+/** Whether `value` is a {@link SessionStartedFrame}. */
+export function isSessionStartedFrame(value: unknown): value is SessionStartedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'session.started' &&
+    isSessionStartedPayload(value.payload)
+  );
+}
+
+/** Where the session stands. Derived by us, not read off a single SDK message. */
+export interface SessionStatusChangedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'session.statusChanged';
+  readonly payload: SessionStatusChangedPayload;
+}
+
+/** Whether `value` is a {@link SessionStatusChangedFrame}. */
+export function isSessionStatusChangedFrame(value: unknown): value is SessionStatusChangedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'session.statusChanged' &&
+    isSessionStatusChangedPayload(value.payload)
+  );
+}
+
+/** A tool invocation ended, from the `tool_result` the SDK reports on a `user` message. */
+export interface ToolCompletedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'tool.completed';
+  readonly payload: ToolCompletedPayload;
+}
+
+/** Whether `value` is a {@link ToolCompletedFrame}. */
+export function isToolCompletedFrame(value: unknown): value is ToolCompletedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'tool.completed' &&
+    isToolCompletedPayload(value.payload)
+  );
+}
+
+/** Output of a tool while it is still running, from the SDK's `tool_progress`. */
+export interface ToolProgressFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'tool.progress';
+  readonly payload: ToolProgressPayload;
+}
+
+/** Whether `value` is a {@link ToolProgressFrame}. */
+export function isToolProgressFrame(value: unknown): value is ToolProgressFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'tool.progress' &&
+    isToolProgressPayload(value.payload)
+  );
+}
+
+/** A tool invocation began. Emitted for **every** tool, including the ones no human was asked about — the audit trail is anchored on the same hook, for exactly that reason (ADR-011). */
+export interface ToolStartedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'tool.started';
+  readonly payload: ToolStartedPayload;
+}
+
+/** Whether `value` is a {@link ToolStartedFrame}. */
+export function isToolStartedFrame(value: unknown): value is ToolStartedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'tool.started' &&
+    isToolStartedPayload(value.payload)
+  );
+}
+
+/** A turn finished, from the SDK's `result`. It is what closes the turn in the UI and what carries its cost. */
+export interface TurnCompletedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'turn.completed';
+  readonly payload: TurnCompletedPayload;
+}
+
+/** Whether `value` is a {@link TurnCompletedFrame}. */
+export function isTurnCompletedFrame(value: unknown): value is TurnCompletedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'turn.completed' &&
+    isTurnCompletedPayload(value.payload)
+  );
+}
+
+/** The answer to `permission.requested`, carrying its `id` in `correlationId`. Resolving the same `requestId` twice is a silent ack and **one** execution, never an error and never a double run — several clients watch one session, and a client may resend after reconnecting. */
+export interface PermissionResolveFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'response';
+  readonly type: 'permission.resolve';
+  readonly payload: PermissionResolvePayload;
+}
+
+/** Whether `value` is a {@link PermissionResolveFrame}. */
+export function isPermissionResolveFrame(value: unknown): value is PermissionResolveFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'response' &&
+    value.type === 'permission.resolve' &&
+    isPermissionResolvePayload(value.payload)
   );
 }

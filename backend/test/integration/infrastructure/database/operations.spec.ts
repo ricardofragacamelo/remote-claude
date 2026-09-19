@@ -34,7 +34,7 @@ describe('the database commands', () => {
   /** How many sessions the seed owner has. */
   async function seededRows(): Promise<number> {
     const rows = await pool.query<{ count: string }>(
-      'SELECT count(*)::text AS count FROM "sessions" WHERE "owner_id" = $1',
+      'SELECT count(*)::text AS count FROM "diag_sessions" WHERE "owner_id" = $1',
       [SEED_OWNER],
     );
 
@@ -74,13 +74,13 @@ describe('the database commands', () => {
   it('reset clears whatever was there before', async () => {
     await runMigrate(pool);
     await pool.query(
-      `INSERT INTO "sessions" ("id", "owner_id", "opened_at", "last_pinged_at")
+      `INSERT INTO "diag_sessions" ("id", "owner_id", "opened_at", "last_pinged_at")
        VALUES ('01J0ABCDEFGHJKMNPQRSTVWXYZ', 'auth|someone', now(), now())`,
     );
 
     await runReset(pool);
 
-    const rows = await pool.query('SELECT "id" FROM "sessions" WHERE "owner_id" = $1', [
+    const rows = await pool.query('SELECT "id" FROM "diag_sessions" WHERE "owner_id" = $1', [
       'auth|someone',
     ]);
     expect(rows.rowCount).toBe(0);

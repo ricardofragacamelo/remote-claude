@@ -89,13 +89,13 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Contrato](F0-contract.md) | o spike bloqueante, e comandos, eventos e o round-trip de permissão em schema, TS e Dart | B-01…B-06, B-45 | 🔲 |
-| F1 | [Workspace](F1-workspace.md) | allowlist, HTTP e seletor no web | B-07…B-11 | 🔲 |
-| F2 | [Runtime da sessão](F2-session-runtime.md) | adapter do Agent SDK, sessão, fan-out e replay | B-12…B-20, B-44 | 🔲 |
-| F3 | [Auditoria](F3-audit.md) | trilha append-only de toda invocação de tool, e o checkpoint de arquivo que o desfazer consome | B-21…B-24, B-46, B-47 | 🔲 |
-| F4 | [Permissão](F4-permission.md) | `canUseTool`, timeout que nega, idempotência | B-25…B-31 | 🔲 |
-| F5 | [Web da sessão](F5-web-session.md) | stream, tools, fila de permissão, controles | B-32…B-38 | 🔲 |
-| F6 | [E2E e smoke-live](F6-e2e.md) | cenários obrigatórios e a primeira spec contra o Claude real | B-39…B-43 | 🔲 |
+| F0 | [Contrato](F0-contract.md) | o spike bloqueante, e comandos, eventos e o round-trip de permissão em schema, TS e Dart | B-01…B-06, B-45 | ✅ |
+| F1 | [Workspace](F1-workspace.md) | allowlist, HTTP e seletor no web | B-07…B-11 | ✅ |
+| F2 | [Runtime da sessão](F2-session-runtime.md) | adapter do Agent SDK, sessão, fan-out e replay | B-12…B-20, B-44 | ✅ |
+| F3 | [Auditoria](F3-audit.md) | trilha append-only de toda invocação de tool, e o checkpoint de arquivo que o desfazer consome | B-21…B-24, B-46, B-47 | ✅ |
+| F4 | [Permissão](F4-permission.md) | `canUseTool`, timeout que nega, idempotência | B-25…B-31 | ✅ |
+| F5 | [Web da sessão](F5-web-session.md) | stream, tools, fila de permissão, controles | B-32…B-38 | ✅ |
+| F6 | [E2E e smoke-live](F6-e2e.md) | cenários obrigatórios e a primeira spec contra o Claude real | B-39…B-43 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 
@@ -175,7 +175,7 @@ scripts/run-smoke-live.mjs                 `pnpm test:e2e:live`
 
 | # | Assunto | Estado |
 |---|---|---|
-| R-01 | Diretório já confiado (`hasTrustDialogAccepted`) pode fazer o `allow` de projeto furar o `canUseTool` | **aberto e bloqueante** — herdado do bootstrap; fechar em B-42 **antes** de qualquer sessão real ([descoberta §8.2](../../discovery/01-descoberta-claude-agent-sdk.md#82--a-assimetria-allow-vs-deny-entre-escopos)) |
+| R-01 | Diretório já confiado (`hasTrustDialogAccepted`) faz o `allow` de projeto furar o `canUseTool` | **confirmado pela medição** (B-45, 2026-09-18): em diretório confiado o `canUseTool` não é chamado. Deixa de ser risco e vira requisito — a mitigação entra na F2 e a B-42 a prova em e2e ([medição](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido)) |
 | R-02 | O fake do Agent SDK pode divergir do SDK real e dar confiança falsa | mitigar com B-41: o `smoke-live` é quem confronta o fake com a realidade |
 | R-03 | Mapear ~38 variantes de `SDKMessage` com 90 % de `branches` é caro | a regra de sobrevivência (variante desconhecida → `warn`) reduz o leque; o resto é tabela, testada por tabela |
 | R-04 | `~222 MB` por sessão foi medido em uma máquina só | neste plano o limite é **configurado**; derivá-lo da RAM é o [plano 05](../05-hardening-operations/README.md) |

@@ -71,8 +71,8 @@ novo sem esses três campos não compila.
 |---|---|---|
 | `400` | `INVALID_INPUT` | Payload malformado, tipo errado, JSON inválido |
 | `401` | `UNAUTHENTICATED` | Sem credencial, ou token inválido/expirado |
-| `403` | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN` | Autenticado, mas não pode. **Workspace fora da allowlist mora aqui.** |
-| `404` | `SESSION_NOT_FOUND` | Recurso não existe, ou o requisitante não pode saber que existe |
+| `403` | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN` | Autenticado, mas não pode. **Workspace fora da allowlist e recurso de outra pessoa moram aqui.** |
+| `404` | `SESSION_NOT_FOUND` | O recurso **não existe** |
 | `409` | `CONFLICT` | Conflito com o estado atual |
 | `410` | `PERMISSION_REQUEST_EXPIRED` | Existiu, não existe mais, e não volta |
 | `413` | `PAYLOAD_TOO_LARGE` | Prompt ou upload acima do limite |
@@ -110,8 +110,9 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `INSUFFICIENT_SCOPE` | 403 | auth | Autenticado, sem o escopo necessário |
 | `WORKSPACE_NOT_ALLOWED` | 403 | workspace | Caminho fora da allowlist |
 | `WORKSPACE_NOT_FOUND` | 404 | workspace | Caminho não existe |
+| `FORBIDDEN` | 403 | workspace, session | Existe, e é de outra pessoa |
 | `WORKSPACE_NOT_A_DIRECTORY` | 422 | workspace | Caminho existe, mas é arquivo |
-| `SESSION_NOT_FOUND` | 404 | session | Sessão inexistente ou inacessível |
+| `SESSION_NOT_FOUND` | 404 | session | Sessão inexistente |
 | `SESSION_LOCKED` | 423 | session | Em uso exclusivo por outra connection |
 | `SESSION_LIMIT_REACHED` | 429 | session | Máximo de sessões simultâneas |
 | `PERMISSION_REQUEST_NOT_FOUND` | 404 | permission | `requestId` desconhecido |
@@ -164,3 +165,12 @@ falha de autenticação no handshake (`4401`) ou violação de protocolo (`4400`
 - **`401` vs `403` não é detalhe.** `401` significa "renove a credencial e repita"; `403`
   significa "não adianta insistir". Cliente que trata os dois igual entra em laço de
   renovação. Resposta de `401` nunca revela **qual** validação falhou — isso vai no log.
+- **`403` vs `404` também não.** `403` é falha de **autorização**: o requisitante é quem diz ser,
+  e ainda assim não pode. `404` é registro que **não está lá**. São perguntas diferentes e têm
+  respostas diferentes — inclusive quando o recurso existe e é de outra pessoa, que é `403`.
+
+  Uma versão anterior deste documento mandava responder `404` nesse último caso, para não
+  confirmar que um id existe. Isso foi revertido em 2026-09-19
+  ([01 · D-17](../../plans/01-live-session/decisions.md#d-17--usar-o-código-http-que-cada-coisa-é)):
+  é semântica própria, e semântica própria deixa o cliente sem como distinguir "sumiu" de "não é
+  seu" — que é exatamente a distinção de que ele precisa para decidir se insiste.

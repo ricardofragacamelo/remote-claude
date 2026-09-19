@@ -26,13 +26,13 @@ o comportamento do `canUseTool` muda numa atualização. Ver
 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 
-### B-39 — Cenários compartilhados em `e2e/scenarios/` 🔲
+### B-39 — Cenários compartilhados em `e2e/scenarios/` ✅
 
 Os fluxos novos escritos **uma vez**, lidos pelo Playwright e pelo `integration_test` do
 Flutter, que os recebe por `--dart-define`. Expectativa nova chega às duas pontas de uma vez;
 cenário duplicado é cenário que diverge.
 
-### B-40 — Os cenários obrigatórios alcançáveis por este plano 🔲
+### B-40 — Os cenários obrigatórios alcançáveis por este plano ✅
 
 Da [lista obrigatória](../../architecture/shared/06-testing-strategy.md#cenários-e2e-obrigatórios):
 1 (fluxo completo), 2 (permissão pelo web), 5 (timeout), 6 (replay), 7 (`gap`), 8 (interrupt) e
@@ -40,7 +40,7 @@ Da [lista obrigatória](../../architecture/shared/06-testing-strategy.md#cenári
 
 Os de número 3, 4 e 10 exigem o celular e são a [F4 do plano 02](../02-mobile-approval/F4-e2e.md).
 
-### B-41 — `e2e/smoke-live/` e o script `pnpm test:e2e:live` 🔲
+### B-41 — `e2e/smoke-live/` e o script `pnpm test:e2e:live` ✅
 
 A primeira spec contra o Claude real: abre sessão num workspace descartável, manda um prompt
 trivial, e **falha se qualquer `SDKMessage` cair no ramo "variante desconhecida"** do mapper.
@@ -53,7 +53,7 @@ script que ninguém encontra é reescrito por outra pessoa daqui a um mês.
 
 Fora do portão de PR, por decisão: custa dinheiro e não é determinístico.
 
-### B-42 — R-01 provado pela porta do usuário 🔲
+### B-42 — R-01 provado pela porta do usuário ✅
 
 **A medição não acontece aqui.** Ela foi antecipada para **B-45, antes da F0**
 ([D-11](decisions.md#d-11--o-furo-que-invalidaria-o-produto)): descobrir um furo de premissa
@@ -64,7 +64,7 @@ backend limpa ou recusa a marca antes de abrir sessão, e o `canUseTool` continu
 a aprovação humana não escapa. Vale mesmo que B-45 tenha medido que o furo não existe; a
 mitigação foi adotada de qualquer forma, e o que não é exercitado apodrece.
 
-### B-43 — O app segue verde contra o contrato novo 🔲
+### B-43 — O app segue verde contra o contrato novo ✅
 
 `pnpm test:e2e:mobile` continua saindo 0. O app não ganha tela neste plano; o que se prova é
 que o contrato novo não quebrou o que já estava entregue — e que `session.detach` deixou de

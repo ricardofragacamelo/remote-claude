@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/permission-extended.json",
+  "title": "PermissionExtended",
+  "description": "The deadline of a pending request moved. Fanned out to every connection, because the phone and the browser are looking at the same countdown.",
+  "x-kind": "event",
+  "x-type": "permission.extended",
+  "type": "object",
+  "required": ["requestId", "expiresAt", "remainingExtensions"],
+  "properties": {
+    "requestId": { "type": "string" },
+    "expiresAt": { "type": "string", "description": "The new deadline, ISO 8601 in UTC." },
+    "remainingExtensions": {
+      "type": "integer",
+      "description": "How many extensions are left before the configured ceiling. It is what stops the UI promising an extension that no longer exists."
+    }
+  }
+}

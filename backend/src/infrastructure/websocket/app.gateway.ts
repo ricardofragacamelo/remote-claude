@@ -207,8 +207,15 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnM
       connectionId: connection.id,
       userId,
       locale: connection.locale,
+      setLocale: (locale) => {
+        connection.locale = locale;
+      },
       frame,
       attach: (sessionId) => connection.attached.add(sessionId),
+      detach: (sessionId) => {
+        connection.attached.delete(sessionId);
+      },
+      isAttached: (sessionId) => connection.attached.has(sessionId),
       replay: (sessionId, resumeFromSeq) => this.hub.replay(sessionId, resumeFromSeq),
       publish: (sessionId, event) => {
         this.hub.publish(sessionId, event);
@@ -349,6 +356,10 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnM
   /** A frame that could not even be decoded. Version mismatch closes; everything else answers. */
   private refuseUndecodable(connection: Connection, error: unknown): void {
     if (error instanceof UnsupportedProtocolVersionError) {
+      // The error frame goes first, and it is the only way the client learns which versions this
+      // build speaks: a close frame carries a code and a reason, never a payload. Without it the
+      // only thing an app on a store could tell its user is "it did not work".
+      this.hub.deliver(connection, this.frames.error(error, this.ids.next()));
       this.close(connection, CLOSE.unsupportedVersion, 'unsupported protocol version');
       return;
     }

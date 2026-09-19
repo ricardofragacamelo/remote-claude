@@ -1,0 +1,12 @@
+{
+  "id": "S-77",
+  "title": "Claude asks before it writes, the person allows it, and the tool runs",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "toolName": "Write",
+    "riskHint": "write",
+    "decision": "allow",
+    "statusWhileAsking": "waitingPermission"
+  }
+}

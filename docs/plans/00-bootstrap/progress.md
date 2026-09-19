@@ -13,12 +13,13 @@ contagem de cenários — saem de `pnpm plan progress`, lidos dos arquivos de fa
 
 **Fase corrente:** nenhuma — **F0…F7 concluídas**, B-40 fechada com a primeira execução verde do
 `integration_test` do Flutter
-**Última atualização:** 2026-09-16
-**Bloqueios:** nenhum. Um achado em aberto, que não bloqueia o plano: **S-119** — o app envia
-`session.detach`, comando que não existe em `packages/contracts` nem no backend, e volta como
+**Última atualização:** 2026-09-19
+**Bloqueios:** nenhum. Um achado deixou este plano em aberto: **S-119** — o app envia
+`session.detach`, comando que não existia em `packages/contracts` nem no backend, e voltava como
 `INVALID_INPUT`/`unknownCommand`. Não foi corrigido aqui porque comando WS é contrato e se muda
-nas três pontas de uma vez ([05](../../architecture/shared/05-websocket-protocol.md)); vai para o
-plano seguinte.
+nas três pontas de uma vez ([05](../../architecture/shared/05-websocket-protocol.md)).
+**Fechado em 2026-09-18**, na [F0 do plano 01](../01-live-session/F0-contract.md): o comando
+existe no schema e o handler existe no backend.
 
 **Como está provado:** `pnpm verify:full` foi executado inteiro e **saiu com código 0** — os onze
 portões verdes, pela primeira vez desde que o plano começou. O portão 9 agora tem comando:
@@ -257,7 +258,7 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 | 2026-09-14 | `osv-scanner` e o quality gate do SonarQube | o `pnpm audit` cobre a dependência vulnerável hoje; `osv-scanner` e o Sonar exigem infraestrutura que este plano não levanta. O `semgrep` roda, pela imagem oficial | plano seguinte |
 | 2026-09-14 | Tela de diagnóstico que liga `debug` em release | `levelFor(isRelease, debugRequested)` já aceita o pedido e está coberto; falta a tela que o faz | plano seguinte |
 | 2026-09-14 | ~~**Execução verde do `integration_test` do Flutter** (S-62, S-116)~~ | **fechado** — `pnpm test:e2e:mobile` saiu 0 com o emulador cercado por cgroup. A execução achou S-118 (corrigido) e S-119 (em aberto) | entregue |
-| 2026-09-14 | **S-119** — `session.detach` não existe no contrato nem no backend | o app o envia e leva `INVALID_INPUT`/`unknownCommand`. Corrigir é mudar comando WS, o que exige schema, backend, web, mobile e o [05](../../architecture/shared/05-websocket-protocol.md) na mesma mudança — escopo de plano, não de correção de passagem | plano seguinte |
+| 2026-09-14 | ~~**S-119** — `session.detach` não existe no contrato nem no backend~~ | o app o envia e leva `INVALID_INPUT`/`unknownCommand`. Corrigir é mudar comando WS, o que exige schema, backend, web, mobile e o [05](../../architecture/shared/05-websocket-protocol.md) na mesma mudança — escopo de plano, não de correção de passagem. **Fechado em 2026-09-18**, na [F0 do plano 01](../01-live-session/F0-contract.md) | plano seguinte |
 | 2026-09-14 | `-Xmx8G -XX:MaxMetaspaceSize=4G` em `mobile/android/gradle.properties` | é o default do template Flutter, e sozinho promete 12 GB de JVM. Não foi alterado porque a execução passou com a cerca de cgroup por fora; continua sendo um teto alto demais para uma máquina de desenvolvimento | plano seguinte |
 | 2026-09-14 | Job de e2e mobile no CI | seria configuração não verificada num pipeline que hoje é verde; e a decisão é que ele não bloqueia merge. Entra junto com a máquina/runner que o suporte | plano seguinte |
 | 2026-09-14 | `e2e/smoke-live/` está vazio | o bootstrap deliberadamente não fala com o Claude ([escopo](README.md#escopo)). O diretório, a exclusão no `playwright.config.ts` e o porquê existem; a primeira spec entra com o Agent SDK | plano seguinte |

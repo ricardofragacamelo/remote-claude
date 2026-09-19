@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/tool-started.json",
+  "title": "ToolStarted",
+  "description": "A tool invocation began. Emitted for **every** tool, including the ones no human was asked about — the audit trail is anchored on the same hook, for exactly that reason (ADR-011).",
+  "x-kind": "event",
+  "x-type": "tool.started",
+  "type": "object",
+  "required": ["toolUseId", "toolName", "input"],
+  "properties": {
+    "toolUseId": {
+      "type": "string",
+      "description": "The SDK's id for this invocation. It is what ties started, progress and completed together."
+    },
+    "toolName": { "type": "string" },
+    "input": { "type": "object", "description": "The exact input the tool was called with." },
+    "title": {
+      "type": "string",
+      "description": "A short human label for the invocation, already derived by the backend."
+    }
+  }
+}

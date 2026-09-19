@@ -11,7 +11,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-16
+**Última atualização:** 2026-09-19
 **Bloqueios:** **R-01 e R-03 bloqueiam a F1** — como o backend é alcançado de fora, e quais
 sistemas operacionais entram no escopo inicial.
 

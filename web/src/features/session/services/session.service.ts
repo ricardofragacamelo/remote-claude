@@ -4,10 +4,10 @@ import type { WsClient } from '@/shared/api/ws-client';
 import type { Pong } from '../types/pong';
 
 /** The command of the walking skeleton. */
-export const PING = 'session.ping';
+export const PING = 'diag.ping';
 
 /** The event it produces. */
-export const PONG = 'session.pong';
+export const PONG = 'diag.pong';
 
 /**
  * Sends a ping.

@@ -9,20 +9,20 @@ const valid = {
   v: 1,
   id: '01J0ABCDEFGHJKMNPQRSTVWXYZ',
   kind: 'command',
-  type: 'session.ping',
+  type: 'diag.ping',
   ts: '2026-09-13T12:00:00.000Z',
   payload: { nonce: 'n' },
 };
 
 describe('decodeFrame', () => {
   it('accepts a well-formed frame', () => {
-    expect(decodeFrame(JSON.stringify(valid))).toMatchObject({ type: 'session.ping' });
+    expect(decodeFrame(JSON.stringify(valid))).toMatchObject({ type: 'diag.ping' });
   });
 
   it('accepts a frame carrying a field this build does not know', () => {
     const frame = decodeFrame(JSON.stringify({ ...valid, somethingNew: true }));
 
-    expect(frame.type).toBe('session.ping');
+    expect(frame.type).toBe('diag.ping');
   });
 
   it('refuses text that is not JSON', () => {

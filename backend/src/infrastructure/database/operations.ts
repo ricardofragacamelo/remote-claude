@@ -31,7 +31,7 @@ export async function runMigrate(pool: pg.Pool): Promise<DatabaseOperationResult
 export async function runSeed(pool: pg.Pool): Promise<DatabaseOperationResult> {
   for (const session of SEED_SESSIONS) {
     await pool.query(
-      `INSERT INTO "sessions" ("id", "owner_id", "opened_at", "last_pinged_at", "ping_count")
+      `INSERT INTO "diag_sessions" ("id", "owner_id", "opened_at", "last_pinged_at", "ping_count")
        VALUES ($1, $2, now(), now(), $3)
        ON CONFLICT ("id") DO NOTHING`,
       [session.id, SEED_OWNER, session.pingCount],

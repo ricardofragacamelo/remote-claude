@@ -113,12 +113,39 @@ describe('the WebSocket gateway', () => {
       await expect(socket.closed()).resolves.toMatchObject({ code: 4426 });
     });
 
+    it('says which versions it speaks before closing, so the client can tell its user', async () => {
+      const socket = await connect();
+
+      socket.send(commandFrame('connection.authenticate', {}, { v: 2 as never }));
+      const answer = await socket.next();
+
+      expect(answer).toMatchObject({ kind: 'error', type: 'error' });
+      expect(answer.payload).toMatchObject({
+        code: 'INVALID_INPUT',
+        messageKey: 'connection.error.unsupportedVersion',
+        params: { supportedVersions: [1] },
+      });
+    });
+
+    // `seq` is there because the envelope now requires one on every event: without it the frame
+    // would be refused as malformed, and this test would stop exercising the kind check it exists
+    // for. A well-formed event from a client is still a protocol violation.
     it('closes with 4400 when the client sends a kind only the server may send', async () => {
       const socket = await connect();
 
-      socket.send(commandFrame('session.pong', {}, { kind: 'event' }));
+      socket.send(commandFrame('diag.pong', {}, { kind: 'event', seq: 1 }));
 
       await expect(socket.closed()).resolves.toMatchObject({ code: 4400 });
+    });
+
+    it('answers an error, and does not close, for an event with no seq at all', async () => {
+      const socket = await connect();
+
+      socket.send(commandFrame('diag.pong', {}, { kind: 'event' }));
+      const answer = await socket.next();
+
+      expect(answer.payload).toMatchObject({ code: 'INVALID_INPUT' });
+      expect(socket.isOpen).toBe(true);
     });
 
     it('refuses a second handshake without swapping the identity', async () => {
@@ -177,7 +204,7 @@ describe('the WebSocket gateway', () => {
     it('answers PAYLOAD_TOO_LARGE for a frame over the announced limit', async () => {
       const socket = await connect();
 
-      socket.send(commandFrame('session.ping', { nonce: 'x'.repeat(70_000) }));
+      socket.send(commandFrame('diag.ping', { nonce: 'x'.repeat(70_000) }));
       const answer = await socket.next();
 
       expect(answer.payload).toMatchObject({ code: 'PAYLOAD_TOO_LARGE', httpEquivalent: 413 });
@@ -187,7 +214,7 @@ describe('the WebSocket gateway', () => {
     it('answers UNAUTHENTICATED for a command that arrives before the handshake', async () => {
       const socket = await connect();
 
-      socket.send(commandFrame('session.ping', { nonce: 'n' }));
+      socket.send(commandFrame('diag.ping', { nonce: 'n' }));
       const answer = await socket.next();
 
       expect(answer.payload).toMatchObject({ code: 'UNAUTHENTICATED', httpEquivalent: 401 });
@@ -206,7 +233,7 @@ describe('the WebSocket gateway', () => {
 
     it('correlates the error with the command that caused it', async () => {
       const { socket } = await authenticated();
-      const frame = commandFrame('session.ping', {});
+      const frame = commandFrame('diag.ping', {});
 
       socket.send(frame);
       const answer = await socket.next();
@@ -216,15 +243,15 @@ describe('the WebSocket gateway', () => {
   });
 
   describe('the vertical slice', () => {
-    it('answers session.ping with an ack and then the pong event', async () => {
+    it('answers diag.ping with an ack and then the pong event', async () => {
       const { socket } = await authenticated();
 
-      socket.send(commandFrame('session.ping', { nonce: 'first' }));
+      socket.send(commandFrame('diag.ping', { nonce: 'first' }));
       const ack = await socket.next();
       const pong = await socket.next();
 
       expect(ack).toMatchObject({ kind: 'ack', type: 'command.accepted' });
-      expect(pong).toMatchObject({ kind: 'event', type: 'session.pong', seq: 1 });
+      expect(pong).toMatchObject({ kind: 'event', type: 'diag.pong', seq: 1 });
       expect(pong.payload).toMatchObject({ nonce: 'first', pingCount: 1 });
       expect(pong.sessionId).toEqual(expect.any(String));
     });
@@ -232,11 +259,11 @@ describe('the WebSocket gateway', () => {
     it('numbers the events of one session strictly upwards', async () => {
       const { socket } = await authenticated();
 
-      socket.send(commandFrame('session.ping', { nonce: 'a' }));
+      socket.send(commandFrame('diag.ping', { nonce: 'a' }));
       await socket.next();
       const first = await socket.next();
 
-      socket.send(commandFrame('session.ping', { sessionId: first.sessionId, nonce: 'b' }));
+      socket.send(commandFrame('diag.ping', { sessionId: first.sessionId, nonce: 'b' }));
       await socket.next();
       const second = await socket.next();
 
@@ -247,17 +274,17 @@ describe('the WebSocket gateway', () => {
     it('persists the count, so a third ping continues where the second left off', async () => {
       const { socket } = await authenticated();
 
-      socket.send(commandFrame('session.ping', { nonce: 'a' }));
+      socket.send(commandFrame('diag.ping', { nonce: 'a' }));
       await socket.next();
       const opened = await socket.next();
 
       for (const nonce of ['b', 'c']) {
-        socket.send(commandFrame('session.ping', { sessionId: opened.sessionId, nonce }));
+        socket.send(commandFrame('diag.ping', { sessionId: opened.sessionId, nonce }));
         await socket.next();
         await socket.next();
       }
 
-      socket.send(commandFrame('session.ping', { sessionId: opened.sessionId, nonce: 'd' }));
+      socket.send(commandFrame('diag.ping', { sessionId: opened.sessionId, nonce: 'd' }));
       await socket.next();
       const fourth = await socket.next();
 
@@ -268,91 +295,108 @@ describe('the WebSocket gateway', () => {
       const { socket } = await authenticated();
 
       socket.send(
-        commandFrame('session.ping', { sessionId: '01J0ABCDEFGHJKMNPQRSTVWXYZ', nonce: 'n' }),
+        commandFrame('diag.ping', { sessionId: '01J0ABCDEFGHJKMNPQRSTVWXYZ', nonce: 'n' }),
       );
       const answer = await socket.next();
 
       expect(answer.payload).toMatchObject({ code: 'SESSION_NOT_FOUND', httpEquivalent: 404 });
     });
 
-    it("answers SESSION_NOT_FOUND for somebody else's session, never FORBIDDEN", async () => {
+    it("answers FORBIDDEN for somebody else's session — D-17", async () => {
       const mine = await authenticated('auth|owner');
-      mine.socket.send(commandFrame('session.ping', { nonce: 'n' }));
+      mine.socket.send(commandFrame('diag.ping', { nonce: 'n' }));
       await mine.socket.next();
       const pong = await mine.socket.next();
 
       const theirs = await authenticated('auth|intruder');
-      theirs.socket.send(commandFrame('session.ping', { sessionId: pong.sessionId, nonce: 'n' }));
+      theirs.socket.send(commandFrame('diag.ping', { sessionId: pong.sessionId, nonce: 'n' }));
       const answer = await theirs.socket.next();
 
-      expect(answer.payload).toMatchObject({ code: 'SESSION_NOT_FOUND' });
+      // The credential is good and the caller is who they say they are; they still may not.
+      // That is `403`, and the earlier answer of `404` was a semantics of its own.
+      expect(answer.payload).toMatchObject({ code: 'FORBIDDEN', httpEquivalent: 403 });
     });
 
     it('answers INVALID_INPUT for a session id that is not a ULID', async () => {
       const { socket } = await authenticated();
 
-      socket.send(commandFrame('session.ping', { sessionId: 'nope', nonce: 'n' }));
+      socket.send(commandFrame('diag.ping', { sessionId: 'nope', nonce: 'n' }));
       const answer = await socket.next();
 
       expect(answer.payload).toMatchObject({ code: 'INVALID_INPUT', httpEquivalent: 400 });
     });
   });
 
-  describe('many connections on one session', () => {
-    it('fans every event out to both, with no sequence used twice', async () => {
-      const first = await authenticated('auth|shared');
-      first.socket.send(commandFrame('session.ping', { nonce: 'open' }));
-      await first.socket.next();
-      const opened = await first.socket.next();
-      const sessionId = String(opened.sessionId);
+  /**
+   * Fan-out, replay and `session.attach` live with the sessions they belong to.
+   *
+   * They used to be exercised here, over `diag.ping`, because the walking skeleton's counter was
+   * the only session there was. It is not a session of Claude, it is not in the live registry, and
+   * `session.attach` answers for live sessions only — so the scenarios moved to
+   * `session-stream.spec.ts`, where they run against a real turn with a scripted Agent SDK.
+   */
+  describe('session.attach', () => {
+    it('refuses a session that is not running, whoever asks', async () => {
+      const { socket } = await authenticated('auth|attach-unknown');
 
-      const second = await authenticated('auth|shared');
-      second.socket.send(commandFrame('session.attach', { sessionId }));
-      const attached = await second.socket.next();
+      socket.send(commandFrame('session.attach', { sessionId: '01J0ABCDEFGHJKMNPQRSTVWXYZ' }));
+      const answer = await socket.next();
 
-      first.socket.send(commandFrame('session.ping', { sessionId, nonce: 'shared' }));
-      await first.socket.next();
-      const seenByFirst = await first.socket.next();
-      const seenBySecond = await second.socket.next();
+      // Nothing persists a live session, so "unknown", "closed" and "somebody else's" are one
+      // answer — and that is the honest one.
+      expect(answer.payload).toMatchObject({ code: 'SESSION_NOT_FOUND', httpEquivalent: 404 });
+    });
+  });
 
-      expect(attached).toMatchObject({ kind: 'ack', type: 'session.attached' });
-      expect(seenByFirst.seq).toBe(2);
-      expect(seenBySecond.seq).toBe(2);
-      expect(seenBySecond.payload).toMatchObject({ nonce: 'shared' });
+  /**
+   * S-01 — `session.detach`, the debt the bootstrap left open.
+   *
+   * The web client has been sending it since the walking skeleton, against a contract that had no
+   * such command, and getting `INVALID_INPUT` back (S-119 of the bootstrap plan).
+   */
+  describe('session.detach', () => {
+    it('is idempotent — detaching twice answers an ack, never an error', async () => {
+      const { socket } = await authenticated('auth|detach-twice');
+      const sessionId = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
+
+      socket.send(commandFrame('session.detach', { sessionId }));
+      await socket.next();
+      socket.send(commandFrame('session.detach', { sessionId }));
+      const second = await socket.next();
+
+      expect(second).toMatchObject({ kind: 'ack', type: 'command.accepted' });
     });
 
-    it('replays what a reconnecting client missed', async () => {
-      const first = await authenticated('auth|replay');
-      first.socket.send(commandFrame('session.ping', { nonce: 'one' }));
-      await first.socket.next();
-      const opened = await first.socket.next();
-      const sessionId = String(opened.sessionId);
+    it('accepts a detach from a session this connection never watched', async () => {
+      const { socket } = await authenticated('auth|detach-stranger');
 
-      first.socket.send(commandFrame('session.ping', { sessionId, nonce: 'two' }));
-      await first.socket.next();
-      await first.socket.next();
+      socket.send(commandFrame('session.detach', { sessionId: '01J0ABCDEFGHJKMNPQRSTVWXYZ' }));
+      const ack = await socket.next();
 
-      const reconnected = await authenticated('auth|replay');
-      reconnected.socket.send(commandFrame('session.attach', { sessionId, resumeFromSeq: 1 }));
-      const ack = await reconnected.socket.next();
-      const replayed = await reconnected.socket.next();
-
-      expect(ack.payload).toMatchObject({ replayed: 1, gap: false, oldestAvailableSeq: 1 });
-      expect(replayed.seq).toBe(2);
-      expect(replayed.payload).toMatchObject({ nonce: 'two' });
+      expect(ack).toMatchObject({ kind: 'ack', type: 'command.accepted' });
     });
 
-    it('refuses to attach to a session that is not the caller’s', async () => {
-      const owner = await authenticated('auth|owner-2');
-      owner.socket.send(commandFrame('session.ping', { nonce: 'n' }));
-      await owner.socket.next();
-      const opened = await owner.socket.next();
+    it('answers INVALID_INPUT when no session is named', async () => {
+      const { socket } = await authenticated('auth|detach-empty');
 
-      const intruder = await authenticated('auth|intruder-2');
-      intruder.socket.send(commandFrame('session.attach', { sessionId: opened.sessionId }));
-      const answer = await intruder.socket.next();
+      socket.send(commandFrame('session.detach', {}));
+      const answer = await socket.next();
 
-      expect(answer.payload).toMatchObject({ code: 'SESSION_NOT_FOUND' });
+      expect(answer.payload).toMatchObject({ code: 'INVALID_INPUT' });
+      expect(socket.isOpen).toBe(true);
+    });
+  });
+
+  /** S-86 — the name the bootstrap used is gone, not kept alive beside the new one. */
+  describe('the name the bootstrap used', () => {
+    it('answers INVALID_INPUT for session.ping, which no longer exists', async () => {
+      const { socket } = await authenticated('auth|old-name');
+
+      socket.send(commandFrame('session.ping', { nonce: 'n' }));
+      const answer = await socket.next();
+
+      expect(answer.payload).toMatchObject({ code: 'INVALID_INPUT' });
+      expect(socket.isOpen).toBe(true);
     });
   });
 
@@ -361,7 +405,7 @@ describe('the WebSocket gateway', () => {
       harness.log.lines.length = 0;
       const { socket } = await authenticated();
 
-      socket.send(commandFrame('session.ping', { nonce: 'logged' }));
+      socket.send(commandFrame('diag.ping', { nonce: 'logged' }));
       await socket.next();
       await socket.next();
 

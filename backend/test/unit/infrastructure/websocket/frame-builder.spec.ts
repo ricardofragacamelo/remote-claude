@@ -29,7 +29,7 @@ describe('FrameBuilder', () => {
   });
 
   it('leaves out the optional fields that were not asked for', () => {
-    const frame = builder().build({ kind: 'event', type: 'session.pong', payload: {} });
+    const frame = builder().build({ kind: 'event', type: 'diag.pong', payload: {} });
 
     expect(frame).not.toHaveProperty('traceId');
     expect(frame).not.toHaveProperty('correlationId');
@@ -40,7 +40,7 @@ describe('FrameBuilder', () => {
   it('carries the optional fields it was given', () => {
     const frame = builder().build({
       kind: 'event',
-      type: 'session.pong',
+      type: 'diag.pong',
       payload: { a: 1 },
       traceId: 't',
       correlationId: 'c',

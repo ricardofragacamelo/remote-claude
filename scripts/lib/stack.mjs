@@ -9,7 +9,10 @@
  */
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { repoRoot } from './paths.mjs';
+import { ALLOWLIST_FILE } from './workspaces.mjs';
 
 /** Compose project of the development stack. Ephemeral e2e runs use `<this>-e2e-<id>`. */
 export const PROJECT_NAME = 'remote-claude';
@@ -84,6 +87,20 @@ export const E2E_POSTGRES = {
  * @property {string} OIDC_SCOPES
  * @property {string} NODE_ENV
  * @property {string} LOG_LEVEL
+ * @property {string} RC_WORKSPACE_ALLOWLIST_FILE
+ * @property {string} RC_SESSION_MAX_CONCURRENT
+ * @property {string} RC_SESSION_MAX_TURNS
+ * @property {string} RC_SESSION_MAX_BUDGET_USD
+ * @property {string} RC_SESSION_DEFAULT_MODEL
+ * @property {string} RC_SESSION_DEFAULT_PERMISSION_MODE
+ * @property {string} RC_PERMISSION_TIMEOUT_MS
+ * @property {string} RC_PERMISSION_EXTENSION_MS
+ * @property {string} RC_PERMISSION_MAX_EXTENSIONS
+ * @property {string} RC_PERMISSION_RULE_LIFETIME_MS
+ * @property {string} RC_CHECKPOINT_DIR
+ * @property {string} RC_CHECKPOINT_MAX_FILE_BYTES
+ * @property {string} RC_CHECKPOINT_MAX_STORE_BYTES
+ * @property {string} [CLAUDE_CONFIG_DIR]
  */
 
 /**
@@ -98,9 +115,13 @@ export const E2E_POSTGRES = {
  * take — an unreachable branch in the coverage report is a lie about what was tested.
  *
  * @param {StackPorts} ports
+ * @param {{ claudeConfigDir?: string | null }} [options] where the CLI keeps its configuration.
+ *   The hermetic run isolates it, so a test never edits somebody's own editor. `null` leaves the
+ *   variable **unset**, which is what the live run needs: the login lives in the CLI's own default
+ *   layout, and pointing the variable anywhere at all moves the place it looks for it.
  * @returns {EphemeralEnvironment}
  */
-export function ephemeralEnvironment(ports) {
+export function ephemeralEnvironment(ports, options = {}) {
   const urls = serviceUrls(ports);
 
   return {
@@ -122,6 +143,44 @@ export function ephemeralEnvironment(ports) {
 
     NODE_ENV: 'test',
     LOG_LEVEL: 'debug',
+
+    // Absolute, because the backend is started with its own package as the working directory and
+    // a relative path would resolve against that instead of against the repository.
+    RC_WORKSPACE_ALLOWLIST_FILE: ALLOWLIST_FILE,
+
+    RC_SESSION_MAX_CONCURRENT: '10',
+    RC_SESSION_MAX_TURNS: '100',
+    RC_SESSION_MAX_BUDGET_USD: '10',
+    RC_SESSION_DEFAULT_MODEL: 'claude-sonnet-5',
+    RC_SESSION_DEFAULT_PERMISSION_MODE: 'default',
+
+    // Short, because an e2e that waits two minutes for a permission to expire is an e2e nobody
+    // runs. The scenario that needs the deadline to pass says so; the others answer long before.
+    RC_PERMISSION_TIMEOUT_MS: '5000',
+    RC_PERMISSION_EXTENSION_MS: '10000',
+    RC_PERMISSION_MAX_EXTENSIONS: '2',
+    RC_PERMISSION_RULE_LIFETIME_MS: '600000',
+
+    // The CLI's configuration — the trust marks among it, and the login. The hermetic run keeps
+    // it away from the developer's own, because the backend clears a directory's trust mark
+    // before opening a session there and a run that did that to somebody's real `~/.claude.json`
+    // would be a test editing their editor.
+    //
+    // The **live** run passes `null` and the variable is left out entirely. Setting it to
+    // anything — even to the home directory — moves where the CLI looks for the login, and a CLI
+    // that cannot find it answers "Not logged in" as a perfectly well-formed turn. That is a
+    // green run that talked to nothing, and it is exactly what happened the first time.
+    ...(options.claudeConfigDir === null
+      ? {}
+      : {
+          CLAUDE_CONFIG_DIR:
+            options.claudeConfigDir ??
+            path.join(os.tmpdir(), `remote-claude-config-${String(ports.backend)}`),
+        }),
+
+    RC_CHECKPOINT_DIR: path.join(os.tmpdir(), `remote-claude-checkpoints-${String(ports.backend)}`),
+    RC_CHECKPOINT_MAX_FILE_BYTES: '5242880',
+    RC_CHECKPOINT_MAX_STORE_BYTES: '524288000',
   };
 }
 
@@ -133,11 +192,13 @@ export function ephemeralEnvironment(ports) {
  * is why the cleanup removes it even when the run failed.
  *
  * @param {StackPorts} ports
+ * @param {{ claudeConfigDir?: string | null }} [options] the same choice the environment was
+ *   built with
  * @returns {string}
  */
-export function e2eDotEnv(ports) {
+export function e2eDotEnv(ports, options = {}) {
   const urls = serviceUrls(ports);
-  const environment = ephemeralEnvironment(ports);
+  const environment = ephemeralEnvironment(ports, options);
 
   /** @type {Record<string, string>} */
   const values = {
@@ -151,6 +212,15 @@ export function e2eDotEnv(ports) {
     // The Flutter end reads the same file, and needs the two values the browser does not.
     RC_OIDC_CLIENT_ID_MOBILE: environment.OIDC_CLIENT_ID_MOBILE,
     RC_OIDC_SCOPES: environment.OIDC_SCOPES,
+
+    // Where the backend of this run reads the CLI's configuration. The suite needs it to mark a
+    // directory as trusted and to check the backend cleared the mark — the one behaviour that,
+    // left alone, switches the human approval off in silence.
+    RC_CLAUDE_CONFIG_DIR: environment.CLAUDE_CONFIG_DIR ?? claudeCliConfigDir(),
+
+    // The backend's own log of this run. Only the live suite reads it, and for one line: the
+    // warning the mapper writes when the SDK sends a variant this build has never seen.
+    RC_BACKEND_LOG: BACKEND_LOG_FILE,
   };
 
   const body = Object.entries(values)
@@ -159,6 +229,26 @@ export function e2eDotEnv(ports) {
 
   return `# Written by scripts/run-e2e-local.mjs, and deleted when the run ends. Never commit it.\n${body}\n`;
 }
+
+/**
+ * Where this machine's Claude CLI keeps its configuration, by its own rules.
+ *
+ * `CLAUDE_CONFIG_DIR` when the developer set one, and `~/.claude` otherwise — which is where the
+ * login is. Only the suite reads this; the backend of a live run is given no variable at all, so
+ * that the CLI and the backend both fall back to the same defaults.
+ *
+ * @returns {string}
+ */
+export function claudeCliConfigDir() {
+  const configured = process.env['CLAUDE_CONFIG_DIR'];
+
+  return configured === undefined || configured === ''
+    ? path.join(os.homedir(), '.claude')
+    : configured;
+}
+
+/** Where the backend's log of an ephemeral run is written. Generated, and never committed. */
+export const BACKEND_LOG_FILE = path.join(repoRoot, 'e2e', '.backend.log');
 
 /** Services declared in docker-compose.yml, in start order. */
 export const SERVICES = ['postgres', 'keycloak'];

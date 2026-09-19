@@ -27,6 +27,13 @@ Envelope? decodeEnvelope(String raw) {
     return null;
   }
 
+  // The conditional requirements of the envelope, generated from the same `x-required-when` the
+  // TypeScript guard is generated from. An event with no `seq` is dropped here: replay is built on
+  // it, and a hole that nobody notices at the edge is a hole nobody can detect afterwards.
+  if (!envelopeConditionalsHold(parsed)) {
+    return null;
+  }
+
   return Envelope.fromJson(parsed);
 }
 

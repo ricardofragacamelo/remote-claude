@@ -24,7 +24,7 @@ começar.
 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 
-### B-25 — Domínio `permission` 🔲
+### B-25 — Domínio `permission` ✅
 
 `PermissionRequest` com estados (`pending → resolved | expired`), `expiresAt`, e as invariantes:
 `deny` exige `reason`, primeira resolução vence, resolução posterior é no-op.
@@ -33,12 +33,12 @@ Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅
 `project` e `always` são persistidos no [plano 03](../03-rules-and-audit/README.md) — regra que
 sobrevive à sessão precisa de tela para ser revogada, e essa tela é de lá.
 
-### B-26 — Histórico de requests no banco 🔲
+### B-26 — Histórico de requests no banco ✅
 
 Tabela e migration para o histórico de `PermissionRequest` — o que foi pedido, por quem foi
 resolvido, quando e como. Regra viva de escopo `session` fica **em memória**, com a sessão.
 
-### B-27 — `permission-bridge`: o `canUseTool` 🔲
+### B-27 — `permission-bridge`: o `canUseTool` ✅
 
 Os quatro pontos não negociáveis, nesta ordem: idempotência por `requestId`, regra já existente
 resolve sem incomodar ninguém, criação do request com publicação do evento, e a espera.
@@ -55,7 +55,7 @@ cada cenário **fixa o valor que usa**, ou deixa de ser determinístico. Estende
 proteção contra sessão pendurada, então o teto é rígido: atingido, responde erro, e a UI mostra
 que não há mais extensão.
 
-### B-28 — Registro de pendentes e republicação no attach 🔲
+### B-28 — Registro de pendentes e republicação no attach ✅
 
 O gap que o produto sofre é entre cliente e backend; o canal SDK↔CLI não cai junto. A `Promise`
 do `canUseTool` continua pendente no nosso processo, e `reinitialize()` **não** reentrega nada
@@ -63,7 +63,7 @@ do `canUseTool` continua pendente no nosso processo, e `reinitialize()` **não**
 
 Ao reatar, quem republica os pendentes é o **nosso** registro.
 
-### B-29 — O round-trip no gateway 🔲
+### B-29 — O round-trip no gateway ✅
 
 `permission.requested` para todas as connections que observam; `permission.resolve` como
 `response` com `correlationId`; `permission.resolved` para todas, **inclusive** quem respondeu.
@@ -77,7 +77,7 @@ pedido ter sido resolvido ou expirado é **erro**, não no-op silencioso — que
 saber que não estendeu. Web e celular podem estender o mesmo pedido: a operação é idempotente por
 `requestId`.
 
-### B-30 — `riskHint` e sugestões de escopo 🔲
+### B-30 — `riskHint` e sugestões de escopo ✅
 
 O `riskHint` é derivado **no backend**, a partir da tool e do input, para a UI decidir o
 destaque sem reimplementar a classificação em duas pontas. `suggestions` traz os escopos
@@ -93,7 +93,7 @@ Não é detalhe de UI: é essa garantia que sustenta a confirmação em dois pas
 para `destructive` ([plano 02 · D-08](../02-mobile-approval/decisions.md)). Se ela deixar de
 falhar fechado, aquela decisão reabre.
 
-### B-31 — Eventos de domínio: destravar, auditar, notificar 🔲
+### B-31 — Eventos de domínio: destravar, auditar, notificar ✅
 
 `permission.resolved` como evento interno (`EventEmitter2`), com três consumidores: `audit`
 grava, `session` destrava o loop e — a partir do [plano 02](../02-mobile-approval/README.md) —

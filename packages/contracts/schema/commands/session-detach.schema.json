@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-detach.json",
+  "title": "SessionDetach",
+  "description": "Stops observing a session. The counterpart of `session.attach`: without it, a client that moved on keeps receiving a stream it no longer shows.",
+  "x-kind": "command",
+  "x-type": "session.detach",
+  "type": "object",
+  "required": ["sessionId"],
+  "properties": {
+    "sessionId": { "type": "string", "description": "Session to stop observing." }
+  }
+}

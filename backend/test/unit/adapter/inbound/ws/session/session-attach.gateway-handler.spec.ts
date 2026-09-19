@@ -11,9 +11,11 @@ import { EventBuffer } from '@infra/websocket/event-buffer';
 import { FrameBuilder } from '@infra/websocket/frame-builder';
 import { SessionHub } from '@infra/websocket/session-hub';
 import { InputValidationError } from '@shared/errors/input-validation.error';
-import { aSession } from '../../../../../support/builders/session.builder';
+import { aPermissionModule } from '../../../../../support/builders/permission.builder';
+import { aRegistry, aSession } from '../../../../../support/builders/session.builder';
+import { RegistrySessionOwnership } from '@adapter/outbound/session/registry-session.ownership';
+import { aWsContext } from '../../../../../support/builders/ws-context.builder';
 import { FixedClock } from '../../../../../support/fakes/fixed-clock';
-import { InMemorySessionRepository } from '../../../../../support/fakes/in-memory-session.repository';
 import { RecordingLogger } from '../../../../../support/fakes/recording-logger';
 import { SequentialIds } from '../../../../../support/fakes/sequential-ids';
 
@@ -33,32 +35,30 @@ function frame(payload: unknown): Envelope {
 }
 
 describe('SessionAttachHandler', () => {
-  let sessions: InMemorySessionRepository;
   let hub: SessionHub;
   let handler: SessionAttachHandler;
   let attached: string[];
+  let permissions: ReturnType<typeof aPermissionModule>;
 
-  const contextFor = (payload: unknown): WsCommandContext => ({
-    connectionId: 'c1',
-    userId: owner,
-    locale: 'en',
-    frame: frame(payload),
-    attach: (sessionId) => attached.push(sessionId),
-    replay: (sessionId, resumeFromSeq) => hub.replay(sessionId, resumeFromSeq),
-    publish: (sessionId, event) => {
-      hub.publish(sessionId, event);
-    },
-  });
+  const contextFor = (payload: unknown): WsCommandContext =>
+    aWsContext({
+      frame: frame(payload),
+      userId: owner,
+      attached,
+      replay: (sessionId, resumeFromSeq) => hub.replay(sessionId, resumeFromSeq),
+      publish: (sessionId, event) => {
+        hub.publish(sessionId, event);
+      },
+    });
 
   /** Publishes `count` events on the session, so there is something to replay. */
   const publish = (count: number): void => {
     for (let index = 0; index < count; index += 1) {
-      hub.publish(SESSION, { type: 'session.pong', payload: { index } });
+      hub.publish(SESSION, { type: 'diag.pong', payload: { index } });
     }
   };
 
   beforeEach(() => {
-    sessions = new InMemorySessionRepository();
     attached = [];
     hub = new SessionHub(
       new ConnectionRegistry(),
@@ -66,8 +66,12 @@ describe('SessionAttachHandler', () => {
       new FrameBuilder(new FixedClock(now), new SequentialIds()),
       new RecordingLogger().logger,
     );
-    handler = new SessionAttachHandler(new AttachSessionUseCase(sessions));
-    sessions.seed(aSession());
+    permissions = aPermissionModule();
+    handler = new SessionAttachHandler(
+      new AttachSessionUseCase([new RegistrySessionOwnership(aRegistry([aSession()]).registry)]),
+      permissions.request,
+      new FrameBuilder(new FixedClock(now), new SequentialIds('01J0REQ000000000000000')),
+    );
   });
 
   it('attaches, and replays nothing when the client asks for no resume', async () => {
@@ -112,7 +116,9 @@ describe('SessionAttachHandler', () => {
 
   it("refuses somebody else's session, and attaches nothing", async () => {
     const other = new SessionAttachHandler(
-      new AttachSessionUseCase(new InMemorySessionRepository()),
+      new AttachSessionUseCase([new RegistrySessionOwnership(aRegistry([]).registry)]),
+      permissions.request,
+      new FrameBuilder(new FixedClock(now), new SequentialIds('01J0REQ000000000000000')),
     );
 
     await expect(other.handle(contextFor({ sessionId: SESSION }))).rejects.toThrow(

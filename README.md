@@ -177,8 +177,10 @@ Isso não é entregar; é esconder.
 | `pnpm test:integration` | **exige Docker**: Postgres real via testcontainers, nunca SQLite, nunca mock; e o contrato de saída dos scripts de `scripts/` |
 | `pnpm test:e2e` | sobe stack **efêmera em portas aleatórias**, roda Playwright, derruba tudo |
 | `pnpm test:e2e:mobile` | a mesma stack, com o `integration_test` do Flutter — **exige emulador**, e não é portão |
+| `pnpm test:e2e:live` | a mesma stack contra o **Claude de verdade** — exige o Claude logado, custa dinheiro, e não é portão |
 | `pnpm test:coverage` | mínimo **90 % em statements, branches, functions e lines — por arquivo** |
 | `cd mobile && flutter test` | unit e widget do app |
+| `pnpm fixtures:record` | grava o stream do Agent SDK **real** como fixture — sob demanda, exige o Claude logado |
 
 `pnpm test:e2e` sai com o **código dos testes**, não com 0 fixo — senão o CI fica verde com
 teste vermelho. E pode rodar com o `pnpm dev` de pé, porque usa portas aleatórias e um projeto
@@ -190,6 +192,21 @@ custa minutos e gigabytes, e verificação cara demais para caber no ciclo é ve
 alguém desliga. Está declarado em vez de escondido —
 [por quê](docs/architecture/shared/06-testing-strategy.md#por-que-o-e2e-de-mobile-não-bloqueia).
 Nenhum dos dois se auto-pula: sem navegador ou sem device, cada um **falha**.
+
+Dois comandos desta lista falam com o Claude de verdade, e nenhum dos dois é portão.
+
+`pnpm test:e2e:live` roda `e2e/smoke-live/` contra o Claude desta máquina. Tudo em `e2e/specs/`
+roda contra um **replay** de execução gravada, porque e2e tem que ser determinístico e o Claude
+não é; esta é a exceção, e existe para pegar o que nada mais pega — **o SDK mudando o contrato
+debaixo de nós**. Ela falha se qualquer `SDKMessage` cair no ramo "variante desconhecida" do
+mapper, que é onde uma quebra de contrato vira aviso em vez de bug silencioso. Roda sob demanda
+([D-12](docs/plans/01-live-session/decisions.md#d-12--onde-o-smoke-live-roda)).
+
+`pnpm fixtures:record` é o outro. Ele roda o SDK contra um diretório descartável e salva o que voltou em
+`backend/test/fakes/agent-sdk/fixtures/`, que é o que o fake replica nos testes. Existe porque um
+fake escrito de memória prova que o fake funciona — ver
+[D-04](docs/plans/01-live-session/decisions.md#d-04--o-fake-e-o-que-ele-pode-mentir). Regravar é
+`pnpm fixtures:record` ou `pnpm fixtures:record <cenário>`, e o resultado entra no commit.
 
 Na cobertura não há média que compense: um arquivo em 70 % não é salvo por outro em 99 %.
 

@@ -7,20 +7,38 @@ import '../../../../support/builders/frames.dart';
 void main() {
   group('decodeEnvelope', () {
     test('reads a valid frame', () {
-      final Envelope? envelope = decodeEnvelope(sessionPong(sessionId: 'ses-1', seq: 3));
+      final Envelope? envelope = decodeEnvelope(diagPong(sessionId: 'ses-1', seq: 3));
 
       expect(envelope, isNotNull);
-      expect(envelope!.type, 'session.pong');
+      expect(envelope!.type, 'diag.pong');
       expect(envelope.seq, 3);
       expect(envelope.sessionId, 'ses-1');
     });
 
     test('accepts a field it has never heard of — a published app outlives its server', () {
       const String raw =
-          '{"v":1,"id":"a","kind":"event","type":"session.pong",'
+          '{"v":1,"id":"a","kind":"event","type":"diag.pong","seq":1,'
           '"ts":"2026-09-14T12:00:00.000Z","futureField":"whatever"}';
 
       expect(decodeEnvelope(raw), isNotNull);
+    });
+
+    test('refuses an event with no seq — replay is built on it', () {
+      final String raw = frame(kind: 'event', type: 'diag.pong');
+
+      expect(decodeEnvelope(raw), isNull);
+    });
+
+    test('refuses an event whose seq is not a number', () {
+      const String raw =
+          '{"v":1,"id":"a","kind":"event","type":"diag.pong","seq":"1",'
+          '"ts":"2026-09-14T12:00:00.000Z"}';
+
+      expect(decodeEnvelope(raw), isNull);
+    });
+
+    test('asks for no seq on a frame that is not an event', () {
+      expect(decodeEnvelope(connectionReady()), isNotNull);
     });
 
     test('refuses a frame missing an envelope field', () {
@@ -52,12 +70,12 @@ void main() {
         v: protocolVersion,
         id: 'a',
         kind: 'command',
-        type: 'session.ping',
+        type: 'diag.ping',
         ts: '2026-09-14T12:00:00.000Z',
       ),
     );
 
     expect(encoded, isNot(contains('seq')));
-    expect(encoded, contains('session.ping'));
+    expect(encoded, contains('diag.ping'));
   });
 }

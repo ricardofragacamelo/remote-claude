@@ -271,3 +271,116 @@ describe('buildModel', () => {
     expect(model.interfaces).toEqual([]);
   });
 });
+
+/**
+ * `x-required-when` — the conditional requirement, read from the schema.
+ *
+ * The contract has two of them and they are the reason the keyword exists: `seq` is required on an
+ * `event`, and `reason` is required on a `deny`. Spreading either across three hand-written
+ * validators is how a rule ends up holding in two languages and not the third.
+ */
+describe('buildModel with a conditional requirement', () => {
+  /** @param {Record<string, unknown>} rule */
+  const withRule = (rule) =>
+    envelope({
+      required: ['v', 'kind', 'type'],
+      properties: {
+        v: { type: 'integer', const: 1 },
+        kind: { type: 'string', enum: FRAME_KINDS },
+        type: { type: 'string' },
+        seq: { type: 'integer' },
+        payload: { type: 'object' },
+      },
+      'x-required-when': [rule],
+    });
+
+  const seqOnEvent = {
+    field: 'seq',
+    when: { field: 'kind', equals: 'event' },
+    because: 'replay is built on it',
+  };
+
+  it('reads the rule onto the interface', () => {
+    const model = buildModel(withRule(seqOnEvent), []);
+
+    expect(model.envelope.conditionals).toEqual([
+      { field: 'seq', whenField: 'kind', equals: 'event', because: 'replay is built on it' },
+    ]);
+  });
+
+  it('leaves the field optional — conditional is not the same as required', () => {
+    const model = buildModel(withRule(seqOnEvent), []);
+    const seq = model.envelope.fields.find((field) => field.name === 'seq');
+
+    expect(seq?.required).toBe(false);
+  });
+
+  it('gives an interface with no rule an empty list, never undefined', () => {
+    const model = buildModel(envelope(), []);
+
+    expect(model.envelope.conditionals).toEqual([]);
+  });
+
+  it('accepts a rule that decides on a boolean', () => {
+    const model = buildModel(
+      envelope({
+        required: ['auto'],
+        properties: { auto: { type: 'boolean' }, resolvedBy: { type: 'string' } },
+        'x-required-when': [
+          {
+            field: 'resolvedBy',
+            when: { field: 'auto', equals: false },
+            because: 'a decision a human made has an author',
+          },
+        ],
+      }),
+      [],
+    );
+
+    expect(model.envelope.conditionals[0]?.equals).toBe(false);
+  });
+
+  it('refuses a rule on a field that is never declared', () => {
+    expect(() => buildModel(withRule({ ...seqOnEvent, field: 'nowhere' }), [])).toThrow(
+      ContractError,
+    );
+  });
+
+  it('refuses a rule that decides on a field that is never declared', () => {
+    expect(() =>
+      buildModel(withRule({ ...seqOnEvent, when: { field: 'nowhere', equals: 'event' } }), []),
+    ).toThrow(ContractError);
+  });
+
+  it('refuses a rule on a field that is already required, because it could never fire', () => {
+    expect(() => buildModel(withRule({ ...seqOnEvent, field: 'type' }), [])).toThrow(ContractError);
+  });
+
+  it('refuses a rule that compares against something that is neither string nor boolean', () => {
+    expect(() =>
+      buildModel(withRule({ ...seqOnEvent, when: { field: 'kind', equals: 7 } }), []),
+    ).toThrow(ContractError);
+  });
+
+  it('refuses a rule with no because — a rule nobody can review is a rule nobody maintains', () => {
+    expect(() => buildModel(withRule({ ...seqOnEvent, because: undefined }), [])).toThrow(
+      ContractError,
+    );
+  });
+
+  it('refuses a rule whose because is empty, which is the same as not having one', () => {
+    expect(() => buildModel(withRule({ ...seqOnEvent, because: '' }), [])).toThrow(ContractError);
+  });
+
+  it('refuses an x-required-when that is not a list', () => {
+    expect(() => buildModel(envelope({ 'x-required-when': { field: 'seq' } }), [])).toThrow(
+      ContractError,
+    );
+  });
+
+  it('names the offending file when it refuses one', () => {
+    expect(() => buildModel(withRule({ ...seqOnEvent, field: 'nowhere' }), [])).toThrow(
+      /envelope\.schema\.json/,
+    );
+  });
+});

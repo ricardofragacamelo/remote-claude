@@ -83,7 +83,7 @@
   "@sessionPingDescription": { "description": "What the round trip proves" },
 
   "sessionPingAction": "Send ping",
-  "@sessionPingAction": { "description": "Sends the session.ping command" },
+  "@sessionPingAction": { "description": "Sends the diag.ping command" },
 
   "sessionPingPending": "Waiting for the pong…",
   "@sessionPingPending": { "description": "Shown while a ping is in flight" },

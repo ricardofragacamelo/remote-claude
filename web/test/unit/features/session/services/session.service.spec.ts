@@ -22,7 +22,7 @@ function pongFrame(overrides: Record<string, unknown> = {}): Envelope {
     v: 1,
     id: 'srv-1',
     kind: 'event',
-    type: 'session.pong',
+    type: 'diag.pong',
     ts: '2026-09-13T12:00:00.000Z',
     seq: 3,
     sessionId: '01J0',

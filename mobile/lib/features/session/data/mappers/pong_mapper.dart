@@ -11,7 +11,7 @@ Pong? pongFrom(Envelope frame) {
   final int? seq = frame.seq;
   final Map<String, Object?>? payload = frame.payload;
 
-  if (frame.type != sessionPongType || seq == null || payload == null) {
+  if (frame.type != diagPongType || seq == null || payload == null) {
     return null;
   }
 

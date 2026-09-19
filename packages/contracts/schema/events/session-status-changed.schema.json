@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/session-status-changed.json",
+  "title": "SessionStatusChanged",
+  "description": "Where the session stands. Derived by us, not read off a single SDK message.",
+  "x-kind": "event",
+  "x-type": "session.statusChanged",
+  "type": "object",
+  "required": ["status"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["idle", "thinking", "running", "waitingPermission", "closed"],
+      "description": "`waitingPermission` is the one that matters: the agent loop is blocked on a human."
+    }
+  }
+}

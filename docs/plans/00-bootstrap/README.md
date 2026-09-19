@@ -138,6 +138,7 @@ remote-claude/
 │   ├── doctor.mjs                 pré-requisitos do ambiente
 │   ├── start-local.mjs            portas fixas, stack de desenvolvimento
 │   ├── run-e2e-local.mjs          portas aleatórias, efêmero, roda Playwright (ou o Flutter)
+│   ├── run-smoke-live.mjs         a mesma stack contra o Claude real — sob demanda, não é portão
 │   ├── verify.mjs                 portões 1-7
 │   ├── verify-full.mjs            portões 1-11
 │   ├── verify-workspace.mjs       os portões 1-7 de um workspace só
@@ -185,7 +186,8 @@ Todos em `.mjs`, executados direto pelo `node`, sem build.
 |---|---|---|---|
 | `doctor.mjs` | B-48 | verifica pré-requisitos: versão do node, pnpm, docker, flutter, portas livres | `pnpm doctor` |
 | `start-local.mjs` | B-10 | sobe a stack de desenvolvimento, portas fixas | `pnpm dev` |
-| `run-e2e-local.mjs` | B-37 | sobe stack efêmera, roda e2e, derruba tudo | `pnpm test:e2e` · `:mobile` |
+| `run-e2e-local.mjs` | B-37 | sobe stack efêmera, roda e2e, derruba tudo | `pnpm test:e2e` · `:mobile` · `--live` |
+| `run-smoke-live.mjs` | [01 · B-41](../01-live-session/F6-e2e.md) | a mesma stack contra o **Claude de verdade** — exige o Claude logado, e não é portão | `pnpm test:e2e:live` |
 | `verify.mjs` | B-46 | portões 1-7 | `pnpm verify` |
 | `verify-full.mjs` | B-46 | portões 1-11 | `pnpm verify:full` |
 | `mobile.mjs` | B-41, B-42, B-40 | os portões do Flutter com **código de saída honesto**: `format`, `format:check`, `analyze`, `arch`, `test:unit`, `test:widget`, `coverage`, `test:e2e` | `node scripts/mobile.mjs arch` |

@@ -118,6 +118,7 @@
   ],
   "users": [
     {
+      "id": "00000000-0000-4000-8000-000000000001",
       "username": "dev",
       "email": "dev@remote-claude.local",
       "firstName": "Dev",
@@ -134,6 +135,7 @@
       "realmRoles": ["default-roles-remote-claude"]
     },
     {
+      "id": "00000000-0000-4000-8000-000000000002",
       "username": "approver",
       "email": "approver@remote-claude.local",
       "firstName": "Approver",

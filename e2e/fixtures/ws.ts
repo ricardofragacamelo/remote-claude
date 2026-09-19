@@ -161,6 +161,32 @@ export class E2eSocket {
     this.socket.close(1000, 'e2e finished');
   }
 
+  /**
+   * Cuts the connection without a close frame, the way a lost network does.
+   *
+   * Not the same as {@link close}: a normal closure is a client saying goodbye, and the one thing
+   * replay exists for is the connection that did **not**.
+   */
+  drop(): void {
+    this.socket.terminate();
+  }
+
+  /** Answers a `request` frame the server is waiting on, naming the question in `correlationId`. */
+  respond(frame: Envelope, payload: Readonly<Record<string, unknown>>): void {
+    this.socket.send(
+      JSON.stringify({
+        v: PROTOCOL_VERSION,
+        id: randomUUID(),
+        kind: 'response',
+        type: frame.type.replace('.requested', '.resolve'),
+        ts: new Date().toISOString(),
+        correlationId: frame.id,
+        traceId: randomUUID(),
+        payload,
+      } satisfies Envelope),
+    );
+  }
+
   private settle(): void {
     for (const waiter of [...this.waiters]) {
       waiter.settle();
@@ -168,7 +194,7 @@ export class E2eSocket {
   }
 }
 
-/** Payload of a `session.pong`, as the suite reads it. */
+/** Payload of a `diag.pong`, as the suite reads it. */
 export interface PongLike {
   readonly sessionId: string;
   readonly pingCount: number;
@@ -185,7 +211,7 @@ export function pongOf(frame: Envelope): PongLike {
     typeof payload.pingCount !== 'number' ||
     typeof payload.nonce !== 'string'
   ) {
-    throw new Error(`this is not a session.pong: ${JSON.stringify(frame)}`);
+    throw new Error(`this is not a diag.pong: ${JSON.stringify(frame)}`);
   }
 
   return { sessionId: payload.sessionId, pingCount: payload.pingCount, nonce: payload.nonce };

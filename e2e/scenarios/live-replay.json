@@ -1,0 +1,9 @@
+{
+  "id": "S-79",
+  "title": "the socket dies mid-turn and comes back: nothing is lost and nothing arrives twice",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "text-turn",
+    "gap": false
+  }
+}

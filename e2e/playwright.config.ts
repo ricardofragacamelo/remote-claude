@@ -1,6 +1,6 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
 
-import { environment } from './fixtures/environment';
+import { shared } from './playwright.shared';
 
 /**
  * Gate 9.
@@ -10,36 +10,17 @@ import { environment } from './fixtures/environment';
  * `webServer` block here would be a second implementation of that, and it could not bring
  * PostgreSQL and Keycloak with it.
  *
- * `retries: 0`, everywhere. A retry turns a flaky test into a test that passes eventually, which
- * is how a real intermittent bug gets shipped — see docs/architecture/shared/06-testing-strategy.md.
+ * The Agent SDK behind that stack is a **replay of a recorded run**: an end-to-end test has to be
+ * deterministic and Claude is not, and each real run costs money.
  */
 export default defineConfig({
-  testDir: '.',
+  ...shared,
 
   // `smoke-live/` talks to the real Claude: slow, not hermetic, and never part of a pull request.
-  // It is run on demand and nightly, by naming it explicitly.
+  // It has a configuration of its own, and this one refuses to pick it up by accident.
   testIgnore: ['smoke-live/**'],
   testMatch: ['specs/**/*.spec.ts'],
 
-  fullyParallel: false,
-  forbidOnly: true,
-  retries: 0,
-  workers: 1,
-
   timeout: 120_000,
   expect: { timeout: 15_000 },
-
-  // `list`, everywhere. A reporter chosen from the environment means the output a person reads
-  // while debugging is not the output CI produced, and `.env.example` would have to declare a
-  // variable this repository does not own.
-  reporter: [['list']],
-
-  use: {
-    baseURL: environment.webUrl,
-    trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
-    video: 'off',
-  },
-
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });

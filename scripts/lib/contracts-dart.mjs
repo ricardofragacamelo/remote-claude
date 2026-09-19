@@ -84,6 +84,89 @@ function writeExpression(field) {
 }
 
 /**
+ * Whether a decoded value fails to have the shape a field declares.
+ *
+ * Reads as a refusal rather than an assertion because that is how it is used: the generated
+ * predicate answers `false` on the first rule that does not hold.
+ *
+ * @param {import('./contracts-model.mjs').TypeRef} type
+ * @returns {string}
+ */
+function shapeRefusal(type) {
+  switch (type.kind) {
+    case 'string':
+    case 'enum':
+      return 'is! String';
+    case 'integer':
+      return 'is! int';
+    case 'boolean':
+      return 'is! bool';
+    case 'const':
+      return typeof type.value === 'string' ? 'is! String' : 'is! int';
+    case 'array':
+      return 'is! List<Object?>';
+    case 'object':
+    case 'record':
+      return 'is! Map<String, Object?>';
+  }
+}
+
+/**
+ * The conditional requirements of one declaration, as a predicate over a decoded map.
+ *
+ * Dart gets a predicate where TypeScript gets a type guard, because that is the shape each
+ * language already uses — but both are generated from the same `x-required-when`, which is the
+ * point: a rule written once cannot hold on one end and not on the other.
+ *
+ * @param {import('./contracts-model.mjs').Interface} declaration
+ * @returns {string[]} empty when the declaration has no conditional requirement
+ */
+function emitConditionals(declaration) {
+  if (declaration.conditionals.length === 0) {
+    return [];
+  }
+
+  const name = `${camelCase(declaration.name)}ConditionalsHold`;
+
+  const lines = [
+    `/// Whether [json] satisfies the conditional requirements of [${declaration.name}].`,
+    '///',
+  ];
+
+  for (const conditional of declaration.conditionals) {
+    lines.push(
+      `/// \`${conditional.field}\` is also required when \`${conditional.whenField}\` is`,
+      `/// \`${String(conditional.equals)}\` — ${conditional.because}.`,
+    );
+  }
+
+  lines.push(`bool ${name}(Map<String, Object?> json) {`);
+
+  for (const conditional of declaration.conditionals) {
+    // Known to exist: `buildModel` refuses a rule naming a field nobody declared.
+    const field = /** @type {import('./contracts-model.mjs').Field} */ (
+      declaration.fields.find((candidate) => candidate.name === conditional.field)
+    );
+    const refusal = shapeRefusal(field.type);
+    const expected =
+      typeof conditional.equals === 'string'
+        ? `'${conditional.equals}'`
+        : String(conditional.equals);
+
+    lines.push(
+      `  if (json['${conditional.whenField}'] == ${expected} && json['${conditional.field}'] ${refusal}) {`,
+      '    return false;',
+      '  }',
+      '',
+    );
+  }
+
+  lines.push('  return true;', '}');
+
+  return [lines.join('\n'), ''];
+}
+
+/**
  * @param {import('./contracts-model.mjs').Interface} declaration
  * @returns {string}
  */
@@ -168,7 +251,11 @@ export function emitDart(model) {
       `const String ${camelCase(message.name)}Type = '${message.frameType}';`,
       '',
     ]),
-    ...[model.envelope, ...model.interfaces].flatMap((declaration) => [emitClass(declaration), '']),
+    ...[model.envelope, ...model.interfaces].flatMap((declaration) => [
+      emitClass(declaration),
+      '',
+      ...emitConditionals(declaration),
+    ]),
   ];
 
   return `${blocks.join('\n').trimEnd()}\n`;

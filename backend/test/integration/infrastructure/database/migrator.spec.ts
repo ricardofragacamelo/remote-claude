@@ -31,7 +31,7 @@ describe('migrate', () => {
 
     const columns = await pool.query<{ column_name: string; data_type: string }>(
       `SELECT column_name, data_type FROM information_schema.columns
-       WHERE table_name = 'sessions' ORDER BY column_name`,
+       WHERE table_name = 'diag_sessions' ORDER BY column_name`,
     );
 
     expect(columns.rows.map((row) => row.column_name)).toEqual([
@@ -57,7 +57,7 @@ describe('migrate', () => {
   });
 
   it('does not corrupt the schema when two instances start at the same moment', async () => {
-    await pool.query('DROP TABLE IF EXISTS "sessions"');
+    await pool.query('DROP TABLE IF EXISTS "diag_sessions"');
     await pool.query('DROP TABLE IF EXISTS "_migrations"');
 
     const [first, second] = await Promise.all([migrate(pool), migrate(pool)]);

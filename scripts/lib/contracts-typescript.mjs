@@ -84,17 +84,49 @@ function fieldCheck(field) {
 }
 
 /**
+ * The runtime check for one conditional requirement: the deciding field has the value that makes
+ * the other one mandatory, and the other one is missing or of the wrong shape.
+ *
+ * The field is known to exist — `buildModel` refuses a rule that names one nobody declared, which
+ * is why there is no branch for it here.
+ *
+ * @param {import('./contracts-model.mjs').Interface} declaration
+ * @param {import('./contracts-model.mjs').Conditional} conditional
+ * @returns {string}
+ */
+function conditionalCheck(declaration, conditional) {
+  const field = /** @type {import('./contracts-model.mjs').Field} */ (
+    declaration.fields.find((candidate) => candidate.name === conditional.field)
+  );
+
+  const decides = `record['${conditional.whenField}']`;
+  const expected =
+    typeof conditional.equals === 'string' ? `'${conditional.equals}'` : String(conditional.equals);
+
+  return `(${decides} === ${expected} && ${String(fieldCheck(field))})`;
+}
+
+/**
  * @param {import('./contracts-model.mjs').Interface} declaration
  * @returns {string}
  */
 function emitGuard(declaration) {
-  const checks = declaration.fields
-    .filter((field) => field.required)
-    .map((field) => fieldCheck(field))
-    .filter((check) => check !== null);
+  const checks = [
+    ...declaration.fields
+      .filter((field) => field.required)
+      .map((field) => fieldCheck(field))
+      .filter((check) => check !== null),
+    ...declaration.conditionals.map((conditional) => conditionalCheck(declaration, conditional)),
+  ];
 
   const lines = [
-    `/** Whether \`value\` carries every required field of {@link ${declaration.name}}. Unknown fields are accepted. */`,
+    '/**',
+    ` * Whether \`value\` carries every required field of {@link ${declaration.name}}. Unknown fields are accepted.`,
+    ...declaration.conditionals.flatMap((conditional) => [
+      ' *',
+      ` * \`${conditional.field}\` is also required when \`${conditional.whenField}\` is \`${String(conditional.equals)}\` — ${conditional.because}.`,
+    ]),
+    ' */',
     `export function is${declaration.name}(value: unknown): value is ${declaration.name} {`,
     `  if (typeof value !== 'object' || value === null) {`,
     '    return false;',

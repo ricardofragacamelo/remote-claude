@@ -10,7 +10,7 @@ Envelope envelope(String raw) => decodeEnvelope(raw)!;
 
 void main() {
   test('reads a pong frame as the entity', () {
-    final Pong? pong = pongFrom(envelope(sessionPong(sessionId: 'ses-1', seq: 4, pingCount: 2)));
+    final Pong? pong = pongFrom(envelope(diagPong(sessionId: 'ses-1', seq: 4, pingCount: 2)));
 
     expect(pong, isNotNull);
     expect(pong!.seq, 4);
@@ -23,10 +23,18 @@ void main() {
     expect(pongFrom(envelope(connectionReady())), isNull);
   });
 
+  // Built as an object rather than decoded from the wire: since the contract made `seq` mandatory
+  // on every event, [decodeEnvelope] refuses this frame at the edge and the mapper never sees it
+  // (that half is in frame_codec_test.dart). The mapper keeps its own guard anyway — it is called
+  // with envelopes this app builds too, and a mapper that trusts its caller is a mapper that
+  // produces a Pong with no place in the stream.
   test('an event with no seq is not a pong — seq is what replay needs', () {
-    final String raw = frame(
+    const Envelope seqless = Envelope(
+      v: protocolVersion,
+      id: 'a',
       kind: 'event',
-      type: 'session.pong',
+      type: diagPongType,
+      ts: '2026-09-14T12:00:00.000Z',
       payload: <String, Object?>{
         'sessionId': 'ses-1',
         'pingedAt': 't',
@@ -35,17 +43,17 @@ void main() {
       },
     );
 
-    expect(pongFrom(envelope(raw)), isNull);
+    expect(pongFrom(seqless), isNull);
   });
 
   test('an event with no payload is not a pong', () {
-    expect(pongFrom(envelope(frame(kind: 'event', type: 'session.pong', seq: 1))), isNull);
+    expect(pongFrom(envelope(frame(kind: 'event', type: 'diag.pong', seq: 1))), isNull);
   });
 
   test('a payload missing a field is not a pong', () {
     final String raw = frame(
       kind: 'event',
-      type: 'session.pong',
+      type: 'diag.pong',
       seq: 1,
       payload: <String, Object?>{'sessionId': 'ses-1'},
     );
@@ -56,7 +64,7 @@ void main() {
   test('a payload with a field of the wrong type is not a pong', () {
     final String raw = frame(
       kind: 'event',
-      type: 'session.pong',
+      type: 'diag.pong',
       seq: 1,
       payload: <String, Object?>{
         'sessionId': 'ses-1',

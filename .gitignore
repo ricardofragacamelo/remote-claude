@@ -36,3 +36,4 @@ mobile/android/.gradle/
 # logs
 *.log
 npm-debug.log*
+/.checkpoints/

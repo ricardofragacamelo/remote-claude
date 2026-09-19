@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/permission-resolved.json",
+  "title": "PermissionResolved",
+  "description": "A permission request is settled. It reaches **every** connection, including the one that answered — that is how a second client learns it lost the race, and who won it.",
+  "x-kind": "event",
+  "x-type": "permission.resolved",
+  "type": "object",
+  "required": ["requestId", "decision", "auto"],
+  "x-required-when": [
+    {
+      "field": "resolvedBy",
+      "when": { "field": "auto", "equals": false },
+      "because": "a decision a human made has an author; only the automatic deny has none"
+    }
+  ],
+  "properties": {
+    "requestId": {
+      "type": "string",
+      "description": "The request that was settled. A client matches it against the card it is showing, never against `toolUseId`."
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["allow", "deny"],
+      "description": "What was decided. First answer wins, so this is the decision that reached `canUseTool`, not necessarily the one this client sent."
+    },
+    "auto": {
+      "type": "boolean",
+      "description": "The server decided it, with nobody answering — the deadline passed, or a session-scoped rule matched. Silence never authorises, so an automatic decision is always `deny` unless a rule allowed it."
+    },
+    "resolvedBy": {
+      "type": "string",
+      "description": "Who answered. Required whenever `auto` is false, so \"approved on your phone 2 min ago\" is something the UI can actually say."
+    },
+    "resolvedFrom": {
+      "type": "string",
+      "enum": ["web", "mobile"],
+      "description": "Which client answered."
+    }
+  }
+}

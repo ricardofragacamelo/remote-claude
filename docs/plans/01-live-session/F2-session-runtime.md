@@ -24,7 +24,7 @@ Leia [backend/04-claude-integration](../../architecture/backend/04-claude-integr
 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 
-### B-12 — Porta `ClaudeSessionPort` e o SDK fake roteirizado 🔲
+### B-12 — Porta `ClaudeSessionPort` e o SDK fake roteirizado ✅
 
 A porta em `application/session/ports/`; o fake em `backend/test/fakes/agent-sdk/`, emitindo
 `SDKMessage` roteirizados a partir de um script declarativo (uma lista de mensagens, com
@@ -42,7 +42,7 @@ cota e rede — [estratégia de testes](../../architecture/shared/06-testing-str
 O fake é um risco declarado (R-02 do [plano](README.md#riscos-e-decisões-em-aberto)): quem o
 confronta com a realidade é o `smoke-live` da [F6](F6-e2e.md).
 
-### B-13 — `sdk-options.factory` 🔲
+### B-13 — `sdk-options.factory` ✅
 
 Monta `Options` a partir do domínio, com o que a arquitetura já amarrou:
 `settingSources: ['project']`, `canUseTool`, `hooks.PreToolUse`, `includePartialMessages`,
@@ -55,14 +55,14 @@ acaba ligado.
 Por que `['project']` e não omitido nem `[]`:
 [a armadilha do `settingSources`](../../architecture/backend/04-claude-integration.md#a-armadilha-do-settingsources).
 
-### B-14 — `input-queue` e `session-runner` 🔲
+### B-14 — `input-queue` e `session-runner` ✅
 
 A fila `AsyncIterable<SDKUserMessage>` que habilita os control requests, e o runner que mantém
 **uma** `query()` por sessão, com `query.close()` no `finally` — inclusive quando o loop lançou.
 
 Subprocesso vazado não morre sozinho, e este roda na máquina do usuário.
 
-### B-15 — `sdk-message.mapper` 🔲
+### B-15 — `sdk-message.mapper` ✅
 
 `SDKMessage` → evento do nosso contrato, pela
 [tabela de mapeamento](../../architecture/backend/04-claude-integration.md#o-mapper--a-tradução-que-protege-o-contrato).
@@ -71,14 +71,14 @@ Subprocesso vazado não morre sozinho, e este roda na máquina do usuário.
 A regra de sobrevivência: variante desconhecida vira `warn` e é descartada. Ela **não** derruba
 a sessão — é o que permite o SDK ganhar uma variante nova sem tirar o produto do ar.
 
-### B-16 — Domínio `session`: entidade e máquina de estados 🔲
+### B-16 — Domínio `session`: entidade e máquina de estados ✅
 
 `starting → idle → thinking → running → waitingPermission → idle → closed`, com cada transição
 inválida virando erro de domínio — [backend/03](../../architecture/backend/03-modules.md#session).
 
 Regra pura, sem I/O, e é o arquivo onde a cobertura de `branches` mais importa.
 
-### B-17 — Use cases da sessão 🔲
+### B-17 — Use cases da sessão ✅
 
 `start`, `prompt`, `interrupt`, `setModel`, `setPermissionMode`, `close`.
 
@@ -93,7 +93,7 @@ Por ser número concreto, o **limite atingido deixa de ser caso de borda improv�
 sessão é recusada com `SESSION_LIMIT_REACHED` traduzido e **sem subprocesso órfão** — caminho
 obrigatório desta fase, não cenário opcional.
 
-### B-18 — Hub, ring buffer e replay 🔲
+### B-18 — Hub, ring buffer e replay ✅
 
 `SessionHub` com fan-out 1 sessão → N connections, `seq` atribuído **num ponto só**,
 `EventBuffer` de 1000 eventos, `attach`/`detach` e o `gap` do
@@ -102,7 +102,7 @@ obrigatório desta fase, não cenário opcional.
 Publicação é fire-and-forget por connection: socket lento **não** segura o loop do Agent SDK.
 Fila estourada → desconecta com `1013` e o cliente reconecta.
 
-### B-19 — Handlers dos comandos no gateway 🔲
+### B-19 — Handlers dos comandos no gateway ✅
 
 Um handler por comando em `adapter/inbound/ws/session/`. O gateway **não contém regra**: valida
 o frame, autoriza a connection e chama o use case.
@@ -111,14 +111,14 @@ o frame, autoriza a connection e chama o use case.
 Autorização por ação conforme [backend/06](../../architecture/backend/06-realtime.md#autorização-por-connection)
 — fechar a sessão é só do dono.
 
-### B-20 — Logging da borda do Agent SDK 🔲
+### B-20 — Logging da borda do Agent SDK ✅
 
 `claude.input`, `claude.output`, `claude.session.lifecycle` em `debug`, com truncamento e
 redação conforme [a tabela desta borda](../../architecture/backend/04-claude-integration.md#logging-desta-borda).
 
 Conteúdo de arquivo lido pela tool `Read` **nunca** vai para o log — só `path` e `bytes`.
 
-### B-44 — Gravador de fixtures do Agent SDK 🔲
+### B-44 — Gravador de fixtures do Agent SDK ✅
 
 Ferramenta do repositório que executa o SDK real contra um workspace descartável e grava o
 stream como fixture versionada, consumida por B-12.

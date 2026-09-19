@@ -260,3 +260,196 @@ describe('the shapes an optional field takes', () => {
     );
   });
 });
+
+/**
+ * The conditional requirement, in both languages.
+ *
+ * One `x-required-when` in the schema becomes a clause inside the TypeScript guard and a Dart
+ * predicate beside the class. Both are generated so the rule cannot hold on one end and not the
+ * other — which is the failure mode a hand-written validator per language always ends in.
+ */
+const conditionalModel = buildModel(
+  {
+    source: 'envelope.schema.json',
+    schema: {
+      title: 'Envelope',
+      type: 'object',
+      required: ['kind'],
+      'x-required-when': [
+        {
+          field: 'seq',
+          when: { field: 'kind', equals: 'event' },
+          because: 'replay is built on it',
+        },
+      ],
+      properties: {
+        kind: { type: 'string', enum: ['command', 'event'] },
+        seq: { type: 'integer' },
+      },
+    },
+  },
+  [
+    {
+      source: 'responses/resolve.schema.json',
+      schema: {
+        title: 'Resolve',
+        'x-kind': 'response',
+        'x-type': 'permission.resolve',
+        type: 'object',
+        required: ['decision', 'auto'],
+        'x-required-when': [
+          {
+            field: 'reason',
+            when: { field: 'decision', equals: 'deny' },
+            because: 'the reason goes into the audit trail',
+          },
+          {
+            field: 'resolvedBy',
+            when: { field: 'auto', equals: false },
+            because: 'a decision a human made has an author',
+          },
+        ],
+        properties: {
+          decision: { type: 'string', enum: ['allow', 'deny'] },
+          auto: { type: 'boolean' },
+          reason: { type: 'string' },
+          resolvedBy: { type: 'string' },
+          evidence: { type: 'object' },
+          attempts: { type: 'array', items: { type: 'string' } },
+          nested: { type: 'object', properties: { at: { type: 'string' } } },
+          marker: { type: 'string', const: 'x' },
+        },
+      },
+    },
+  ],
+);
+
+const conditionalTypeScript = emitTypeScript(conditionalModel);
+const conditionalDart = emitDart(conditionalModel);
+
+describe('a conditional requirement, in TypeScript', () => {
+  it('adds the clause to the guard of the declaration that carries it', () => {
+    expect(conditionalTypeScript).toContain(
+      "(record['kind'] === 'event' && typeof record['seq'] !== 'number')",
+    );
+  });
+
+  it('compares a boolean without quoting it', () => {
+    expect(conditionalTypeScript).toContain(
+      "(record['auto'] === false && typeof record['resolvedBy'] !== 'string')",
+    );
+  });
+
+  it('emits every rule of a declaration, not only the first', () => {
+    expect(conditionalTypeScript).toContain(
+      "(record['decision'] === 'deny' && typeof record['reason'] !== 'string')",
+    );
+  });
+
+  it('explains the rule in the doc comment, so a reader does not have to infer it', () => {
+    expect(conditionalTypeScript).toContain(
+      '`seq` is also required when `kind` is `event` — replay is built on it.',
+    );
+  });
+
+  it('leaves the field optional in the interface — conditional is not required', () => {
+    expect(conditionalTypeScript).toContain('readonly seq?: number;');
+  });
+});
+
+describe('a conditional requirement, in Dart', () => {
+  it('emits a predicate named after the declaration', () => {
+    expect(conditionalDart).toContain('bool envelopeConditionalsHold(Map<String, Object?> json) {');
+  });
+
+  it('refuses the frame when the rule does not hold', () => {
+    expect(conditionalDart).toContain("if (json['kind'] == 'event' && json['seq'] is! int) {");
+  });
+
+  it('compares a boolean without quoting it', () => {
+    expect(conditionalDart).toContain(
+      "if (json['auto'] == false && json['resolvedBy'] is! String) {",
+    );
+  });
+
+  it('answers true when every rule holds', () => {
+    expect(conditionalDart).toContain('  return true;\n}');
+  });
+
+  it('emits no predicate for a declaration with no rule', () => {
+    expect(dart).not.toContain('ConditionalsHold');
+  });
+});
+
+/**
+ * The shapes a rule can be written against. They are exercised here rather than left to the two
+ * the contract happens to use today: a rule added on an array or an open map next year would
+ * otherwise generate a check nobody ever ran.
+ */
+describe('the Dart shape check of a conditional, per declared type', () => {
+  /** @param {Record<string, unknown>} property @param {string} expected */
+  const refusalFor = (property, expected) => {
+    const emitted = emitDart(
+      buildModel(
+        {
+          source: 'envelope.schema.json',
+          schema: {
+            title: 'Envelope',
+            type: 'object',
+            required: ['kind'],
+            'x-required-when': [
+              {
+                field: 'subject',
+                when: { field: 'kind', equals: 'event' },
+                because: 'the shape under test',
+              },
+            ],
+            properties: { kind: { type: 'string' }, subject: property },
+          },
+        },
+        [],
+      ),
+    );
+
+    expect(emitted).toContain(`json['subject'] ${expected}`);
+  };
+
+  it('refuses a string that is not one', () => {
+    refusalFor({ type: 'string' }, 'is! String');
+  });
+
+  it('refuses an enum that is not a string — the enum is open at runtime', () => {
+    refusalFor({ type: 'string', enum: ['a', 'b'] }, 'is! String');
+  });
+
+  it('refuses an integer that is not one', () => {
+    refusalFor({ type: 'integer' }, 'is! int');
+  });
+
+  it('refuses a boolean that is not one', () => {
+    refusalFor({ type: 'boolean' }, 'is! bool');
+  });
+
+  it('refuses a string const that is not a string', () => {
+    refusalFor({ type: 'string', const: 'x' }, 'is! String');
+  });
+
+  it('refuses an integer const that is not an int', () => {
+    refusalFor({ type: 'integer', const: 1 }, 'is! int');
+  });
+
+  it('refuses an array that is not a list', () => {
+    refusalFor({ type: 'array', items: { type: 'string' } }, 'is! List<Object?>');
+  });
+
+  it('refuses an open map that is not a map', () => {
+    refusalFor({ type: 'object' }, 'is! Map<String, Object?>');
+  });
+
+  it('refuses a declared object that is not a map', () => {
+    refusalFor(
+      { type: 'object', properties: { at: { type: 'string' } } },
+      'is! Map<String, Object?>',
+    );
+  });
+});

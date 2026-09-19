@@ -110,9 +110,11 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   - **Cada raiz declara quem a usa** (o `sub` do OIDC). Com multiusuário, allowlist global
     significaria que qualquer pessoa autenticada alcança toda raiz — o escopo existiria na
     trilha e na permissão, mas não no acesso, que é onde importa.
-  - Raiz que **existe e não é do usuário** responde `WORKSPACE_NOT_FOUND` (404), nunca 403:
-    403 confirma a existência de um caminho que o usuário não deveria saber que existe.
-- **Erros:** `WORKSPACE_NOT_ALLOWED`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`
+  - Raiz que **existe e não é do usuário** responde `FORBIDDEN` (403): o requisitante é quem diz
+    ser, e ainda assim não pode. `404` fica para o caminho que **não existe**
+    ([01 · D-17](../../plans/01-live-session/decisions.md#d-17--usar-o-código-http-que-cada-coisa-é)).
+- **Erros:** `WORKSPACE_NOT_ALLOWED`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`,
+  `FORBIDDEN`
 - **Nota:** esta é a primeira linha de defesa do sistema. A regra é pura, sem I/O, e tem
   cobertura mínima de 90 %. Ver [01-clean-architecture.md](01-clean-architecture.md).
 
@@ -231,8 +233,8 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   não pode custar o trabalho de ninguém. A **segunda falha consecutiva** encerra a sessão, com
   motivo explícito; uma escrita bem-sucedida zera o contador. Evita os dois extremos: a sessão
   zumbi, em que nada passa e o usuário fica tentando, e a morte por soluço.
-- **Escopo de leitura:** cada usuário lê a própria trilha. Trilha de outro responde `404`, não
-  `403` — 403 confirma a existência do que o requisitante não deveria saber que existe.
+- **Escopo de leitura:** cada usuário lê a própria trilha. Trilha de outro responde `403`: existe,
+  e não é sua ([01 · D-17](../../plans/01-live-session/decisions.md#d-17--usar-o-código-http-que-cada-coisa-é)).
 - **Ordenação e paginação:** cursor **keyset descendente** sobre `seq`, o sequencial próprio da
   tabela; `at` é coluna de **filtro**, nunca de ordenação. Timestamp ordena mal por dois motivos
   independentes — empate no mesmo milissegundo e relógio da máquina ajustado para trás —, e o

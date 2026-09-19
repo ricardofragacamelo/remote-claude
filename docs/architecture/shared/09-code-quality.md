@@ -250,6 +250,16 @@ que o furo acontece **em silêncio**: nem `settingSources` omitido nem hook ause
 erro ou aviso — apenas desligam a proteção. Ver
 [backend/04](../backend/04-claude-integration.md#a-armadilha-do-settingsources).
 
+Duas notas sobre como a regra própria funciona, e por que ela é assim:
+
+- **ela lê código, não prosa.** Comentários são apagados antes da busca pela chamada; strings não,
+  porque é numa string que mora o `['project']` que a regra exige. Um portão que acusa o
+  comentário que explica `query()` é um portão que se aprende a rolar para baixo;
+- **ela não é a única barreira.** A fábrica de `Query` — a costura que permite injetar um stream
+  roteirizado em teste — deixou o único `query(` literal do backend num passthrough. Por isso
+  `realQueryFactory` também **recusa** opções sem `settingSources: ['project']` e sem o hook. A
+  regra verifica em tempo de commit; a fábrica impede em tempo de execução.
+
 Atualização de dependência é automatizada (Renovade/Dependabot), com agrupamento e
 atualização de segurança em prioridade.
 

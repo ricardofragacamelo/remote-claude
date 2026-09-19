@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/permission-extend.json",
+  "title": "PermissionExtend",
+  "description": "Extends the deadline of a pending permission request. The payload carries **only** the request: the increment and the ceiling come from the backend configuration, because our timeout is the only protection against a hung session and the client does not get to choose that number. Idempotent by `requestId` — web and phone may both extend the same request.",
+  "x-kind": "command",
+  "x-type": "permission.extend",
+  "type": "object",
+  "required": ["requestId"],
+  "properties": {
+    "requestId": { "type": "string", "description": "The pending request to extend." }
+  }
+}

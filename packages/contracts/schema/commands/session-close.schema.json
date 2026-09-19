@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-close.json",
+  "title": "SessionClose",
+  "description": "Ends the session and releases its subprocess. Unlike every other command of the session, only the owner may send it.",
+  "x-kind": "command",
+  "x-type": "session.close",
+  "type": "object",
+  "required": ["sessionId"],
+  "properties": { "sessionId": { "type": "string" } }
+}

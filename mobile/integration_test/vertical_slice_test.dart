@@ -7,8 +7,8 @@
 /// ```
 /// a real credential from the local realm
 ///  → the app's own socket opens and the handshake is authenticated
-///  → the button sends session.ping
-///  → session.pong comes back with a seq, from PostgreSQL and through the gateway
+///  → the button sends diag.ping
+///  → diag.pong comes back with a seq, from PostgreSQL and through the gateway
 ///  → the widget renders it, translated
 /// ```
 ///

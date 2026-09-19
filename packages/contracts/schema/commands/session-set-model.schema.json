@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-set-model.json",
+  "title": "SessionSetModel",
+  "description": "Changes the model of a running session.",
+  "x-kind": "command",
+  "x-type": "session.setModel",
+  "type": "object",
+  "required": ["sessionId", "model"],
+  "properties": {
+    "sessionId": { "type": "string" },
+    "model": { "type": "string", "description": "Model identifier, as the Agent SDK names it." }
+  }
+}

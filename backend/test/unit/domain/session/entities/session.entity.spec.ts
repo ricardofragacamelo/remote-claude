@@ -1,65 +1,151 @@
 import { describe, expect, it } from 'vitest';
 
 import { UserId } from '@domain/auth';
-import { Session, SessionId } from '@domain/session';
+import { InvalidSessionTransitionError, SessionClosedError } from '@domain/session';
 import { aSession } from '../../../../support/builders/session.builder';
 
-const id = SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ');
 const owner = UserId.create('auth|owner');
-const openedAt = new Date('2026-09-13T12:00:00.000Z');
+const stranger = UserId.create('auth|stranger');
 
 describe('Session', () => {
-  it('opens with no pings recorded', () => {
-    const session = Session.open(id, owner, openedAt);
+  it('opens in `starting`, because the subprocess is not up yet', () => {
+    const session = aSession();
 
-    expect(session.pingCount).toBe(0);
-    expect(session.lastPingedAt).toEqual(openedAt);
-    expect(session.openedAt).toEqual(openedAt);
+    expect(session.status).toBe('starting');
+    expect(session.isClosed).toBe(false);
+    expect(session.closeReason).toBeNull();
   });
 
-  it('counts the first ping and reports the instant it was given', () => {
-    const session = Session.open(id, owner, openedAt);
-    const at = new Date('2026-09-13T12:00:05.000Z');
+  it('carries the workspace, the model and the mode it was opened with', () => {
+    const session = aSession({ model: 'claude-opus-5', permissionMode: 'plan' });
 
-    const pong = session.ping(at, 'nonce-1');
-
-    expect(pong.pingCount).toBe(1);
-    expect(pong.pingedAt).toEqual(at);
-    expect(pong.nonce).toBe('nonce-1');
-    expect(pong.sessionId.equals(id)).toBe(true);
+    expect(session.workspace.value).toBe('/srv/projects/app');
+    expect(session.model).toBe('claude-opus-5');
+    expect(session.permissionMode).toBe('plan');
   });
 
-  it('keeps counting across pings, and moves the last ping forward', () => {
-    const session = Session.open(id, owner, openedAt);
-    const second = new Date('2026-09-13T12:00:10.000Z');
-
-    session.ping(new Date('2026-09-13T12:00:05.000Z'), 'a');
-    const pong = session.ping(second, 'b');
-
-    expect(pong.pingCount).toBe(2);
-    expect(session.lastPingedAt).toEqual(second);
+  it('knows who it belongs to', () => {
+    expect(aSession().isOwnedBy(owner)).toBe(true);
+    expect(aSession().isOwnedBy(stranger)).toBe(false);
   });
 
-  it('restores the count and the timestamps it was persisted with', () => {
-    const session = aSession({ pingCount: 7, lastPingedAt: new Date('2026-09-13T13:00:00.000Z') });
+  describe('moving', () => {
+    it('follows the machine', () => {
+      const session = aSession();
 
-    expect(session.pingCount).toBe(7);
-    expect(session.lastPingedAt).toEqual(new Date('2026-09-13T13:00:00.000Z'));
+      session.moveTo('idle');
+      session.moveTo('thinking');
+      session.moveTo('running');
+
+      expect(session.status).toBe('running');
+    });
+
+    it('treats being told the status it already has as nothing at all', () => {
+      // The SDK reports the same thing twice often enough — two tools in a row both mean
+      // `running` — and turning that into a violation would crash on an ordinary stream.
+      const session = aSession();
+      session.moveTo('idle');
+
+      expect(() => {
+        session.moveTo('idle');
+      }).not.toThrow();
+      expect(session.status).toBe('idle');
+    });
+
+    it('refuses a move the machine does not make', () => {
+      expect(() => aSession().moveTo('running')).toThrow(InvalidSessionTransitionError);
+    });
+
+    it('says which session and which move, because it is a bug of ours', () => {
+      expect.assertions(2);
+
+      try {
+        aSession().moveTo('waitingPermission');
+      } catch (error) {
+        const failure = error as InvalidSessionTransitionError;
+        expect(failure.code).toBe('INTERNAL_ERROR');
+        expect(failure.params).toMatchObject({ from: 'starting', to: 'waitingPermission' });
+      }
+    });
+
+    it('refuses to move after closing', () => {
+      const session = aSession();
+      session.close('completed');
+
+      expect(() => session.moveTo('idle')).toThrow(InvalidSessionTransitionError);
+    });
   });
 
-  it('recognises its owner', () => {
-    expect(aSession({ ownerId: 'auth|owner' }).isOwnedBy(UserId.create('auth|owner'))).toBe(true);
+  describe('closing', () => {
+    it('records why', () => {
+      const session = aSession();
+      session.close('failed');
+
+      expect(session.status).toBe('closed');
+      expect(session.closeReason).toBe('failed');
+    });
+
+    it('can be closed from any status', () => {
+      const session = aSession();
+      session.moveTo('idle');
+      session.moveTo('thinking');
+      session.close('shutdown');
+
+      expect(session.isClosed).toBe(true);
+    });
+
+    it('keeps the first reason when it is closed twice', () => {
+      // Closing runs from a command, from a `finally` and from the shutdown hook, and any two can
+      // happen at once. The later reason is a consequence of the first; overwriting it would
+      // replace the cause with its effect.
+      const session = aSession();
+
+      session.close('auditUnavailable');
+      session.close('shutdown');
+
+      expect(session.closeReason).toBe('auditUnavailable');
+    });
   });
 
-  it('does not recognise anybody else', () => {
-    expect(aSession({ ownerId: 'auth|owner' }).isOwnedBy(UserId.create('auth|other'))).toBe(false);
-  });
+  describe('changing what it runs with', () => {
+    it('takes a new model', () => {
+      const session = aSession();
+      session.setModel('claude-opus-5');
 
-  it('round-trips through its snapshot', () => {
-    const original = aSession({ pingCount: 3 });
+      expect(session.model).toBe('claude-opus-5');
+    });
 
-    const restored = Session.restore(original.snapshot());
+    it('takes a new permission mode', () => {
+      const session = aSession();
+      session.setPermissionMode('acceptEdits');
 
-    expect(restored.snapshot()).toEqual(original.snapshot());
+      expect(session.permissionMode).toBe('acceptEdits');
+    });
+
+    it.each([
+      ['the model', (session: ReturnType<typeof aSession>) => session.setModel('x')],
+      [
+        'the mode',
+        (session: ReturnType<typeof aSession>) => session.setPermissionMode('acceptEdits'),
+      ],
+    ])('refuses to change %s of a closed session', (_what, change) => {
+      const session = aSession();
+      session.close('completed');
+
+      expect(() => change(session)).toThrow(SessionClosedError);
+    });
+
+    it('answers a closed session exactly as it answers a missing one', () => {
+      expect.assertions(1);
+      const session = aSession();
+      session.close('completed');
+
+      try {
+        session.setModel('x');
+      } catch (error) {
+        // A distinct code would be the only way to learn that a session id was once real.
+        expect((error as SessionClosedError).code).toBe('SESSION_NOT_FOUND');
+      }
+    });
   });
 });

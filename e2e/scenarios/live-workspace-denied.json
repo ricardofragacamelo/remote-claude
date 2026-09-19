@@ -1,0 +1,9 @@
+{
+  "id": "S-82",
+  "title": "a folder outside the allowlist is refused before anything is spawned",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "path": "/etc",
+    "code": "WORKSPACE_NOT_ALLOWED"
+  }
+}

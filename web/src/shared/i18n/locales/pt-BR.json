@@ -44,7 +44,9 @@
   "session": {
     "error": {
       "notFound": "Essa sessão não existe mais.",
-      "invalidSessionId": "{{sessionId}} não é um identificador de sessão."
+      "invalidSessionId": "{{sessionId}} não é um identificador de sessão.",
+      "claudeUnavailable": "O Claude parou de responder nesta máquina.",
+      "forbidden": "Essa sessão é de outra pessoa."
     },
     "ping": {
       "title": "Ida e volta",
@@ -55,6 +57,132 @@
       "result": "Pong {{count}} às {{at}}",
       "sequence": "Sequência {{seq}}",
       "sessionLabel": "Sessão {{sessionId}}"
+    },
+    "status": {
+      "starting": "Iniciando",
+      "idle": "Parada",
+      "thinking": "Pensando",
+      "running": "Executando uma ferramenta",
+      "waitingPermission": "Esperando você",
+      "closed": "Encerrada"
+    },
+    "role": {
+      "assistant": "Claude",
+      "user": "Você"
+    },
+    "toolStatus": {
+      "running": "Executando",
+      "succeeded": "Pronto",
+      "failed": "Falhou",
+      "denied": "Recusada"
+    },
+    "closeReason": {
+      "closedByUser": "você a encerrou",
+      "completed": "ela terminou",
+      "failed": "o Claude parou de responder",
+      "auditUnavailable": "não foi possível gravar a trilha de auditoria",
+      "shutdown": "o backend foi desligado"
+    },
+    "starter": {
+      "title": "Abrir uma sessão",
+      "description": "O Claude roda nesta máquina, na pasta que você escolher acima.",
+      "action": "Abrir sessão",
+      "pending": "Abrindo…",
+      "chooseWorkspace": "Escolha uma pasta acima primeiro."
+    },
+    "screen": {
+      "title": "Sessão",
+      "sessionLabel": "Sessão {{sessionId}}",
+      "conversation": "Conversa",
+      "tools": "Ferramentas",
+      "emptyTitle": "Ainda não há nada",
+      "emptyDescription": "Mande um prompt abaixo para começar a conversa.",
+      "partial": "Isto é só o que o servidor ainda tinha em memória, não a conversa inteira.",
+      "ended": "Esta sessão terminou às {{at}} porque {{reason}}.",
+      "turn": "O último turno custou {{cost}} e levou {{ms}} ms."
+    },
+    "composer": {
+      "label": "Prompt",
+      "placeholder": "Peça ao Claude algo nesta pasta…",
+      "send": "Enviar"
+    },
+    "controls": {
+      "interrupt": "Interromper",
+      "close": "Encerrar sessão",
+      "closeNotOwner": "Só o navegador que abriu esta sessão pode encerrá-la."
+    }
+  },
+  "workspace": {
+    "error": {
+      "invalidPath": "Esse caminho não pode ser usado.",
+      "notAllowed": "Esta instalação não permite {{path}}.",
+      "notFound": "{{path}} não existe.",
+      "notADirectory": "{{path}} é um arquivo, não uma pasta.",
+      "forbidden": "Essa pasta não é sua para abrir."
+    },
+    "selector": {
+      "title": "Workspace",
+      "description": "O Claude roda dentro da pasta que você escolher aqui, e em nenhuma outra.",
+      "loading": "Carregando as pastas que você pode usar…",
+      "lastUsed": "Aberta pela última vez em {{at}}",
+      "neverUsed": "Nunca aberta",
+      "emptyTitle": "Nenhuma pasta disponível para você",
+      "emptyDescription": "A allowlist desta máquina ainda não menciona a sua conta. Quem instalou o remote-claude pode acrescentar uma pasta."
+    }
+  },
+  "permission": {
+    "queue": {
+      "title": "Esperando você",
+      "description": "O Claude parou e não vai executar isto até você responder.",
+      "emptyTitle": "Nada para decidir",
+      "emptyDescription": "O Claude pergunta aqui antes de executar qualquer coisa que precise da sua palavra.",
+      "lastAuto": "O último pedido foi {{decision}} automaticamente.",
+      "lastBy": "O último pedido foi {{decision}} por {{who}}."
+    },
+    "card": {
+      "label": "Permissão para {{tool}}",
+      "remaining": "faltam {{seconds}} s",
+      "deny": "Recusar",
+      "extend": "Preciso de mais tempo",
+      "sending": "Enviando sua resposta…"
+    },
+    "risk": {
+      "read": "Lê alguma coisa",
+      "write": "Altera um arquivo",
+      "destructive": "Pode destruir alguma coisa"
+    },
+    "scope": {
+      "once": "Permitir uma vez",
+      "session": "Permitir nesta sessão"
+    },
+    "decision": {
+      "allow": "permitido",
+      "deny": "recusado"
+    },
+    "tool": {
+      "Bash": "Executar um comando de shell",
+      "Write": "Escrever um arquivo",
+      "Edit": "Editar um arquivo",
+      "MultiEdit": "Editar vários arquivos",
+      "NotebookEdit": "Editar um notebook",
+      "Read": "Ler um arquivo",
+      "WebFetch": "Buscar uma página",
+      "unknown": "Usar {{tool}}"
+    },
+    "error": {
+      "requestNotFound": "Esse pedido não está mais aberto.",
+      "requestExpired": "Esse pedido ficou sem tempo.",
+      "notOwned": "Você não está acompanhando essa sessão.",
+      "reasonRequired": "Uma recusa precisa de um motivo.",
+      "extensionLimitReached": "Esse pedido não pode ser estendido de novo.",
+      "scopeUnsupported": "Esta versão não concede esse alcance.",
+      "rulePatternInvalid": "Esse padrão de regra não é válido.",
+      "ruleExpiryTooLong": "Essa regra duraria mais do que esta instalação permite."
+    }
+  },
+  "audit": {
+    "error": {
+      "unavailable": "Não foi possível gravar a trilha de auditoria, então nada foi autorizado a rodar."
     }
   }
 }

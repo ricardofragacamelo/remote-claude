@@ -1,0 +1,9 @@
+{
+  "id": "S-54",
+  "title": "two clients answer the same request: the first wins and the second is told who did",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "decision": "allow"
+  }
+}

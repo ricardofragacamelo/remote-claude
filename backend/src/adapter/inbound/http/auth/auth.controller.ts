@@ -3,7 +3,7 @@ import type { Request, Response } from 'express';
 
 import { EstablishSessionUseCase, RenewSessionUseCase } from '@application/auth';
 import type { EstablishedSession } from '@application/auth';
-import { ZodBodyPipe } from '@shared/validation/zod.pipe';
+import { ZodPipe } from '@shared/validation/zod.pipe';
 import { establishSessionSchema } from './auth.dto';
 import type { EstablishSessionDto, SessionDto } from './auth.dto';
 import { readRefreshCookie, writeRefreshCookie } from './refresh-cookie';
@@ -26,7 +26,7 @@ export class AuthController {
   @Post('session')
   @HttpCode(201)
   async create(
-    @Body(new ZodBodyPipe(establishSessionSchema)) body: EstablishSessionDto,
+    @Body(new ZodPipe(establishSessionSchema)) body: EstablishSessionDto,
     @Res({ passthrough: true }) response: Response,
   ): Promise<SessionDto> {
     return this.answer(await this.establish.execute(body), response);

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/responses/permission-resolve.json",
+  "title": "PermissionResolve",
+  "description": "The answer to `permission.requested`, carrying its `id` in `correlationId`. Resolving the same `requestId` twice is a silent ack and **one** execution, never an error and never a double run — several clients watch one session, and a client may resend after reconnecting.",
+  "x-kind": "response",
+  "x-type": "permission.resolve",
+  "type": "object",
+  "required": ["requestId", "decision"],
+  "x-required-when": [
+    {
+      "field": "reason",
+      "when": { "field": "decision", "equals": "deny" },
+      "because": "the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from"
+    }
+  ],
+  "properties": {
+    "requestId": {
+      "type": "string",
+      "description": "The request being answered. Idempotency keys on it, so resending after a reconnect costs nothing."
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["allow", "deny"],
+      "description": "Yes or no. There is no third value: silence is handled by the deadline, and it denies."
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["once", "session", "project", "always"],
+      "description": "How far the decision reaches. Absent means `once`. Only `once` and `session` exist in this plan — `project` and `always` are persisted rules, and they arrive with the rules module."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why it was refused. Required whenever `decision` is `deny` — the schema carries the condition, so no end has to remember it."
+    }
+  }
+}

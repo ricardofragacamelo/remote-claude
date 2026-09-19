@@ -424,11 +424,12 @@ ficou indisponível — o modelo recorreu a `ToolSearch` e `Bash` para contornar
 Faz sentido como desenho de segurança: honrar `deny` de um repositório de terceiro é seguro
 (só restringe); honrar `allow` não é.
 
-> **Incerteza residual, não resolvida:** os diretórios de teste não constam em
-> `~/.claude.json` como confiados (`hasTrustDialogAccepted`). Não foi verificado se, num
-> diretório **já confiado** pelo usuário no CLI interativo, o `allow` de projeto passa a ser
-> aplicado — o que reabriria a brecha. Testar isso exigiria alterar o `~/.claude.json` do
-> usuário, o que não foi feito. **Verificar antes de ir para produção.**
+> **Incerteza resolvida em 2026-09-18, e a resposta é a ruim.** Os diretórios desta medição não
+> constavam como confiados (`hasTrustDialogAccepted`). A [B-45](../plans/01-live-session/F0-contract.md)
+> repetiu o teste num diretório **confiado**, sobre um `CLAUDE_CONFIG_DIR` isolado: o `allow` de
+> projeto passa a ser aplicado e o `canUseTool` **não é chamado**. A tabela acima vale apenas para
+> diretório não confiado. O detalhe da medição está em
+> [04-claude-integration](../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido).
 
 ### 8.3 — `reinitialize()` não reentrega o pedido, e não precisamos dele
 

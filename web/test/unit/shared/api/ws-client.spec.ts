@@ -10,7 +10,7 @@ function serverFrame(overrides: Partial<Envelope>): Record<string, unknown> {
     v: 1,
     id: 'srv-1',
     kind: 'event',
-    type: 'session.pong',
+    type: 'diag.pong',
     ts: '2026-09-13T12:00:00.000Z',
     ...overrides,
   };
@@ -339,14 +339,14 @@ describe('WsClient', () => {
     it('sends a command once the connection is ready', () => {
       const socket = connectAndReady();
 
-      expect(client.command('session.ping', { nonce: 'n' })).toBe(true);
-      expect(socket.frames().at(-1)).toMatchObject({ kind: 'command', type: 'session.ping' });
+      expect(client.command('diag.ping', { nonce: 'n' })).toBe(true);
+      expect(socket.frames().at(-1)).toMatchObject({ kind: 'command', type: 'diag.ping' });
     });
 
     it('refuses to pretend a command left while the socket is down', () => {
       client.connect();
 
-      expect(client.command('session.ping', { nonce: 'n' })).toBe(false);
+      expect(client.command('diag.ping', { nonce: 'n' })).toBe(false);
     });
 
     it('connecting twice does not open a second socket', () => {

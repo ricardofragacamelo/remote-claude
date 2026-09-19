@@ -1,0 +1,9 @@
+{
+  "id": "S-81",
+  "title": "a turn that will not finish on its own is interrupted, and the session comes back idle",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "text-turn",
+    "statusAfterInterrupt": "idle"
+  }
+}

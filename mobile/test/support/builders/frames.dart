@@ -52,14 +52,14 @@ String sessionAttached({
 );
 
 /// One pong.
-String sessionPong({
+String diagPong({
   required String sessionId,
   required int seq,
   int pingCount = 1,
   String nonce = 'nonce-1',
 }) => frame(
   kind: 'event',
-  type: 'session.pong',
+  type: 'diag.pong',
   sessionId: sessionId,
   seq: seq,
   payload: <String, Object?>{

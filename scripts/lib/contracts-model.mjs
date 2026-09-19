@@ -11,7 +11,15 @@
 const METADATA = new Set(['$schema', '$id', 'title', 'description', 'x-kind', 'x-type']);
 
 /** Keywords the subset understands. */
-const SUPPORTED = new Set(['type', 'properties', 'required', 'items', 'enum', 'const']);
+const SUPPORTED = new Set([
+  'type',
+  'properties',
+  'required',
+  'items',
+  'enum',
+  'const',
+  'x-required-when',
+]);
 
 /** The `kind` values the envelope allows; a message declaring anything else is rejected. */
 export const FRAME_KINDS = ['command', 'event', 'request', 'response', 'ack', 'error'];
@@ -47,10 +55,26 @@ export class ContractError extends Error {
  */
 
 /**
+ * A field the contract requires only in a given case — `reason` when the decision is `deny`,
+ * `seq` when the frame is an event.
+ *
+ * It lives in the schema rather than in each end's validation because a rule spread over three
+ * languages is a rule that holds in two of them. See
+ * docs/architecture/shared/05-websocket-protocol.md.
+ *
+ * @typedef {object} Conditional
+ * @property {string} field the field that becomes required
+ * @property {string} whenField the field that decides
+ * @property {string | boolean} equals the value of `whenField` that makes `field` required
+ * @property {string} because why the rule exists, carried into the generated comment
+ */
+
+/**
  * @typedef {object} Interface
  * @property {string} name
  * @property {string} description
  * @property {Field[]} fields
+ * @property {Conditional[]} conditionals
  */
 
 /**
@@ -158,6 +182,74 @@ function resolveType(source, name, schema, collected) {
 }
 
 /**
+ * Reads `x-required-when`, refusing a rule that could never fire.
+ *
+ * Three refusals, and each one is a rule that would look present and do nothing: a condition on
+ * a field nobody declared, a condition that decides on a field nobody declared, and a condition
+ * on a field that is already unconditionally required.
+ *
+ * @param {string} source
+ * @param {string} name
+ * @param {Record<string, unknown>} schema
+ * @param {Set<string>} required
+ * @param {Record<string, unknown>} properties
+ * @returns {Conditional[]}
+ */
+function toConditionals(source, name, schema, required, properties) {
+  const declared = schema['x-required-when'];
+
+  if (declared === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(declared)) {
+    throw new ContractError(source, `\`x-required-when\` of \`${name}\` is not a list`);
+  }
+
+  return declared.map((entry) => {
+    const rule = /** @type {Record<string, unknown>} */ (entry);
+    const field = rule['field'];
+    const when = /** @type {Record<string, unknown>} */ (rule['when'] ?? {});
+    const whenField = when['field'];
+    const equals = when['equals'];
+    const because = rule['because'];
+
+    if (typeof field !== 'string' || properties[field] === undefined) {
+      throw new ContractError(
+        source,
+        `\`x-required-when\` of \`${name}\` names \`${String(field)}\`, which is never declared`,
+      );
+    }
+    if (required.has(field)) {
+      throw new ContractError(
+        source,
+        `\`${field}\` of \`${name}\` is already required, so the condition can never fire`,
+      );
+    }
+    if (typeof whenField !== 'string' || properties[whenField] === undefined) {
+      throw new ContractError(
+        source,
+        `\`x-required-when\` of \`${name}\` decides on \`${String(whenField)}\`, which is never declared`,
+      );
+    }
+    if (typeof equals !== 'string' && typeof equals !== 'boolean') {
+      throw new ContractError(
+        source,
+        `\`x-required-when\` of \`${name}\` compares \`${whenField}\` with something that is not a string or a boolean`,
+      );
+    }
+    if (typeof because !== 'string' || because === '') {
+      throw new ContractError(
+        source,
+        `\`x-required-when\` of \`${name}\` has no \`because\` — a rule nobody can review is a rule nobody maintains`,
+      );
+    }
+
+    return { field, whenField, equals, because };
+  });
+}
+
+/**
  * @param {string} source
  * @param {string} name
  * @param {Record<string, unknown>} schema
@@ -181,6 +273,7 @@ function toInterface(source, name, schema, collected) {
   return {
     name,
     description: String(schema['description'] ?? ''),
+    conditionals: toConditionals(source, name, schema, required, properties),
     fields: Object.entries(properties).map(([field, property]) => ({
       name: field,
       required: required.has(field),

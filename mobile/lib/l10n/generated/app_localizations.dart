@@ -249,7 +249,7 @@ abstract class AppLocalizations {
   /// **'One command across every layer: the gateway, the use case, the rule, the database and back as an event.'**
   String get sessionPingDescription;
 
-  /// Sends the session.ping command
+  /// Sends the diag.ping command
   ///
   /// In en, this message translates to:
   /// **'Send ping'**

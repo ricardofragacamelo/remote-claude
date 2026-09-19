@@ -3,6 +3,7 @@ import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/re
 import { CALLBACK_PATH } from '@/features/auth';
 import { App } from './App';
 import { Callback } from './Callback';
+import { SessionRoute } from './SessionRoute';
 
 /**
  * The routes.
@@ -20,8 +21,20 @@ const callbackRoute = createRoute({
   component: Callback,
 });
 
+/**
+ * The session on screen is in the **path**, not in state.
+ *
+ * The test the architecture states is simple: pasting the link on another device reproduces the
+ * screen. A session held in a store would fail it.
+ */
+const sessionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sessions/$sessionId',
+  component: SessionRoute,
+});
+
 export const router = createRouter({
-  routeTree: rootRoute.addChildren([indexRoute, callbackRoute]),
+  routeTree: rootRoute.addChildren([indexRoute, callbackRoute, sessionRoute]),
 });
 
 declare module '@tanstack/react-router' {

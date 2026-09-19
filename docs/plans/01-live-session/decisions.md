@@ -39,7 +39,7 @@ na mesma entrega — contrato quebrado em uma ponta só é bug.
 |---|---|---|---|---|---|
 | D-02 | De onde vem a allowlist de raízes: variável de ambiente, arquivo de configuração ou tabela administrável pela UI | se ela muda sem reiniciar o processo, e quem tem permissão de mudá-la | B-08 | 2026-09-15 · **arquivo de configuração**, validado no boot, com recarga explícita | ✅ |
 | D-03 | O sistema tem **dono único** ou vários usuários? | se duas pessoas usarão a mesma instalação — hoje não há caso conhecido | B-07, B-09 | 2026-09-15 · **multiusuário desde o dia 1**: `userId` escopa workspace, audit e permission desde a primeira migration | ✅ |
-| D-13 | Com vários usuários, quem pode usar qual raiz? | nasceu de D-03: allowlist global com multiusuário anula metade do escopo | B-08, B-09 | 2026-09-15 · **o arquivo declara a raiz e quem a usa** (subject OIDC) | ✅ |
+| D-13 | Com vários usuários, quem pode usar qual raiz? | nasceu de D-03: allowlist global com multiusuário anula metade do escopo | B-08, B-09 | 2026-09-15 · **o arquivo declara a raiz e quem a usa** (subject OIDC). A parte sobre **qual status** devolver foi revertida pela [D-17](#d-17--usar-o-código-http-que-cada-coisa-é) | ✅ |
 
 ### D-02 — onde mora a allowlist
 
@@ -81,8 +81,12 @@ acesso — que é onde ele importa.
 (subject OIDC). Mantém a defesa inteira no disco, como D-02 decidiu, sem reintroduzir a tabela
 administrável que D-02 rejeitou.
 
-Raiz que existe mas não é do usuário responde **404, não 403** — 403 confirma a existência de um
-caminho que o usuário não deveria saber que existe.
+Raiz que existe mas não é do usuário responde **`403`**.
+
+> **Revertido em 2026-09-19.** Esta decisão dizia originalmente "404, não 403 — 403 confirma a
+> existência de um caminho que o usuário não deveria saber que existe". A
+> [D-17](#d-17--usar-o-código-http-que-cada-coisa-é) desfez essa parte; o resto da D-13 — cada
+> entrada do arquivo declara a raiz e quem a usa — continua valendo inteiro.
 
 ---
 
@@ -92,6 +96,7 @@ caminho que o usuário não deveria saber que existe.
 |---|---|---|---|---|---|
 | D-04 | Como o Agent SDK é fakeado no teste: fake roteirizado nosso, ou o CLI real guiado por script | quanto do comportamento o fake precisa reproduzir para a cobertura ser honesta | B-12 | 2026-09-15 · **fake nosso, com roteiros gravados do SDK real** — exige um gravador de fixtures (B-12b) | ✅ |
 | D-05 | Qual o limite de sessões simultâneas configurado por default | RAM típica da máquina alvo; a derivação automática é o [plano 05](../05-hardening-operations/F0-limits.md) | B-17 | 2026-09-15 · **10 sessões** (~2,2 GB, ~222 MB × 10) | ✅ |
+| D-14 | Como a fábrica de opções declara as tools sem dispensar o `canUseTool` | nasceu do spike da B-45: nome simples em `options.allowedTools` auto-aprova a tool | B-13 | 2026-09-18 · **nenhum nome simples em `allowedTools`**; toda tool passa pelo `canUseTool` | ✅ |
 
 ### D-04 — o fake, e o que ele pode mentir
 
@@ -121,6 +126,20 @@ uma máquina alvo folgada.
 **limite atingido** (11ª sessão recusada, com erro traduzido e sem subprocesso órfão) passa a ser
 obrigatório na F2, não um caso de borda improvável. Derivar o limite da RAM continua sendo o
 [plano 05](../05-hardening-operations/F0-limits.md).
+
+### D-14 — o segundo jeito de furar o `canUseTool`
+
+Descoberta durante o spike da [B-45](F0-contract.md), e não pelos tipos: a opção
+`allowedTools: ['Write']` — um **nome simples** — auto-aprova a tool antes de o callback ser
+consultado. O SDK avisa, em `stderr`, com `CLAUDE_SDK_CAN_USE_TOOL_SHADOWED`; um backend que não
+lê `stderr` não vê nada.
+
+É o mesmo furo de [D-11](#d-11--o-furo-que-invalidaria-o-produto) por outra porta: lá vinha da
+marca de confiança do diretório, aqui das nossas próprias opções.
+
+**Decidido:** a fábrica de opções **não usa nome simples em `allowedTools`**. Restringir o leque
+de tools, quando for preciso, é `deny` — que é aplicado sem dispensar ninguém. A regra vale para a
+B-13, e o `scan:security` é onde ela vira verificação de máquina.
 
 ---
 
@@ -168,6 +187,8 @@ e o contador zerando quando uma escrita volta a passar.
 |---|---|---|---|---|---|
 | D-08 | Quem classifica o `riskHint`, e com qual regra: lista por tool, heurística sobre o input, ou os dois | quais comandos precisam ser marcados como destrutivos para o destaque valer algo | B-30 | 2026-09-15 · **lista por tool + heurística sobre o input, falhando fechado** | ✅ |
 | D-09 | O timeout de 120 s é por pedido; o usuário pode estendê-lo pela UI? | com que frequência 120 s é pouco na prática — não há uso medido ainda | B-27 | 2026-09-15 · **sim, com valor e teto configuráveis** — o comando nasce na **F0** | ✅ |
+| D-15 | O que "extensão idempotente por `requestId`" quer dizer quando web e celular pedem juntos | nasceu na implementação da B-29: o contrato exige idempotência e o payload não tem chave nenhuma além do `requestId` | B-27, B-29 | 2026-09-19 · **"pelo menos `incremento` a mais a partir de agora"** — prazo que já alcança isso volta inalterado, sem gastar extensão | ✅ |
+| D-16 | De onde sai o padrão de uma regra de escopo `session` | nasceu na B-25: a decisão é sobre uma invocação, e a regra precisa de um padrão na gramática do Claude | B-25, B-29 | 2026-09-19 · **o padrão mais estreito que cobre a invocação**, e `once` quando nenhum honesto existe | ✅ |
 
 ### D-08 — classificar risco sem mentir
 
@@ -179,6 +200,46 @@ heurística sobre o input trata o `Bash`, e **comando que a heurística não rec
 como destrutivo**, não como seguro. Falso positivo incomoda; falso negativo é o acidente.
 
 Seja qual for, ela é **derivada no backend** — as duas pontas não podem divergir.
+
+### D-15 — o que "idempotente" quer dizer numa extensão
+
+O contrato diz que `permission.extend` é idempotente por `requestId` e o cenário S-94 pede que web
+e celular estendendo o mesmo pedido custem **uma** extensão, não duas. O payload não carrega chave
+de idempotência nenhuma — nem podia: quem escolhe o número é a configuração, não o cliente.
+
+**Decidido:** o comando significa *"me dê pelo menos `incremento` a mais a partir de agora"*. Um
+pedido cujo prazo **já alcança** esse instante volta inalterado, sem gastar extensão e sem
+publicar nada. Duas pontas apertando o botão no mesmo momento são um ato só, e nenhuma das duas
+precisa saber que a outra existe.
+
+Três consequências, todas desejáveis:
+
+1. o teto continua rígido — é ele que protege a sessão de ficar pendurada;
+2. estender de novo **mais tarde** funciona normalmente, porque "a partir de agora" já mudou;
+3. nada é anunciado quando nada se moveu: a contagem regressiva nas duas telas já está certa.
+
+A alternativa — somar incremento ao prazo corrente — seria mais intuitiva no botão e **não** é
+idempotente: duas pontas dobrariam o prazo, que é exatamente o que a única proteção existente não
+pode permitir sem alguém decidir isso.
+
+### D-16 — de onde sai o padrão de uma regra de sessão
+
+A decisão que um humano toma é sobre **uma invocação** — este comando, este arquivo. A regra
+precisa de um padrão na gramática das settings do Claude Code, e qualquer tradução entre os dois
+é uma escolha sobre o que mais fica autorizado.
+
+**Decidido:** o padrão é o **mais estreito** que cobre a invocação — `Bash(git status)` para um
+comando, `Write(/srv/app/main.ts)` para um caminho. Quando nenhum padrão honesto existe, a decisão
+vale como `once` e **nenhuma regra é criada**. Os dois casos em que isso acontece:
+
+- o input não traz nenhum campo que um padrão saiba nomear, e o único padrão disponível seria a
+  **tool inteira** — muito mais do que foi aprovado;
+- o valor contém `)`, e o padrão seria relido como outra coisa. Uma regra que o parser entende
+  diferente de como foi escrita é a única espécie de regra que um sistema de permissão não pode
+  guardar.
+
+Cair para `once` é o lado seguro: incomoda perguntando de novo, em vez de autorizar mais do que
+alguém disse.
 
 ### D-09 — estender o que já é o único timeout
 
@@ -221,11 +282,61 @@ O histórico de verdade continua sendo o [plano 04](../04-transcript-and-resume/
 
 ---
 
+## Decisões de quem conduz, tomadas depois da entrega
+
+| ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
+|---|---|---|---|---|---|
+| D-17 | `403` ou `404` quando o recurso existe e é de outra pessoa | a matriz (S-38) pedia `403` e três documentos normativos mandavam `404`; nenhum dos dois podia ceder sem alguém decidir | S-38, e o catálogo de erros inteiro | 2026-09-19 · **o código HTTP que cada coisa é**: `403` para falha de autorização, `404` para registro que não existe | ✅ |
+
+### D-17 — usar o código HTTP que cada coisa é
+
+A matriz pedia `FORBIDDEN` para `session.close` por quem não é dono. O
+[catálogo de erros](../../architecture/shared/04-errors-and-http.md), a
+[D-13](#d-13--a-raiz-e-o-seu-dono) e o [catálogo de módulos](../../architecture/backend/03-modules.md)
+mandavam `404` — "403 confirma a existência do que o requisitante não deveria saber que existe".
+Dois documentos normativos em desacordo, e o [AGENTS.md](../../../AGENTS.md) diz o que fazer com
+isso: parar e perguntar.
+
+**Decidido por quem conduz o trabalho:** usar a semântica que os códigos já têm.
+
+| Status | O que é |
+|---|---|
+| `401` | sem credencial, ou credencial inválida |
+| `403` | autenticado, e ainda assim não pode — **falha de autorização** |
+| `404` | o registro **não está lá** |
+
+"Existe e é de outra pessoa" é falha de autorização, e portanto `403`. Responder `404` ali é
+inventar uma semântica própria, e o preço dela é maior do que o que ela compra: um cliente que
+recebe `404` para as duas coisas não consegue distinguir "sumiu" de "não é seu", que é justamente
+a distinção de que ele precisa para decidir se insiste, se recarrega ou se mostra um erro.
+
+O argumento que a regra antiga fazia — evitar enumeração — não desaparece; deixa de ser resolvido
+no status. Quem não pode alcançar um recurso não o alcança de nenhuma das duas formas, e o que a
+diferença revela é a existência de um id que quem pergunta já tinha em mãos.
+
+**O que mudou no código**, tudo na mesma entrega:
+
+| Onde | Antes | Agora |
+|---|---|---|
+| raiz de workspace de outro usuário | `WORKSPACE_NOT_FOUND` 404 | `FORBIDDEN` 403 |
+| `session.attach` em sessão de outro | `SESSION_NOT_FOUND` 404 | `FORBIDDEN` 403 |
+| `prompt`/`interrupt`/`setModel`/`setPermissionMode`/`close` em sessão de outro | `SESSION_NOT_FOUND` 404 | `FORBIDDEN` 403 |
+| `diag.ping` em sessão de outro | `SESSION_NOT_FOUND` 404 | `FORBIDDEN` 403 |
+| sessão que **não existe**, em qualquer dos caminhos acima | `SESSION_NOT_FOUND` 404 | inalterado |
+
+Nenhum código novo foi inventado: `FORBIDDEN` já estava no catálogo, com exatamente esse
+significado. `PERMISSION_NOT_OWNED` (403) já seguia a regra e ficou como estava.
+
+Efeito fora deste plano: a [D-05 do plano 03](../03-rules-and-audit/decisions.md#d-05--de-quem-é-a-trilha)
+herdava a formulação antiga e foi corrigida junto — trilha de outro usuário responde `403`.
+
+---
+
 ## F6 — E2E e smoke-live
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-11 | **Um `allow` de projeto volta a dispensar o `canUseTool` em diretório já confiado?** | só um spike responde: marcar `hasTrustDialogAccepted` no CLI interativo e repetir a medição | B-42, e toda sessão real | 2026-09-15 · **spike agendado para antes da F0**, e a mitigação é adotada de qualquer forma. A resposta técnica continua **não medida** | 🔄 |
+| D-11 | **Um `allow` de projeto volta a dispensar o `canUseTool` em diretório já confiado?** | só um spike responde: marcar `hasTrustDialogAccepted` no CLI interativo e repetir a medição | B-42, e toda sessão real | 2026-09-18 · **sim, volta — medido.** Em diretório confiado o `canUseTool` **não é chamado**. A mitigação passa a ser obrigatória | ✅ |
 | D-12 | Onde o `smoke-live` roda, contra qual workspace descartável, e quem paga a execução | custo por execução e a máquina que terá o Claude logado no nightly | B-41 | 2026-09-15 · **sob demanda, sem nightly** — R-02 fica mitigado por disciplina | ✅ |
 
 ### D-11 — o furo que invalidaria o produto
@@ -238,18 +349,38 @@ diz o que se sabe: `deny` de projeto é aplicado, `allow` de projeto **não** di
 
 Se em diretório confiado o `allow` passar a valer, toda a aprovação humana escapa em silêncio.
 
-**Decidido — o quando, não o quê:**
+**Decidido em 2026-09-15 — o quando:** o spike roda **antes da F0**, como a
+**[B-45](F0-contract.md)**, e a mitigação é adotada de qualquer forma. A B-42 passa a provar a
+**mitigação** em e2e, não a medir o furo.
 
-- o spike roda **antes da F0**, não em B-42 — é a **[B-45](F0-contract.md)**, a primeira task do
-  plano. Descobrir um furo de premissa depois da F4 pronta custa o plano inteiro; o spike custa
-  um diretório descartável, um backup do `~/.claude.json` e a restauração no fim. A B-42 passa a
-  provar a **mitigação** em e2e, não a medir o furo;
-- **a mitigação é adotada de qualquer forma** — o backend limpa ou recusa a marca de confiança
-  antes de abrir sessão. A medição decide apenas se ela é obrigatória ou redundante, nunca se
-  ela existe.
+**Medido em 2026-09-18, e a resposta é a ruim.** SDK `0.3.277`, `settingSources: ['project']`,
+`.claude/settings.json` do projeto com `"permissions": { "allow": ["Write"] }`, dois braços sobre
+o mesmo diretório descartável, dois ciclos cada:
 
-A linha continua 🔄 porque o que está decidido é a agenda: o resultado da medição entra aqui
-quando o spike rodar, e é ele que fecha o R-01.
+| `hasTrustDialogAccepted` | `canUseTool` | hook `PreToolUse` | escreveu |
+|---|---|---|---|
+| `false` (controle) | ✅ chamado | ✅ chamado | sim |
+| `true` | ❌ **não chamado** | ✅ chamado | sim |
+
+Em diretório confiado, a tool executou **sem que ninguém fosse consultado** — sem erro e sem
+aviso. O que isso muda:
+
+1. **A mitigação deixa de ser precaução e vira requisito.** Sem limpar ou recusar a marca de
+   confiança antes de abrir sessão, o produto não tem aprovação humana. Vai para a F2, na fábrica
+   de opções, e a B-42 prova em e2e.
+2. **[ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse)
+   se confirma na prática.** O hook `PreToolUse` foi chamado nos dois braços. Auditoria ancorada
+   no `canUseTool` teria perdido justamente a invocação que ninguém autorizou.
+3. **Achado colateral, e ele custa uma regra:** `options.allowedTools` com nome simples
+   (`['Write']`) também dispensa o `canUseTool` — o próprio SDK avisa
+   (`CLAUDE_SDK_CAN_USE_TOOL_SHADOWED`). Entrou como
+   [D-14](#f2--runtime-da-sessão).
+
+**Como foi medido, e por que não como o plano dizia.** O plano previa backup e restauração do
+`~/.claude.json`. Em vez disso o spike rodou sobre um `CLAUDE_CONFIG_DIR` isolado, com a
+credencial copiada — mede a mesma coisa e não disputa o arquivo com a sessão de Claude Code que
+estava aberta na máquina. O `~/.claude.json` ficou byte a byte idêntico, verificado por checksum
+antes e depois.
 
 ### D-12 — onde o smoke-live roda
 
@@ -278,6 +409,7 @@ Decisão registrada só aqui é decisão que o resto do repositório não conhec
 | D-06, D-07 | [backend/05-persistence](../../architecture/backend/05-persistence.md#a-trilha-de-auditoria) — a trigger — e [backend/03-modules](../../architecture/backend/03-modules.md#audit) — nega sempre, encerra na segunda falha consecutiva |
 | D-04, D-12 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) — fixtures capturadas do SDK real, e `smoke-live` **sob demanda, sem nightly**, corrigindo a tabela de portões |
 | D-08 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) — `riskHint` derivado no backend, por lista **mais** heurística, falhando fechado |
+| D-11, D-14 | 2026-09-18 · [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido) — a medição e as três consequências — e [descoberta §8.2](../../discovery/01-descoberta-claude-agent-sdk.md#82--a-assimetria-allow-vs-deny-entre-escopos), cuja incerteza residual deixa de existir |
 | D-10 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#reconexão-e-replay) — o buffer sobrevive ao encerramento, e o replay é rotulado como parcial |
 
 Segue pendente, e **não** é documento de arquitetura: levar D-05, D-08 e D-10 às fases

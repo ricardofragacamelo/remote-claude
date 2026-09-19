@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/session-started.json",
+  "title": "SessionStarted",
+  "description": "The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` — an SDKMessage is never emitted raw (ADR-006).",
+  "x-kind": "event",
+  "x-type": "session.started",
+  "type": "object",
+  "required": ["sessionId", "workspacePath", "model", "permissionMode"],
+  "properties": {
+    "sessionId": { "type": "string" },
+    "workspacePath": {
+      "type": "string",
+      "description": "The workspace the session runs in, already normalised and already inside the allowlist."
+    },
+    "model": { "type": "string" },
+    "permissionMode": {
+      "type": "string",
+      "enum": ["default", "acceptEdits", "bypassPermissions", "plan"]
+    }
+  }
+}

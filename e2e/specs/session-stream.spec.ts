@@ -2,6 +2,12 @@ import { expect, test } from '@playwright/test';
 import type { Browser } from '@playwright/test';
 
 import { E2eSocket, pongOf } from '../fixtures/ws';
+import {
+  attachFrom,
+  expectRecycledBuffer,
+  pushPastSeq,
+  replayBufferSize,
+} from '../fixtures/live-session';
 import { signIn } from '../fixtures/auth';
 import type { AuthenticatedUser } from '../fixtures/auth';
 import { scenario } from '../scenarios';
@@ -37,10 +43,10 @@ async function ping(
   sessionId: string | null,
 ): Promise<{ sessionId: string; seq: number; pingCount: number }> {
   const nonce = `e2e-${String(Date.now())}-${String(Math.random())}`;
-  socket.send('session.ping', { ...(sessionId === null ? {} : { sessionId }), nonce });
+  socket.send('diag.ping', { ...(sessionId === null ? {} : { sessionId }), nonce });
 
   const frame = await socket.waitFor(
-    (candidate) => candidate.type === 'session.pong' && pongOf(candidate).nonce === nonce,
+    (candidate) => candidate.type === 'diag.pong' && pongOf(candidate).nonce === nonce,
   );
 
   const pong = pongOf(frame);
@@ -113,45 +119,24 @@ test(`${gap.id} — ${gap.title}`, async () => {
   const producer = await connected();
   const opened = await ping(producer, null);
 
-  const ready = producer.frames.find((frame) => frame.type === 'connection.ready');
-  const capacity = (ready?.payload as { limits: { replayBufferSize: number } }).limits
-    .replayBufferSize;
-
-  // Overflowing the ring is the only honest way to produce a gap: the buffer is what decides, and
-  // its size is a property of the server, announced in the handshake rather than assumed here.
-  // The frames go out a hundred at a time: one at a time is a round trip per event and minutes of
-  // wall clock, and all of them at once is a thousand queries queued on a ten-connection pool.
-  const target = capacity + expected.overflowMargin;
-  const batchSize = 100;
-
-  for (let sent = 1; sent < target;) {
-    const last = Math.min(target - 1, sent + batchSize - 1);
-
-    for (let index = sent; index <= last; index += 1) {
-      producer.send('session.ping', {
+  let sent = 0;
+  await pushPastSeq(
+    producer,
+    replayBufferSize(producer) + expected.overflowMargin,
+    () => {
+      sent += 1;
+      producer.send('diag.ping', {
         sessionId: opened.sessionId,
-        nonce: `overflow-${String(index)}`,
+        nonce: `overflow-${String(sent)}`,
       });
-    }
-
-    sent = last + 1;
-    await producer.waitFor(
-      (frame) => frame.type === 'session.pong' && (frame.seq ?? 0) >= sent,
-      60_000,
-    );
-  }
+    },
+    100,
+  );
 
   // Coming back from before what the buffer still holds. A partial replay is never stitched: a
   // client that believes it has everything and does not is worse than one told to reload.
   const late = await connected();
-  late.send('session.attach', { sessionId: opened.sessionId, resumeFromSeq: 1 });
-
-  const attached = await late.waitFor((frame) => frame.type === 'session.attached');
-  const ack = attached.payload as { replayed: number; gap: boolean; oldestAvailableSeq: number };
-
-  expect(ack.gap).toBe(expected.gap);
-  expect(ack.replayed).toBe(expected.replayed);
-  expect(ack.oldestAvailableSeq).toBeGreaterThan(1);
+  expectRecycledBuffer(await attachFrom(late, opened.sessionId, 1), expected);
 
   producer.close();
   late.close();

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/permission-requested.json",
+  "title": "PermissionRequested",
+  "description": "The one `request` that travels server to client, and the reason the whole protocol is a socket instead of a stream: `canUseTool` has blocked the agent loop and it stays blocked until somebody answers or the deadline passes. Answered with the `permission.resolve` response.",
+  "x-kind": "request",
+  "x-type": "permission.requested",
+  "type": "object",
+  "required": [
+    "requestId",
+    "toolUseId",
+    "toolName",
+    "title",
+    "input",
+    "riskHint",
+    "defaultToNo",
+    "expiresAt"
+  ],
+  "properties": {
+    "requestId": {
+      "type": "string",
+      "description": "Idempotency is by **this** field, never by `toolUseId`."
+    },
+    "toolUseId": {
+      "type": "string",
+      "description": "The invocation this request is about, tying it to the `tool.started` already on screen."
+    },
+    "toolName": { "type": "string" },
+    "title": {
+      "type": "string",
+      "description": "Short label of what is being asked, derived by the backend."
+    },
+    "description": {
+      "type": "string",
+      "description": "The detail a human needs to decide — the command line, the path being written."
+    },
+    "input": {
+      "type": "object",
+      "description": "The exact input the tool would run with. What is shown is what executes."
+    },
+    "riskHint": {
+      "type": "string",
+      "enum": ["read", "write", "destructive"],
+      "description": "Derived in the backend, by a per-tool list **plus** a heuristic over the input, and it fails closed: a command the heuristic does not recognise is marked `destructive`. A false positive is an annoyance; a false negative is the accident."
+    },
+    "defaultToNo": {
+      "type": "boolean",
+      "description": "The UI pre-selects refusal. Silence never authorises."
+    },
+    "expiresAt": {
+      "type": "string",
+      "description": "When the request is denied automatically, ISO 8601 in UTC. Ours is the only timeout there is — the CLI imposes none."
+    },
+    "suggestions": {
+      "type": "array",
+      "description": "Scopes the UI may offer beyond a one-off yes.",
+      "items": {
+        "type": "object",
+        "required": ["scope", "labelKey"],
+        "properties": {
+          "scope": { "type": "string", "enum": ["once", "session", "project", "always"] },
+          "labelKey": {
+            "type": "string",
+            "description": "An i18n key. The server never sends prose."
+          }
+        }
+      }
+    }
+  }
+}

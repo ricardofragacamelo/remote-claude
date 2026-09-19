@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-prompt.json",
+  "title": "SessionPrompt",
+  "description": "Sends one turn. A prompt that arrives while a turn is running is **queued** and runs next, the way the Claude Code UI does it — it is never refused.",
+  "x-kind": "command",
+  "x-type": "session.prompt",
+  "type": "object",
+  "required": ["sessionId", "text"],
+  "properties": {
+    "sessionId": { "type": "string" },
+    "text": { "type": "string", "description": "What the user typed." },
+    "attachments": {
+      "type": "array",
+      "description": "Files carried with the prompt.",
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string", "description": "Path inside the session's workspace." },
+          "mediaType": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -109,11 +109,36 @@ describe('.env.example', () => {
   });
 
   it('carries no Claude credential — the backend inherits the local login', () => {
+    // There is deliberately no variable for the Claude credential: the backend runs as the owner
+    // of the machine and uses the login `claude` already stored
+    // (docs/discovery/01-descoberta-claude-agent-sdk.md). A variable for it would be a second
+    // place a token can live, and the second place is the one that ends up in a shell history.
+    //
+    // `CLAUDE_CONFIG_DIR` is the one Claude-named variable that may be declared, and it is not a
+    // credential: it is the **directory** the CLI keeps its configuration in, and the backend
+    // reads it to clear a directory's trust mark in the file the CLI is actually reading. The
+    // exception is named here rather than loosening the pattern, so `ANTHROPIC_API_KEY` and
+    // everything like it still fails this test.
+    const allowed = new Set(['CLAUDE_CONFIG_DIR']);
+
     const suspicious = [...declaredVariables(example)].filter(
-      (name) => name.includes('CLAUDE') || name.includes('ANTHROPIC'),
+      (name) => (name.includes('CLAUDE') || name.includes('ANTHROPIC')) && !allowed.has(name),
     );
 
     expect(suspicious).toEqual([]);
+  });
+
+  it('still refuses a credential that merely looks like configuration', () => {
+    // The rule above has one named exception, and this is what stops it from becoming a hole: a
+    // variable whose name says "secret" is refused however it is spelled.
+    const declared = new Set(['CLAUDE_CONFIG_DIR', 'ANTHROPIC_API_KEY', 'CLAUDE_TOKEN']);
+    const allowed = new Set(['CLAUDE_CONFIG_DIR']);
+
+    const suspicious = [...declared].filter(
+      (name) => (name.includes('CLAUDE') || name.includes('ANTHROPIC')) && !allowed.has(name),
+    );
+
+    expect(suspicious).toEqual(['ANTHROPIC_API_KEY', 'CLAUDE_TOKEN']);
   });
 });
 

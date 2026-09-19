@@ -57,6 +57,32 @@ export class SessionHub {
 
     this.buffer.append(sessionId, frame);
 
+    return this.fanOut(sessionId, frame);
+  }
+
+  /**
+   * Puts an open question to every connection watching a session.
+   *
+   * Deliberately **not** numbered and **not** buffered, which is what separates a question from a
+   * fact. A `seq` would claim a place in the history of the conversation for something that has
+   * not happened yet, and replaying it later would put a card back on screen for a request that
+   * has since been answered. A reconnecting client is told about the questions that are still open
+   * by the permission registry, which is the only thing that knows which ones those are
+   * ([ADR-012](../../../../docs/architecture/shared/00-decisions.md)).
+   */
+  request(sessionId: string, draft: EventDraft): Envelope {
+    return this.fanOut(sessionId, this.frames.build({ ...draft, kind: 'request', sessionId }));
+  }
+
+  /**
+   * One frame to every connection watching a session.
+   *
+   * The one place the fan-out happens, so what differs between a question and a fact stays the
+   * two lines that actually differ — whether it is numbered, and whether it is kept.
+   *
+   * @returns the frame as it went out, so the caller can log or assert on the `seq` it got
+   */
+  private fanOut(sessionId: string, frame: Envelope): Envelope {
     for (const connection of this.registry.forSession(sessionId)) {
       this.deliver(connection, frame);
     }
@@ -91,6 +117,22 @@ export class SessionHub {
         'dropping connection after a failed send',
       );
       this.registry.remove(connection.id);
+    }
+  }
+
+  /**
+   * Fans a failure out to everybody watching a session.
+   *
+   * Deliberately **not** an event: it carries no `seq` and it is not kept for replay. It says
+   * "something is wrong right now", and replaying that ten minutes later to a reconnecting client
+   * would report a failure that has already been dealt with. What does belong in the history is
+   * the consequence — a session that ends because of it closes with a reason, as an event.
+   */
+  publishError(sessionId: string, error: unknown, traceId: string): void {
+    const frame = this.frames.error(error, traceId);
+
+    for (const connection of this.registry.forSession(sessionId)) {
+      this.deliver(connection, frame);
     }
   }
 

@@ -127,9 +127,13 @@ O que a decisão cria:
 
 **Decidido por herança**, pela mesma [D-03 do plano 01](../01-live-session/decisions.md#d-03--um-dono-ou-vários):
 cada usuário lê a própria trilha, `userId` `NOT NULL` desde a primeira migration, toda query
-escopada. Trilha de outro responde **404, não 403** — S-26, S-45, e a mesma regra que a D-13 do
-plano 01 aplicou às raízes de workspace: 403 confirma a existência de algo que o usuário não
-deveria saber que existe.
+escopada.
+
+**Trilha de outro responde `403`** — S-26, S-45. A formulação original desta decisão dizia `404`,
+pela mesma razão que a D-13 do plano 01 dava para as raízes de workspace. As duas foram revertidas
+em 2026-09-19 pela [D-17 do plano 01](../01-live-session/decisions.md#d-17--usar-o-código-http-que-cada-coisa-é):
+`403` é falha de autorização e `404` é registro que não existe, e o produto usa a semântica HTTP
+em vez de inventar uma própria.
 
 ### D-06 — paginar sobre o tempo
 

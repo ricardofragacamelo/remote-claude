@@ -19,7 +19,7 @@ function frame(overrides: Record<string, unknown>): Record<string, unknown> {
     v: 1,
     id: 'srv-1',
     kind: 'event',
-    type: 'session.pong',
+    type: 'diag.pong',
     ts: '2026-09-13T12:00:00.000Z',
     ...overrides,
   };
@@ -167,7 +167,7 @@ describe('the round-trip screen', () => {
     await userEvent.click(button);
     await userEvent.click(button);
 
-    const pings = sockets.latest.frames().filter((sent) => sent['type'] === 'session.ping');
+    const pings = sockets.latest.frames().filter((sent) => sent['type'] === 'diag.ping');
     expect(pings).toHaveLength(1);
   });
 

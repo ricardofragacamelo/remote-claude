@@ -25,7 +25,7 @@ Nesta fase **não há comportamento novo no backend**. Há vocabulário.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — Schemas dos comandos de sessão 🔲
+### B-01 — Schemas dos comandos de sessão ✅
 
 `session.start`, `session.attach`, `session.detach`, `session.prompt`, `session.interrupt`,
 `session.setPermissionMode`, `session.setModel`, `session.close`, `session.setLocale`, com os
@@ -46,7 +46,7 @@ o resto do contrato, e não na F4 — contrato alterado no meio do plano é queb
 `{ requestId }` e nada mais: **incremento e teto vêm da configuração do backend**, porque o
 nosso timeout é a única proteção contra sessão pendurada e o cliente não escolhe o número.
 
-### B-02 — Schemas dos eventos de sessão 🔲
+### B-02 — Schemas dos eventos de sessão ✅
 
 `session.started`, `session.statusChanged`, `message.delta`, `message.completed`,
 `tool.started`, `tool.progress`, `tool.completed`, `turn.completed`, `session.closed`,
@@ -55,7 +55,7 @@ nosso timeout é a única proteção contra sessão pendurada e o cliente não e
 `seq` é **obrigatório** em todo `event` — o schema precisa cobrar isso, não a boa vontade de
 quem emite.
 
-### B-03 — O round-trip de permissão no schema 🔲
+### B-03 — O round-trip de permissão no schema ✅
 
 É o único caso de `kind: request` servidor → cliente, e o desenho inteiro existe por causa
 dele: `permission.requested` (request), `permission.resolve` (response) e `permission.resolved`
@@ -66,7 +66,7 @@ espalhada no código.
 
 O ack `session.attached` ganha `replayed`, `oldestAvailableSeq` e `gap`.
 
-### B-04 — Geração TS + Dart e os guards 🔲
+### B-04 — Geração TS + Dart e os guards ✅
 
 `pnpm contracts:generate` emite os dois alvos; `pnpm contracts:check` falha se qualquer um
 estiver dessincronizado. Guard gerado aceita campo desconhecido (forward-compat) e recusa
@@ -74,7 +74,7 @@ frame sem campo obrigatório — ver [versionamento](../../architecture/shared/0
 
 Campo opcional e evento novo **não** incrementam `v`.
 
-### B-05 — Documento de contrato e catálogo de erros atualizados 🔲
+### B-05 — Documento de contrato e catálogo de erros atualizados ✅
 
 [05-websocket-protocol.md](../../architecture/shared/05-websocket-protocol.md) passa a
 descrever o que existe, incluindo `promptedBy`/`resolvedBy` nos eventos resultantes. Nenhum
@@ -83,12 +83,12 @@ descrever o que existe, incluindo `promptedBy`/`resolvedBy` nos eventos resultan
 
 Contrato alterado sem atualizar o documento é o anti-padrão listado no [AGENTS.md](../../../AGENTS.md).
 
-### B-06 — As três pontas compilando contra o gerado 🔲
+### B-06 — As três pontas compilando contra o gerado ✅
 
 Backend, web e mobile importam o contrato novo e seguem verdes. O app **não** ganha tela nesta
 fase; ele apenas para de enviar um comando que não existe.
 
-### B-45 — Spike do diretório confiado, antes de tudo 🔲
+### B-45 — Spike do diretório confiado, antes de tudo ✅
 
 **A primeira coisa a rodar no plano**, antes de qualquer schema
 ([D-11](decisions.md#d-11--o-furo-que-invalidaria-o-produto)). Verificar, num diretório já
@@ -104,6 +104,18 @@ antes de abrir sessão. A medição decide se ela é obrigatória ou redundante,
 O resultado, qualquer que seja, vira registro em [progress.md](progress.md), fecha a linha de
 [D-11](decisions.md) e atualiza
 [04-claude-integration](../../architecture/backend/04-claude-integration.md#a-armadilha-do-settingsources).
+
+**Medido em 2026-09-18: o furo é real.** Em diretório confiado o `canUseTool` **não é chamado**, e
+o `allow` de projeto executa a tool sem consultar ninguém. A mitigação passa de precaução a
+requisito, e o spike ainda achou um segundo caminho para o mesmo furo — nome simples em
+`options.allowedTools` ([D-14](decisions.md#d-14--o-segundo-jeito-de-furar-o-canusetool)). A
+medição, os números e o método estão em
+[D-11](decisions.md#d-11--o-furo-que-invalidaria-o-produto) e em
+[04-claude-integration](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido).
+
+O spike rodou sobre um `CLAUDE_CONFIG_DIR` isolado em vez do backup e restauração do
+`~/.claude.json` que esta task previa: mede a mesma coisa e não disputa o arquivo com uma sessão
+de Claude Code aberta na mesma máquina.
 
 ---
 

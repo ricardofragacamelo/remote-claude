@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { wsClient } from '@/shared/api/ws';
 import type { ConnectionStatus } from '@/shared/api/ws-client';
+import { useSessionFrames } from '@/shared/hooks/useSessionFrames';
+import { wsClient } from '@/shared/api/ws';
 import { sendPing } from '../services/session.service';
 import { useSessionStreamStore } from '../store/session-stream.store';
 import type { Pong } from '../types/pong';
@@ -38,19 +39,11 @@ export function useSessionStream(): SessionStream {
   // The very first ping opens the session, so its pong arrives before anything could have attached.
   useEffect(() => wsClient.observe(apply), [apply]);
 
-  useEffect(() => {
-    if (sessionId === null) {
-      return;
-    }
-
-    // The detach is mandatory: without it, moving between sessions piles up subscriptions and the
-    // screen starts receiving events for a session it no longer shows.
-    return wsClient.attach(sessionId, {
-      onEvent: apply,
-      onGap: reset,
-      lastSeq: () => useSessionStreamStore.getState().lastSeq,
-    });
-  }, [sessionId, apply, reset]);
+  useSessionFrames(sessionId, {
+    apply,
+    reset,
+    lastSeq: () => useSessionStreamStore.getState().lastSeq,
+  });
 
   const isSending = useMemo(
     () => pending !== null && !pongs.some((pong) => pong.nonce === pending),

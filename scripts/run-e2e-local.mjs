@@ -38,7 +38,18 @@
  * Neither is ever *skipped*: asked for and unable to run, each fails loudly rather than passing
  * by being absent.
  *
- * Usage: `pnpm test:e2e` · `pnpm test:e2e:mobile` — other arguments go to Playwright.
+ * `pnpm test:e2e:live` runs `e2e/smoke-live/` against the **real** Claude on this machine. It is
+ * the one suite that is not hermetic and the only one that costs money per run, so it is never a
+ * gate — it exists to catch the SDK changing its contract under us, which nothing else can.
+ *
+ * **Which backend comes up is the other thing that differs.** The default run starts
+ * `backend start:scripted`: the same application, with the one provider that would spawn the
+ * Claude CLI replaced by a replay of a recorded run. `--live` starts the product's own entry
+ * point. An end-to-end suite has to be deterministic and Claude is not; a suite that talked to
+ * the real model on every pull request would be a suite that is eventually deleted.
+ *
+ * Usage: `pnpm test:e2e` · `pnpm test:e2e:mobile` · `pnpm test:e2e:live` — other arguments go to
+ * Playwright.
  */
 
 import fs from 'node:fs';
@@ -52,6 +63,7 @@ import { repoRoot } from './lib/paths.mjs';
 import { findFreePort } from './lib/ports.mjs';
 import { cleanupOnce, kill, onTermination, startProc } from './lib/proc.mjs';
 import {
+  BACKEND_LOG_FILE,
   E2E_PROJECT_PREFIX,
   e2eDotEnv,
   e2eProjectName,
@@ -60,6 +72,7 @@ import {
 } from './lib/stack.mjs';
 import { bold, cyan, dim, fail, hint, info, line, ok, title, warn } from './lib/ui.mjs';
 import { waitForHttp } from './lib/wait.mjs';
+import { ensureDeclaredRoots } from './lib/workspaces.mjs';
 
 /** How long the backend and the web build get before the run is called a failure. */
 const SERVICE_TIMEOUT_MS = 180_000;
@@ -70,11 +83,31 @@ const STACK_FAILED = 1;
 /** Where the suite reads the addresses of this particular run. Generated, and never committed. */
 const dotEnvPath = path.join(repoRoot, 'e2e', '.env');
 
+/**
+ * Where the backend's own log of this run is kept.
+ *
+ * Only the live suite reads it, and it reads it for one thing: the line the mapper writes when the
+ * SDK sends a message variant this build has never seen. That warning is the whole point of
+ * `smoke-live` — a contract break that only shows up as a log line nobody reads is a contract
+ * break that reaches production quietly.
+ */
+const backendLogPath = BACKEND_LOG_FILE;
+
 /** Which end of the suite this run is for. */
 const mobile = process.argv.includes('--mobile');
 
-/** Everything else, handed to Playwright unchanged. */
-const playwrightArgs = process.argv.slice(2).filter((argument) => argument !== '--mobile');
+/** Whether the real Claude is behind the backend, rather than a replay of a recorded run. */
+const live = process.argv.includes('--live');
+
+/** The flags this script owns. Everything else is handed to Playwright unchanged. */
+const OWN_FLAGS = new Set(['--mobile', '--live']);
+
+const playwrightArgs = [
+  ...process.argv.slice(2).filter((argument) => !OWN_FLAGS.has(argument)),
+  // The live suite is excluded from the default run by `playwright.config.ts`, so naming it is
+  // the only way to run it — and naming it is deliberate, never accidental.
+  ...(live ? ['smoke-live', '--config', 'playwright.live.config.ts'] : []),
+];
 
 /** @type {import('node:child_process').ChildProcess[]} */
 const children = [];
@@ -115,6 +148,7 @@ const teardown = cleanupOnce(async () => {
   // Even when the run failed: a stale file pointing at ports nothing listens on turns the next
   // `pnpm exec playwright test` into a confusing timeout instead of a clear "run the script".
   fs.rmSync(dotEnvPath, { force: true });
+  fs.rmSync(backendLogPath, { force: true });
 
   ok('nothing left', 'no containers, no volumes, no e2e/.env');
 });
@@ -125,11 +159,30 @@ const teardown = cleanupOnce(async () => {
  * @param {string} label
  * @param {readonly string[]} args arguments to `pnpm`
  * @param {NodeJS.ProcessEnv} env
+ * @param {string} [logFile] where to keep a copy of its output, for a suite that reads it
  * @returns {import('node:child_process').ChildProcess}
  */
-function startService(label, args, env) {
+function startService(label, args, env, logFile) {
   info(`starting ${label}`);
-  const child = startProc('pnpm', args, { cwd: repoRoot, env });
+
+  const child =
+    logFile === undefined
+      ? startProc('pnpm', args, { cwd: repoRoot, env })
+      : startProc('pnpm', args, { cwd: repoRoot, env, stdio: ['ignore', 'pipe', 'pipe'] });
+
+  if (logFile !== undefined) {
+    // Written **and** echoed: the file is what the suite reads, and the terminal is what a person
+    // watching a run that takes minutes reads. Losing either would cost one of them.
+    const sink = fs.createWriteStream(logFile, { flags: 'a' });
+
+    for (const stream of [child.stdout, child.stderr]) {
+      stream?.on('data', (chunk) => {
+        sink.write(chunk);
+        process.stdout.write(chunk);
+      });
+    }
+  }
+
   children.push(child);
   return child;
 }
@@ -140,7 +193,11 @@ function startService(label, args, env) {
  * @returns {Promise<number>} the exit code of the suite, or of whatever stopped it from running
  */
 async function main() {
-  title(`test:e2e${mobile ? ':mobile' : ''} — ephemeral stack`);
+  title(`test:e2e${mobile ? ':mobile' : ''}${live ? ':live' : ''} — ephemeral stack`);
+
+  if (live) {
+    warn('this run talks to the real Claude', 'it is not hermetic, and it costs money');
+  }
 
   if (composeCli === null) {
     fail('docker compose is not available');
@@ -180,7 +237,21 @@ async function main() {
   // The stack inherits PATH and the like, and nothing else of the machine's configuration: the
   // repository `.env` is deliberately not loaded, so the suite cannot pass because of a value
   // that happens to be set on one developer's box.
-  const env = { ...process.env, ...ephemeralEnvironment(ports), COMPOSE_PROJECT_NAME: project };
+  // The live run is given no `CLAUDE_CONFIG_DIR` at all, so the CLI and the backend both fall
+  // back to the layout the login actually lives in. Everything else isolates it, so a test never
+  // edits somebody's `~/.claude.json`.
+  const claudeConfig = live ? { claudeConfigDir: null } : {};
+
+  const env = {
+    ...process.env,
+    ...ephemeralEnvironment(ports, claudeConfig),
+    COMPOSE_PROJECT_NAME: project,
+  };
+
+  // The backend refuses to start when a root of the allowlist does not exist, so the roots have
+  // to be there before it comes up — a run that fails for a missing /tmp directory looks nothing
+  // like its cause.
+  ensureDeclaredRoots();
 
   compose = composeRunner(composeCli, project, { cwd: repoRoot, env });
   info(`project: ${bold(project)}`);
@@ -189,7 +260,19 @@ async function main() {
 
   // The backend applies its migrations on the way up, so there is no separate migrate step: an
   // extra one here would be a second implementation of "bring the schema up to date".
-  const backendProc = startService('backend', ['--filter', './backend', 'start'], env);
+  // The scripted entry point is the same application with the Agent SDK replaced by a replay of a
+  // recorded run; `--live` starts the product's own. Neither is a flag inside `src/`: a switch in
+  // the product that replaces the Agent SDK is a switch that eventually ships switched on.
+  fs.rmSync(backendLogPath, { force: true });
+
+  const backendProc = startService(
+    'backend',
+    ['--filter', './backend', live ? 'start' : 'start:scripted'],
+    env,
+    // Only the live suite reads it. Keeping a log of every run would be a file that grows and
+    // that nothing ever looks at.
+    live ? backendLogPath : undefined,
+  );
   await waitForHttp(`${urls.backend}/health`, {
     proc: backendProc,
     timeoutMs: SERVICE_TIMEOUT_MS,
@@ -218,11 +301,11 @@ async function main() {
     return build.code;
   }
 
-  const webProc = startService('web', ['--filter', './web', 'preview'], webEnv);
+  const webProc = startService('web', ['--filter', './web', 'preview'], webEnv, undefined);
   await waitForHttp(urls.web, { proc: webProc, timeoutMs: SERVICE_TIMEOUT_MS, intervalMs: 500 });
   ok('web', urls.web);
 
-  fs.writeFileSync(dotEnvPath, e2eDotEnv(ports), 'utf8');
+  fs.writeFileSync(dotEnvPath, e2eDotEnv(ports, claudeConfig), 'utf8');
 
   line();
   line(`  ${bold('Backend')}  ${cyan(urls.backend)}   ${bold('Web')}  ${cyan(urls.web)}`);

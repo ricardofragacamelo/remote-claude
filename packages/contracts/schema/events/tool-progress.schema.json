@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/tool-progress.json",
+  "title": "ToolProgress",
+  "description": "Output of a tool while it is still running, from the SDK's `tool_progress`.",
+  "x-kind": "event",
+  "x-type": "tool.progress",
+  "type": "object",
+  "required": ["toolUseId", "chunk"],
+  "properties": {
+    "toolUseId": { "type": "string" },
+    "chunk": { "type": "string", "description": "This fragment of the output, and only this one." }
+  }
+}

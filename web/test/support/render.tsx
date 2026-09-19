@@ -1,4 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from '@tanstack/react-router';
 import { render as rtlRender } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import type { ReactElement, ReactNode } from 'react';
@@ -29,6 +37,37 @@ export function render(ui: ReactElement, locale: Locale = 'en'): RenderResult {
   }
 
   return rtlRender(ui, { wrapper: Wrapper });
+}
+
+/**
+ * Renders inside a real router, on a memory history.
+ *
+ * For the screens that navigate. `useNavigate` outside a `RouterProvider` warns and does nothing,
+ * so a test without one would be a test of a button that cannot work — and it would say so only
+ * in a warning nobody reads.
+ *
+ * @returns the render result and a way to read where the router ended up
+ */
+export function renderRouted(
+  ui: ReactElement,
+  locale: Locale = 'en',
+): RenderResult & { path(): string } {
+  const root = createRootRoute({ component: Outlet });
+  const index = createRoute({ getParentRoute: () => root, path: '/', component: () => ui });
+  const session = createRoute({
+    getParentRoute: () => root,
+    path: '/sessions/$sessionId',
+    component: () => null,
+  });
+
+  const router = createRouter({
+    routeTree: root.addChildren([index, session]),
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  });
+
+  const result = render(<RouterProvider router={router} />, locale);
+
+  return { ...result, path: () => router.state.location.pathname };
 }
 
 /** The same catalogue the component resolves against, for an assertion to quote a key not a word. */

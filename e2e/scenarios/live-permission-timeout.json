@@ -1,0 +1,10 @@
+{
+  "id": "S-78",
+  "title": "nobody answers, the deadline refuses, and the session carries on coherently",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "decision": "deny",
+    "auto": true
+  }
+}

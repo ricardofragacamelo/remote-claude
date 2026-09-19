@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-set-locale.json",
+  "title": "SessionSetLocale",
+  "description": "Changes the language of **this connection**, not of the user. A phone in Portuguese and a browser in English watch the same session at the same time.",
+  "x-kind": "command",
+  "x-type": "session.setLocale",
+  "type": "object",
+  "required": ["locale"],
+  "properties": {
+    "locale": {
+      "type": "string",
+      "enum": ["en", "pt-BR"],
+      "description": "Language of this connection."
+    }
+  }
+}

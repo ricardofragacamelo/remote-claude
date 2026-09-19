@@ -19,7 +19,14 @@ export type ConnectionStatus = 'idle' | 'connecting' | 'ready' | 'reconnecting' 
 
 /** What a feature needs from the stream of one session. */
 export interface SessionSubscriber {
-  /** One event, already validated and already past the `seq` filter of the caller's store. */
+  /**
+   * One frame of this session: an `event`, or the `request` that a permission is.
+   *
+   * A subscriber receives **everything** the session produced, including what another subscriber
+   * has already seen. That is safe by design — the store discards anything at or below its own
+   * `lastSeq` — and it is what lets the conversation and the permission queue watch the same
+   * session without either of them knowing the other exists.
+   */
   onEvent(frame: Envelope): void;
 
   /** The buffer no longer holds what this subscriber missed: drop local state and reload. */
@@ -68,7 +75,7 @@ export class WsClient {
   private attempt = 0;
   private cancelRetry: (() => void) | null = null;
   private wanted = false;
-  private readonly subscribers = new Map<string, SessionSubscriber>();
+  private readonly subscribers = new Map<string, Set<SessionSubscriber>>();
   private readonly observers = new Set<(frame: Envelope) => void>();
   private readonly watchers = new Set<(status: ConnectionStatus) => void>();
   private readonly schedule: Scheduler;
@@ -124,19 +131,33 @@ export class WsClient {
   }
 
   /**
-   * Subscribes to a session's events. Answers the detach.
+   * Subscribes to a session's frames. Answers the detach.
+   *
+   * **Several subscribers may watch one session**, and they do: the conversation and the
+   * permission queue are different features looking at the same stream. The socket is attached
+   * once and detached when the last of them goes — a `session.detach` sent while another feature
+   * is still watching would silently stop its screen updating.
    *
    * The detach is not optional: without it, moving between sessions accumulates subscriptions and
-   * the screen starts receiving events for a session it is no longer showing.
+   * the screen starts receiving frames for a session it is no longer showing.
    */
   attach(sessionId: string, subscriber: SessionSubscriber): () => void {
-    this.subscribers.set(sessionId, subscriber);
+    const watching = this.subscribers.get(sessionId) ?? new Set<SessionSubscriber>();
+    watching.add(subscriber);
+    this.subscribers.set(sessionId, watching);
 
     if (this.status === 'ready') {
-      this.requestAttach(sessionId, subscriber);
+      this.requestAttach(sessionId);
     }
 
     return () => {
+      const remaining = this.subscribers.get(sessionId);
+      remaining?.delete(subscriber);
+
+      if (remaining === undefined || remaining.size > 0) {
+        return;
+      }
+
       this.subscribers.delete(sessionId);
       if (this.status === 'ready') {
         this.command('session.detach', { sessionId });
@@ -157,6 +178,22 @@ export class WsClient {
 
   /** Sends a command. Silently queues nothing: a command sent while down is a command lost. */
   command(type: string, payload: Readonly<Record<string, unknown>>): boolean {
+    return this.send('command', type, payload);
+  }
+
+  /**
+   * One outgoing frame, stamped and logged.
+   *
+   * The envelope fields are filled in here and nowhere else, so nothing that sends a frame can
+   * forget one. Positional arguments rather than a draft object, because there are four of them
+   * and three are always present.
+   */
+  private send(
+    kind: Envelope['kind'],
+    type: string,
+    payload: Readonly<Record<string, unknown>>,
+    correlationId?: string,
+  ): boolean {
     const socket = this.socket;
     if (socket === null || this.status !== 'ready') {
       return false;
@@ -165,16 +202,34 @@ export class WsClient {
     const frame: Envelope = {
       v: PROTOCOL_VERSION,
       id: newTraceId(),
-      kind: 'command',
+      kind,
       type,
       ts: new Date().toISOString(),
       traceId: newTraceId(),
+      ...(correlationId === undefined ? {} : { correlationId }),
       payload,
     };
 
-    logger.debug({ op: 'ws.outbound', kind: frame.kind, type }, 'ws frame sent');
+    logger.debug({ op: 'ws.outbound', kind, type }, 'ws frame sent');
     socket.send(JSON.stringify(frame));
     return true;
+  }
+
+  /**
+   * Answers a `request` the server is waiting on.
+   *
+   * A `response` and not a command, because that is what it is: the server asked, `correlationId`
+   * names the question, and the kind is what tells the gateway the difference. The one case that
+   * exists today is `permission.resolve`, and the agent loop is stopped until it arrives.
+   *
+   * @returns whether the frame left; a socket that is not ready silently sends nothing
+   */
+  respond(
+    type: string,
+    payload: Readonly<Record<string, unknown>>,
+    correlationId: string,
+  ): boolean {
+    return this.send('response', type, payload, correlationId);
   }
 
   /** The delay before the next attempt: exponential, capped, and jittered. */
@@ -240,7 +295,9 @@ export class WsClient {
       return;
     }
 
-    if (parsed.kind === 'event') {
+    // An `event` is a fact of the conversation; a `request` is the server asking a question and
+    // waiting. Both belong to a session and both go to whoever is watching it.
+    if (parsed.kind === 'event' || parsed.kind === 'request') {
       this.deliver(parsed);
     }
   }
@@ -250,13 +307,24 @@ export class WsClient {
     this.move('ready');
 
     // Whatever was being watched before the socket went is watched again, from where it left off.
-    for (const [sessionId, subscriber] of this.subscribers) {
-      this.requestAttach(sessionId, subscriber);
+    for (const sessionId of this.subscribers.keys()) {
+      this.requestAttach(sessionId);
     }
   }
 
-  private requestAttach(sessionId: string, subscriber: SessionSubscriber): void {
-    const resumeFromSeq = subscriber.lastSeq();
+  /**
+   * Asks for the session again, resuming from the **furthest behind** of its subscribers.
+   *
+   * The minimum and not the maximum: resuming from the one that is ahead would leave the other
+   * with a hole it has no way to notice. Re-delivering what a subscriber already applied costs
+   * nothing, because discarding `seq <= lastSeq` is the first rule of every store.
+   */
+  private requestAttach(sessionId: string): void {
+    const applied = [...(this.subscribers.get(sessionId) ?? [])].map((subscriber) =>
+      subscriber.lastSeq(),
+    );
+    const resumeFromSeq = applied.length === 0 ? 0 : Math.min(...applied);
+
     this.command('session.attach', {
       sessionId,
       ...(resumeFromSeq > 0 ? { resumeFromSeq } : {}),
@@ -266,20 +334,27 @@ export class WsClient {
   private attached(frame: Envelope): void {
     const payload = frame.payload as { sessionId?: unknown; gap?: unknown } | undefined;
     const sessionId = typeof payload?.sessionId === 'string' ? payload.sessionId : null;
-    const subscriber = sessionId === null ? undefined : this.subscribers.get(sessionId);
+    const watching = sessionId === null ? undefined : this.subscribers.get(sessionId);
 
-    if (subscriber !== undefined && payload?.gap === true) {
-      logger.warn({ op: 'ws.connection', sessionId }, 'replay gap — reloading the transcript');
+    if (watching === undefined || payload?.gap !== true) {
+      return;
+    }
+
+    logger.warn({ op: 'ws.connection', sessionId }, 'replay gap — reloading the transcript');
+
+    for (const subscriber of watching) {
       subscriber.onGap();
     }
   }
 
   private deliver(frame: Envelope): void {
     const sessionId = frame.sessionId;
-    const subscriber = sessionId === undefined ? undefined : this.subscribers.get(sessionId);
+    const watching = sessionId === undefined ? undefined : this.subscribers.get(sessionId);
 
-    if (subscriber !== undefined) {
-      subscriber.onEvent(frame);
+    if (watching !== undefined && watching.size > 0) {
+      for (const subscriber of watching) {
+        subscriber.onEvent(frame);
+      }
       return;
     }
 

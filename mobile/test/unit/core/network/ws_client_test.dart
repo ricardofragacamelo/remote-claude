@@ -143,7 +143,7 @@ void main() {
 
     test('remembers the connection id for every later log line', () async {
       await connectAndHandshake();
-      client.command('session.ping', <String, Object?>{'nonce': 'n'});
+      client.command('diag.ping', <String, Object?>{'nonce': 'n'});
 
       expect(recorder.withOp(LogOp.wsOutbound).last['connectionId'], 'conn-1');
     });
@@ -158,18 +158,18 @@ void main() {
 
   group('commands', () {
     test('a command sent while the socket is down goes nowhere and says so', () {
-      expect(client.command('session.ping', <String, Object?>{'nonce': 'n'}), isFalse);
+      expect(client.command('diag.ping', <String, Object?>{'nonce': 'n'}), isFalse);
     });
 
     test('a command on a ready socket carries the envelope of the contract', () async {
       await connectAndHandshake();
 
-      expect(client.command('session.ping', <String, Object?>{'nonce': 'n'}), isTrue);
+      expect(client.command('diag.ping', <String, Object?>{'nonce': 'n'}), isTrue);
 
       final Map<String, Object?> frame = decode(socket().sent.last);
       expect(frame['v'], protocolVersion);
       expect(frame['kind'], 'command');
-      expect(frame['type'], 'session.ping');
+      expect(frame['type'], 'diag.ping');
       expect(frame['traceId'], isA<String>());
     });
 
@@ -247,7 +247,7 @@ void main() {
       final _Subscriber subscriber = _Subscriber();
       client.attach('ses-1', subscriber);
 
-      socket().deliver(sessionPong(sessionId: 'ses-1', seq: 1));
+      socket().deliver(diagPong(sessionId: 'ses-1', seq: 1));
       await settle();
 
       expect(subscriber.events.single.seq, 1);
@@ -258,7 +258,7 @@ void main() {
       final List<Envelope> seen = <Envelope>[];
       client.observe(seen.add);
 
-      socket().deliver(sessionPong(sessionId: 'ses-new', seq: 1));
+      socket().deliver(diagPong(sessionId: 'ses-new', seq: 1));
       await settle();
 
       expect(seen.single.sessionId, 'ses-new');
@@ -269,7 +269,7 @@ void main() {
       final List<Envelope> seen = <Envelope>[];
       client.observe(seen.add)();
 
-      socket().deliver(sessionPong(sessionId: 'ses-new', seq: 1));
+      socket().deliver(diagPong(sessionId: 'ses-new', seq: 1));
       await settle();
 
       expect(seen, isEmpty);
