@@ -1,7 +1,7 @@
-import { bigint, check, index, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { boolean, check, index, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
-import { invocationColumns } from './columns';
+import { invocationColumns, keysetIndexes, trailColumns } from './columns';
 
 /**
  * The `audit_entries` table.
@@ -29,19 +29,31 @@ export const auditEntries = pgTable(
   'audit_entries',
   {
     id: text('id').primaryKey(),
-    seq: bigint('seq', { mode: 'number' }).notNull().generatedAlwaysAsIdentity(),
     ...invocationColumns,
     decision: text('decision').notNull(),
     deviceId: text('device_id'),
     ip: text('ip'),
-    at: timestamp('at', { withTimezone: true }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * The trace in scope when the entry was written — the turn's, or the answer's. Stamped by the
+     * repository from the context, never by the domain, which does not know observability exists.
+     */
+    traceId: text('trace_id'),
+    // The verdict of a decision entry, null on every `recorded` one. Written with the entry rather
+    // than joined from `permission_requests` at read time: the question "who authorised this?" is
+    // answered by this table alone (D-15).
+    requestId: text('request_id'),
+    auto: boolean('auto'),
+    ruleId: text('rule_id'),
+    scope: text('scope'),
+    resolvedBy: text('resolved_by'),
+    resolvedFrom: text('resolved_from'),
+    ...trailColumns,
   },
   (table) => [
-    // Keyset pagination is descending over `seq`, scoped by user or by session. The indexes match
-    // the ordering, because an index that matches the filter and not the order sorts every page.
-    index('audit_entries_user_id_seq_idx').on(table.userId, table.seq.desc()),
-    index('audit_entries_session_id_seq_idx').on(table.sessionId, table.seq.desc()),
+    // Keyset pagination is descending over `seq`, scoped by user or by session.
+    ...keysetIndexes('audit_entries', table, { name: 'session_id', column: table.sessionId }),
+    // The retention purge takes the oldest rows before its cutoff, one batch at a time.
+    index('audit_entries_at_idx').on(table.at),
     // One record per invocation **per fact**. A redelivered tool call writes `recorded` again and
     // collides with the entry it repeats, so the trail never claims a command ran twice; a
     // permission decision about the same invocation is a different fact and gets its own row.
@@ -56,5 +68,12 @@ export const auditEntries = pgTable(
       'audit_entries_decision_known',
       sql`${table.decision} IN ('recorded', 'allowed', 'denied')`,
     ),
+    // The hook fires before anybody has voted, so its entry carries no verdict.
+    check(
+      'audit_entries_recorded_has_no_verdict',
+      sql`${table.decision} <> 'recorded' OR (${table.requestId} IS NULL AND ${table.auto} IS NULL AND ${table.ruleId} IS NULL AND ${table.scope} IS NULL AND ${table.resolvedBy} IS NULL AND ${table.resolvedFrom} IS NULL)`,
+    ),
+    // A rule is what answers when nobody does.
+    check('audit_entries_rule_is_automatic', sql`${table.ruleId} IS NULL OR ${table.auto} IS TRUE`),
   ],
 );

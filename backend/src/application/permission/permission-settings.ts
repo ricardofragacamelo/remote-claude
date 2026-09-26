@@ -18,4 +18,16 @@ export interface PermissionSettings {
 
   /** The longest a rule granted in a session may live. */
   readonly ruleLifetimeMs: number;
+
+  /** How long a `project` or `always` rule lives when nobody said how long. */
+  readonly ruleDefaultLifetimeMs: number;
+
+  /**
+   * The longest a `project` or `always` rule may live. Asking for more is refused, never cut.
+   *
+   * The configuration bounds it too — the boot refuses a ceiling past what the code allows — so
+   * no environment variable can turn a rule into a permanent grant
+   * ([D-02](../../../../docs/plans/03-rules-and-audit/decisions.md)).
+   */
+  readonly ruleMaxLifetimeMs: number;
 }

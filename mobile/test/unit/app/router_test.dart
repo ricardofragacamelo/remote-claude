@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/app/router.dart';
+import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/features/auth/auth.dart';
 
 AuthSession session() => AuthSession(

@@ -190,3 +190,49 @@ final class PingSessionProvider extends $FunctionalProvider<PingSession, PingSes
 }
 
 String _$pingSessionHash() => r'40cc230b798c043bfaa96b9988b65eedfafda57f';
+
+/// Drives a session: start, prompt, interrupt and close.
+
+@ProviderFor(driveSession)
+final driveSessionProvider = DriveSessionProvider._();
+
+/// Drives a session: start, prompt, interrupt and close.
+
+final class DriveSessionProvider
+    extends $FunctionalProvider<DriveSession, DriveSession, DriveSession>
+    with $Provider<DriveSession> {
+  /// Drives a session: start, prompt, interrupt and close.
+  DriveSessionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'driveSessionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$driveSessionHash();
+
+  @$internal
+  @override
+  $ProviderElement<DriveSession> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  DriveSession create(Ref ref) {
+    return driveSession(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DriveSession value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DriveSession>(value),
+    );
+  }
+}
+
+String _$driveSessionHash() => r'37ec9df60e56e3f8d2de2d72e3043a32dc7888f4';

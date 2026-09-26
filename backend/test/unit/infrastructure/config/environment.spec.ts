@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { ConfigurationError } from '@remote-claude/config';
-import { loadConfig } from '@infra/config/environment';
+import {
+  AUDIT_PURGE_MIN_INTERVAL_MS,
+  RULE_LIFETIME_CEILING_MS,
+  loadConfig,
+  loadDatabaseConfig,
+} from '@infra/config/environment';
 import type { RawEnvironment } from '@infra/config/environment';
 
 const complete: RawEnvironment = {
@@ -25,9 +30,16 @@ const complete: RawEnvironment = {
   RC_PERMISSION_EXTENSION_MS: '120000',
   RC_PERMISSION_MAX_EXTENSIONS: '3',
   RC_PERMISSION_RULE_LIFETIME_MS: '28800000',
+  RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS: '7776000000',
+  RC_PERMISSION_RULE_MAX_LIFETIME_MS: '7776000000',
+  RC_PUSH_ENDPOINT: 'https://push.example.test/v1/messages:send',
+  RC_PUSH_CREDENTIALS_FILE: '/etc/remote-claude/push.json',
+  RC_PUSH_SCOPE: 'https://push.example.test/auth/messaging',
   RC_CHECKPOINT_DIR: '/var/lib/remote-claude/checkpoints',
   RC_CHECKPOINT_MAX_FILE_BYTES: '5242880',
   RC_CHECKPOINT_MAX_STORE_BYTES: '524288000',
+  RC_AUDIT_RETENTION_DAYS: '90',
+  RC_AUDIT_PURGE_INTERVAL_MS: '86400000',
 };
 
 /** The complete environment, with one variable changed or removed. */
@@ -56,7 +68,15 @@ describe('loadConfig', () => {
         extensionMs: 120_000,
         maxExtensions: 3,
         ruleLifetimeMs: 28_800_000,
+        ruleDefaultLifetimeMs: 7_776_000_000,
+        ruleMaxLifetimeMs: 7_776_000_000,
       },
+      push: {
+        endpoint: 'https://push.example.test/v1/messages:send',
+        credentialsFile: '/etc/remote-claude/push.json',
+        scope: 'https://push.example.test/auth/messaging',
+      },
+      audit: { retentionDays: 90, purgeIntervalMs: 86_400_000 },
       checkpoints: {
         directory: '/var/lib/remote-claude/checkpoints',
         maxFileBytes: 5_242_880,
@@ -89,9 +109,13 @@ describe('loadConfig', () => {
     'RC_SESSION_MAX_BUDGET_USD',
     'RC_SESSION_DEFAULT_MODEL',
     'RC_SESSION_DEFAULT_PERMISSION_MODE',
+    'RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS',
+    'RC_PERMISSION_RULE_MAX_LIFETIME_MS',
     'RC_CHECKPOINT_DIR',
     'RC_CHECKPOINT_MAX_FILE_BYTES',
     'RC_CHECKPOINT_MAX_STORE_BYTES',
+    'RC_AUDIT_RETENTION_DAYS',
+    'RC_AUDIT_PURGE_INTERVAL_MS',
   ] as const)('refuses to produce a configuration when %s is missing', (variable) => {
     expect(() => loadConfig(withChange({ [variable]: undefined }))).toThrow(ConfigurationError);
   });
@@ -114,8 +138,138 @@ describe('loadConfig', () => {
     ['RC_SESSION_DEFAULT_PERMISSION_MODE', 'yolo'],
     ['RC_CHECKPOINT_MAX_FILE_BYTES', '0'],
     ['RC_CHECKPOINT_MAX_STORE_BYTES', '-1'],
+    ['RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS', '0'],
+    ['RC_PERMISSION_RULE_MAX_LIFETIME_MS', '0'],
   ] as const)('refuses %s set to %s', (variable, value) => {
     expect(() => loadConfig(withChange({ [variable]: value }))).toThrow(ConfigurationError);
+  });
+
+  describe('the lifetime of a persisted rule — S-60', () => {
+    it('refuses a ceiling past what the code allows, so no variable makes a rule permanent', () => {
+      const overCeiling = String(RULE_LIFETIME_CEILING_MS + 1);
+
+      expect(() =>
+        loadConfig(
+          withChange({
+            RC_PERMISSION_RULE_MAX_LIFETIME_MS: overCeiling,
+            RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS: '1000',
+          }),
+        ),
+      ).toThrow(ConfigurationError);
+    });
+
+    it('accepts a ceiling exactly at what the code allows', () => {
+      const atCeiling = String(RULE_LIFETIME_CEILING_MS);
+
+      expect(
+        loadConfig(withChange({ RC_PERMISSION_RULE_MAX_LIFETIME_MS: atCeiling })).permission
+          .ruleMaxLifetimeMs,
+      ).toBe(RULE_LIFETIME_CEILING_MS);
+    });
+
+    it('refuses a default above the ceiling, and names the variable', () => {
+      // Every rule granted from an approval card would then be refused by the installation's own
+      // ceiling: the product configured to reject its own default.
+      expect.assertions(2);
+
+      try {
+        loadConfig(
+          withChange({
+            RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS: '7776000001',
+            RC_PERMISSION_RULE_MAX_LIFETIME_MS: '7776000000',
+          }),
+        );
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConfigurationError);
+        expect((error as ConfigurationError).problems[0]).toContain(
+          'RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS',
+        );
+      }
+    });
+
+    it('accepts a default equal to the ceiling', () => {
+      expect(loadConfig(complete).permission.ruleDefaultLifetimeMs).toBe(7_776_000_000);
+    });
+  });
+
+  describe('the retention of the trail — S-33', () => {
+    it('refuses a window below the ninety-day floor, rather than raising it in silence', () => {
+      expect(() => loadConfig(withChange({ RC_AUDIT_RETENTION_DAYS: '89' }))).toThrow(
+        ConfigurationError,
+      );
+    });
+
+    it('accepts the floor itself, and a longer window', () => {
+      expect(loadConfig(withChange({ RC_AUDIT_RETENTION_DAYS: '90' })).audit.retentionDays).toBe(
+        90,
+      );
+      expect(loadConfig(withChange({ RC_AUDIT_RETENTION_DAYS: '365' })).audit.retentionDays).toBe(
+        365,
+      );
+    });
+
+    it.each(['ninety', '90.5', '0', '-90', '36501'])('refuses a window of %s', (value) => {
+      expect(() => loadConfig(withChange({ RC_AUDIT_RETENTION_DAYS: value }))).toThrow(
+        ConfigurationError,
+      );
+    });
+  });
+
+  describe('the purge job — S-82', () => {
+    it('switches the job off only with the literal word', () => {
+      expect(
+        loadConfig(withChange({ RC_AUDIT_PURGE_INTERVAL_MS: 'off' })).audit.purgeIntervalMs,
+      ).toBeNull();
+    });
+
+    // Switched off by configuration, never by accident: a zero or an empty value is a mistake,
+    // and a mistake stops the boot instead of quietly ending the retention promise.
+    it.each(['0', '', 'OFF', 'false', String(AUDIT_PURGE_MIN_INTERVAL_MS - 1), '-1'])(
+      'refuses an interval of "%s"',
+      (value) => {
+        expect(() => loadConfig(withChange({ RC_AUDIT_PURGE_INTERVAL_MS: value }))).toThrow(
+          ConfigurationError,
+        );
+      },
+    );
+
+    it('accepts the shortest interval there is', () => {
+      expect(
+        loadConfig(withChange({ RC_AUDIT_PURGE_INTERVAL_MS: String(AUDIT_PURGE_MIN_INTERVAL_MS) }))
+          .audit.purgeIntervalMs,
+      ).toBe(60_000);
+    });
+  });
+
+  describe('what `pnpm db` reads — D-22', () => {
+    const database = {
+      LOG_LEVEL: 'info',
+      DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
+      RC_AUDIT_RETENTION_DAYS: '120',
+    };
+
+    it('needs the database, the log level and the window, and nothing else', () => {
+      expect(loadDatabaseConfig(database)).toEqual({
+        logLevel: 'info',
+        databaseUrl: 'postgresql://u:p@localhost:5432/db',
+        audit: { retentionDays: 120 },
+      });
+    });
+
+    it('holds the command to the same floor as the boot — S-33', () => {
+      expect(() => loadDatabaseConfig({ ...database, RC_AUDIT_RETENTION_DAYS: '89' })).toThrow(
+        ConfigurationError,
+      );
+    });
+
+    it.each(['LOG_LEVEL', 'DATABASE_URL', 'RC_AUDIT_RETENTION_DAYS'] as const)(
+      'refuses to run without %s',
+      (variable) => {
+        expect(() => loadDatabaseConfig({ ...database, [variable]: undefined })).toThrow(
+          ConfigurationError,
+        );
+      },
+    );
   });
 
   it('makes the allowlist path absolute, whatever the working directory turns out to be', () => {

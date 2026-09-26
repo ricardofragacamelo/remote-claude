@@ -28,6 +28,7 @@
     "@remote-claude/contracts": "workspace:*",
     "cookie-parser": "^1.4.7",
     "drizzle-orm": "^0.45.2",
+    "i18next": "^26.4.2",
     "jose": "^6.2.12",
     "pg": "^8.23.0",
     "pino": "^10.3.1",

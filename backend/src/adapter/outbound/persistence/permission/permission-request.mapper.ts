@@ -29,6 +29,7 @@ export function toRow(request: PermissionRequest, now: Date): PermissionRequestI
     resolvedBy: resolution?.resolvedBy?.value ?? null,
     resolvedFrom: resolution?.resolvedFrom ?? null,
     auto: resolution?.auto ?? null,
+    ruleId: resolution?.ruleId ?? null,
     extensionsUsed: request.extensionsUsed,
     requestedAt: request.requestedAt,
     expiresAt: request.expiresAt,

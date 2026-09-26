@@ -1,0 +1,9 @@
+{
+  "id": "02·S-57",
+  "title": "a notification opened after the deadline is not an actionable card",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "code": "PERMISSION_REQUEST_EXPIRED"
+  }
+}

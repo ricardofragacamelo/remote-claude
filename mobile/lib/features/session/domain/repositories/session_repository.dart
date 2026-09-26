@@ -24,4 +24,10 @@ abstract interface class SessionRepository {
   ///
   /// @returns whether the command left; a socket that is not ready sends nothing
   bool ping({String? sessionId, required String nonce});
+
+  /// Sends one of the session's commands.
+  ///
+  /// @returns whether the command left; a socket that is not ready sends nothing, and the screen
+  ///   says so rather than pretending the prompt is on its way (S-76)
+  bool send(String type, Map<String, Object?> payload);
 }

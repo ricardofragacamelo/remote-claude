@@ -4,6 +4,7 @@ import { SessionRunner } from '@adapter/outbound/claude/session-runner';
 import type { SessionEvent, ToolInvocation } from '@application/session';
 import type { SessionCloseReason } from '@domain/session';
 import { SessionId } from '@domain/session';
+import { ClaudeSessionId } from '@domain/transcript';
 import { WorkspacePath } from '@domain/workspace';
 import { loadFixture } from '../../../../fakes/agent-sdk/fixture';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
@@ -12,8 +13,11 @@ import { FixedClock } from '../../../../support/fakes/fixed-clock';
 import { StubPermissionGate } from '../../../../support/fakes/stub-permission-gate';
 import { RecordingJournal } from '../../../../support/fakes/recording-journal';
 import { RecordingLogger } from '../../../../support/fakes/recording-logger';
+import type { LogLine } from '../../../../support/fakes/recording-logger';
+import { runWithTrace } from '@shared/logging/trace-context';
 
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
+const CONVERSATION = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
 const now = new Date('2026-09-18T12:00:00.000Z');
 
 /** A runner over a scripted stream, with everything it produced collected. */
@@ -43,6 +47,7 @@ function runner(script: ScriptOptions = {}): {
       model: null,
       permissionMode: 'default',
       resumeSessionId: null,
+      claudeSessionId: ClaudeSessionId.create(CONVERSATION),
       onEvent: (event) => events.push(event),
       onClosed: (reason) => closed.push(reason),
     },
@@ -107,6 +112,39 @@ describe('SessionRunner', () => {
       harness.runner.run();
 
       expect(harness.record.options?.cwd).toBe('/srv/projects/app');
+    });
+
+    it('names the conversation with the id already recorded as ours — plan 04, S-71', () => {
+      // Minted and recorded before the subprocess existed; the SDK is told to use it rather than
+      // inventing one, so the transcript on disk is the one the provenance names.
+      harness.runner.run();
+
+      expect(harness.record.options?.sessionId).toBe(CONVERSATION);
+    });
+
+    it('never hands a rule back to the SDK, even when the SDK offers one — plan 03, B-04 / D-09', async () => {
+      // A rule returned in `updatedPermissions` is applied by the CLI without calling
+      // `canUseTool` again, and nothing takes it back out of a live session: revoking would stop
+      // working until the next one. Our rule is the only authority, so the answer carries none.
+      harness.runner.run();
+      const canUseTool = harness.record.options?.canUseTool;
+
+      const result = await canUseTool?.('Bash', { command: 'git status' }, {
+        signal: new AbortController().signal,
+        toolUseID: 'toolu-1',
+        requestId: 'request-1',
+        suggestions: [
+          {
+            type: 'addRules',
+            rules: [{ toolName: 'Bash', ruleContent: 'git status' }],
+            behavior: 'allow',
+            destination: 'session',
+          },
+        ],
+      } as unknown as Parameters<NonNullable<typeof canUseTool>>[2]);
+
+      expect(result).toEqual({ behavior: 'allow', updatedInput: { command: 'git status' } });
+      expect(result).not.toHaveProperty('updatedPermissions');
     });
   });
 
@@ -200,6 +238,7 @@ describe('SessionRunner', () => {
           model: null,
           permissionMode: 'default',
           resumeSessionId: null,
+          claudeSessionId: null,
           onEvent: (event) => refused.events.push(event),
           onClosed: (reason) => refused.closed.push(reason),
         },
@@ -466,6 +505,97 @@ describe('SessionRunner', () => {
       expect(harness.log.withOp('claude.session.lifecycle')[0]).toMatchObject({
         trustMark: expect.any(String),
       });
+    });
+  });
+
+  describe('the trace of a turn — D-16', () => {
+    /** The traces the lines of one message were written under, in order, with no repeats. */
+    const tracesOf = (lines: readonly LogLine[], msg: string): unknown[] => [
+      ...new Set(lines.filter((line) => line['msg'] === msg).map((line) => line['traceId'])),
+    ];
+
+    it('runs the hooks, the callback and the stream of a turn under its prompt`s trace — S-31', async () => {
+      const tools = runner({ fixture: 'tool-turn' });
+      runWithTrace({ traceId: 'trace-start' }, () => {
+        tools.runner.run();
+      });
+      runWithTrace({ traceId: 'trace-turn-1' }, () => {
+        tools.runner.prompt('do the work');
+      });
+      await tools.settle();
+
+      expect(tracesOf(tools.log.lines, 'tool invocation recorded')).toEqual(['trace-turn-1']);
+      expect(tracesOf(tools.log.lines, 'canUseTool answered')).toEqual(['trace-turn-1']);
+      expect(tracesOf(tools.log.lines, 'sdk message')).toEqual(['trace-turn-1']);
+    });
+
+    it('gives each turn its own trace, not the one the session was opened with — S-76', async () => {
+      const tools = runner({ fixture: 'tool-turn' });
+      runWithTrace({ traceId: 'trace-start' }, () => {
+        tools.runner.run();
+      });
+
+      runWithTrace({ traceId: 'trace-turn-1' }, () => {
+        tools.runner.prompt('first');
+      });
+      await tools.settle();
+      const firstTurn = tools.log.lines.length;
+
+      runWithTrace({ traceId: 'trace-turn-2' }, () => {
+        tools.runner.prompt('second');
+      });
+      await tools.settle();
+
+      const recorded = 'tool invocation recorded';
+      expect(tracesOf(tools.log.lines.slice(0, firstTurn), recorded)).toEqual(['trace-turn-1']);
+      expect(tracesOf(tools.log.lines.slice(firstTurn), recorded)).toEqual(['trace-turn-2']);
+    });
+
+    it('takes the prompts` traces in the order the prompts were queued', async () => {
+      // Two prompts before the first turn opens: each `UserPromptSubmit` takes the oldest.
+      const tools = runner({ fixture: 'tool-turn' });
+      tools.runner.run();
+      runWithTrace({ traceId: 'trace-a' }, () => {
+        tools.runner.prompt('first');
+      });
+      runWithTrace({ traceId: 'trace-b' }, () => {
+        tools.runner.prompt('second');
+      });
+      await tools.settle();
+
+      expect(tracesOf(tools.log.lines, 'tool invocation recorded')).toEqual(['trace-a', 'trace-b']);
+    });
+
+    it('keeps the trace it had when a turn opens with no prompt of ours behind it', async () => {
+      harness.runner.run();
+      runWithTrace({ traceId: 'trace-turn-1' }, () => {
+        harness.runner.prompt('hello');
+      });
+      await harness.settle();
+
+      // The CLI opening a turn by itself — the hook fires with nothing of ours queued — and then
+      // asking about a tool. What it asks is still attributed to the last prompt we know of.
+      const options = harness.record.options;
+      await options?.hooks?.UserPromptSubmit?.[0]?.hooks[0]?.(
+        { hook_event_name: 'UserPromptSubmit', prompt: 'internal', prompt_id: 'p-2' } as never,
+        undefined,
+        { signal: new AbortController().signal },
+      );
+      await options?.canUseTool?.('Bash', { command: 'ls' }, {
+        signal: new AbortController().signal,
+        requestId: 'request-unprompted',
+        toolUseID: 'toolu-unprompted',
+      } as never);
+
+      expect(tracesOf(harness.log.lines, 'canUseTool answered')).toEqual(['trace-turn-1']);
+    });
+
+    it('writes nothing of a trace when the session was opened outside one', async () => {
+      harness.runner.run();
+      harness.runner.prompt('hello');
+      await harness.settle();
+
+      expect(harness.log.withOp('claude.output').every((line) => !('traceId' in line))).toBe(true);
     });
   });
 });

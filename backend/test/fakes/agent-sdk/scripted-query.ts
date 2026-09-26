@@ -98,6 +98,36 @@ export interface ScriptOptions {
   readonly extraMessages?: readonly unknown[];
 }
 
+/** What a turn after the first appends to every tool use id it replays. Nothing on the first. */
+function turnSuffix(turn: number): string {
+  return turn <= 1 ? '' : `-turn-${String(turn)}`;
+}
+
+/**
+ * The recording as turn `turn` of a run replays it: the same, with tool use ids of its own.
+ *
+ * The real SDK never hands the same `tool_use_id` to two turns. A fake that replayed the
+ * recorded ones on every turn made the second turn of a session a **redelivery** of the first, and
+ * the trail — which drops a redelivered invocation on purpose — silently wrote nothing for it. The
+ * ids are rewritten in the messages and the hooks alike, so an event and its entry still agree;
+ * the first turn is the recording byte for byte.
+ */
+function forTurn(fixture: AgentSdkFixture, turn: number): AgentSdkFixture {
+  const suffix = turnSuffix(turn);
+  if (suffix === '') {
+    return fixture;
+  }
+
+  let text = JSON.stringify(fixture);
+  for (const { toolUseId } of fixture.preToolUse) {
+    if (toolUseId !== undefined) {
+      text = text.replaceAll(toolUseId, `${toolUseId}${suffix}`);
+    }
+  }
+
+  return JSON.parse(text) as AgentSdkFixture;
+}
+
 /**
  * The Agent SDK, replaying a recorded run.
  *
@@ -184,7 +214,11 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     // A prompt may name the recording it wants replayed. It is how one running stack covers both
     // the turn that asks for permission and the turn that does not — an end-to-end suite gets one
     // backend per run, and starting a second one per scenario would cost more than it proves.
-    this.fixture = loadFixture(fixtureNamedIn(prompt) ?? this.script.fixture ?? 'text-turn');
+    this.turns += 1;
+    this.fixture = forTurn(
+      loadFixture(fixtureNamedIn(prompt) ?? this.script.fixture ?? 'text-turn'),
+      this.turns,
+    );
 
     // Every turn opens with `UserPromptSubmit`, as the real SDK does. A fake that skipped it would
     // leave the checkpoint of the turn unopened, and the undo point unlabelled.
@@ -263,6 +297,12 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
   /** Unique to this scripted run, so no two sessions ever mint the same `requestId`. */
   private readonly runId = `run-${String((runs += 1))}`;
 
+  /** How many turns this run has replayed — what makes each turn's tool use ids its own. */
+  private turns = 0;
+
+  /** How many times this run has consulted `canUseTool` — one fresh `requestId` per call. */
+  private asks = 0;
+
   /**
    * Fires the hooks and the callback the recording says this turn fired.
    *
@@ -277,7 +317,7 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
       const input = this.fixture.canUseTool.find(
         (entry) => entry.toolName === invocation.toolName,
       )?.input;
-      const toolUseId = invocation.toolUseId ?? `tool-${String(index)}`;
+      const toolUseId = invocation.toolUseId ?? `tool-${String(index)}${turnSuffix(this.turns)}`;
 
       this.record.hooked.push(invocation.toolName);
       await this.fire(
@@ -303,8 +343,10 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
             // `requestId` is the idempotency key the permission bridge branches on, so a fake
             // that left it constant would make every request look like a redelivery of the first
             // — and one that only varied within a run would make the second **session** inherit
-            // the first session's answers. The real SDK mints a fresh one per call.
-            requestId: `${this.runId}-request-${String(index)}`,
+            // the first session's answers. Nor may it repeat across the turns of one session: the
+            // second turn would inherit the first turn's answer, and a revoked rule would look as
+            // if it still applied. The real SDK mints a fresh one per call.
+            requestId: `${this.runId}-request-${String((this.asks += 1))}-${String(index)}`,
             toolUseID: toolUseId,
           },
         );

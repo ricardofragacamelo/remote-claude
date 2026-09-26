@@ -79,6 +79,14 @@ void main() {
     expect(adapter.lastRequest!.data, <String, Object?>{'code': 'c'});
   });
 
+  test('sends a DELETE to the path it was given', () async {
+    final _Adapter adapter = _Adapter();
+    await clientWith(adapter).delete('/permission-rules/rule_1');
+
+    expect(adapter.lastRequest!.method, 'DELETE');
+    expect(adapter.lastRequest!.path, '/permission-rules/rule_1');
+  });
+
   test('a refusal reaches the caller as a Failure, never as a DioException', () async {
     final _Adapter adapter = _Adapter(
       status: 404,

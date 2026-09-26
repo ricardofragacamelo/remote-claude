@@ -31,6 +31,18 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-13 | dois clientes disputando a última vaga: um entra, o outro recebe erro | conc | integração | `SESSION_LIMIT_REACHED` | B-01 | ⬜ |
 | S-14 | chamar o shutdown duas vezes é inofensivo | idem | unit | — | B-04 | ⬜ |
 
+## Nova tentativa do push — B-25
+
+| ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
+|---|---|---|---|---|---|---|
+| S-47 | provedor falha uma vez e entrega na segunda: o aparelho recebe **uma** notificação | eq | unit | — | B-25 | ⬜ |
+| S-48 | falha em todas as tentativas: para no limite, e loga um `warn` só, com o número de tentativas | fron | unit | — | B-25 | ⬜ |
+| S-49 | `tokenRejected` **não** é tentado de novo, e o token é apagado mantendo o device aprovado | err | unit | — | B-25 | ⬜ |
+| S-50 | pedido resolvido durante o recuo: a tentativa pendente é cancelada e nenhum aviso chega depois da retirada | est | integração | — | B-25 | ⬜ |
+| S-51 | retirada chegando enquanto uma nova tentativa do aviso está em voo: o aparelho termina sem card | conc | integração | — | B-25 | ⬜ |
+| S-52 | a nova tentativa manda a mesma tag do pedido: se a primeira tinha entrado, o aparelho segue com uma notificação só | idem | unit | — | B-25 | ⬜ |
+| S-53 | provedor de teste falha a primeira chamada e o aparelho recebe a notificação mesmo assim | eq | e2e | — | B-25 | ⬜ |
+
 ## Logs do cliente — B-08…B-11
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |

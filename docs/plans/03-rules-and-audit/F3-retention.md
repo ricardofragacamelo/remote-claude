@@ -23,13 +23,13 @@ escolher *o quê*.
 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 
-### B-16 — Janela configurada, com piso 🔲
+### B-16 — Janela configurada, com piso ✅
 
 Retenção mínima de 90 dias ([backend/03](../../architecture/backend/03-modules.md#audit)).
 Valor abaixo disso **impede o processo de subir** — piso que se pode baixar por variável de
 ambiente não é piso.
 
-### B-17 — Purga em lote 🔲
+### B-17 — Purga em lote ✅
 
 Apaga fora da janela, em lotes, sem bloquear a escrita da trilha: auditoria que para de gravar
 durante a limpeza bloquearia a autorização (é a regra da
@@ -52,7 +52,7 @@ A trigger append-only do plano 01 barra `DELETE` **dentro** do piso de 90 dias e
 a janela configurada é o que a purga tenta apagar. `DELETE` direto dentro da janela é recusado
 pelo banco, com o papel da aplicação (S-52).
 
-### B-18 — Subcomando no `db.mjs` 🔲
+### B-18 — Subcomando no `db.mjs` ✅
 
 A purga entra no script que já existe (`migrate` · `reset` · `seed`), chamando **a mesma rotina
 de aplicação** que o job — não uma segunda implementação que envelhece diferente —, com **código
@@ -61,7 +61,7 @@ de saída honesto** e saída dizendo o que apagou e o que não conseguiu apagar.
 Entra na seção **Comandos** do [README.md](../../../README.md#comandos) e no
 [catálogo de scripts](../00-bootstrap/README.md#catálogo-de-scripts) na mesma entrega.
 
-### B-19 — A purga é auditada 🔲
+### B-19 — A purga é auditada ✅
 
 Ela própria vira registro: janela, contagem e **quem disparou** — `job` ou `cli`. Operação que
 apaga trilha sem deixar rastro é o buraco óbvio deste desenho, e "não sei quem mandou" é meio
@@ -71,7 +71,7 @@ rastro.
 
 ## Cenários cobertos
 
-S-33…S-40, S-51, S-52.
+S-33…S-40, S-51, S-52 e, descobertos ao começar a fase, S-82…S-91.
 
 ---
 

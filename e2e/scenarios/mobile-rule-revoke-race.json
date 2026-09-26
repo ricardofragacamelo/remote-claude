@@ -1,0 +1,11 @@
+{
+  "id": "03·S-46",
+  "title": "the browser and the phone revoke the same rule at once: one revocation, and both are told it",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "scope": "always",
+    "status": 200,
+    "revocations": 1
+  }
+}

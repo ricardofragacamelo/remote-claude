@@ -10,6 +10,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
@@ -40,6 +41,44 @@ extension PumpApp on WidgetTester {
           ],
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: child),
+        ),
+      ),
+    );
+
+    if (pumpOnce) {
+      await pump();
+    }
+  }
+
+  /// Mounts a screen that **navigates**, with a router it can navigate in.
+  ///
+  /// A screen calling `context.go` needs a `GoRouter` above it, and `home:` gives it none. The
+  /// routes are the test's own so the destination can be a marker rather than a real screen:
+  /// what is being proven is that the app went somewhere, and where.
+  Future<void> pumpRouted(
+    List<RouteBase> routes, {
+    String initialLocation = '/',
+    List<Override> overrides = const <Override>[],
+    Locale locale = const Locale('en'),
+    bool pumpOnce = true,
+  }) async {
+    final GoRouter router = GoRouter(initialLocation: initialLocation, routes: routes);
+    addTearDown(router.dispose);
+
+    await pumpWidget(
+      ProviderScope(
+        overrides: overrides,
+        child: MaterialApp.router(
+          locale: locale,
+          theme: AppTheme.light(),
+          localizationsDelegates: const <LocalizationsDelegate<Object>>[
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
         ),
       ),
     );

@@ -5,22 +5,26 @@
 library;
 
 import 'package:equatable/equatable.dart';
-import 'package:remote_claude/features/session/domain/entities/pong.dart';
+import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 
 /// One update of the stream.
 sealed class SessionUpdate extends Equatable {
   const SessionUpdate();
 }
 
-/// A pong arrived.
-final class PongReceived extends SessionUpdate {
-  const PongReceived(this.pong);
+/// Something happened in the session being followed.
+///
+/// The event travels, not the frame: the wire stops at `data/`, and both readers of this stream —
+/// the conversation and the walking skeleton's round trip — work with the same domain type, so
+/// they cannot go out of step about what arrived.
+final class EventReceived extends SessionUpdate {
+  const EventReceived(this.event);
 
-  /// What came back.
-  final Pong pong;
+  /// What happened.
+  final SessionEvent event;
 
   @override
-  List<Object?> get props => <Object?>[pong];
+  List<Object?> get props => <Object?>[event];
 }
 
 /// The replay buffer no longer held what was missed: drop everything and reload.

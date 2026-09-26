@@ -117,21 +117,38 @@ a mesma assimetria do device pendente, que vê e não decide. Botão desabilitad
 de segurança que parece bug.
 
 Biometria indisponível ou recusada → cai para o PIN do dispositivo, nunca para "aprovar
-direto".
+direto". No código isso é um argumento: `biometricOnly: false`, e qualquer coisa que o prompt
+responda que não seja "confirmado" — cancelado, bloqueado, prompt que não abriu — é "não".
+
+A chave que desliga fica na tela inicial, **longe** do card que ela protege, e desliga o **pedido**,
+não a regra acima: aparelho sem nenhum bloqueio continua sem aprovar com a chave em qualquer
+posição. Negar nunca pede biometria. A preferência mora no armazenamento seguro e sobrevive ao
+logout — é do aparelho, não da conta
+([02 · D-25](../../plans/02-mobile-approval/decisions.md#d-25--o-que-a-chave-desliga)).
 
 ---
 
 ## Logout
 
-1. Limpa o armazenamento seguro.
-2. Fecha o WebSocket.
-3. Invalida os providers Riverpod — **obrigatório**: dado do usuário anterior não pode
-   aparecer para o próximo.
-4. Desregistra o push token no backend.
-5. Chama o `end_session_endpoint` do provedor.
+A ordem é a regra ([02 · D-23](../../plans/02-mobile-approval/decisions.md#d-23--a-ordem-do-logout)):
 
-Pular o passo 4 faz o aparelho continuar recebendo notificação de permissão de uma conta da
+1. **Desregistra o push token no backend** — primeiro, porque é uma chamada ao backend e precisa
+   da credencial que o passo seguinte apaga. Falhar aqui é `warn`, nunca motivo para não sair: um
+   logout que não completa sem rede deixa a credencial no aparelho.
+2. Limpa o armazenamento seguro.
+3. Chama o `end_session_endpoint` do provedor.
+4. Fecha o WebSocket.
+5. Invalida os providers Riverpod — **obrigatório**: dado do usuário anterior não pode
+   aparecer para o próximo.
+
+Pular o passo 1 faz o aparelho continuar recebendo notificação de permissão de uma conta da
 qual ele saiu.
+
+Quem sabe desregistrar é a feature `device`, e quem faz logout é `auth` — que `device` já importa.
+Para a seta não voltar, o passo é **registrado** em `core/session/sign_out_hooks.dart` e o logout
+roda o que estiver lá, antes de mexer no próprio estado. Fechar o socket e invalidar os providers é
+do `app/` (`session_scope.dart`), que enxerga todas as features: ao ver "ninguém logado" ele fecha;
+ao ver um login, abre o socket com a credencial nova.
 
 ---
 

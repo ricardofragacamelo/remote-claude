@@ -11,13 +11,16 @@ import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/features/auth/auth.dart';
 import 'package:remote_claude/features/auth/auth_providers.dart';
 import 'package:remote_claude/features/auth/domain/repositories/auth_repository.dart';
+import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 import '../../support/fakes/fake_auth_repository.dart';
 import '../../support/fakes/fake_session_repository.dart';
 import '../../support/fakes/recording_writer.dart';
+import '../../support/fakes/stub_device_controller.dart';
 import '../../support/pump_app.dart';
+import '../../support/fakes/fake_permission_repository.dart';
 
 /// A session that is always **fresh**, whatever day this runs on.
 ///
@@ -68,12 +71,16 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          ...permissionOverrides(),
           authRepositoryProvider.overrideWithValue(auth as AuthRepository),
           sessionRepositoryProvider.overrideWithValue(sessions),
           appLoggerProvider.overrideWithValue(logger),
           connectionStatusProvider.overrideWith(
             (Ref ref) => Stream<ConnectionStatus>.value(ConnectionStatus.ready),
           ),
+          // The session screen carries the approval banner, which would otherwise register this
+          // installation against a backend this suite does not have.
+          deviceControllerAnswering(AsyncData<RegisteredDevice?>(aRegisteredDevice())),
         ],
         child: RemoteClaudeApp(key: appKey),
       ),

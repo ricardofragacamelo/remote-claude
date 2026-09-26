@@ -12,6 +12,7 @@ import { startPostgres } from '../../../../../support/containers/postgres';
 import type { DisposablePostgres } from '../../../../../support/containers/postgres';
 import { aPersistenceContext } from '../../../../../support/fakes/persistence-context';
 import { RecordingLogger } from '../../../../../support/fakes/recording-logger';
+import { runWithTrace } from '@shared/logging/trace-context';
 
 const owner = UserId.create('auth|owner');
 const sessionId = SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ');
@@ -111,6 +112,79 @@ describe('the audit trail', () => {
     );
     return result.rows;
   }
+
+  /** A decision a rule took, about the invocation the hook recorded. */
+  const ruled = (overrides: { id?: string; ruleId?: string | null; auto?: boolean } = {}) =>
+    AuditEntry.record({
+      id: overrides.id ?? '01J0AUDIT00000000000000V1',
+      userId: owner,
+      sessionId,
+      toolUseId: 'tu-v',
+      toolName: 'Bash',
+      input: { command: 'git status' },
+      decision: 'allowed',
+      origin: { deviceId: null, ip: null },
+      at,
+      verdict: {
+        requestId: 'req-v',
+        auto: overrides.auto ?? true,
+        ruleId: overrides.ruleId === undefined ? 'rule-v' : overrides.ruleId,
+        scope: 'always',
+        resolvedBy: owner,
+        resolvedFrom: null,
+      },
+    });
+
+  it('writes the verdict of a decision with the entry — S-81, D-15', async () => {
+    await repository().append(ruled());
+
+    expect((await rows())[0]).toMatchObject({
+      decision: 'allowed',
+      request_id: 'req-v',
+      auto: true,
+      rule_id: 'rule-v',
+      scope: 'always',
+      resolved_by: 'auth|owner',
+      resolved_from: null,
+    });
+  });
+
+  it('writes the trace in scope, which the entity never carried — S-31, D-16', async () => {
+    await runWithTrace({ traceId: 'trace-turn-1' }, () => repository().append(entry()));
+
+    expect((await rows())[0]?.['trace_id']).toBe('trace-turn-1');
+  });
+
+  it('writes no trace when there is none, rather than inventing one', async () => {
+    await repository().append(entry());
+
+    expect((await rows())[0]?.['trace_id']).toBeNull();
+  });
+
+  it('refuses a hook entry that claims a verdict, in the database itself', async () => {
+    // The hook fires before anybody has voted. The domain never writes this; the CHECK is what
+    // survives the day something does.
+    const refusal = await refusalOf(
+      connection.db.execute(
+        sql`INSERT INTO "audit_entries" ("id", "user_id", "session_id", "tool_name", "input", "decision", "request_id", "at")
+            VALUES ('01J0AUDIT00000000000000V2', 'auth|owner', ${sessionId.value}, 'Bash', '{}', 'recorded', 'req-x', now())`,
+      ),
+    );
+
+    expect(refusal).toContain('audit_entries_recorded_has_no_verdict');
+  });
+
+  it('refuses a rule on a decision a person took, in the database itself', async () => {
+    const refusal = await refusalOf(repository().append(ruled({ auto: false })));
+
+    expect(refusal).toContain('audit_entries_rule_is_automatic');
+  });
+
+  it('accepts an automatic decision with no rule — the deadline refusing', async () => {
+    await repository().append(ruled({ ruleId: null }));
+
+    expect((await rows())[0]).toMatchObject({ auto: true, rule_id: null });
+  });
 
   it('writes an entry with everything it carries', async () => {
     await repository().append(entry({ toolUseId: 'tu-1' }));

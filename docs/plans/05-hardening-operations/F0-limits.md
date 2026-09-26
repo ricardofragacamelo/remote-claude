@@ -4,7 +4,7 @@ Plano: [05 — Endurecimento e operação](README.md) · Cenários: [scenarios.m
 
 **Depende de:** [plano 01](../01-live-session/README.md).
 **Entrega:** o backend para de aceitar mais do que a máquina aguenta, devolve o que não está
-sendo usado, e não deixa processo para trás.
+sendo usado, não deixa processo para trás, e não perde uma notificação por uma falha de rede.
 
 ---
 
@@ -66,11 +66,30 @@ que conhece o limite não precisa descobri-lo apanhando.
 `ping` a cada 30 s, sem `pong` em 10 s fecha com `4408`. Conferir que isso se mantém com o
 servidor ocupado — heartbeat que atrasa sob carga derruba conexão saudável.
 
+### B-25 — Nova tentativa do push 🔲
+
+Hoje o `NotifyPermissionUseCase` chama o provedor **uma vez**: `failed` vira `warn` e acabou.
+No e2e do [plano 02](../02-mobile-approval/progress.md) (ciclo 32), um `connect timeout` ao buscar
+o token de acesso do provedor perdeu a notificação do pedido, e a retirada, segundos depois,
+entregou com `200`. [D-05 do plano 02](../02-mobile-approval/decisions.md#d-05--quando-o-push-não-sai)
+decidiu "sem segundo canal", não "sem nova tentativa".
+
+`failed` passa a ser tentado de novo, com recuo e um número limitado de tentativas
+([D-09](decisions.md)), tanto no aviso quanto na retirada. Três coisas não mudam:
+
+- `tokenRejected` é permanente e **não** é tentado de novo — o token é apagado, como em D-13;
+- a nova tentativa nunca segura o pedido de permissão, e nunca passa do `expiresAt` dele;
+- pedido que se resolve durante o recuo cancela a tentativa pendente: nenhum aviso chega depois
+  da retirada.
+
+`Retry-After` do provedor, quando vem, manda no recuo. Esgotou → um `warn` só, com o número de
+tentativas.
+
 ---
 
 ## Cenários cobertos
 
-S-01…S-14.
+S-01…S-14, S-47…S-53.
 
 ---
 

@@ -41,7 +41,14 @@ import { bold, dim, fail, hint, line, ok, title } from './lib/ui.mjs';
  *   name a key as a plain string rather than translating it
  */
 
-/** The two catalogue families of the product. The mobile one is ARB; the web one is JSON. */
+/**
+ * The catalogue families of the product. The mobile one is ARB; the other two are JSON.
+ *
+ * The backend has one **only** because of push: the payload is rendered by the operating system
+ * of a phone, which has no catalogue of ours and no way to be given one. Everywhere else the
+ * backend sends a `messageKey` and whoever has a screen translates
+ * (docs/architecture/shared/02-i18n.md#a-única-exceção).
+ */
 export const FAMILIES = [
   {
     name: 'web',
@@ -60,6 +67,19 @@ export const FAMILIES = [
     // whatever arrives. A key the catalogue of errors can emit is therefore in use, even
     // though no `t()` call in the front end spells it out.
     emitters: [{ dir: 'backend/src', extensions: ['.ts'] }],
+  },
+  {
+    name: 'backend',
+    sourceDir: 'backend/src',
+    sourceExtensions: ['.ts'],
+    placeholders: MUSTACHE,
+    // The keys are named as literals by the translator, never resolved from a prefix: a key
+    // reached only through a computed name is a key nobody can prove is in use.
+    readUsage: usageInLiterals,
+    catalogues: [
+      { locale: 'en', file: 'backend/src/shared/i18n/locales/en.json' },
+      { locale: 'pt-BR', file: 'backend/src/shared/i18n/locales/pt-BR.json' },
+    ],
   },
   {
     name: 'mobile',

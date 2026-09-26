@@ -1,0 +1,10 @@
+{
+  "id": "03·S-44",
+  "title": "a rule the phone grants answers the next request of the session open in the browser",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "scope": "always",
+    "resolvedFrom": "mobile"
+  }
+}

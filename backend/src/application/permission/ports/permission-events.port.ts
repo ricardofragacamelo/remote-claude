@@ -12,6 +12,17 @@ export interface PermissionResolvedEvent {
 }
 
 /**
+ * A question has been put to a human, and nothing has answered it yet.
+ *
+ * It is published **after** the card is on the wire, because that ordering is the difference
+ * between the two channels: whoever has the screen open has already been asked, and the push
+ * exists for whoever has not. `notification` is its only consumer.
+ */
+export interface PermissionRequestedEvent {
+  readonly request: PermissionRequest;
+}
+
+/**
  * The internal bus, for facts one module produces and others react to.
  *
  * `permission.resolved` has three consumers and none of them may be called directly: `audit`
@@ -24,6 +35,14 @@ export interface PermissionResolvedEvent {
  * and the one thing this event does is let it go.
  */
 export interface PermissionEvents {
+  /**
+   * Somebody has to decide something.
+   *
+   * Not published for a request a rule settled on its own: nothing was ever asked, so there is
+   * nothing to notify anybody about.
+   */
+  requested(event: PermissionRequestedEvent): void;
+
   resolved(event: PermissionResolvedEvent): void;
 }
 

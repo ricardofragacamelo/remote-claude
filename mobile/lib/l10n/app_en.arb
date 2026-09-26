@@ -119,5 +119,516 @@
   "@sessionErrorInvalidSessionId": {
     "description": "The session id failed validation before any call",
     "placeholders": { "sessionId": { "type": "String" } }
-  }
+  },
+
+  "deviceStatusRegisteringTitle": "Registering this device",
+  "@deviceStatusRegisteringTitle": { "description": "Title while the registration request is in flight" },
+
+  "deviceStatusRegisteringBody": "Telling the backend which device this is.",
+  "@deviceStatusRegisteringBody": { "description": "Body while the registration request is in flight" },
+
+  "deviceStatusPendingTitle": "Waiting for approval",
+  "@deviceStatusPendingTitle": { "description": "Title of the banner shown while the device is pending" },
+
+  "deviceStatusPendingBody": "You can watch sessions from here. Approving a tool needs this device approved first, and that is done from the browser on your machine.",
+  "@deviceStatusPendingBody": { "description": "Why the approval controls are disabled on a pending device" },
+
+  "deviceStatusRevokedTitle": "This device was revoked",
+  "@deviceStatusRevokedTitle": { "description": "Title of the banner shown when the device has been revoked" },
+
+  "deviceStatusRevokedBody": "It can no longer answer permission requests. Approve it again from the browser on your machine, or sign out.",
+  "@deviceStatusRevokedBody": { "description": "What to do about a revoked device" },
+
+  "deviceStatusUnknownTitle": "This device is not registered",
+  "@deviceStatusUnknownTitle": { "description": "Title shown when the registration could not be completed or the status is unknown" },
+
+  "deviceStatusUnknownBody": "You can watch sessions. Approving a tool is off until the registration goes through.",
+  "@deviceStatusUnknownBody": { "description": "What still works when the registration is unknown" },
+
+  "authErrorDeviceNotRegistered": "This device is not approved yet.",
+  "@authErrorDeviceNotRegistered": { "description": "DEVICE_NOT_REGISTERED from the backend" },
+
+  "authErrorDeviceRevoked": "This device has been revoked.",
+  "@authErrorDeviceRevoked": { "description": "DEVICE_REVOKED from the backend" },
+
+  "authErrorDeviceNotFound": "That device does not exist.",
+  "@authErrorDeviceNotFound": { "description": "NOT_FOUND for a device id" },
+
+  "authErrorDeviceApprovalForbidden": "A device cannot approve a device. Use the browser.",
+  "@authErrorDeviceApprovalForbidden": { "description": "FORBIDDEN when a device tries to approve one" },
+
+  "pushDeniedTitle": "Notifications are off",
+  "@pushDeniedTitle": { "description": "Title when the user refused the OS notification permission" },
+
+  "pushDeniedBody": "Without notifications, you will only see an approval request while this app is open. You can turn them on in the system settings.",
+  "@pushDeniedBody": { "description": "Body when the user refused the OS notification permission" },
+
+  "pushDeniedAction": "Open settings",
+  "@pushDeniedAction": { "description": "Action that takes the user to the OS notification settings" },
+
+  "pushUnavailableTitle": "Notifications are not available",
+  "@pushUnavailableTitle": { "description": "Title when this build has no push transport configured" },
+
+  "pushUnavailableBody": "This build cannot receive notifications. Approval works while the app is open, and there is nothing to change in the system settings.",
+  "@pushUnavailableBody": { "description": "Body when this build has no push transport configured" },
+
+  "pushRotationFailedTitle": "Notifications may not arrive",
+  "@pushRotationFailedTitle": { "description": "Title when a rotated push token could not be registered" },
+
+  "pushRotationFailedBody": "This device got a new notification address and it could not be registered. Approval from away may not reach you until it is.",
+  "@pushRotationFailedBody": { "description": "Body when a rotated push token could not be registered" },
+
+  "workspaceListTitle": "Workspaces",
+  "@workspaceListTitle": { "description": "Title of the screen listing the allowed roots" },
+
+  "workspaceListDescription": "Pick a folder to open a session in.",
+  "@workspaceListDescription": { "description": "Explains what choosing a workspace does" },
+
+  "workspaceListLoading": "Loading folders",
+  "@workspaceListLoading": { "description": "Shown while the allowlist is being read" },
+
+  "workspaceListEmptyTitle": "No folders yet",
+  "@workspaceListEmptyTitle": { "description": "Title of the empty state of the workspace list" },
+
+  "workspaceListEmptyBody": "Nothing is on the allowlist. It is set on the machine running the backend, not from here.",
+  "@workspaceListEmptyBody": { "description": "Body of the empty state of the workspace list" },
+
+  "workspaceNeverOpened": "Never opened",
+  "@workspaceNeverOpened": { "description": "Shown instead of a date for a root this user has not used" },
+
+  "workspaceStartRefused": "The session was not opened: this device is not connected.",
+  "@workspaceStartRefused": { "description": "Shown when session.start could not leave because the socket is down" },
+
+  "sessionTitle": "Session",
+  "@sessionTitle": { "description": "Title of the live session screen" },
+
+  "sessionEmptyTitle": "Nothing yet",
+  "@sessionEmptyTitle": { "description": "Title of the empty state of the session screen" },
+
+  "sessionEmptyBody": "Send a prompt to start.",
+  "@sessionEmptyBody": { "description": "Body of the empty state of the session screen" },
+
+  "sessionPromptHint": "Ask Claude something",
+  "@sessionPromptHint": { "description": "Placeholder of the prompt field" },
+
+  "sessionPromptAction": "Send",
+  "@sessionPromptAction": { "description": "Action that sends one turn" },
+
+  "sessionPromptRefused": "Not sent: this device is not connected.",
+  "@sessionPromptRefused": { "description": "Shown when a prompt could not leave because the socket is down" },
+
+  "sessionInterruptAction": "Stop",
+  "@sessionInterruptAction": { "description": "Action that interrupts the running turn" },
+
+  "sessionCloseAction": "End session",
+  "@sessionCloseAction": { "description": "Action that closes the session" },
+
+  "sessionStatusStarting": "Starting",
+  "@sessionStatusStarting": { "description": "Session status: opened, nothing reported yet" },
+
+  "sessionStatusIdle": "Idle",
+  "@sessionStatusIdle": { "description": "Session status: open with nothing running" },
+
+  "sessionStatusThinking": "Thinking",
+  "@sessionStatusThinking": { "description": "Session status: the model is working" },
+
+  "sessionStatusRunning": "Running a tool",
+  "@sessionStatusRunning": { "description": "Session status: a tool is running on the user's machine" },
+
+  "sessionStatusWaitingPermission": "Waiting for approval",
+  "@sessionStatusWaitingPermission": { "description": "Session status: stopped behind a permission request" },
+
+  "sessionStatusClosed": "Closed",
+  "@sessionStatusClosed": { "description": "Session status: over" },
+
+  "sessionToolStatusRunning": "Running",
+  "@sessionToolStatusRunning": { "description": "Tool invocation still running" },
+
+  "sessionToolStatusSucceeded": "Succeeded",
+  "@sessionToolStatusSucceeded": { "description": "Tool invocation that finished well" },
+
+  "sessionToolStatusFailed": "Failed",
+  "@sessionToolStatusFailed": { "description": "Tool invocation that failed" },
+
+  "sessionToolStatusDenied": "Denied",
+  "@sessionToolStatusDenied": { "description": "Tool invocation somebody refused" },
+
+  "sessionToolOutputLabel": "Output",
+  "@sessionToolOutputLabel": { "description": "Label above what a tool printed" },
+
+  "sessionTurnCost": "{costUsd} USD in {durationMs} ms",
+  "@sessionTurnCost": {
+    "description": "What the last finished turn cost",
+    "placeholders": {
+      "costUsd": { "type": "String" },
+      "durationMs": { "type": "int" }
+    }
+  },
+
+  "sessionClosedByUser": "Ended by whoever opened it.",
+  "@sessionClosedByUser": { "description": "Why the session closed" },
+
+  "sessionClosedCompleted": "Finished on its own.",
+  "@sessionClosedCompleted": { "description": "Why the session closed" },
+
+  "sessionClosedFailed": "Ended after a failure.",
+  "@sessionClosedFailed": { "description": "Why the session closed" },
+
+  "sessionClosedAuditUnavailable": "Ended because the audit trail could not be written.",
+  "@sessionClosedAuditUnavailable": { "description": "Why the session closed" },
+
+  "sessionClosedShutdown": "Ended because the backend stopped.",
+  "@sessionClosedShutdown": { "description": "Why the session closed" },
+
+  "permissionPageTitle": "Permission",
+  "@permissionPageTitle": { "description": "Title of the screen a notification opens" },
+
+  "permissionQueueTitle": "Waiting for you",
+  "@permissionQueueTitle": { "description": "Heading above the open permission requests of a session" },
+
+  "permissionQueueDescription": "Claude has stopped and will not run these until you answer. Silence refuses.",
+  "@permissionQueueDescription": { "description": "Explains the permission queue" },
+
+  "permissionCardLabel": "Permission for {tool}",
+  "@permissionCardLabel": {
+    "description": "Accessibility label of a permission card",
+    "placeholders": {
+      "tool": { "type": "String" }
+    }
+  },
+
+  "permissionToolBash": "Run a shell command",
+  "@permissionToolBash": { "description": "What the Bash tool does" },
+
+  "permissionToolWrite": "Write a file",
+  "@permissionToolWrite": { "description": "What the Write tool does" },
+
+  "permissionToolEdit": "Edit a file",
+  "@permissionToolEdit": { "description": "What the Edit tool does" },
+
+  "permissionToolMultiEdit": "Edit several files",
+  "@permissionToolMultiEdit": { "description": "What the MultiEdit tool does" },
+
+  "permissionToolNotebookEdit": "Edit a notebook",
+  "@permissionToolNotebookEdit": { "description": "What the NotebookEdit tool does" },
+
+  "permissionToolRead": "Read a file",
+  "@permissionToolRead": { "description": "What the Read tool does" },
+
+  "permissionToolWebFetch": "Fetch a page",
+  "@permissionToolWebFetch": { "description": "What the WebFetch tool does" },
+
+  "permissionToolUnknown": "Use {tool}",
+  "@permissionToolUnknown": {
+    "description": "Fallback label for a tool this build has no words for",
+    "placeholders": {
+      "tool": { "type": "String" }
+    }
+  },
+
+  "permissionRiskRead": "Reads something",
+  "@permissionRiskRead": { "description": "Risk of a read-only invocation" },
+
+  "permissionRiskWrite": "Changes a file",
+  "@permissionRiskWrite": { "description": "Risk of an invocation that writes" },
+
+  "permissionRiskDestructive": "Could destroy something",
+  "@permissionRiskDestructive": { "description": "Risk of a destructive invocation" },
+
+  "permissionCommandLabel": "Exactly what will run",
+  "@permissionCommandLabel": { "description": "Label above the exact command of a permission request" },
+
+  "permissionRemaining": "{seconds} s left — then it is refused",
+  "@permissionRemaining": {
+    "description": "Countdown until the deadline refuses the request",
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  },
+
+  "permissionScopeOnce": "Allow once",
+  "@permissionScopeOnce": { "description": "Allow for this invocation only" },
+
+  "permissionScopeOnceHint": "Only this command, only now.",
+  "@permissionScopeOnceHint": { "description": "What allowing once means" },
+
+  "permissionScopeSession": "Allow for this session",
+  "@permissionScopeSession": { "description": "Allow every identical request until the session ends" },
+
+  "permissionScopeSessionHint": "Every identical request, until this session ends.",
+  "@permissionScopeSessionHint": { "description": "What allowing for the session means, and for how long" },
+
+  "permissionDeny": "Refuse",
+  "@permissionDeny": { "description": "Refuse the request" },
+
+  "permissionExtend": "Give me more time",
+  "@permissionExtend": { "description": "Ask the backend to extend the deadline" },
+
+  "permissionExtendExhausted": "This request cannot be extended again.",
+  "@permissionExtendExhausted": { "description": "Why the extend action is gone" },
+
+  "permissionSending": "Sending your answer…",
+  "@permissionSending": { "description": "An answer is on its way" },
+
+  "permissionConfirmTitle": "This could destroy something. Allow it anyway?",
+  "@permissionConfirmTitle": { "description": "Second step of a destructive approval" },
+
+  "permissionConfirmAction": "Yes, allow it",
+  "@permissionConfirmAction": { "description": "Confirms a destructive approval" },
+
+  "permissionConfirmCancel": "Go back",
+  "@permissionConfirmCancel": { "description": "Backs out of a destructive approval" },
+
+  "permissionLockReason": "Confirm it is you to allow this command on your computer",
+  "@permissionLockReason": { "description": "Text of the system biometric or PIN prompt" },
+
+  "permissionLockRefused": "It was not confirmed that this is your phone. Nothing was sent.",
+  "@permissionLockRefused": { "description": "The biometric or PIN prompt did not confirm" },
+
+  "permissionNoLockTitle": "This phone has no screen lock",
+  "@permissionNoLockTitle": { "description": "Why approving is off on this device" },
+
+  "permissionNoLockBody": "A phone without a fingerprint, PIN, pattern or password cannot approve commands. Set a screen lock in the system settings. You can still refuse and watch.",
+  "@permissionNoLockBody": { "description": "Explains D-07 and what to do" },
+
+  "permissionNotSent": "Your answer did not leave: the connection is down. Try again when it is back.",
+  "@permissionNotSent": { "description": "The answer could not be sent" },
+
+  "permissionOffline": "No connection: answering waits for it to come back.",
+  "@permissionOffline": { "description": "Why the answer controls are off while offline" },
+
+  "permissionConnecting": "Connecting to the session before you can answer…",
+  "@permissionConnecting": { "description": "The socket has not re-delivered the request yet" },
+
+  "permissionDeviceBlocked": "This phone cannot answer until it is approved in the browser.",
+  "@permissionDeviceBlocked": { "description": "Why the controls are off on a device that may not decide" },
+
+  "permissionCheckingTitle": "Checking this request with the server…",
+  "@permissionCheckingTitle": { "description": "The screen is revalidating the request" },
+
+  "permissionGoneTitle": "This request no longer exists",
+  "@permissionGoneTitle": { "description": "The server no longer knows the request" },
+
+  "permissionGoneBody": "The session it belonged to has ended, or the server restarted. There is nothing left to answer.",
+  "@permissionGoneBody": { "description": "Why the request is gone" },
+
+  "permissionOpenSession": "Open the session",
+  "@permissionOpenSession": { "description": "Goes from the permission screen to its session" },
+
+  "permissionOutcomeAllowedWeb": "Allowed in the browser.",
+  "@permissionOutcomeAllowedWeb": { "description": "How the request ended" },
+
+  "permissionOutcomeRefusedWeb": "Refused in the browser.",
+  "@permissionOutcomeRefusedWeb": { "description": "How the request ended" },
+
+  "permissionOutcomeAllowedPhone": "Allowed from a phone.",
+  "@permissionOutcomeAllowedPhone": { "description": "How the request ended" },
+
+  "permissionOutcomeRefusedPhone": "Refused from a phone.",
+  "@permissionOutcomeRefusedPhone": { "description": "How the request ended" },
+
+  "permissionOutcomeAllowed": "Allowed.",
+  "@permissionOutcomeAllowed": { "description": "How the request ended, origin unknown" },
+
+  "permissionOutcomeRefused": "Refused.",
+  "@permissionOutcomeRefused": { "description": "How the request ended, origin unknown" },
+
+  "permissionOutcomeAllowedByRule": "Allowed by one of your rules, without asking anybody.",
+  "@permissionOutcomeAllowedByRule": { "description": "A rule answered — for this session, this project or every project" },
+
+  "permissionOutcomeRefusedByRule": "Refused by one of your rules, without asking anybody.",
+  "@permissionOutcomeRefusedByRule": { "description": "A rule answered — for this session, this project or every project" },
+
+  "permissionOutcomeExpired": "Refused automatically: nobody answered in time.",
+  "@permissionOutcomeExpired": { "description": "The deadline refused the request" },
+
+  "approvalLockTitle": "Ask for fingerprint or PIN before approving",
+  "@approvalLockTitle": { "description": "Switch that turns the approval lock on or off" },
+
+  "approvalLockBody": "On by default. Refusing never asks.",
+  "@approvalLockBody": { "description": "Explains the approval lock switch" },
+
+  "permissionErrorRequestNotFound": "That request is no longer open.",
+  "@permissionErrorRequestNotFound": { "description": "Translation of permission.error.requestNotFound" },
+
+  "permissionErrorRequestExpired": "That request ran out of time.",
+  "@permissionErrorRequestExpired": { "description": "Translation of permission.error.requestExpired" },
+
+  "permissionErrorNotOwned": "That request is not yours to answer.",
+  "@permissionErrorNotOwned": { "description": "Translation of permission.error.notOwned" },
+
+  "permissionScopeProject": "Don't ask again in this project",
+  "@permissionScopeProject": { "description": "A yes that leaves a rule for this project" },
+
+  "permissionScopeProjectHint": "Matching requests in this project run without asking, for {duration}.",
+  "@permissionScopeProjectHint": {
+    "description": "What the project scope reaches, and for how long",
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+
+  "permissionScopeAlways": "Don't ask again anywhere",
+  "@permissionScopeAlways": { "description": "A yes that leaves a rule for every project" },
+
+  "permissionScopeAlwaysHint": "Matching requests in any of your projects run without asking, for {duration}.",
+  "@permissionScopeAlwaysHint": {
+    "description": "What the always scope reaches, and for how long",
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+
+  "permissionRuleDays": "{days} days",
+  "@permissionRuleDays": {
+    "description": "A rule lifetime in days",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+
+  "permissionRuleHours": "{hours} hours",
+  "@permissionRuleHours": {
+    "description": "A rule lifetime shorter than a day, in hours",
+    "placeholders": {
+      "hours": { "type": "int" }
+    }
+  },
+
+  "permissionPersistTitle": "Stop asking about this?",
+  "@permissionPersistTitle": { "description": "Second step of a yes that persists a rule" },
+
+  "permissionPersistProject": "Claude will run what matches the rule below in this project without asking you, for {duration}.",
+  "@permissionPersistProject": {
+    "description": "The reach of a project rule, in full",
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+
+  "permissionPersistAlways": "Claude will run what matches the rule below in any of your projects without asking you, for {duration}.",
+  "@permissionPersistAlways": {
+    "description": "The reach of an always rule, in full",
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+
+  "permissionPersistRevocable": "You can take it back at any time from your rules. Revoking takes effect on the next request, in every open session.",
+  "@permissionPersistRevocable": { "description": "That a persisted rule is revocable, and when revoking takes effect" },
+
+  "permissionPersistOpenRules": "See your rules",
+  "@permissionPersistOpenRules": { "description": "Opens the rules screen from the second step" },
+
+  "permissionPersistConfirm": "Allow and stop asking",
+  "@permissionPersistConfirm": { "description": "Confirms a yes that persists a rule" },
+
+  "permissionErrorRuleNotFound": "That rule does not exist.",
+  "@permissionErrorRuleNotFound": { "description": "Translation of permission.error.ruleNotFound" },
+
+  "rulesTitle": "Your rules",
+  "@rulesTitle": { "description": "Title of the rules screen" },
+
+  "rulesOpen": "Rules you granted",
+  "@rulesOpen": { "description": "Opens the rules screen" },
+
+  "rulesReload": "Read the list again",
+  "@rulesReload": { "description": "Reloads the rules" },
+
+  "rulesDescription": "What Claude may do on this machine without asking you first. Revoking takes effect on the next request, in every open session.",
+  "@rulesDescription": { "description": "What the rules screen is" },
+
+  "rulesLoading": "Loading your rules…",
+  "@rulesLoading": { "description": "While the rules load" },
+
+  "rulesEmptyTitle": "No rules yet",
+  "@rulesEmptyTitle": { "description": "No rule granted" },
+
+  "rulesEmptyBody": "A rule is created when you answer a request with “don't ask again”. Until then, Claude asks you every time.",
+  "@rulesEmptyBody": { "description": "What a rule is, when there is none" },
+
+  "rulesScopeProject": "In one project",
+  "@rulesScopeProject": { "description": "Reach of a project rule" },
+
+  "rulesScopeAlways": "In every project",
+  "@rulesScopeAlways": { "description": "Reach of an always rule" },
+
+  "rulesDecisionAllow": "runs without asking",
+  "@rulesDecisionAllow": { "description": "A rule that allows" },
+
+  "rulesDecisionDeny": "refused without asking",
+  "@rulesDecisionDeny": { "description": "A rule that refuses" },
+
+  "rulesStatusActive": "Active",
+  "@rulesStatusActive": { "description": "A rule that still answers" },
+
+  "rulesStatusExpired": "Expired",
+  "@rulesStatusExpired": { "description": "A rule past its expiry" },
+
+  "rulesStatusUnknown": "Unknown state",
+  "@rulesStatusUnknown": { "description": "A rule state this build does not know" },
+
+  "rulesRowLabel": "Rule {pattern}",
+  "@rulesRowLabel": {
+    "description": "Accessible name of a rule row",
+    "placeholders": {
+      "pattern": { "type": "String" }
+    }
+  },
+
+  "rulesToolDecision": "{tool} · {decision}",
+  "@rulesToolDecision": {
+    "description": "The tool of a rule and what it does",
+    "placeholders": {
+      "tool": { "type": "String" },
+      "decision": { "type": "String" }
+    }
+  },
+
+  "rulesProject": "Project: {path}",
+  "@rulesProject": {
+    "description": "The project a project rule is confined to",
+    "placeholders": {
+      "path": { "type": "String" }
+    }
+  },
+
+  "rulesGranted": "Granted by {who} on {at}",
+  "@rulesGranted": {
+    "description": "Who granted a rule, and when",
+    "placeholders": {
+      "who": { "type": "String" },
+      "at": { "type": "String" }
+    }
+  },
+
+  "rulesValidUntil": "Valid until {at}",
+  "@rulesValidUntil": {
+    "description": "Until when a rule answers",
+    "placeholders": {
+      "at": { "type": "String" }
+    }
+  },
+
+  "rulesExpiredOn": "Expired on {at}. Claude asks you again.",
+  "@rulesExpiredOn": {
+    "description": "When a rule stopped answering",
+    "placeholders": {
+      "at": { "type": "String" }
+    }
+  },
+
+  "rulesExpiringSoon": "Expires soon: after {at}, Claude will ask you again.",
+  "@rulesExpiringSoon": {
+    "description": "Warning for a rule close to expiring",
+    "placeholders": {
+      "at": { "type": "String" }
+    }
+  },
+
+  "rulesRevoke": "Revoke",
+  "@rulesRevoke": { "description": "Revokes a rule" },
+
+  "rulesRevoking": "Revoking…",
+  "@rulesRevoking": { "description": "While a revocation is in flight" }
 }

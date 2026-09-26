@@ -21,23 +21,23 @@ O custo de desobedecer não aparece no dia da entrega: aparece na atualização 
 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 
-### B-01 — Módulo `transcript` e a porta 🔲
+### B-01 — Módulo `transcript` e a porta ✅
 
 Porta em `application/transcript/ports/`, adapter em `adapter/outbound/claude/`. Nenhum import
 de `@anthropic-ai/*` fora dessa pasta — é o que permite trocar ou fakear o SDK.
 
-### B-02 — Endpoints de histórico 🔲
+### B-02 — Endpoints de histórico ✅
 
 Listar sessões (com a **origem** de cada uma: aberta aqui ou no VSCode) e carregar as mensagens
 de uma sessão.
 
-### B-03 — Histórico no mesmo contrato dos eventos vivos 🔲
+### B-03 — Histórico no mesmo contrato dos eventos vivos ✅
 
 Uma mensagem lida do histórico chega ao cliente no mesmo formato de `message.completed` /
 `tool.completed`. Dois formatos para a mesma coisa significaria dois redutores no front — e o
 segundo é o que fica desatualizado.
 
-### B-04 — Autorização, paginação e cache 🔲
+### B-04 — Autorização, paginação e cache ✅
 
 Só o dono lê, e só workspace da allowlist aparece ([D-01](decisions.md#d-01--o-que-aparece-de-fora)).
 
@@ -49,7 +49,7 @@ leituras concorrentes ([D-02](decisions.md#d-02--o-tamanho-da-página-e-quem-ela
 
 Cursor, e não offset cru: a ordem do `listSessions` muda sob escrita concorrente.
 
-### B-05 — Erros e logging desta borda 🔲
+### B-05 — Erros e logging desta borda ✅
 
 SDK indisponível ao ler → `CLAUDE_UNAVAILABLE` (`502`), nunca `500`: a distinção entre bug
 nosso e upstream fora é o que permite alertar certo
@@ -61,7 +61,9 @@ I/O logado em `debug`, sem despejar o conteúdo das mensagens no log.
 
 ## Cenários cobertos
 
-S-01…S-10.
+S-01…S-10, S-54…S-57, S-64 e os descobertos na implementação, S-68…S-74 (prazo do SDK, cursor
+cuja âncora sumiu, leitura concorrente, procedência antes do subprocesso, log sem conteúdo, cerca
+do `workspacePath` e teto do cache).
 
 ---
 

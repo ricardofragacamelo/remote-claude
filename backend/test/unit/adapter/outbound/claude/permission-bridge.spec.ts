@@ -134,6 +134,7 @@ describe('PermissionBridge', () => {
       id: 'request-2',
       sessionId: PERMISSION_SESSION,
       userId: PERMISSION_OWNER,
+      projectPath: null,
       toolUseId: null,
       toolName: 'Bash',
       input: { command: 'git status' },
@@ -161,7 +162,9 @@ describe('PermissionBridge', () => {
   it('refuses when the deadline passes, with a sentence Claude can work with — S-51, S-63', async () => {
     const pending = bridge.ask(question());
 
-    await Promise.resolve();
+    // A real tick, not a microtask: the deadline is armed only after the rules have been read, and
+    // firing before that would fire nothing.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     harness.scheduler.fire();
 
     // The deadline's refusal carries no reason, because nobody gave one — and the agent still
@@ -220,6 +223,7 @@ describe('PermissionBridge', () => {
       id: 'somebody-else',
       sessionId: PERMISSION_SESSION,
       userId: PERMISSION_OWNER,
+      projectPath: null,
       toolUseId: null,
       toolName: 'Read',
       input: {},

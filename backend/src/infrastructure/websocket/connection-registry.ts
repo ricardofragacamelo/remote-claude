@@ -12,6 +12,16 @@ export interface Connection {
   readonly socket: Sendable;
   userId: UserId | null;
   locale: string;
+
+  /**
+   * The installation this socket belongs to, when the client is a device.
+   *
+   * `null` is the browser. It is kept on the connection rather than looked up per command for one
+   * reason: revoking a device has to close its sockets **now**, and a lookup cannot find a socket
+   * that never said which device it was.
+   */
+  installId: string | null;
+
   expiresAt: Date | null;
   readonly attached: Set<string>;
 }
@@ -32,6 +42,7 @@ export class ConnectionRegistry {
       socket,
       userId: null,
       locale: 'en',
+      installId: null,
       expiresAt: null,
       attached: new Set<string>(),
     };
@@ -46,6 +57,20 @@ export class ConnectionRegistry {
 
   remove(id: string): void {
     this.connections.delete(id);
+  }
+
+  /**
+   * Every connection of one installation of one user.
+   *
+   * Scoped by user as well as by installation, because the installation id is only unique inside
+   * an account: two people on the same phone are two devices, and revoking one may not drop the
+   * other's socket.
+   */
+  forDevice(userId: UserId, installId: string): Connection[] {
+    return [...this.connections.values()].filter(
+      (connection) =>
+        connection.installId === installId && connection.userId?.value === userId.value,
+    );
   }
 
   /** Every connection watching a session. */

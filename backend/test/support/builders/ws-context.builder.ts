@@ -12,6 +12,9 @@ export interface WsContextOptions {
   readonly connectionId?: string;
   readonly locale?: string;
 
+  /** The installation behind the socket. Absent is a browser, which is the common case. */
+  readonly installId?: string | null;
+
   /** Locales the handler set on this connection, in order. */
   readonly locales?: string[];
 
@@ -43,6 +46,7 @@ export function aWsContext(options: WsContextOptions): WsCommandContext {
   return {
     connectionId: options.connectionId ?? 'c1',
     userId: options.userId ?? UserId.create('auth|owner'),
+    installId: options.installId ?? null,
     locale: options.locale ?? 'en',
     setLocale: (locale) => locales.push(locale),
     frame: options.frame,

@@ -176,3 +176,80 @@ describe('reading the permission frames', () => {
     expect(read?.input).toEqual({});
   });
 });
+
+describe('the scopes a question offers — plan 03, D-12', () => {
+  /** A question offering exactly [suggestions]. */
+  function offering(suggestions: readonly unknown[]): ReturnType<typeof toRequest> {
+    return toRequest(
+      frame({
+        kind: 'request',
+        type: 'permission.requested',
+        payload: {
+          requestId: 'req-1',
+          toolName: 'Bash',
+          title: 'permission.tool.Bash',
+          input: { command: 'git status' },
+          riskHint: 'read',
+          expiresAt: '2026-09-19T12:02:00.000Z',
+          suggestions,
+        },
+      }),
+    );
+  }
+
+  const ONE_DAY = 86_400_000;
+
+  it('reads a persisted scope with the rule it would grant', () => {
+    const read = offering([
+      { scope: 'once', labelKey: 'permission.scope.once' },
+      {
+        scope: 'always',
+        labelKey: 'permission.scope.always',
+        pattern: 'Bash(git status)',
+        lifetimeMs: ONE_DAY,
+      },
+    ]);
+
+    expect(read?.suggestions).toEqual([
+      { scope: 'once', labelKey: 'permission.scope.once', rule: null },
+      {
+        scope: 'always',
+        labelKey: 'permission.scope.always',
+        rule: { pattern: 'Bash(git status)', lifetimeMs: ONE_DAY },
+      },
+    ]);
+  });
+
+  it('says nothing about a rule on the scopes that die with the session', () => {
+    // A pattern sent beside `session` by mistake is not a rule this screen should describe.
+    const read = offering([
+      { scope: 'session', labelKey: 'permission.scope.session', pattern: 'Bash(x)', lifetimeMs: 1 },
+    ]);
+
+    expect(read?.suggestions).toEqual([
+      { scope: 'session', labelKey: 'permission.scope.session', rule: null },
+    ]);
+  });
+
+  it.each([
+    ['no pattern', { lifetimeMs: ONE_DAY }],
+    ['no lifetime', { pattern: 'Bash(git status)' }],
+    ['a lifetime that is not a number', { pattern: 'Bash(git status)', lifetimeMs: '90d' }],
+    ['a fractional lifetime', { pattern: 'Bash(git status)', lifetimeMs: 1.5 }],
+    ['a lifetime of zero', { pattern: 'Bash(git status)', lifetimeMs: 0 }],
+  ])('does not offer a persisted scope with %s — S-67', (_case, rule) => {
+    // "Don't ask again" without saying about what, or for how long, is the button R-02 is about.
+    const read = offering([
+      { scope: 'once', labelKey: 'permission.scope.once' },
+      { scope: 'project', labelKey: 'permission.scope.project', ...rule },
+    ]);
+
+    expect(read?.suggestions.map((suggestion) => suggestion.scope)).toEqual(['once']);
+  });
+
+  it('drops a scope this build has never heard of', () => {
+    const read = offering([{ scope: 'forever', labelKey: 'permission.scope.forever' }]);
+
+    expect(read?.suggestions).toEqual([]);
+  });
+});

@@ -8,13 +8,16 @@ import { IoLoggingInterceptor } from '@shared/logging/io-logging.interceptor';
 import { TraceMiddleware } from '@shared/logging/trace.middleware';
 import { AuthModule } from '@infra/modules/auth.module';
 import { AuditModule } from '@infra/modules/audit.module';
+import { AuditQueryModule } from '@infra/modules/audit-query.module';
 import { DatabaseModule } from '@infra/modules/database.module';
 import { GatewayModule } from '@infra/modules/gateway.module';
 import { HealthModule } from '@infra/modules/health.module';
+import { NotificationModule } from '@infra/modules/notification.module';
 import { PlatformModule } from '@infra/modules/platform.module';
 import { DiagModule } from '@infra/modules/diag.module';
 import { PermissionModule } from '@infra/modules/permission.module';
 import { SessionModule } from '@infra/modules/session.module';
+import { TranscriptModule } from '@infra/modules/transcript.module';
 import { WorkspaceModule } from '@infra/modules/workspace.module';
 
 /**
@@ -35,9 +38,12 @@ import { WorkspaceModule } from '@infra/modules/workspace.module';
     HealthModule,
     WorkspaceModule,
     AuditModule,
+    AuditQueryModule,
     DiagModule,
     PermissionModule,
+    NotificationModule,
     SessionModule,
+    TranscriptModule,
     GatewayModule,
   ],
   providers: [

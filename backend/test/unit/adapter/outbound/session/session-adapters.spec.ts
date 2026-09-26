@@ -118,6 +118,7 @@ describe('AgentSdkClaudeSessionAdapter', () => {
       model: null,
       permissionMode: 'default',
       resumeSessionId: null,
+      claudeSessionId: null,
       onEvent: () => undefined,
       onClosed: () => undefined,
     });

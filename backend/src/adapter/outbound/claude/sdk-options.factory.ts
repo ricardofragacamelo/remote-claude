@@ -18,6 +18,9 @@ export interface SdkOptionsInput {
   readonly model: string | null;
   readonly permissionMode: PermissionMode;
   readonly resumeSessionId: string | null;
+
+  /** The id the new conversation takes in Claude's store, already recorded as ours. */
+  readonly claudeSessionId: string | null;
   readonly limits: SessionLimits;
   readonly abortController: AbortController;
 
@@ -79,5 +82,12 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
 
     ...(input.model === null ? {} : { model: input.model }),
     ...(input.resumeSessionId === null ? {} : { resume: input.resumeSessionId }),
+
+    // Ours, and recorded as ours before this call: it is what later tells this conversation from
+    // one the editor began. The SDK refuses it beside `resume` unless forking, and a resume keeps
+    // the id it has — so it is only ever set on a conversation that starts here.
+    ...(input.claudeSessionId === null || input.resumeSessionId !== null
+      ? {}
+      : { sessionId: input.claudeSessionId }),
   };
 }

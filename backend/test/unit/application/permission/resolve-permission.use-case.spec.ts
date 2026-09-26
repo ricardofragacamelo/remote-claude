@@ -9,8 +9,11 @@ import {
   PermissionScopeUnsupportedError,
 } from '@domain/permission';
 import {
+  PERMISSION_NOW,
   PERMISSION_OWNER,
+  PERMISSION_PROJECT,
   PERMISSION_SESSION,
+  TEST_PERMISSION_SETTINGS,
   aPermissionModule,
   aPermissionQuestion,
 } from '../../../support/builders/permission.builder';
@@ -139,14 +142,9 @@ describe('ResolvePermissionUseCase', () => {
       );
     });
 
-    it.each(['project', 'always', 'forever'])(
-      'refuses the scope %s rather than downgrading it in silence',
-      async (scope) => {
-        // Somebody who tapped "always" and got "just this once" has been told something untrue
-        // about what they authorised.
-        await expect(answer({ scope })).rejects.toThrow(PermissionScopeUnsupportedError);
-      },
-    );
+    it('refuses a scope the contract does not know, rather than guessing one', async () => {
+      await expect(answer({ scope: 'forever' })).rejects.toThrow(PermissionScopeUnsupportedError);
+    });
   });
 
   describe('scope `session`', () => {
@@ -155,14 +153,20 @@ describe('ResolvePermissionUseCase', () => {
 
       expect(harness.registry.rulesOf(PERMISSION_SESSION)).toHaveLength(1);
       expect(
-        harness.registry.matchingRule(
-          PERMISSION_SESSION,
-          PERMISSION_OWNER,
-          'Bash',
-          { command: 'rm -rf build/' },
-          harness.clock.now(),
-        ),
+        await harness.ruleBook.answering('request-2', {
+          subject: {
+            userId: PERMISSION_OWNER,
+            sessionId: PERMISSION_SESSION,
+            projectPath: PERMISSION_PROJECT,
+          },
+          toolName: 'Bash',
+          input: { command: 'rm -rf build/' },
+          permissionMode: 'default',
+          now: harness.clock.now(),
+        }),
       ).not.toBeNull();
+      // A session rule is memory, never a row: it has to die with the subprocess.
+      expect(harness.rules.rules).toEqual([]);
     });
 
     it('leaves none when no honest pattern can be written for the input', async () => {
@@ -195,6 +199,129 @@ describe('ResolvePermissionUseCase', () => {
       });
 
       expect(other.registry.rulesOf(PERMISSION_SESSION)).toEqual([]);
+    });
+  });
+
+  describe('scopes `project` and `always` — plan 03', () => {
+    it('grants the narrowest rule for the project, with the default lifetime — 03/S-01', async () => {
+      await answer({ scope: 'project' });
+
+      const [rule] = harness.rules.rules;
+      expect(rule?.snapshot()).toMatchObject({
+        scope: 'project',
+        projectPath: PERMISSION_PROJECT,
+        sessionId: null,
+        pattern: 'Bash(rm -rf build/)',
+        decision: 'allow',
+        createdAt: PERMISSION_NOW,
+        expiresAt: new Date(
+          PERMISSION_NOW.getTime() + TEST_PERMISSION_SETTINGS.ruleDefaultLifetimeMs,
+        ),
+      });
+      expect(harness.registry.find('request-1')?.resolution).toMatchObject({
+        scope: 'project',
+        auto: false,
+      });
+    });
+
+    it('grants an `always` rule that names no project — 03/S-02', async () => {
+      await answer({ scope: 'always' });
+
+      expect(harness.rules.rules[0]?.snapshot()).toMatchObject({
+        scope: 'always',
+        projectPath: null,
+      });
+    });
+
+    it('records the grant in the trail — 03/S-13', async () => {
+      await answer({ scope: 'always' });
+
+      expect(harness.trail.kinds).toEqual(['permission.ruleGranted']);
+      expect(harness.trail.appended[0]?.snapshot()).toMatchObject({
+        subjectId: harness.rules.rules[0]?.id,
+        subjectLabel: 'Bash(rm -rf build/)',
+      });
+    });
+
+    it('grants a refusal as a refusing rule, reason and all', async () => {
+      await answer({ scope: 'always', decision: 'deny', reason: 'never here' });
+
+      expect(harness.rules.rules[0]?.decision).toBe('deny');
+    });
+
+    it('leaves no rule behind a refusal with no reason', async () => {
+      await expect(answer({ scope: 'always', decision: 'deny', reason: null })).rejects.toThrow(
+        PermissionReasonRequiredError,
+      );
+      await expect(answer({ scope: 'always', decision: 'deny', reason: '' })).rejects.toThrow(
+        PermissionReasonRequiredError,
+      );
+
+      expect(harness.rules.rules).toEqual([]);
+      expect(harness.registry.find('request-1')?.isPending).toBe(true);
+    });
+
+    it('refuses an input with nothing a pattern can name, instead of the whole tool — 03/S-58', async () => {
+      const other = aPermissionModule();
+      await other.request.execute(
+        aPermissionQuestion({ requestId: 'request-9', input: { note: 'nothing nameable' } }),
+      );
+
+      await expect(
+        other.resolve.execute({
+          requestId: 'request-9',
+          decision: 'allow',
+          reason: null,
+          scope: 'always',
+          userId: PERMISSION_OWNER,
+          resolvedFrom: 'web',
+          watchesSession: watching,
+        }),
+      ).rejects.toThrow(PermissionScopeUnsupportedError);
+
+      // The question stays open for the person to answer again, and nothing was authorised.
+      expect(other.rules.rules).toEqual([]);
+      expect(other.registry.find('request-9')?.isPending).toBe(true);
+    });
+
+    it('refuses `project` when the session could not tell its project', async () => {
+      const other = aPermissionModule();
+      await other.request.execute(
+        aPermissionQuestion({ requestId: 'request-7', projectPath: null }),
+      );
+
+      await expect(
+        other.resolve.execute({
+          requestId: 'request-7',
+          decision: 'allow',
+          reason: null,
+          scope: 'project',
+          userId: PERMISSION_OWNER,
+          resolvedFrom: 'web',
+          watchesSession: watching,
+        }),
+      ).rejects.toThrow(PermissionScopeUnsupportedError);
+      expect(other.registry.find('request-7')?.isPending).toBe(true);
+    });
+
+    it('grants nothing about a question that was already decided', async () => {
+      await answer();
+
+      const late = await answer({ scope: 'always' });
+
+      expect(late.won).toBe(false);
+      expect(harness.rules.rules).toEqual([]);
+    });
+
+    it('does not settle when the trail refuses the grant', async () => {
+      // An authorisation nobody can account for afterwards is the worse outcome: the answer fails,
+      // and the question stays open.
+      harness.trail.failure = new Error('trail down');
+
+      await expect(answer({ scope: 'always' })).rejects.toThrow('trail down');
+      expect(harness.registry.find('request-1')?.isPending).toBe(true);
+      // Taken back, so it never answers anything nobody can account for.
+      expect(harness.rules.rules[0]?.statusAt(harness.clock.now())).toBe('revoked');
     });
   });
 });

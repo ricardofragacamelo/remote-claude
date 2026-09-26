@@ -68,9 +68,10 @@ import {
   e2eDotEnv,
   e2eProjectName,
   ephemeralEnvironment,
+  realPushEnvironment,
   serviceUrls,
 } from './lib/stack.mjs';
-import { bold, cyan, dim, fail, hint, info, line, ok, title, warn } from './lib/ui.mjs';
+import { bold, cyan, dim, fail, fatal, hint, info, line, ok, title, warn } from './lib/ui.mjs';
 import { waitForHttp } from './lib/wait.mjs';
 import { ensureDeclaredRoots } from './lib/workspaces.mjs';
 
@@ -93,14 +94,21 @@ const dotEnvPath = path.join(repoRoot, 'e2e', '.env');
  */
 const backendLogPath = BACKEND_LOG_FILE;
 
-/** Which end of the suite this run is for. */
-const mobile = process.argv.includes('--mobile');
+/**
+ * Whether this run really notifies — the app's suite, with the push settings of the `.env` in place
+ * of the hermetic ones (plan 02, D-26). Never part of the default suite: it reaches a provider
+ * outside this machine, and it needs a device with Play Services.
+ */
+const push = process.argv.includes('--push');
+
+/** Which end of the suite this run is for. The real-push run is the app's. */
+const mobile = push || process.argv.includes('--mobile');
 
 /** Whether the real Claude is behind the backend, rather than a replay of a recorded run. */
 const live = process.argv.includes('--live');
 
 /** The flags this script owns. Everything else is handed to Playwright unchanged. */
-const OWN_FLAGS = new Set(['--mobile', '--live']);
+const OWN_FLAGS = new Set(['--mobile', '--live', '--push']);
 
 const playwrightArgs = [
   ...process.argv.slice(2).filter((argument) => !OWN_FLAGS.has(argument)),
@@ -188,12 +196,43 @@ function startService(label, args, env, logFile) {
 }
 
 /**
+ * The push settings of the `.env`, for the run that really notifies — or nothing, for every other.
+ *
+ * A misconfigured `.env` stops the run before any container starts: a real-push run that fell
+ * back to the hermetic settings would pass without notifying anybody, which is exactly what it
+ * exists to catch.
+ *
+ * @returns {Record<string, string>}
+ */
+function realPushOrExit() {
+  if (!push) {
+    return {};
+  }
+
+  const dotEnv = path.join(repoRoot, '.env');
+  const result = fs.existsSync(dotEnv)
+    ? realPushEnvironment(fs.readFileSync(dotEnv, 'utf8'))
+    : { problem: 'there is no .env to take the push settings from' };
+
+  if ('problem' in result) {
+    fatal(`the real-push run cannot start: ${result.problem}`);
+    hint('set RC_PUSH_ENDPOINT, RC_PUSH_CREDENTIALS_FILE and RC_PUSH_SCOPE in .env');
+    process.exit(1);
+  }
+
+  warn('this run really notifies', 'it reaches the push provider, outside this machine');
+  return result.env;
+}
+
+/**
  * Brings the stack up and runs the suite.
  *
  * @returns {Promise<number>} the exit code of the suite, or of whatever stopped it from running
  */
 async function main() {
-  title(`test:e2e${mobile ? ':mobile' : ''}${live ? ':live' : ''} — ephemeral stack`);
+  title(
+    `test:e2e${mobile ? ':mobile' : ''}${push ? ':push' : ''}${live ? ':live' : ''} — ephemeral stack`,
+  );
 
   if (live) {
     warn('this run talks to the real Claude', 'it is not hermetic, and it costs money');
@@ -245,6 +284,7 @@ async function main() {
   const env = {
     ...process.env,
     ...ephemeralEnvironment(ports, claudeConfig),
+    ...realPushOrExit(),
     COMPOSE_PROJECT_NAME: project,
   };
 
@@ -317,11 +357,15 @@ async function main() {
   // both runners write their report to stdout; piping and re-emitting keeps the output *and* the
   // exit code, which is the one thing this script must not lose.
   const suite = mobile
-    ? run(process.execPath, [path.join(repoRoot, 'scripts/mobile.mjs'), 'test:e2e'], {
-        cwd: repoRoot,
-        env,
-        timeoutMs: 1_800_000,
-      })
+    ? run(
+        process.execPath,
+        [path.join(repoRoot, 'scripts/mobile.mjs'), push ? 'test:e2e:push' : 'test:e2e'],
+        {
+          cwd: repoRoot,
+          env,
+          timeoutMs: 1_800_000,
+        },
+      )
     : run('pnpm', ['--filter', './e2e', 'exec', 'playwright', 'test', ...playwrightArgs], {
         cwd: repoRoot,
         env,

@@ -197,7 +197,7 @@ Todos em `.mjs`, executados direto pelo `node`, sem build.
 | `i18n-check.mjs` | B-45 | paridade de chaves, órfãs, params entre idiomas | `pnpm i18n:check` |
 | `docs-check.mjs` | B-49 | links e âncoras internas quebradas, documento órfão do índice | `pnpm docs:check` |
 | `secrets-scan.mjs` | B-04 | `gitleaks` no repositório ou só no que está no índice; cai na imagem Docker quando o binário não existe | `pnpm scan:secrets` |
-| `db.mjs` | B-51 | `migrate`, `reset`, `seed` | `pnpm db migrate` |
+| `db.mjs` | B-51, [03 · B-18](../03-rules-and-audit/F3-retention.md) | `migrate`, `reset`, `seed`, e `purge` — a purga da trilha, a mesma rotina do job do backend, com o relatório do que saiu e do que ficou | `pnpm db migrate` · `pnpm db purge` |
 | `clean.mjs` | B-50 | purga projetos e volumes compose órfãos, build, coverage | `pnpm clean` |
 | `plan.mjs` | B-52 | cria pasta de plano no [formato normativo](../README.md#formato-obrigatório); `--progress` recalcula os contadores | `pnpm plan new <nome>` |
 

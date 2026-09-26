@@ -1,0 +1,9 @@
+{
+  "id": "02·S-54",
+  "title": "the app opens a permission by its address, revalidates it with the server and approves it",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "toolName": "Write"
+  }
+}

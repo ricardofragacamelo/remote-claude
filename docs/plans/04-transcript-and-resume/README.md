@@ -65,7 +65,7 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Transcript](F0-transcript.md) | listar e ler histórico pelas funções do SDK | B-01…B-05 | 🔲 |
+| F0 | [Transcript](F0-transcript.md) | listar e ler histórico pelas funções do SDK | B-01…B-05 | ✅ |
 | F1 | [Telas de histórico](F1-transcript-ui.md) | histórico no web e no app, e a recarga do `gap` | B-06…B-09 | 🔲 |
 | F2 | [Retomada](F2-resume.md) | continuar sessão encerrada, inclusive a do VSCode | B-10…B-13 | 🔲 |
 | F3 | [Slash commands](F3-commands.md) | menu vindo da instalação, e o `/init` | B-14…B-17 | 🔲 |

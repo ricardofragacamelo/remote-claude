@@ -18,7 +18,11 @@
     "error": {
       "unauthenticated": "Entre novamente, por favor.",
       "tokenExpired": "Sua sessão expirou.",
-      "invalidState": "A resposta do login não corresponde ao pedido."
+      "invalidState": "A resposta do login não corresponde ao pedido.",
+      "deviceNotRegistered": "Este aparelho ainda não foi aprovado.",
+      "deviceRevoked": "Este aparelho foi revogado.",
+      "deviceNotFound": "Esse aparelho não existe.",
+      "deviceApprovalForbidden": "Um aparelho não aprova outro aparelho. Use o navegador."
     },
     "signIn": {
       "title": "Entre para continuar",
@@ -153,7 +157,9 @@
     },
     "scope": {
       "once": "Permitir uma vez",
-      "session": "Permitir nesta sessão"
+      "session": "Permitir nesta sessão",
+      "project": "Não perguntar de novo neste projeto",
+      "always": "Não perguntar de novo em lugar nenhum"
     },
     "decision": {
       "allow": "permitido",
@@ -177,12 +183,169 @@
       "extensionLimitReached": "Esse pedido não pode ser estendido de novo.",
       "scopeUnsupported": "Esta versão não concede esse alcance.",
       "rulePatternInvalid": "Esse padrão de regra não é válido.",
-      "ruleExpiryTooLong": "Essa regra duraria mais do que esta instalação permite."
+      "ruleExpiryTooLong": "Essa regra duraria mais do que esta instalação permite.",
+      "ruleNotFound": "Essa regra não existe.",
+      "ruleNotOwned": "Essa regra é de outra pessoa.",
+      "ruleExpiryInvalid": "Uma regra precisa expirar depois de ser criada."
+    },
+    "persist": {
+      "title": "Parar de perguntar sobre isto?",
+      "project": "O Claude vai executar o que casar com a regra abaixo neste projeto sem perguntar a você, por {{duration}}.",
+      "always": "O Claude vai executar o que casar com a regra abaixo em qualquer projeto seu sem perguntar a você, por {{duration}}.",
+      "days": "{{days}} dias",
+      "hours": "{{hours}} horas",
+      "revocable": "Você pode retirar isso a qualquer momento nas suas regras. A revogação vale no próximo pedido, em toda sessão aberta.",
+      "back": "Voltar",
+      "confirm": "Permitir e parar de perguntar",
+      "openRules": "Ver suas regras"
     }
   },
   "audit": {
+    "screen": {
+      "title": "O que rodou na sua máquina",
+      "open": "O que rodou",
+      "back": "Voltar às sessões"
+    },
+    "list": {
+      "title": "Trilha de auditoria",
+      "description": "Toda tool que o Claude usou nesta máquina, das mais novas para as mais antigas — inclusive as que ninguém foi perguntado.",
+      "loading": "Carregando a trilha…",
+      "emptyTitle": "Nada aqui",
+      "emptyDescription": "Nenhuma tool que corresponda a estes filtros rodou. Limpe-os para ver a trilha inteira.",
+      "loadMore": "Carregar entradas mais antigas",
+      "loadingMore": "Carregando entradas mais antigas…"
+    },
+    "filter": {
+      "label": "Filtrar a trilha",
+      "session": "Sessão",
+      "tool": "Tool",
+      "decision": "Decisão",
+      "anyDecision": "Qualquer decisão",
+      "from": "De (incluído)",
+      "to": "Até (excluído)",
+      "apply": "Aplicar filtros",
+      "clear": "Limpar filtros"
+    },
+    "decision": {
+      "recorded": "Registrada",
+      "allowed": "Permitida",
+      "denied": "Recusada"
+    },
+    "row": {
+      "label": "{{tool}} em {{at}}",
+      "unasked": "Ninguém foi perguntado",
+      "openRule": "Abrir a regra que permitiu",
+      "details": "Input exato e ligações",
+      "session": "Sessão",
+      "trace": "Trace",
+      "noTrace": "nenhum registrado",
+      "request": "Pedido",
+      "onlyThisSession": "Só esta sessão"
+    },
+    "verdict": {
+      "recorded": "Registrada no momento em que ia rodar, antes de qualquer decisão.",
+      "unknown": "Gravada antes de a trilha guardar como foi decidida.",
+      "byRule": "{{decision}} por uma das suas regras ({{scope}}), sem perguntar a ninguém.",
+      "bySessionRule": "{{decision}} por uma regra só daquela sessão. Ela acabou com a sessão, então não há o que abrir.",
+      "nobodyAnswered": "Ninguém respondeu a tempo, então foi recusada.",
+      "byPerson": "{{decision}} por {{who}}, pelo {{from}}.",
+      "somebody": "alguém"
+    },
+    "origin": {
+      "web": "web",
+      "mobile": "celular",
+      "unknown": "um lugar desconhecido"
+    },
     "error": {
-      "unavailable": "Não foi possível gravar a trilha de auditoria, então nada foi autorizado a rodar."
+      "unavailable": "Não foi possível gravar a trilha de auditoria, então nada foi autorizado a rodar.",
+      "forbidden": "Essa sessão é de outra pessoa, então a trilha dela não é sua para ler."
+    }
+  },
+  "devices": {
+    "list": {
+      "title": "Aparelhos",
+      "description": "Os celulares que podem responder a um pedido de permissão. Um aparelho é aprovado daqui, nunca por si mesmo.",
+      "loading": "Carregando aparelhos…",
+      "emptyTitle": "Nenhum aparelho registrado ainda",
+      "emptyDescription": "Instale o app e entre no seu celular. Ele aparece aqui, esperando a sua aprovação."
+    },
+    "status": {
+      "pending": "Aguardando aprovação",
+      "approved": "Aprovado",
+      "revoked": "Revogado"
+    },
+    "row": {
+      "platform": "{{platform}} · app {{appVersion}}",
+      "lastSeen": "Visto pela última vez em {{at}}",
+      "noPush": "Sem token de push: este aparelho só é alcançado com o app aberto."
+    },
+    "action": {
+      "approve": "Aprovar este aparelho",
+      "revoke": "Revogar"
+    },
+    "confirm": {
+      "title": "Revogar este aparelho",
+      "description": "{{name}} para de responder a pedidos de permissão imediatamente, e as conexões abertas dele são fechadas.",
+      "cancel": "Manter",
+      "confirm": "Revogar"
+    }
+  },
+  "rules": {
+    "screen": {
+      "title": "Suas regras",
+      "open": "Regras que você concedeu",
+      "back": "Voltar para as sessões"
+    },
+    "list": {
+      "title": "Regras que você concedeu",
+      "description": "O que o Claude pode fazer nesta máquina sem perguntar a você antes. A revogação vale no próximo pedido, em toda sessão aberta.",
+      "loading": "Carregando suas regras…",
+      "emptyTitle": "Nenhuma regra ainda",
+      "emptyDescription": "Uma regra nasce quando você responde um pedido com “não perguntar de novo”. Até lá, o Claude pergunta toda vez."
+    },
+    "scope": {
+      "project": "Em um projeto",
+      "always": "Em todos os projetos"
+    },
+    "decision": {
+      "allow": "executa sem perguntar",
+      "deny": "recusado sem perguntar"
+    },
+    "status": {
+      "active": "Ativa",
+      "expired": "Expirada",
+      "revoked": "Revogada"
+    },
+    "row": {
+      "label": "Regra {{pattern}}",
+      "toolDecision": "{{tool}} · {{decision}}",
+      "project": "Projeto: {{path}}",
+      "granted": "Concedida por {{who}} em {{at}}",
+      "validUntil": "Válida até {{at}}",
+      "expiredOn": "Expirou em {{at}}. O Claude volta a perguntar.",
+      "expiringSoon": "Expira em breve: depois de {{at}}, o Claude volta a perguntar.",
+      "revokedOn": "Revogada em {{at}}. Ela não responde mais nada."
+    },
+    "action": {
+      "revoke": "Revogar",
+      "revoking": "Revogando…"
+    },
+    "detail": {
+      "screenTitle": "Uma regra que você concedeu",
+      "title": "A regra",
+      "description": "O que esta regra deixa o Claude fazer, e se ainda deixa.",
+      "loading": "Carregando a regra…",
+      "emptyTitle": "Nenhuma regra",
+      "emptyDescription": "Não há regra para mostrar."
+    }
+  },
+  "transcript": {
+    "error": {
+      "notFound": "Essa conversa não existe, ou não é sua para ler.",
+      "invalidSessionId": "{{sessionId}} não é um identificador de conversa.",
+      "claudeUnavailable": "O Claude não conseguiu ler o histórico nesta máquina.",
+      "claudeTimeout": "O Claude demorou demais para ler o histórico. Tente de novo.",
+      "cursorStale": "Esta conversa mudou enquanto você a lia. Recarregue a partir das mensagens mais recentes."
     }
   }
 }

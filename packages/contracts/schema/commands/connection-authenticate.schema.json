@@ -10,7 +10,7 @@
   "properties": {
     "token": {
       "type": "string",
-      "description": "OIDC access token. In the frame body, never in the query string — a query string leaks into proxy logs."
+      "description": "OIDC access token. In the frame body, never in the query string \u2014 a query string leaks into proxy logs."
     },
     "locale": {
       "type": "string",
@@ -22,8 +22,17 @@
       "description": "Who is connecting, for diagnostics and for the deprecation window.",
       "required": ["kind", "version"],
       "properties": {
-        "kind": { "type": "string", "enum": ["web", "mobile"] },
-        "version": { "type": "string" }
+        "kind": {
+          "type": "string",
+          "enum": ["web", "mobile"]
+        },
+        "version": {
+          "type": "string"
+        },
+        "installId": {
+          "type": "string",
+          "description": "The registered installation this socket belongs to, when the client is a device. Absent from a browser, which is not a device and never approves one. It is what lets revoking a device close its sockets at once, with 4401 \u2014 without it, a revoked phone would keep answering permission requests until its token expired."
+        }
       }
     }
   }

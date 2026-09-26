@@ -1,0 +1,9 @@
+{
+  "id": "02·S-53",
+  "title": "the browser and the phone see the same stream, in the same order",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "decision": "allow"
+  }
+}

@@ -20,6 +20,9 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 | D-10 | A unicidade do device é `installId` sozinho, ou o par `(userId, installId)` | nasceu de [D-03 do plano 01](../01-live-session/decisions.md) — multiusuário desde o dia 1 | B-02 | 2026-09-15 · **`(userId, installId)`** — uma linha por usuário e aparelho, e a aprovação de um nunca vale para o outro | ✅ |
 | D-11 | O aparelho que fica pendente e nunca é aprovado expira? E há teto de aparelhos por usuário? | quantos aparelhos um usuário terá na prática — o mesmo gap que D-04 e D-07 citam | B-01, B-03 | 2026-09-15 · **pendente expira em 7 dias** e sai da lista; registrar de novo é abrir o app. Sem teto de aparelhos | ✅ |
 
+| D-18 | O que "revogar invalida os refresh tokens do device" significa, num backend que nunca vê o refresh token do app | o app renova direto no provedor; o backend é Resource Server e não guarda credencial | B-04 | 2026-09-19 · **a credencial para de valer aqui**, em todo transporte, a partir do instante da revogação | ✅ |
+| D-19 | Como o backend sabe de qual aparelho vem um socket | o handshake só levava `client.{kind, version}`, e sem aparelho não há como fechar o socket **daquele** device | B-04, B-05 | 2026-09-19 · **`client.installId` no handshake**, opcional; ausente é navegador | ✅ |
+
 ### D-01 — reconhecer o mesmo aparelho
 
 Sem identidade estável, cada reinstalação cria um device novo — e a lista vira um cemitério que
@@ -73,6 +76,53 @@ reconhecível. Sem teto de aparelhos — o número real não é o problema, a id
 **Tarefa que esta decisão cria:** a expiração do pendente na F0, junto de B-03, com os cenários
 de fronteira (6º dia vive, 8º não) e de idempotência (expirar duas vezes não muda nada).
 
+### D-18 — o que a revogação consegue prometer
+
+[B-04](F0-device.md) e o
+[08-authentication](../../architecture/shared/08-authentication.md#device-e-o-canal-mobile) dizem
+que revogar um device "invalida os refresh tokens dele imediatamente". Na implementação isso
+encontrou um fato do desenho: **o backend nunca tem o refresh token do app**. Ele é Resource
+Server — valida token, não emite —, e o app renova direto contra o provedor, por
+`flutter_appauth`. Não há o que revogar no provedor sem guardar a credencial, e guardá-la é
+proibido em três documentos.
+
+**Decidido:** a revogação garante que a credencial **para de valer aqui**, em todo transporte, a
+partir daquele instante — as connections abertas fecham com `4401`, um novo handshake daquele
+`installId` é recusado, e toda ação que decide é recusada com `DEVICE_REVOKED`. O que ela não faz,
+e agora está dito: encerrar a sessão do usuário no provedor. Quem quiser isso usa o logout, que é
+[B-25](F3-mobile-permission.md).
+
+O preço, registrado: o access token daquele aparelho continua sendo um token válido **para o
+provedor** até expirar. Ele não abre nada neste backend, que é o que importa aqui; se algum dia
+outro serviço aceitar o mesmo `audience`, esta linha reabre como ADR.
+
+Efeito: [S-08](scenarios.md) passa a dizer "a credencial para de valer", que é o que o cenário de
+integração prova, em vez de "invalida os refresh tokens", que nenhum teste poderia provar.
+
+### D-19 — de qual aparelho vem este socket
+
+O handshake levava `client: { kind, version }` e mais nada. Com isso, **B-04 não era
+implementável**: não há como fechar "as connections daquele device" se nenhuma connection sabe de
+qual device é. E B-05 teria de descobrir o aparelho por outro caminho a cada comando.
+
+**Decidido:** `client.installId`, opcional, no `connection.authenticate`. Ausente é o navegador,
+que não é device e nunca vira um — e é essa ausência que a regra de aprovação lê.
+
+Mudança de contrato, então mudança nas três pontas na mesma entrega:
+[connection-authenticate.schema.json](../../../packages/contracts/schema/commands/connection-authenticate.schema.json),
+o TypeScript e o Dart regerados, e o
+[05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#handshake) atualizado
+com a regra que veio junto: `installId` sem registro, ou revogado, fecha com `4401`; **pendente
+conecta**.
+
+Na mesma decisão veio o lado HTTP: o app manda `x-install-id` em toda requisição. Header, e não
+campo de corpo, porque é propriedade de **quem chama** e precisa ser legível num `GET` e num
+`DELETE`. Ele não autentica nada — diz qual dos aparelhos do usuário está pedindo —, e é a
+ausência dele que faz o `POST /devices/:id/approval` saber que quem chama é um navegador
+([D-02](#d-02--quem-aprova)).
+
+**Tarefa que esta decisão cria:** nenhuma. Ela é o meio de B-04 e B-05, e entrou com elas.
+
 ---
 
 ## F1 — Push
@@ -86,6 +136,9 @@ de fronteira (6º dia vive, 8º não) e de idempotência (expirar duas vezes nã
 | D-13 | Token de push rotacionado ou recusado pelo provedor: o app reenvia, e o backend limpa o token morto mantendo o device aprovado? | com que frequência o provedor troca o token no uso real | B-09, B-13 | 2026-09-15 · **o app reenvia o token a cada renovação; token recusado pelo provedor é apagado e o device continua aprovado** | ✅ |
 | D-14 | O que o produto faz quando o usuário **nega** a permissão de notificação do SO | quantos negam na primeira vez, e se voltam atrás | B-13 | 2026-09-15 · **explica no app e segue** — aprovação com o app aberto, com atalho para as configurações do SO | ✅ |
 | D-15 | Vários pedidos pendentes ao mesmo tempo: uma notificação por pedido, uma agrupada, ou substituição | quantos pedidos simultâneos acontecem numa sessão real | B-10 | 2026-09-15 · **uma notificação por pedido**, agrupadas pelo SO, cada uma cancelada com o seu pedido | ✅ |
+
+| D-20 | Onde vive o segredo do provedor de push, e o que acontece quando ele falta | a credencial é uma chave privada; a allowlist já provou que arquivo é melhor que variável, mas ela derruba o boot e push não é fronteira de segurança | B-09 | 2026-09-19 · **arquivo** em `RC_PUSH_CREDENTIALS_FILE`, e ausente **não** derruba o boot | ✅ |
+| D-21 | Onde vive o SDK do fornecedor **no aparelho**, já que o S-26 proíbe o nome dele em `mobile/lib/**.dart` | receber push na Android exige a biblioteca do fornecedor, e um `import` dela é uma linha de Dart com o nome escrito | B-13, B-31, B-32 | 2026-09-19 · **atrás de um `MethodChannel`**: o Dart conhece uma porta e um canal, o fornecedor vive em `android/` e na configuração | ✅ |
 
 ### D-03 — o provedor, e o que ele **não** pode saber
 
@@ -109,6 +162,26 @@ fim a fim.
 
 Vale para qualquer escolha: o nome dele **não sai da configuração**, o payload não carrega
 conteúdo de arquivo nem output de comando, e a tela revalida no servidor antes de renderizar.
+
+### D-20 — onde vive o segredo, e o que ele não pode derrubar
+
+A credencial do provedor é uma chave privada de service account. Chave privada em variável de
+ambiente é chave privada em todo `ps`, em todo crash dump e em todo `docker inspect` — o mesmo
+argumento que pôs a allowlist num arquivo ([backend/03 · D-02](../../architecture/backend/03-modules.md#workspace)).
+
+**Decidido:** três valores de configuração — `RC_PUSH_ENDPOINT`, `RC_PUSH_CREDENTIALS_FILE` e
+`RC_PUSH_SCOPE` — com a credencial num **arquivo**, e nenhum deles nomeando fornecedor nenhum.
+
+O que difere da allowlist, e é a parte que precisa estar dita: **arquivo ausente não derruba o
+boot**. A allowlist é a fronteira de segurança do produto e um backend no ar com ela quebrada é
+pior que fora do ar; push é melhor esforço ao lado de um prazo que não é. Um backend que se
+recusasse a subir porque ninguém configurou notificação ainda trocaria o produto inteiro por uma
+das suas conveniências. O preço é o que [D-05](#d-05--quando-o-push-não-sai) já registra.
+
+**Tarefa que esta decisão cria:** nenhuma — é o meio de B-09. O que ela cria é uma **regra de
+máquina**: `scripts/lib/vendor-name-rules.mjs`, rodada por `pnpm scan:security` sobre backend, web
+e app, que é o que [S-26](scenarios.md) pede e o que impede o nome do fornecedor de escapar da
+configuração.
 
 ### D-04 — todos ou o último
 
@@ -186,6 +259,27 @@ existe para evitar. O agrupamento nativo do Android cuida da aparência, e o can
 continua sendo por `requestId`, como B-10 já faz.
 ---
 
+### D-21 — o fornecedor não atravessa a fronteira do Dart
+
+O [S-26](scenarios.md) virou regra de máquina em B-09, e ela varre `mobile/lib/**.dart`. Receber
+push na Android exige a biblioteca do fornecedor; um `import` dela é uma linha de Dart com o nome
+escrito, e o portão cai — corretamente. As duas saídas ruins eram abrir exceção na regra, que é o
+anti-padrão que o [AGENTS.md](../../../AGENTS.md) rejeita por nome, e renomear o import para
+enganar o scanner, que é pior.
+
+**Decidido:** o Dart conhece **uma porta** — `PushGateway`, em `core/notifications/` — e um
+`MethodChannel` chamado por um nome do produto, não do fornecedor. A biblioteca vive onde
+biblioteca de plataforma vive: em `android/`, com o segredo em arquivo de configuração. É a mesma
+divisão que o backend já faz, onde `adapter/outbound/push/` conhece um endpoint e uma credencial e
+nunca quem responde por eles.
+
+Isso tem uma consequência que precisa ser dita: **sem transporte configurado, o canal responde
+"indisponível"**, e o app entra num estado próprio — *não* no estado de notificação negada do
+[D-14](#d-14--o-usuário-que-nega-a-notificação). Os dois textos são diferentes de propósito: um
+usuário que negou pode voltar atrás nas configurações do SO; um build sem transporte não tem o que
+o usuário possa fazer, e dizer "você negou" seria mentira. A montagem do projeto do fornecedor
+continua sendo trabalho de quem opera, como a F1 já dizia.
+
 ## F2 — Sessão no app
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
@@ -213,6 +307,60 @@ O histórico de verdade continua sendo o [plano 04](../04-transcript-and-resume/
 | D-07 | O que fazer em aparelho sem biometria **e** sem PIN configurado | quantos aparelhos assim existem no uso real | B-22 | 2026-09-15 · **recusa a aprovação nesse aparelho**, com o motivo escrito na tela; observar sessão continua permitido | ✅ |
 | D-08 | A confirmação em dois passos vale para toda tool, ou só para `riskHint: destructive` | dependia de [D-08 do plano 01](../01-live-session/decisions.md) — **fechado em 2026-09-15** | B-21 | 2026-09-15 · **só `riskHint: destructive`**, como [mobile/04-ui](../../architecture/mobile/04-ui.md#a-tela-de-permissão) já normatiza | ✅ |
 | D-16 | O app oferece **estender o prazo** do pedido, ou a extensão é só do web | quantas vezes 120 s é pouco para quem decide no celular | B-20, B-24 | 2026-09-15 · **sim**, com valor e teto vindos da configuração, como o [01 · D-09](../01-live-session/decisions.md) fixou | ✅ |
+| D-22 | Com o que o deep link **revalida no servidor**: o replay do `session.attach`, ou uma consulta própria | o attach republica os pendentes, mas não diz quando acabou de republicar — "não veio" não prova "não existe" | B-23 | 2026-09-24 · **`GET /sessions/:sessionId/permissions/:requestId`**, que responde o estado real: pendente, resolvido (com quem), `410` expirado, `404` desconhecido, `403` de outro usuário | ✅ |
+| D-23 | Em que ordem o logout acontece, se desregistrar o push precisa da credencial que o logout apaga | se o token em memória sobrevive à limpeza do armazenamento seguro | B-25 | 2026-09-24 · **desregistrar primeiro**, enquanto a credencial vale; depois o armazenamento, o provedor, o socket e os providers | ✅ |
+| D-24 | Como conversa e fila de permissão observam a mesma sessão pelo único socket do app | o `WsClient` guardava **um** assinante por sessão, e o segundo apagava o primeiro | B-24 | 2026-09-24 · **vários assinantes por sessão**, como no web: anexa uma vez, retoma do mais atrasado, desanexa com o último | ✅ |
+| D-25 | O que "desligável" desliga na biometria, e onde a preferência mora | se desligar a biometria reabre o caso do D-07 | B-22 | 2026-09-24 · desligar **tira o pedido de biometria/PIN**, não a regra do D-07: aparelho sem bloqueio continua sem aprovar. A preferência fica no armazenamento seguro, ligada por default | ✅ |
+
+### D-22 — revalidar é perguntar, não esperar
+
+O [mobile/03](../../architecture/mobile/03-state-and-data.md#push-notification--o-canal-que-torna-o-app-útil)
+manda revalidar no servidor antes de renderizar. O caminho barato seria o que o socket já faz: ao
+`session.attach`, o backend republica os pedidos ainda pendentes. Ele serve para o caso bom e não
+para o ruim — os pendentes chegam depois do `ack`, sem marcador de fim, e a ausência do pedido
+depois de *n* milissegundos é um palpite, não uma resposta. Um card que some porque o frame demorou
+e um card que some porque o pedido acabou pareceriam iguais.
+
+**Decidido:** uma consulta HTTP que responde **o estado**, lido do mesmo registro em memória que o
+attach usa. Os quatro desfechos têm o código que a [D-17 do plano 01](../01-live-session/decisions.md)
+manda usar: `200` com o pedido pendente (e quantas extensões restam), `200` com a resolução (e de
+onde veio), `410 PERMISSION_REQUEST_EXPIRED`, `404 PERMISSION_REQUEST_NOT_FOUND` e
+`403 PERMISSION_NOT_OWNED`. Responder uma permissão continua sendo pelo socket, e só depois que o
+attach reentregar o frame: é ele que dá o `correlationId`, e é o attach que o backend exige de quem
+responde.
+
+### D-23 — a ordem do logout
+
+O [mobile/07-auth](../../architecture/mobile/07-auth.md#logout) lista cinco passos, com "limpa o
+armazenamento" primeiro. Desregistrar o push é uma chamada ao backend, e ela precisa do token que o
+primeiro passo apaga — na ordem escrita, o passo 4 falharia sempre, calado, e o aparelho seguiria
+recebendo notificação da conta que saiu.
+
+**Decidido:** o desregistro vai **antes**, e falhar nele é `warn`, nunca motivo para não sair
+(S-88): um logout que não completa sem rede deixa a credencial no aparelho, que é o pior dos
+desfechos. Depois vêm o armazenamento, o `end_session_endpoint`, o socket e os providers. O
+normativo foi corrigido junto.
+
+### D-24 — duas telas, um socket
+
+A fila de permissão e a conversa são features diferentes olhando o mesmo stream. O `WsClient` do app
+guardava um assinante por sessão, então a segunda a anexar calava a primeira, e o desanexar de uma
+mandava `session.detach` com a outra ainda na tela. O web já tinha resolvido isso; o app passa a
+fazer o mesmo: anexa uma vez, retoma do assinante mais atrasado (reentregar o que alguém já aplicou
+custa nada, porque descartar `seq <= lastSeq` é a primeira regra de todo estado), e desanexa com o
+último (S-82). O app também passa a entregar frames `request` — até aqui só `event` chegava a quem
+assinava, e `permission.requested` é exatamente um `request`.
+
+### D-25 — o que a chave desliga
+
+A biometria é "ligada por default e desligável" ([mobile/07-auth](../../architecture/mobile/07-auth.md#biometria)).
+Se desligar a chave também desligasse o D-07, um aparelho sem bloqueio aprovaria depois de um toque
+num switch — a regra viraria sugestão.
+
+**Decidido:** a chave tira o **pedido** de biometria/PIN antes de aprovar. Um aparelho sem nenhum
+bloqueio continua sem aprovar, com a chave em qualquer posição. Negar nunca pede biometria: é a
+decisão segura, e pôr uma barreira nela só atrasa o "não". A preferência não é credencial, mas mora
+no armazenamento seguro para não trazer uma segunda dependência de armazenamento só para um booleano.
 
 ### D-07 — quando o aparelho não tem barreira
 
@@ -256,6 +404,7 @@ de a permissão ter sido resolvida.
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-09 | Qual imagem de emulador e API level o `integration_test` usa de forma reprodutível | **não é custo** — a primeira execução já aconteceu no [plano 00](../00-bootstrap/progress.md) (cgroup, 4 núcleos, 7 GB); o que não existe é a imagem fixada em lugar nenhum | B-28 | 2026-09-15 · **API 35 fixada** — a imagem com que o plano 00 saiu verde, e o mínimo que exibe o diálogo de permissão de notificação | ✅ |
+| D-26 | Como provar a entrega real do push e o diálogo do SO sem tirar a hermeticidade da suíte padrão | se o emulador fixado tem Play Services (tem: `google_apis_playstore`), e o que alcança a UI do sistema | B-28, B-34 | 2026-09-24 · **uma variante opt-in**, `pnpm test:e2e:mobile:push`: mesma stack, com o push do `.env` no lugar de `push.invalid`, rodada pelo `patrol`, que aperta `home`, responde o diálogo e toca a notificação. A suíte padrão continua hermética | ✅ |
 | D-17 | Como o celular alcança o backend fora da rede local | é o [plano 06 · D-04](../06-distribution/decisions.md) — túnel, VPN ou porta com TLS | nada nesta fase | — | ⛔ |
 
 ### D-09 — o emulador reprodutível
@@ -272,6 +421,17 @@ simplesmente não aparece, e a suíte passaria sem provar nada.
 
 Uma imagem só, não duas: a suíte já é a mais cara do repositório, e o caminho antigo não tem
 usuário conhecido para justificar dobrar o tempo.
+
+### D-26 — o push de verdade, sem sujar a suíte de todo dia
+
+S-54 e S-67 só existem com três coisas que a suíte hermética recusa por desenho: um provedor de push
+real, o app **fora** da tela (com ele aberto o backend não manda push — S-16) e alguém que toque na
+UI do sistema. As duas credenciais estão no workspace, e o emulador fixado tem Play Services.
+
+**Decidido:** uma variante à parte, que ninguém roda sem pedir. Ela lê o push do `.env` — e só isso
+do `.env` — e roda um teste do `patrol`, que é o que alcança o sistema: responde o diálogo de
+notificação, manda o app para o fundo e toca a notificação quando ela chega. A suíte padrão não muda:
+continua apontando o push para `push.invalid`, e continua rodando sem rede para fora da máquina.
 
 ### D-17 — o produto fora da mesa
 
@@ -296,6 +456,10 @@ Decisão registrada só aqui é decisão que o resto do repositório não conhec
 | D-10 | [backend/05-persistence](../../architecture/backend/05-persistence.md#o-device-do-celular) — o índice único composto, nascendo composto na migration |
 | D-14, D-16 | [mobile/04-ui](../../architecture/mobile/04-ui.md#a-tela-de-permissão) — a ação de estender no card, e a tela de notificação negada |
 | D-02 | nada a propagar — a escolha **já** é o que o normativo diz ([08-authentication](../../architecture/shared/08-authentication.md#device-e-o-canal-mobile)) |
+| D-18 | [08-authentication](../../architecture/shared/08-authentication.md#device-e-o-canal-mobile) — o que a revogação garante, e o que ela não garante (2026-09-19) |
+| D-20 | [.env.example](../../../.env.example) e [backend/03-modules](../../architecture/backend/03-modules.md#notification) — os três valores, e o boot que não cai (2026-09-19) |
+| D-19 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#handshake) — `client.installId`, e o que o handshake recusa (2026-09-19) |
+| D-21 | [mobile/03-state-and-data](../../architecture/mobile/03-state-and-data.md#push-notification--o-canal-que-torna-o-app-útil) — a porta em `core/notifications/`, o fornecedor em `android/`, e o estado "indisponível" que não é "negado" (2026-09-20) |
 
 "Só Android" já está no **Não entra** do [README do plano](README.md#escopo). Segue pendente, e
 **não** é documento de arquitetura: a imagem API 35 dita no

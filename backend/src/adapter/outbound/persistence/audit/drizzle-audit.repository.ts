@@ -5,6 +5,7 @@ import type { AuditEntry } from '@domain/audit';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
 import { auditEntries } from '@infra/database/schema';
+import { currentTraceId } from '@shared/logging/trace-context';
 import { runLogged } from '../query-logging';
 import { toRow } from './audit-entry.mapper';
 
@@ -24,6 +25,10 @@ import { toRow } from './audit-entry.mapper';
  * were given one id, which is a bug of ours and has to surface as a failed write — refusing the
  * tool — rather than be absorbed as an upsert that replaces one record of what was executed with
  * another.
+ *
+ * The `trace_id` is stamped **here**, from the context, and nowhere closer to the domain: it is what
+ * leads from the record to the log lines and the events of the same turn, and observability is not
+ * something the domain is allowed to know about ([D-16](../../../../../../docs/plans/03-rules-and-audit/decisions.md)).
  */
 @Injectable()
 export class DrizzleAuditRepository implements AuditRepository {
@@ -35,7 +40,7 @@ export class DrizzleAuditRepository implements AuditRepository {
       'audit.append',
       this.context.db
         .insert(auditEntries)
-        .values(toRow(entry))
+        .values(toRow(entry, currentTraceId()))
         .onConflictDoNothing({
           target: [auditEntries.sessionId, auditEntries.toolUseId, auditEntries.decision],
         }),

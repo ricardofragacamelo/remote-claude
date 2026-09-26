@@ -71,6 +71,16 @@ export class RecordDecisionOnResolved {
         decision: resolution.decision === 'allow' ? 'allowed' : 'denied',
         origin: { deviceId: null, ip: null },
         at: resolution.at,
+        // What the decision was, written with it: from the entry one reaches the request, the rule
+        // that answered and whether anybody did — without reading another module's table (D-15).
+        verdict: {
+          requestId: request.id,
+          auto: resolution.auto,
+          ruleId: resolution.ruleId ?? null,
+          scope: resolution.scope,
+          resolvedBy: resolution.resolvedBy,
+          resolvedFrom: resolution.resolvedFrom,
+        },
       })
       .then((outcome) => {
         if (outcome !== 'recorded') {

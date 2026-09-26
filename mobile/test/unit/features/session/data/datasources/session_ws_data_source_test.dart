@@ -8,6 +8,7 @@ import 'package:remote_claude/core/network/trace.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/features/session/data/datasources/session_ws_data_source.dart';
 import 'package:remote_claude/features/session/data/repositories/session_repository_impl.dart';
+import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 import 'package:remote_claude/features/session/domain/repositories/session_repository.dart';
 
@@ -72,7 +73,7 @@ void main() {
 
     socket().deliver(diagPong(sessionId: 'ses-1', seq: 1));
 
-    expect(await first, isA<PongReceived>());
+    expect(await first, isA<EventReceived>());
   });
 
   test('a pong of a followed session reaches the stream', () async {
@@ -82,7 +83,7 @@ void main() {
 
     socket().deliver(diagPong(sessionId: 'ses-1', seq: 2));
 
-    expect((await first as PongReceived).pong.seq, 2);
+    expect(((await first as EventReceived).event as PongArrived).pong.seq, 2);
   });
 
   test('a gap reaches the stream as one', () async {
@@ -167,5 +168,20 @@ void main() {
     await source.dispose();
 
     expect(() => socket().deliver(diagPong(sessionId: 'ses-1', seq: 1)), returnsNormally);
+  });
+
+  test('a session command goes out as a frame, and says whether it left', () async {
+    await ready();
+
+    expect(repository.send('session.prompt', <String, Object?>{'sessionId': 'ses-1'}), isTrue);
+
+    // The same door the ping uses: the repository knows a command name and a payload, and the
+    // socket knows nothing about what a session is.
+    expect(socket().sent.last, contains('session.prompt'));
+  });
+
+  test('a command sent before the handshake answers false rather than vanishing', () {
+    // The screen has to be able to say the prompt did not leave (S-76).
+    expect(repository.send('session.prompt', <String, Object?>{'sessionId': 'ses-1'}), isFalse);
   });
 }

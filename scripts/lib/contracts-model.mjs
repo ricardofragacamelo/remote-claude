@@ -24,6 +24,16 @@ const SUPPORTED = new Set([
 /** The `kind` values the envelope allows; a message declaring anything else is rejected. */
 export const FRAME_KINDS = ['command', 'event', 'request', 'response', 'ack', 'error'];
 
+/**
+ * Kinds that are **not** frames: a payload that travels over HTTP and is still one contract.
+ *
+ * Device registration is the case it exists for. The payload has to mean the same thing in three
+ * languages, exactly like a frame does, but it never crosses a socket — so it gets its type and
+ * its guard and no `frameType` entry, because a client offering to send `device.register` on the
+ * WebSocket would be offering something the gateway has no handler for.
+ */
+export const PAYLOAD_KINDS = ['http'];
+
 /** A schema the generator cannot honour. Thrown rather than worked around. */
 export class ContractError extends Error {
   /**
@@ -80,8 +90,9 @@ export class ContractError extends Error {
 /**
  * @typedef {object} Message
  * @property {string} name e.g. `ConnectionAuthenticate`
- * @property {string} frameKind one of FRAME_KINDS
+ * @property {string} frameKind one of FRAME_KINDS, or one of PAYLOAD_KINDS
  * @property {string} frameType e.g. `connection.authenticate`
+ * @property {boolean} frame whether it travels as a frame; false for a PAYLOAD_KINDS message
  * @property {string} description
  * @property {string} payload name of the payload interface
  */
@@ -314,10 +325,13 @@ export function buildModel(envelope, messages) {
     if (typeof frameType !== 'string' || frameType === '') {
       throw new ContractError(source, 'a message schema needs an `x-type`');
     }
-    if (typeof frameKind !== 'string' || !FRAME_KINDS.includes(frameKind)) {
+    if (
+      typeof frameKind !== 'string' ||
+      (!FRAME_KINDS.includes(frameKind) && !PAYLOAD_KINDS.includes(frameKind))
+    ) {
       throw new ContractError(
         source,
-        `\`x-kind\` is ${JSON.stringify(frameKind)}, which the envelope does not allow (${FRAME_KINDS.join(', ')})`,
+        `\`x-kind\` is ${JSON.stringify(frameKind)}, which the envelope does not allow (${[...FRAME_KINDS, ...PAYLOAD_KINDS].join(', ')})`,
       );
     }
 
@@ -328,6 +342,7 @@ export function buildModel(envelope, messages) {
       name: title,
       frameKind,
       frameType,
+      frame: FRAME_KINDS.includes(frameKind),
       description: String(schema['description'] ?? ''),
       payload,
     });

@@ -2,6 +2,7 @@ import type { UserId } from '@domain/auth';
 import type { Workspace } from '../entities/workspace.entity';
 import { WorkspaceNotAllowedError } from '../errors/workspace-not-allowed.error';
 import { WorkspaceForbiddenError } from '../errors/workspace-forbidden.error';
+import { InvalidWorkspacePathError } from '../errors/invalid-workspace-path.error';
 import { WorkspacePath } from '../value-objects/workspace-path.value-object';
 
 /**
@@ -50,6 +51,30 @@ export class WorkspaceAllowlist {
     }
 
     return { path, workspace };
+  }
+
+  /**
+   * Whether `raw` is a path `userId` may reach — {@link resolve} as a question, for a caller that
+   * filters rather than refuses.
+   *
+   * A path that is not a path at all is simply not admitted. Only the refusals of this rule are
+   * turned into `false`; anything else it could throw is a bug and still propagates.
+   */
+  admits(raw: string, userId: UserId): boolean {
+    try {
+      this.resolve(raw, userId);
+      return true;
+    } catch (error) {
+      if (
+        error instanceof InvalidWorkspacePathError ||
+        error instanceof WorkspaceNotAllowedError ||
+        error instanceof WorkspaceForbiddenError
+      ) {
+        return false;
+      }
+
+      throw error;
+    }
   }
 }
 

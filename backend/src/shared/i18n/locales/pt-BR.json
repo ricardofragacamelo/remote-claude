@@ -1,0 +1,8 @@
+{
+  "push": {
+    "permission": {
+      "title": "O Claude está esperando por você",
+      "body": "Ele quer executar {{toolName}}. Abra para permitir ou recusar."
+    }
+  }
+}

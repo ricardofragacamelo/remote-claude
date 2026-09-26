@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_context.dart';
+import 'package:remote_claude/core/device/install_id.dart';
 import 'package:remote_claude/core/logging/log_operations.dart';
 import 'package:remote_claude/core/network/api_client.dart';
 import 'package:remote_claude/core/network/interceptors/auth_interceptor.dart';
@@ -56,12 +57,13 @@ void main() {
 
   tearDown(() => logger.dispose());
 
-  Dio build(_ScriptedAdapter adapter) {
+  Dio build(_ScriptedAdapter adapter, {InstallIdSource? installIds}) {
     final Dio dio = buildDio(
       baseUrl: 'http://localhost:3000',
       credentials: credentials,
       logger: logger,
       traceIds: TraceIds(),
+      installIds: installIds,
     );
     dio.httpClientAdapter = adapter;
     return dio;
@@ -74,6 +76,38 @@ void main() {
     final RequestOptions sent = adapter.requests.single;
     expect(sent.headers['x-trace-id'], isA<String>());
     expect(sent.headers['accept-language'], 'en');
+  });
+
+  // A header rather than a body field, because it is a property of the caller and has to be
+  // readable on a GET too. A browser never sends it, and that absence is what the backend's
+  // approval rule reads (D-02).
+  test('names the installation on every request, once there is one', () async {
+    final _ScriptedAdapter adapter = _ScriptedAdapter(<int>[200]);
+    await build(adapter, installIds: _StubInstallId('install-1')).get<Object?>('/health');
+
+    expect(adapter.requests.single.headers[installIdHeader], 'install-1');
+  });
+
+  test('sends no installation header before the id has been loaded', () async {
+    final _ScriptedAdapter adapter = _ScriptedAdapter(<int>[200]);
+    await build(adapter, installIds: _StubInstallId(null)).get<Object?>('/health');
+
+    expect(adapter.requests.single.headers.containsKey(installIdHeader), isFalse);
+  });
+
+  // An empty header would be worse than none: the backend reads its **presence**.
+  test('sends no installation header for an empty id', () async {
+    final _ScriptedAdapter adapter = _ScriptedAdapter(<int>[200]);
+    await build(adapter, installIds: _StubInstallId('')).get<Object?>('/health');
+
+    expect(adapter.requests.single.headers.containsKey(installIdHeader), isFalse);
+  });
+
+  test('sends no installation header when the client has no source for one', () async {
+    final _ScriptedAdapter adapter = _ScriptedAdapter(<int>[200]);
+    await build(adapter).get<Object?>('/health');
+
+    expect(adapter.requests.single.headers.containsKey(installIdHeader), isFalse);
   });
 
   test('carries the credential when there is one', () async {
@@ -152,4 +186,12 @@ void main() {
 
     expect(adapter.requests.single.headers['x-trace-id'], 'given-trace');
   });
+}
+
+/// An installation identity fixed by the test.
+class _StubInstallId implements InstallIdSource {
+  _StubInstallId(this.installId);
+
+  @override
+  final String? installId;
 }

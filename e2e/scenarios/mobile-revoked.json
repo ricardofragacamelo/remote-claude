@@ -1,0 +1,8 @@
+{
+  "id": "02·S-56",
+  "title": "revoking the phone with the app open closes its socket with 4401, and the app says so",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "closeCode": 4401
+  }
+}

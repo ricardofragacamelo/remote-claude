@@ -26,6 +26,10 @@ void main() {
       'auth.error.invalidState',
       'connection.error.unsupportedVersion',
       'session.error.notFound',
+      'auth.error.deviceNotRegistered',
+      'auth.error.deviceRevoked',
+      'auth.error.deviceNotFound',
+      'auth.error.deviceApprovalForbidden',
     ];
 
     for (final String key in keys) {
@@ -37,6 +41,21 @@ void main() {
       expect(message, isNotEmpty, reason: key);
       expect(message, isNot(contains(key)), reason: key);
     }
+  });
+
+  // S-21 of plan 03 — a failed revocation is said in words, not as a code.
+  test('a rule that is gone by the time it is revoked has its own sentence', () {
+    expect(
+      translateFailure(
+        en,
+        const ServerFailure(
+          code: 'PERMISSION_RULE_NOT_FOUND',
+          messageKey: 'permission.error.ruleNotFound',
+          traceId: 't',
+        ),
+      ),
+      en.permissionErrorRuleNotFound,
+    );
   });
 
   test('interpolates the params the key declares', () {

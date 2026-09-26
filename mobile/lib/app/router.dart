@@ -7,14 +7,12 @@ library;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:remote_claude/core/navigation/deep_link_controller.dart';
+import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/features/auth/auth.dart';
+import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/session.dart';
-
-/// Where the app goes when nobody said otherwise.
-const String sessionRoute = '/';
-
-/// Where an unauthenticated visitor is sent.
-const String signInRoute = '/sign-in';
+import 'package:remote_claude/features/workspace/workspace.dart';
 
 /// Decides the destination of one navigation.
 ///
@@ -56,6 +54,35 @@ GoRouter buildRouter(Ref ref) {
         name: 'signIn',
         builder: (BuildContext context, GoRouterState state) => const SignInPage(),
       ),
+      GoRoute(
+        path: workspacesRoute,
+        name: 'workspaces',
+        builder: (BuildContext context, GoRouterState state) => const WorkspaceListPage(),
+      ),
+      GoRoute(
+        path: rulesRoute,
+        name: 'rules',
+        builder: (BuildContext context, GoRouterState state) => const RulesPage(),
+      ),
+      GoRoute(
+        path: '/sessions/:sessionId',
+        name: 'session-live',
+        builder: (BuildContext context, GoRouterState state) =>
+            SessionPage(sessionId: state.pathParameters['sessionId'] ?? ''),
+        routes: <RouteBase>[
+          // A notification's target. Nested under its session, so "back" lands on the session the
+          // request belongs to — and the screen revalidates against the server before it shows
+          // anything, because the notification may be older than the request's fate (S-45).
+          GoRoute(
+            path: 'permissions/:requestId',
+            name: 'session-permission',
+            builder: (BuildContext context, GoRouterState state) => PermissionPage(
+              sessionId: state.pathParameters['sessionId'] ?? '',
+              requestId: state.pathParameters['requestId'] ?? '',
+            ),
+          ),
+        ],
+      ),
     ],
   );
 
@@ -65,6 +92,16 @@ GoRouter buildRouter(Ref ref) {
     authControllerProvider,
     (AsyncValue<AuthSession?>? previous, AsyncValue<AuthSession?> next) => router.refresh(),
   );
+
+  // A tap on a notification arrives from the platform, with no widget involved. This is where it
+  // becomes navigation — and the acknowledgement is what stops the app dragging itself back to
+  // the same screen on every rebuild.
+  ref.listen<String?>(deepLinkControllerProvider, (String? previous, String? location) {
+    if (location != null) {
+      ref.read(deepLinkControllerProvider.notifier).acknowledge();
+      router.go(location);
+    }
+  });
 
   ref.onDispose(router.dispose);
 

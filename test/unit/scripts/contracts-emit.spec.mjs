@@ -453,3 +453,50 @@ describe('the Dart shape check of a conditional, per declared type', () => {
     );
   });
 });
+
+// A payload-only contract: a shape shared over HTTP, not a frame. Both emitters have to give it
+// a type and leave it out of everything that describes the socket — a client offered
+// `device.register` as a frame type would be offered something the gateway has no handler for.
+const payloadOnly = {
+  source: 'commands/device-register.schema.json',
+  schema: {
+    title: 'DeviceRegister',
+    description: 'What the app says about itself.',
+    'x-kind': 'http',
+    'x-type': 'device.register',
+    type: 'object',
+    required: ['installId'],
+    properties: { installId: { type: 'string' } },
+  },
+};
+
+const mixedModel = buildModel(envelope, [command, payloadOnly]);
+const mixedTypeScript = emitTypeScript(mixedModel);
+const mixedDart = emitDart(mixedModel);
+
+describe('a payload-only contract', () => {
+  it('gets a TypeScript type and a guard', () => {
+    expect(mixedTypeScript).toContain('export interface DeviceRegisterPayload {');
+    expect(mixedTypeScript).toContain('export function isDeviceRegisterPayload(');
+  });
+
+  it('gets no frame type and no frame guard', () => {
+    expect(mixedTypeScript).not.toContain('DeviceRegisterFrame');
+    expect(mixedTypeScript).not.toContain("'device.register',");
+  });
+
+  it('gets a Dart class', () => {
+    expect(mixedDart).toContain('class DeviceRegisterPayload {');
+  });
+
+  it('gets no Dart frame constants and no entry in frameTypes', () => {
+    expect(mixedDart).not.toContain('deviceRegisterKind');
+    expect(mixedDart).not.toContain('deviceRegisterType');
+    expect(mixedDart).not.toContain("  'device.register',");
+  });
+
+  it('leaves the frames alone', () => {
+    expect(mixedTypeScript).toContain("  'thing.do',");
+    expect(mixedTypeScript).toContain('ThingFrame');
+  });
+});

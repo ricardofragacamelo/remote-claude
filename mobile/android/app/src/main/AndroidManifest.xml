@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Asked at runtime from Android 13 on, and only after the device exists (S-68). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- The barrier in front of an approval: fingerprint or face, falling back to the device PIN,
+         never to "approve without asking" (docs/architecture/mobile/07-auth.md#biometria). -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+
     <application
         android:label="remote_claude"
         android:name="${applicationName}"
@@ -25,6 +31,21 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- The push transport (D-21). Without the credential file the service is registered and
+             never started: the library has no app to initialise, and the channel answers
+             "unavailable". -->
+        <service
+            android:name=".push.PushMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
+        <!-- A message shown by the library while the app is in the background lands on our
+             channel, not on a generic one the user cannot tell apart. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/push_channel_id" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

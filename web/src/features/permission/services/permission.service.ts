@@ -8,6 +8,7 @@ import type {
   PermissionRequest,
   PermissionScope,
   RiskHint,
+  RuleOffer,
   ScopeSuggestion,
 } from '../types/permission';
 
@@ -65,7 +66,10 @@ export function sendExtension(client: WsClient, requestId: string): boolean {
 const RISKS = new Set<string>(['read', 'write', 'destructive']);
 
 /** The scopes this build honours. A suggestion for any other is dropped rather than offered. */
-const SCOPES = new Set<string>(['once', 'session']);
+const SCOPES = new Set<string>(['once', 'session', 'project', 'always']);
+
+/** The scopes that leave a rule behind, and so cannot be offered without saying which. */
+const PERSISTED = new Set<string>(['project', 'always']);
 
 /**
  * The feature's model of a `permission.requested` frame, or `null` when it is not one.
@@ -160,7 +164,7 @@ function readSuggestions(value: unknown): readonly ScopeSuggestion[] {
     return [];
   }
 
-  return value.flatMap((entry) => {
+  return value.flatMap((entry): ScopeSuggestion[] => {
     if (!isRecord(entry)) {
       return [];
     }
@@ -170,8 +174,29 @@ function readSuggestions(value: unknown): readonly ScopeSuggestion[] {
 
     // A scope this build cannot honour is dropped rather than offered: the server would refuse it,
     // and a button that always fails is worse than one that is not there.
-    return scope !== null && labelKey !== null && SCOPES.has(scope)
-      ? [{ scope: scope as PermissionScope, labelKey }]
-      : [];
+    if (scope === null || labelKey === null || !SCOPES.has(scope)) {
+      return [];
+    }
+
+    if (!PERSISTED.has(scope)) {
+      return [{ scope: scope as PermissionScope, labelKey, rule: null }];
+    }
+
+    // "Don't ask again" without saying about what, or for how long, is the button the plan's R-02
+    // is about. A persisted scope that arrives without its rule is not offered at all (S-67).
+    const rule = readRuleOffer(entry);
+    return rule === null ? [] : [{ scope: scope as PermissionScope, labelKey, rule }];
   });
+}
+
+function readRuleOffer(entry: Readonly<Record<string, unknown>>): RuleOffer | null {
+  const pattern = text(entry, 'pattern');
+  const lifetimeMs = entry['lifetimeMs'];
+
+  return pattern === null ||
+    typeof lifetimeMs !== 'number' ||
+    !Number.isInteger(lifetimeMs) ||
+    lifetimeMs <= 0
+    ? null
+    : { pattern, lifetimeMs };
 }

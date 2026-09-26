@@ -12,3 +12,7 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# The push transport's credential file. It is configuration, per operator, and never committed:
+# a build without it compiles, and the app says notifications will not arrive (D-21).
+/app/google-services.json

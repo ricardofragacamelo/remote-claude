@@ -13,6 +13,7 @@ import {
   run,
   runAsync,
   runAttached,
+  runReporting,
   spawnLocation,
 } from '../../../scripts/lib/exec.mjs';
 import { declaredScripts, runGates } from '../../../scripts/lib/gates.mjs';
@@ -103,6 +104,15 @@ describe('exec', () => {
 
   it('answers a non-zero code when an attached command fails', () => {
     expect(runAttached(process.execPath, ['-e', 'process.exit(2)']).code).toBe(2);
+  });
+
+  it('captures the report on stdout and leaves stderr to the terminal', () => {
+    const result = runReporting(process.execPath, [
+      '-e',
+      'process.stdout.write("{}");process.stderr.write("log");process.exit(1)',
+    ]);
+
+    expect(result).toMatchObject({ found: true, code: 1, stdout: '{}', stderr: '' });
   });
 
   it('knows whether an executable is reachable', () => {

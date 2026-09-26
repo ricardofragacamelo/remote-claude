@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Written by `patrol` on every run, next to the tests; a build artefact, never source.
+/patrol_test/test_bundle.dart

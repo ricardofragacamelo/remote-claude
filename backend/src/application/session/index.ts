@@ -1,7 +1,7 @@
 /** Public surface of the `session` use cases. */
 export { AttachSessionUseCase } from './attach-session.use-case';
 export { StartSessionUseCase } from './start-session.use-case';
-export type { SessionDefaults } from './start-session.use-case';
+export type { SessionDefaults, SessionProvenance } from './start-session.use-case';
 export type { StartSessionCommand } from './commands/start-session.command';
 export {
   CloseSessionUseCase,
@@ -35,3 +35,8 @@ export type { ToolInvocation, ToolInvocationRecorder } from './ports/tool-invoca
 export { TOOL_INVOCATION_RECORDER } from './ports/tool-invocation.port';
 export type { WorkspaceResolver } from './ports/workspace-resolver.port';
 export { WORKSPACE_RESOLVER } from './ports/workspace-resolver.port';
+export type { SessionOrigin, SessionOriginRepository } from './ports/session-origin.repository';
+export {
+  CLAUDE_SESSION_ID_GENERATOR,
+  SESSION_ORIGIN_REPOSITORY,
+} from './ports/session-origin.repository';

@@ -11,7 +11,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-15
+**Última atualização:** 2026-09-24
 **Bloqueios:** **R-01 bloqueia a F2** — qual provedor OIDC real, com qual tenant e audience,
 e quem o administra.
 
@@ -31,12 +31,12 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | Fase | Tarefas | Concluídas | Estado |
 |---|---|---|---|
-| [F0](F0-limits.md) | B-01…B-07 | 0/7 | 🔲 |
+| [F0](F0-limits.md) | B-01…B-07, B-25 | 0/8 | 🔲 |
 | [F1](F1-client-logs.md) | B-08…B-11 | 0/4 | 🔲 |
 | [F2](F2-identity.md) | B-12…B-15 | 0/4 | 🔲 |
 | [F3](F3-gates.md) | B-16…B-20 | 0/5 | 🔲 |
 | [F4](F4-e2e.md) | B-21…B-24 | 0/4 | 🔲 |
-| **Total** | **B-01…B-24** | **0/24** | 🔲 |
+| **Total** | **B-01…B-25** | **0/25** | 🔲 |
 
 ---
 
@@ -44,7 +44,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 46 | 46 | 0 | 0 | 0 |
+| [Matriz](scenarios.md) | 53 | 53 | 0 | 0 | 0 |
 
 ---
 
@@ -55,7 +55,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 8 | 8 | 0 | 0 | 0 |
+| [Decisões](decisions.md) | 9 | 9 | 0 | 0 | 0 |
 
 ---
 
@@ -76,7 +76,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-09-24 | B-25, a nova tentativa do push, entra na F0 | veio do ciclo 32 do [plano 02](../02-mobile-approval/progress.md): uma falha pontual do provedor perdeu a notificação, e o plano 02 a mandou para cá | F0, S-47…S-53 e [D-09](decisions.md), que bloqueia B-25 |
 
 ---
 

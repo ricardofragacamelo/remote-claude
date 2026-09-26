@@ -51,6 +51,20 @@ export async function submitCredentials(page: Page, user: ScenarioUser): Promise
   await page.locator('#kc-login').click();
 }
 
+/**
+ * Opens `path` in the browser signed out, signs in from the screen's own button, and waits to be
+ * brought back to that same address — a deep link that did not survive the round trip fails here.
+ *
+ * @param path the route with its search, as a person would paste it
+ */
+export async function openSignedIn(page: Page, user: ScenarioUser, path: string): Promise<void> {
+  await page.goto(path);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.waitForURL(`${environment.keycloakUrl}/**`);
+  await submitCredentials(page, user);
+  await page.waitForURL(`${environment.webUrl}${path}`);
+}
+
 /** What a completed sign-in gives the caller. */
 export interface AuthenticatedUser {
   readonly accessToken: string;

@@ -464,17 +464,22 @@ class ConnectionAuthenticatePayloadClient {
   const ConnectionAuthenticatePayloadClient({
     required this.kind,
     required this.version,
+    this.installId,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory ConnectionAuthenticatePayloadClient.fromJson(Map<String, Object?> json) => ConnectionAuthenticatePayloadClient(
         kind: json['kind']! as String,
         version: json['version']! as String,
+        installId: json['installId'] as String?,
       );
 
   final String kind;
 
   final String version;
+
+  /// The registered installation this socket belongs to, when the client is a device. Absent from a browser, which is not a device and never approves one. It is what lets revoking a device close its sockets at once, with 4401 — without it, a revoked phone would keep answering permission requests until its token expired.
+  final String? installId;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -482,6 +487,10 @@ class ConnectionAuthenticatePayloadClient {
       'kind': kind,
       'version': version,
     };
+
+    if (installId != null) {
+      json['installId'] = installId;
+    }
 
     return json;
   }
@@ -542,6 +551,66 @@ class ConnectionReauthenticatePayload {
     final Map<String, Object?> json = <String, Object?>{
       'token': token,
     };
+
+    return json;
+  }
+}
+
+/// What the app says about itself on `POST /devices`. It travels over HTTP rather than the socket — a device has to exist before it may decide anything, and the handshake already needs to know which device it is — but the payload is one contract in three languages all the same.
+class DeviceRegisterPayload {
+  const DeviceRegisterPayload({
+    required this.installId,
+    required this.name,
+    required this.platform,
+    required this.appVersion,
+    this.pushToken,
+    this.locale,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DeviceRegisterPayload.fromJson(Map<String, Object?> json) => DeviceRegisterPayload(
+        installId: json['installId']! as String,
+        name: json['name']! as String,
+        platform: json['platform']! as String,
+        appVersion: json['appVersion']! as String,
+        pushToken: json['pushToken'] as String?,
+        locale: json['locale'] as String?,
+      );
+
+  /// Identity of the installation, minted by the app on first run and kept in the operating system's secure storage. Never an identifier of the device itself: that one survives an uninstall, which is a privacy problem, and this one does not (D-01).
+  final String installId;
+
+  /// What the person will recognise in the approval list.
+  final String name;
+
+  /// Which operating system. Only Android is exercised in this plan (D-12); the app still builds for iOS.
+  final String platform;
+
+  /// Version of the app, for diagnostics and for the deprecation window.
+  final String appVersion;
+
+  /// The provider's token for this installation, when there is one. Absent is normal and not an error: a device with no token still watches sessions, and the app re-sends the token on every renewal (D-13).
+  final String? pushToken;
+
+  /// Language the push goes out in — the one exception to the rule that the backend never translates. Absent falls back to `en`.
+  final String? locale;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'installId': installId,
+      'name': name,
+      'platform': platform,
+      'appVersion': appVersion,
+    };
+
+    if (pushToken != null) {
+      json['pushToken'] = pushToken;
+    }
+
+    if (locale != null) {
+      json['locale'] = locale;
+    }
 
     return json;
   }
@@ -1191,12 +1260,16 @@ class PermissionRequestedPayloadSuggestionsItem {
   const PermissionRequestedPayloadSuggestionsItem({
     required this.scope,
     required this.labelKey,
+    this.pattern,
+    this.lifetimeMs,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory PermissionRequestedPayloadSuggestionsItem.fromJson(Map<String, Object?> json) => PermissionRequestedPayloadSuggestionsItem(
         scope: json['scope']! as String,
         labelKey: json['labelKey']! as String,
+        pattern: json['pattern'] as String?,
+        lifetimeMs: json['lifetimeMs'] as int?,
       );
 
   final String scope;
@@ -1204,12 +1277,26 @@ class PermissionRequestedPayloadSuggestionsItem {
   /// An i18n key. The server never sends prose.
   final String labelKey;
 
+  /// What a rule granted by this suggestion would match, in the grammar of the Claude Code settings — the narrowest pattern that covers this invocation. Present on `project` and `always`; a client never offers one of those without it.
+  final String? pattern;
+
+  /// How long a rule granted by this suggestion would live, counted from the answer. Present on `project` and `always`; the number is the installation's, never the client's.
+  final int? lifetimeMs;
+
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'scope': scope,
       'labelKey': labelKey,
     };
+
+    if (pattern != null) {
+      json['pattern'] = pattern;
+    }
+
+    if (lifetimeMs != null) {
+      json['lifetimeMs'] = lifetimeMs;
+    }
 
     return json;
   }
@@ -1323,7 +1410,7 @@ class PermissionResolvedPayload {
   /// What was decided. First answer wins, so this is the decision that reached `canUseTool`, not necessarily the one this client sent.
   final String decision;
 
-  /// The server decided it, with nobody answering — the deadline passed, or a session-scoped rule matched. Silence never authorises, so an automatic decision is always `deny` unless a rule allowed it.
+  /// The server decided it, with nobody answering — the deadline passed, or a rule the user granted earlier (`session`, `project` or `always`) matched. A request a rule settles is never put to anybody, and this event is how every screen watching still learns that something ran in the user's name. Silence never authorises, so an automatic decision is always `deny` unless a rule allowed it.
   final bool auto;
 
   /// Who answered. Required whenever `auto` is false, so "approved on your phone 2 min ago" is something the UI can actually say.
@@ -1639,7 +1726,7 @@ class PermissionResolvePayload {
   /// Yes or no. There is no third value: silence is handled by the deadline, and it denies.
   final String decision;
 
-  /// How far the decision reaches. Absent means `once`. Only `once` and `session` exist in this plan — `project` and `always` are persisted rules, and they arrive with the rules module.
+  /// How far the decision reaches. Absent means `once`. `session` leaves a rule that dies with the session; `project` and `always` persist a rule — the narrowest pattern covering this invocation, with the configured default lifetime — that answers future requests without asking and is revoked through `DELETE /permission-rules/:ruleId`. An invocation with nothing a pattern can name cannot be granted `project` or `always`: that is `INVALID_INPUT`, never a rule for the whole tool.
   final String? scope;
 
   /// Why it was refused. Required whenever `decision` is `deny` — the schema carries the condition, so no end has to remember it.

@@ -34,12 +34,28 @@ String translateFailure(AppLocalizations l10n, Failure failure) {
       return l10n.authErrorTokenExpired;
     case 'auth.error.invalidState':
       return l10n.authErrorInvalidState;
+    case 'auth.error.deviceNotRegistered':
+      return l10n.authErrorDeviceNotRegistered;
+    case 'auth.error.deviceRevoked':
+      return l10n.authErrorDeviceRevoked;
+    case 'auth.error.deviceNotFound':
+      return l10n.authErrorDeviceNotFound;
+    case 'auth.error.deviceApprovalForbidden':
+      return l10n.authErrorDeviceApprovalForbidden;
     case 'connection.error.unsupportedVersion':
       return l10n.connectionErrorUnsupportedVersion;
     case 'session.error.notFound':
       return l10n.sessionErrorNotFound;
     case 'session.error.invalidSessionId':
       return l10n.sessionErrorInvalidSessionId(failure.params['sessionId'] ?? '');
+    case 'permission.error.requestNotFound':
+      return l10n.permissionErrorRequestNotFound;
+    case 'permission.error.requestExpired':
+      return l10n.permissionErrorRequestExpired;
+    case 'permission.error.notOwned':
+      return l10n.permissionErrorNotOwned;
+    case 'permission.error.ruleNotFound':
+      return l10n.permissionErrorRuleNotFound;
     default:
       return l10n.commonErrorUnexpected;
   }

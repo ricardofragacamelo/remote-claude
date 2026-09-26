@@ -1,9 +1,17 @@
 import type { UserId } from '@domain/auth';
+import type { PermissionOrigin, PermissionScope } from '@domain/permission';
 import type { SessionId } from '@domain/session';
 import { ToolInput } from '../value-objects/tool-input.value-object';
 
 /** What the system did about an invocation. `recorded` is the trail of the hook, before any vote. */
-export type AuditDecision = 'recorded' | 'allowed' | 'denied';
+export const AUDIT_DECISIONS = ['recorded', 'allowed', 'denied'] as const;
+
+export type AuditDecision = (typeof AUDIT_DECISIONS)[number];
+
+/** Whether `value` is a decision this build knows. Used where a row or a query is read. */
+export function isAuditDecision(value: string): value is AuditDecision {
+  return (AUDIT_DECISIONS as readonly string[]).includes(value);
+}
 
 /** Where a request came from, as far as the backend can honestly tell. */
 export interface AuditOrigin {
@@ -12,6 +20,36 @@ export interface AuditOrigin {
 
   /** The address the connection came from. */
   readonly ip: string | null;
+}
+
+/**
+ * What a decision was, carried by the entry that records it.
+ *
+ * Written with the entry rather than looked up when the trail is read: the question "who
+ * authorised this command?" is answered by the trail alone, and never by a table of another module
+ * that is rewritten as a request moves on ([D-15](../../../../../docs/plans/03-rules-and-audit/decisions.md)).
+ *
+ * Only an `allowed` or `denied` entry has one. The hook's `recorded` entry fires before anybody has
+ * voted, and a verdict on it would be the trail claiming a decision that has not been taken.
+ */
+export interface AuditVerdict {
+  /** The permission request the decision settled. */
+  readonly requestId: string;
+
+  /** The server decided, with nobody answering — a rule, or the deadline. */
+  readonly auto: boolean;
+
+  /** The rule that answered, when one did. Only ever on an automatic decision. */
+  readonly ruleId: string | null;
+
+  /** How far the answer reaches. */
+  readonly scope: PermissionScope;
+
+  /** Who answered. `null` on the refusal nobody made. */
+  readonly resolvedBy: UserId | null;
+
+  /** Where the answer came from. `null` when nobody answered. */
+  readonly resolvedFrom: PermissionOrigin | null;
 }
 
 /** What writing an entry needs to know. */
@@ -25,15 +63,22 @@ export interface AuditEntryDraft {
   readonly decision: AuditDecision;
   readonly origin: AuditOrigin;
   readonly at: Date;
+
+  /** What was decided, on a decision entry. Absent means none — which is what `recorded` is. */
+  readonly verdict?: AuditVerdict | null;
 }
 
 /**
  * The persisted shape, as the mapper on either side of the repository sees it.
  *
- * Derived from the draft rather than written out again: the two differ in exactly one field — the
- * input has been captured — and restating the other eight is how they come to disagree.
+ * Derived from the draft rather than written out again: the two differ in two fields — the input
+ * has been captured, and the verdict is always stated, `null` when there is none — and restating
+ * the other eight is how they come to disagree.
  */
-export type AuditEntrySnapshot = Omit<AuditEntryDraft, 'input'> & { readonly input: ToolInput };
+export type AuditEntrySnapshot = Omit<AuditEntryDraft, 'input' | 'verdict'> & {
+  readonly input: ToolInput;
+  readonly verdict: AuditVerdict | null;
+};
 
 /**
  * One invocation of a tool, for ever.
@@ -57,6 +102,7 @@ export class AuditEntry {
     readonly decision: AuditDecision,
     readonly origin: AuditOrigin,
     readonly at: Date,
+    readonly verdict: AuditVerdict | null,
   ) {}
 
   /** An invocation, as the `PreToolUse` hook saw it. */
@@ -71,6 +117,7 @@ export class AuditEntry {
       draft.decision,
       { deviceId: draft.origin.deviceId, ip: draft.origin.ip },
       draft.at,
+      draft.verdict ?? null,
     );
   }
 
@@ -86,6 +133,7 @@ export class AuditEntry {
       snapshot.decision,
       snapshot.origin,
       snapshot.at,
+      snapshot.verdict,
     );
   }
 
@@ -100,6 +148,7 @@ export class AuditEntry {
       decision: this.decision,
       origin: this.origin,
       at: this.at,
+      verdict: this.verdict,
     };
   }
 }

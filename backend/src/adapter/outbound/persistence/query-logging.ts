@@ -42,3 +42,21 @@ export async function runLogged<T>(
 
   return result;
 }
+
+/** A raw statement Drizzle executes: awaitable, and able to show its SQL — under another name. */
+export interface ExecutedStatement<T> extends PromiseLike<T> {
+  getQuery(): { sql: string; params: unknown[] };
+}
+
+/**
+ * A raw `execute` in the shape {@link runLogged} takes.
+ *
+ * `db.execute(sql…)` describes itself with `getQuery()` where a query builder says `toSQL()`, and
+ * without this every raw statement would carry the same four lines of adapter to be logged.
+ */
+export function describedBy<T>(statement: ExecutedStatement<T>): LoggableQuery<T> {
+  return {
+    toSQL: () => statement.getQuery(),
+    then: (onFulfilled, onRejected) => statement.then(onFulfilled, onRejected),
+  };
+}

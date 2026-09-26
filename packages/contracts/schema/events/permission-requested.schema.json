@@ -62,6 +62,14 @@
           "labelKey": {
             "type": "string",
             "description": "An i18n key. The server never sends prose."
+          },
+          "pattern": {
+            "type": "string",
+            "description": "What a rule granted by this suggestion would match, in the grammar of the Claude Code settings — the narrowest pattern that covers this invocation. Present on `project` and `always`; a client never offers one of those without it."
+          },
+          "lifetimeMs": {
+            "type": "integer",
+            "description": "How long a rule granted by this suggestion would live, counted from the answer. Present on `project` and `always`; the number is the installation's, never the client's."
           }
         }
       }

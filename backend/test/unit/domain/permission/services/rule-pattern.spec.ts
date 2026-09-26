@@ -11,9 +11,10 @@ import {
 /**
  * The grammar of the Claude Code settings, which is ours because it has to be.
  *
- * The stored pattern is **literally** what goes back to the SDK in `updatedPermissions`, so a
- * grammar of our own would need translating — and a translation that is one character out makes
- * our half authorise a set of commands the Claude half does not, or the other way round.
+ * The stored pattern is **literally** the grammar of the SDK's `PermissionUpdate` — not sent back
+ * today (D-09 of the rules plan), but a grammar of our own would need translating the day it is,
+ * and a translation that is one character out makes our half authorise a set of commands the
+ * Claude half does not, or the other way round.
  */
 describe('parseRulePattern', () => {
   it('reads a bare tool name as the whole tool', () => {
@@ -42,7 +43,7 @@ describe('parseRulePattern', () => {
     ['(git status)', 'no tool at all'],
     ['9Bash(x)', 'a tool name that is not an identifier'],
     ['', 'nothing'],
-  ])('refuses %j — %s', (pattern) => {
+  ])('refuses %j — %s — S-47', (pattern) => {
     expect(() => parseRulePattern(pattern)).toThrow(PermissionRulePatternInvalidError);
   });
 });
@@ -54,11 +55,11 @@ describe('ruleMatches', () => {
     expect(ruleMatches(pattern, 'Bash', { command: 'git status' })).toBe(true);
   });
 
-  it('covers what continues it at a token boundary', () => {
+  it('covers what continues it at a token boundary — S-48', () => {
     expect(ruleMatches(pattern, 'Bash', { command: 'git status --short' })).toBe(true);
   });
 
-  it('does not cover a word that merely starts with it', () => {
+  it('does not cover a word that merely starts with it — S-48', () => {
     // The hole a bare `startsWith` leaves, and the one nobody notices until something is named
     // just so: `git statusx` is a different command.
     expect(ruleMatches(pattern, 'Bash', { command: 'git statusx' })).toBe(false);
@@ -79,7 +80,14 @@ describe('ruleMatches', () => {
     expect(ruleMatches(exact, 'Bash', { command: 'git status --short' })).toBe(false);
   });
 
-  it('matches nothing when the input carries no field a pattern can name', () => {
+  it('does not let `Bash(git status)` cover `git push --force` — S-06', () => {
+    const exact = parseRulePattern('Bash(git status)');
+
+    expect(ruleMatches(exact, 'Bash', { command: 'git push --force' })).toBe(false);
+    expect(ruleMatches(pattern, 'Bash', { command: 'git push --force' })).toBe(false);
+  });
+
+  it('matches nothing when the input carries no field a pattern can name — S-05', () => {
     // The conservative reading: an unrecognised shape matches less, never more.
     expect(ruleMatches(pattern, 'Bash', { something: 1 })).toBe(false);
   });

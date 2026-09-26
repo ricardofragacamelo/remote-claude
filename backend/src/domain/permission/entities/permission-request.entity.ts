@@ -38,6 +38,14 @@ export interface PermissionAnswer {
    */
   readonly auto: boolean;
 
+  /**
+   * The rule that answered, when one did — and absent otherwise.
+   *
+   * It is what lets somebody who finds a command that ran without being asked go from the record
+   * to the authorisation, including one that has since been revoked.
+   */
+  readonly ruleId?: string;
+
   readonly at: Date;
 }
 
@@ -74,6 +82,14 @@ export interface PermissionRequestOpening {
   /** The owner of the session. A rule of one user never resolves the request of another. */
   readonly userId: UserId;
 
+  /**
+   * The workspace root the session runs in — what a `project` rule is granted for.
+   *
+   * `null` when it could not be told, and then no `project` rule reaches the request and none can
+   * be granted from it: a rule for "whatever project this was" is a rule nobody can read.
+   */
+  readonly projectPath: string | null;
+
   readonly toolUseId: string | null;
   readonly toolName: string;
   readonly input: Readonly<Record<string, unknown>>;
@@ -106,6 +122,7 @@ export class PermissionRequest {
     readonly id: string,
     readonly sessionId: SessionId,
     readonly userId: UserId,
+    readonly projectPath: string | null,
     readonly toolUseId: string | null,
     readonly toolName: string,
     readonly input: Readonly<Record<string, unknown>>,
@@ -121,6 +138,7 @@ export class PermissionRequest {
       opening.id,
       opening.sessionId,
       opening.userId,
+      opening.projectPath,
       opening.toolUseId,
       opening.toolName,
       opening.input,

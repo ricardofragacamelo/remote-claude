@@ -186,9 +186,10 @@ const canUseTool: CanUseTool = async (toolName, input, options) => {
   const existing = await permissions.findByRequestId(options.requestId)
   if (existing?.isResolved) return existing.toSdkResult()
 
-  // 2. regra persistida resolve sem incomodar ninguém
-  const rule = await permissions.findMatchingRule(sessionId, toolName, input)
-  if (rule) return rule.toSdkResult()
+  // 2. regra — de sessão, de projeto ou "sempre" — resolve sem incomodar ninguém.
+  //    Lida a cada pedido, nunca em cache: revogar vale na próxima invocação da sessão já de pé.
+  const rule = await permissions.findMatchingRule(userId, sessionId, projectPath, toolName, input)
+  if (rule) return rule.toSdkResult()   // publica permission.resolved com auto: true
 
   // 3. cria o request, publica evento, dispara push, e ESPERA
   const request = await permissions.create({ ...options, toolName, input })
@@ -220,8 +221,13 @@ Quatro pontos que **não** são negociáveis:
 3. **Timeout nega.** `defaultTo: 'deny'`. Silêncio nunca autoriza.
 4. **`options.signal`** é respeitado — o SDK cancela o pedido quando a sessão morre.
 
-O retorno é `{ behavior: 'allow', updatedPermissions? }` ou `{ behavior: 'deny', message }`.
-`updatedPermissions` é como o "sempre permitir" vira regra do lado do Claude.
+O retorno é `{ behavior: 'allow' }` ou `{ behavior: 'deny', message }` — **sem**
+`updatedPermissions`, e isso é decisão, não omissão
+([D-09 do plano 03](../../plans/03-rules-and-audit/decisions.md#d-09--a-regra-nossa-é-a-única-autoridade)).
+Uma regra devolvida ao SDK passa a ser aplicada pelo CLI **sem** chamar o `canUseTool`, e o SDK
+`0.3.277` não tem como retirá-la de uma sessão viva: revogar deixaria de valer até a próxima
+sessão, e a execução autorizada pela regra deixaria de aparecer como `permission.resolved` com
+`auto: true`. A regra nossa é a única autoridade; o SDK pergunta, e quem responde é ela.
 
 ### A regra fala a gramática do Claude, não uma nossa
 
@@ -239,10 +245,10 @@ Sem glob (`Bash(git *)` liberaria `git push --force`) e sem expressão regular �
 para uma decisão de segurança tomada num toque de celular, e nenhuma UI consegue mostrar o
 alcance real de uma regex.
 
-A razão não é só restringir. É que o `ruleContent` guardado é **literalmente** o que vai para o
-`PermissionUpdate`: gramática própria exigiria tradução, e tradução que erra por um caractere faz
-a nossa metade liberar o que a do Claude não libera — ou o contrário, que é pior. Duas respostas
-para a mesma pergunta.
+A razão não é só restringir. É que o `ruleContent` guardado é **literalmente** a gramática do
+`PermissionUpdate`: hoje ele não é devolvido ao SDK (D-09), mas o dia em que for, é uma linha na
+ponte e não uma tradução — e tradução que erra por um caractere faz a nossa metade liberar o que a
+do Claude não libera, ou o contrário, que é pior. Duas respostas para a mesma pergunta.
 
 Duas consequências que não são detalhe de implementação:
 

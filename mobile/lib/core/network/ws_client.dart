@@ -17,6 +17,7 @@ library;
 import 'dart:async';
 import 'dart:math';
 
+import 'package:remote_claude/core/device/install_id.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_operations.dart';
 import 'package:remote_claude/core/network/contracts/frame_codec.dart';
@@ -44,8 +45,13 @@ enum ConnectionStatus {
 }
 
 /// What a feature needs from the stream of one session.
+///
+/// A subscriber receives **everything** the session produces — its `event`s and the `request` a
+/// permission is — including what another subscriber of the same session has already applied.
+/// That is what lets the conversation and the permission queue watch one stream without knowing
+/// about each other.
 abstract interface class SessionSubscriber {
-  /// One event, already validated against the envelope.
+  /// One frame of the session, already validated against the envelope.
   void onEvent(Envelope frame);
 
   /// The buffer no longer holds what this subscriber missed: drop local state and reload.
@@ -54,6 +60,9 @@ abstract interface class SessionSubscriber {
   /// The highest `seq` already applied, so a reconnect can resume from it.
   int get lastSeq;
 }
+
+/// The close code of a refused credential or device (docs/architecture/shared/05-websocket-protocol.md).
+const int closeAuthenticationFailed = 4401;
 
 /// Backoff bounds. Never a tight loop, and never longer than half a minute.
 const Duration backoffMin = Duration(seconds: 1);
@@ -76,6 +85,7 @@ class WsClient {
     required this._credentials,
     required this._logger,
     required this._appVersion,
+    this._installIds,
     FrameSocketFactory? connect,
     Scheduler? schedule,
     Random? random,
@@ -89,15 +99,17 @@ class WsClient {
   final CredentialSource _credentials;
   final AppLogger _logger;
   final String _appVersion;
+  final InstallIdSource? _installIds;
   final FrameSocketFactory _connect;
   final Scheduler _schedule;
   final Random _random;
   final TraceIds _traceIds;
 
-  final Map<String, SessionSubscriber> _subscribers = <String, SessionSubscriber>{};
+  final Map<String, Set<SessionSubscriber>> _subscribers = <String, Set<SessionSubscriber>>{};
   final Set<void Function(Envelope)> _observers = <void Function(Envelope)>{};
   final StreamController<ConnectionStatus> _statuses =
       StreamController<ConnectionStatus>.broadcast();
+  final StreamController<void> _rejections = StreamController<void>.broadcast();
 
   FrameSocket? _socket;
   StreamSubscription<String>? _inbound;
@@ -122,6 +134,15 @@ class WsClient {
         );
         controller.onCancel = subscription.cancel;
       });
+
+  /// Every time the server closed the socket with `4401` — the credential, or the device behind
+  /// it, was refused.
+  ///
+  /// The socket reconnects on its own after one, and that is right for a token that expired. It
+  /// is not the whole story for a phone that was **revoked** while the app was open: whoever shows
+  /// what this installation may do has to ask again, or the screen keeps saying "approved" about a
+  /// phone that can no longer decide anything (S-56).
+  Stream<void> get rejections => _rejections.stream;
 
   /// Opens the connection, and keeps it open until [close].
   void connect() {
@@ -152,7 +173,7 @@ class WsClient {
   Future<void> close() async {
     _wanted = false;
     await _teardown(1000, 'client closed');
-    _move(ConnectionStatus.closed);
+    _settleClosed();
   }
 
   /// Drops the socket because the app went to the background, without giving up on it.
@@ -166,7 +187,18 @@ class WsClient {
 
     _logger.info('socket suspended for the background', op: LogOp.lifecycleChanged);
     await _teardown(1000, 'app paused');
-    _move(ConnectionStatus.closed);
+    _settleClosed();
+  }
+
+  /// Reports the closure — unless a socket was opened while the old one was closing.
+  ///
+  /// Closing is asynchronous and connecting is not, so a sign-out immediately followed by a
+  /// sign-in opens the new socket before the old one has finished going. Reporting "closed" then
+  /// would overwrite the status of the connection that is actually there.
+  void _settleClosed() {
+    if (_socket == null) {
+      _move(ConnectionStatus.closed);
+    }
   }
 
   /// Revalidates the credential and reconnects.
@@ -187,18 +219,31 @@ class WsClient {
   bool reauthenticate(String token) =>
       command('connection.reauthenticate', <String, Object?>{'token': token});
 
-  /// Subscribes to a session's events. Answers the detach.
+  /// Subscribes to a session's frames. Answers the detach.
   ///
-  /// The detach is not optional: without it, moving between sessions accumulates subscriptions
-  /// and the screen starts receiving events for a session it no longer shows.
+  /// **Several subscribers may watch one session**, and they do: the conversation and the
+  /// permission queue are different features looking at the same stream. The socket is attached
+  /// once, re-attached from the furthest-behind subscriber when a new one arrives, and detached
+  /// when the **last** of them goes — a `session.detach` sent while another feature is still
+  /// watching would silently stop its screen updating (S-82).
+  ///
+  /// The detach is not optional: without it, moving between sessions accumulates subscriptions and
+  /// the screen starts receiving events for a session it no longer shows.
   void Function() attach(String sessionId, SessionSubscriber subscriber) {
-    _subscribers[sessionId] = subscriber;
+    (_subscribers[sessionId] ??= <SessionSubscriber>{}).add(subscriber);
 
     if (_status == ConnectionStatus.ready) {
-      _requestAttach(sessionId, subscriber);
+      _requestAttach(sessionId);
     }
 
     return () {
+      final Set<SessionSubscriber>? remaining = _subscribers[sessionId];
+      remaining?.remove(subscriber);
+
+      if (remaining == null || remaining.isNotEmpty) {
+        return;
+      }
+
       _subscribers.remove(sessionId);
       if (_status == ConnectionStatus.ready) {
         command('session.detach', <String, Object?>{'sessionId': sessionId});
@@ -206,23 +251,49 @@ class WsClient {
     };
   }
 
-  /// Watches events that belong to no attached session. Answers the unsubscribe.
+  /// Watches frames that belong to no attached session. Answers the unsubscribe.
   ///
   /// A command may **open** the session it is about — the first ping of the walking skeleton
-  /// does — so the event announcing it arrives before anything could have attached to it.
+  /// does — so the event announcing it arrives before anything could have attached to it. An
+  /// `error` frame belongs to no session either: it answers a command, by `correlationId`, and
+  /// whoever sent that command is the one listening for it.
   void Function() observe(void Function(Envelope frame) listener) {
     _observers.add(listener);
     return () => _observers.remove(listener);
   }
 
   /// Sends a command. A socket that is not ready sends nothing, and says so.
-  bool command(String type, Map<String, Object?> payload) {
+  bool command(String type, Map<String, Object?> payload) => send(type, payload) != null;
+
+  /// Sends a command and answers the `id` it left with, or `null` when nothing left.
+  ///
+  /// The id is what an `error` frame names in `correlationId`. A caller that has to tell *its*
+  /// refusal apart from anybody else's — "that request cannot be extended again" — keeps it.
+  String? send(String type, Map<String, Object?> payload) => _send('command', type, payload);
+
+  /// Answers a `request` the server is waiting on.
+  ///
+  /// A `response` and not a command, because that is what it is: the server asked, and
+  /// [correlationId] names the question. The one case that exists is `permission.resolve`, and
+  /// the agent loop on the user's machine is stopped until it arrives.
+  ///
+  /// @returns whether the frame left; a socket that is not ready sends nothing
+  bool respond(String type, Map<String, Object?> payload, {required String correlationId}) =>
+      _send('response', type, payload, correlationId: correlationId) != null;
+
+  String? _send(String kind, String type, Map<String, Object?> payload, {String? correlationId}) {
     final FrameSocket? socket = _socket;
     if (socket == null || _status != ConnectionStatus.ready) {
-      return false;
+      return null;
     }
 
-    final Envelope frame = _frame(type, payload, traceId: _traceIds.next());
+    final Envelope frame = _frame(
+      type,
+      payload,
+      kind: kind,
+      traceId: _traceIds.next(),
+      correlationId: correlationId,
+    );
 
     _logger.debug(
       'ws frame sent',
@@ -231,7 +302,7 @@ class WsClient {
     );
 
     socket.send(encodeEnvelope(frame));
-    return true;
+    return frame.id;
   }
 
   /// The delay before the next attempt: exponential, capped, and jittered.
@@ -252,15 +323,23 @@ class WsClient {
   Future<void> dispose() async {
     await close();
     await _statuses.close();
+    await _rejections.close();
   }
 
-  Envelope _frame(String type, Map<String, Object?> payload, {String? traceId}) => Envelope(
+  Envelope _frame(
+    String type,
+    Map<String, Object?> payload, {
+    String kind = 'command',
+    String? traceId,
+    String? correlationId,
+  }) => Envelope(
     v: protocolVersion,
     id: _traceIds.next(),
-    kind: 'command',
+    kind: kind,
     type: type,
     ts: DateTime.now().toUtc().toIso8601String(),
     traceId: traceId,
+    correlationId: correlationId,
     payload: payload,
   );
 
@@ -273,10 +352,20 @@ class WsClient {
       return;
     }
 
+    // The installation goes in the handshake, and it is what lets a revocation close this socket
+    // at once with 4401. Without it a revoked phone would keep answering permission requests
+    // until its access token ran out — a revocation that revokes nothing for fifteen minutes
+    // (docs/architecture/shared/08-authentication.md#token-no-websocket).
+    final String? installId = _installIds?.installId;
+
     final Envelope frame = _frame('connection.authenticate', <String, Object?>{
       'token': token,
       'locale': _credentials.locale,
-      'client': <String, Object?>{'kind': 'mobile', 'version': _appVersion},
+      'client': <String, Object?>{
+        'kind': 'mobile',
+        'version': _appVersion,
+        if (installId != null && installId.isNotEmpty) 'installId': installId,
+      },
     });
 
     // The token is the one thing that never reaches a log, not even truncated.
@@ -313,7 +402,10 @@ class WsClient {
       return;
     }
 
-    if (frame.kind == 'event') {
+    // An `event` is a fact of the conversation; a `request` is the server asking a question and
+    // holding the agent loop open until somebody answers — `permission.requested` is one, and a
+    // client that dropped it would never show the card. An `error` answers a command.
+    if (frame.kind == 'event' || frame.kind == 'request' || frame.kind == 'error') {
       _deliver(frame);
     }
   }
@@ -329,11 +421,19 @@ class WsClient {
     _move(ConnectionStatus.ready);
 
     // Whatever was being watched before the socket went is watched again, from where it left off.
-    _subscribers.forEach(_requestAttach);
+    _subscribers.keys.toList(growable: false).forEach(_requestAttach);
   }
 
-  void _requestAttach(String sessionId, SessionSubscriber subscriber) {
-    final int resumeFromSeq = subscriber.lastSeq;
+  /// Asks for the session again, resuming from the **furthest behind** of its subscribers.
+  ///
+  /// The furthest behind, not the furthest ahead: resuming from the latter would leave the other
+  /// with a hole it has no way to notice. Re-delivering what a subscriber already applied costs
+  /// nothing, because discarding `seq <= lastSeq` is the first rule of every stream state.
+  void _requestAttach(String sessionId) {
+    final Iterable<int> applied = (_subscribers[sessionId] ?? const <SessionSubscriber>{}).map(
+      (SessionSubscriber subscriber) => subscriber.lastSeq,
+    );
+    final int resumeFromSeq = applied.isEmpty ? 0 : applied.reduce(min);
 
     command('session.attach', <String, Object?>{
       'sessionId': sessionId,
@@ -343,24 +443,29 @@ class WsClient {
 
   void _attached(Envelope frame) {
     final Object? sessionId = frame.payload?['sessionId'];
-    final SessionSubscriber? subscriber = sessionId is String ? _subscribers[sessionId] : null;
+    final Set<SessionSubscriber>? watching = sessionId is String ? _subscribers[sessionId] : null;
 
-    if (subscriber != null && frame.payload?['gap'] == true) {
+    if (watching != null && frame.payload?['gap'] == true) {
       _logger.warn(
         'replay gap — reloading the transcript',
         op: LogOp.wsConnection,
         fields: <String, Object?>{'sessionId': sessionId},
       );
-      subscriber.onGap();
+
+      for (final SessionSubscriber subscriber in watching.toList(growable: false)) {
+        subscriber.onGap();
+      }
     }
   }
 
   void _deliver(Envelope frame) {
     final String? sessionId = frame.sessionId;
-    final SessionSubscriber? subscriber = sessionId == null ? null : _subscribers[sessionId];
+    final Set<SessionSubscriber>? watching = sessionId == null ? null : _subscribers[sessionId];
 
-    if (subscriber != null) {
-      subscriber.onEvent(frame);
+    if (watching != null) {
+      for (final SessionSubscriber subscriber in watching.toList(growable: false)) {
+        subscriber.onEvent(frame);
+      }
       return;
     }
 
@@ -372,6 +477,10 @@ class WsClient {
   void _dropped(int code) {
     _socket = null;
     _inbound = null;
+
+    if (code == closeAuthenticationFailed && !_rejections.isClosed) {
+      _rejections.add(null);
+    }
 
     if (!_wanted || code == 1000) {
       _move(ConnectionStatus.closed);

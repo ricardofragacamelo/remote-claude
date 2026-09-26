@@ -41,6 +41,29 @@ const REFUSALS = [
       api.post(`${environment.backendUrl}/auth/session`, { data: { code: '' } }),
   },
   {
+    what: 'a permission revalidation with no credential',
+    status: 401,
+    code: 'UNAUTHENTICATED',
+    call: (api: APIRequestContext) =>
+      api.get(`${environment.backendUrl}/sessions/01J0ABCDEFGHJKMNPQRSTVWXYZ/permissions/req-1`),
+  },
+  {
+    what: 'a history listing with no credential',
+    status: 401,
+    code: 'UNAUTHENTICATED',
+    call: (api: APIRequestContext) =>
+      api.get(`${environment.backendUrl}/transcripts?workspacePath=/srv`),
+  },
+  {
+    what: 'a page of history with no credential',
+    status: 401,
+    code: 'UNAUTHENTICATED',
+    call: (api: APIRequestContext) =>
+      api.get(
+        `${environment.backendUrl}/transcripts/6b41b192-a41b-46c2-b8d7-5098d8c825be/messages`,
+      ),
+  },
+  {
     what: 'a route that does not exist',
     status: 404,
     code: 'NOT_FOUND',

@@ -1,0 +1,9 @@
+{
+  "id": "02·S-55",
+  "title": "a phone still waiting for approval sees the question, cannot answer it, and is told why",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "code": "DEVICE_NOT_REGISTERED"
+  }
+}

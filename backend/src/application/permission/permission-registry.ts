@@ -1,6 +1,5 @@
 import type { PermissionRequest, PermissionRule } from '@domain/permission';
 import type { SessionId } from '@domain/session';
-import type { UserId } from '@domain/auth';
 import type { CancelScheduled } from '@application/shared';
 
 /**
@@ -64,25 +63,6 @@ export class PermissionRegistry {
     const existing = this.rules.get(sessionId.value) ?? [];
     existing.push(rule);
     this.rules.set(sessionId.value, existing);
-  }
-
-  /**
-   * The rule that answers this invocation, or `null`.
-   *
-   * `userId` is part of the question and not only of the rule's creation: a rule of one person
-   * answering another's request would turn "I trust this command" into "anybody on this machine
-   * trusts this command".
-   */
-  matchingRule(
-    sessionId: SessionId,
-    userId: UserId,
-    toolName: string,
-    input: Readonly<Record<string, unknown>>,
-    now: Date,
-  ): PermissionRule | null {
-    const candidates = this.rules.get(sessionId.value) ?? [];
-
-    return candidates.find((rule) => rule.matches(userId, toolName, input, now)) ?? null;
   }
 
   /** Every rule of a session, expired ones included — "gone" and "stopped applying" differ. */

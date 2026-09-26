@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 
 import { parseEnvironment } from '@remote-claude/config';
+import { AUDIT_RETENTION_FLOOR_DAYS } from '@domain/audit';
 import { PERMISSION_MODES } from '@domain/session';
 import type { PermissionMode } from '@domain/session';
 
@@ -14,6 +15,37 @@ import type { PermissionMode } from '@domain/session';
  * docs/architecture/shared/07-repository-layout.md#configuração-e-segredo.
  */
 const port = z.coerce.number().int().min(1).max(65_535);
+
+/**
+ * The longest any persisted permission rule may live, whatever the environment says.
+ *
+ * A ceiling that an environment variable could raise without bound would not be a ceiling: set to
+ * a century, every rule is a permanent grant. The variable picks a number **under** this one, and a
+ * number above it stops the boot ([D-02](../../../../docs/plans/03-rules-and-audit/decisions.md)).
+ */
+export const RULE_LIFETIME_CEILING_MS = 365 * 24 * 60 * 60 * 1000;
+
+const ruleLifetime = z.coerce.number().int().positive().max(RULE_LIFETIME_CEILING_MS);
+
+/**
+ * The shortest interval the purge job may run at.
+ *
+ * A minute: the cadence is not what keeps the floor — the trigger is — and a job configured to run
+ * every few milliseconds would be a job that holds a connection for ever.
+ */
+export const AUDIT_PURGE_MIN_INTERVAL_MS = 60_000;
+
+/**
+ * `off`, or how often the purge job runs.
+ *
+ * Switching the job off is the literal word and nothing else. `0`, an empty value or a missing
+ * variable stop the boot: the retention promise may be switched off by configuration, never by a
+ * number typed wrong ([D-22](../../../../docs/plans/03-rules-and-audit/decisions.md)).
+ */
+const purgeInterval = z.union([
+  z.literal('off'),
+  z.coerce.number().int().min(AUDIT_PURGE_MIN_INTERVAL_MS),
+]);
 
 export const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']),
@@ -36,10 +68,33 @@ export const environmentSchema = z.object({
   RC_PERMISSION_EXTENSION_MS: z.coerce.number().int().positive(),
   RC_PERMISSION_MAX_EXTENSIONS: z.coerce.number().int().min(0),
   RC_PERMISSION_RULE_LIFETIME_MS: z.coerce.number().int().positive(),
+  RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS: ruleLifetime,
+  RC_PERMISSION_RULE_MAX_LIFETIME_MS: ruleLifetime,
+  RC_PUSH_ENDPOINT: z.url(),
+  RC_PUSH_CREDENTIALS_FILE: z.string().min(1),
+  RC_PUSH_SCOPE: z.string().min(1),
   RC_CHECKPOINT_DIR: z.string().min(1),
   RC_CHECKPOINT_MAX_FILE_BYTES: z.coerce.number().int().positive(),
   RC_CHECKPOINT_MAX_STORE_BYTES: z.coerce.number().int().positive(),
+  // The floor is not a preference: a window below it stops the boot, rather than being raised to
+  // it in silence. A floor that a variable can lower is not a floor.
+  RC_AUDIT_RETENTION_DAYS: z.coerce.number().int().min(AUDIT_RETENTION_FLOOR_DAYS).max(36_500),
+  RC_AUDIT_PURGE_INTERVAL_MS: purgeInterval,
 });
+
+/**
+ * The relations between variables that the variables alone cannot state.
+ *
+ * A default above the ceiling would make every rule granted from an approval card a rule the
+ * installation refuses — the product would be configured to reject its own default.
+ */
+const consistentEnvironment = environmentSchema.refine(
+  (env) => env.RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS <= env.RC_PERMISSION_RULE_MAX_LIFETIME_MS,
+  {
+    path: ['RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS'],
+    message: 'must not be greater than RC_PERMISSION_RULE_MAX_LIFETIME_MS',
+  },
+);
 
 /** The shape the schema accepts, before validation. */
 export type RawEnvironment = Record<keyof z.infer<typeof environmentSchema>, string | undefined>;
@@ -72,7 +127,7 @@ export interface AppConfig {
   /**
    * The numbers a permission request lives by.
    *
-   * All four from configuration, none of them ever from a client. Our timeout is the only
+   * All of them from configuration, none of them ever from a client. Our timeout is the only
    * protection against a session that hangs for ever — the CLI imposes none, measured — so a
    * client that could choose it could switch it off
    * ([D-09](../../../../docs/plans/01-live-session/decisions.md)).
@@ -82,6 +137,41 @@ export interface AppConfig {
     readonly extensionMs: number;
     readonly maxExtensions: number;
     readonly ruleLifetimeMs: number;
+    /** How long a `project` or `always` rule lives when nobody said how long. */
+    readonly ruleDefaultLifetimeMs: number;
+    /** The longest one may live — itself bounded by {@link RULE_LIFETIME_CEILING_MS}. */
+    readonly ruleMaxLifetimeMs: number;
+  };
+
+  /**
+   * How a notification reaches a phone.
+   *
+   * Three values and not one line of vendor anywhere: the endpoint to post to, the file holding
+   * the service account that signs the exchange, and the scope that exchange asks for. Changing
+   * provider is changing these three ([AGENTS.md](../../../../AGENTS.md)).
+   *
+   * The credential is a **file** rather than a variable, like the workspace allowlist and for a
+   * related reason: a private key in an environment variable is a private key in every process
+   * listing and every crash dump. Unlike the allowlist, a missing one does not stop the boot —
+   * push is a best effort beside a deadline that is not, and a backend that refused to start
+   * because nobody has set up notifications yet would trade the product for one of its
+   * conveniences.
+   */
+  readonly push: {
+    readonly endpoint: string;
+    readonly credentialsFile: string;
+    readonly scope: string;
+  };
+
+  /**
+   * How long the trail is kept, and how often it is cut back to that.
+   *
+   * `purgeIntervalMs` is `null` when the job is switched off — on purpose, and said out loud at
+   * boot, because the retention then depends on somebody running `pnpm db purge`.
+   */
+  readonly audit: {
+    readonly retentionDays: number;
+    readonly purgeIntervalMs: number | null;
   };
 
   /** Where the undo snapshots live, and how much room they may take. */
@@ -108,7 +198,7 @@ export interface AppConfig {
  * @throws {import('@remote-claude/config').ConfigurationError} listing every problem at once
  */
 export function loadConfig(source: RawEnvironment): AppConfig {
-  const env = parseEnvironment(environmentSchema, source);
+  const env = parseEnvironment(consistentEnvironment, source);
 
   return {
     nodeEnv: env.NODE_ENV,
@@ -133,6 +223,18 @@ export function loadConfig(source: RawEnvironment): AppConfig {
       extensionMs: env.RC_PERMISSION_EXTENSION_MS,
       maxExtensions: env.RC_PERMISSION_MAX_EXTENSIONS,
       ruleLifetimeMs: env.RC_PERMISSION_RULE_LIFETIME_MS,
+      ruleDefaultLifetimeMs: env.RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS,
+      ruleMaxLifetimeMs: env.RC_PERMISSION_RULE_MAX_LIFETIME_MS,
+    },
+    push: {
+      endpoint: env.RC_PUSH_ENDPOINT,
+      credentialsFile: resolve(env.RC_PUSH_CREDENTIALS_FILE),
+      scope: env.RC_PUSH_SCOPE,
+    },
+    audit: {
+      retentionDays: env.RC_AUDIT_RETENTION_DAYS,
+      purgeIntervalMs:
+        env.RC_AUDIT_PURGE_INTERVAL_MS === 'off' ? null : env.RC_AUDIT_PURGE_INTERVAL_MS,
     },
     checkpoints: {
       directory: resolve(env.RC_CHECKPOINT_DIR),
@@ -146,6 +248,47 @@ export function loadConfig(source: RawEnvironment): AppConfig {
       mobileClientId: env.OIDC_CLIENT_ID_MOBILE,
       scopes: env.OIDC_SCOPES,
     },
+  };
+}
+
+/**
+ * The variables `pnpm db` reads — validated by the same schema as the boot, and no others.
+ *
+ * Purging old rows needs a database and a window, not a push endpoint; demanding the backend's
+ * whole environment would make the command fail for the wrong reason, and exactly when the backend
+ * is down ([D-22](../../../../docs/plans/03-rules-and-audit/decisions.md)).
+ */
+const databaseEnvironmentSchema = environmentSchema.pick({
+  LOG_LEVEL: true,
+  DATABASE_URL: true,
+  RC_AUDIT_RETENTION_DAYS: true,
+});
+
+/** The shape the database command accepts, before validation. */
+export type RawDatabaseEnvironment = Pick<
+  RawEnvironment,
+  keyof z.infer<typeof databaseEnvironmentSchema>
+>;
+
+/** What the database command is configured with. */
+export interface DatabaseConfig {
+  readonly logLevel: string;
+  readonly databaseUrl: string;
+  readonly audit: { readonly retentionDays: number };
+}
+
+/**
+ * Validates what `pnpm db` needs, or refuses to produce a configuration.
+ *
+ * @throws {import('@remote-claude/config').ConfigurationError} listing every problem at once
+ */
+export function loadDatabaseConfig(source: RawDatabaseEnvironment): DatabaseConfig {
+  const env = parseEnvironment(databaseEnvironmentSchema, source);
+
+  return {
+    logLevel: env.LOG_LEVEL,
+    databaseUrl: env.DATABASE_URL,
+    audit: { retentionDays: env.RC_AUDIT_RETENTION_DAYS },
   };
 }
 

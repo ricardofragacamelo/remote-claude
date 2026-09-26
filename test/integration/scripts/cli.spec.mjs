@@ -170,3 +170,39 @@ describe('contracts.mjs', () => {
     expect(runScript('contracts.mjs', ['--check']).code).toBe(0);
   });
 });
+
+describe('db.mjs', () => {
+  it('lists every command, the purge among them, when asked for none', () => {
+    const result = runScript('db.mjs');
+
+    expect(result.code).toBe(2);
+    for (const command of ['migrate', 'purge', 'reset', 'seed']) {
+      expect(result.stdout).toContain(command);
+    }
+  });
+
+  it('fails the purge, and says nothing was removed, when the database cannot be reached — S-91', () => {
+    // Only what the command reads: it must not need the backend's whole environment to say this.
+    const result = runScript('db.mjs', ['purge'], {
+      DATABASE_URL: 'postgresql://nobody:nothing@127.0.0.1:1/none',
+      LOG_LEVEL: 'fatal',
+      RC_AUDIT_RETENTION_DAYS: '90',
+    });
+
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain('the purge could not start');
+    expect(result.stdout).toContain('nothing was removed');
+  });
+
+  it('refuses a window below the floor before touching anything — S-33', () => {
+    const result = runScript('db.mjs', ['purge'], {
+      DATABASE_URL: 'postgresql://nobody:nothing@127.0.0.1:1/none',
+      LOG_LEVEL: 'fatal',
+      RC_AUDIT_RETENTION_DAYS: '30',
+    });
+
+    expect(result.code).not.toBe(0);
+    expect(result.stdout).toContain('without a report');
+    expect(result.stderr).toContain('RC_AUDIT_RETENTION_DAYS');
+  });
+});

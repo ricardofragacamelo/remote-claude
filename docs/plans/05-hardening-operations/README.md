@@ -44,6 +44,7 @@ pontas, tela de diagnóstico, `osv-scanner`, Sonar e o job de e2e mobile no CI
 | | |
 |---|---|
 | Limite derivado da RAM, TTL de ociosa, sessão órfã, shutdown ordeiro | F0 |
+| Nova tentativa do push quando o provedor falha | F0 |
 | Rate limit e limites anunciados por connection | F0 |
 | Ingestão dos logs do web e do app, e a tela de diagnóstico | F1 |
 | Provedor de identidade real como **configuração**, rotação e revogação | F2 |
@@ -68,7 +69,7 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Limites](F0-limits.md) | RAM, TTL, órfã, shutdown, rate limit | B-01…B-07 | 🔲 |
+| F0 | [Limites](F0-limits.md) | RAM, TTL, órfã, shutdown, rate limit, nova tentativa do push | B-01…B-07, B-25 | 🔲 |
 | F1 | [Logs do cliente](F1-client-logs.md) | ingestão dos dois shippers e diagnóstico | B-08…B-11 | 🔲 |
 | F2 | [Identidade](F2-identity.md) | provedor real por configuração, rotação, revogação | B-12…B-15 | 🔲 |
 | F3 | [Portões](F3-gates.md) | osv-scanner, Sonar, CI do mobile, nightly | B-16…B-20 | 🔲 |
@@ -90,6 +91,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Sessão ociosa libera recurso; sessão ativa não é morta | B-02 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#ciclo-de-vida-e-recursos) | S-04, S-05 |
 | Subprocesso não sobrevive ao backend | B-03, B-04 | [backend/06-realtime](../../architecture/backend/06-realtime.md#shutdown) | S-06…S-09, S-14 |
 | Cliente que martela é contido, com `Retry-After` | B-05, B-06, B-07 | [backend/06-realtime](../../architecture/backend/06-realtime.md#heartbeat-e-limites) | S-10…S-12 |
+| Uma falha pontual do provedor não perde a notificação | B-25 | [plano 02 · D-05](../02-mobile-approval/decisions.md#d-05--quando-o-push-não-sai) | S-47…S-53 |
 | Log do cliente tem para onde ir, sem virar vazamento | B-08…B-10 | [03-logging](../../architecture/shared/03-logging.md) | S-15…S-20, S-22 |
 | `debug` em release é ligável sem recompilar | B-11 | [mobile/05-logging](../../architecture/mobile/05-logging.md) | S-21 |
 | Trocar de provedor é trocar configuração | B-12 | [08-authentication](../../architecture/shared/08-authentication.md#configuração) | S-23, S-24, S-32 |
@@ -112,6 +114,7 @@ Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 ```
 backend/src/
 ├── application/session/           session-reaper (TTL) · capacity (RAM)
+├── application/notification/      nova tentativa do push, com recuo
 ├── adapter/inbound/http/logs/     ingestão dos lotes do cliente
 ├── infrastructure/websocket/      rate limit por connection, limites anunciados
 └── infrastructure/lifecycle/      boot: varredura de órfã · shutdown ordeiro

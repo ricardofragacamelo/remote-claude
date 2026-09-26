@@ -23,6 +23,11 @@ iniciamos aquele `sessionId`. O SDK não informa a origem de uma sessão, e é e
 permite rotular "nossa" e "externa" na lista — e escolher a estratégia de retomada. Uma linha
 de metadado não é duplicar transcript.
 
+Esse registro é a tabela `session_origins` — `claude_session_id` (chave), `session_id`,
+`user_id`, `workspace_path`, `opened_at`, e nenhuma coluna de conteúdo. Dona é `session`, que a
+grava **antes** do `query()`, com o UUID que ela mesma cunhou e passou ao SDK como `sessionId`;
+falha ao gravar não abre a sessão. Gravar a mesma conversa duas vezes mantém o primeiro dono.
+
 **E guarda o estado em que a sessão deixou cada arquivo** — caminho, hash e mtime, gravados no
 hook `PostToolUse`. É o que permite ao desfazer distinguir "como a sessão deixou" de "alterado
 à mão depois", porque o store de checkpoint do CLI guarda conteúdo puro e não sabe quem
@@ -80,9 +85,11 @@ Interface em `application/<domínio>/ports/`, implementação em
 ```ts
 // src/application/permission/ports/permission-rule.repository.ts
 export interface PermissionRuleRepository {
-  findMatching(sessionId: SessionId, toolName: string, input: ToolInput): Promise<PermissionRule | null>
-  save(rule: PermissionRule): Promise<void>
-  revoke(ruleId: PermissionRuleId): Promise<void>
+  grant(rule: PermissionRule, now: Date): Promise<RuleGrant>          // atômico: a equivalente ativa, ou esta
+  findById(ruleId: string): Promise<PermissionRule | null>
+  findApplicable(userId: UserId, projectPath: string | null, now: Date): Promise<PermissionRule[]>
+  listFor(userId: UserId): Promise<PermissionRule[]>
+  saveRevocation(rule: PermissionRule): Promise<void>
 }
 export const PERMISSION_RULE_REPOSITORY = Symbol('PermissionRuleRepository')
 ```
@@ -146,6 +153,37 @@ aprovação seria herdada em silêncio. O índice nasce composto na migration qu
 depois seria migração em tabela com dado. Ver
 [08-authentication](../shared/08-authentication.md#device-e-o-canal-mobile).
 
+### Os fatos de conta
+
+`audit_events` é irmã de `audit_entries`, não um alargamento dela. A trilha de invocação é moldada
+em torno de **uma invocação** — uma sessão, um nome de tool, um input exato —, e nenhuma das três
+colunas tem valor honesto para "este celular foi aprovado". Tornar as três anuláveis transformaria
+cada `NOT NULL` da tabela cuja razão de existir é poder ser confiada em um talvez.
+
+O que a irmã copia é a disciplina: `seq` que ordena enquanto `at` filtra, ULID cunhado pelo
+`IdGenerator` do domínio em vez de default do banco, e as mesmas duas triggers — `UPDATE` aborta
+sempre, `DELETE` aborta dentro do piso de 90 dias. Ver
+[03-modules](03-modules.md#audit) e
+[08-authentication](../shared/08-authentication.md#logging).
+
+### As regras de permissão
+
+`permission_rules` guarda só o que precisa sobreviver ao processo — escopo `project` e `always`. A
+regra de `session` fica em memória e morre com o subprocesso, que é o que ela significa.
+
+- `user_id` e `expires_at` são **`NOT NULL`**: regra é de uma pessoa, e toda regra expira. O teto da
+  validade é configuração, conferida na criação — um `CHECK` congelaria o número numa migration.
+- **Nunca se apaga uma regra.** Revogar grava `revoked_at` e a linha fica: `permission_requests.rule_id`
+  aponta para a regra que resolveu, e "qual regra deixou isto rodar?" precisa de resposta depois da
+  revogação.
+- **Sem índice único**, de propósito: "a mesma regra duas vezes é uma" vale entre as **ativas**, e
+  estar ativa depende do relógio, que um índice não lê. O repositório serializa a concessão da
+  mesma regra com um *advisory lock* de transação sobre usuário, escopo, projeto, padrão e decisão.
+- O escopo e o projeto concordam por `CHECK`: `project` tem `project_path`, `always` não.
+
+Ver [a F0 do plano 03](../../plans/03-rules-and-audit/F0-rules.md) e a
+[D-10](../../plans/03-rules-and-audit/decisions.md#d-10--dois-caminhos-para-nascer-uma-rotina).
+
 ### A trilha de auditoria
 
 A tabela de auditoria foge de duas convenções acima, e foge de propósito.
@@ -162,8 +200,13 @@ o relógio da máquina do usuário pode ser ajustado para trás. `at` filtra, `s
 
 ```
 BEFORE UPDATE → aborta sempre
-BEFORE DELETE → aborta se a linha estiver dentro do piso de retenção (90 dias)
+BEFORE DELETE → aborta se a linha estiver dentro do piso de retenção (90 dias = 2160 horas)
 ```
+
+O piso é medido em **horas**, não em dias de calendário: para `timestamptz`, `interval '90 days'` é
+aritmética no fuso da sessão, e atravessando um horário de verão são 2159 ou 2161 horas — enquanto
+o código conta 90 × 24. A `0010` reescreveu as duas funções com `interval '2160 hours'`
+([03 · D-21](../../plans/03-rules-and-audit/decisions.md#d-21--o-piso-são-2160-horas-não-90-dias-de-calendário)).
 
 E um índice único sobre `(session_id, tool_use_id)`: o SDK reentrega uma invocação pendente depois
 de um gap de transporte, e uma segunda linha faria a trilha afirmar que o comando rodou duas
@@ -182,6 +225,21 @@ ou a um `DELETE` digitado à mão.
 
 A trigger é barreira, não permissão: quem tem o papel de owner pode desligá-la. Ela impede o
 acidente e o bug, não o ato deliberado de quem já controla o banco.
+
+**O que a purga apaga fica escrito em `audit_purges`**, uma linha por lote, e a linha é gravada pela
+**mesma instrução** que apaga — um CTE que seleciona o lote, apaga e insere a contagem do que o
+`DELETE` devolveu. Uma instrução é uma transação: não existe instante em que a trilha perdeu linhas
+e nada diz quem as tirou. A tabela recusa `UPDATE` e `DELETE` sempre, e repete o piso num `CHECK`
+(`retention_days >= 90`). As duas trilhas ganharam índice em `at`, que é por onde o lote é escolhido
+([03 · D-19](../../plans/03-rules-and-audit/decisions.md#d-19--a-purga-se-registra-na-mesma-instrução-que-apaga)).
+
+**A entrada de decisão carrega o próprio veredito** — `request_id`, `auto`, `rule_id`, `scope`,
+`resolved_by`, `resolved_from` —, e toda entrada carrega o `trace_id` em escopo quando foi gravada.
+São colunas anuláveis, acrescentadas pela `0009` sem reescrever linha
+([03 · D-15](../../plans/03-rules-and-audit/decisions.md#d-15--a-correlação-nasce-com-a-entrada)). Duas
+`CHECK` repetem no banco o que o domínio garante: entrada `recorded` não tem veredito, e só decisão
+automática aponta regra. O `trace_id` é carimbado pelo repositório, a partir do contexto: o domínio
+não sabe o que é um trace.
 
 ---
 

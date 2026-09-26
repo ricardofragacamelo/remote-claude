@@ -18,7 +18,11 @@
     "error": {
       "unauthenticated": "Please sign in again.",
       "tokenExpired": "Your session expired.",
-      "invalidState": "The sign-in reply did not match the request."
+      "invalidState": "The sign-in reply did not match the request.",
+      "deviceNotRegistered": "This device is not approved yet.",
+      "deviceRevoked": "This device has been revoked.",
+      "deviceNotFound": "That device does not exist.",
+      "deviceApprovalForbidden": "A device cannot approve a device. Use the browser."
     },
     "signIn": {
       "title": "Sign in to continue",
@@ -153,7 +157,9 @@
     },
     "scope": {
       "once": "Allow once",
-      "session": "Allow for this session"
+      "session": "Allow for this session",
+      "project": "Don't ask again in this project",
+      "always": "Don't ask again anywhere"
     },
     "decision": {
       "allow": "allowed",
@@ -177,12 +183,169 @@
       "extensionLimitReached": "That request cannot be extended again.",
       "scopeUnsupported": "This build cannot grant that scope.",
       "rulePatternInvalid": "That rule pattern is not valid.",
-      "ruleExpiryTooLong": "That rule would last longer than this installation allows."
+      "ruleExpiryTooLong": "That rule would last longer than this installation allows.",
+      "ruleNotFound": "That rule does not exist.",
+      "ruleNotOwned": "That rule belongs to somebody else.",
+      "ruleExpiryInvalid": "A rule has to expire after it is created."
+    },
+    "persist": {
+      "title": "Stop asking about this?",
+      "project": "Claude will run what matches the rule below in this project without asking you, for {{duration}}.",
+      "always": "Claude will run what matches the rule below in any of your projects without asking you, for {{duration}}.",
+      "days": "{{days}} days",
+      "hours": "{{hours}} hours",
+      "revocable": "You can take it back at any time from your rules. Revoking takes effect on the next request, in every open session.",
+      "back": "Go back",
+      "confirm": "Allow and stop asking",
+      "openRules": "See your rules"
     }
   },
   "audit": {
+    "screen": {
+      "title": "What ran on your machine",
+      "open": "What ran",
+      "back": "Back to sessions"
+    },
+    "list": {
+      "title": "Audit trail",
+      "description": "Every tool Claude used on this machine, newest first — including the ones nobody was asked about.",
+      "loading": "Loading the trail…",
+      "emptyTitle": "Nothing here",
+      "emptyDescription": "No tool ran that matches these filters. Clear them to see the whole trail.",
+      "loadMore": "Load older entries",
+      "loadingMore": "Loading older entries…"
+    },
+    "filter": {
+      "label": "Filter the trail",
+      "session": "Session",
+      "tool": "Tool",
+      "decision": "Decision",
+      "anyDecision": "Any decision",
+      "from": "From (included)",
+      "to": "Until (excluded)",
+      "apply": "Apply filters",
+      "clear": "Clear filters"
+    },
+    "decision": {
+      "recorded": "Recorded",
+      "allowed": "Allowed",
+      "denied": "Refused"
+    },
+    "row": {
+      "label": "{{tool}} at {{at}}",
+      "unasked": "Nobody was asked",
+      "openRule": "Open the rule that allowed it",
+      "details": "Exact input and links",
+      "session": "Session",
+      "trace": "Trace",
+      "noTrace": "none recorded",
+      "request": "Request",
+      "onlyThisSession": "Only this session"
+    },
+    "verdict": {
+      "recorded": "Recorded as it was about to run, before any decision.",
+      "unknown": "Written before the trail kept how it was decided.",
+      "byRule": "{{decision}} by one of your rules ({{scope}}), without asking anybody.",
+      "bySessionRule": "{{decision}} by a rule for that session only. It ended with the session, so there is nothing left to open.",
+      "nobodyAnswered": "Nobody answered in time, so it was refused.",
+      "byPerson": "{{decision}} by {{who}}, from {{from}}.",
+      "somebody": "somebody"
+    },
+    "origin": {
+      "web": "the web",
+      "mobile": "the phone",
+      "unknown": "an unknown place"
+    },
     "error": {
-      "unavailable": "The audit trail could not be written, so nothing was allowed to run."
+      "unavailable": "The audit trail could not be written, so nothing was allowed to run.",
+      "forbidden": "That session belongs to somebody else, so its trail is not yours to read."
+    }
+  },
+  "devices": {
+    "list": {
+      "title": "Devices",
+      "description": "The phones that may answer a permission request. A device is approved from here, and never from itself.",
+      "loading": "Loading devices…",
+      "emptyTitle": "No device registered yet",
+      "emptyDescription": "Install the app and sign in on your phone. It will appear here, waiting for you to approve it."
+    },
+    "status": {
+      "pending": "Waiting for approval",
+      "approved": "Approved",
+      "revoked": "Revoked"
+    },
+    "row": {
+      "platform": "{{platform}} · app {{appVersion}}",
+      "lastSeen": "Last seen {{at}}",
+      "noPush": "No push token: this device is only reachable while the app is open."
+    },
+    "action": {
+      "approve": "Approve this device",
+      "revoke": "Revoke"
+    },
+    "confirm": {
+      "title": "Revoke this device",
+      "description": "{{name}} will stop answering permission requests immediately, and its open connections will be closed.",
+      "cancel": "Keep it",
+      "confirm": "Revoke it"
+    }
+  },
+  "rules": {
+    "screen": {
+      "title": "Your rules",
+      "open": "Rules you granted",
+      "back": "Back to sessions"
+    },
+    "list": {
+      "title": "Rules you granted",
+      "description": "What Claude may do on this machine without asking you first. Revoking takes effect on the next request, in every open session.",
+      "loading": "Loading your rules…",
+      "emptyTitle": "No rules yet",
+      "emptyDescription": "A rule is created when you answer a request with “don't ask again”. Until then, Claude asks you every time."
+    },
+    "scope": {
+      "project": "In one project",
+      "always": "In every project"
+    },
+    "decision": {
+      "allow": "runs without asking",
+      "deny": "refused without asking"
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "revoked": "Revoked"
+    },
+    "row": {
+      "label": "Rule {{pattern}}",
+      "toolDecision": "{{tool}} · {{decision}}",
+      "project": "Project: {{path}}",
+      "granted": "Granted by {{who}} on {{at}}",
+      "validUntil": "Valid until {{at}}",
+      "expiredOn": "Expired on {{at}}. Claude asks you again.",
+      "expiringSoon": "Expires soon: after {{at}}, Claude will ask you again.",
+      "revokedOn": "Revoked on {{at}}. It no longer answers anything."
+    },
+    "action": {
+      "revoke": "Revoke",
+      "revoking": "Revoking…"
+    },
+    "detail": {
+      "screenTitle": "A rule you granted",
+      "title": "The rule",
+      "description": "What this rule lets Claude do, and whether it still does.",
+      "loading": "Loading the rule…",
+      "emptyTitle": "No rule",
+      "emptyDescription": "There is no rule to show."
+    }
+  },
+  "transcript": {
+    "error": {
+      "notFound": "That conversation does not exist, or it is not yours to read.",
+      "invalidSessionId": "{{sessionId}} is not a conversation identifier.",
+      "claudeUnavailable": "Claude could not read its history on this machine.",
+      "claudeTimeout": "Claude took too long to read its history. Try again.",
+      "cursorStale": "This conversation changed while you were reading it. Reload it from the latest messages."
     }
   }
 }

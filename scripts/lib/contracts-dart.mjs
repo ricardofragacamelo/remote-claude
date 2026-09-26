@@ -225,6 +225,9 @@ function emitClass(declaration) {
  * @returns {string}
  */
 export function emitDart(model) {
+  // A payload-only contract has a class and no frame constants: see PAYLOAD_KINDS.
+  const frames = model.messages.filter((message) => message.frame);
+
   const blocks = [
     BANNER,
     '',
@@ -240,10 +243,10 @@ export function emitDart(model) {
     '',
     '/// Every frame `type` the classes below cover.',
     'const List<String> frameTypes = <String>[',
-    ...model.messages.map((message) => `  '${message.frameType}',`),
+    ...frames.map((message) => `  '${message.frameType}',`),
     '];',
     '',
-    ...model.messages.flatMap((message) => [
+    ...frames.flatMap((message) => [
       `/// \`kind\` of a ${message.frameType} frame.`,
       `const String ${camelCase(message.name)}Kind = '${message.frameKind}';`,
       '',

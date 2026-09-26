@@ -18,6 +18,7 @@ import type {
 import type { Clock } from '@domain/shared';
 import type { PermissionMode, SessionCloseReason } from '@domain/session';
 import type { Logger } from '@shared/logging/logger';
+import { currentTraceId, runWithTrace } from '@shared/logging/trace-context';
 import { pathsWrittenBy } from './file-tools';
 import { SessionInputQueue } from './input-queue';
 import type { QueryFactory } from './query.factory';
@@ -66,6 +67,19 @@ export class SessionRunner implements ClaudeSessionHandle {
   private query: Query | null = null;
   private closed = false;
 
+  /**
+   * The trace of each prompt queued and not yet begun, oldest first.
+   *
+   * The SDK runs its whole loop in the async context of whoever opened the session, so without
+   * this every hook of a two-day session would carry the `traceId` of its `session.start` — and one
+   * trace per session is the `sessionId`'s job, not the trace's
+   * ([D-16](../../../../../docs/plans/03-rules-and-audit/decisions.md)).
+   */
+  private readonly pendingTraces: (string | null)[] = [];
+
+  /** The trace the current turn runs under: the prompt's, once the CLI says the turn began. */
+  private turnTrace: string | null = null;
+
   constructor(
     private readonly start: ClaudeSessionStart,
     private readonly deps: SessionRunnerDeps,
@@ -81,6 +95,9 @@ export class SessionRunner implements ClaudeSessionHandle {
     const sessionId = this.start.sessionId.value;
     const directory = this.start.workspace.value;
 
+    // Until the first turn begins, what runs does so because the session was opened.
+    this.turnTrace = currentTraceId();
+
     // Before anything is spawned. In a trusted directory the SDK skips `canUseTool` entirely —
     // measured — so a session opened without this step has no human approval at all.
     const clearance = clearTrustMark(directory);
@@ -92,6 +109,7 @@ export class SessionRunner implements ClaudeSessionHandle {
         sessionId,
         phase: 'starting',
         workspacePath: directory,
+        claudeSessionId: this.start.claudeSessionId?.value ?? this.start.resumeSessionId,
         trustMark: clearance,
       },
       'opening a claude session',
@@ -102,6 +120,7 @@ export class SessionRunner implements ClaudeSessionHandle {
       model: this.start.model,
       permissionMode: this.start.permissionMode,
       resumeSessionId: this.start.resumeSessionId,
+      claudeSessionId: this.start.claudeSessionId?.value ?? null,
       limits: this.deps.limits,
       abortController: this.abort,
       onStderr: (data) => {
@@ -151,34 +170,40 @@ export class SessionRunner implements ClaudeSessionHandle {
    *
    * The wait itself is the gate's; what belongs here is the translation, and the refusal always
    * carries a message, because that message is what goes back to Claude.
+   *
+   * The answer never carries `updatedPermissions`, whatever the SDK suggested. A rule handed back
+   * is applied by the CLI without calling this again, and nothing takes it out of a live session —
+   * revoking one of ours would stop working until the next session. Our rule is the only authority
+   * ([D-09](../../../../../docs/plans/03-rules-and-audit/decisions.md)).
    */
   private canUseTool(): CanUseTool {
-    return async (toolName, input, options): Promise<PermissionResult> => {
-      const verdict = await this.deps.permissions.ask({
-        sessionId: this.start.sessionId,
-        requestId: options.requestId,
-        toolUseId: options.toolUseID ?? null,
-        toolName,
-        input,
-        signal: options.signal,
-      });
-
-      this.deps.logger.debug(
-        {
-          op: 'claude.permission.request',
-          layer: 'adapter',
-          sessionId: this.start.sessionId.value,
+    return (toolName, input, options): Promise<PermissionResult> =>
+      this.inTurn(async (): Promise<PermissionResult> => {
+        const verdict = await this.deps.permissions.ask({
+          sessionId: this.start.sessionId,
           requestId: options.requestId,
+          toolUseId: options.toolUseID ?? null,
           toolName,
-          decision: verdict.decision,
-        },
-        'canUseTool answered',
-      );
+          input,
+          signal: options.signal,
+        });
 
-      return verdict.decision === 'allow'
-        ? { behavior: 'allow', updatedInput: input }
-        : { behavior: 'deny', message: verdict.reason ?? 'denied' };
-    };
+        this.deps.logger.debug(
+          {
+            op: 'claude.permission.request',
+            layer: 'adapter',
+            sessionId: this.start.sessionId.value,
+            requestId: options.requestId,
+            toolName,
+            decision: verdict.decision,
+          },
+          'canUseTool answered',
+        );
+
+        return verdict.decision === 'allow'
+          ? { behavior: 'allow', updatedInput: input }
+          : { behavior: 'deny', message: verdict.reason ?? 'denied' };
+      });
   }
 
   prompt(text: string): void {
@@ -194,6 +219,8 @@ export class SessionRunner implements ClaudeSessionHandle {
       'prompt queued',
     );
 
+    // Queued with the prompt, in the same order, and adopted when the CLI opens the turn.
+    this.pendingTraces.push(currentTraceId());
     this.queue.push(text);
   }
 
@@ -226,7 +253,9 @@ export class SessionRunner implements ClaudeSessionHandle {
 
     try {
       for await (const message of query) {
-        this.onMessage(message);
+        this.inTurn(() => {
+          this.onMessage(message);
+        });
       }
     } catch (error) {
       reason = 'failed';
@@ -292,68 +321,69 @@ export class SessionRunner implements ClaudeSessionHandle {
    * ([D-07](../../../../../docs/plans/01-live-session/decisions.md)).
    */
   private auditHook(sessionId: string) {
-    return async (input: unknown, toolUseId: string | undefined): Promise<HookJSONOutput> => {
-      const hook = input as {
-        tool_name?: string;
-        tool_input?: Record<string, unknown>;
-        prompt_id?: string;
-      };
+    return (input: unknown, toolUseId: string | undefined): Promise<HookJSONOutput> =>
+      this.inTurn(async (): Promise<HookJSONOutput> => {
+        const hook = input as {
+          tool_name?: string;
+          tool_input?: Record<string, unknown>;
+          prompt_id?: string;
+        };
 
-      try {
-        await this.deps.recorder.record({
-          sessionId: this.start.sessionId,
-          toolUseId: toolUseId ?? null,
-          toolName: hook.tool_name ?? 'unknown',
-          input: hook.tool_input ?? {},
-          promptId: hook.prompt_id ?? null,
-          at: this.deps.clock.now(),
-        });
-      } catch (error) {
-        this.deps.logger.error(
+        try {
+          await this.deps.recorder.record({
+            sessionId: this.start.sessionId,
+            toolUseId: toolUseId ?? null,
+            toolName: hook.tool_name ?? 'unknown',
+            input: hook.tool_input ?? {},
+            promptId: hook.prompt_id ?? null,
+            at: this.deps.clock.now(),
+          });
+        } catch (error) {
+          this.deps.logger.error(
+            {
+              op: 'claude.permission.request',
+              layer: 'adapter',
+              sessionId,
+              toolName: hook.tool_name,
+              err: error,
+            },
+            'the tool is refused because it could not be recorded',
+          );
+
+          return {
+            hookSpecificOutput: {
+              hookEventName: 'PreToolUse',
+              permissionDecision: 'deny',
+              permissionDecisionReason: 'the audit trail could not be written',
+            },
+          };
+        }
+
+        this.deps.logger.debug(
           {
             op: 'claude.permission.request',
             layer: 'adapter',
             sessionId,
+            toolUseId,
             toolName: hook.tool_name,
-            err: error,
+            // The whole input, deliberately: this line is part of the trail, not a sample of it.
+            input: hook.tool_input,
           },
-          'the tool is refused because it could not be recorded',
+          'tool invocation recorded',
         );
 
-        return {
-          hookSpecificOutput: {
-            hookEventName: 'PreToolUse',
-            permissionDecision: 'deny',
-            permissionDecisionReason: 'the audit trail could not be written',
-          },
-        };
-      }
+        // After the trail and never before it: the snapshot is best-effort and the trail is not, so
+        // a snapshot that somehow failed must not be able to stop a tool the trail already recorded.
+        for (const path of pathsWrittenBy(hook.tool_name ?? '', hook.tool_input)) {
+          await this.deps.journal.captureBefore(
+            this.start.sessionId,
+            hook.prompt_id ?? 'unknown',
+            path,
+          );
+        }
 
-      this.deps.logger.debug(
-        {
-          op: 'claude.permission.request',
-          layer: 'adapter',
-          sessionId,
-          toolUseId,
-          toolName: hook.tool_name,
-          // The whole input, deliberately: this line is part of the trail, not a sample of it.
-          input: hook.tool_input,
-        },
-        'tool invocation recorded',
-      );
-
-      // After the trail and never before it: the snapshot is best-effort and the trail is not, so
-      // a snapshot that somehow failed must not be able to stop a tool the trail already recorded.
-      for (const path of pathsWrittenBy(hook.tool_name ?? '', hook.tool_input)) {
-        await this.deps.journal.captureBefore(
-          this.start.sessionId,
-          hook.prompt_id ?? 'unknown',
-          path,
-        );
-      }
-
-      return { continue: true };
-    };
+        return { continue: true };
+      });
   }
 
   /**
@@ -363,16 +393,26 @@ export class SessionRunner implements ClaudeSessionHandle {
    * to refactor the parser" is a sentence somebody can act on, and a `prompt_id` is not.
    */
   private turnHook() {
-    return async (input: unknown): Promise<HookJSONOutput> => {
-      const hook = input as { prompt?: string; prompt_id?: string };
+    return (input: unknown): Promise<HookJSONOutput> => {
+      // The turn of the oldest prompt still waiting: prompts are taken in the order they were
+      // queued, and this hook is the CLI saying it has taken one.
+      // A turn with no prompt of ours behind it keeps the trace it had.
+      const queued = this.pendingTraces.shift();
+      if (queued !== undefined) {
+        this.turnTrace = queued;
+      }
 
-      await this.deps.journal.openTurn(
-        this.start.sessionId,
-        hook.prompt_id ?? 'unknown',
-        hook.prompt ?? '',
-      );
+      return this.inTurn(async (): Promise<HookJSONOutput> => {
+        const hook = input as { prompt?: string; prompt_id?: string };
 
-      return { continue: true };
+        await this.deps.journal.openTurn(
+          this.start.sessionId,
+          hook.prompt_id ?? 'unknown',
+          hook.prompt ?? '',
+        );
+
+        return { continue: true };
+      });
     };
   }
 
@@ -384,15 +424,29 @@ export class SessionRunner implements ClaudeSessionHandle {
    * a journal failure from stopping somebody's work.
    */
   private resultHook() {
-    return async (input: unknown): Promise<HookJSONOutput> => {
-      const hook = input as { tool_name?: string; tool_input?: unknown };
+    return (input: unknown): Promise<HookJSONOutput> =>
+      this.inTurn(async (): Promise<HookJSONOutput> => {
+        const hook = input as { tool_name?: string; tool_input?: unknown };
 
-      for (const path of pathsWrittenBy(hook.tool_name ?? '', hook.tool_input)) {
-        await this.deps.journal.recordResult(this.start.sessionId, path);
-      }
+        for (const path of pathsWrittenBy(hook.tool_name ?? '', hook.tool_input)) {
+          await this.deps.journal.recordResult(this.start.sessionId, path);
+        }
 
-      return { continue: true };
-    };
+        return { continue: true };
+      });
+  }
+
+  /**
+   * Runs `body` under the trace of the current turn.
+   *
+   * What the SDK calls back into — a hook, `canUseTool`, a message of the stream — is logged, written
+   * to the trail and published under the `traceId` of the prompt that caused it, which is what makes
+   * the trace lead from a record of the trail to the log and to the event (S-31).
+   */
+  private inTurn<T>(body: () => T): T {
+    const traceId = this.turnTrace;
+
+    return traceId === null ? body() : runWithTrace({ traceId }, body);
   }
 
   /** The SDK's own channel for telling us we shadowed our permission callback. */

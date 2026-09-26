@@ -8,8 +8,8 @@ import 'dart:async';
 
 import 'package:remote_claude/core/network/contracts/protocol.g.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
-import 'package:remote_claude/features/session/data/mappers/pong_mapper.dart';
-import 'package:remote_claude/features/session/domain/entities/pong.dart';
+import 'package:remote_claude/features/session/data/mappers/session_event_mapper.dart';
+import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 
 /// Reads and writes the session's frames.
@@ -53,6 +53,9 @@ class SessionWsDataSource implements SessionSubscriber {
   bool ping({String? sessionId, required String nonce}) =>
       _client.command('diag.ping', <String, Object?>{'sessionId': ?sessionId, 'nonce': nonce});
 
+  /// Sends one of the session's commands, with [payload] exactly as the contract carries it.
+  bool send(String type, Map<String, Object?> payload) => _client.command(type, payload);
+
   @override
   void onEvent(Envelope frame) => _onFrame(frame);
 
@@ -67,9 +70,12 @@ class SessionWsDataSource implements SessionSubscriber {
   }
 
   void _onFrame(Envelope frame) {
-    final Pong? pong = pongFrom(frame);
-    if (pong != null) {
-      _emit(PongReceived(pong));
+    final SessionEvent? event = sessionEventFrom(frame);
+
+    // A frame with no `seq` is not part of a session's history — a question is asked, not
+    // recorded — and belongs to the permission queue rather than here.
+    if (event != null) {
+      _emit(EventReceived(event));
     }
   }
 

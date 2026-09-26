@@ -161,7 +161,16 @@ Reabrir isso é **ADR**, não decisão de plano.
 pendentes é como se aprova por cansaço o aparelho errado, meses depois. Não há teto de aparelhos
 por usuário — o número não é o problema, a idade é.
 
-Revogar um device invalida os refresh tokens dele imediatamente e é registrado em `audit`.
+**Revogar um device faz a credencial dele parar de valer aqui, na hora** — as connections abertas
+fecham com `4401`, um novo handshake daquele `installId` é recusado, e toda ação que decide
+responde `DEVICE_REVOKED`. É registrado em `audit`.
+
+O que a revogação **não** faz, e precisa estar dito: encerrar a sessão do usuário no provedor. O
+backend é Resource Server e nunca vê o refresh token do app — quem renova é o próprio app, direto
+contra o provedor —, então não há o que revogar lá sem guardar credencial, o que é proibido. O
+access token daquele aparelho continua válido **para o provedor** até expirar; ele não abre nada
+aqui, que é o que importa. Encerrar no provedor é o logout
+([02 · D-18](../../plans/02-mobile-approval/decisions.md#d-18--o-que-a-revogação-consegue-prometer)).
 
 ---
 

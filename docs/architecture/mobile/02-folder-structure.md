@@ -48,7 +48,7 @@ mobile/
 │   │   │       ├── widgets/
 │   │   │       └── providers/          session_list_provider.dart (+ .g.dart)
 │   │   │
-│   │   ├── permission/                 ← a feature mais importante do app
+│   │   ├── permission/                 ← a feature mais importante do app; pedido, escopo e regras
 │   │   ├── workspace/
 │   │   ├── transcript/
 │   │   └── auth/
@@ -56,6 +56,7 @@ mobile/
 │   ├── core/                           sem regra de negócio
 │   │   ├── network/                    dio, ws_client, interceptors
 │   │   ├── storage/                    secure storage
+│   │   ├── session/                    passos que o logout roda enquanto a credencial vale
 │   │   ├── logging/                    logger + formatter JSON
 │   │   ├── error/                      Failure base, mapeamento
 │   │   ├── theme/                      tokens, Material 3

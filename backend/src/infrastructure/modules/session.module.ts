@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 
 import {
+  CLAUDE_SESSION_ID_GENERATOR,
   CLAUDE_SESSION_PORT,
   CloseSessionUseCase,
   InterruptSessionUseCase,
   PromptSessionUseCase,
   SESSION_BROADCASTER,
   SESSION_FILE_JOURNAL,
+  SESSION_ORIGIN_REPOSITORY,
   SESSION_PERMISSION_GATE,
   SessionRegistry,
   SetSessionModelUseCase,
@@ -18,6 +20,7 @@ import {
 import type {
   ClaudeSessionPort,
   SessionBroadcaster,
+  SessionOriginRepository,
   WorkspaceResolver,
 } from '@application/session';
 import { CLOCK, ID_GENERATOR } from '@application/shared';
@@ -34,6 +37,7 @@ import { QUERY_FACTORY, realQueryFactory } from '@adapter/outbound/claude/query.
 import { SESSION_LIMITS } from '@adapter/outbound/claude/session-limits';
 import { FileSnapshotStore } from '@adapter/outbound/checkpoint/file-snapshot.store';
 import { DrizzleSessionFileRepository } from '@adapter/outbound/persistence/session/drizzle-session-file.repository';
+import { DrizzleSessionOriginRepository } from '@adapter/outbound/persistence/session/drizzle-session-origin.repository';
 import { AuditToolInvocationRecorder } from '@adapter/outbound/session/audit-tool-invocation.recorder';
 import { DiskSessionFileJournal } from '@adapter/outbound/session/disk-session-file.journal';
 import { HubSessionBroadcaster } from '@adapter/outbound/session/hub-session.broadcaster';
@@ -42,6 +46,7 @@ import { WorkspaceModuleResolver } from '@adapter/outbound/session/workspace-mod
 import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
 import { EndSessionPermissionsUseCase, RequestPermissionUseCase } from '@application/permission';
+import { UuidGenerator } from '@shared/ids/uuid-generator';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { AuditModule } from './audit.module';
 import { PermissionModule } from './permission.module';
@@ -76,6 +81,9 @@ import { WorkspaceModule } from './workspace.module';
         }),
     },
     { provide: SESSION_FILE_JOURNAL, useClass: DiskSessionFileJournal },
+    // That we opened a conversation: written before anything is spawned, read by `transcript`.
+    { provide: SESSION_ORIGIN_REPOSITORY, useClass: DrizzleSessionOriginRepository },
+    { provide: CLAUDE_SESSION_ID_GENERATOR, useClass: UuidGenerator },
     {
       // Built by factory rather than by reflection, because it needs the broadcaster token and a
       // token cannot be inferred from a type.
@@ -120,6 +128,8 @@ import { WorkspaceModule } from './workspace.module';
         CLOCK,
         ID_GENERATOR,
         APP_CONFIG,
+        CLAUDE_SESSION_ID_GENERATOR,
+        SESSION_ORIGIN_REPOSITORY,
       ],
       useFactory: (
         workspaces: WorkspaceResolver,
@@ -129,6 +139,8 @@ import { WorkspaceModule } from './workspace.module';
         clock: Clock,
         ids: IdGenerator,
         config: AppConfig,
+        claudeIds: IdGenerator,
+        origins: SessionOriginRepository,
       ) =>
         new StartSessionUseCase(
           workspaces,
@@ -138,6 +150,7 @@ import { WorkspaceModule } from './workspace.module';
           clock,
           ids,
           config.session.defaults,
+          { ids: claudeIds, origins },
         ),
     },
 
@@ -271,6 +284,11 @@ import { WorkspaceModule } from './workspace.module';
       ),
     },
   ],
-  exports: [...Object.values(SESSION_HANDLERS), RegistrySessionOwnership, SessionRegistry],
+  exports: [
+    ...Object.values(SESSION_HANDLERS),
+    RegistrySessionOwnership,
+    SessionRegistry,
+    SESSION_ORIGIN_REPOSITORY,
+  ],
 })
 export class SessionModule {}

@@ -1,17 +1,27 @@
+import { RecordAuditEventUseCase } from '@application/audit';
 import {
+  DescribePermissionUseCase,
   EndSessionPermissionsUseCase,
   ExtendPermissionUseCase,
+  GrantPermissionRuleUseCase,
+  DescribePermissionRuleUseCase,
+  ListPermissionRulesUseCase,
   PermissionDeadlines,
   PermissionRegistry,
+  PermissionRuleBook,
   PermissionSettlement,
   RequestPermissionUseCase,
   ResolvePermissionUseCase,
+  RevokePermissionRuleUseCase,
 } from '@application/permission';
 import type { PermissionSettings } from '@application/permission';
 import { UserId } from '@domain/auth';
+import type { PermissionMode } from '@domain/session';
 import { SessionId } from '@domain/session';
 import { FixedClock } from '../fakes/fixed-clock';
 import { InMemoryPermissionRequestRepository } from '../fakes/in-memory-permission-request.repository';
+import { InMemoryPermissionRuleRepository } from '../fakes/in-memory-permission-rule.repository';
+import { RecordingAuditEvents } from '../fakes/recording-audit-events';
 import { ManualScheduler } from '../fakes/manual-scheduler';
 import { RecordingPermissionBroadcaster } from '../fakes/recording-permission-broadcaster';
 import { RecordingPermissionEvents } from '../fakes/recording-permission-events';
@@ -31,12 +41,20 @@ export const TEST_PERMISSION_SETTINGS: PermissionSettings = {
   extensionMs: 2_000,
   maxExtensions: 2,
   ruleLifetimeMs: 60_000,
+  ruleDefaultLifetimeMs: 3_600_000,
+  ruleMaxLifetimeMs: 86_400_000,
 };
 
 /** The whole permission stack, with every edge replaced by something a test can read. */
 export interface PermissionHarness {
   readonly registry: PermissionRegistry;
   readonly requests: InMemoryPermissionRequestRepository;
+  readonly rules: InMemoryPermissionRuleRepository;
+  readonly trail: RecordingAuditEvents;
+  readonly ruleBook: PermissionRuleBook;
+
+  /** Failures the rule book reported instead of letting them decide anything. */
+  readonly lookupFailures: readonly unknown[];
   readonly broadcaster: RecordingPermissionBroadcaster;
   readonly events: RecordingPermissionEvents;
   readonly scheduler: ManualScheduler;
@@ -51,6 +69,11 @@ export interface PermissionHarness {
   readonly resolve: ResolvePermissionUseCase;
   readonly extend: ExtendPermissionUseCase;
   readonly endSession: EndSessionPermissionsUseCase;
+  readonly describe: DescribePermissionUseCase;
+  readonly grant: GrantPermissionRuleUseCase;
+  readonly revoke: RevokePermissionRuleUseCase;
+  readonly list: ListPermissionRulesUseCase;
+  readonly describeRule: DescribePermissionRuleUseCase;
 }
 
 /** The session most permission tests ask about. */
@@ -58,6 +81,9 @@ export const PERMISSION_SESSION = SessionId.create(SESSION_ID);
 
 /** The person most permission tests are. */
 export const PERMISSION_OWNER = UserId.create('auth|owner');
+
+/** The workspace root most permission tests run in. */
+export const PERMISSION_PROJECT = '/srv/projects/app';
 
 /** The instant the harness starts at. */
 export const PERMISSION_NOW = new Date('2026-09-19T12:00:00.000Z');
@@ -79,6 +105,14 @@ export function aPermissionModule(
   const scheduler = new ManualScheduler();
   const clock = new FixedClock(PERMISSION_NOW);
   const ids = new SequentialIds();
+  const rules = new InMemoryPermissionRuleRepository();
+  const trail = new RecordingAuditEvents();
+  const lookupFailures: unknown[] = [];
+  const ruleBook = new PermissionRuleBook(registry, rules, (error) => {
+    lookupFailures.push(error);
+  });
+  const recordEvent = new RecordAuditEventUseCase(trail, ids);
+  const grant = new GrantPermissionRuleUseCase(rules, recordEvent, ids, clock, settings);
 
   const settlement = new PermissionSettlement(
     registry,
@@ -96,6 +130,10 @@ export function aPermissionModule(
   return {
     registry,
     requests,
+    rules,
+    trail,
+    ruleBook,
+    lookupFailures,
     broadcaster,
     events,
     scheduler,
@@ -107,13 +145,15 @@ export function aPermissionModule(
     request: new RequestPermissionUseCase(
       registry,
       requests,
+      ruleBook,
       settlement,
       deadlines,
       broadcaster,
+      events,
       clock,
       settings,
     ),
-    resolve: new ResolvePermissionUseCase(registry, settlement, clock),
+    resolve: new ResolvePermissionUseCase(registry, settlement, grant, clock),
     extend: new ExtendPermissionUseCase(
       registry,
       requests,
@@ -123,6 +163,11 @@ export function aPermissionModule(
       settings,
     ),
     endSession: new EndSessionPermissionsUseCase(registry, settlement, clock),
+    describe: new DescribePermissionUseCase(registry, settings),
+    grant,
+    revoke: new RevokePermissionRuleUseCase(rules, recordEvent, clock),
+    list: new ListPermissionRulesUseCase(rules, clock),
+    describeRule: new DescribePermissionRuleUseCase(rules, clock),
   };
 }
 
@@ -135,12 +180,16 @@ export function aPermissionQuestion(
     toolUseId?: string | null;
     userId?: UserId;
     sessionId?: SessionId;
+    projectPath?: string | null;
+    permissionMode?: PermissionMode;
   } = {},
 ) {
   return {
     requestId: overrides.requestId ?? 'request-1',
     sessionId: overrides.sessionId ?? PERMISSION_SESSION,
     userId: overrides.userId ?? PERMISSION_OWNER,
+    projectPath: overrides.projectPath === undefined ? PERMISSION_PROJECT : overrides.projectPath,
+    permissionMode: overrides.permissionMode ?? 'default',
     toolUseId: overrides.toolUseId === undefined ? 'toolu-1' : overrides.toolUseId,
     toolName: overrides.toolName ?? 'Bash',
     input: overrides.input ?? { command: 'rm -rf build/' },

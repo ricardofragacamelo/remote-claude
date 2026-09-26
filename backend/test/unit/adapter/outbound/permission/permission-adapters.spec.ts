@@ -34,6 +34,7 @@ function aResolvedEvent(decision: 'allow' | 'deny' = 'allow'): PermissionResolve
     id: 'request-1',
     sessionId: PERMISSION_SESSION,
     userId: PERMISSION_OWNER,
+    projectPath: null,
     toolUseId: 'toolu-1',
     toolName: 'Bash',
     input: { command: 'rm -rf build/' },
@@ -183,6 +184,7 @@ describe('the consumers of permission.resolved', () => {
       id: 'request-2',
       sessionId: PERMISSION_SESSION,
       userId: PERMISSION_OWNER,
+      projectPath: null,
       toolUseId: null,
       toolName: 'Write',
       input: { file_path: '/srv/app/main.ts' },
@@ -196,6 +198,71 @@ describe('the consumers of permission.resolved', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(written[0]).toMatchObject({ decision: 'denied', userId: PERMISSION_OWNER });
+    // …and the verdict says nobody answered: the owner is who it was about, not who decided.
+    expect(written[0]?.verdict).toEqual({
+      requestId: 'request-2',
+      auto: true,
+      ruleId: null,
+      scope: 'once',
+      resolvedBy: null,
+      resolvedFrom: null,
+    });
+  });
+
+  it('writes what was decided with the entry: the request, who, and from where — S-81', async () => {
+    const written: AuditEntry[] = [];
+    const record = new RecordToolInvocationUseCase(
+      { append: (entry) => (written.push(entry), Promise.resolve()) },
+      new SequentialIds(),
+    );
+
+    new RecordDecisionOnResolved(record, new RecordingLogger().logger).handle(aResolvedEvent());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(written[0]?.verdict).toEqual({
+      requestId: 'request-1',
+      auto: false,
+      ruleId: null,
+      scope: 'once',
+      resolvedBy: PERMISSION_OWNER,
+      resolvedFrom: 'web',
+    });
+  });
+
+  it('writes the rule that answered, when a rule did — S-30, S-81', async () => {
+    const written: AuditEntry[] = [];
+    const record = new RecordToolInvocationUseCase(
+      { append: (entry) => (written.push(entry), Promise.resolve()) },
+      new SequentialIds(),
+    );
+    const request = PermissionRequest.open({
+      id: 'request-4',
+      sessionId: PERMISSION_SESSION,
+      userId: PERMISSION_OWNER,
+      projectPath: '/srv/app',
+      toolUseId: 'toolu-4',
+      toolName: 'Bash',
+      input: { command: 'git status' },
+      riskHint: 'read',
+      requestedAt: PERMISSION_NOW,
+      expiresAt: PERMISSION_NOW,
+    });
+    request.resolve({
+      decision: 'allow',
+      reason: null,
+      scope: 'project',
+      resolvedBy: PERMISSION_OWNER,
+      resolvedFrom: null,
+      auto: true,
+      ruleId: 'rule-9',
+      at: PERMISSION_NOW,
+    });
+
+    new RecordDecisionOnResolved(record, new RecordingLogger().logger).handle({ request });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(written[0]).toMatchObject({ decision: 'allowed' });
+    expect(written[0]?.verdict).toMatchObject({ auto: true, ruleId: 'rule-9', scope: 'project' });
   });
 
   it('says nothing about a request that is somehow not settled', () => {
@@ -207,6 +274,7 @@ describe('the consumers of permission.resolved', () => {
       id: 'request-3',
       sessionId: PERMISSION_SESSION,
       userId: PERMISSION_OWNER,
+      projectPath: null,
       toolUseId: null,
       toolName: 'Read',
       input: {},

@@ -63,6 +63,16 @@ export interface WsCommandContext {
   /** Who is asking. A handler never runs before the handshake, so this is never null. */
   readonly userId: UserId;
 
+  /**
+   * Which installation is asking, or `null` for a browser.
+   *
+   * It is on the context rather than looked up because it is a fact about the **socket**: the
+   * client declared it in the handshake, and the handshake refused it if it named a device that
+   * does not exist or has been revoked. What a handler still has to ask is whether that device may
+   * **decide** — a pending one watches and does not answer (S-03, S-04).
+   */
+  readonly installId: string | null;
+
   readonly locale: string;
 
   /**

@@ -1,10 +1,10 @@
-import { useParams } from '@tanstack/react-router';
+import { useCallback } from 'react';
+import { useNavigate, useParams } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
-import { SignInPrompt, useAuth } from '@/features/auth';
 import { PermissionQueuePanel } from '@/features/permission';
 import { SessionScreen } from '@/features/session';
-import { Skeleton } from '@/shared/components/ui/skeleton';
+import { Screen, SignedIn } from './Screen';
 
 /**
  * `/sessions/:sessionId` — the session, reproduced from the URL alone.
@@ -19,21 +19,20 @@ import { Skeleton } from '@/shared/components/ui/skeleton';
 export function SessionRoute(): React.JSX.Element {
   const { t } = useTranslation();
   const { sessionId } = useParams({ from: '/sessions/$sessionId' });
-  const { isAuthenticated, isResolving } = useAuth();
+  const navigate = useNavigate();
+
+  // The way from a "don't ask again" to the list that takes it back — one of the two entrances
+  // D-04 requires, handed down so the feature itself never learns the router exists.
+  const openRules = useCallback(() => {
+    void navigate({ to: '/rules' });
+  }, [navigate]);
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 p-4 md:p-8">
-      <h1 className="text-xl font-semibold">{t('session.screen.title')}</h1>
-
-      {isResolving && <Skeleton className="h-48 w-full" aria-label={t('auth.callback.pending')} />}
-      {!isResolving && !isAuthenticated && <SignInPrompt returnTo={`/sessions/${sessionId}`} />}
-
-      {isAuthenticated && (
-        <>
-          <SessionScreen sessionId={sessionId} />
-          <PermissionQueuePanel sessionId={sessionId} />
-        </>
-      )}
-    </main>
+    <Screen title={t('session.screen.title')}>
+      <SignedIn returnTo={`/sessions/${sessionId}`}>
+        <SessionScreen sessionId={sessionId} />
+        <PermissionQueuePanel sessionId={sessionId} onOpenRules={openRules} />
+      </SignedIn>
+    </Screen>
   );
 }

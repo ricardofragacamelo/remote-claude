@@ -39,7 +39,7 @@ Por isso os dois assuntos estão no mesmo plano: separá-los entregaria o poder 
 | | |
 |---|---|
 | `PermissionRule` com escopo `project` e `always`, persistida e revogável | F0 |
-| Auto-resolução **antes** de notificar, e `updatedPermissions` de volta ao SDK | F0 |
+| Auto-resolução **antes** de notificar — sem `updatedPermissions` de volta ao SDK ([D-09](decisions.md#d-09--a-regra-nossa-é-a-única-autoridade)) | F0 |
 | Telas de regras no web e no app | F1 |
 | Consulta da trilha de auditoria, com filtro, paginação e a tela | F2 |
 | Retenção de 90 dias e a purga, ela própria auditada | F3 |
@@ -64,11 +64,11 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Regras](F0-rules.md) | regra persistida, casada, aplicada e revogável | B-01…B-06 | 🔲 |
-| F1 | [Telas de regra](F1-rules-ui.md) | listar e revogar nas duas pontas | B-07…B-10 | 🔲 |
-| F2 | [Consulta da trilha](F2-audit-query.md) | filtro, paginação, tela e correlação | B-11…B-15 | 🔲 |
-| F3 | [Retenção](F3-retention.md) | 90 dias, purga idempotente e auditada | B-16…B-19 | 🔲 |
-| F4 | [E2E](F4-e2e.md) | o ciclo completo da regra, pela porta do usuário | B-20…B-23 | 🔲 |
+| F0 | [Regras](F0-rules.md) | regra persistida, casada, aplicada e revogável | B-01…B-06 | ✅ |
+| F1 | [Telas de regra](F1-rules-ui.md) | listar e revogar nas duas pontas | B-07…B-10 | ✅ |
+| F2 | [Consulta da trilha](F2-audit-query.md) | filtro, paginação, tela e correlação | B-11…B-15 | ✅ |
+| F3 | [Retenção](F3-retention.md) | 90 dias, purga idempotente e auditada | B-16…B-19 | ✅ |
+| F4 | [E2E](F4-e2e.md) | o ciclo completo da regra, pela porta do usuário | B-20…B-23 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 
@@ -88,13 +88,13 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Regra é revogável, e a revogação vale na sessão viva | B-05 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) | S-09…S-11 |
 | Regra pertence a um usuário e nunca resolve o pedido de outro | B-01 | [08-authentication](../../architecture/shared/08-authentication.md#identidade-e-o-modelo-local) | S-13, S-14 |
 | "Sempre permitir" vira regra também do lado do Claude | B-04 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#a-ponte-de-permissão) | S-01, S-02 |
-| Revogar regra é operação de uma tela, nas duas pontas | B-07…B-10 | [web/01](../../architecture/web/01-architecture.md), [mobile/04-ui](../../architecture/mobile/04-ui.md) | S-15…S-22 |
+| Revogar regra é operação de uma tela, nas duas pontas | B-07…B-10 | [web/01](../../architecture/web/01-architecture.md), [mobile/04-ui](../../architecture/mobile/04-ui.md) | S-15…S-22, S-63…S-69 |
 | A trilha é consultável, com filtro e paginação estável | B-11, B-14 | [backend/03-modules](../../architecture/backend/03-modules.md#audit) | S-23…S-25, S-28, S-29 |
 | A trilha de um usuário não vaza para outro, nem expõe conteúdo | B-12 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) | S-26, S-27 |
 | Da trilha se chega à sessão, ao log e à decisão | B-13, B-15 | [03-logging](../../architecture/shared/03-logging.md) | S-30…S-32 |
 | Retenção mínima de 90 dias, e purga que não apaga demais | B-16, B-17, B-19 | [backend/03-modules](../../architecture/backend/03-modules.md#audit) | S-33…S-39 |
 | Purga é script, com código de saída honesto | B-18 | [11-validation-protocol](../../architecture/shared/11-validation-protocol.md#automação-script-não-orquestração-pelo-agente) | S-40 |
-| O ciclo da regra provado pela porta do usuário | B-20…B-23 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-41…S-46 |
+| O ciclo da regra provado pela porta do usuário | B-20…B-23 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-41…S-46, S-92 |
 
 Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 

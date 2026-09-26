@@ -162,8 +162,17 @@ Regra de permissão é autorização **antecipada** para executar comando na má
 - A linha mostra escopo, tool, padrão, autor, data e **validade**, com sinal para a regra perto
   de expirar. Sem o aviso, a sessão volta a perguntar sem explicação: perde-se a comodidade e não
   se explica a perda.
+- A linha mostra escopo, tool, padrão, autor, data e **validade**; "perto de expirar" é **menos de
+  sete dias**, calculado no cliente sobre o `expiresAt` do servidor
+  ([03 · D-13](../../plans/03-rules-and-audit/decisions.md#d-13--perto-de-expirar-é-sete-dias)).
 - Regra **expirada continua listada**, marcada como tal. Regra revogada some.
-- Revogar é ação direta, idempotente na UI: duplo clique revoga uma vez.
+- Revogar é ação direta, idempotente na UI: duplo clique revoga uma vez. Falha ao revogar
+  **mantém a linha**, com o erro traduzido ao lado — a regra continua respondendo, e é isso que a
+  tela existe para mostrar.
+- **Escolher `project` ou `always` pede um segundo passo, qualquer que seja o risco**, e o segundo
+  passo diz o alcance por extenso: o padrão exato que será gravado, onde vale e por quanto tempo —
+  os dois vindos da sugestão do servidor, nunca calculados aqui. Dele se chega a `/rules`
+  ([03 · D-14](../../plans/03-rules-and-audit/decisions.md#d-14--escopo-persistido-sempre-pede-o-segundo-passo)).
 
 ### Trilha de auditoria
 
@@ -174,6 +183,16 @@ Responde a uma pergunta só: **"o que foi executado na minha máquina sem me per
   revogada, e aí a tela explica o estado em vez de mostrar um vazio sem motivo.
 - O detalhe mostra o `input` exato da tool. Nunca o conteúdo de arquivo lido pela tool `Read`:
   a trilha guarda `path` e tamanho, e é isso que a tela recebe.
+- Mora em `/audit`, com os filtros na **search** — a trilha filtrada é um link, e continua sendo
+  depois do login: quem abre o link deslogado volta à trilha **com** os filtros, não à trilha
+  inteira. O formulário é rascunho até aplicar: uma navegação por filtro, não uma por tecla.
+- Cada entrada diz **em palavras** como a decisão foi tomada: por uma regra (e a regra abre), por
+  uma regra `session` (que acabou com a sessão, e não oferece link), por ninguém a tempo (recusada),
+  ou por uma pessoa (quem, e de onde). Entrada que nenhuma pergunta alcançou é marcada como tal.
+- "Carregar mais" acrescenta a página seguinte; falha ali **mantém** o que já está na tela, com o
+  erro ao lado. Filtro novo recomeça do topo e descarta o que ainda chegava do anterior.
+- A regra aberta da trilha mora em `/rules/$ruleId`, em qualquer estado: ativa, com o botão de
+  revogar; revogada, dizendo quando — nunca uma página vazia.
 
 ### Stream de mensagens
 

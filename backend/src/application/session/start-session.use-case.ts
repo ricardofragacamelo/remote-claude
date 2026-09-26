@@ -1,9 +1,11 @@
 import type { Clock, IdGenerator } from '@domain/shared';
 import { ClaudeUnavailableError, Session, SessionId } from '@domain/session';
 import type { PermissionMode, SessionCloseReason } from '@domain/session';
+import { ClaudeSessionId } from '@domain/transcript';
 import type { StartSessionCommand } from './commands/start-session.command';
 import type { ClaudeSessionPort, SessionEvent } from './ports/claude-session.port';
 import type { SessionBroadcaster } from './ports/session-broadcaster.port';
+import type { SessionOriginRepository } from './ports/session-origin.repository';
 import type { WorkspaceResolver } from './ports/workspace-resolver.port';
 import { observedStatus } from './session-status';
 import type { SessionRegistry } from './session-registry';
@@ -15,12 +17,29 @@ export interface SessionDefaults {
 }
 
 /**
+ * How a new conversation of Claude is named, and where it is recorded as ours.
+ *
+ * Together because they are one step: the id is minted to be recorded, and a record without the id
+ * handed to the SDK would name a transcript that never exists.
+ */
+export interface SessionProvenance {
+  /** Mints the UUID the SDK is told to use. */
+  readonly ids: IdGenerator;
+  readonly origins: SessionOriginRepository;
+}
+
+/**
  * Opens a session of Claude on a workspace.
  *
  * The order of the first two steps is the security of the product: the path clears the allowlist
  * **before** a slot is taken and long before a subprocess exists, because `cwd` of the SDK's
  * `query()` is exactly that path. A session that got as far as spawning on an unchecked directory
  * is a shell on the user's machine.
+ *
+ * The third step is the provenance, and it too comes before the subprocess. It is what later says
+ * that the conversation is ours — and so whose it is, and whether a resume may write into it
+ * ([D-04](../../../../docs/plans/04-transcript-and-resume/decisions.md)). A session whose origin
+ * could not be recorded is not opened: it would read as somebody else's for the rest of its life.
  */
 export class StartSessionUseCase {
   constructor(
@@ -31,11 +50,13 @@ export class StartSessionUseCase {
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
     private readonly defaults: SessionDefaults,
+    private readonly provenance: SessionProvenance,
   ) {}
 
   /**
    * @throws {import('@domain/workspace').WorkspaceNotAllowedError} path outside every root
    * @throws {import('@domain/session').SessionLimitReachedError} the installation is full
+   * @throws whatever recording the provenance threw — and then nothing was spawned
    */
   async execute(command: StartSessionCommand): Promise<Session> {
     const workspace = await this.workspaces.resolve(command.workspacePath, command.userId);
@@ -55,12 +76,18 @@ export class StartSessionUseCase {
         openedAt: this.clock.now(),
       });
 
+      // A resume keeps the id the conversation already has, and whose it is was settled when it
+      // was opened. Resuming is the next phase's (F2); until then it records nothing new.
+      const claudeSessionId =
+        command.resumeSessionId === null ? await this.recordOrigin(session) : null;
+
       const handle = await this.claude.start({
         sessionId: session.id,
         workspace,
         model: command.model,
         permissionMode: session.permissionMode,
         resumeSessionId: command.resumeSessionId,
+        claudeSessionId,
         onEvent: (event) => {
           this.onEvent(session, event);
         },
@@ -81,6 +108,21 @@ export class StartSessionUseCase {
     } finally {
       this.registry.release();
     }
+  }
+
+  /** Mints the id of the new conversation and records it as ours, before anything is spawned. */
+  private async recordOrigin(session: Session): Promise<ClaudeSessionId> {
+    const claudeSessionId = ClaudeSessionId.create(this.provenance.ids.next());
+
+    await this.provenance.origins.record({
+      claudeSessionId,
+      sessionId: session.id,
+      openedBy: session.ownerId,
+      workspace: session.workspace,
+      openedAt: session.openedAt,
+    });
+
+    return claudeSessionId;
   }
 
   /**

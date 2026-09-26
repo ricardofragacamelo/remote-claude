@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { AuthorizationCodeExchange, IdentityProvider, IssuedTokens } from '@application/auth';
 import { UnauthenticatedError } from '@domain/auth';
 import { APP_CONFIG, type AppConfig } from '@infra/config/environment';
+import { readTokenAnswer } from '@shared/http/token-endpoint';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { IDENTITY_DISCOVERY } from './identity.tokens';
 import type { OidcDiscovery } from './oidc-discovery';
@@ -69,19 +70,16 @@ export class OidcIdentityProvider implements IdentityProvider {
       'identity provider answered',
     );
 
-    if (!response.ok) {
-      throw new UnauthenticatedError(`token endpoint answered ${String(response.status)}`);
-    }
-
-    const parsed = tokenResponseSchema.safeParse(await response.json());
-    if (!parsed.success) {
-      throw new UnauthenticatedError('token endpoint answered an unusable body');
-    }
+    const issued = await readTokenAnswer(
+      response,
+      tokenResponseSchema,
+      (why) => new UnauthenticatedError(`token endpoint ${why}`),
+    );
 
     return {
-      accessToken: parsed.data.access_token,
-      refreshToken: parsed.data.refresh_token ?? null,
-      expiresInSeconds: parsed.data.expires_in,
+      accessToken: issued.access_token,
+      refreshToken: issued.refresh_token ?? null,
+      expiresInSeconds: issued.expires_in,
     };
   }
 }

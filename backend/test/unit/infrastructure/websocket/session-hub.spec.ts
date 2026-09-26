@@ -5,6 +5,7 @@ import type { Sendable } from '@infra/websocket/connection-registry';
 import { EventBuffer } from '@infra/websocket/event-buffer';
 import { FrameBuilder } from '@infra/websocket/frame-builder';
 import { SessionHub } from '@infra/websocket/session-hub';
+import { runWithTrace } from '@shared/logging/trace-context';
 import { FixedClock } from '../../../support/fakes/fixed-clock';
 import { RecordingLogger } from '../../../support/fakes/recording-logger';
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
@@ -156,5 +157,35 @@ describe('SessionHub', () => {
     hub.publish('s1', { type: 'diag.pong', payload: { blob: 'x'.repeat(20_000) } });
 
     expect(log.withOp('ws.outbound')[0]).toMatchObject({ truncated: true });
+  });
+
+  describe('the trace of what it publishes — D-16', () => {
+    it('stamps the trace in scope on an event, so it leads back to the command — S-31', () => {
+      const frame = runWithTrace({ traceId: 'trace-turn-1' }, () =>
+        hub.publish('s1', { type: 'tool.started', payload: {} }),
+      );
+
+      expect(frame.traceId).toBe('trace-turn-1');
+    });
+
+    it('stamps it on a question too', () => {
+      const frame = runWithTrace({ traceId: 'trace-turn-1' }, () =>
+        hub.request('s1', { type: 'permission.requested', payload: {} }),
+      );
+
+      expect(frame.traceId).toBe('trace-turn-1');
+    });
+
+    it('keeps the trace a caller already chose', () => {
+      const frame = runWithTrace({ traceId: 'trace-ambient' }, () =>
+        hub.publish('s1', { type: 'diag.pong', payload: {}, traceId: 'trace-chosen' }),
+      );
+
+      expect(frame.traceId).toBe('trace-chosen');
+    });
+
+    it('adds no trace outside one, rather than inventing it', () => {
+      expect(hub.publish('s1', { type: 'diag.pong', payload: {} })).not.toHaveProperty('traceId');
+    });
   });
 });

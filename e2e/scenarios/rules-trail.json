@@ -1,0 +1,15 @@
+{
+  "id": "03·S-43",
+  "title": "the trail shows the write nobody was asked about, and leads to the rule that allowed it",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "scope": "always",
+    "toolName": "Write",
+    "decision": "allowed",
+    "unasked": "Nobody was asked",
+    "byRule": "Allowed by one of your rules (In every project), without asking anybody.",
+    "openRule": "Open the rule that allowed it",
+    "revokedStatus": "Revoked"
+  }
+}

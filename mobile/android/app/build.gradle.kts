@@ -30,6 +30,18 @@ android {
         // without a value. Keep it in step with the redirect URI registered in the realm
         // (infra/keycloak/realm-remote-claude.json) — see docs/architecture/mobile/07-auth.md.
         manifestPlaceholders["appAuthRedirectScheme"] = "br.com.remoteclaude.app"
+
+        // The runner `patrol` drives the real-push suite through: it is what reaches the system's
+        // own screens — the notification permission dialog, the home button, the tray (plan 02,
+        // D-26). Used only by `patrol test`; `flutter test integration_test` does not go through it.
+        testInstrumentationRunner = "pl.leancode.patrol.PatrolJUnitRunner"
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
+    }
+
+    testOptions {
+        // Each test starts from an app with no data — no granted permission, no stored token — so
+        // the permission dialog the suite answers is the one a first install shows.
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
     }
 
     buildTypes {
@@ -49,4 +61,20 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+// The push transport's credential file is configuration, per operator, and not committed. Its
+// plugin refuses to build without it, so it is applied only when the file is there: a build
+// without it compiles, runs, and says notifications will not arrive — it does not fail (D-21).
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
+dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("androidx.core:core-ktx:1.17.0")
+
+    testImplementation("junit:junit:4.13.2")
+    androidTestUtil("androidx.test:orchestrator:1.5.1")
 }

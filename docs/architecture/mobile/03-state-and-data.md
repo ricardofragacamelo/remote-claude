@@ -52,6 +52,19 @@ com `resumeFromSeq`, valida frame contra o contrato gerado, renova credencial co
 
 Ver [contrato](../shared/05-websocket-protocol.md).
 
+**Várias features observam a mesma sessão pelo único socket** — a conversa e a fila de permissão
+([02 · D-24](../../plans/02-mobile-approval/decisions.md#d-24--duas-telas-um-socket)). O `WsClient`
+anexa uma vez, re-anexa retomando do assinante **mais atrasado** quando chega outro (reentregar o
+que alguém já aplicou custa nada, por causa da primeira regra abaixo), e só manda `session.detach`
+quando sai o último. Ele entrega a quem assina tanto `event` quanto `request` — o
+`permission.requested` é um `request` — e os frames `error` vão para os observadores, correlacionados
+pelo `id` do comando que os causou (`WsClient.send` devolve esse `id`).
+
+**`4401` é anunciado**, não só reconectado (`WsClient.rejections`). Reconectar basta para um token
+que expirou; não basta para um aparelho **revogado** com o app aberto, que continuaria dizendo
+"aprovado" na tela. O `app/` escuta e pede o status do aparelho de novo — por `GET /devices`, uma
+leitura: re-registrar sobrescreveria o push token a cada token expirado (S-56).
+
 ### As três regras do stream
 
 Idênticas às do web, porque o problema é o mesmo:
@@ -91,9 +104,37 @@ não ficar parada até o timeout.
 | Push de permissão já resolvida é **cancelado** | notificação zumbi para ação que não existe mais |
 | Device precisa estar **aprovado** | ver [07-auth.md](07-auth.md) |
 
+**O fornecedor não atravessa a fronteira do Dart.** Receber push na Android exige a biblioteca de
+quem entrega, e um `import` dela seria o nome do fornecedor dentro de `lib/` — que
+[S-26](../../plans/02-mobile-approval/scenarios.md) proíbe por regra de máquina. Então o Dart
+conhece **uma porta** (`PushGateway`, em `core/notifications/`) e um `MethodChannel` com nome do
+produto; a biblioteca e o segredo vivem em `android/` e na configuração, como qualquer
+dependência de plataforma. É a mesma divisão que o backend faz, onde `adapter/outbound/push/`
+conhece um endpoint e uma credencial e nunca quem responde por eles
+([02 · D-21](../../plans/02-mobile-approval/decisions.md#d-21--o-fornecedor-não-atravessa-a-fronteira-do-dart)).
+
+Disso sai um estado que a UI precisa ter: **sem transporte configurado, o canal responde
+"indisponível"**, e isso **não** é o mesmo que o usuário ter negado a notificação. Quem negou pode
+voltar atrás nas configurações do SO; um build sem transporte não oferece nada para o usuário
+mudar, e dizer "você negou" seria mentira. São duas frases diferentes, de propósito.
+
+O que liga o transporte é **um arquivo**, de quem opera: `mobile/android/app/google-services.json`,
+fora do git. O plugin do Gradle que o lê só é aplicado quando ele existe — sem ele o build compila,
+o app roda e o canal responde "indisponível". A retirada de uma notificação usa o par
+`(tag = requestId, id = 0)`, que é o que a biblioteca do fornecedor usa quando mostra a mensagem
+sozinha com o app em background; assim a mesma chamada retira a notificação qualquer que seja
+quem a pôs na tela.
+
 Ao abrir pelo push, **revalide o estado no servidor**. O push pode ter atrasado, e a permissão
 pode ter expirado ou sido resolvida em outro dispositivo — nunca renderize a partir do payload
 da notificação.
+
+A revalidação é uma **consulta**, `GET /sessions/:sessionId/permissions/:requestId`, e não o replay
+do `attach`: o attach republica os pendentes sem dizer quando terminou, e "não chegou" não prova
+"não existe" ([02 · D-22](../../plans/02-mobile-approval/decisions.md#d-22--revalidar-é-perguntar-não-esperar)).
+Até ela responder a tela mostra que está conferindo — mesmo que o socket já tenha entregado o pedido.
+Depois, o que o stream disser vence a resposta. Responder continua sendo pelo socket, e só depois
+que o attach reentregar o frame, que é o que dá o `correlationId`.
 
 ---
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
@@ -278,6 +278,160 @@ describe('the permission queue', () => {
 
     await waitFor(async () => {
       expect(await axe(container)).toHaveNoViolations();
+    });
+  });
+
+  describe('a yes that outlives the session — plan 03, B-08', () => {
+    const LIFETIME_DAYS = 90;
+
+    /** The question with the two persisted scopes offered, the way the backend offers them. */
+    function askPersisted(): void {
+      const rule = { pattern: 'Bash(git status)', lifetimeMs: LIFETIME_DAYS * 86_400_000 };
+      ask({
+        description: 'git status',
+        input: { command: 'git status' },
+        riskHint: 'read',
+        suggestions: [
+          { scope: 'once', labelKey: 'permission.scope.once' },
+          { scope: 'session', labelKey: 'permission.scope.session' },
+          { scope: 'project', labelKey: 'permission.scope.project', ...rule },
+          { scope: 'always', labelKey: 'permission.scope.always', ...rule },
+        ],
+      });
+    }
+
+    function answers(): readonly Record<string, unknown>[] {
+      return sockets.latest.frames().filter((sent) => sent['type'] === 'permission.resolve');
+    }
+
+    it('says in full what `always` reaches, and for how long, before sending anything — S-17', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<PermissionQueuePanel sessionId={SESSION} />);
+      connect();
+      askPersisted();
+
+      await user.click(screen.getByRole('button', { name: t('permission.scope.always') }));
+
+      const step = screen.getByRole('group', { name: t('permission.persist.title') });
+      const duration = t('permission.persist.days', { days: LIFETIME_DAYS });
+      expect(
+        within(step).getByText(t('permission.persist.always', { duration })),
+      ).toBeInTheDocument();
+      // The pattern exactly as it will be stored — the reach, with no euphemism in between.
+      expect(within(step).getByText('Bash(git status)')).toBeInTheDocument();
+      expect(within(step).getByText(t('permission.persist.revocable'))).toBeInTheDocument();
+      expect(answers()).toHaveLength(0);
+    });
+
+    it('asks the second step on a tool that is not destructive, too — S-65', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<PermissionQueuePanel sessionId={SESSION} />);
+      connect();
+      askPersisted();
+
+      await user.click(screen.getByRole('button', { name: t('permission.scope.project') }));
+
+      const step = screen.getByRole('group', { name: t('permission.persist.title') });
+      expect(
+        within(step).getByText(
+          t('permission.persist.project', {
+            duration: t('permission.persist.days', { days: LIFETIME_DAYS }),
+          }),
+        ),
+      ).toBeInTheDocument();
+      // The way back has the focus: the accident this step exists for is one stray Enter.
+      expect(
+        within(step).getByRole('button', { name: t('permission.persist.back') }),
+      ).toHaveFocus();
+
+      await user.click(within(step).getByRole('button', { name: t('permission.persist.confirm') }));
+
+      expect(answers()).toEqual([
+        expect.objectContaining({
+          payload: { requestId: 'req-1', decision: 'allow', scope: 'project' },
+        }),
+      ]);
+    });
+
+    it('sends nothing when the person goes back — S-65', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<PermissionQueuePanel sessionId={SESSION} />);
+      connect();
+      askPersisted();
+
+      await user.click(screen.getByRole('button', { name: t('permission.scope.always') }));
+      await user.click(screen.getByRole('button', { name: t('permission.persist.back') }));
+
+      expect(answers()).toHaveLength(0);
+      // Back where it started, every answer on offer again.
+      expect(screen.getByRole('button', { name: t('permission.scope.once') })).toBeEnabled();
+    });
+
+    it('leads to the rules from the second step — one of the two ways in of D-04', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const openRules = vi.fn();
+      render(<PermissionQueuePanel sessionId={SESSION} onOpenRules={openRules} />);
+      connect();
+      askPersisted();
+
+      await user.click(screen.getByRole('button', { name: t('permission.scope.always') }));
+      await user.click(screen.getByRole('button', { name: t('permission.persist.openRules') }));
+
+      expect(openRules).toHaveBeenCalledOnce();
+    });
+
+    it('offers no way to the rules when there is nowhere to go', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<PermissionQueuePanel sessionId={SESSION} />);
+      connect();
+      askPersisted();
+
+      await user.click(screen.getByRole('button', { name: t('permission.scope.always') }));
+
+      expect(
+        screen.queryByRole('button', { name: t('permission.persist.openRules') }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('says a lifetime shorter than a day in hours, not as zero days', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<PermissionQueuePanel sessionId={SESSION} />);
+      connect();
+      ask({
+        suggestions: [
+          {
+            scope: 'always',
+            labelKey: 'permission.scope.always',
+            pattern: 'Bash(rm -rf build/)',
+            lifetimeMs: 3_600_000,
+          },
+        ],
+      });
+
+      await user.click(screen.getByRole('button', { name: t('permission.scope.always') }));
+
+      expect(
+        screen.getByText(
+          t('permission.persist.always', {
+            duration: t('permission.persist.hours', { hours: 1 }),
+          }),
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('has no accessibility violation in the second step', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const { container } = render(
+        <PermissionQueuePanel sessionId={SESSION} onOpenRules={vi.fn()} />,
+      );
+      connect();
+      askPersisted();
+
+      await user.click(screen.getByRole('button', { name: t('permission.scope.always') }));
+
+      await waitFor(async () => {
+        expect(await axe(container)).toHaveNoViolations();
+      });
     });
   });
 });

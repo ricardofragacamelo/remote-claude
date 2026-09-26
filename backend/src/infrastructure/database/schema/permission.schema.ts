@@ -32,6 +32,8 @@ export const permissionRequests = pgTable(
     resolvedBy: text('resolved_by'),
     resolvedFrom: text('resolved_from'),
     auto: boolean('auto'),
+    /** The rule that answered, when one did. No foreign key: a `session` rule is never stored. */
+    ruleId: text('rule_id'),
     extensionsUsed: integer('extensions_used').notNull().default(0),
     requestedAt: timestamp('requested_at', { withTimezone: true }).notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),

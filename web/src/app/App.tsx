@@ -2,10 +2,11 @@ import { useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
-import { SignInPrompt, useAuth } from '@/features/auth';
+import { useAuth } from '@/features/auth';
+import { DeviceList } from '@/features/devices';
 import { SessionPingPanel, SessionStarter } from '@/features/session';
 import { useWorkspaceStore, WorkspaceSelector } from '@/features/workspace';
-import { Skeleton } from '@/shared/components/ui/skeleton';
+import { Screen, SignedIn } from './Screen';
 
 /**
  * The shell.
@@ -15,7 +16,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton';
  */
 export function App(): React.JSX.Element {
   const { t } = useTranslation();
-  const { isAuthenticated, isResolving } = useAuth();
+  const { isAuthenticated } = useAuth();
   const workspacePath = useWorkspaceStore((state) => state.selected);
   const navigate = useNavigate();
 
@@ -28,14 +29,23 @@ export function App(): React.JSX.Element {
   );
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 p-4 md:p-8">
-      <h1 className="text-xl font-semibold">{t('session.starter.title')}</h1>
-
-      {isResolving && <Skeleton className="h-48 w-full" aria-label={t('auth.callback.pending')} />}
-      {!isResolving && !isAuthenticated && <SignInPrompt returnTo="/" />}
-      {isAuthenticated && <WorkspaceSelector />}
-      {isAuthenticated && <SessionStarter workspacePath={workspacePath} onStarted={open} />}
-      {isAuthenticated && <SessionPingPanel />}
-    </main>
+    <Screen
+      title={t('session.starter.title')}
+      links={
+        isAuthenticated
+          ? [
+              { to: '/rules', label: t('rules.screen.open') },
+              { to: '/audit', label: t('audit.screen.open') },
+            ]
+          : undefined
+      }
+    >
+      <SignedIn returnTo="/">
+        <WorkspaceSelector />
+        <SessionStarter workspacePath={workspacePath} onStarted={open} />
+        <SessionPingPanel />
+        <DeviceList />
+      </SignedIn>
+    </Screen>
   );
 }

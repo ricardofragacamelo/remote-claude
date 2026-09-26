@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/device/install_id.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_context.dart';
 import 'package:remote_claude/core/logging/log_operations.dart';
@@ -60,6 +61,7 @@ void main() {
   late AppLogger logger;
   late _ManualScheduler scheduler;
   late WsClient client;
+  late _StubInstallId installIds;
 
   setUp(() {
     opened = <FakeFrameSocket>[];
@@ -71,12 +73,14 @@ void main() {
       writer: recorder.writer,
     );
     scheduler = _ManualScheduler();
+    installIds = _StubInstallId(null);
 
     client = WsClient(
       url: Uri.parse('ws://localhost:3000/ws'),
       credentials: credentials,
       logger: logger,
       appVersion: '0.0.1',
+      installIds: installIds,
       connect: (Uri url) {
         urls.add(url);
         final FakeFrameSocket socket = FakeFrameSocket();
@@ -119,6 +123,43 @@ void main() {
       expect(payload['token'], 'token');
       expect(payload['locale'], 'en');
       expect(payload['client'], <String, Object?>{'kind': 'mobile', 'version': '0.0.1'});
+    });
+
+    // Without it a revoked phone would keep answering permission requests until its access token
+    // ran out — a revocation that revokes nothing for fifteen minutes (S-07).
+    test('names the installation in the handshake, once there is one', () {
+      installIds.installId = 'install-1';
+      client.connect();
+
+      final Map<String, Object?> payload =
+          decode(socket().sent.single)['payload']! as Map<String, Object?>;
+
+      expect(payload['client'], <String, Object?>{
+        'kind': 'mobile',
+        'version': '0.0.1',
+        'installId': 'install-1',
+      });
+    });
+
+    test('leaves the installation out entirely when there is none yet', () {
+      client.connect();
+
+      final Map<String, Object?> payload =
+          decode(socket().sent.single)['payload']! as Map<String, Object?>;
+      final Map<String, Object?> clientInfo = payload['client']! as Map<String, Object?>;
+
+      expect(clientInfo.containsKey('installId'), isFalse);
+    });
+
+    test('leaves it out for an empty id, because the backend reads its presence', () {
+      installIds.installId = '';
+      client.connect();
+
+      final Map<String, Object?> payload =
+          decode(socket().sent.single)['payload']! as Map<String, Object?>;
+      final Map<String, Object?> clientInfo = payload['client']! as Map<String, Object?>;
+
+      expect(clientInfo.containsKey('installId'), isFalse);
     });
 
     test('never writes the token to a log', () {
@@ -307,6 +348,208 @@ void main() {
     });
   });
 
+  // S-82 — the conversation and the permission queue watch one session through the one socket.
+  // A sign-out followed at once by a sign-in: the old socket is still closing when the new one opens.
+  test('a connection opened while the previous one closes keeps its own status', () async {
+    await connectAndHandshake();
+
+    final Future<void> closing = client.close();
+    client.connect();
+    await closing;
+
+    expect(opened, hasLength(2));
+    expect(client.status, ConnectionStatus.connecting);
+  });
+
+  // S-56 — a refused credential or device is announced, so whoever shows the device's status asks.
+  group('a refused socket', () {
+    test('is announced when the server closes with 4401', () async {
+      await connectAndHandshake();
+      final List<void> seen = <void>[];
+      client.rejections.listen(seen.add);
+
+      await socket().drop(closeAuthenticationFailed);
+      await settle();
+
+      expect(seen, hasLength(1));
+    });
+
+    test('any other close is not a refusal', () async {
+      await connectAndHandshake();
+      final List<void> seen = <void>[];
+      client.rejections.listen(seen.add);
+
+      await socket().drop(1006);
+      await settle();
+
+      expect(seen, isEmpty);
+    });
+  });
+
+  group('two subscribers of one session', () {
+    List<String> typesSent() =>
+        socket().sent.map((String raw) => decode(raw)['type']! as String).toList();
+
+    test('both receive every frame of the session', () async {
+      await connectAndHandshake();
+      final _Subscriber conversation = _Subscriber();
+      final _Subscriber queue = _Subscriber();
+      client.attach('ses-1', conversation);
+      client.attach('ses-1', queue);
+
+      socket().deliver(diagPong(sessionId: 'ses-1', seq: 1));
+      await settle();
+
+      expect(conversation.events.single.seq, 1);
+      expect(queue.events.single.seq, 1);
+    });
+
+    test('a second subscriber re-attaches from the furthest behind of the two', () async {
+      await connectAndHandshake();
+      client.attach('ses-1', _Subscriber()..seq = 40);
+      client.attach('ses-1', _Subscriber());
+
+      final Map<String, Object?> payload =
+          decode(socket().sent.last)['payload']! as Map<String, Object?>;
+      expect(payload.containsKey('resumeFromSeq'), isFalse);
+    });
+
+    test('a reconnect resumes from the furthest behind, once per session', () async {
+      await connectAndHandshake();
+      client.attach('ses-1', _Subscriber()..seq = 40);
+      client.attach('ses-1', _Subscriber()..seq = 12);
+
+      await socket().drop(1006);
+      await settle();
+      scheduler.fire();
+      await settle();
+      socket().deliver(connectionReady());
+      await settle();
+
+      final List<Map<String, Object?>> attaches = socket().sent
+          .map(decode)
+          .where((Map<String, Object?> frame) => frame['type'] == 'session.attach')
+          .toList();
+      expect(attaches, hasLength(1));
+      expect((attaches.single['payload']! as Map<String, Object?>)['resumeFromSeq'], 12);
+    });
+
+    test('the first to leave does not detach the session from under the other', () async {
+      await connectAndHandshake();
+      final void Function() leaveConversation = client.attach('ses-1', _Subscriber());
+      final _Subscriber queue = _Subscriber();
+      client.attach('ses-1', queue);
+
+      leaveConversation();
+      socket().deliver(diagPong(sessionId: 'ses-1', seq: 1));
+      await settle();
+
+      expect(typesSent(), isNot(contains('session.detach')));
+      expect(queue.events, hasLength(1));
+    });
+
+    test('the last to leave detaches', () async {
+      await connectAndHandshake();
+      final void Function() leaveConversation = client.attach('ses-1', _Subscriber());
+      final void Function() leaveQueue = client.attach('ses-1', _Subscriber());
+
+      leaveConversation();
+      leaveQueue();
+
+      expect(typesSent().last, 'session.detach');
+    });
+
+    test('leaving twice is harmless', () async {
+      await connectAndHandshake();
+      final void Function() leave = client.attach('ses-1', _Subscriber());
+
+      leave();
+      expect(leave, returnsNormally);
+    });
+
+    test('a gap tells every subscriber to reload', () async {
+      await connectAndHandshake();
+      final _Subscriber conversation = _Subscriber();
+      final _Subscriber queue = _Subscriber();
+      client.attach('ses-1', conversation);
+      client.attach('ses-1', queue);
+
+      socket().deliver(sessionAttached(sessionId: 'ses-1', gap: true));
+      await settle();
+
+      expect(conversation.gaps, 1);
+      expect(queue.gaps, 1);
+    });
+  });
+
+  group('questions and answers', () {
+    // `permission.requested` is a `request`, not an event. A client that only forwarded events
+    // would never show the card, and the agent loop would sit there until the deadline refused.
+    test('a request of an attached session reaches its subscribers', () async {
+      await connectAndHandshake();
+      final _Subscriber subscriber = _Subscriber();
+      client.attach('ses-1', subscriber);
+
+      socket().deliver(
+        frame(
+          kind: 'request',
+          type: 'permission.requested',
+          id: 'req-frame',
+          sessionId: 'ses-1',
+          payload: <String, Object?>{'requestId': 'r1'},
+        ),
+      );
+      await settle();
+
+      expect(subscriber.events.single.id, 'req-frame');
+    });
+
+    test('an error reaches the observers, carrying the id of the command it answers', () async {
+      await connectAndHandshake();
+      final List<Envelope> seen = <Envelope>[];
+      client.observe(seen.add);
+
+      final String? id = client.send('permission.extend', <String, Object?>{'requestId': 'r1'});
+      socket().deliver(
+        jsonEncode(<String, Object?>{
+          'v': 1,
+          'id': 'err-1',
+          'kind': 'error',
+          'type': 'error',
+          'ts': '2026-09-14T12:00:00.000Z',
+          'correlationId': id,
+          'payload': <String, Object?>{'code': 'INVALID_INPUT', 'messageKey': 'k', 'traceId': 't'},
+        }),
+      );
+      await settle();
+
+      expect(id, isNotNull);
+      expect(seen.single.correlationId, id);
+    });
+
+    test('a response names the question it answers', () async {
+      await connectAndHandshake();
+
+      final bool left = client.respond('permission.resolve', <String, Object?>{
+        'requestId': 'r1',
+        'decision': 'allow',
+      }, correlationId: 'req-frame');
+
+      final Map<String, Object?> sent = decode(socket().sent.last);
+      expect(left, isTrue);
+      expect(sent['kind'], 'response');
+      expect(sent['correlationId'], 'req-frame');
+    });
+
+    test('nothing leaves while the socket is not ready', () {
+      expect(client.send('permission.extend', <String, Object?>{'requestId': 'r1'}), isNull);
+      expect(
+        client.respond('permission.resolve', <String, Object?>{}, correlationId: 'x'),
+        isFalse,
+      );
+    });
+  });
+
   group('frames that are not frames', () {
     test('something that is not JSON is dropped, and the socket survives', () async {
       await connectAndHandshake();
@@ -463,4 +706,12 @@ void main() {
       ]);
     });
   });
+}
+
+/// An installation identity the test moves.
+class _StubInstallId implements InstallIdSource {
+  _StubInstallId(this.installId);
+
+  @override
+  String? installId;
 }

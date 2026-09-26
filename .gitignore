@@ -37,3 +37,6 @@ mobile/android/.gradle/
 *.log
 npm-debug.log*
 /.checkpoints/
+
+# Credential files the backend reads by path (RC_PUSH_CREDENTIALS_FILE). Never committed.
+/.secrets/

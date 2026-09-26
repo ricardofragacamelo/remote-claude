@@ -128,6 +128,13 @@ Substitua por `"[REDACTED]"`. Payload grande é truncado em **8 KB** com
 
 Uma sessão do Claude gera muitos `traceId` (um por turno). O que amarra tudo é o `sessionId`.
 
+O SDK roda o laço da sessão inteira no contexto assíncrono de quem a abriu, então o turno não
+herda o seu trace sozinho: o runner guarda o `traceId` de cada `session.prompt` e o **adota**
+quando o CLI abre o turno (`UserPromptSubmit`). Hooks, `canUseTool` e mensagens do stream rodam sob
+ele; o hub carimba o trace em escopo em todo evento que publica; e a entrada da trilha grava o
+mesmo — é o que leva de um registro da trilha ao log e ao evento
+([03 · D-16](../../plans/03-rules-and-audit/decisions.md#d-16--o-traceid-é-o-do-turno)).
+
 ---
 
 ## Regras de erro

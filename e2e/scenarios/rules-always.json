@@ -1,0 +1,12 @@
+{
+  "id": "03·S-41",
+  "title": "answering \"don't ask again anywhere\" leaves a rule, and the next write runs without asking",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "tool-turn",
+    "scope": "always"
+  }
+}

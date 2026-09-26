@@ -1,0 +1,12 @@
+{
+  "id": "03·S-45",
+  "title": "somebody else's session trail is refused with 403, through the API and the screen",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "stranger": { "username": "approver", "password": "approver" },
+    "status": 403,
+    "code": "FORBIDDEN",
+    "message": "That session belongs to somebody else, so its trail is not yours to read."
+  }
+}

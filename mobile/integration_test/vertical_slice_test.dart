@@ -17,66 +17,34 @@
 /// stops immediately, saying which command to use.
 library;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:remote_claude/app/app.dart';
-import 'package:remote_claude/app/bootstrap.dart';
 import 'package:remote_claude/core/config/app_config.dart';
-import 'package:remote_claude/core/logging/app_logger.dart';
+import 'package:remote_claude/core/device/device_identity_provider.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
-import 'package:remote_claude/core/storage/credential_store_provider.dart';
-import 'package:remote_claude/features/auth/auth_providers.dart';
 import 'package:remote_claude/features/auth/presentation/providers/auth_controller.dart';
+import 'package:remote_claude/features/session/presentation/widgets/pong_list.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
-import 'support/direct_grant_data_source.dart';
 import 'support/e2e_environment.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   final AppConfig config = e2eConfig();
-  final E2eScenario scenario = E2eScenario.fromDefine();
+  final E2eScenario scenario = E2eScenario.named('vertical-ping');
 
   testWidgets('${scenario.id} — ${scenario.title}', (WidgetTester tester) async {
-    // The same world `main.dart` builds, from the same helper: configuration *and* the logger.
-    // Overriding only half of it leaves `appLoggerProvider` throwing on the first widget that
-    // reads it, which is what this test did until it first ran on a device.
-    final AppLogger logger = buildLogger(
-      config: config,
-      platform: defaultTargetPlatform.name,
-      isRelease: kReleaseMode,
-    );
-
-    final ProviderContainer container = ProviderContainer(
-      overrides: <Override>[
-        ...bootstrapOverrides(config: config, logger: logger),
-
-        // The two edges a headless run cannot have: the operating system's external tab, and the
-        // Keychain. Everything between them is the shipped code.
-        credentialStoreProvider.overrideWithValue(MemoryCredentialStore()),
-        oidcAuthDataSourceProvider.overrideWithValue(
-          DirectGrantDataSource(
-            config: config,
-            username: scenario.user['username']!,
-            password: scenario.user['password']!,
-          ),
-        ),
-      ],
-    );
+    final ProviderContainer container = e2eContainer(config, scenario);
     addTearDown(container.dispose);
+    await container.read(deviceIdentityProvider).ensure();
 
     final AppLocalizations l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(container: container, child: const RemoteClaudeApp()),
-    );
-    await tester.pumpAndSettle();
+    await mountApp(tester, container);
 
     // Nobody is signed in on a fresh install: the router sends the visitor to the sign-in screen
     // rather than flashing the session screen at them.
@@ -111,29 +79,12 @@ void main() {
 
     // The count the entity incremented is the one the screen shows: the second ping landed on the
     // session the first one opened, rather than starting a new one.
-    expect(find.byType(Card), findsNWidgets(counts.length));
+    // Counted inside the list of round trips: the screen carries other cards — the one that says
+    // what this installation may do, among them.
+    expect(
+      find.descendant(of: find.byType(PongList), matching: find.byType(Card)),
+      findsNWidgets(counts.length),
+    );
     expect(find.textContaining(RegExp('^Session ')), findsOneWidget);
   });
-}
-
-/// Pumps until [ready] holds, or fails saying what never happened.
-///
-/// `pumpAndSettle` cannot be used to wait for the network: it settles as soon as no animation is
-/// pending, which happens long before a frame comes back over the socket. And a fixed delay is a
-/// flaky test by construction — see docs/architecture/shared/06-testing-strategy.md.
-Future<void> pumpUntil(
-  WidgetTester tester,
-  bool Function() ready, {
-  Duration timeout = const Duration(seconds: 30),
-}) async {
-  final DateTime deadline = DateTime.now().add(timeout);
-
-  while (!ready()) {
-    if (DateTime.now().isAfter(deadline)) {
-      fail('the condition never held within ${timeout.inSeconds}s');
-    }
-    await tester.pump(const Duration(milliseconds: 50));
-  }
-
-  await tester.pump();
 }

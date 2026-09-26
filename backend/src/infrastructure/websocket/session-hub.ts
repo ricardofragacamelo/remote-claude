@@ -3,6 +3,7 @@ import type { Envelope } from '@remote-claude/contracts';
 
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { forLog } from '@shared/logging/redact';
+import { currentTraceId } from '@shared/logging/trace-context';
 import { ConnectionRegistry } from './connection-registry';
 import type { Connection } from './connection-registry';
 import { EventBuffer } from './event-buffer';
@@ -12,6 +13,24 @@ import type { FrameDraft } from './frame-builder';
 
 /** What a caller asks the hub to publish. `seq` is the hub's to fill in, so it is absent here. */
 export type EventDraft = Omit<FrameDraft, 'kind' | 'seq'>;
+
+/**
+ * A draft with the trace in scope, when it did not bring one of its own.
+ *
+ * Every event emitted because of a command carries that command's `traceId`
+ * (docs/architecture/shared/03-logging.md#traceid--como-propaga) — and the stream of a turn runs
+ * under the trace of its prompt, so a `tool.started` and the entry of the trail it matches carry
+ * the same one ([D-16](../../../../docs/plans/03-rules-and-audit/decisions.md)).
+ */
+function traced(draft: EventDraft): EventDraft {
+  if (draft.traceId !== undefined) {
+    return draft;
+  }
+
+  const traceId = currentTraceId();
+
+  return traceId === null ? draft : { ...draft, traceId };
+}
 
 /**
  * Fan-out: one session, many connections.
@@ -49,7 +68,7 @@ export class SessionHub {
    */
   publish(sessionId: string, draft: EventDraft): Envelope {
     const frame = this.frames.build({
-      ...draft,
+      ...traced(draft),
       kind: 'event',
       sessionId,
       seq: this.nextSeq(sessionId),
@@ -71,7 +90,10 @@ export class SessionHub {
    * ([ADR-012](../../../../docs/architecture/shared/00-decisions.md)).
    */
   request(sessionId: string, draft: EventDraft): Envelope {
-    return this.fanOut(sessionId, this.frames.build({ ...draft, kind: 'request', sessionId }));
+    return this.fanOut(
+      sessionId,
+      this.frames.build({ ...traced(draft), kind: 'request', sessionId }),
+    );
   }
 
   /**

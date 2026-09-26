@@ -1,4 +1,4 @@
-import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { SDKMessage, SessionMessage } from '@anthropic-ai/claude-agent-sdk';
 
 import type { SessionEvent } from '@application/session';
 import { isPlainObject } from '@shared/utils/plain-object';
@@ -174,7 +174,12 @@ function fromStreamEvent(
  * block among them also opens a tool.
  */
 function fromAssistant(message: Extract<SDKMessage, { type: 'assistant' }>): MappedMessage {
-  const blocks = asArray(message.message.content);
+  return assistantEvents(message.message.id, message.message.content);
+}
+
+/** The events of an assistant message, from its id and its content — live or read back. */
+function assistantEvents(messageId: string, content: unknown): MappedMessage {
+  const blocks = asArray(content);
 
   const started = blocks
     .filter((block) => block.type === 'tool_use')
@@ -191,7 +196,7 @@ function fromAssistant(message: Extract<SDKMessage, { type: 'assistant' }>): Map
     {
       type: 'message.completed',
       payload: {
-        messageId: message.message.id,
+        messageId,
         role: 'assistant',
         content: blocks.map(toContentBlock),
       },
@@ -207,14 +212,19 @@ function fromAssistant(message: Extract<SDKMessage, { type: 'assistant' }>): Map
  * the client can show what was sent from the other device.
  */
 function fromUser(message: Extract<SDKMessage, { type: 'user' }>): MappedMessage {
-  const blocks = asArray(message.message.content);
+  return userEvents(message.uuid ?? '', message.message.content);
+}
+
+/** The events of a user message, from its id and its content — live or read back. */
+function userEvents(messageId: string, content: unknown): MappedMessage {
+  const blocks = asArray(content);
   const results = blocks.filter((block) => block.type === 'tool_result');
 
   if (results.length === 0) {
     return events({
       type: 'message.completed',
       payload: {
-        messageId: message.uuid ?? '',
+        messageId,
         role: 'user',
         content: blocks.map(toContentBlock),
       },
@@ -245,6 +255,38 @@ function fromResult(message: Extract<SDKMessage, { type: 'result' }>): MappedMes
       durationMs: message.duration_ms,
     },
   });
+}
+
+/**
+ * A message read back from a transcript, as the events the live stream produced for it.
+ *
+ * It goes through **the same two functions** the live stream does, and that is the whole of B-03:
+ * a message from history reaches the client as the `message.completed`, `tool.started` and
+ * `tool.completed` it was when it happened, with the same ids — so the client that reloads after a
+ * `gap` recognises what it already has instead of showing it twice. Two mappings would drift, and
+ * the one that drifts is the one nobody watches.
+ *
+ * A `system` entry is never asked for, and would produce nothing if it were: none of it is a
+ * message of the timeline.
+ */
+export function historicalEvents(message: SessionMessage): readonly SessionEvent[] {
+  const body = isPlainObject(message.message) ? message.message : {};
+
+  switch (message.type) {
+    case 'assistant':
+      // The API's message id, exactly as the live `assistant` message carries it — that is the
+      // key the client already accumulated deltas under.
+      return assistantEvents(
+        typeof body['id'] === 'string' ? body['id'] : message.uuid,
+        body['content'],
+      ).events;
+
+    case 'user':
+      return userEvents(message.uuid, body['content']).events;
+
+    default:
+      return [];
+  }
 }
 
 /** One or more events, in the order they should reach the client. */

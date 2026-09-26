@@ -84,3 +84,17 @@ final class UnexpectedFailure extends Failure {
   const UnexpectedFailure({required super.traceId})
     : super(code: 'INTERNAL_ERROR', messageKey: 'common.error.unexpected');
 }
+
+/// The trace of a failure that never came from a request, and so never had one.
+///
+/// A dash rather than an empty string: the error view renders the trace, and a blank space where
+/// an identifier should be reads as a bug in the screen instead of an absence of information.
+const String unknownTraceId = '-';
+
+/// Any error, read as a [Failure].
+///
+/// Anything that is not one already becomes [UnexpectedFailure]. Above `data/` a raw exception has
+/// no code, no trace and nothing the UI can translate — and the screen still owes the person a
+/// sentence, so the conversion happens here rather than in each screen's own way.
+Failure asFailure(Object error) =>
+    error is Failure ? error : const UnexpectedFailure(traceId: unknownTraceId);

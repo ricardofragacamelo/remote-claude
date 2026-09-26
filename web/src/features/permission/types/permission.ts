@@ -1,11 +1,34 @@
 /** How dangerous the backend judged an invocation. Derived there, never here. */
 export type RiskHint = 'read' | 'write' | 'destructive';
 
-/** How far a decision reaches. Only the two that die with the session exist in this build. */
-export type PermissionScope = 'once' | 'session';
+/**
+ * How far a decision reaches.
+ *
+ * `once` and `session` die with the session. `project` and `always` leave a rule that outlives it,
+ * which is why they are offered only with the rule they would grant, and only behind a second step.
+ */
+export type PermissionScope = 'once' | 'session' | 'project' | 'always';
+
+/** The two scopes that persist a rule, and the only two that can be revoked from `/rules`. */
+export type PersistedScope = Extract<PermissionScope, 'project' | 'always'>;
 
 /** Yes or no. There is no third value: silence is the deadline's, and it denies. */
 export type PermissionDecision = 'allow' | 'deny';
+
+/**
+ * What a `project` or `always` answer would leave behind, as the server described it.
+ *
+ * Never derived here. The pattern is the one the backend's matcher will grant, and the lifetime is
+ * the installation's — a client that computed either would show one reach and grant another
+ * ([D-12](../../../../../docs/plans/03-rules-and-audit/decisions.md)).
+ */
+export interface RuleOffer {
+  /** In the grammar of the Claude Code settings: `Bash(git status)`. */
+  readonly pattern: string;
+
+  /** How long the rule lives, counted from the answer. */
+  readonly lifetimeMs: number;
+}
 
 /** A scope the UI may offer, with the key it is labelled by. */
 export interface ScopeSuggestion {
@@ -13,6 +36,9 @@ export interface ScopeSuggestion {
 
   /** An i18n key. The server never sends prose, not even inside a suggestion. */
   readonly labelKey: string;
+
+  /** The rule a persisted scope would grant; `null` on the two that die with the session. */
+  readonly rule: RuleOffer | null;
 }
 
 /**

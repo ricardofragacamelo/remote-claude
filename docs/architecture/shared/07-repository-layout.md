@@ -143,8 +143,8 @@ silencioso para o limite.
 | Configuração | Restrição | Por quê |
 |---|---|---|
 | Validade da regra de permissão — default e **teto** | teto obrigatório; pedido acima é recusado com `PERMISSION_RULE_EXPIRY_TOO_LONG` | regra sem validade sobrevive à razão que a criou; teto é o que força a revisão periódica |
-| Janela de retenção da trilha | **≥ 90 dias**, o piso que a trigger da tabela também aplica | ver [a trilha](../backend/05-persistence.md#a-trilha-de-auditoria) — piso que se pode baixar por variável de ambiente não é piso |
-| Intervalo do job de purga, e o seu desligamento | desligar é explícito, e o boot loga em `warn` | promessa de retenção não pode morrer em silêncio |
+| Janela de retenção da trilha (`RC_AUDIT_RETENTION_DAYS`) | **≥ 90 dias**, o piso que a trigger da tabela também aplica | ver [a trilha](../backend/05-persistence.md#a-trilha-de-auditoria) — piso que se pode baixar por variável de ambiente não é piso |
+| Intervalo do job de purga, e o seu desligamento (`RC_AUDIT_PURGE_INTERVAL_MS`) | ≥ 1 minuto; desligar é o valor literal `off` — `0`, vazio ou ausente derrubam o boot —, e desligado o boot loga em `warn` | promessa de retenção não pode morrer em silêncio, nem por um número digitado errado ([03 · D-22](../../plans/03-rules-and-audit/decisions.md#d-22--o-job-o-botão-de-desligar-e-o-que-o-comando-lê)) |
 
 ---
 

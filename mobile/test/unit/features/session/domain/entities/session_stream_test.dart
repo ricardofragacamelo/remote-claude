@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 import 'package:remote_claude/features/session/domain/entities/session_stream.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
@@ -84,9 +85,16 @@ void main() {
     // Not `const`: two identical constant expressions are one instance, and identity would
     // answer before the equality this test is about.
     // ignore_for_file: prefer_const_constructors
-    expect(PongReceived(pong()), PongReceived(pong()));
+    final SessionEvent arrival = PongArrived(1, pong());
+
+    expect(EventReceived(arrival), EventReceived(arrival));
     expect(StreamGap(), StreamGap());
-    expect(PongReceived(pong()), isNot(StreamGap()));
+    expect(EventReceived(arrival), isNot(StreamGap()));
     expect(StreamGap().props, isEmpty);
+  });
+
+  test('pongs compare by value, so a replay of one is not a second round trip', () {
+    expect(pong(), pong());
+    expect(pong(), isNot(pong(seq: 2)));
   });
 }

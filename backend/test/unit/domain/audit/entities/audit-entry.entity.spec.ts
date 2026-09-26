@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { AuditEntry } from '@domain/audit';
+import { AuditEntry, isAuditDecision } from '@domain/audit';
 import { UserId } from '@domain/auth';
 import { SessionId } from '@domain/session';
 
@@ -88,5 +88,35 @@ describe('AuditEntry', () => {
 
   it.each(['recorded', 'allowed', 'denied'] as const)('records the decision %s', (decision) => {
     expect(AuditEntry.record({ ...draft, decision }).decision).toBe(decision);
+  });
+
+  it('carries no verdict unless one is given — a hook entry decides nothing', () => {
+    expect(AuditEntry.record(draft).verdict).toBeNull();
+    expect(AuditEntry.record({ ...draft, verdict: null }).verdict).toBeNull();
+  });
+
+  it('carries the verdict of a decision, and hands it back unchanged — S-81', () => {
+    const verdict = {
+      requestId: 'req-1',
+      auto: true,
+      ruleId: 'rule-1',
+      scope: 'project' as const,
+      resolvedBy: owner,
+      resolvedFrom: null,
+    };
+    const entry = AuditEntry.record({ ...draft, decision: 'allowed', verdict });
+
+    expect(entry.verdict).toEqual(verdict);
+    expect(AuditEntry.restore(entry.snapshot()).verdict).toEqual(verdict);
+  });
+});
+
+describe('isAuditDecision', () => {
+  it.each(['recorded', 'allowed', 'denied'])('knows %s', (decision) => {
+    expect(isAuditDecision(decision)).toBe(true);
+  });
+
+  it.each(['allow', 'deny', '', 'RECORDED'])('does not know %j', (decision) => {
+    expect(isAuditDecision(decision)).toBe(false);
   });
 });

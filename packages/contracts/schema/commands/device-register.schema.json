@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/device-register.json",
+  "title": "DeviceRegister",
+  "description": "What the app says about itself on `POST /devices`. It travels over HTTP rather than the socket — a device has to exist before it may decide anything, and the handshake already needs to know which device it is — but the payload is one contract in three languages all the same.",
+  "x-kind": "http",
+  "x-type": "device.register",
+  "type": "object",
+  "required": ["installId", "name", "platform", "appVersion"],
+  "properties": {
+    "installId": {
+      "type": "string",
+      "description": "Identity of the installation, minted by the app on first run and kept in the operating system's secure storage. Never an identifier of the device itself: that one survives an uninstall, which is a privacy problem, and this one does not (D-01)."
+    },
+    "name": {
+      "type": "string",
+      "description": "What the person will recognise in the approval list."
+    },
+    "platform": {
+      "type": "string",
+      "enum": ["android", "ios"],
+      "description": "Which operating system. Only Android is exercised in this plan (D-12); the app still builds for iOS."
+    },
+    "appVersion": {
+      "type": "string",
+      "description": "Version of the app, for diagnostics and for the deprecation window."
+    },
+    "pushToken": {
+      "type": "string",
+      "description": "The provider's token for this installation, when there is one. Absent is normal and not an error: a device with no token still watches sessions, and the app re-sends the token on every renewal (D-13)."
+    },
+    "locale": {
+      "type": "string",
+      "enum": ["en", "pt-BR"],
+      "description": "Language the push goes out in — the one exception to the rule that the backend never translates. Absent falls back to `en`."
+    }
+  }
+}

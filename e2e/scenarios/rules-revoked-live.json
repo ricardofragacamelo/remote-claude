@@ -1,0 +1,10 @@
+{
+  "id": "03·S-42",
+  "title": "revoking the rule in the browser makes the session that was already open ask again",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "scope": "always",
+    "revokedStatus": "revoked"
+  }
+}

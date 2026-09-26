@@ -10,6 +10,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:remote_claude/core/network/trace_provider.dart';
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
+import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/session_stream.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 import 'package:remote_claude/features/session/domain/usecases/watch_session.dart';
@@ -84,7 +85,13 @@ class SessionStreamController extends _$SessionStreamController {
 
   void _apply(SessionUpdate update) {
     switch (update) {
-      case PongReceived(:final Pong pong):
+      case EventReceived(:final SessionEvent event):
+        // One stream, read by two screens. This one cares about exactly one of its events.
+        if (event is! PongArrived) {
+          return;
+        }
+
+        final Pong pong = event.pong;
         final String? before = state.stream.sessionId;
         final SessionStream next = state.stream.apply(pong);
 

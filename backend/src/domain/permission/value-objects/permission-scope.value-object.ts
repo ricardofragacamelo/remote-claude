@@ -1,32 +1,38 @@
 /**
  * How far a decision reaches.
  *
- * Four values, and the contract carries the same four. Only two of them exist in this plan: a rule
- * that outlives the session needs a screen to revoke it, and that screen belongs to the rules plan
- * — see docs/plans/01-live-session/F4-permission.md.
+ * Four values, and the contract carries the same four:
+ *
+ * | Scope | Leaves behind |
+ * |---|---|
+ * | `once` | nothing |
+ * | `session` | a rule in memory, gone with the subprocess |
+ * | `project` | a persisted rule, for every session of this person in that project |
+ * | `always` | a persisted rule, for every session of this person anywhere |
+ *
+ * The last two outlive the session, which is why they exist only alongside the way of revoking
+ * them — see docs/plans/03-rules-and-audit/F0-rules.md.
  */
 export const PERMISSION_SCOPES = ['once', 'session', 'project', 'always'] as const;
 
 export type PermissionScope = (typeof PERMISSION_SCOPES)[number];
 
 /**
- * The scopes that die with the session, and therefore the ones this build honours.
+ * The scopes whose rule is written to the database, because it has to survive the process.
  *
- * `once` leaves nothing behind; `session` leaves a rule in memory that goes when the subprocess
- * does. Neither can grant anything tomorrow, which is what makes them safe to ship before the
- * screen that revokes a rule exists.
+ * A `session` rule stays in memory on purpose: what goes to the database is what has to outlive
+ * the subprocess, and a session rule is defined by not doing that.
  */
-export const LIVE_PERMISSION_SCOPES = ['once', 'session'] as const;
+export const PERSISTED_PERMISSION_SCOPES = ['project', 'always'] as const;
 
-export type LivePermissionScope = (typeof LIVE_PERMISSION_SCOPES)[number];
+export type PersistedPermissionScope = (typeof PERSISTED_PERMISSION_SCOPES)[number];
 
-/**
- * Whether this build can honour a scope.
- *
- * A scope it cannot honour is **not** silently downgraded to `once`: a person who tapped "always"
- * and got "just this once" has been told something untrue about what they authorised. The caller
- * refuses instead.
- */
-export function isLivePermissionScope(scope: string): scope is LivePermissionScope {
-  return (LIVE_PERMISSION_SCOPES as readonly string[]).includes(scope);
+/** Whether a string names one of the four scopes. */
+export function isPermissionScope(scope: string): scope is PermissionScope {
+  return (PERMISSION_SCOPES as readonly string[]).includes(scope);
+}
+
+/** Whether a scope's rule is persisted rather than kept in memory. */
+export function isPersistedPermissionScope(scope: string): scope is PersistedPermissionScope {
+  return (PERSISTED_PERMISSION_SCOPES as readonly string[]).includes(scope);
 }

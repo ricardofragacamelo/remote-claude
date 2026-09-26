@@ -1,0 +1,9 @@
+{
+  "id": "03·S-92",
+  "title": "a purge while a session is open leaves its trail alone, and the session goes on writing it",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "plantedDaysAgo": 200
+  }
+}

@@ -10,13 +10,9 @@
  * docs/architecture/backend/04-claude-integration.md#a-armadilha-do-settingsources.
  */
 
-/**
- * @typedef {object} Finding
- * @property {string} rule
- * @property {string} file
- * @property {number} line 1-based
- * @property {string} detail what is wrong, and what it costs
- */
+import { inspectAll as inspectWith } from './source-rules.mjs';
+
+/** @typedef {import('./source-rules.mjs').Finding} Finding */
 
 /**
  * The text between the parentheses of the call starting at [open].
@@ -270,5 +266,5 @@ export function inspectSource(file, rawSource) {
  * @returns {Finding[]}
  */
 export function inspectAll(files) {
-  return files.flatMap((entry) => inspectSource(entry.file, entry.source));
+  return inspectWith(files, inspectSource);
 }

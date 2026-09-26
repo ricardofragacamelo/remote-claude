@@ -49,14 +49,18 @@ export function spawnLocation(options) {
  * @param {string} command
  * @param {readonly string[]} args
  * @param {RunOptions} options
- * @param {{ attached: boolean, defaultTimeoutMs: number }} mode
+ * @param {{ attached: boolean | 'stderr', defaultTimeoutMs: number }} mode `true` inherits every stream, `'stderr'` only stderr
  * @returns {RunResult}
  */
 function invoke(command, args, options, mode) {
   /** @type {import('node:child_process').SpawnSyncOptions} */
   const spawnOptions = {
     timeout: options.timeoutMs ?? mode.defaultTimeoutMs,
-    ...(mode.attached ? { stdio: 'inherit' } : { encoding: 'utf8' }),
+    ...(mode.attached === true
+      ? { stdio: 'inherit' }
+      : mode.attached === 'stderr'
+        ? { stdio: ['inherit', 'pipe', 'inherit'], encoding: 'utf8' }
+        : { encoding: 'utf8' }),
     ...spawnLocation(options),
   };
 
@@ -98,6 +102,22 @@ export function run(command, args, options = {}) {
  */
 export function runAttached(command, args, options = {}) {
   return invoke(command, args, options, { attached: true, defaultTimeoutMs: 300_000 });
+}
+
+/**
+ * Runs a command that **reports** on stdout and talks to the person on stderr: the report is
+ * captured for the caller to read, and everything else reaches the terminal as it happens.
+ *
+ * `pnpm db purge` is the reason: its result is one JSON line the script turns into sentences, and
+ * its log is for whoever is watching.
+ *
+ * @param {string} command
+ * @param {readonly string[]} args
+ * @param {RunOptions} [options]
+ * @returns {RunResult}
+ */
+export function runReporting(command, args, options = {}) {
+  return invoke(command, args, options, { attached: 'stderr', defaultTimeoutMs: 300_000 });
 }
 
 /**

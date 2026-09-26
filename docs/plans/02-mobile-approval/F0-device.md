@@ -21,7 +21,7 @@ alguém ter dito que ele pode.
 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 
-### B-01 — `Device` no domínio `auth` 🔲
+### B-01 — `Device` no domínio `auth` ✅
 
 Nome, plataforma, versão do app, `pushToken`, `locale` e o estado (`pending → approved →
 revoked`). Ancorado no `User`, que por sua vez é ancorado no `sub` — nunca no e-mail
@@ -29,7 +29,7 @@ revoked`). Ancorado no `User`, que por sua vez é ancorado no `sub` — nunca no
 
 `Device.locale` é o que decide o idioma do push. Ausente, cai em `en`.
 
-### B-02 — Tabela `devices` e migration 🔲
+### B-02 — Tabela `devices` e migration ✅
 
 O índice único é **composto: `(user_id, install_id)`**
 ([D-10](decisions.md#d-10--o-mesmo-aparelho-duas-contas)), e nasce composto — depois seria
@@ -40,34 +40,38 @@ do que esta fase existe para garantir.
 Migration versionada; identidade estável do aparelho (um `installId` gerado pelo app) para que
 reinstalar não crie um device fantasma a cada abertura.
 
-### B-03 — Endpoints de device 🔲
+### B-03 — Endpoints de device ✅
 
 Registrar, listar, aprovar e revogar, com os status do
 [catálogo](../../architecture/shared/04-errors-and-http.md): `201` no registro, `403` para
 device não aprovado, `404` para o que não é do usuário.
 
-### B-04 — Revogação alcança socket aberto 🔲
+### B-04 — Revogação alcança socket aberto ✅
 
 Revogar fecha **na hora** as connections daquele device, com `4401`, e invalida os refresh
 tokens dele. Sem isso, um aparelho revogado continua aprovando permissão até o token expirar —
 ou seja, a revogação não revoga nada.
 
-### B-05 — Guard de device nas ações que decidem 🔲
+### B-05 — Guard de device nas ações que decidem ✅
 
 Observar sessão: permitido a device pendente. Responder permissão: só aprovado, com
 `DEVICE_NOT_REGISTERED` ou `DEVICE_REVOKED`.
 
+O guard vale também para `permission.extend`, que a task não nomeia. Estender não autoriza nada,
+mas **move o prazo** — e o prazo é a única proteção que existe contra sessão pendurada
+([01 · D-09](../01-live-session/decisions.md)). Quem não pode decidir não pode movê-lo.
+
 `401` diz "renove e repita"; `403` diz "não adianta insistir". Trocar os dois põe o app em laço
 de renovação.
 
-### B-06 — Tela de devices no web 🔲
+### B-06 — Tela de devices no web ✅
 
 Listar, aprovar e revogar, com a data do último uso. A aprovação parte de uma **sessão já
 confiável** — um aparelho não aprova a si mesmo, e é isso que torna o registro uma prova.
 
 Fecha a dívida que o bootstrap registrou em [web/07-auth](../../architecture/web/07-auth.md).
 
-### B-07 — Registro e estado pendente no app 🔲
+### B-07 — Registro e estado pendente no app ✅
 
 No primeiro login o app registra o aparelho e mostra o estado com todas as letras: enquanto
 pendente, observa sessões e tem os controles de aprovação **desabilitados, com explicação**.
@@ -75,7 +79,7 @@ pendente, observa sessões e tem os controles de aprovação **desabilitados, co
 Esconder o motivo transforma regra de segurança em bug aparente
 ([mobile/07-auth](../../architecture/mobile/07-auth.md)).
 
-### B-30 — O pendente que ninguém aprovou expira 🔲
+### B-30 — O pendente que ninguém aprovou expira ✅
 
 Registro pendente há mais de **7 dias** sai da lista
 ([D-11](decisions.md#d-11--o-pendente-esquecido)). Registrar de novo é abrir o app.

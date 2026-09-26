@@ -1,20 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:remote_claude/features/session/domain/entities/pong.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 import 'package:remote_claude/features/session/presentation/providers/session_stream_controller.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 
+import '../../../../../support/builders/frames.dart';
 import '../../../../../support/fakes/fake_session_repository.dart';
 
-Pong pong({int seq = 1, String nonce = 'n-1', String sessionId = 'ses-1', int count = 1}) => Pong(
-  seq: seq,
-  sessionId: sessionId,
-  pingedAt: '2026-09-14T12:00:00.000Z',
-  pingCount: count,
-  nonce: nonce,
-);
+/// One pong, as the data source emits it.
+SessionUpdate pongUpdate({
+  int seq = 1,
+  String nonce = 'n-1',
+  String sessionId = 'ses-1',
+  int count = 1,
+}) => arrivalOf(diagPong(sessionId: sessionId, seq: seq, pingCount: count, nonce: nonce));
 
 void main() {
   late FakeSessionRepository repository;
@@ -80,7 +80,7 @@ void main() {
 
   test('the answer ends the wait', () async {
     controller().ping();
-    repository.emit(PongReceived(pong(nonce: repository.pings.single)));
+    repository.emit(pongUpdate(nonce: repository.pings.single));
     await settle();
 
     expect(state().isSending, isFalse);
@@ -89,39 +89,39 @@ void main() {
 
   test('somebody else’s answer does not end our wait', () async {
     controller().ping();
-    repository.emit(PongReceived(pong(nonce: 'somebody-else')));
+    repository.emit(pongUpdate(nonce: 'somebody-else'));
     await settle();
 
     expect(state().isSending, isTrue);
   });
 
   test('the first pong is what starts following the session', () async {
-    repository.emit(PongReceived(pong(seq: 1)));
+    repository.emit(pongUpdate(seq: 1));
     await settle();
 
     expect(repository.followed, <String>['ses-1']);
   });
 
   test('the follower resumes from the highest seq applied', () async {
-    repository.emit(PongReceived(pong(seq: 1)));
+    repository.emit(pongUpdate(seq: 1));
     await settle();
-    repository.emit(PongReceived(pong(seq: 7, nonce: 'n-7')));
+    repository.emit(pongUpdate(seq: 7, nonce: 'n-7'));
     await settle();
 
     expect(repository.lastSeq!(), 7);
   });
 
   test('following happens once, not on every event', () async {
-    repository.emit(PongReceived(pong(seq: 1)));
+    repository.emit(pongUpdate(seq: 1));
     await settle();
-    repository.emit(PongReceived(pong(seq: 2, nonce: 'n-2')));
+    repository.emit(pongUpdate(seq: 2, nonce: 'n-2'));
     await settle();
 
     expect(repository.followed, hasLength(1));
   });
 
   test('a later ping carries the session that was opened', () async {
-    repository.emit(PongReceived(pong(seq: 1)));
+    repository.emit(pongUpdate(seq: 1));
     await settle();
 
     controller().ping();
@@ -130,9 +130,9 @@ void main() {
   });
 
   test('a replayed event does not duplicate the transcript', () async {
-    repository.emit(PongReceived(pong(seq: 1)));
+    repository.emit(pongUpdate(seq: 1));
     await settle();
-    repository.emit(PongReceived(pong(seq: 1)));
+    repository.emit(pongUpdate(seq: 1));
     await settle();
 
     expect(state().stream.pongs, hasLength(1));
@@ -140,7 +140,7 @@ void main() {
 
   test('a gap clears everything, including the round trip in flight', () async {
     controller().ping();
-    repository.emit(PongReceived(pong(seq: 4)));
+    repository.emit(pongUpdate(seq: 4));
     await settle();
 
     repository.emit(const StreamGap());

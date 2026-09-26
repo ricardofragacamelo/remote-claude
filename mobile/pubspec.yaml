@@ -40,6 +40,7 @@ dependencies:
 
   intl: any
   cupertino_icons: ^1.0.8
+  local_auth: ^3.0.2
 
 dev_dependencies:
   flutter_test:
@@ -62,6 +63,7 @@ dev_dependencies:
   # letting a transitive dependency decide what the test compiles against.
   flutter_appauth_platform_interface: ^12.0.1
   plugin_platform_interface: ^2.1.8
+  patrol: ^4.10.0
 
 flutter:
   uses-material-design: true
@@ -69,3 +71,10 @@ flutter:
   # Generates the type-safe accessors of lib/l10n/*.arb. A key that does not exist becomes a
   # compile error, which is the whole reason for ARB over string lookup.
   generate: true
+
+# The real-push suite (plan 02, D-26), run by `node scripts/mobile.mjs test:e2e:push` through
+# `patrol`, which is what reaches the notification dialog, the home button and the tray.
+patrol:
+  app_name: remote_claude
+  android:
+    package_name: com.remoteclaude.remote_claude

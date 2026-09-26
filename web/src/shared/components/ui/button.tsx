@@ -1,6 +1,6 @@
 import { cva } from 'class-variance-authority';
 import type { VariantProps } from 'class-variance-authority';
-import type { ButtonHTMLAttributes } from 'react';
+import type { ComponentProps } from 'react';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -33,7 +33,11 @@ const button = cva(
   },
 );
 
-export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof button>;
+// CUSTOM: `ComponentProps<'button'>` rather than `ButtonHTMLAttributes`, so a caller can hold a
+// `ref`. The devices screen needs one: when the revoke confirmation opens, focus has to land on
+// the way out and not on the destructive button, and `autoFocus` is refused by the accessibility
+// lint. Under React 19 `ref` is an ordinary prop, so nothing else changes.
+export type ButtonProps = ComponentProps<'button'> & VariantProps<typeof button>;
 
 export function Button({ className, variant, size, ...props }: ButtonProps): React.JSX.Element {
   return <button className={cn(button({ variant, size }), className)} {...props} />;

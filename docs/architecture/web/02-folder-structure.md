@@ -27,6 +27,8 @@ web/
 │   ├── main.tsx
 │   ├── app/
 │   │   ├── App.tsx
+│   │   ├── Screen.tsx              moldura das rotas: coluna, título, link, portão de login
+│   │   ├── RulesRoute.tsx          /rules — o que foi autorizado antes, e onde se retira
 │   │   ├── router.tsx              rotas
 │   │   └── providers.tsx           QueryClient, i18n, tema, error boundary
 │   │

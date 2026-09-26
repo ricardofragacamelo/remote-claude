@@ -27,7 +27,7 @@
     "scope": {
       "type": "string",
       "enum": ["once", "session", "project", "always"],
-      "description": "How far the decision reaches. Absent means `once`. Only `once` and `session` exist in this plan — `project` and `always` are persisted rules, and they arrive with the rules module."
+      "description": "How far the decision reaches. Absent means `once`. `session` leaves a rule that dies with the session; `project` and `always` persist a rule — the narrowest pattern covering this invocation, with the configured default lifetime — that answers future requests without asking and is revoked through `DELETE /permission-rules/:ruleId`. An invocation with nothing a pattern can name cannot be granted `project` or `always`: that is `INVALID_INPUT`, never a rule for the whole tool."
     },
     "reason": {
       "type": "string",

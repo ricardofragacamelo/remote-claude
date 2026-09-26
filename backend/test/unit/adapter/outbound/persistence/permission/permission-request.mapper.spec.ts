@@ -15,6 +15,7 @@ function aRequest(): PermissionRequest {
     id: 'request-1',
     sessionId: PERMISSION_SESSION,
     userId: PERMISSION_OWNER,
+    projectPath: null,
     toolUseId: 'toolu-1',
     toolName: 'Bash',
     input: { command: 'rm -rf build/' },
@@ -48,6 +49,7 @@ describe('the permission request mapper', () => {
       resolvedBy: null,
       resolvedFrom: null,
       auto: null,
+      ruleId: null,
       extensionsUsed: 0,
       requestedAt: PERMISSION_NOW,
       expiresAt: new Date(PERMISSION_NOW.getTime() + 1_000),
@@ -91,6 +93,26 @@ describe('the permission request mapper', () => {
       resolvedBy: null,
       resolvedFrom: null,
       auto: true,
+    });
+  });
+
+  it('writes which rule answered, when one did — S-62', () => {
+    const request = aRequest();
+    request.resolve({
+      decision: 'allow',
+      reason: null,
+      scope: 'always',
+      resolvedBy: PERMISSION_OWNER,
+      resolvedFrom: null,
+      auto: true,
+      ruleId: 'rule-7',
+      at: written,
+    });
+
+    expect(toRow(request, written)).toMatchObject({
+      auto: true,
+      scope: 'always',
+      ruleId: 'rule-7',
     });
   });
 

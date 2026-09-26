@@ -3,6 +3,7 @@ library;
 
 import 'package:remote_claude/core/config/app_config.dart';
 import 'package:remote_claude/core/config/app_config_provider.dart';
+import 'package:remote_claude/core/device/device_identity_provider.dart';
 import 'package:remote_claude/core/logging/logger_provider.dart';
 import 'package:remote_claude/core/network/credentials_provider.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
@@ -20,6 +21,7 @@ WsClient wsClient(Ref ref) {
     credentials: ref.watch(credentialsProvider),
     logger: ref.watch(appLoggerProvider),
     appVersion: config.appVersion,
+    installIds: ref.watch(deviceIdentityProvider),
   );
 
   ref.onDispose(client.dispose);

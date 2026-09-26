@@ -1,4 +1,8 @@
-import type { PermissionEvents, PermissionResolvedEvent } from '@application/permission';
+import type {
+  PermissionEvents,
+  PermissionRequestedEvent,
+  PermissionResolvedEvent,
+} from '@application/permission';
 
 /**
  * The internal bus, as a list of subscribers.
@@ -9,11 +13,19 @@ import type { PermissionEvents, PermissionResolvedEvent } from '@application/per
  */
 export class RecordingPermissionEvents implements PermissionEvents {
   readonly published: PermissionResolvedEvent[] = [];
+
+  /** The questions that were put to somebody, in order. Only the ones nothing settled first. */
+  readonly asked: PermissionRequestedEvent[] = [];
+
   private readonly subscribers: ((event: PermissionResolvedEvent) => void)[] = [];
 
   /** Registers a consumer, exactly as the real bus would. */
   subscribe(consumer: (event: PermissionResolvedEvent) => void): void {
     this.subscribers.push(consumer);
+  }
+
+  requested(event: PermissionRequestedEvent): void {
+    this.asked.push(event);
   }
 
   resolved(event: PermissionResolvedEvent): void {
@@ -27,5 +39,10 @@ export class RecordingPermissionEvents implements PermissionEvents {
   /** The ids of the requests that were settled, in order. */
   get requestIds(): string[] {
     return this.published.map((event) => event.request.id);
+  }
+
+  /** The ids of the requests that actually reached somebody, in order. */
+  get askedIds(): string[] {
+    return this.asked.map((event) => event.request.id);
   }
 }

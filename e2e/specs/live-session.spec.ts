@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test';
-import type { Browser } from '@playwright/test';
 
 import {
   attachFrom,
@@ -7,17 +6,16 @@ import {
   expectRecycledBuffer,
   lastSeqOf,
   markAsTrusted,
-  openWorkspace,
   permissionAsked,
   prompt,
   pushPastSeq,
   replayBufferSize,
   sequencesOf,
   startSession,
+  workspaceFor,
   statusReached,
   trustMarkOf,
 } from '../fixtures/live-session';
-import type { LiveSessionContext } from '../fixtures/live-session';
 import { scenario } from '../scenarios';
 
 /**
@@ -43,16 +41,12 @@ const race = scenario('live-race');
 const overflow = scenario('live-replay-gap');
 const trusted = scenario('live-trusted-directory');
 
-let context: LiveSessionContext;
-
-test.beforeAll(async ({ browser }: { browser: Browser }) => {
-  context = await openWorkspace(browser, whole.user);
-});
+const context = workspaceFor(whole.user);
 
 /** Opens a session on the workspace this suite signed in for. */
 async function session(): Promise<{ socket: Awaited<ReturnType<typeof connected>>; id: string }> {
-  const socket = await connected(context.user);
-  return { socket, id: await startSession(socket, context.workspace) };
+  const socket = await connected(context().user);
+  return { socket, id: await startSession(socket, context().workspace) };
 }
 
 /** Waits for the turn to end, and lets the socket go. A turn that never ends is the failure. */
@@ -142,7 +136,7 @@ test(`${asking.id} — ${asking.title}`, async () => {
     requestId,
     decision: expected.decision,
     auto: false,
-    resolvedBy: context.user.userId,
+    resolvedBy: context().user.userId,
   });
 
   // The loop was blocked on that answer; the turn only finishes because it arrived.
@@ -173,7 +167,7 @@ test(`${silence.id} — ${silence.title}`, async () => {
 test(`${denied.id} — ${denied.title}`, async () => {
   const expected = denied.expect as { path: string; code: string };
 
-  const socket = await connected(context.user);
+  const socket = await connected(context().user);
   socket.send('session.start', { workspacePath: expected.path });
 
   const failure = await socket.waitFor((frame) => frame.kind === 'error');
@@ -219,7 +213,7 @@ test(`${reconnect.id} — ${reconnect.title}`, async () => {
   // goodbye.
   first.drop();
 
-  const back = await connected(context.user);
+  const back = await connected(context().user);
   expect((await attachFrom(back, sessionId, lastApplied)).gap).toBe(expected.gap);
 
   // The turn only finishes once the interrupt lands, so what the second socket receives is
@@ -239,7 +233,7 @@ test(`${race.id} — ${race.title}`, async () => {
   const expected = race.expect as { fixture: string; decision: string };
 
   const { socket: first, id: sessionId } = await session();
-  const second = await connected(context.user);
+  const second = await connected(context().user);
 
   await attachFrom(second, sessionId, 0);
 
@@ -257,7 +251,7 @@ test(`${race.id} — ${race.title}`, async () => {
     expect(resolved.payload).toMatchObject({
       requestId,
       decision: expected.decision,
-      resolvedBy: context.user.userId,
+      resolvedBy: context().user.userId,
     });
   }
 
@@ -277,13 +271,13 @@ test(`${trusted.id} — ${trusted.title}`, async () => {
   // The mitigation is that the backend clears the mark before it opens a session. What is proved
   // here is the mitigation, through the door a user goes through: the directory is marked, and the
   // question still reaches the client.
-  markAsTrusted(context.workspace);
-  expect(trustMarkOf(context.workspace)).toBe(true);
+  markAsTrusted(context().workspace);
+  expect(trustMarkOf(context().workspace)).toBe(true);
 
   const { socket, request } = await asked(expected.fixture);
 
   expect(request.payload).toMatchObject({ toolName: expected.toolName });
-  expect(trustMarkOf(context.workspace)).toBe(false);
+  expect(trustMarkOf(context().workspace)).toBe(false);
 
   socket.close();
 });
@@ -304,7 +298,7 @@ test(`${overflow.id} — ${overflow.title}`, async () => {
 
   // Coming back from before what the buffer still holds. A partial replay is never stitched: a
   // client that believes it has everything and does not is worse than one told to reload.
-  const late = await connected(context.user);
+  const late = await connected(context().user);
   expectRecycledBuffer(await attachFrom(late, sessionId, 1), expected);
 
   producer.close();

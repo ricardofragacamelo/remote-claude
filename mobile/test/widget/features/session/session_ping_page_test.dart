@@ -4,21 +4,25 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
+import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/builders/frames.dart';
 import '../../../support/fakes/fake_session_repository.dart';
+import '../../../support/fakes/stub_device_controller.dart';
 import '../../../support/pump_app.dart';
+import '../../../support/fakes/fake_permission_repository.dart';
 
-Pong pong({int seq = 1, String nonce = 'n-1', int count = 1}) => Pong(
-  seq: seq,
-  sessionId: 'ses-1',
-  pingedAt: '2026-09-14T12:00:00.000Z',
-  pingCount: count,
-  nonce: nonce,
-);
+/// One pong, as the data source emits it.
+SessionUpdate pongUpdate({
+  int seq = 1,
+  String nonce = 'n-1',
+  String sessionId = 'ses-1',
+  int count = 1,
+}) => arrivalOf(diagPong(sessionId: sessionId, seq: seq, pingCount: count, nonce: nonce));
 
 void main() {
   late AppLocalizations l10n;
@@ -29,16 +33,28 @@ void main() {
   setUp(() => repository = FakeSessionRepository());
   tearDown(() => repository.dispose());
 
-  Future<void> pumpPage(WidgetTester tester, {ConnectionStatus status = ConnectionStatus.ready}) =>
-      tester.pumpApp(
-        const SessionPingPage(),
-        overrides: <Override>[
-          sessionRepositoryProvider.overrideWithValue(repository),
-          connectionStatusProvider.overrideWith(
-            (Ref ref) => Stream<ConnectionStatus>.value(status),
-          ),
-        ],
-      );
+  Future<void> pumpPage(
+    WidgetTester tester, {
+    ConnectionStatus status = ConnectionStatus.ready,
+  }) => tester.pumpApp(
+    const SessionPingPage(),
+    overrides: <Override>[
+      ...permissionOverrides(),
+      sessionRepositoryProvider.overrideWithValue(repository),
+      connectionStatusProvider.overrideWith((Ref ref) => Stream<ConnectionStatus>.value(status)),
+      // The page carries the approval banner. An approved device says nothing, which keeps
+      // this suite about the page — the banner has its own.
+      deviceControllerAnswering(AsyncData<RegisteredDevice?>(aRegisteredDevice())),
+    ],
+  );
+
+  // The switch lives on the home screen, away from the card it guards.
+  testWidgets('offers the approval lock switch', (WidgetTester tester) async {
+    await pumpPage(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.approvalLockTitle), findsOneWidget);
+  });
 
   testWidgets('shows the empty state before any round trip', (WidgetTester tester) async {
     await pumpPage(tester);
@@ -91,7 +107,7 @@ void main() {
     await pumpPage(tester);
     await tester.pump();
 
-    repository.emit(PongReceived(pong(count: 3)));
+    repository.emit(pongUpdate(count: 3));
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.sessionPingResult(3, '2026-09-14T12:00:00.000Z')), findsOneWidget);
@@ -103,9 +119,9 @@ void main() {
     await pumpPage(tester);
     await tester.pump();
 
-    repository.emit(PongReceived(pong()));
+    repository.emit(pongUpdate());
     await tester.pumpAndSettle();
-    repository.emit(PongReceived(pong()));
+    repository.emit(pongUpdate());
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.sessionPingSequence(1)), findsOneWidget);
@@ -115,7 +131,7 @@ void main() {
     await pumpPage(tester);
     await tester.pump();
 
-    repository.emit(PongReceived(pong()));
+    repository.emit(pongUpdate());
     await tester.pumpAndSettle();
     repository.emit(const StreamGap());
     await tester.pumpAndSettle();
@@ -135,7 +151,7 @@ void main() {
     await pumpPage(tester);
     await tester.pump();
 
-    repository.emit(PongReceived(pong()));
+    repository.emit(pongUpdate());
     await tester.pumpAndSettle();
 
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
@@ -148,6 +164,7 @@ void main() {
       const SessionPingPage(),
       locale: const Locale('pt'),
       overrides: <Override>[
+        ...permissionOverrides(),
         sessionRepositoryProvider.overrideWithValue(repository),
         connectionStatusProvider.overrideWith(
           (Ref ref) => Stream<ConnectionStatus>.value(ConnectionStatus.ready),

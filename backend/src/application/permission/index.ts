@@ -13,11 +13,31 @@ export { ResolvePermissionUseCase } from './resolve-permission.use-case';
 export { ExtendPermissionUseCase } from './extend-permission.use-case';
 export type { ExtendPermissionCommand } from './extend-permission.use-case';
 export { EndSessionPermissionsUseCase } from './end-session-permissions.use-case';
+export { DescribePermissionUseCase } from './describe-permission.use-case';
+export { PermissionRuleBook } from './permission-rule-book';
+export type { RuleLookupFailureReporter } from './permission-rule-book';
+export { GrantPermissionRuleUseCase } from './grant-permission-rule.use-case';
+export { RevokePermissionRuleUseCase } from './revoke-permission-rule.use-case';
+export { ListPermissionRulesUseCase } from './list-permission-rules.use-case';
+export { DescribePermissionRuleUseCase } from './describe-permission-rule.use-case';
+export type { ListedPermissionRule } from './list-permission-rules.use-case';
+export type { GrantPermissionRuleCommand } from './commands/grant-permission-rule.command';
+export type { DescribePermissionQuery, PermissionState } from './describe-permission.use-case';
 export type { RequestPermissionCommand } from './commands/request-permission.command';
 export type { ResolvePermissionCommand } from './commands/resolve-permission.command';
 export type { PermissionBroadcaster, PermissionFrame } from './ports/permission-broadcaster.port';
 export { PERMISSION_BROADCASTER } from './ports/permission-broadcaster.port';
-export type { PermissionEvents, PermissionResolvedEvent } from './ports/permission-events.port';
+export type {
+  PermissionEvents,
+  PermissionRequestedEvent,
+  PermissionResolvedEvent,
+} from './ports/permission-events.port';
 export { PERMISSION_EVENTS } from './ports/permission-events.port';
 export type { PermissionRequestRepository } from './ports/permission-request.repository';
 export { PERMISSION_REQUEST_REPOSITORY } from './ports/permission-request.repository';
+export type {
+  PermissionRuleRepository,
+  RuleGrant,
+  RuleRevocation,
+} from './ports/permission-rule.repository';
+export { PERMISSION_RULE_REPOSITORY } from './ports/permission-rule.repository';

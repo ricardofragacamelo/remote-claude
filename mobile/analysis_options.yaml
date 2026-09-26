@@ -56,6 +56,37 @@ import_lint:
       target: "package:remote_claude/features/auth/**"
       from: "package:remote_claude/features/session/**"
       except: ["package:remote_claude/features/session/session.dart"]
+    no_cross_feature_internals_device_from_auth:
+      target: "package:remote_claude/features/auth/**"
+      from: "package:remote_claude/features/device/**"
+      except: ["package:remote_claude/features/device/device.dart"]
+    no_cross_feature_internals_device_from_session:
+      target: "package:remote_claude/features/session/**"
+      from: "package:remote_claude/features/device/**"
+      except: ["package:remote_claude/features/device/device.dart"]
+    no_cross_feature_internals_auth_from_device:
+      target: "package:remote_claude/features/device/**"
+      from: "package:remote_claude/features/auth/**"
+      except: ["package:remote_claude/features/auth/auth.dart"]
+    no_cross_feature_internals_session_from_device:
+      target: "package:remote_claude/features/device/**"
+      from: "package:remote_claude/features/session/**"
+      except: ["package:remote_claude/features/session/session.dart"]
+
+    no_cross_feature_internals_permission_from_session:
+      target: "package:remote_claude/features/session/**"
+      from: "package:remote_claude/features/permission/**"
+      except: ["package:remote_claude/features/permission/permission.dart"]
+    no_cross_feature_internals_device_from_permission:
+      target: "package:remote_claude/features/permission/**"
+      from: "package:remote_claude/features/device/**"
+      except: ["package:remote_claude/features/device/device.dart"]
+    # The permission feature is imported by the session screen, so it never imports the session
+    # back — not even through its barrel. That is the cycle this rule exists to refuse.
+    permission_never_imports_session:
+      target: "package:remote_claude/features/permission/**"
+      from: "package:remote_claude/features/session/**"
+      except: []
 
     # The arrow points at `core/`, always. `core/` knowing a feature is a cycle waiting to be
     # written.

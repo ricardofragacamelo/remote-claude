@@ -1,0 +1,11 @@
+{
+  "id": "02·S-51",
+  "title": "the phone answers the permission, and the browser only watches it settle",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "toolName": "Write",
+    "decision": "allow",
+    "resolvedFrom": "mobile"
+  }
+}

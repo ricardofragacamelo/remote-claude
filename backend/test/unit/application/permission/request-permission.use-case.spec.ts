@@ -51,7 +51,66 @@ describe('RequestPermissionUseCase', () => {
       suggestions: [
         { scope: 'once', labelKey: 'permission.scope.once' },
         { scope: 'session', labelKey: 'permission.scope.session' },
+        {
+          scope: 'project',
+          labelKey: 'permission.scope.project',
+          pattern: 'Bash(rm -rf build/)',
+          lifetimeMs: 3_600_000,
+        },
+        {
+          scope: 'always',
+          labelKey: 'permission.scope.always',
+          pattern: 'Bash(rm -rf build/)',
+          lifetimeMs: 3_600_000,
+        },
       ],
+    });
+  });
+
+  describe('the scopes it offers — plan 03, D-12', () => {
+    it('offers the persisted scopes with the rule they would grant — S-63', async () => {
+      // The narrowest pattern and the configured lifetime, so the screen can say in full what a
+      // "don't ask again" reaches before anybody chooses it — the same pattern the answer grants.
+      await harness.request.execute(aPermissionQuestion({ input: { command: 'git status' } }));
+
+      const offered = scopesOffered(harness);
+      expect(offered.map((suggestion) => suggestion['scope'])).toEqual([
+        'once',
+        'session',
+        'project',
+        'always',
+      ]);
+      expect(offered.slice(2)).toEqual([
+        expect.objectContaining({ pattern: 'Bash(git status)', lifetimeMs: 3_600_000 }),
+        expect.objectContaining({ pattern: 'Bash(git status)', lifetimeMs: 3_600_000 }),
+      ]);
+      // The ephemeral ones say nothing about a rule, because they leave none that outlives them.
+      expect(offered[0]).not.toHaveProperty('pattern');
+      expect(offered[1]).not.toHaveProperty('lifetimeMs');
+    });
+
+    it.each([
+      ['nothing a pattern can name', { note: 'x' }],
+      ['a value that would read back as another pattern', { command: 'echo )' }],
+    ])('offers only the ephemeral scopes for %s — S-64', async (_case, input) => {
+      // Answering with `project` or `always` would be refused (S-58); offering a button the server
+      // refuses is worse than not offering it.
+      await harness.request.execute(aPermissionQuestion({ input }));
+
+      expect(scopesOffered(harness).map((suggestion) => suggestion['scope'])).toEqual([
+        'once',
+        'session',
+      ]);
+    });
+
+    it('leaves `project` out of a request that has no project', async () => {
+      await harness.request.execute(aPermissionQuestion({ projectPath: null }));
+
+      expect(scopesOffered(harness).map((suggestion) => suggestion['scope'])).toEqual([
+        'once',
+        'session',
+        'always',
+      ]);
     });
   });
 
@@ -156,9 +215,24 @@ describe('RequestPermissionUseCase', () => {
         kind: 'settled',
         resolution: expect.objectContaining({ decision: 'allow', auto: true }),
       });
-      // Nothing was asked, so there is nothing to resolve on screen: publishing either frame
-      // would put a card up only to take it away again.
-      expect(harness.broadcaster.frames).toEqual([]);
+      // Nothing was asked: no card and no deadline. What **is** published is the resolution, with
+      // `auto: true` — the person has to be able to see that something ran in their name. That
+      // part changed with the rules plan (03 · B-03); before it the resolution went unannounced.
+      expect(harness.broadcaster.frames).toEqual([
+        {
+          sessionId: PERMISSION_SESSION.value,
+          kind: 'event',
+          frame: {
+            type: 'permission.resolved',
+            payload: {
+              requestId: 'request-2',
+              decision: 'allow',
+              auto: true,
+              resolvedBy: PERMISSION_OWNER.value,
+            },
+          },
+        },
+      ]);
       expect(harness.scheduler.armed).toBe(0);
     });
 
@@ -228,3 +302,11 @@ describe('RequestPermissionUseCase', () => {
     ]);
   });
 });
+
+/** The `suggestions` of the last question published. */
+function scopesOffered(harness: PermissionHarness): readonly Readonly<Record<string, unknown>>[] {
+  const payload = harness.broadcaster.last('permission.requested') as {
+    suggestions: readonly Readonly<Record<string, unknown>>[];
+  };
+  return payload.suggestions;
+}

@@ -19,7 +19,7 @@ Voltar para o [índice do backend](README.md).
 | `permission` | Requests de permissão, regras persistidas, resolução, timeout | Executar a tool · registrar a trilha (é `audit`) |
 | `transcript` | Histórico: listar sessões, carregar mensagens, retomar | Sessão viva |
 | `notification` | Push para device quando ninguém está online | Decidir se algo merece notificação (quem decide é `permission`) |
-| `audit` | Trilha imutável de **toda** invocação de tool, via hook `PreToolUse` | Autorizar |
+| `audit` | Trilha imutável de **toda** invocação de tool, via hook `PreToolUse`, e dos fatos de conta do mesmo peso (registro, aprovação e revogação de device) | Autorizar |
 
 ### Por que `permission` é módulo separado de `session`
 
@@ -152,8 +152,8 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
     criação. Regra de um jamais resolve o pedido de outro
   - o padrão de input usa a **gramática das settings do Claude Code** — `Bash(git status)` casa
     exato, `Bash(git status:*)` casa o prefixo, `Bash` casa a tool inteira. Sem glob, sem regex:
-    é a mesma gramática que volta ao SDK em `updatedPermissions`, e sintaxe própria faria as duas
-    metades casarem conjuntos diferentes de comando
+    é a gramática do `PermissionUpdate` do SDK — hoje não devolvido, pela D-09 do plano 03 —, e
+    sintaxe própria faria as duas metades casarem conjuntos diferentes de comando no dia em que for
     ([a ponte](04-claude-integration.md#a-ponte-de-permissão))
   - **padrão fora da gramática é recusado na criação**, não guardado como regra que nunca casa —
     e o prefixo respeita fronteira de token: `git status:*` não cobre `git statusx`
@@ -170,8 +170,59 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   - o prazo do pedido pode ser **estendido** pela UI, com incremento e teto vindos da
     configuração — o cliente manda o comando, não escolhe o número
     ([contrato WS](../shared/05-websocket-protocol.md#estender-o-prazo-é-mexer-na-única-proteção-que-existe))
+- **HTTP — `GET /sessions/:sessionId/permissions/:requestId`** (Bearer). A consulta que o deep
+  link do push faz **antes** de renderizar: o push pode chegar atrasado, e o pedido pode já ter
+  sido respondido noutra tela ou negado pelo prazo. O `session.attach` republica os pendentes,
+  mas sem marcador de fim — "não veio em *n* ms" é palpite, não resposta —, então a revalidação é
+  **perguntar**, lendo o mesmo registro em memória de onde o attach reentrega
+  ([02 · D-22](../../plans/02-mobile-approval/decisions.md#d-22--revalidar-é-perguntar-não-esperar)).
+  Só lê: responder continua sendo pelo socket, que é quem dá o `correlationId`.
+
+  | Status | Corpo | Quando |
+  |---|---|---|
+  | `200` | `{ "status": "pending", "request": <payload de permission.requested>, "remainingExtensions": n }` | o pedido ainda bloqueia o loop; `request` é **exatamente** o payload do frame, e `n` é o teto configurado menos as extensões gastas |
+  | `200` | `{ "status": "resolved", "requestId", "decision", "auto", "resolvedBy"?, "resolvedFrom"? }` | alguém respondeu, ou uma regra respondeu; os campos são os de `permission.resolved`, ausentes (nunca `null`) quando não há o que dizer |
+  | `410` | `PERMISSION_REQUEST_EXPIRED` | o prazo negou — "chegou tarde" não é "já foi decidido" |
+  | `404` | `PERMISSION_REQUEST_NOT_FOUND` | `requestId` que este processo não conhece (inclusive o de sessão já encerrada), **ou** pedido que não é daquele `sessionId` |
+  | `403` | `PERMISSION_NOT_OWNED` | pedido de outro usuário |
+  | `401` | `UNAUTHENTICATED` | sem credencial válida |
+
+  A ordem das recusas é fixa — desconhecido, outro usuário, outra sessão, expirado — para que a
+  resposta a um estranho não dependa de ele ter acertado a sessão.
+- **Precedência** ([D-11 do plano 03](../../plans/03-rules-and-audit/decisions.md#d-11--o-mais-restritivo-até-onde-o-canusetool-alcança)):
+  qualquer `deny` que case nega, ao lado de qualquer `allow`; em `permissionMode: plan`, nenhum
+  `allow` auto-aprova — o pedido vai ao humano. Regra que resolve publica `permission.resolved` com
+  `auto: true` e **não** publica `permission.requested` nem dispara push. As regras são lidas a cada
+  pedido, sem cache: falha ao lê-las pergunta ao humano, nunca autoriza.
+- **HTTP — `/permission-rules`** (Bearer). As regras que sobrevivem à sessão (`project`, `always`);
+  a de `session` nasce do card e morre com a sessão
+  ([D-10 do plano 03](../../plans/03-rules-and-audit/decisions.md#d-10--dois-caminhos-para-nascer-uma-rotina)).
+  Escolher `project`/`always` no `permission.resolve` passa pela **mesma** rotina, com o padrão mais
+  estreito que cobre a invocação e a validade default. O `permission.requested` oferece os dois
+  **com** esse padrão e essa validade (`pattern`, `lifetimeMs`), e só quando a invocação tem padrão
+  possível — `project`, só quando o pedido tem workspace
+  ([D-12 do plano 03](../../plans/03-rules-and-audit/decisions.md#d-12--o-alcance-vem-na-pergunta)).
+
+  | Rota | Status | Quando |
+  |---|---|---|
+  | `GET /permission-rules` | `200` `{ rules: [...] }` | as do chamador, mais novas primeiro; expirada vem marcada (`status: expired`), revogada não vem |
+  | `POST /permission-rules` `{ pattern, decision, scope, projectPath?, expiresAt? }` | `201` com a regra | concedida — ou a equivalente que já estava ativa (idempotente) |
+  | | `400` `PERMISSION_RULE_PATTERN_INVALID` | padrão fora da gramática |
+  | | `422` `PERMISSION_RULE_EXPIRY_TOO_LONG` | validade acima do teto configurado |
+  | | `400` `INVALID_INPUT` | validade no passado, ou `project` sem `projectPath` |
+  | `GET /permission-rules/:ruleId` | `200` com a regra | em **qualquer** estado, inclusive `revoked` — é por onde a trilha leva à regra que respondeu ([D-18 do plano 03](../../plans/03-rules-and-audit/decisions.md#d-18--a-regra-revogada-tem-endereço)) |
+  | | `404` `PERMISSION_RULE_NOT_FOUND` | não existe |
+  | | `403` `PERMISSION_NOT_OWNED` | é de outra pessoa |
+  | `DELETE /permission-rules/:ruleId` | `200` com a regra revogada | revogada agora — ou já estava (idempotente). Duas revogações **ao mesmo tempo** também são uma: a que o banco guarda é a registrada na trilha, e as duas respostas trazem o `revokedAt` dela (S-46 do plano 03) |
+  | | `404` `PERMISSION_RULE_NOT_FOUND` | não existe |
+  | | `403` `PERMISSION_NOT_OWNED` | é de outra pessoa, e continua valendo para ela |
+
+  A regra tem `id`, `scope`, `toolName`, `pattern` (a gramática, como escrita), `decision`,
+  `projectPath`, `grantedBy`, `grantedAt`, `expiresAt`, `status` (`active`/`expired`/`revoked`) e
+  `revokedAt`. Conceder e revogar entram na trilha (`permission.ruleGranted`,
+  `permission.ruleRevoked`), só quando algo mudou.
 - **Erros:** `PERMISSION_REQUEST_NOT_FOUND`, `PERMISSION_REQUEST_EXPIRED`, `PERMISSION_NOT_OWNED`,
-  `PERMISSION_RULE_PATTERN_INVALID`, `PERMISSION_RULE_EXPIRY_TOO_LONG`
+  `PERMISSION_RULE_PATTERN_INVALID`, `PERMISSION_RULE_EXPIRY_TOO_LONG`, `PERMISSION_RULE_NOT_FOUND`
 - Ver [contrato WS](../shared/05-websocket-protocol.md#o-fluxo-de-permissão).
 
 ### `transcript`
@@ -197,6 +248,55 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   **não** reduzem o trabalho do SDK — medido, ~30 MB de heap por chamada, com ou sem limite.
   Cache por `sessionId` + `lastModified`, e limite de leituras concorrentes. Ver
   [descoberta §9.2](../../discovery/01-descoberta-claude-agent-sdk.md#92--limitoffset-não-reduzem-o-trabalho-do-servidor).
+  Os números estão em `adapter/outbound/claude/transcript-reads.ts`: **16** conversas em cache
+  (descarta a lida há mais tempo), **2** leituras simultâneas (as demais esperam a vez; a mesma
+  leitura pedida junto é **uma** chamada) e prazo de **10 s** por leitura.
+- **A procedência nasce com a sessão, antes do subprocesso.** O id da conversa no store do
+  Claude é um UUID **cunhado por nós** e passado ao SDK como `sessionId`; a linha em
+  `session_origins` é gravada antes do `query()`. Falha ao gravar **não abre a sessão** — uma
+  conversa nossa sem registro leria como de outra pessoa para sempre. A tabela é do `session`;
+  o `transcript` pergunta por uma porta própria (`TranscriptOriginSource`).
+- **Quem vê o quê** é regra pura de domínio (`transcriptOriginFor`): sem `cwd` → oculta;
+  `cwd` fora das raízes do chamador → oculta; aberta aqui por outra pessoa → oculta; aberta aqui
+  pelo chamador → `ours`; o resto → `external`. Ler o que não se lista responde `404`, igual ao
+  que não existe.
+- **Nenhum arquivo é aberto por esta fatia.** `pnpm lint:arch` reprova `fs`/`readline` em
+  qualquer camada do `transcript` (`transcript-reads-through-the-sdk`) e leitor de linhas em
+  qualquer lugar do backend (`no-line-reader`).
+- **HTTP — `GET /transcripts`** (Bearer). `workspacePath` (obrigatório: uma raiz da allowlist ou
+  um caminho dentro dela), `cursor` opaco e `limit` de 1 a 100 (default 25). Lista **um**
+  diretório, exatamente: `listSessions({ dir, includeWorktrees: false })` não desce a
+  subdiretórios, então a conversa aberta em `/raiz/app` aparece em `workspacePath=/raiz/app`, e
+  não em `workspacePath=/raiz`.
+
+  | Status | Quando |
+  |---|---|
+  | `200` `{ sessions: [...], nextCursor }` | uma página, escrita mais recente primeiro; `nextCursor: null` na última |
+  | `400` `INVALID_INPUT` | caminho relativo, cursor que não foi emitido aqui, `limit` fora dos limites |
+  | `403` `WORKSPACE_NOT_ALLOWED` / `FORBIDDEN` | fora de toda raiz / raiz de outra pessoa — **antes** de chamar o SDK |
+  | `502` `CLAUDE_UNAVAILABLE` · `504` `CLAUDE_TIMEOUT` | o SDK falhou / não respondeu no prazo |
+
+  A sessão tem `sessionId` (o id da conversa no store do Claude — o que `session.start` aceita como
+  `resumeSessionId`), `summary`, `origin` (`ours`/`external`), `cwd`, `gitBranch`, `createdAt` e
+  `lastModified`. O cursor é keyset sobre `(lastModified, sessionId)` descendente: conversa escrita
+  entre duas páginas sobe, acima da janela já lida — não repete, e não faz pular nenhuma.
+- **HTTP — `GET /transcripts/:sessionId/messages`** (Bearer). `cursor` (id de mensagem) e `limit`
+  de 1 a 100 (default 25), **pela cauda**.
+
+  | Status | Quando |
+  |---|---|
+  | `200` `{ session, events: [...], nextCursor }` | as mensagens mais recentes, em ordem cronológica; a próxima página é o que veio **antes** |
+  | `400` `INVALID_INPUT` | id que não é UUID, cursor malformado, `limit` fora dos limites — ou cursor cuja mensagem sumiu (`transcript.error.cursorStale`: a conversa foi compactada; recomeça-se pela cauda) |
+  | `404` `NOT_FOUND` | id que não nomeia conversa, **ou** conversa que o chamador não pode ler — a mesma resposta |
+  | `502` `CLAUDE_UNAVAILABLE` · `504` `CLAUDE_TIMEOUT` | o SDK falhou / não respondeu no prazo |
+
+  `events` são frames do contrato vivo **sem o envelope** — `{ type, payload }` de
+  `message.completed`, `tool.started` e `tool.completed`, produzidos pelas **mesmas** funções do
+  `sdk-message.mapper` que servem o stream, e com os mesmos ids. É o que deixa o cliente recarregar
+  depois de um `gap` com um redutor só.
+- **Erros:** `NOT_FOUND` (`transcript.error.notFound`), `INVALID_INPUT`
+  (`transcript.error.invalidSessionId`, `transcript.error.cursorStale`), `CLAUDE_UNAVAILABLE`
+  (`transcript.error.claudeUnavailable`), `CLAUDE_TIMEOUT` (`transcript.error.claudeTimeout`).
 
 ### `notification`
 
@@ -217,11 +317,32 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   quando o app abrir. Revogar o device cobraria nova aprovação pelo web a cada rotação de token
   do SO. O app reenvia o token a cada renovação, e reenviar o mesmo token não duplica linha.
 - O nome do provedor **não sai da configuração** — nem em log, nem em tipo, nem em nome de
-  classe.
+  classe. O que o código conhece são três valores: o endpoint, o arquivo de credencial e o escopo
+  que a troca pede. A regra é verificada por máquina, em `pnpm scan:security`, sobre as três
+  pontas ([02 · S-26](../../plans/02-mobile-approval/scenarios.md)).
+- **A credencial é arquivo, e a falta dela não derruba o boot.** Chave privada em variável de
+  ambiente é chave privada em todo `ps` e em todo crash dump — o mesmo argumento da allowlist. O
+  que difere da allowlist é a consequência: ela é a fronteira de segurança e um backend no ar com
+  ela quebrada é pior que fora do ar; push é melhor esforço ao lado de um prazo que não é, e um
+  backend que não subisse porque ninguém configurou notificação trocaria o produto por uma das
+  suas conveniências ([02 · D-20](../../plans/02-mobile-approval/decisions.md#d-20--onde-vive-o-segredo-e-o-que-ele-não-pode-derrubar)).
 
 ### `audit`
 
-- **Fonte dos eventos:** o hook **`PreToolUse`**, não o `canUseTool`. O hook dispara para
+- **Duas tabelas, não uma.** `audit_entries` é moldada em torno de **uma invocação** — uma sessão,
+  um nome de tool, um input exato —, e nenhuma das três colunas tem valor honesto para "este
+  celular foi aprovado". Os fatos de conta que o
+  [08-authentication](../shared/08-authentication.md#logging) manda registrar moram em
+  `audit_events` — e com eles conceder e revogar uma regra de permissão (`permission.ruleGranted`,
+  `permission.ruleRevoked`), que é autorização antecipada do mesmo peso —, tabela irmã com a mesma disciplina: `seq` que ordena enquanto `at` filtra, ULID
+  cunhado pelo domínio, e trigger que recusa `UPDATE` sempre e `DELETE` dentro do piso de 90 dias.
+  Alargar a primeira com colunas anuláveis transformaria cada `NOT NULL` dela em talvez, justo na
+  tabela cuja razão de existir é poder ser confiada.
+- **Falha ao escrever um fato de conta não é graduada.** Ela propaga, e a operação que a causou
+  falha junto. O tratamento graduado existe para que um soluço do banco não custe a sessão de
+  ninguém; aprovar um device é **um** clique deliberado, e responder "feito" para uma aprovação
+  que ninguém consegue prestar contas depois é o pior dos dois resultados.
+- **Fonte dos eventos de tool:** o hook **`PreToolUse`**, não o `canUseTool`. O hook dispara para
   **toda** invocação de tool; o `canUseTool` só para o que exige humano. Medido em spike: 6
   tool calls → 6 hooks → 2 `canUseTool`. Ancorar aqui é o que impede a trilha de perder toda
   leitura de arquivo. Ver [ADR-011](../shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse).
@@ -235,6 +356,28 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   zumbi, em que nada passa e o usuário fica tentando, e a morte por soluço.
 - **Escopo de leitura:** cada usuário lê a própria trilha. Trilha de outro responde `403`: existe,
   e não é sua ([01 · D-17](../../plans/01-live-session/decisions.md#d-17--usar-o-código-http-que-cada-coisa-é)).
+  Como a consulta é sempre escopada por quem pergunta, "trilha de outro" é o **filtro pela sessão de
+  outra pessoa** — a sessão cujas entradas são todas de outro usuário. Sessão sem nenhuma entrada é
+  página vazia: nada diz de quem ela é ([03 · D-17](../../plans/03-rules-and-audit/decisions.md#d-17--a-trilha-de-outro-é-a-sessão-de-outro)).
+- **A leitura é um módulo Nest à parte** (`AuditQueryModule`), com porta própria
+  (`AuditTrailReader`) e o controller: nenhum módulo que escreve na trilha recebe como lê-la, e o
+  `AuditModule` continua exportando só os dois use cases de escrita.
+- **HTTP — `GET /audit-entries`** (Bearer). Filtros opcionais `sessionId`, `toolName`, `decision`
+  (`recorded`/`allowed`/`denied`), `from` (incluído) e `to` (excluído), em ISO 8601 com offset;
+  `cursor` opaco e `limit` de 1 a 100 (default 50).
+
+  | Status | Quando |
+  |---|---|
+  | `200` `{ entries: [...], nextCursor }` | uma página, mais nova primeiro; `nextCursor: null` na última |
+  | `400` `INVALID_INPUT` | período que termina antes de começar, cursor malformado, `limit` fora dos limites, `sessionId` que não é um |
+  | `403` `FORBIDDEN` (`audit.error.forbidden`) | a sessão filtrada é de outra pessoa |
+
+  A entrada tem `id`, `sessionId`, `toolUseId`, `toolName`, `input`, `decision`, `at`, `traceId` e
+  `verdict` — `null` numa `recorded`, e `{ requestId, auto, ruleId, scope, resolvedBy, resolvedFrom }`
+  numa decisão. O veredito é **gravado com a entrada**, não juntado de `permission_requests` na
+  leitura ([03 · D-15](../../plans/03-rules-and-audit/decisions.md#d-15--a-correlação-nasce-com-a-entrada)).
+  O `traceId` é o do turno, para o hook e para a regra, e o da resposta, para a decisão humana
+  ([03 · D-16](../../plans/03-rules-and-audit/decisions.md#d-16--o-traceid-é-o-do-turno)).
 - **Ordenação e paginação:** cursor **keyset descendente** sobre `seq`, o sequencial próprio da
   tabela; `at` é coluna de **filtro**, nunca de ordenação. Timestamp ordena mal por dois motivos
   independentes — empate no mesmo milissegundo e relógio da máquina ajustado para trás —, e o
@@ -243,7 +386,9 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   commitar depois de uma maior. Os índices seguem a ordenação: `(user_id, seq DESC)` e
   `(session_id, seq DESC)`.
 - **A consulta nunca devolve conteúdo de arquivo** lido pela tool `Read` — a trilha guarda
-  `path` e tamanho, e é isso que sai.
+  `path` e tamanho, e é isso que sai. É uma lista de permissão, não de negação: de uma `Read` saem
+  só `file_path`, `offset`, `limit` e `pages`, os campos do `FileReadInput` do SDK. Toda outra tool sai
+  com o `input` exato.
 - **Retenção:** piso de **90 dias**, e o piso vive na trigger da tabela, não na intenção do
   código — ver [persistência](05-persistence.md#a-trilha-de-auditoria). A janela efetiva vem de
   configuração e só pode ser ≥ piso; valor abaixo **impede o processo de subir**.
@@ -254,7 +399,19 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   purga é **ela mesma auditada** — janela, contagem e quem disparou (`job` ou `cli`). Operação
   que apaga trilha sem deixar rastro é o buraco óbvio do desenho.
 - O job é desligável **por configuração, nunca por acidente**: desligado, o backend loga em
-  `warn` no boot que a retenção passou a depender de alguém rodar o comando.
+  `warn` no boot que a retenção passou a depender de alguém rodar o comando. Ligado, roda um minuto
+  depois do boot e daí a cada intervalo ([03 · D-22](../../plans/03-rules-and-audit/decisions.md#d-22--o-job-o-botão-de-desligar-e-o-que-o-comando-lê)).
+- **O que a purga varre:** as duas trilhas, `audit_entries` e `audit_events`, com a mesma janela e
+  independentes — um lote recusado numa não impede a outra
+  ([03 · D-20](../../plans/03-rules-and-audit/decisions.md#d-20--a-trilha-são-as-duas-tabelas)).
+- **Como a purga se registra:** em `audit_purges`, uma linha por lote — execução, quem disparou,
+  trilha, janela e contagem —, **gravada na mesma instrução que apaga o lote**: ou as linhas saem e o
+  registro entra, ou nenhum dos dois. Lote que não apaga nada não deixa linha
+  ([03 · D-19](../../plans/03-rules-and-audit/decisions.md#d-19--a-purga-se-registra-na-mesma-instrução-que-apaga)).
+- **A porta própria:** `AuditRetentionStore`, ligada à purga e a nada mais — nem o repositório de
+  escrita nem o leitor da trilha ganham como apagar. O job vive no `AuditModule`, que continua
+  exportando só os dois use cases de escrita; `pnpm db purge` monta a mesma rotina pela mesma função
+  (`createAuditPurge`).
 
 ---
 

@@ -24,7 +24,7 @@ leitura própria, do lado de fora do fluxo ([backend/03](../../architecture/back
 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 
-### B-11 — Endpoint de consulta 🔲
+### B-11 — Endpoint de consulta ✅
 
 Filtro por sessão, tool, decisão e período; paginação **por cursor**, não por offset — offset
 repete e pula linha quando a tabela cresce durante a leitura, e esta cresce o tempo todo.
@@ -34,26 +34,28 @@ O cursor é **keyset descendente sobre `seq`**, o sequencial próprio da tabela
 período usam, e deixa de ser a ordenação. Descendente é o que torna o S-25 verdadeiro: escrita
 nova só entra **acima** da janela já lida, nunca dentro dela.
 
-### B-12 — Autorização da leitura 🔲
+### B-12 — Autorização da leitura ✅
 
-Cada usuário lê a própria trilha. Trilha de outro devolve `404`, não `403` com detalhe: o
-`404` é para "não existe, ou você não pode saber que existe"
-([04-errors-and-http](../../architecture/shared/04-errors-and-http.md)).
+Cada usuário lê a própria trilha. Trilha de outro — o filtro pela sessão de outra pessoa —
+devolve `403 FORBIDDEN`: existe, e não é sua ([D-05](decisions.md#d-05--de-quem-é-a-trilha),
+[D-17](decisions.md#d-17--a-trilha-de-outro-é-a-sessão-de-outro),
+[04-errors-and-http](../../architecture/shared/04-errors-and-http.md)). A versão anterior deste
+parágrafo dizia `404`, e tinha ficado para trás quando a D-05 registrou a reversão.
 
 A consulta nunca devolve conteúdo de arquivo lido pela tool `Read` — a trilha guarda `path` e
 tamanho, e é isso que sai.
 
-### B-13 — Tela da trilha no web 🔲
+### B-13 — Tela da trilha no web ✅
 
 Filtros, lista e o detalhe com o `input` exato da tool. Os quatro estados, i18n completo.
 
-### B-14 — Índices desenhados com a consulta 🔲
+### B-14 — Índices desenhados com a consulta ✅
 
 Índice que serve ao filtro real, desenhado sobre a ordenação da D-06 — `(user_id, seq DESC)` e
 `(session_id, seq DESC)`, com `at` como coluna de filtro —, verificado com plano de execução.
 Consulta que varre a tabela inteira funciona no primeiro mês e deixa de funcionar no sexto.
 
-### B-15 — Correlação: da trilha ao que aconteceu 🔲
+### B-15 — Correlação: da trilha ao que aconteceu ✅
 
 De uma entrada da trilha se chega à sessão, ao `traceId` no log e — quando houve pergunta — à
 decisão, com `resolvedBy`. Quando não houve, à **regra** que resolveu, com `auto: true`.
@@ -67,7 +69,7 @@ explica o estado, em vez de devolver um vazio sem motivo. É o segundo ponto de 
 
 ## Cenários cobertos
 
-S-23…S-32, S-50.
+S-23…S-32, S-50, e os que a fase descobriu: S-70…S-81.
 
 ---
 

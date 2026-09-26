@@ -137,3 +137,25 @@ describe('tests outside src/', () => {
     expect(result?.messages[0]?.message).toContain('test/unit');
   });
 });
+
+describe('react/jsx-no-literals — nothing presentable is born hardcoded', () => {
+  // S-22 of plan 03: the screens where an authorisation is taken back are as bound by the rule as
+  // any other, and a sentence written in English there is a sentence a pt-BR user cannot read.
+  it.each([
+    'web/src/features/permission/components/RuleList.tsx',
+    'web/src/features/permission/components/RuleRow.tsx',
+    'web/src/app/RulesRoute.tsx',
+  ])('rejects a literal sentence in %s', async (filePath) => {
+    const code = 'export const Row = () => <button>Revoke</button>;\n';
+
+    expect(await ruleIdsFor(code, filePath)).toContain('react/jsx-no-literals');
+  });
+
+  it('accepts the same button when its text comes from a key', async () => {
+    const code = "export const Row = ({ t }) => <button>{t('rules.action.revoke')}</button>;\n";
+
+    expect(
+      await ruleIdsFor(code, 'web/src/features/permission/components/RuleRow.tsx'),
+    ).not.toContain('react/jsx-no-literals');
+  });
+});

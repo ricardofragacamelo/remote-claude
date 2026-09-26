@@ -1,4 +1,7 @@
-import { jsonb, text, timestamp } from 'drizzle-orm/pg-core';
+import { bigint, index, jsonb, text, timestamp } from 'drizzle-orm/pg-core';
+import type { IndexBuilder } from 'drizzle-orm/pg-core';
+import { desc } from 'drizzle-orm';
+import type { PgColumn } from 'drizzle-orm/pg-core';
 
 /**
  * The audit columns every table carries.
@@ -30,3 +33,42 @@ export const invocationColumns = {
   /** The exact input. `jsonb`, never `json`, and never cut down. */
   input: jsonb('input').notNull(),
 };
+
+/**
+ * What both append-only trails carry beside their id: a sequence, and two instants.
+ *
+ * **`at` filters and `seq` orders**, and the two are not interchangeable: two records land in the
+ * same millisecond, and the clock of the machine can be set backwards. `at` is when the fact
+ * happened and `created_at` is when the row was written, which are the same thing until the day
+ * they are not.
+ *
+ * The identifier stays the primary key, and it is a ULID minted by the domain's `IdGenerator`: a
+ * database default would mean the database decides who a record is. There is no `updated_at`,
+ * because a trigger on each table aborts every `UPDATE`.
+ */
+export const trailColumns = {
+  seq: bigint('seq', { mode: 'number' }).notNull().generatedAlwaysAsIdentity(),
+  at: timestamp('at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+};
+
+/**
+ * The two keyset indexes a trail is read by: by owner, and by whatever it is a trail *of*.
+ *
+ * Written once because both trails read the same way and the pair drifts otherwise — and an index
+ * that matches the filter but not the order sorts every page. Descending, like the query: a write
+ * that arrives while somebody is paging enters **above** the window already read, never inside it.
+ *
+ * @param prefix the table's name, which every index of it is named after
+ * @param scope the second column the trail is scoped by — the session, or the subject
+ */
+export function keysetIndexes(
+  prefix: string,
+  columns: { readonly userId: PgColumn; readonly seq: PgColumn },
+  scope: { readonly name: string; readonly column: PgColumn },
+): IndexBuilder[] {
+  return [
+    index(`${prefix}_user_id_seq_idx`).on(columns.userId, desc(columns.seq)),
+    index(`${prefix}_${scope.name}_seq_idx`).on(scope.column, desc(columns.seq)),
+  ];
+}

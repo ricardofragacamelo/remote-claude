@@ -1,18 +1,21 @@
 import { useTranslation } from 'react-i18next';
 
-import { EmptyState } from '@/shared/components/EmptyState';
-import { ErrorState } from '@/shared/components/ErrorState';
-import { Panel } from '@/shared/components/Panel';
+import { LoadedList } from '@/shared/components/LoadedList';
+import type { ListKeys } from '@/shared/components/LoadedList';
 import { Button } from '@/shared/components/ui/button';
-import { Skeleton } from '@/shared/components/ui/skeleton';
 import { useWorkspaces } from '../hooks/useWorkspaces';
+
+/** Named as literals, so the orphan check can see that the catalogue entries are in use. */
+const KEYS: ListKeys = {
+  title: 'workspace.selector.title',
+  description: 'workspace.selector.description',
+  loading: 'workspace.selector.loading',
+  emptyTitle: 'workspace.selector.emptyTitle',
+  emptyDescription: 'workspace.selector.emptyDescription',
+};
 
 /**
  * Where the session will run.
- *
- * It handles the four states every screen that loads data has to handle — loading, error, empty
- * and content. The missing one is always the one a user eventually sees, so a missing one is a
- * review failure. See docs/architecture/web/03-ui-system.md.
  *
  * The empty state is the interesting one here: it is not a bug, it is an installation whose
  * allowlist does not mention this person — and the text has to say that, because "no workspaces"
@@ -25,47 +28,36 @@ export function WorkspaceSelector(): React.JSX.Element {
   const { isLoading, error, workspaces, selected, select, reload } = useWorkspaces();
 
   return (
-    <Panel title={t('workspace.selector.title')} description={t('workspace.selector.description')}>
-      {isLoading && (
-        <Skeleton className="h-24 w-full" aria-label={t('workspace.selector.loading')} />
-      )}
-
-      {!isLoading && error !== null && <ErrorState error={error} onRetry={reload} />}
-
-      {!isLoading && error === null && workspaces.length === 0 && (
-        <EmptyState
-          title={t('workspace.selector.emptyTitle')}
-          description={t('workspace.selector.emptyDescription')}
-        />
-      )}
-
-      {!isLoading && error === null && workspaces.length > 0 && (
-        <ul className="flex flex-col gap-2" aria-label={t('workspace.selector.title')}>
-          {workspaces.map((workspace) => (
-            <li key={workspace.path}>
-              <Button
-                variant={workspace.path === selected ? 'primary' : 'outline'}
-                size="touch"
-                className="w-full justify-start"
-                aria-pressed={workspace.path === selected}
-                onClick={() => {
-                  select(workspace.path);
-                }}
-              >
-                <span className="flex flex-col items-start gap-0.5">
-                  <span className="text-sm font-medium">{workspace.label}</span>
-                  <span className="font-mono text-xs opacity-70">{workspace.path}</span>
-                  <span className="text-xs opacity-70">
-                    {workspace.lastUsedAt === null
-                      ? t('workspace.selector.neverUsed')
-                      : t('workspace.selector.lastUsed', { at: workspace.lastUsedAt })}
-                  </span>
-                </span>
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Panel>
+    <LoadedList
+      keys={KEYS}
+      isLoading={isLoading}
+      error={error}
+      isEmpty={workspaces.length === 0}
+      onRetry={reload}
+    >
+      {workspaces.map((workspace) => (
+        <li key={workspace.path}>
+          <Button
+            variant={workspace.path === selected ? 'primary' : 'outline'}
+            size="touch"
+            className="w-full justify-start"
+            aria-pressed={workspace.path === selected}
+            onClick={() => {
+              select(workspace.path);
+            }}
+          >
+            <span className="flex flex-col items-start gap-0.5">
+              <span className="text-sm font-medium">{workspace.label}</span>
+              <span className="font-mono text-xs opacity-70">{workspace.path}</span>
+              <span className="text-xs opacity-70">
+                {workspace.lastUsedAt === null
+                  ? t('workspace.selector.neverUsed')
+                  : t('workspace.selector.lastUsed', { at: workspace.lastUsedAt })}
+              </span>
+            </span>
+          </Button>
+        </li>
+      ))}
+    </LoadedList>
   );
 }

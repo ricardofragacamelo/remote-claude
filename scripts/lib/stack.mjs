@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { parseEnv } from 'node:util';
 import { repoRoot } from './paths.mjs';
 import { ALLOWLIST_FILE } from './workspaces.mjs';
 
@@ -97,9 +98,16 @@ export const E2E_POSTGRES = {
  * @property {string} RC_PERMISSION_EXTENSION_MS
  * @property {string} RC_PERMISSION_MAX_EXTENSIONS
  * @property {string} RC_PERMISSION_RULE_LIFETIME_MS
+ * @property {string} RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS
+ * @property {string} RC_PERMISSION_RULE_MAX_LIFETIME_MS
+ * @property {string} RC_PUSH_ENDPOINT
+ * @property {string} RC_PUSH_CREDENTIALS_FILE
+ * @property {string} RC_PUSH_SCOPE
  * @property {string} RC_CHECKPOINT_DIR
  * @property {string} RC_CHECKPOINT_MAX_FILE_BYTES
  * @property {string} RC_CHECKPOINT_MAX_STORE_BYTES
+ * @property {string} RC_AUDIT_RETENTION_DAYS
+ * @property {string} RC_AUDIT_PURGE_INTERVAL_MS
  * @property {string} [CLAUDE_CONFIG_DIR]
  */
 
@@ -160,6 +168,8 @@ export function ephemeralEnvironment(ports, options = {}) {
     RC_PERMISSION_EXTENSION_MS: '10000',
     RC_PERMISSION_MAX_EXTENSIONS: '2',
     RC_PERMISSION_RULE_LIFETIME_MS: '600000',
+    RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS: '3600000',
+    RC_PERMISSION_RULE_MAX_LIFETIME_MS: '86400000',
 
     // The CLI's configuration — the trust marks among it, and the login. The hermetic run keeps
     // it away from the developer's own, because the backend clears a directory's trust mark
@@ -178,9 +188,27 @@ export function ephemeralEnvironment(ports, options = {}) {
             path.join(os.tmpdir(), `remote-claude-config-${String(ports.backend)}`),
         }),
 
+    // A push provider that does not exist, deliberately. `.invalid` cannot resolve, so a run
+    // that started notifying somebody would fail loudly rather than reach a real endpoint — and
+    // no scenario here is about push: the credential file is absent, which the backend treats as
+    // "not configured" without refusing to start (02 · D-20).
+    RC_PUSH_ENDPOINT: 'https://push.invalid/v1/messages:send',
+    RC_PUSH_CREDENTIALS_FILE: path.join(
+      os.tmpdir(),
+      `remote-claude-push-${String(ports.backend)}.json`,
+    ),
+    RC_PUSH_SCOPE: 'https://push.invalid/auth',
+
     RC_CHECKPOINT_DIR: path.join(os.tmpdir(), `remote-claude-checkpoints-${String(ports.backend)}`),
     RC_CHECKPOINT_MAX_FILE_BYTES: '5242880',
     RC_CHECKPOINT_MAX_STORE_BYTES: '524288000',
+
+    // The floor, and the job **off**. The retention spec plants rows past the window and purges them
+    // through `pnpm db purge`, the door it is testing; a job waking up a minute after boot would race
+    // it for the same rows and the same lock, at a moment that depends on how fast the machine is.
+    // The job itself is proved in the backend's own suites, at instants they choose.
+    RC_AUDIT_RETENTION_DAYS: '90',
+    RC_AUDIT_PURGE_INTERVAL_MS: 'off',
   };
 }
 
@@ -221,6 +249,11 @@ export function e2eDotEnv(ports, options = {}) {
     // The backend's own log of this run. Only the live suite reads it, and for one line: the
     // warning the mapper writes when the SDK sends a variant this build has never seen.
     RC_BACKEND_LOG: BACKEND_LOG_FILE,
+
+    // The database of this run. Read by the retention spec and by nothing else: rows ninety days
+    // old cannot come through any door of the product — every writer stamps the present — so the
+    // spec plants them, and then purges them through the one door that exists for that.
+    RC_DATABASE_URL: environment.DATABASE_URL,
   };
 
   const body = Object.entries(values)
@@ -371,6 +404,59 @@ export function workspaceStatus(rootDir, workspace) {
 
 /** Deep link the provider sends the mobile app back to, as the realm registers it. */
 export const MOBILE_REDIRECT_URL = 'br.com.remoteclaude.app://oauth/callback';
+
+/** The push settings the real-push run takes from the repository `.env`, and nothing else. */
+export const REAL_PUSH_KEYS = ['RC_PUSH_ENDPOINT', 'RC_PUSH_CREDENTIALS_FILE', 'RC_PUSH_SCOPE'];
+
+/**
+ * How long a permission waits in the real-push run.
+ *
+ * The hermetic suite gives five seconds, because nothing there travels further than this machine.
+ * A real notification goes through the provider, reaches the phone, and is tapped by the test — a
+ * round trip of seconds that five would turn into a race the deadline wins.
+ */
+export const REAL_PUSH_PERMISSION_TIMEOUT_MS = '60000';
+
+/**
+ * The overrides that turn the hermetic stack into the one that really notifies — plan 02, D-26.
+ *
+ * Only the push settings are read from the `.env`, and only for this run: everything else stays as
+ * hermetic as the default suite, so a real notification is the one thing this run adds. The
+ * credential path is resolved against the repository, since the backend runs from its own folder.
+ *
+ * @param {string} dotEnvText the contents of the repository `.env`
+ * @param {{ root?: string, exists?: (file: string) => boolean }} [options]
+ * @returns {{ env: Record<string, string> } | { problem: string }}
+ */
+export function realPushEnvironment(dotEnvText, options = {}) {
+  const root = options.root ?? repoRoot;
+  const exists = options.exists ?? fs.existsSync;
+  const parsed = parseEnv(dotEnvText);
+
+  const missing = REAL_PUSH_KEYS.filter((key) => (parsed[key] ?? '').trim() === '');
+  if (missing.length > 0) {
+    return { problem: `the .env does not set ${missing.join(', ')}` };
+  }
+
+  const endpoint = String(parsed['RC_PUSH_ENDPOINT']);
+  if (new URL(endpoint).hostname.endsWith('.invalid')) {
+    return { problem: `RC_PUSH_ENDPOINT in the .env still points at ${endpoint}` };
+  }
+
+  const credentials = path.resolve(root, String(parsed['RC_PUSH_CREDENTIALS_FILE']));
+  if (!exists(credentials)) {
+    return { problem: `the push credential file does not exist: ${credentials}` };
+  }
+
+  return {
+    env: {
+      RC_PUSH_ENDPOINT: endpoint,
+      RC_PUSH_CREDENTIALS_FILE: credentials,
+      RC_PUSH_SCOPE: String(parsed['RC_PUSH_SCOPE']),
+      RC_PERMISSION_TIMEOUT_MS: REAL_PUSH_PERMISSION_TIMEOUT_MS,
+    },
+  };
+}
 
 /**
  * The `--dart-define` arguments the Flutter end-to-end run is compiled with.

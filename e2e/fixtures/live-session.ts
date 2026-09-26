@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import type { Envelope } from '@remote-claude/contracts';
 
 import type { Browser } from '@playwright/test';
@@ -57,6 +57,30 @@ export async function openWorkspace(
   return { user: signedIn, workspace };
 }
 
+/**
+ * Signs in once for a whole spec file, and finds its workspace.
+ *
+ * Every live suite starts the same way, and the second copy of these five lines is where one of
+ * them would eventually forget the workspace lookup and hard-code a path. It registers the
+ * `beforeAll` itself, so it is called at the top level of a spec, never inside a test.
+ *
+ * @returns the context, read when a test needs it — it only exists once `beforeAll` has run
+ */
+export function workspaceFor(user: ScenarioUser): () => LiveSessionContext {
+  let context: LiveSessionContext | null = null;
+
+  test.beforeAll(async ({ browser }: { browser: Browser }) => {
+    context = await openWorkspace(browser, user);
+  });
+
+  return () => {
+    if (context === null) {
+      throw new Error('the workspace is only known once beforeAll has run');
+    }
+    return context;
+  };
+}
+
 /** Opens an authenticated socket for a user the suite has already signed in. */
 export async function connected(user: AuthenticatedUser): Promise<E2eSocket> {
   const socket = await E2eSocket.open();
@@ -79,6 +103,22 @@ export async function startSession(socket: E2eSocket, workspacePath: string): Pr
 
   expect(typeof sessionId).toBe('string');
   return String(sessionId);
+}
+
+/**
+ * Ends a session and lets its socket go.
+ *
+ * Closing the socket alone does not end the session — it keeps its subprocess for whoever attaches
+ * next — and the backend holds a bounded number at once. A spec that only closed sockets would
+ * starve every spec after it of a session to open.
+ */
+export async function closeSession(socket: E2eSocket, sessionId: string): Promise<void> {
+  socket.send('session.close', { sessionId });
+  await socket.waitFor(
+    (frame) => frame.type === 'session.closed' && frame.sessionId === sessionId,
+    30_000,
+  );
+  socket.close();
 }
 
 /**

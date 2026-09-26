@@ -23,4 +23,7 @@ class SessionRepositoryImpl implements SessionRepository {
   @override
   bool ping({String? sessionId, required String nonce}) =>
       _source.ping(sessionId: sessionId, nonce: nonce);
+
+  @override
+  bool send(String type, Map<String, Object?> payload) => _source.send(type, payload);
 }

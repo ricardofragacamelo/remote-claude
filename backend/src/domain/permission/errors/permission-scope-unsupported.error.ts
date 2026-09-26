@@ -1,19 +1,19 @@
 import { DomainError } from '@domain/shared';
 
 /**
- * A scope this build cannot honour.
+ * A scope that cannot be honoured for this invocation.
  *
- * Refused, and deliberately **not** downgraded to `once`. A person who tapped "always" and got
- * "just this once" has been told something untrue about what they authorised — and the direction
- * of that lie is the safe one only until they rely on it. `project` and `always` are persisted
- * rules, and a rule that outlives its session needs the screen that revokes it, which arrives with
- * the rules plan.
+ * Refused, and deliberately **not** narrowed or widened to something that can. The case that
+ * reaches it is a `project` or `always` answer about an invocation whose input has no field a
+ * pattern can name: the only rule available would cover the **whole tool**, which is far more than
+ * what was approved, and falling back to `once` would tell somebody who tapped "always" something
+ * untrue about what they authorised. The person is told, and chooses again.
  */
 export class PermissionScopeUnsupportedError extends DomainError {
   readonly code = 'INVALID_INPUT';
   readonly messageKey = 'permission.error.scopeUnsupported';
 
   constructor(scope: string) {
-    super(`permission scope ${scope} is not available in this build`, { scope });
+    super(`permission scope ${scope} cannot be granted for this invocation`, { scope });
   }
 }

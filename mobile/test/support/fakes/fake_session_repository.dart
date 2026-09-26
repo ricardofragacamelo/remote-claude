@@ -16,6 +16,9 @@ class FakeSessionRepository implements SessionRepository {
   /// The session ids each ping carried.
   final List<String?> pingedSessions = <String?>[];
 
+  /// The commands that were sent, as `(type, payload)` pairs.
+  final List<(String, Map<String, Object?>)> commands = <(String, Map<String, Object?>)>[];
+
   /// Sessions that were followed, in order.
   final List<String> followed = <String>[];
 
@@ -44,6 +47,12 @@ class FakeSessionRepository implements SessionRepository {
   bool ping({String? sessionId, required String nonce}) {
     pings.add(nonce);
     pingedSessions.add(sessionId);
+    return accepts;
+  }
+
+  @override
+  bool send(String type, Map<String, Object?> payload) {
+    commands.add((type, payload));
     return accepts;
   }
 

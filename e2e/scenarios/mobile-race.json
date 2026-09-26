@@ -1,0 +1,8 @@
+{
+  "id": "02·S-52",
+  "title": "the browser and the phone answer together: the first wins, the second is told who did",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn"
+  }
+}

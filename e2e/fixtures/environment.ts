@@ -43,6 +43,16 @@ export interface E2eEnvironment {
    * up as a log line nobody reads is a contract break that reaches production quietly.
    */
   readonly backendLog: string;
+
+  /**
+   * The database of this run.
+   *
+   * Read by the retention and the trail-isolation specs alone, and only where no door of the
+   * product answers. No door writes a row ninety days old — every writer stamps the present — so
+   * they plant them here, and remove them through `pnpm db purge`, which is the door they test; and
+   * no screen lists the account trail, so the isolation spec counts a revocation here.
+   */
+  readonly databaseUrl: string;
 }
 
 const VARIABLES: Record<keyof E2eEnvironment, string> = {
@@ -54,6 +64,7 @@ const VARIABLES: Record<keyof E2eEnvironment, string> = {
   clientId: 'RC_OIDC_CLIENT_ID',
   claudeConfigDir: 'RC_CLAUDE_CONFIG_DIR',
   backendLog: 'RC_BACKEND_LOG',
+  databaseUrl: 'RC_DATABASE_URL',
 };
 
 /** Loads `e2e/.env` into `process.env`, if the file is there. */

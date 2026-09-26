@@ -70,8 +70,8 @@ describe('the permission queue', () => {
         defaultToNo: true,
         expiresAt: EXPIRES,
         suggestions: [
-          { scope: 'once', labelKey: 'permission.scope.once' },
-          { scope: 'session', labelKey: 'permission.scope.session' },
+          { scope: 'once', labelKey: 'permission.scope.once', rule: null },
+          { scope: 'session', labelKey: 'permission.scope.session', rule: null },
         ],
         isAnswering: false,
       },
@@ -183,7 +183,8 @@ describe('the permission queue', () => {
   });
 
   it('offers only the scopes this build can honour', () => {
-    // The server would refuse the others, and a button that always fails is worse than no button.
+    // An `always` with no rule to describe cannot be honoured honestly (S-67), and a scope nobody
+    // has heard of would be refused: a button that always fails is worse than no button.
     store().apply(
       requested({
         suggestions: [
@@ -195,7 +196,7 @@ describe('the permission queue', () => {
     );
 
     expect(store().pending[0]?.suggestions).toEqual([
-      { scope: 'once', labelKey: 'permission.scope.once' },
+      { scope: 'once', labelKey: 'permission.scope.once', rule: null },
     ]);
   });
 

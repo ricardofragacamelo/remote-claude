@@ -9,6 +9,7 @@ const input = (overrides: Partial<SdkOptionsInput> = {}): SdkOptionsInput => ({
   model: null,
   permissionMode: 'default',
   resumeSessionId: null,
+  claudeSessionId: null,
   limits: { maxBudgetUsd: 10, maxTurns: 100 },
   abortController: new AbortController(),
   onStderr: () => undefined,
@@ -97,6 +98,32 @@ describe('buildSdkOptions', () => {
 
     it('sets the resume when one was asked for', () => {
       expect(buildSdkOptions(input({ resumeSessionId: 'sdk-7' })).resume).toBe('sdk-7');
+    });
+
+    it('names a new conversation with the id recorded as ours — plan 04, S-71', () => {
+      const conversation = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
+
+      expect(buildSdkOptions(input({ claudeSessionId: conversation })).sessionId).toBe(
+        conversation,
+      );
+    });
+
+    it('lets the SDK pick no id when none was minted', () => {
+      expect('sessionId' in buildSdkOptions(input())).toBe(false);
+    });
+
+    it('never names the conversation beside a resume, which keeps the id it has', () => {
+      // The SDK refuses `sessionId` next to `resume` unless forking: a resume continues a file
+      // that already has a name.
+      const options = buildSdkOptions(
+        input({
+          resumeSessionId: 'sdk-7',
+          claudeSessionId: '6b41b192-a41b-46c2-b8d7-5098d8c825be',
+        }),
+      );
+
+      expect(options.resume).toBe('sdk-7');
+      expect('sessionId' in options).toBe(false);
     });
   });
 });

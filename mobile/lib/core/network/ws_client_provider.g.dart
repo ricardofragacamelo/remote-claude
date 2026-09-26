@@ -47,7 +47,7 @@ final class WsClientProvider extends $FunctionalProvider<WsClient, WsClient, WsC
   }
 }
 
-String _$wsClientHash() => r'2ea133a8d2e853c774963938c363ccc936a94484';
+String _$wsClientHash() => r'97eb6cedb43c834c1bf6d71aa97955374fa9eee4';
 
 /// Where the connection stands, for a screen to show.
 

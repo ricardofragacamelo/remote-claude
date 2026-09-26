@@ -122,6 +122,7 @@ silencioso.
 | `pnpm dev` | sobe a stack de desenvolvimento em **portas fixas** |
 | `pnpm db reset` | derruba, recria, migra e popula — a sequência que ninguém lembra na ordem certa |
 | `pnpm db seed` | só popula; rodar duas vezes não muda nada |
+| `pnpm db purge` | apaga da trilha de auditoria o que passou da janela de retenção (`RC_AUDIT_RETENTION_DAYS`, mínimo 90 dias) e registra o que apagou. É o mesmo job que o backend roda sozinho, sob o mesmo lock; sai ≠ 0 e diz o que ficou quando algo foi recusado, e rodar de novo retoma de onde parou |
 | `pnpm --filter backend verify` | os portões 1-7 só do backend — o ciclo curto enquanto se mexe nele |
 | `pnpm --filter web verify` | os mesmos, só do web |
 | `pnpm clean` | purga projetos e **volumes docker órfãos**, `dist/`, `coverage/`, relatórios |
@@ -176,7 +177,8 @@ Isso não é entregar; é esconder.
 | `pnpm test:unit` | unit das três pontas **e dos scripts de `scripts/`** — rápido, sem I/O |
 | `pnpm test:integration` | **exige Docker**: Postgres real via testcontainers, nunca SQLite, nunca mock; e o contrato de saída dos scripts de `scripts/` |
 | `pnpm test:e2e` | sobe stack **efêmera em portas aleatórias**, roda Playwright, derruba tudo |
-| `pnpm test:e2e:mobile` | a mesma stack, com o `integration_test` do Flutter — **exige emulador**, e não é portão |
+| `pnpm test:e2e:mobile` | a mesma stack, com o `integration_test` do Flutter — **exige emulador na imagem API 35** (`emulator -avd remote_claude_api35`), e não é portão |
+| `pnpm test:e2e:mobile:push` | a mesma suíte do app com **push de verdade**: lê do `.env` só as três `RC_PUSH_*`, roda pelo `patrol` (`dart pub global activate patrol_cli 4.8.0`), responde o diálogo de notificação do SO, manda o app para o fundo e toca a notificação — sai da máquina, e não é portão |
 | `pnpm test:e2e:live` | a mesma stack contra o **Claude de verdade** — exige o Claude logado, custa dinheiro, e não é portão |
 | `pnpm test:coverage` | mínimo **90 % em statements, branches, functions e lines — por arquivo** |
 | `cd mobile && flutter test` | unit e widget do app |
@@ -192,6 +194,18 @@ custa minutos e gigabytes, e verificação cara demais para caber no ciclo é ve
 alguém desliga. Está declarado em vez de escondido —
 [por quê](docs/architecture/shared/06-testing-strategy.md#por-que-o-e2e-de-mobile-não-bloqueia).
 Nenhum dos dois se auto-pula: sem navegador ou sem device, cada um **falha**.
+
+A imagem é **fixada**: `scripts/mobile.mjs test:e2e` pergunta ao aparelho o API level antes de
+compilar qualquer coisa, e recusa outro que não o 35 — API diferente muda permissão de notificação,
+biometria e deep link, que é o que a suíte exercita, e o resultado deixaria de ser comparável entre
+duas máquinas ([D-09](docs/plans/02-mobile-approval/decisions.md#d-09--o-emulador-reprodutível)).
+O Gradle roda com teto de 3 GB de heap (`mobile/android/gradle.properties`), para caber ao lado do
+emulador e da stack.
+
+A AVD da suíte é **dedicada**, `remote_claude_api35`: imagem `android-35;google_apis_playstore;x86_64`
+(o push de verdade precisa do Play Services) e partição de dados de 16 GB — com os 6 GB do perfil
+padrão, os apps do Google da imagem enchem o disco e a instalação do APK de teste falha com
+`INSTALL_FAILED_INSUFFICIENT_STORAGE`. Uma AVD de uso pessoal fica fora disso.
 
 Dois comandos desta lista falam com o Claude de verdade, e nenhum dos dois é portão.
 
@@ -227,7 +241,7 @@ e `functions` não existem para medir nesta ponta. Está registrado no
 | `pnpm scan:secrets` | `gitleaks` sobre o repositório; `--staged` só sobre o que está no índice |
 | `pnpm scan:security` | segredo, dependência vulnerável, padrão inseguro **e as regras do produto** |
 | `pnpm i18n:check` | paridade de chaves `en` ↔ `pt-BR`, chave órfã, params que não sobrevivem à tradução |
-| `node scripts/mobile.mjs <tarefa>` | os mesmos portões só do Flutter: `format`, `format:check`, `analyze`, `arch`, `test:unit`, `test:widget`, `coverage`, `test:e2e` |
+| `node scripts/mobile.mjs <tarefa>` | os mesmos portões só do Flutter: `generate`, `format`, `format:check`, `analyze`, `arch`, `test:unit`, `test:widget`, `test:native`, `coverage`, `test:e2e` |
 
 `pnpm scan:secrets` é o que o hook de pre-commit roda. Se o `gitleaks` não estiver instalado,
 ele cai na imagem oficial via Docker — que já é pré-requisito do projeto. Não existindo nenhum
@@ -244,6 +258,13 @@ O `scripts/mobile.mjs` existe porque o ferramental Dart não devolve código de 
 `import_lint` lista as violações e **sai 0 de qualquer jeito**, e `flutter test --coverage`
 escreve um relatório que nada lê. Cada portão do Flutter passa por um invólucro que lê a saída
 e sai com a verdade.
+
+`mobile.mjs generate` é o outro motivo: o `build_runner` sem `--build-filter` percorre todos os
+inputs do módulo e, numa máquina com qualquer outra coisa rodando, **não termina** — foi medido
+travando por cinquenta minutos a poucos por cento de um núcleo. Filtrado nas pastas que de fato
+têm anotação, termina em segundos. Quem adiciona um `@riverpod` numa pasta nova acrescenta uma
+linha em `GENERATED_OUTPUTS`; os `.g.dart` são **commitados**, como o protocolo, então a geração
+não faz parte do build e quem esquecer de rodá-la é pego pelo `pnpm verify` não compilando.
 
 ### Contratos e tradução
 

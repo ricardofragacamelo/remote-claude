@@ -74,11 +74,11 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Device](F0-device.md) | registro, aprovação, revogação, expiração do pendente e a tela de devices | B-01…B-07, B-30 | 🔲 |
-| F1 | [Push](F1-push.md) | notificação traduzida, disparada e cancelada na hora certa | B-08…B-13, B-31, B-32 | 🔲 |
-| F2 | [Sessão no app](F2-mobile-session.md) | socket, ciclo de vida e o stream nas telas | B-14…B-19 | 🔲 |
-| F3 | [Permissão no app](F3-mobile-permission.md) | a tela que autoriza, com biometria, deep link e extensão do prazo | B-20…B-25, B-33 | 🔲 |
-| F4 | [E2E](F4-e2e.md) | permissão pelo celular, corrida e multi-cliente, em imagem fixada | B-26…B-29, B-34 | 🔲 |
+| F0 | [Device](F0-device.md) | registro, aprovação, revogação, expiração do pendente e a tela de devices | B-01…B-07, B-30 | ✅ |
+| F1 | [Push](F1-push.md) | notificação traduzida, disparada e cancelada na hora certa | B-08…B-13, B-31, B-32 | ✅ |
+| F2 | [Sessão no app](F2-mobile-session.md) | socket, ciclo de vida e o stream nas telas | B-14…B-19 | ✅ |
+| F3 | [Permissão no app](F3-mobile-permission.md) | a tela que autoriza, com biometria, deep link e extensão do prazo | B-20…B-25, B-33 | ✅ |
+| F4 | [E2E](F4-e2e.md) | permissão pelo celular, corrida e multi-cliente, em imagem fixada | B-26…B-29, B-34 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 

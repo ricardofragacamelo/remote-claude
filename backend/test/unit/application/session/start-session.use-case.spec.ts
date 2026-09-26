@@ -9,11 +9,14 @@ import type {
 } from '@application/session';
 import { UserId } from '@domain/auth';
 import { SessionLimitReachedError } from '@domain/session';
+import { ClaudeSessionId } from '@domain/transcript';
 import { WorkspaceNotAllowedError, WorkspacePath } from '@domain/workspace';
 import { RecordingHandle } from '../../../support/builders/session.builder';
 import { RecordingBroadcaster } from '../../../support/fakes/recording-broadcaster';
 import { FixedClock } from '../../../support/fakes/fixed-clock';
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
+import { SequentialUuids } from '../../../support/fakes/sequential-uuids';
+import { InMemorySessionOriginRepository } from '../../../support/fakes/in-memory-session-origin.repository';
 
 const owner = UserId.create('auth|owner');
 const now = new Date('2026-09-18T12:00:00.000Z');
@@ -43,6 +46,7 @@ describe('StartSessionUseCase', () => {
   let registry: SessionRegistry;
   let broadcaster: RecordingBroadcaster;
   let resolved: string[];
+  let origins: InMemorySessionOriginRepository;
 
   // Shared across builds on purpose: a fresh generator per call would mint the same id twice, and
   // two sessions with one id is a registry holding one entry and a limit that never trips.
@@ -64,6 +68,7 @@ describe('StartSessionUseCase', () => {
     broadcaster = new RecordingBroadcaster();
     resolved = [];
     ids = new SequentialIds();
+    origins = new InMemorySessionOriginRepository();
   });
 
   const build = (): StartSessionUseCase =>
@@ -75,6 +80,7 @@ describe('StartSessionUseCase', () => {
       new FixedClock(now),
       ids,
       defaults,
+      { ids: new SequentialUuids(), origins },
     );
 
   const start = (workspacePath = '/srv/projects/app'): ReturnType<StartSessionUseCase['execute']> =>
@@ -116,6 +122,60 @@ describe('StartSessionUseCase', () => {
     expect(session.model).toBe('claude-opus-5');
     expect(claude.starts[0]?.permissionMode).toBe('plan');
     expect(claude.starts[0]?.resumeSessionId).toBe('sdk-1');
+  });
+
+  describe('the provenance — plan 04, S-71', () => {
+    const FIRST = '00000000-0000-4000-8000-000000000001';
+
+    it('records the conversation as ours, and hands the SDK that very id', async () => {
+      const session = await start();
+
+      expect(origins.rows.get(FIRST)).toMatchObject({
+        sessionId: session.id,
+        openedBy: owner,
+        workspace: session.workspace,
+        openedAt: now,
+      });
+      expect(claude.starts[0]?.claudeSessionId?.equals(ClaudeSessionId.create(FIRST))).toBe(true);
+    });
+
+    it('records it before anything is spawned', async () => {
+      // Written after the fact, it would leave a window in which a transcript of ours is on disk
+      // and reads as somebody else's.
+      let recordedFirst = false;
+      const record = origins.record.bind(origins);
+      origins.record = (origin) => {
+        recordedFirst = claude.starts.length === 0;
+        return record(origin);
+      };
+
+      await start();
+
+      expect(recordedFirst).toBe(true);
+    });
+
+    it('opens nothing when the provenance cannot be recorded, and gives the slot back', async () => {
+      // A session whose origin is lost would read as somebody else's for the rest of its life —
+      // and a resume would fork it, or worse, treat another person's as free to continue.
+      origins.failWith = new Error('the database is gone');
+
+      await expect(start()).rejects.toThrow('the database is gone');
+      expect(claude.starts).toEqual([]);
+      expect(registry.size).toBe(0);
+    });
+
+    it('records nothing new on a resume, which keeps the id it has', async () => {
+      await build().execute({
+        workspacePath: '/srv/projects/app',
+        model: null,
+        permissionMode: null,
+        resumeSessionId: 'sdk-1',
+        userId: owner,
+      });
+
+      expect(origins.rows.size).toBe(0);
+      expect(claude.starts[0]?.claudeSessionId).toBeNull();
+    });
   });
 
   describe('the order of the checks', () => {

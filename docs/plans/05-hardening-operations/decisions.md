@@ -17,12 +17,22 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 |---|---|---|---|---|---|
 | D-01 | A fórmula do limite por RAM: fração da memória livre ou da total, com que piso e que teto | os ~222 MB por sessão foram medidos em **uma** máquina só | B-01 | — | 🔲 |
 | D-02 | Qual o TTL da sessão ociosa, e o que conta como ociosa | quanto tempo alguém deixa uma sessão parada e ainda a quer viva | B-02 | — | 🔲 |
+| D-09 | A política de nova tentativa do push: quantas, com que recuo, e quais `failed` são transitórios | o `PushSender` devolve um `failed` só, e hoje não distingue rede, `5xx` e `4xx` do provedor | B-25 | — | 🔲 |
 
 ### D-02 — o que é ociosidade
 
 Um ponto não é negociável: **esperar permissão não é ociosidade** — encerrar ali mataria
 exatamente o fluxo que o produto existe para servir (S-05). O que falta é o prazo, e se ele
 conta do último evento ou da última ação humana.
+
+### D-09 — quando tentar de novo
+
+Nasceu do ciclo 32 do [plano 02](../02-mobile-approval/progress.md): uma falha pontual do provedor
+perdeu a notificação. O que **não** está em discussão: `tokenRejected` continua permanente
+([D-13 do plano 02](../02-mobile-approval/decisions.md#d-13--o-token-que-morre-calado)), e
+nenhuma tentativa passa do prazo do pedido. O que falta é o número, o recuo, e se o `PushSender`
+passa a separar falha transitória (rede, `429`, `5xx`) de recusa definitiva do provedor (`4xx`),
+que tentar de novo não resolve.
 
 ---
 

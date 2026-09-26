@@ -1,0 +1,8 @@
+{
+  "id": "02·S-54, 02·S-67",
+  "title": "the OS asks for notifications, the phone goes to the background, a real notification arrives, and its tap approves",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn"
+  }
+}

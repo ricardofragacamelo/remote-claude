@@ -98,6 +98,8 @@ export interface SessionAttachedPayload {
 export interface ConnectionAuthenticatePayloadClient {
   readonly kind: 'web' | 'mobile';
   readonly version: string;
+  /** The registered installation this socket belongs to, when the client is a device. Absent from a browser, which is not a device and never approves one. It is what lets revoking a device close its sockets at once, with 4401 — without it, a revoked phone would keep answering permission requests until its token expired. */
+  readonly installId?: string;
 }
 
 /** Opens the connection. Without it inside 5 seconds the server closes with 4401. */
@@ -114,6 +116,22 @@ export interface ConnectionAuthenticatePayload {
 export interface ConnectionReauthenticatePayload {
   /** The renewed OIDC access token. */
   readonly token: string;
+}
+
+/** What the app says about itself on `POST /devices`. It travels over HTTP rather than the socket — a device has to exist before it may decide anything, and the handshake already needs to know which device it is — but the payload is one contract in three languages all the same. */
+export interface DeviceRegisterPayload {
+  /** Identity of the installation, minted by the app on first run and kept in the operating system's secure storage. Never an identifier of the device itself: that one survives an uninstall, which is a privacy problem, and this one does not (D-01). */
+  readonly installId: string;
+  /** What the person will recognise in the approval list. */
+  readonly name: string;
+  /** Which operating system. Only Android is exercised in this plan (D-12); the app still builds for iOS. */
+  readonly platform: 'android' | 'ios';
+  /** Version of the app, for diagnostics and for the deprecation window. */
+  readonly appVersion: string;
+  /** The provider's token for this installation, when there is one. Absent is normal and not an error: a device with no token still watches sessions, and the app re-sends the token on every renewal (D-13). */
+  readonly pushToken?: string;
+  /** Language the push goes out in — the one exception to the rule that the backend never translates. Absent falls back to `en`. */
+  readonly locale?: 'en' | 'pt-BR';
 }
 
 /** Diagnostics of the gateway: it crosses every layer without touching the Agent SDK, and is the only smoke test that needs no Claude subprocess. It lives outside the session namespace on purpose — `diag` says it is diagnostics, which is what keeps the slice from becoming a public API with no owner. Omitting `sessionId` opens a session; sending one pings that session. */
@@ -271,6 +289,10 @@ export interface PermissionRequestedPayloadSuggestionsItem {
   readonly scope: 'once' | 'session' | 'project' | 'always';
   /** An i18n key. The server never sends prose. */
   readonly labelKey: string;
+  /** What a rule granted by this suggestion would match, in the grammar of the Claude Code settings — the narrowest pattern that covers this invocation. Present on `project` and `always`; a client never offers one of those without it. */
+  readonly pattern?: string;
+  /** How long a rule granted by this suggestion would live, counted from the answer. Present on `project` and `always`; the number is the installation's, never the client's. */
+  readonly lifetimeMs?: number;
 }
 
 /** The one `request` that travels server to client, and the reason the whole protocol is a socket instead of a stream: `canUseTool` has blocked the agent loop and it stays blocked until somebody answers or the deadline passes. Answered with the `permission.resolve` response. */
@@ -302,7 +324,7 @@ export interface PermissionResolvedPayload {
   readonly requestId: string;
   /** What was decided. First answer wins, so this is the decision that reached `canUseTool`, not necessarily the one this client sent. */
   readonly decision: 'allow' | 'deny';
-  /** The server decided it, with nobody answering — the deadline passed, or a session-scoped rule matched. Silence never authorises, so an automatic decision is always `deny` unless a rule allowed it. */
+  /** The server decided it, with nobody answering — the deadline passed, or a rule the user granted earlier (`session`, `project` or `always`) matched. A request a rule settles is never put to anybody, and this event is how every screen watching still learns that something ran in the user's name. Silence never authorises, so an automatic decision is always `deny` unless a rule allowed it. */
   readonly auto: boolean;
   /** Who answered. Required whenever `auto` is false, so "approved on your phone 2 min ago" is something the UI can actually say. */
   readonly resolvedBy?: string;
@@ -377,7 +399,7 @@ export interface PermissionResolvePayload {
   readonly requestId: string;
   /** Yes or no. There is no third value: silence is handled by the deadline, and it denies. */
   readonly decision: 'allow' | 'deny';
-  /** How far the decision reaches. Absent means `once`. Only `once` and `session` exist in this plan — `project` and `always` are persisted rules, and they arrive with the rules module. */
+  /** How far the decision reaches. Absent means `once`. `session` leaves a rule that dies with the session; `project` and `always` persist a rule — the narrowest pattern covering this invocation, with the configured default lifetime — that answers future requests without asking and is revoked through `DELETE /permission-rules/:ruleId`. An invocation with nothing a pattern can name cannot be granted `project` or `always`: that is `INVALID_INPUT`, never a rule for the whole tool. */
   readonly scope?: 'once' | 'session' | 'project' | 'always';
   /** Why it was refused. Required whenever `decision` is `deny` — the schema carries the condition, so no end has to remember it. */
   readonly reason?: string;
@@ -516,6 +538,24 @@ export function isConnectionReauthenticatePayload(value: unknown): value is Conn
 
   return !(
     typeof record['token'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link DeviceRegisterPayload}. Unknown fields are accepted.
+ */
+export function isDeviceRegisterPayload(value: unknown): value is DeviceRegisterPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['installId'] !== 'string' ||
+    typeof record['name'] !== 'string' ||
+    typeof record['platform'] !== 'string' ||
+    typeof record['appVersion'] !== 'string'
   );
 }
 

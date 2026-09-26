@@ -8,6 +8,7 @@ import {
   E2E_PROJECT_PREFIX,
   MOBILE_REDIRECT_URL,
   dartDefines,
+  realPushEnvironment,
   PORT_VARIABLES,
   PROJECT_NAME,
   e2eDotEnv,
@@ -215,6 +216,12 @@ describe('the ephemeral stack of an e2e run', () => {
     expect(values['RC_BACKEND_URL']).toBe('http://localhost:51003');
     expect(values['RC_WS_URL']).toBe('ws://localhost:51003/ws');
     expect(values['RC_OIDC_ISSUER']).toBe('http://localhost:51002/realms/remote-claude');
+    expect(values['RC_DATABASE_URL']).toBe(ephemeralEnvironment(ports).DATABASE_URL);
+  });
+
+  it('switches the purge job off, so it cannot race the retention spec for its rows', () => {
+    expect(ephemeralEnvironment(ports).RC_AUDIT_PURGE_INTERVAL_MS).toBe('off');
+    expect(ephemeralEnvironment(ports).RC_AUDIT_RETENTION_DAYS).toBe('90');
   });
 
   it('says in the file itself that it is generated, so nobody commits one', () => {
@@ -290,5 +297,57 @@ describe('dartDefines', () => {
 
     expect(argv).not.toContain('RC_API_URL=undefined');
     expect(argv).toContain('RC_API_URL=');
+  });
+});
+
+// Plan 02, D-26 — the run that really notifies takes the push settings, and only them, from .env.
+describe('realPushEnvironment', () => {
+  const dotEnv = [
+    'RC_PUSH_ENDPOINT=https://fcm.googleapis.com/v1/projects/p/messages:send',
+    'RC_PUSH_CREDENTIALS_FILE=./.secrets/push-credentials.json',
+    'RC_PUSH_SCOPE=https://www.googleapis.com/auth/firebase.messaging',
+    'RC_DATABASE_URL=postgres://not-this-one',
+  ].join('\n');
+
+  it('takes the three push settings, resolves the credential, and lengthens the deadline', () => {
+    const result = realPushEnvironment(dotEnv, { root: '/repo', exists: () => true });
+
+    expect(result).toEqual({
+      env: {
+        RC_PUSH_ENDPOINT: 'https://fcm.googleapis.com/v1/projects/p/messages:send',
+        RC_PUSH_CREDENTIALS_FILE: '/repo/.secrets/push-credentials.json',
+        RC_PUSH_SCOPE: 'https://www.googleapis.com/auth/firebase.messaging',
+        RC_PERMISSION_TIMEOUT_MS: '60000',
+      },
+    });
+  });
+
+  it('takes nothing else from the .env', () => {
+    const result = realPushEnvironment(dotEnv, { root: '/repo', exists: () => true });
+
+    expect(Object.keys('env' in result ? result.env : {})).not.toContain('RC_DATABASE_URL');
+  });
+
+  it('refuses a .env that does not set every push setting, naming the missing ones', () => {
+    expect(realPushEnvironment('RC_PUSH_SCOPE=x', { exists: () => true })).toEqual({
+      problem: 'the .env does not set RC_PUSH_ENDPOINT, RC_PUSH_CREDENTIALS_FILE',
+    });
+  });
+
+  it('refuses an endpoint that is still the placeholder', () => {
+    const placeholder = dotEnv.replace(
+      'https://fcm.googleapis.com/v1/projects/p/messages:send',
+      'https://push.invalid/v1/messages:send',
+    );
+
+    expect(realPushEnvironment(placeholder, { exists: () => true })).toHaveProperty('problem');
+  });
+
+  it('refuses a credential file that is not there', () => {
+    const result = realPushEnvironment(dotEnv, { root: '/repo', exists: () => false });
+
+    expect(result).toEqual({
+      problem: 'the push credential file does not exist: /repo/.secrets/push-credentials.json',
+    });
   });
 });

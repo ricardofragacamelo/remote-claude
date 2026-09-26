@@ -3,6 +3,7 @@ library;
 
 import 'package:dio/dio.dart';
 import 'package:remote_claude/core/config/app_config_provider.dart';
+import 'package:remote_claude/core/device/device_identity_provider.dart';
 import 'package:remote_claude/core/logging/logger_provider.dart';
 import 'package:remote_claude/core/network/api_client.dart';
 import 'package:remote_claude/core/network/credentials_provider.dart';
@@ -19,6 +20,7 @@ ApiClient apiClient(Ref ref) {
     credentials: ref.watch(credentialsProvider),
     logger: ref.watch(appLoggerProvider),
     traceIds: ref.watch(traceIdsProvider),
+    installIds: ref.watch(deviceIdentityProvider),
   );
 
   ref.onDispose(dio.close);

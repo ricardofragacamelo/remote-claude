@@ -21,6 +21,7 @@ function aRequest(expiresInMs = 1_000): PermissionRequest {
     id: 'request-1',
     sessionId: SessionId.create(SESSION_ID),
     userId: owner,
+    projectPath: null,
     toolUseId: 'toolu-1',
     toolName: 'Bash',
     input: { command: 'rm -rf build/' },

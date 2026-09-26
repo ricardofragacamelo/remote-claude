@@ -15,7 +15,12 @@ abstract interface class CredentialStore {
   /// Stores [value] under [key].
   Future<void> write(String key, String value);
 
-  /// Forgets everything this app stored. What logging out does first.
+  /// Forgets every **credential** this app stored. What logging out does first.
+  ///
+  /// It deliberately does not wipe the store: the installation id is not a credential, and a
+  /// logout that reset it would register a brand new device on the next sign-in — one more row
+  /// for somebody to approve, every time. It disappears with the app, not with the session
+  /// ([D-01](../../../../docs/plans/02-mobile-approval/decisions.md)).
   Future<void> clear();
 }
 
@@ -38,6 +43,22 @@ abstract final class CredentialKeys {
 
   /// When the access token was issued, which is what makes proactive renewal possible.
   static const String issuedAt = 'rc.issuedAt';
+
+  /// Every credential key, so [CredentialStore.clear] cannot forget one by omission.
+  static const List<String> all = <String>[
+    accessToken,
+    refreshToken,
+    idToken,
+    userId,
+    expiresAt,
+    issuedAt,
+  ];
+}
+
+/// What identifies this installation, and outlives a logout.
+abstract final class DeviceKeys {
+  /// Identity of this installation, minted on first run. Never an identifier of the device.
+  static const String installId = 'rc.installId';
 }
 
 /// The store this app uses.
@@ -64,5 +85,12 @@ class SecureCredentialStore implements CredentialStore {
   Future<void> write(String key, String value) => _storage.write(key: key, value: value);
 
   @override
-  Future<void> clear() => _storage.deleteAll();
+  Future<void> clear() async {
+    // Key by key rather than `deleteAll`, because the store also holds the installation id, and
+    // that one is not a credential: wiping it on logout would make the next sign-in a new device
+    // waiting for approval.
+    for (final String key in CredentialKeys.all) {
+      await _storage.delete(key: key);
+    }
+  }
 }

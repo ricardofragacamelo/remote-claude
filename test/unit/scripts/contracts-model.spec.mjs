@@ -108,10 +108,40 @@ describe('buildModel', () => {
         name: 'ConnectionReady',
         frameKind: 'ack',
         frameType: 'connection.ready',
+        frame: true,
         description: '',
         payload: 'ConnectionReadyPayload',
       },
     ]);
+  });
+
+  // A payload-only contract: one shape in three languages, travelling over HTTP. Device
+  // registration is the case it exists for — the device has to exist before it can decide
+  // anything, so it cannot arrive on the socket.
+  it('accepts a payload-only kind, and marks it as not a frame', () => {
+    const model = buildModel(envelope(), [
+      message({
+        title: 'DeviceRegister',
+        'x-kind': 'http',
+        'x-type': 'device.register',
+        type: 'object',
+        properties: { installId: { type: 'string' } },
+      }),
+    ]);
+
+    expect(model.messages).toEqual([
+      {
+        name: 'DeviceRegister',
+        frameKind: 'http',
+        frameType: 'device.register',
+        frame: false,
+        description: '',
+        payload: 'DeviceRegisterPayload',
+      },
+    ]);
+    expect(model.interfaces.map((declaration) => declaration.name)).toContain(
+      'DeviceRegisterPayload',
+    );
   });
 
   it('reads an array of objects as a list of a named type', () => {
@@ -160,7 +190,7 @@ describe('buildModel', () => {
     })();
 
     expect(failure?.message).toContain('commands/thing.schema.json');
-    expect(failure?.message).toContain('command, event, request, response, ack, error');
+    expect(failure?.message).toContain('command, event, request, response, ack, error, http');
   });
 
   it('refuses a message with no x-type', () => {

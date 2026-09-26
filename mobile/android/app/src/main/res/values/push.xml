@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The channel permission requests arrive on. The id is a key, never shown. -->
+    <string name="push_channel_id" translatable="false">permission_requests</string>
+    <string name="push_channel_name">Permission requests</string>
+    <string name="push_channel_description">Claude is waiting for you to approve or deny a tool.</string>
+</resources>

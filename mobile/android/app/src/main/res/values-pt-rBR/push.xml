@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="push_channel_name">Pedidos de permissão</string>
+    <string name="push_channel_description">O Claude está esperando você aprovar ou negar uma tool.</string>
+</resources>

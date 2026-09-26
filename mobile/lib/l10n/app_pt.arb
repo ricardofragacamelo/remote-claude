@@ -34,5 +34,287 @@
   "sessionPingSequence": "Sequência {seq}",
   "sessionPingSessionLabel": "Sessão {sessionId}",
   "sessionErrorNotFound": "Essa sessão não existe mais.",
-  "sessionErrorInvalidSessionId": "{sessionId} não é um identificador de sessão."
+  "sessionErrorInvalidSessionId": "{sessionId} não é um identificador de sessão.",
+
+  "deviceStatusRegisteringTitle": "Registrando este aparelho",
+
+  "deviceStatusRegisteringBody": "Avisando o backend de qual aparelho é este.",
+
+  "deviceStatusPendingTitle": "Aguardando aprovação",
+
+  "deviceStatusPendingBody": "Você pode acompanhar as sessões daqui. Aprovar uma tool exige este aparelho aprovado antes, e isso é feito pelo navegador na sua máquina.",
+
+  "deviceStatusRevokedTitle": "Este aparelho foi revogado",
+
+  "deviceStatusRevokedBody": "Ele não responde mais a pedidos de permissão. Aprove-o de novo pelo navegador na sua máquina, ou saia da conta.",
+
+  "deviceStatusUnknownTitle": "Este aparelho não está registrado",
+
+  "deviceStatusUnknownBody": "Você pode acompanhar as sessões. Aprovar uma tool fica desligado até o registro passar.",
+
+  "authErrorDeviceNotRegistered": "Este aparelho ainda não foi aprovado.",
+
+  "authErrorDeviceRevoked": "Este aparelho foi revogado.",
+
+  "authErrorDeviceNotFound": "Esse aparelho não existe.",
+
+  "authErrorDeviceApprovalForbidden": "Um aparelho não aprova outro aparelho. Use o navegador.",
+
+  "pushDeniedTitle": "As notificações estão desligadas",
+
+  "pushDeniedBody": "Sem notificação, você só vê um pedido de aprovação com este app aberto. Dá para ligar nas configurações do sistema.",
+
+  "pushDeniedAction": "Abrir configurações",
+
+  "pushUnavailableTitle": "Notificações indisponíveis",
+
+  "pushUnavailableBody": "Esta versão não recebe notificações. A aprovação funciona com o app aberto, e não há nada para mudar nas configurações do sistema.",
+
+  "pushRotationFailedTitle": "As notificações podem não chegar",
+
+  "pushRotationFailedBody": "Este aparelho recebeu um endereço novo de notificação e não foi possível registrá-lo. A aprovação de longe pode não chegar até que seja.",
+
+  "workspaceListTitle": "Pastas",
+
+  "workspaceListDescription": "Escolha uma pasta para abrir uma sessão.",
+
+  "workspaceListLoading": "Carregando as pastas",
+
+  "workspaceListEmptyTitle": "Nenhuma pasta ainda",
+
+  "workspaceListEmptyBody": "Não há nada na allowlist. Ela é definida na máquina que roda o backend, não daqui.",
+
+  "workspaceNeverOpened": "Nunca aberta",
+
+  "workspaceStartRefused": "A sessão não foi aberta: este aparelho não está conectado.",
+
+  "sessionTitle": "Sessão",
+
+  "sessionEmptyTitle": "Nada ainda",
+
+  "sessionEmptyBody": "Envie um prompt para começar.",
+
+  "sessionPromptHint": "Peça algo ao Claude",
+
+  "sessionPromptAction": "Enviar",
+
+  "sessionPromptRefused": "Não enviado: este aparelho não está conectado.",
+
+  "sessionInterruptAction": "Parar",
+
+  "sessionCloseAction": "Encerrar sessão",
+
+  "sessionStatusStarting": "Iniciando",
+
+  "sessionStatusIdle": "Ociosa",
+
+  "sessionStatusThinking": "Pensando",
+
+  "sessionStatusRunning": "Executando uma tool",
+
+  "sessionStatusWaitingPermission": "Aguardando aprovação",
+
+  "sessionStatusClosed": "Encerrada",
+
+  "sessionToolStatusRunning": "Executando",
+
+  "sessionToolStatusSucceeded": "Concluída",
+
+  "sessionToolStatusFailed": "Falhou",
+
+  "sessionToolStatusDenied": "Negada",
+
+  "sessionToolOutputLabel": "Saída",
+
+  "sessionTurnCost": "{costUsd} USD em {durationMs} ms",
+
+  "sessionClosedByUser": "Encerrada por quem a abriu.",
+
+  "sessionClosedCompleted": "Terminou sozinha.",
+
+  "sessionClosedFailed": "Encerrada depois de uma falha.",
+
+  "sessionClosedAuditUnavailable": "Encerrada porque a trilha de auditoria não pôde ser gravada.",
+
+  "sessionClosedShutdown": "Encerrada porque o backend parou.",
+
+  "permissionPageTitle": "Permissão",
+
+  "permissionQueueTitle": "Esperando por você",
+
+  "permissionQueueDescription": "O Claude parou e não vai executar isto até você responder. Silêncio nega.",
+
+  "permissionCardLabel": "Permissão para {tool}",
+
+  "permissionToolBash": "Executar um comando no terminal",
+
+  "permissionToolWrite": "Gravar um arquivo",
+
+  "permissionToolEdit": "Editar um arquivo",
+
+  "permissionToolMultiEdit": "Editar vários arquivos",
+
+  "permissionToolNotebookEdit": "Editar um notebook",
+
+  "permissionToolRead": "Ler um arquivo",
+
+  "permissionToolWebFetch": "Buscar uma página",
+
+  "permissionToolUnknown": "Usar {tool}",
+
+  "permissionRiskRead": "Lê algo",
+
+  "permissionRiskWrite": "Altera um arquivo",
+
+  "permissionRiskDestructive": "Pode destruir algo",
+
+  "permissionCommandLabel": "Exatamente o que vai executar",
+
+  "permissionRemaining": "{seconds} s restantes — depois, é negado",
+
+  "permissionScopeOnce": "Permitir uma vez",
+
+  "permissionScopeOnceHint": "Só este comando, só agora.",
+
+  "permissionScopeSession": "Permitir nesta sessão",
+
+  "permissionScopeSessionHint": "Todo pedido idêntico, até esta sessão terminar.",
+
+  "permissionDeny": "Negar",
+
+  "permissionExtend": "Quero mais tempo",
+
+  "permissionExtendExhausted": "Este pedido não pode mais ser estendido.",
+
+  "permissionSending": "Enviando sua resposta…",
+
+  "permissionConfirmTitle": "Isto pode destruir algo. Permitir mesmo assim?",
+
+  "permissionConfirmAction": "Sim, permitir",
+
+  "permissionConfirmCancel": "Voltar",
+
+  "permissionLockReason": "Confirme que é você para permitir este comando no seu computador",
+
+  "permissionLockRefused": "Não foi confirmado que este celular é seu. Nada foi enviado.",
+
+  "permissionNoLockTitle": "Este celular não tem bloqueio de tela",
+
+  "permissionNoLockBody": "Um celular sem digital, PIN, padrão ou senha não pode aprovar comandos. Configure um bloqueio de tela nas configurações do sistema. Você ainda pode negar e acompanhar.",
+
+  "permissionNotSent": "Sua resposta não saiu: a conexão caiu. Tente de novo quando ela voltar.",
+
+  "permissionOffline": "Sem conexão: responder espera ela voltar.",
+
+  "permissionConnecting": "Conectando à sessão antes de você poder responder…",
+
+  "permissionDeviceBlocked": "Este celular não pode responder até ser aprovado no navegador.",
+
+  "permissionCheckingTitle": "Conferindo este pedido com o servidor…",
+
+  "permissionGoneTitle": "Este pedido não existe mais",
+
+  "permissionGoneBody": "A sessão a que ele pertencia terminou, ou o servidor reiniciou. Não há mais nada a responder.",
+
+  "permissionOpenSession": "Abrir a sessão",
+
+  "permissionOutcomeAllowedWeb": "Permitido no navegador.",
+
+  "permissionOutcomeRefusedWeb": "Negado no navegador.",
+
+  "permissionOutcomeAllowedPhone": "Permitido por um celular.",
+
+  "permissionOutcomeRefusedPhone": "Negado por um celular.",
+
+  "permissionOutcomeAllowed": "Permitido.",
+
+  "permissionOutcomeRefused": "Negado.",
+
+  "permissionOutcomeAllowedByRule": "Permitido por uma das suas regras, sem perguntar a ninguém.",
+
+  "permissionOutcomeRefusedByRule": "Negado por uma das suas regras, sem perguntar a ninguém.",
+
+  "permissionOutcomeExpired": "Negado automaticamente: ninguém respondeu a tempo.",
+
+  "approvalLockTitle": "Pedir digital ou PIN antes de aprovar",
+
+  "approvalLockBody": "Ligado por padrão. Negar nunca pede.",
+
+  "permissionErrorRequestNotFound": "Esse pedido não está mais aberto.",
+
+  "permissionErrorRequestExpired": "Esse pedido perdeu o prazo.",
+
+  "permissionErrorNotOwned": "Esse pedido não é seu para responder.",
+
+  "permissionScopeProject": "Não perguntar de novo neste projeto",
+
+  "permissionScopeProjectHint": "Pedidos iguais neste projeto executam sem perguntar, por {duration}.",
+
+  "permissionScopeAlways": "Não perguntar de novo em lugar nenhum",
+
+  "permissionScopeAlwaysHint": "Pedidos iguais em qualquer projeto seu executam sem perguntar, por {duration}.",
+
+  "permissionRuleDays": "{days} dias",
+
+  "permissionRuleHours": "{hours} horas",
+
+  "permissionPersistTitle": "Parar de perguntar sobre isto?",
+
+  "permissionPersistProject": "O Claude vai executar o que casar com a regra abaixo neste projeto sem perguntar a você, por {duration}.",
+
+  "permissionPersistAlways": "O Claude vai executar o que casar com a regra abaixo em qualquer projeto seu sem perguntar a você, por {duration}.",
+
+  "permissionPersistRevocable": "Você pode retirar isso a qualquer momento nas suas regras. A revogação vale no próximo pedido, em toda sessão aberta.",
+
+  "permissionPersistOpenRules": "Ver suas regras",
+
+  "permissionPersistConfirm": "Permitir e parar de perguntar",
+
+  "permissionErrorRuleNotFound": "Essa regra não existe.",
+
+  "rulesTitle": "Suas regras",
+
+  "rulesOpen": "Regras que você concedeu",
+
+  "rulesReload": "Ler a lista de novo",
+
+  "rulesDescription": "O que o Claude pode fazer nesta máquina sem perguntar a você antes. A revogação vale no próximo pedido, em toda sessão aberta.",
+
+  "rulesLoading": "Carregando suas regras…",
+
+  "rulesEmptyTitle": "Nenhuma regra ainda",
+
+  "rulesEmptyBody": "Uma regra nasce quando você responde um pedido com “não perguntar de novo”. Até lá, o Claude pergunta toda vez.",
+
+  "rulesScopeProject": "Em um projeto",
+
+  "rulesScopeAlways": "Em todos os projetos",
+
+  "rulesDecisionAllow": "executa sem perguntar",
+
+  "rulesDecisionDeny": "recusado sem perguntar",
+
+  "rulesStatusActive": "Ativa",
+
+  "rulesStatusExpired": "Expirada",
+
+  "rulesStatusUnknown": "Estado desconhecido",
+
+  "rulesRowLabel": "Regra {pattern}",
+
+  "rulesToolDecision": "{tool} · {decision}",
+
+  "rulesProject": "Projeto: {path}",
+
+  "rulesGranted": "Concedida por {who} em {at}",
+
+  "rulesValidUntil": "Válida até {at}",
+
+  "rulesExpiredOn": "Expirou em {at}. O Claude volta a perguntar.",
+
+  "rulesExpiringSoon": "Expira em breve: depois de {at}, o Claude volta a perguntar.",
+
+  "rulesRevoke": "Revogar",
+
+  "rulesRevoking": "Revogando…"
 }

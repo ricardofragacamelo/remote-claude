@@ -1,4 +1,5 @@
 import type { PermissionMode, SessionCloseReason, SessionId } from '@domain/session';
+import type { ClaudeSessionId } from '@domain/transcript';
 import type { WorkspacePath } from '@domain/workspace';
 
 /**
@@ -28,6 +29,14 @@ export interface ClaudeSessionStart {
 
   /** Session of the Agent SDK to continue, or `null` to start fresh. */
   readonly resumeSessionId: string | null;
+
+  /**
+   * The id the new conversation takes in Claude's store — ours, already recorded as ours.
+   *
+   * `null` when resuming: the conversation keeps the id it already has. Handing the SDK an id of
+   * our choosing is what lets the provenance be written before the subprocess exists.
+   */
+  readonly claudeSessionId: ClaudeSessionId | null;
 
   /** Called for every event the stream produced, in order. */
   onEvent(event: SessionEvent): void;

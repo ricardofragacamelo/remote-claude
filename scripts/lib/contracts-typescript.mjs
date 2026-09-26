@@ -187,6 +187,8 @@ function emitFrame(message) {
  */
 export function emitTypeScript(model) {
   const declarations = [model.envelope, ...model.interfaces];
+  // A payload-only contract has a type and a guard and no frame: see PAYLOAD_KINDS.
+  const frames = model.messages.filter((message) => message.frame);
 
   const blocks = [
     BANNER,
@@ -196,12 +198,12 @@ export function emitTypeScript(model) {
     '',
     `/** Every \`type\` the generated frames cover, for exhaustiveness at the call site. */`,
     `export const FRAME_TYPES = [`,
-    ...model.messages.map((message) => `  '${message.frameType}',`),
+    ...frames.map((message) => `  '${message.frameType}',`),
     `] as const;`,
     '',
     ...declarations.flatMap((declaration) => [emitInterface(declaration), '']),
     ...declarations.flatMap((declaration) => [emitGuard(declaration), '']),
-    ...model.messages.flatMap((message) => [emitFrame(message), '']),
+    ...frames.flatMap((message) => [emitFrame(message), '']),
   ];
 
   return `${blocks.join('\n').trimEnd()}\n`;

@@ -58,7 +58,7 @@ primeira classe, não como caso especial.
 
 ```
 Cliente conecta em  wss://<host>/ws?v=1
-  → envia  command  connection.authenticate  { token, locale, client: { kind, version } }
+  → envia  command  connection.authenticate  { token, locale, client: { kind, version, installId? } }
   ← recebe ack      connection.ready         { connectionId, serverVersion, limits }
 ```
 
@@ -71,6 +71,14 @@ Regras:
 - **Expiração com o socket aberto não derruba a conexão.** O cliente renova e envia
   `connection.reauthenticate { token }`. Sem token válido até o fim do período de graça
   (60 s), fecha com `4401`.
+- **`client.installId` identifica o aparelho daquele socket.** Ausente no navegador, que não é
+  device; presente no app. É o que permite à revogação fechar **aquele** socket na hora — sem ele,
+  um celular revogado continuaria respondendo permissão até o token expirar, ou seja, por até
+  quinze minutos a revogação não revogaria nada.
+- **O handshake recusa o device que não pode existir.** `installId` que não tem registro, ou que
+  está **revogado**, fecha com `4401`. Device **pendente** conecta: observar sessão é permitido a
+  quem ainda não decide, e esconder o stream dele transformaria "espere a aprovação" em "o app
+  está quebrado". Ver [08-authentication](08-authentication.md#device-e-o-canal-mobile).
 - **Revogação alcança socket aberto:** revogar device ou usuário fecha as connections dele
   imediatamente, com `4401`.
 - `v` incompatível → fecha com `4426` e `payload.supportedVersions`.
@@ -207,13 +215,28 @@ Payload de `permission.requested`:
   "input": { "command": "rm -rf build/" },
   "riskHint": "destructive",      // read | write | destructive — derivado no backend
   "defaultToNo": true,
-  "suggestions": [ { "scope": "session", "labelKey": "permission.scope.session" } ],
+  "suggestions": [
+    { "scope": "once",    "labelKey": "permission.scope.once" },
+    { "scope": "session", "labelKey": "permission.scope.session" },
+    { "scope": "project", "labelKey": "permission.scope.project",
+      "pattern": "Bash(rm -rf build/)", "lifetimeMs": 7776000000 },
+    { "scope": "always",  "labelKey": "permission.scope.always",
+      "pattern": "Bash(rm -rf build/)", "lifetimeMs": 7776000000 }
+  ],
   "expiresAt": "2026-09-13T12:02:00.000Z"
 }
 ```
 
 `labelKey` e não `label`: o servidor **nunca** manda prosa, nem dentro de uma sugestão. Ver
 [i18n](02-i18n.md).
+
+**`project` e `always` chegam com a regra que deixariam** — `pattern`, o padrão mais estreito que
+cobre esta invocação e o mesmo que a resposta grava, e `lifetimeMs`, a validade default da
+instalação, contada a partir da resposta. É o que deixa a tela dizer o alcance por extenso antes de
+alguém escolher, sem um segundo matcher no cliente nem um "90 dias" escrito à mão
+([03 · D-12](../../plans/03-rules-and-audit/decisions.md#d-12--o-alcance-vem-na-pergunta)).
+Invocação sem padrão possível não recebe as duas sugestões, e `project` exige workspace. O cliente
+que recebe um escopo persistido sem um dos dois campos **não** o oferece.
 
 Resposta:
 
@@ -238,6 +261,14 @@ código — ver [campo obrigatório por condição](#campo-obrigatório-por-cond
    autoriza.
 4. **`deny` exige `reason`.** Vai para a auditoria e volta ao Claude como mensagem.
 5. **Toda decisão é auditada** — quem, quando, de qual device, qual foi o input exato.
+
+**Saber o estado de um pedido é HTTP, não socket.** Quem chega por um push não espera o replay do
+`session.attach` para descobrir se o pedido ainda existe: pergunta em
+`GET /sessions/:sessionId/permissions/:requestId`, que responde pendente (com o payload acima),
+resolvido (com os campos de `permission.resolved`), `410`, `404` ou `403`. Responder continua
+sendo o `permission.resolve` deste contrato. Ver
+[backend/03](../backend/03-modules.md#permission) e
+[02 · D-22](../../plans/02-mobile-approval/decisions.md#d-22--revalidar-é-perguntar-não-esperar).
 
 ---
 

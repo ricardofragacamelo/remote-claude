@@ -1,10 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
-import type { PermissionEvents, PermissionResolvedEvent } from '@application/permission';
+import type {
+  PermissionEvents,
+  PermissionRequestedEvent,
+  PermissionResolvedEvent,
+} from '@application/permission';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 
-/** The name on the bus. `<module>.<fact in the past>`, exactly like the event on the wire. */
+/** The names on the bus. `<module>.<fact in the past>`, exactly like the events on the wire. */
+export const PERMISSION_REQUESTED = 'permission.requested';
 export const PERMISSION_RESOLVED = 'permission.resolved';
 
 /**
@@ -27,6 +32,22 @@ export class EmitterPermissionEvents implements PermissionEvents {
     @Inject(LOGGER) private readonly logger: Logger,
   ) {}
 
+  requested(event: PermissionRequestedEvent): void {
+    this.logger.debug(
+      {
+        op: 'permission.request',
+        layer: 'adapter',
+        sessionId: event.request.sessionId.value,
+        requestId: event.request.id,
+      },
+      'publishing permission.requested on the internal bus',
+    );
+
+    this.publish(PERMISSION_REQUESTED, event.request.sessionId.value, event.request.id, () => {
+      this.emitter.emit(PERMISSION_REQUESTED, event);
+    });
+  }
+
   resolved(event: PermissionResolvedEvent): void {
     this.logger.debug(
       {
@@ -40,20 +61,26 @@ export class EmitterPermissionEvents implements PermissionEvents {
       'publishing permission.resolved on the internal bus',
     );
 
-    try {
+    this.publish(PERMISSION_RESOLVED, event.request.sessionId.value, event.request.id, () => {
       this.emitter.emit(PERMISSION_RESOLVED, event);
+    });
+  }
+
+  /**
+   * Emits, and swallows whatever a consumer threw.
+   *
+   * Logged and swallowed, deliberately, and written once for both facts. A consumer that threw
+   * has a problem of its own; the agent loop waiting on the resolution has not, and it must not
+   * inherit one. The same holds for the question: a notification that failed to go out must not
+   * stop the card that already did.
+   */
+  private publish(name: string, sessionId: string, requestId: string, emit: () => void): void {
+    try {
+      emit();
     } catch (error) {
-      // Logged and swallowed, deliberately. A consumer that threw has a problem of its own; the
-      // agent loop waiting on this resolution has not, and it must not inherit one.
       this.logger.error(
-        {
-          op: 'permission.resolve',
-          layer: 'adapter',
-          sessionId: event.request.sessionId.value,
-          requestId: event.request.id,
-          err: error,
-        },
-        'a consumer of permission.resolved failed',
+        { op: 'permission.resolve', layer: 'adapter', sessionId, requestId, err: error },
+        `a consumer of ${name} failed`,
       );
     }
   }

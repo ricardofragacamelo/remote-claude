@@ -5,7 +5,7 @@ import type { OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websocket
 import { z } from 'zod';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { AuthenticateUseCase } from '@application/auth';
+import { AuthenticateUseCase, ResolveDeviceUseCase } from '@application/auth';
 import { UnauthenticatedError } from '@domain/auth';
 import type { IdGenerator } from '@domain/shared';
 import { ID_GENERATOR } from '@application/shared';
@@ -34,7 +34,13 @@ import { SessionHub } from './session-hub';
 const authenticateSchema = z.object({
   token: z.string().min(1),
   locale: z.enum(['en', 'pt-BR']),
-  client: z.object({ kind: z.enum(['web', 'mobile']), version: z.string().min(1) }),
+  client: z.object({
+    kind: z.enum(['web', 'mobile']),
+    version: z.string().min(1),
+    // Absent from a browser, which is not a device. Present from the app, and it is what lets a
+    // revocation close this socket at once rather than fifteen minutes from now.
+    installId: z.string().min(1).optional(),
+  }),
 });
 
 const reauthenticateSchema = z.object({ token: z.string().min(1) });
@@ -79,6 +85,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnM
     @Inject(SessionHub) private readonly hub: SessionHub,
     @Inject(FrameBuilder) private readonly frames: FrameBuilder,
     @Inject(AuthenticateUseCase) private readonly authenticate: AuthenticateUseCase,
+    @Inject(ResolveDeviceUseCase) private readonly devices: ResolveDeviceUseCase,
     @Inject(ID_GENERATOR) private readonly ids: IdGenerator,
     @Inject(WS_COMMAND_HANDLERS) private readonly handlers: readonly WsCommandHandler[],
     @Inject(LOGGER) private readonly logger: Logger,
@@ -206,6 +213,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnM
     const outcome = await handler.handle({
       connectionId: connection.id,
       userId,
+      installId: connection.installId,
       locale: connection.locale,
       setLocale: (locale) => {
         connection.locale = locale;
@@ -251,8 +259,26 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnM
       return;
     }
 
+    const installId = parsed.data.client.installId ?? null;
+
+    try {
+      // A device that has been revoked, or one nobody ever registered, does not get a socket at
+      // all. A **pending** one does: watching a session is allowed to a device that cannot yet
+      // decide anything, and hiding the stream from it would turn "wait to be approved" into "the
+      // app is broken" (S-03).
+      const device = await this.devices.execute(authentication.userId, installId);
+      if (device !== null && device.status === 'revoked') {
+        this.close(connection, CLOSE.authenticationFailed, 'device revoked');
+        return;
+      }
+    } catch {
+      this.close(connection, CLOSE.authenticationFailed, 'unknown device');
+      return;
+    }
+
     connection.userId = authentication.userId;
     connection.locale = parsed.data.locale;
+    connection.installId = installId;
     connection.expiresAt = authentication.expiresAt;
 
     this.clearTimer(connection.id, 'handshake');

@@ -7,6 +7,7 @@ import 'package:remote_claude/core/logging/log_context.dart';
 import 'package:remote_claude/core/logging/logger_provider.dart';
 import 'package:remote_claude/core/network/credentials.dart';
 import 'package:remote_claude/core/network/credentials_provider.dart';
+import 'package:remote_claude/core/session/sign_out_hooks.dart';
 import 'package:remote_claude/features/auth/auth.dart';
 import 'package:remote_claude/features/auth/auth_providers.dart';
 import 'package:remote_claude/features/auth/domain/repositories/auth_repository.dart';
@@ -105,6 +106,35 @@ void main() {
   test('signing out clears the credential here and at the provider', () async {
     repository.stored = session();
     await build();
+
+    await controller().signOut();
+
+    expect(container.read(authControllerProvider).value, isNull);
+    expect(credentials.accessToken, isNull);
+    expect(repository.signOuts, 1);
+  });
+
+  // D-23 — forgetting the push token is a call to the backend, so it runs while the credential is
+  // still there: before the store is cleared, before the transport forgets the token.
+  test('what needs the credential runs before the credential goes', () async {
+    repository.stored = session();
+    await build();
+    (int, String?)? seen;
+    container
+        .read(signOutHooksProvider)
+        .register('probe', () async => seen = (repository.signOuts, credentials.accessToken));
+
+    await controller().signOut();
+
+    expect(seen, (0, 'token'));
+    expect(repository.signOuts, 1);
+  });
+
+  // S-88 — a step that fails never keeps the credential on the phone.
+  test('a step that fails does not stop the sign-out', () async {
+    repository.stored = session();
+    await build();
+    container.read(signOutHooksProvider).register('offline', () async => throw StateError('x'));
 
     await controller().signOut();
 

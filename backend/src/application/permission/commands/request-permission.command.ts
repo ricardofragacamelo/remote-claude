@@ -1,5 +1,5 @@
 import type { UserId } from '@domain/auth';
-import type { SessionId } from '@domain/session';
+import type { PermissionMode, SessionId } from '@domain/session';
 
 /** One invocation the SDK is holding its loop open for. */
 export interface RequestPermissionCommand {
@@ -10,6 +10,12 @@ export interface RequestPermissionCommand {
 
   /** The owner of the session — who the question is for, and whose rules may answer it. */
   readonly userId: UserId;
+
+  /** The workspace root the session runs in — what a `project` rule is granted for. */
+  readonly projectPath: string | null;
+
+  /** The mode the session is in **now**. In `plan`, no `allow` rule answers (D-11). */
+  readonly permissionMode: PermissionMode;
 
   readonly toolUseId: string | null;
   readonly toolName: string;

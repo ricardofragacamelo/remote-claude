@@ -119,4 +119,32 @@ describe('WorkspaceAllowlist', () => {
       expect(allowlist.for(owner)[0]?.root.value).toBe('/srv/mine');
     });
   });
+
+  describe('admits — plan 04, the fence on what may be read', () => {
+    const allowlist = anAllowlist([
+      aWorkspace({ root: '/srv/mine', label: 'Mine' }),
+      aWorkspace({ root: '/srv/theirs', label: 'Theirs', users: ['auth|stranger'] }),
+    ]);
+
+    it('admits a path inside a root of this user', () => {
+      expect(allowlist.admits('/srv/mine/app', owner)).toBe(true);
+    });
+
+    it('does not admit a path outside every root', () => {
+      expect(allowlist.admits('/etc', owner)).toBe(false);
+    });
+
+    it('does not admit a root of somebody else', () => {
+      expect(allowlist.admits('/srv/theirs/app', owner)).toBe(false);
+    });
+
+    it('does not admit what is not an absolute path', () => {
+      expect(allowlist.admits('relative/path', owner)).toBe(false);
+      expect(allowlist.admits('', owner)).toBe(false);
+    });
+
+    it('still throws what is not one of its refusals — a bug is not a "no"', () => {
+      expect(() => allowlist.admits(undefined as unknown as string, owner)).toThrow(TypeError);
+    });
+  });
 });

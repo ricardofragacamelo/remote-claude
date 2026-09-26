@@ -104,6 +104,50 @@ describe('the Dependency Rule, as the build enforces it', () => {
     ).toBe(false);
   });
 
+  // The exception the push adapter carries: `jose` is a crypto primitive, and signing an
+  // assertion is not knowing what OIDC is.
+  it('allows the push adapter the same crypto library, and nothing more', async () => {
+    expect(
+      broke(await violations(), 'identity-is-isolated', 'adapter/outbound/push/allowed.ts'),
+    ).toBe(false);
+    expect(
+      broke(await violations(), 'push-does-not-learn-oidc', 'adapter/outbound/push/allowed.ts'),
+    ).toBe(false);
+  });
+
+  // Plan 04: the history is read by the SDK's functions, never by a parser of ours.
+  it('refuses a transcript adapter that opens the JSONL itself — S-09', async () => {
+    const found = await violations();
+
+    expect(
+      broke(
+        found,
+        'transcript-reads-through-the-sdk',
+        'adapter/outbound/claude/transcript-parser.ts',
+      ),
+    ).toBe(true);
+    expect(
+      broke(found, 'transcript-reads-through-the-sdk', 'application/transcript/reads-the-file.ts'),
+    ).toBe(true);
+  });
+
+  it('refuses a line reader anywhere, which is how a JSONL parser begins — S-09', async () => {
+    const found = await violations();
+
+    expect(broke(found, 'no-line-reader', 'shared/line-reader.ts')).toBe(true);
+    expect(broke(found, 'no-line-reader', 'adapter/outbound/claude/transcript-parser.ts')).toBe(
+      true,
+    );
+  });
+
+  it('leaves the filesystem to the rest of the backend, outside the transcript slice', async () => {
+    // The checkpoint store writes blobs to disk, and that is its job: the rule is about the
+    // transcript, not about `fs`.
+    expect(
+      broke(await violations(), 'transcript-reads-through-the-sdk', 'shared/line-reader.ts'),
+    ).toBe(false);
+  });
+
   it('carries a comment on every rule, so a failure says why the rule exists', () => {
     for (const rule of configuration.forbidden ?? []) {
       expect(rule.comment, rule.name).toBeTruthy();

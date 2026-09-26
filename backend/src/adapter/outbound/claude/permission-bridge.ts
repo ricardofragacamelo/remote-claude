@@ -77,6 +77,10 @@ export class PermissionBridge implements SessionPermissionGate {
       requestId: question.requestId,
       sessionId: question.sessionId,
       userId: live?.session.ownerId ?? UNKNOWN_OWNER,
+      // What a `project` rule is granted for, and the mode as it is **now** — it can change while
+      // the session runs. A session already forgotten reads as `plan`, where no `allow` answers.
+      projectPath: live?.session.workspace.value ?? null,
+      permissionMode: live?.session.permissionMode ?? 'plan',
       toolUseId: question.toolUseId,
       toolName: question.toolName,
       input: question.input,

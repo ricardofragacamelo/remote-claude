@@ -26,7 +26,7 @@
     },
     "auto": {
       "type": "boolean",
-      "description": "The server decided it, with nobody answering — the deadline passed, or a session-scoped rule matched. Silence never authorises, so an automatic decision is always `deny` unless a rule allowed it."
+      "description": "The server decided it, with nobody answering — the deadline passed, or a rule the user granted earlier (`session`, `project` or `always`) matched. A request a rule settles is never put to anybody, and this event is how every screen watching still learns that something ran in the user's name. Silence never authorises, so an automatic decision is always `deny` unless a rule allowed it."
     },
     "resolvedBy": {
       "type": "string",

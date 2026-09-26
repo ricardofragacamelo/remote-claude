@@ -1,6 +1,7 @@
 import { PermissionRule, patternForInvocation } from '@domain/permission';
 import type { PermissionAnswer, PermissionRequest, PermissionSettling } from '@domain/permission';
 import type { IdGenerator } from '@domain/shared';
+import { resolvedPayload } from './permission-payloads';
 import type { PermissionBroadcaster } from './ports/permission-broadcaster.port';
 import type { PermissionEvents } from './ports/permission-events.port';
 import type { PermissionRequestRepository } from './ports/permission-request.repository';
@@ -69,13 +70,7 @@ export class PermissionSettlement {
     if (options.announce) {
       this.broadcaster.publish(request.sessionId, {
         type: 'permission.resolved',
-        payload: {
-          requestId: request.id,
-          decision: answer.decision,
-          auto: answer.auto,
-          ...(answer.resolvedBy === null ? {} : { resolvedBy: answer.resolvedBy.value }),
-          ...(answer.resolvedFrom === null ? {} : { resolvedFrom: answer.resolvedFrom }),
-        },
+        payload: resolvedPayload(request.id, answer),
       });
     }
 
@@ -108,6 +103,7 @@ export class PermissionSettlement {
           id: this.ids.next(),
           userId: answer.resolvedBy,
           sessionId: request.sessionId,
+          projectPath: null,
           pattern,
           decision: answer.decision,
           scope: 'session',

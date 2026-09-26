@@ -16,21 +16,28 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-01 | a lista traz sessões nossas **e** as criadas no VSCode, com a origem | eq | integração | — | B-02 | ⬜ |
-| S-02 | mensagem histórica chega no mesmo formato do evento vivo | eq | unit | — | B-03 | ⬜ |
-| S-03 | sessão sem mensagem devolve lista vazia, não erro | fron | integração | — | B-02 | ⬜ |
-| S-04 | transcript de outro dono | err | integração | `NOT_FOUND` | B-04 | ⬜ |
-| S-05 | SDK indisponível ao ler o histórico | err | integração | `CLAUDE_UNAVAILABLE` | B-05 | ⬜ |
-| S-06 | transcript longo é paginado, e a página seguinte continua de onde parou | fron | integração | — | B-04 | ⬜ |
-| S-07 | a mesma página pedida duas vezes devolve o mesmo conteúdo | idem | integração | — | B-04 | ⬜ |
-| S-08 | ler enquanto a sessão viva grava não corrompe a página | conc | integração | — | B-04 | ⬜ |
-| S-09 | parser próprio de JSONL → `lint:arch` reprova | err | unit | — | B-01 | ⬜ |
-| S-10 | sessão que termina durante a leitura fecha a página sem erro | est | integração | — | B-01 | ⬜ |
-| S-54 | sessão sem `cwd` é excluída da lista — não há como provar que é de workspace liberado | fron | integração | — | B-02 | ⬜ |
-| S-55 | sessão de worktree cujo `cwd` está fora da allowlist não aparece | err | integração | — | B-04 | ⬜ |
-| S-56 | sessão inexistente distingue-se de sessão vazia — `getSessionInfo` decide | err | integração | `NOT_FOUND` | B-04 | ⬜ |
-| S-57 | duas páginas pedidas sob escrita viva não pulam nem duplicam mensagem | conc | integração | — | B-04 | ⬜ |
-| S-64 | o cache do transcript é invalidado quando o `lastModified` muda | idem | integração | — | B-04 | ⬜ |
+| S-01 | a lista traz sessões nossas **e** as criadas no VSCode, com a origem | eq | integração | — | B-02 | ✅ |
+| S-02 | mensagem histórica chega no mesmo formato do evento vivo | eq | unit | — | B-03 | ✅ |
+| S-03 | sessão sem mensagem devolve lista vazia, não erro | fron | integração | — | B-02 | ✅ |
+| S-04 | transcript de outro dono | err | integração | `NOT_FOUND` | B-04 | ✅ |
+| S-05 | SDK indisponível ao ler o histórico | err | integração | `CLAUDE_UNAVAILABLE` | B-05 | ✅ |
+| S-06 | transcript longo é paginado, e a página seguinte continua de onde parou | fron | integração | — | B-04 | ✅ |
+| S-07 | a mesma página pedida duas vezes devolve o mesmo conteúdo | idem | integração | — | B-04 | ✅ |
+| S-08 | ler enquanto a sessão viva grava não corrompe a página | conc | integração | — | B-04 | ✅ |
+| S-09 | parser próprio de JSONL → `lint:arch` reprova | err | unit | — | B-01 | ✅ |
+| S-10 | sessão que termina durante a leitura fecha a página sem erro | est | integração | — | B-01 | ✅ |
+| S-54 | sessão sem `cwd` é excluída da lista — não há como provar que é de workspace liberado | fron | integração | — | B-02 | ✅ |
+| S-55 | sessão de worktree cujo `cwd` está fora da allowlist não aparece | err | integração | — | B-04 | ✅ |
+| S-56 | sessão inexistente distingue-se de sessão vazia — `getSessionInfo` decide | err | integração | `NOT_FOUND` | B-04 | ✅ |
+| S-57 | duas páginas pedidas sob escrita viva não pulam nem duplicam mensagem | conc | integração | — | B-04 | ✅ |
+| S-64 | o cache do transcript é invalidado quando o `lastModified` muda | idem | integração | — | B-04 | ✅ |
+| S-68 | leitura do SDK sem resposta no prazo | err | unit | `CLAUDE_TIMEOUT` | B-05 | ✅ |
+| S-69 | cursor cuja âncora não existe mais no transcript é recusado, não vira página errada | err | integração | `INVALID_INPUT` | B-04 | ✅ |
+| S-70 | a mesma leitura pedida junto faz **uma** chamada ao SDK, e acima do limite as leituras esperam a vez | conc | unit | — | B-04 | ✅ |
+| S-71 | a sessão aberta aqui grava a procedência **antes** de existir subprocesso; falha ao gravar não abre sessão | est | integração | `INTERNAL_ERROR` | B-02 | ✅ |
+| S-72 | o log da borda do transcript não carrega texto de mensagem | eq | integração | — | B-05 | ✅ |
+| S-73 | `workspacePath` fora da allowlist, ou de outra pessoa, é recusado antes de chamar o SDK | err | integração | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN` | B-04 | ✅ |
+| S-74 | o cache respeita o teto de sessões e descarta a menos recente | fron | unit | — | B-04 | ✅ |
 
 ## Telas de histórico — B-06…B-09
 

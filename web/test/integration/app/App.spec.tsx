@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
 import { App } from '@/app/App';
@@ -40,6 +41,18 @@ describe('the shell', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: t('session.ping.action') })).toBeInTheDocument();
+    });
+  });
+
+  it('leads a signed-in visitor to the rules they granted', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    const user = userEvent.setup();
+    const mounted = renderRouted(<App />);
+
+    await user.click(await screen.findByRole('link', { name: t('rules.screen.open') }));
+
+    await waitFor(() => {
+      expect(mounted.path()).toBe('/rules');
     });
   });
 

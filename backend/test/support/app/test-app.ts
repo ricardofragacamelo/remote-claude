@@ -94,9 +94,24 @@ export function testEnvironment(
   process.env['RC_PERMISSION_EXTENSION_MS'] = '800';
   process.env['RC_PERMISSION_MAX_EXTENSIONS'] = '2';
   process.env['RC_PERMISSION_RULE_LIFETIME_MS'] = '60000';
+  process.env['RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS'] = '3600000';
+  process.env['RC_PERMISSION_RULE_MAX_LIFETIME_MS'] = '86400000';
+  // A push provider that does not exist, on purpose: a suite that is not about notifications
+  // must never reach one, and an endpoint under `.invalid` cannot resolve by accident. The suite
+  // that **is** about them overrides the sender.
+  process.env['RC_PUSH_ENDPOINT'] = 'https://push.invalid/v1/messages:send';
+  process.env['RC_PUSH_CREDENTIALS_FILE'] = path.join(
+    mkdtempSync(path.join(tmpdir(), 'rc-push-')),
+    'credentials.json',
+  );
+  process.env['RC_PUSH_SCOPE'] = 'https://push.invalid/auth';
   process.env['RC_CHECKPOINT_DIR'] = mkdtempSync(path.join(tmpdir(), 'rc-checkpoints-'));
   process.env['RC_CHECKPOINT_MAX_FILE_BYTES'] = '5242880';
   process.env['RC_CHECKPOINT_MAX_STORE_BYTES'] = '524288000';
+  process.env['RC_AUDIT_RETENTION_DAYS'] = '90';
+  // On, and a day long: the first run is a minute after boot, which no suite waits for — the suites
+  // about the purge drive it directly, at the instant they choose.
+  process.env['RC_AUDIT_PURGE_INTERVAL_MS'] = '86400000';
 }
 
 /**

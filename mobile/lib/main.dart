@@ -12,11 +12,12 @@ import 'package:remote_claude/app/app.dart';
 import 'package:remote_claude/app/bootstrap.dart';
 import 'package:remote_claude/app/lifecycle.dart';
 import 'package:remote_claude/core/config/app_config.dart';
+import 'package:remote_claude/core/device/device_identity_provider.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final AppConfig config = AppConfig.from(appDefines);
@@ -31,6 +32,10 @@ void main() {
   final ProviderContainer container = ProviderContainer(
     overrides: bootstrapOverrides(config: config, logger: logger),
   );
+
+  // Before the socket opens, and before the first request goes out: both stamp the installation
+  // id, and one that is not there yet is a handshake the backend cannot tie to a device.
+  await container.read(deviceIdentityProvider).ensure();
 
   final WsClient client = container.read(wsClientProvider)..connect();
   SocketLifecycle(client: client, logger: logger);

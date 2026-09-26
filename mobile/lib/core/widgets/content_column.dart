@@ -9,9 +9,14 @@ library;
 import 'package:flutter/material.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 
-/// A padded, left-aligned column.
+/// A padded column, left-aligned unless told to stretch.
 class ContentColumn extends StatelessWidget {
-  const ContentColumn({required this.children, this.padding = Tokens.spaceMd, super.key});
+  const ContentColumn({
+    required this.children,
+    this.padding = Tokens.spaceMd,
+    this.crossAxisAlignment = CrossAxisAlignment.start,
+    super.key,
+  });
 
   /// What goes in it, top to bottom.
   final List<Widget> children;
@@ -19,12 +24,15 @@ class ContentColumn extends StatelessWidget {
   /// Space around the column. A token, never a number.
   final double padding;
 
+  /// `stretch` for a column of full-width actions; `start` for everything else.
+  final CrossAxisAlignment crossAxisAlignment;
+
   @override
   Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.all(padding),
     child: Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: crossAxisAlignment,
       children: children,
     ),
   );

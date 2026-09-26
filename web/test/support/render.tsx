@@ -60,8 +60,10 @@ export function renderRouted(
     component: () => null,
   });
 
+  const rules = createRoute({ getParentRoute: () => root, path: '/rules', component: () => null });
+
   const router = createRouter({
-    routeTree: root.addChildren([index, session]),
+    routeTree: root.addChildren([index, session, rules]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
   });
 

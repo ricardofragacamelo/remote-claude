@@ -76,13 +76,53 @@ export default {
       to: { dependencyTypes: ['npm'], path: 'node_modules/@anthropic-ai/' },
     },
     {
+      name: 'transcript-reads-through-the-sdk',
+      comment:
+        'The history is read by `listSessions`, `getSessionInfo` and `getSessionMessages` of the ' +
+        'Agent SDK, and never by a parser of ours: the JSONL is internal to Claude Code, shared ' +
+        'with the editor and changes format without notice, so a parser of our own breaks on the ' +
+        'next SDK release without a word. Nothing in the transcript slice may reach for the ' +
+        'filesystem. See docs/architecture/backend/03-modules.md#transcript.',
+      severity: 'error',
+      from: {
+        path: '^src/(domain/transcript/|application/transcript/|adapter/inbound/http/transcript/|adapter/outbound/transcript/|adapter/outbound/claude/transcript)',
+      },
+      to: {
+        dependencyTypes: ['core'],
+        path: '^(node:)?(fs|fs/promises|readline|readline/promises)$',
+      },
+    },
+    {
+      name: 'no-line-reader',
+      comment:
+        'Reading a file line by line is how a JSONL parser begins, and nothing in this backend ' +
+        'has another reason to. The transcript is read by the SDK — see the rule above.',
+      severity: 'error',
+      from: {},
+      to: { dependencyTypes: ['core'], path: '^(node:)?(readline|readline/promises)$' },
+    },
+    {
       name: 'identity-is-isolated',
       comment:
         'Everything that knows what OIDC is lives in one folder — which is what makes changing ' +
-        'identity provider a change of configuration. See docs/architecture/shared/08-authentication.md.',
+        'identity provider a change of configuration. See docs/architecture/shared/08-authentication.md. ' +
+        'The push adapter is the one other place allowed to reach for `jose`, and for something ' +
+        'that is not identity at all: it signs the assertion its own provider exchanges for an ' +
+        'access token. The rule is about OIDC knowledge spreading, not about a crypto primitive, ' +
+        'and `openid-client` and `oidc-client` stay out of there.',
       severity: 'error',
-      from: { pathNot: '^src/adapter/outbound/identity/' },
+      from: { pathNot: '^src/adapter/outbound/(identity|push)/' },
       to: { dependencyTypes: ['npm'], path: 'node_modules/(jose|openid-client|oidc-client)/' },
+    },
+    {
+      name: 'push-does-not-learn-oidc',
+      comment:
+        'The exception above is for one library and one reason. A push adapter that imported an ' +
+        'OIDC client would be identity knowledge in a second folder, which is what the rule it ' +
+        'is excepted from exists to prevent.',
+      severity: 'error',
+      from: { path: '^src/adapter/outbound/push/' },
+      to: { dependencyTypes: ['npm'], path: 'node_modules/(openid-client|oidc-client)/' },
     },
     {
       name: 'no-test-in-src',

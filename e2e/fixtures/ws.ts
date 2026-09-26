@@ -86,13 +86,20 @@ export class E2eSocket {
   /**
    * The handshake, from the token to `connection.ready`.
    *
+   * With an `installId` the socket is a **phone**: that is what the app puts in the handshake, and
+   * it is the only thing that lets the backend tie a socket to a device — to refuse an answer from
+   * one that is pending, and to close it the moment it is revoked.
+   *
    * @returns the `connection.ready` frame, whose payload carries the server's limits
    */
-  async authenticate(accessToken: string): Promise<Envelope> {
+  async authenticate(accessToken: string, installId?: string): Promise<Envelope> {
     this.send('connection.authenticate', {
       token: accessToken,
       locale: 'en',
-      client: { kind: 'web', version: 'e2e' },
+      client:
+        installId === undefined
+          ? { kind: 'web', version: 'e2e' }
+          : { kind: 'mobile', version: 'e2e', installId },
     });
 
     return this.waitFor((frame) => frame.type === 'connection.ready');

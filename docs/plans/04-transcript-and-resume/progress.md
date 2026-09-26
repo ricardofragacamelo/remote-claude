@@ -10,12 +10,12 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-16
+**Fase corrente:** F1 — a F0 fechou em 2026-09-25 (backend: o histórico lido pelas funções do SDK, cercado pela allowlist e com a procedência gravada antes do subprocesso)
+**Última atualização:** 2026-09-25
 **Bloqueios:** nenhum
 
 ```
-F0 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
+F0 ████████████████████ 100%   ✅ concluída
 F1 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 F2 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
@@ -31,13 +31,13 @@ F5 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | Fase | Tarefas | Concluídas | Estado |
 |---|---|---|---|
-| [F0](F0-transcript.md) | B-01…B-05 | 0/5 | 🔲 |
+| [F0](F0-transcript.md) | B-01…B-05 | 5/5 | ✅ |
 | [F1](F1-transcript-ui.md) | B-06…B-09 | 0/4 | 🔲 |
 | [F2](F2-resume.md) | B-10…B-13 | 0/4 | 🔲 |
 | [F3](F3-commands.md) | B-14…B-17 | 0/4 | 🔲 |
 | [F4](F4-checkpoint.md) | B-18…B-21 | 0/4 | 🔲 |
 | [F5](F5-e2e.md) | B-22…B-25 | 0/4 | 🔲 |
-| **Total** | **B-01…B-25** | **0/25** | 🔲 |
+| **Total** | **B-01…B-25** | **5/25** | 🔄 |
 
 ---
 
@@ -45,7 +45,7 @@ F5 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 67 | 67 | 0 | 0 | 0 |
+| [Matriz](scenarios.md) | 74 | 52 | 0 | 22 | 0 |
 
 ---
 
@@ -67,7 +67,8 @@ Um registro por **ciclo**, conforme o
 
 | # | Data | Fase | Portão que falhou | Causa | Correção | Resultado |
 |---|---|---|---|---|---|---|
-| — | — | — | — | — | — | *(sem ciclos ainda)* |
+| 1 | 2026-09-25 | F0 | 7 — cobertura | `transcript-sdk.ts` com 0 % de funções: a ligação real com o SDK era substituída em todo teste | teste de integração que chama o **SDK real** contra um `CLAUDE_CONFIG_DIR` vazio da suíte — prova também, no SDK de verdade, o "`[]` não é inexistente" da S-56 | reinício do portão 1 |
+| 2 | 2026-09-25 | F0 (commit) | hook de pre-commit — segredos | `push-credentials.spec.ts` (plano 02, ainda sem commit) usava um PEM falso como fixture; o gitleaks do hook varre o *stage*, e o `scan:secrets` do `verify:full` não o via antes do commit | fixture trocada por um marcador que não tem forma de chave; as asserções de que a mensagem nunca cita o arquivo foram mantidas, e a da chave passou a checar o próprio valor | backend 1–7 de novo, e o hook |
 
 ---
 
@@ -77,7 +78,14 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-09-25 | O id da conversa no store do Claude é **cunhado por nós** (UUID) e passado ao SDK como `sessionId`; a procedência (`session_origins`) é gravada **antes** do `query()` | gravar depois — lendo o `system:init` — deixa uma janela em que um transcript nosso está no disco e lê como de outra pessoa; e o D-04 fez da origem invariante de correção | B-02, `session` (plano 01), [backend/05](../../architecture/backend/05-persistence.md), migration `0011` |
+| 2026-09-25 | Falha ao gravar a procedência **não abre a sessão** | conversa nossa sem registro seria `external` para sempre: visível a quem mais alcança a raiz, e retomável como de outro | B-02, S-71 |
+| 2026-09-25 | Cache (16 conversas), concorrência (2 leituras) e prazo (10 s) são **constantes** em `transcript-reads.ts`, não configuração | nada neles depende da máquina ainda; o D-02 pedia teto e limite, não um botão | B-04, S-70, S-74 |
+| 2026-09-25 | Prazo estourado é `CLAUDE_TIMEOUT` (504), distinto de `CLAUDE_UNAVAILABLE` (502) | toda chamada externa tem prazo ([04-errors](../../architecture/shared/04-errors-and-http.md)), e "não respondeu" é alarme diferente de "respondeu com falha" | B-05, S-68 |
+| 2026-09-25 | Cursor das mensagens é o **id da mensagem**; cursor cuja mensagem sumiu (compactação) é `400` com `transcript.error.cursorStale` | posição crua apontaria, depois da compactação, para a mensagem errada em silêncio; e sessão viva só acrescenta no fim | B-04, S-69 |
+| 2026-09-25 | A listagem pagina com o mesmo 25/100 das mensagens, keyset `(lastModified, sessionId)` descendente | o D-03 exige paginação própria (154 sessões num workspace) e não fixou números; o keyset é o do D-02 | B-04, S-57 |
+| 2026-09-25 | `GET /transcripts?workspacePath=` lista **um** diretório exatamente; conversa aberta em subdiretório de uma raiz aparece no `workspacePath` do subdiretório | `listSessions({ dir })` não desce a subdiretórios, e `listSessions({})` está proibido pelo D-01 — é o custo da cerca, dito em [backend/03](../../architecture/backend/03-modules.md#transcript) | B-02, F1 (B-06) |
+| 2026-09-25 | "Parser próprio de JSONL" é verificado por duas regras de `dependency-cruiser`: `transcript-reads-through-the-sdk` (sem `fs`/`readline` na fatia) e `no-line-reader` (sem `readline` no backend) | é o que a S-09 exige de `lint:arch`; regra sobre import é verificável, "não escreva parser" não é | B-01, S-09 |
 
 ---
 
@@ -87,7 +95,8 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 
 | Data | O que saiu | Por quê | Para onde foi |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-09-25 | E2E **autenticado** das rotas de histórico — a F0 leva ao e2e só as recusas `401` das duas rotas (S-19) e o backend roteirizado passa a trocar também o store de transcripts | o cenário e2e é compartilhado com o app Flutter e tem fase própria; e a F0 não tem tela para a porta do usuário | [F5](F5-e2e.md) — B-22, B-23 |
+| 2026-09-25 | Chaves `transcript.error.*` no app Flutter (entraram só no web) | o catálogo do app reprova chave sem uso em Dart, e a tela que as usa é da F1 | [F1](F1-transcript-ui.md) — B-08, B-09 |
 
 ---
 
