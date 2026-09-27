@@ -50,6 +50,22 @@ export function spawnLocation(options) {
 }
 
 /**
+ * The streams of a synchronous child, and whether what it prints is captured as text.
+ *
+ * @param {boolean | 'stderr'} attached `true` inherits every stream, `'stderr'` only stderr
+ * @returns {import('node:child_process').SpawnSyncOptions}
+ */
+function streamsFor(attached) {
+  if (attached === true) {
+    return { stdio: 'inherit' };
+  }
+  if (attached === 'stderr') {
+    return { stdio: ['inherit', 'pipe', 'inherit'], encoding: 'utf8' };
+  }
+  return { encoding: 'utf8' };
+}
+
+/**
  * @param {string} command
  * @param {readonly string[]} args
  * @param {RunOptions} options
@@ -60,11 +76,7 @@ function invoke(command, args, options, mode) {
   /** @type {import('node:child_process').SpawnSyncOptions} */
   const spawnOptions = {
     timeout: options.timeoutMs ?? mode.defaultTimeoutMs,
-    ...(mode.attached === true
-      ? { stdio: 'inherit' }
-      : mode.attached === 'stderr'
-        ? { stdio: ['inherit', 'pipe', 'inherit'], encoding: 'utf8' }
-        : { encoding: 'utf8' }),
+    ...streamsFor(mode.attached),
     // Honoured by spawnSync although only `spawn` documents it.
     ...(options.ownProcessGroup === true ? { detached: true } : {}),
     ...spawnLocation(options),

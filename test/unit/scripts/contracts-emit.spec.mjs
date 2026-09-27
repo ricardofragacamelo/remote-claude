@@ -1,3 +1,5 @@
+import { Linter } from 'eslint';
+import tseslint from 'typescript-eslint';
 import { describe, expect, it } from 'vitest';
 
 import { emitDart } from '../../../scripts/lib/contracts-dart.mjs';
@@ -76,7 +78,7 @@ describe('emitTypeScript', () => {
   });
 
   it('checks the const in the guard — the version is a real compatibility check', () => {
-    expect(typescript).toContain("record['v'] !== 1");
+    expect(typescript).toContain("record['v'] === 1,");
   });
 
   it('does not check enum membership in the guard, so a future value is not rejected', () => {
@@ -84,8 +86,8 @@ describe('emitTypeScript', () => {
     // already published — see docs/architecture/shared/05-websocket-protocol.md.
     expect(typescript).not.toContain("'pt-BR' ||");
     // `kind` is a required enum: the guard checks that it is a string, never which string.
-    expect(typescript).toContain("typeof record['kind'] !== 'string'");
-    expect(typescript).not.toContain("record['kind'] !== 'command'");
+    expect(typescript).toContain("typeof record['kind'] === 'string'");
+    expect(typescript).not.toContain("record['kind'] === 'command'");
   });
 
   it('does not check optional fields in the guard', () => {
@@ -239,13 +241,13 @@ describe('the shapes an optional field takes', () => {
   });
 
   it('checks a numeric const by value in the guard — TypeScript', () => {
-    expect(optionalTypeScript).toContain('!== 413');
+    expect(optionalTypeScript).toContain("record['status'] === 413,");
   });
 
   it('guards every required shape, not only the ones with a scalar type', () => {
-    expect(optionalTypeScript).toContain("typeof record['ok'] !== 'boolean'");
-    expect(optionalTypeScript).toContain("typeof record['meta'] !== 'object'");
-    expect(optionalTypeScript).toContain("!Array.isArray(record['tags'])");
+    expect(optionalTypeScript).toContain("typeof record['ok'] === 'boolean',");
+    expect(optionalTypeScript).toContain("isNonNullObject(record['meta']),");
+    expect(optionalTypeScript).toContain("Array.isArray(record['tags']),");
   });
 
   it('types a free-form record as a map in both languages', () => {
@@ -330,19 +332,19 @@ const conditionalDart = emitDart(conditionalModel);
 describe('a conditional requirement, in TypeScript', () => {
   it('adds the clause to the guard of the declaration that carries it', () => {
     expect(conditionalTypeScript).toContain(
-      "(record['kind'] === 'event' && typeof record['seq'] !== 'number')",
+      "requiredWhen(record['kind'] === 'event', typeof record['seq'] === 'number'),",
     );
   });
 
   it('compares a boolean without quoting it', () => {
     expect(conditionalTypeScript).toContain(
-      "(record['auto'] === false && typeof record['resolvedBy'] !== 'string')",
+      "requiredWhen(record['auto'] === false, typeof record['resolvedBy'] === 'string'),",
     );
   });
 
   it('emits every rule of a declaration, not only the first', () => {
     expect(conditionalTypeScript).toContain(
-      "(record['decision'] === 'deny' && typeof record['reason'] !== 'string')",
+      "requiredWhen(record['decision'] === 'deny', typeof record['reason'] === 'string'),",
     );
   });
 
@@ -498,5 +500,102 @@ describe('a payload-only contract', () => {
   it('leaves the frames alone', () => {
     expect(mixedTypeScript).toContain("  'thing.do',");
     expect(mixedTypeScript).toContain('ThingFrame');
+  });
+});
+
+/**
+ * The complexity gate (plan 05, D-10) reads the generated file like any other. A guard that chained
+ * its checks with `||` grew one branch per field, so the gate failed on whichever payload had the
+ * most — which is why each guard is a flat list, and why this checks a guard far wider than any the
+ * contract has today.
+ */
+describe('the TypeScript guards, however many fields they check', () => {
+  const fieldCount = 40;
+  const ruleCount = 12;
+
+  /** @type {Record<string, Record<string, unknown>>} */
+  const properties = { mode: { type: 'string' } };
+  for (let index = 0; index < fieldCount; index += 1) {
+    properties[`field${String(index)}`] =
+      index % 2 === 0 ? { type: 'object' } : { type: 'boolean' };
+  }
+  for (let index = 0; index < ruleCount; index += 1) {
+    properties[`extra${String(index)}`] = { type: 'object' };
+  }
+
+  const wide = emitTypeScript(
+    buildModel(envelope, [
+      {
+        source: 'events/wide.schema.json',
+        schema: {
+          title: 'Wide',
+          'x-kind': 'event',
+          'x-type': 'wide.happened',
+          type: 'object',
+          required: Object.keys(properties).filter((name) => !name.startsWith('extra')),
+          'x-required-when': Array.from({ length: ruleCount }, (_, index) => ({
+            field: `extra${String(index)}`,
+            when: { field: 'mode', equals: `mode${String(index)}` },
+            because: 'the shape under test',
+          })),
+          properties,
+        },
+      },
+    ]),
+  );
+
+  it('keeps every guard within the complexity limit', () => {
+    const messages = new Linter().verify(
+      wide,
+      [
+        {
+          files: ['**/*.ts'],
+          languageOptions: { parser: /** @type {Linter.Parser} */ (tseslint.parser) },
+          rules: { complexity: ['error', 10] },
+        },
+      ],
+      'protocol.ts',
+    );
+
+    expect(messages).toEqual([]);
+  });
+
+  it('lists the checks instead of chaining them', () => {
+    const guard = /export function isWidePayload\(.*?\n}/s.exec(wide)?.[0] ?? '';
+
+    expect(guard).toContain("    isNonNullObject(record['field0']),");
+    expect(guard).toContain("    typeof record['field39'] === 'boolean',");
+    expect(guard).toContain(
+      "    requiredWhen(record['mode'] === 'mode11', isNonNullObject(record['extra11'])),",
+    );
+    expect(guard).toContain('  ].every(Boolean);');
+    expect(guard).not.toContain(' ||\n');
+  });
+
+  it('emits each helper once, beside the guards that call it', () => {
+    expect(wide.match(/^function isNonNullObject\(/gm)).toHaveLength(1);
+    expect(wide.match(/^function requiredWhen\(/gm)).toHaveLength(1);
+  });
+
+  it('emits no helper into a file whose guards never call it', () => {
+    // The first fixture has no required open map and no conditional: an unused helper would be
+    // dead code in a generated file, which the lint of every consumer then reports.
+    expect(typescript).not.toContain('function isNonNullObject(');
+    expect(typescript).not.toContain('function requiredWhen(');
+  });
+
+  it('answers true for a guard with nothing to check', () => {
+    expect(wide).toContain('export function isEnvelope(');
+    expect(
+      emitTypeScript(
+        buildModel(
+          {
+            source: 'envelope.schema.json',
+            schema: { title: 'Envelope', type: 'object', properties: {} },
+          },
+          [],
+        ),
+      ),
+    ).toContain('  return true;\n}');
   });
 });

@@ -75,19 +75,26 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-30 | sem token válido até o fim da graça de 60 s → fecha `4401` | fron | integração | `TOKEN_EXPIRED` | B-14 | ⬜ |
 | S-31 | logout chama o `end_session_endpoint` e limpa o estado local | est | integração | — | B-15 | ⬜ |
 | S-32 | nome de provedor fora da configuração → `scan:security` falha | err | unit | — | B-12 | ⬜ |
+| S-61 | token sem `sub`, sem `email`, ou com `email_verified: false` → `401`, e o usuário não é provisionado | err | integração | `UNAUTHENTICATED` | B-12 | ⬜ |
 
-## Portões — B-16…B-20
+## Portões — B-16, B-19, B-20, B-28
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
 | S-33 | dependência com vulnerabilidade conhecida reprova o portão | err | unit | — | B-16 | ⬜ |
 | S-34 | versão exatamente na borda do intervalo vulnerável é reprovada | fron | unit | — | B-16 | ⬜ |
 | S-35 | scanner indisponível **falha** o portão, em vez de passar em silêncio | err | unit | — | B-16 | ⬜ |
-| S-36 | linha nova sem cobertura reprova o quality gate | eq | e2e | — | B-17 | ⬜ |
 | S-37 | `smoke-live` falhando no nightly abre issue | est | e2e | — | B-19 | ⬜ |
 | S-38 | nightly verde não abre issue nem fecha issue alheia | idem | e2e | — | B-19 | ⬜ |
 | S-39 | `doctor` detecta o pré-requisito novo e diz como resolver | err | e2e | — | B-20 | ⬜ |
-| S-40 | dois jobs de CI simultâneos não disputam porta nem projeto compose | conc | e2e | — | B-18 | ⬜ |
+| S-40 | dois jobs de CI simultâneos não disputam porta nem projeto compose | conc | e2e | — | B-19 | ⬜ |
+| S-62 | função TS/JS com complexidade 10 passa; com 11 reprova pela regra `complexity` | fron | unit | — | B-28 | ✅ |
+| S-63 | a regra vale em backend, web, `packages`, `e2e`, testes e scripts — nenhum escopo escapa | eq | unit | — | B-28 | ✅ |
+| S-64 | função Dart com complexidade 10 passa; com 11 faz `mobile.mjs analyze` sair ≠ 0, nomeando a função | fron | integração | — | B-28 | ✅ |
+| S-65 | a saída da métrica é lida: arquivo, função e valor de cada violação | eq | unit | — | B-28 | ✅ |
+| S-66 | métrica que não terminou (código inesperado, ou sem a linha de conclusão) reprova, em vez de passar em silêncio | err | unit | — | B-28 | ✅ |
+| S-67 | código gerado (`*.g.dart`, `lib/l10n/generated`) fica fora da medição | eq | integração | — | B-28 | ✅ |
+| S-68 | o código de hoje passa nas duas pontas, com as 27 funções refatoradas | est | integração | — | B-28 | ✅ |
 
 ## E2E — B-21…B-23
 
@@ -109,4 +116,5 @@ O protocolo exige justificar dimensão vazia, não omiti-la.
 |---|---|---|
 | Herdadas do plano 04 (B-26, B-27) | `eq`, `err` | o caminho feliz de retomar e de desfazer é do [plano 04](../04-transcript-and-resume/scenarios.md), já coberto; aqui só entra o que ele deixou aberto — o prazo e a trava |
 | Identidade (B-12…B-15) | `idem` | renovação de credencial é, por desenho, **não** idempotente: o refresh rotaciona. A repetição que importa é o **reuso**, e ela tem tratamento próprio em S-27 |
+| Complexidade (B-28) | `idem`, `conc`, e o nível e2e | a análise é leitura pura da árvore: rodar duas vezes dá o mesmo veredito, e não há estado a disputar — o que a concorrência poderia quebrar é a sonda que o teste escreve em `lib/`, e ela tem nome próprio (`_arch_complexity_probe.dart`). Um portão não tem porta de usuário; o seu "fim a fim" é o processo rodado pelo terminal, e isso é a integração (S-64, S-68) |
 | E2E (B-21…B-23) | `idem` | repetição aqui é reconexão, determinística e coberta no [plano 01](../01-live-session/scenarios.md); em e2e só acrescentaria tempo |

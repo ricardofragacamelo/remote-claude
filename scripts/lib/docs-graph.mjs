@@ -143,6 +143,82 @@ export function indexesFor(absolutePath, rootDir, rootIndexes) {
   return candidates;
 }
 
+/** @typedef {ReturnType<typeof makeReader>} Reader */
+/** @typedef {import('./markdown.mjs').MarkdownLink} MarkdownLink */
+
+/**
+ * What is wrong with one link of [file], if anything: a target that does not exist, or an anchor
+ * that no heading of the target produces. External targets and anchors into anything other than
+ * Markdown are not judged.
+ *
+ * @param {Reader} read
+ * @param {string} file the document that wrote the link
+ * @param {MarkdownLink} link
+ * @returns {DocProblem | null}
+ */
+function linkProblem(read, file, link) {
+  const resolved = resolveTarget(file, link.target);
+  if (resolved === null) {
+    return null;
+  }
+
+  if (!fs.existsSync(resolved.file)) {
+    return {
+      kind: 'broken-link',
+      file: read.relative(file),
+      line: link.line,
+      message: `broken link: ${link.target}`,
+      fix: `nothing at ${read.relative(resolved.file)} — fix the path or create the file`,
+    };
+  }
+
+  if (resolved.anchor === '' || !resolved.file.endsWith('.md')) {
+    return null;
+  }
+
+  if (read.anchors(resolved.file).has(resolved.anchor.toLowerCase())) {
+    return null;
+  }
+
+  return {
+    kind: 'missing-anchor',
+    file: read.relative(file),
+    line: link.line,
+    message: `missing anchor: ${link.target}`,
+    fix: `no heading in ${read.relative(resolved.file)} anchors as #${resolved.anchor}`,
+  };
+}
+
+/**
+ * The problem of a document under `docs/` that none of the indexes allowed to list it does.
+ *
+ * @param {Reader} read
+ * @param {string} file
+ * @param {readonly string[]} indexes as [indexesFor] answers them for [file]
+ * @returns {DocProblem | null}
+ */
+function orphanProblem(read, file, indexes) {
+  const listed = indexes.some((index) =>
+    linksOf(read.content(index)).some((link) => {
+      const resolved = resolveTarget(index, link.target);
+      return resolved !== null && resolved.file === file;
+    }),
+  );
+
+  if (listed) {
+    return null;
+  }
+
+  const where = indexes.map((index) => read.relative(index)).join(' or ');
+  return {
+    kind: 'orphan-document',
+    file: read.relative(file),
+    line: 0,
+    message: 'document is listed in no index',
+    fix: `add it to ${where === '' ? 'the index of its area' : where}`,
+  };
+}
+
 /**
  * Walks the whole graph and returns every problem found.
  *
@@ -155,67 +231,22 @@ export function inspectDocs(options) {
   const rootIndexes = options.rootIndexes ?? ['AGENTS.md', 'README.md'];
   const read = makeReader(rootDir);
 
-  /** @type {DocProblem[]} */
-  const problems = [];
+  /** @type {(DocProblem | null)[]} */
+  const found = [];
   const documents = findMarkdownFiles(rootDir);
 
   for (const file of documents) {
     for (const link of linksOf(read.content(file))) {
-      const resolved = resolveTarget(file, link.target);
-      if (resolved === null) {
-        continue;
-      }
-
-      if (!fs.existsSync(resolved.file)) {
-        problems.push({
-          kind: 'broken-link',
-          file: read.relative(file),
-          line: link.line,
-          message: `broken link: ${link.target}`,
-          fix: `nothing at ${read.relative(resolved.file)} — fix the path or create the file`,
-        });
-        continue;
-      }
-
-      if (resolved.anchor === '' || !resolved.file.endsWith('.md')) {
-        continue;
-      }
-
-      if (!read.anchors(resolved.file).has(resolved.anchor.toLowerCase())) {
-        problems.push({
-          kind: 'missing-anchor',
-          file: read.relative(file),
-          line: link.line,
-          message: `missing anchor: ${link.target}`,
-          fix: `no heading in ${read.relative(resolved.file)} anchors as #${resolved.anchor}`,
-        });
-      }
+      found.push(linkProblem(read, file, link));
     }
   }
 
   const indexed = fs.existsSync(docsDir) ? findMarkdownFiles(docsDir) : [];
 
   for (const file of indexed) {
-    const indexes = indexesFor(file, rootDir, rootIndexes);
-
-    const listed = indexes.some((index) =>
-      linksOf(read.content(index)).some((link) => {
-        const resolved = resolveTarget(index, link.target);
-        return resolved !== null && resolved.file === file;
-      }),
-    );
-
-    if (!listed) {
-      const where = indexes.map((index) => read.relative(index)).join(' or ');
-      problems.push({
-        kind: 'orphan-document',
-        file: read.relative(file),
-        line: 0,
-        message: 'document is listed in no index',
-        fix: `add it to ${where === '' ? 'the index of its area' : where}`,
-      });
-    }
+    found.push(orphanProblem(read, file, indexesFor(file, rootDir, rootIndexes)));
   }
 
+  const problems = found.filter((problem) => problem !== null);
   return { problems, documentCount: documents.length, indexedCount: indexed.length };
 }

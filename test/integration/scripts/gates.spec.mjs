@@ -197,6 +197,50 @@ describe('mobile.mjs', () => {
     expect(result.stdout).toContain('every import rule holds');
     expect(result.code).toBe(0);
   });
+
+  /**
+   * A Dart function whose cyclomatic complexity is exactly `paths`: one path, plus one per `if`.
+   *
+   * Written to pass `flutter analyze` on its own, so the only thing that can fail is the bar.
+   *
+   * @param {string} name
+   * @param {number} paths
+   * @returns {string}
+   */
+  function dartWithPaths(name, paths) {
+    const branches = Array.from(
+      { length: paths - 1 },
+      (_, index) => `  if (x == ${String(index)}) {\n    return ${String(index)};\n  }\n`,
+    );
+
+    return `/// Probe.\nint ${name}(int x) {\n${branches.join('')}  return -1;\n}\n`;
+  }
+
+  const PROBE = 'mobile/lib/features/session/domain/entities/_arch_complexity_probe';
+
+  // S-64 and S-67, in one run of the analyzer: it is the slow part.
+  it('fails on a function with 11 paths, not on one with 10, and never on generated code', async () => {
+    writeTemporary(
+      `${PROBE}.dart`,
+      `${dartWithPaths('probeTen', 10)}\n${dartWithPaths('probeEleven', 11)}`,
+    );
+    writeTemporary(`${PROBE}.g.dart`, dartWithPaths('probeGenerated', 30));
+
+    const result = await runScript('mobile.mjs', ['analyze']);
+
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain('probeEleven');
+    expect(result.stdout).not.toContain('probeTen');
+    expect(result.stdout).not.toContain('probeGenerated');
+  });
+
+  // S-68
+  it('holds the complexity bar over the module as it stands', async () => {
+    const result = await runScript('mobile.mjs', ['analyze']);
+
+    expect(result.stdout).toContain('every function is within the complexity bar');
+    expect(result.code).toBe(0);
+  });
 });
 
 describe('scan:secrets — the secret gate', () => {

@@ -2,7 +2,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useConversationHistory } from '../hooks/useConversationHistory';
+import type { ConversationHistory } from '../hooks/useConversationHistory';
 import { useResumeSession } from '../hooks/useResumeSession';
+import type { ResumeControl } from '../hooks/useResumeSession';
+import type { ConversationSummary } from '../types/history';
 import { Conversation } from './Conversation';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { ErrorState } from '@/shared/components/ErrorState';
@@ -49,7 +52,6 @@ export function HistoryScreen({
     [conversationId, summary],
   );
   const resume = useResumeSession(target, onResumed);
-  const isEmpty = conversation.messages.length === 0 && conversation.tools.length === 0;
 
   return (
     <Panel
@@ -68,31 +70,8 @@ export function HistoryScreen({
 
       {summary !== null && (
         <>
-          <p className="text-xs opacity-70">
-            {t(summary.origin === 'ours' ? 'history.origin.ours' : 'history.origin.external')}
-          </p>
-          <p className="font-mono text-xs opacity-70">{summary.cwd}</p>
-
-          {summary.origin === 'external' && (
-            <p className="rounded bg-muted p-2 text-xs" role="note">
-              {t('history.screen.externalNote')}
-            </p>
-          )}
-
-          <Button
-            size="touch"
-            className="self-start"
-            disabled={resume.isResuming || resume.connection !== 'ready'}
-            onClick={resume.resume}
-          >
-            {resume.isResuming ? t('history.screen.resuming') : t('history.screen.resume')}
-          </Button>
-
-          {resume.connection !== 'ready' && (
-            <p className="text-xs opacity-70">{t(`connection.status.${resume.connection}`)}</p>
-          )}
-
-          {resume.error !== null && <ErrorState error={resume.error} />}
+          <Origin summary={summary} />
+          <ResumeControls resume={resume} />
 
           <LoadMore
             hasMore={history.hasEarlier}
@@ -103,20 +82,72 @@ export function HistoryScreen({
             loadingLabel={t('history.screen.loadingEarlier')}
           />
 
-          {isEmpty ? (
-            <EmptyState
-              title={t('history.screen.emptyTitle')}
-              description={t('history.screen.emptyDescription')}
-            />
-          ) : (
-            <Conversation
-              messages={conversation.messages}
-              tools={conversation.tools}
-              isPartial={false}
-            />
-          )}
+          <Transcript conversation={conversation} />
         </>
       )}
     </Panel>
+  );
+}
+
+/** Where the conversation came from and where it ran — and, when begun elsewhere, what that means. */
+function Origin({ summary }: { readonly summary: ConversationSummary }): React.JSX.Element {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <p className="text-xs opacity-70">
+        {t(summary.origin === 'ours' ? 'history.origin.ours' : 'history.origin.external')}
+      </p>
+      <p className="font-mono text-xs opacity-70">{summary.cwd}</p>
+
+      {summary.origin === 'external' && (
+        <p className="rounded bg-muted p-2 text-xs" role="note">
+          {t('history.screen.externalNote')}
+        </p>
+      )}
+    </>
+  );
+}
+
+/** The button that continues the conversation, and why it cannot be pressed when it cannot. */
+function ResumeControls({ resume }: { readonly resume: ResumeControl }): React.JSX.Element {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <Button
+        size="touch"
+        className="self-start"
+        disabled={resume.isResuming || resume.connection !== 'ready'}
+        onClick={resume.resume}
+      >
+        {resume.isResuming ? t('history.screen.resuming') : t('history.screen.resume')}
+      </Button>
+
+      {resume.connection !== 'ready' && (
+        <p className="text-xs opacity-70">{t(`connection.status.${resume.connection}`)}</p>
+      )}
+
+      {resume.error !== null && <ErrorState error={resume.error} />}
+    </>
+  );
+}
+
+/** What was said, or that nothing was. */
+function Transcript({
+  conversation,
+}: {
+  readonly conversation: ConversationHistory['conversation'];
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const isEmpty = conversation.messages.length === 0 && conversation.tools.length === 0;
+
+  return isEmpty ? (
+    <EmptyState
+      title={t('history.screen.emptyTitle')}
+      description={t('history.screen.emptyDescription')}
+    />
+  ) : (
+    <Conversation messages={conversation.messages} tools={conversation.tools} isPartial={false} />
   );
 }

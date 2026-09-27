@@ -159,3 +159,46 @@ describe('react/jsx-no-literals — nothing presentable is born hardcoded', () =
     ).not.toContain('react/jsx-no-literals');
   });
 });
+
+describe('complexity — at most 10 paths through a function', () => {
+  /**
+   * A function whose cyclomatic complexity is exactly `paths`: one path, plus one per `if`.
+   *
+   * @param {number} paths
+   * @returns {string}
+   */
+  function withPaths(paths) {
+    const branches = Array.from(
+      { length: paths - 1 },
+      (_, index) => `  if (x === ${String(index)}) {\n    return ${String(index)};\n  }\n`,
+    );
+
+    return `export function f(x: number): number {\n${branches.join('')}  return -1;\n}\n`;
+  }
+
+  // S-62 — the bar is inclusive: ten passes, eleven does not.
+  it('accepts a function with exactly 10 paths', async () => {
+    expect(await ruleIdsFor(withPaths(10), 'backend/src/f.ts')).not.toContain('complexity');
+  });
+
+  it('rejects a function with 11', async () => {
+    expect(await ruleIdsFor(withPaths(11), 'backend/src/f.ts')).toContain('complexity');
+  });
+
+  // S-63 — no scope of the repository escapes it, tests and scripts included.
+  it.each([
+    'backend/src/f.ts',
+    'backend/test/unit/f.spec.ts',
+    'web/src/features/session/hooks/f.ts',
+    'packages/contracts/src/f.ts',
+    'e2e/f.ts',
+  ])('holds in %s', async (filePath) => {
+    expect(await ruleIdsFor(withPaths(11), filePath)).toContain('complexity');
+  });
+
+  it('holds in a script, which is JavaScript', async () => {
+    const code = withPaths(11).replace('(x: number): number', '(x)');
+
+    expect(await ruleIdsFor(code, 'scripts/lib/f.mjs')).toContain('complexity');
+  });
+});

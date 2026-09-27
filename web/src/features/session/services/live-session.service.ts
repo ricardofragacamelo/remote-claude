@@ -243,6 +243,37 @@ function layered<T>(
   ];
 }
 
+/** How one event changes the conversation. */
+type EventReader = (
+  state: Conversation,
+  payload: Readonly<Record<string, unknown>>,
+  frame: Envelope,
+) => Conversation;
+
+/**
+ * The events the conversation is made of, by type.
+ *
+ * A `Map` and not an object literal: a frame whose type happens to be `constructor` or `toString`
+ * must find nothing here, not something from `Object.prototype`.
+ */
+const EVENT_READERS: ReadonlyMap<string, EventReader> = new Map<string, EventReader>([
+  // The session is open and nothing is running in it. The backend derives the same thing from
+  // the same event; a client that waited for a `session.statusChanged` to learn it would show
+  // "starting" until the first fragment of the first answer arrived.
+  ['session.started', (state) => ({ ...state, status: 'idle' })],
+  [
+    'session.statusChanged',
+    (state, payload) => ({ ...state, status: statusOf(payload) ?? state.status }),
+  ],
+  ['message.delta', applyDelta],
+  ['message.completed', applyCompleted],
+  ['tool.started', applyToolStarted],
+  ['tool.progress', (state, payload) => changeTool(state, payload, progressOf(payload))],
+  ['tool.completed', (state, payload) => changeTool(state, payload, outcomeOf(payload))],
+  ['turn.completed', applyTurn],
+  ['session.closed', (state, payload, frame) => applyClosed(state, payload, frame.ts)],
+]);
+
 /**
  * One frame, applied to the conversation.
  *
@@ -255,51 +286,9 @@ function layered<T>(
  * it has never heard of.
  */
 export function readEvent(state: Conversation, frame: Envelope): Conversation {
-  const payload = frame.payload ?? {};
+  const read = EVENT_READERS.get(frame.type);
 
-  switch (frame.type) {
-    // The session is open and nothing is running in it. The backend derives the same thing from
-    // the same event; a client that waited for a `session.statusChanged` to learn it would show
-    // "starting" until the first fragment of the first answer arrived.
-    case 'session.started':
-      return { ...state, status: 'idle' };
-
-    case 'session.statusChanged':
-      return { ...state, status: statusOf(payload) ?? state.status };
-
-    case 'message.delta':
-      return applyDelta(state, payload);
-
-    case 'message.completed':
-      return applyCompleted(state, payload);
-
-    case 'tool.started':
-      return applyToolStarted(state, payload);
-
-    case 'tool.progress':
-      return changeTool(state, payload, (tool) => {
-        const chunk = readText(payload, 'chunk');
-        return chunk === null ? null : { ...tool, output: tool.output + chunk };
-      });
-
-    case 'tool.completed':
-      return changeTool(state, payload, (tool) => {
-        const status = readText(payload, 'status');
-
-        return status === null || !TOOL_OUTCOMES.has(status)
-          ? null
-          : { ...tool, status: status as ToolStatus, summary: readText(payload, 'summary') };
-      });
-
-    case 'turn.completed':
-      return applyTurn(state, payload);
-
-    case 'session.closed':
-      return applyClosed(state, payload, frame.ts);
-
-    default:
-      return state;
-  }
+  return read === undefined ? state : read(state, frame.payload ?? {}, frame);
 }
 
 /** The statuses the contract carries. An unknown one leaves the status where it was. */
@@ -415,6 +404,28 @@ function applyToolStarted(
   return { ...state, tools: [...withoutTool(state, toolUseId), started] };
 }
 
+/** A `tool.progress`: the chunk appended to what the tool has written so far. */
+function progressOf(payload: Readonly<Record<string, unknown>>): ToolChange {
+  return (tool) => {
+    const chunk = readText(payload, 'chunk');
+    return chunk === null ? null : { ...tool, output: tool.output + chunk };
+  };
+}
+
+/** A `tool.completed`: how the tool ended, when it is an outcome the contract carries. */
+function outcomeOf(payload: Readonly<Record<string, unknown>>): ToolChange {
+  return (tool) => {
+    const status = readText(payload, 'status');
+
+    return status === null || !TOOL_OUTCOMES.has(status)
+      ? null
+      : { ...tool, status: status as ToolStatus, summary: readText(payload, 'summary') };
+  };
+}
+
+/** A change to one tool, or `null` when the payload is not one and the tool stays as it was. */
+type ToolChange = (tool: ToolExecution) => ToolExecution | null;
+
 /** The three outcomes the contract carries. Anything else leaves the tool where it was. */
 const TOOL_OUTCOMES = new Set<string>(['succeeded', 'failed', 'denied']);
 
@@ -428,7 +439,7 @@ const TOOL_OUTCOMES = new Set<string>(['succeeded', 'failed', 'denied']);
 function changeTool(
   state: Conversation,
   payload: Readonly<Record<string, unknown>>,
-  change: (tool: ToolExecution) => ToolExecution | null,
+  change: ToolChange,
 ): Conversation {
   const toolUseId = readText(payload, 'toolUseId');
 

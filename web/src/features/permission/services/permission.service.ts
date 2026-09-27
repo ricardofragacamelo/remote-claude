@@ -85,6 +85,40 @@ export function toRequest(frame: Envelope): PermissionRequest | null {
     return null;
   }
 
+  const required = readRequired(payload);
+
+  if (required === null) {
+    return null;
+  }
+
+  const { requestId, toolName, expiresAt, riskHint } = required;
+
+  return {
+    requestId,
+    frameId: frame.id,
+    toolUseId: text(payload, 'toolUseId') ?? '',
+    toolName,
+    description: text(payload, 'description'),
+    input: isRecord(payload['input']) ? payload['input'] : {},
+    riskHint,
+    // Absent reads as `true`. The safe default is not a convenience here: it is the rule.
+    defaultToNo: payload['defaultToNo'] !== false,
+    expiresAt,
+    suggestions: readSuggestions(payload['suggestions']),
+    isAnswering: false,
+  };
+}
+
+/** What a request cannot be answered without. */
+interface RequiredFields {
+  readonly requestId: string;
+  readonly toolName: string;
+  readonly expiresAt: string;
+  readonly riskHint: RiskHint;
+}
+
+/** The fields a person needs in order to decide, or `null` when any is missing or unknown. */
+function readRequired(payload: Readonly<Record<string, unknown>>): RequiredFields | null {
   const requestId = text(payload, 'requestId');
   const toolName = text(payload, 'toolName');
   // Required by the contract and checked here, even though the label is resolved from the tool
@@ -104,20 +138,7 @@ export function toRequest(frame: Envelope): PermissionRequest | null {
     return null;
   }
 
-  return {
-    requestId,
-    frameId: frame.id,
-    toolUseId: text(payload, 'toolUseId') ?? '',
-    toolName,
-    description: text(payload, 'description'),
-    input: isRecord(payload['input']) ? payload['input'] : {},
-    riskHint: riskHint as RiskHint,
-    // Absent reads as `true`. The safe default is not a convenience here: it is the rule.
-    defaultToNo: payload['defaultToNo'] !== false,
-    expiresAt,
-    suggestions: readSuggestions(payload['suggestions']),
-    isAnswering: false,
-  };
+  return { requestId, toolName, expiresAt, riskHint: riskHint as RiskHint };
 }
 
 /** The feature's model of a `permission.resolved` frame, or `null` when it is not one. */

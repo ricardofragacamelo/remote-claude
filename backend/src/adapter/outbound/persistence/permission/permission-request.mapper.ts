@@ -1,7 +1,25 @@
-import type { PermissionRequest } from '@domain/permission';
+import type { PermissionRequest, PermissionResolution } from '@domain/permission';
 import type { permissionRequests } from '@infra/database/schema';
 
 type PermissionRequestInsert = typeof permissionRequests.$inferInsert;
+
+/** The columns only a settled request fills. */
+type SettlementColumns = Pick<
+  PermissionRequestInsert,
+  'decision' | 'reason' | 'scope' | 'resolvedBy' | 'resolvedFrom' | 'auto' | 'ruleId' | 'resolvedAt'
+>;
+
+/** A request still waiting on its answer: the settlement is written as nothing at all. */
+const UNSETTLED: SettlementColumns = {
+  decision: null,
+  reason: null,
+  scope: null,
+  resolvedBy: null,
+  resolvedFrom: null,
+  auto: null,
+  ruleId: null,
+  resolvedAt: null,
+};
 
 /**
  * The row a request should be written as, in whichever of its two states it is in.
@@ -11,8 +29,6 @@ type PermissionRequestInsert = typeof permissionRequests.$inferInsert;
  * about the same request.
  */
 export function toRow(request: PermissionRequest, now: Date): PermissionRequestInsert {
-  const resolution = request.resolution;
-
   return {
     id: request.id,
     userId: request.userId.value,
@@ -23,17 +39,28 @@ export function toRow(request: PermissionRequest, now: Date): PermissionRequestI
     input: request.input,
     riskHint: request.riskHint,
     status: request.status,
-    decision: resolution?.decision ?? null,
-    reason: resolution?.reason ?? null,
-    scope: resolution?.scope ?? null,
-    resolvedBy: resolution?.resolvedBy?.value ?? null,
-    resolvedFrom: resolution?.resolvedFrom ?? null,
-    auto: resolution?.auto ?? null,
-    ruleId: resolution?.ruleId ?? null,
+    ...settlementOf(request.resolution),
     extensionsUsed: request.extensionsUsed,
     requestedAt: request.requestedAt,
     expiresAt: request.expiresAt,
-    resolvedAt: resolution?.at ?? null,
     updatedAt: now,
+  };
+}
+
+/** The settlement's columns, or {@link UNSETTLED} while there is none. */
+function settlementOf(resolution: PermissionResolution | null): SettlementColumns {
+  if (resolution === null) {
+    return UNSETTLED;
+  }
+
+  return {
+    decision: resolution.decision,
+    reason: resolution.reason,
+    scope: resolution.scope,
+    resolvedBy: resolution.resolvedBy?.value ?? null,
+    resolvedFrom: resolution.resolvedFrom,
+    auto: resolution.auto,
+    ruleId: resolution.ruleId ?? null,
+    resolvedAt: resolution.at,
   };
 }

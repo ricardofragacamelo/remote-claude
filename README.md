@@ -245,7 +245,7 @@ e `functions` não existem para medir nesta ponta. Está registrado no
 
 | Comando | Verifica |
 |---|---|
-| `pnpm lint` | ESLint + `dart analyze` |
+| `pnpm lint` | ESLint + `dart analyze`, com o limite de complexidade (≤ 10 por função) nas três pontas |
 | `pnpm lint:arch` | Dependency Rule — import de `@nestjs/*` em `domain/` **quebra o build** |
 | `pnpm lint:dup` | linhas repetidas (`jscpd`), teto de 3 % |
 | `pnpm typecheck` | `tsc --noEmit` strict — sem `any`, sem `dynamic` |

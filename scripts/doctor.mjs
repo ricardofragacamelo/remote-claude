@@ -18,35 +18,38 @@ import { dim, fail, hint, line, ok, title, warn } from './lib/ui.mjs';
 
 const strict = process.argv.includes('--strict');
 
-async function main() {
-  title('doctor — environment prerequisites');
+/** @typedef {import('./lib/prerequisites.mjs').CheckResult} CheckResult */
 
-  const results = await inspectEnvironment({
-    nodeVersion: process.version,
-    run: (command, args) => run(command, args, { timeoutMs: 20_000 }),
-    isPortFree: (port) => isPortFree(port),
-  });
-
-  for (const result of results) {
-    if (result.status === 'ok') {
-      ok(result.name, result.detail);
-      continue;
-    }
-
-    if (result.status === 'warn') {
-      warn(`${result.name} — ${result.detail}`);
-    } else {
-      fail(`${result.name} — ${result.detail}`);
-    }
-
-    if (result.fix !== undefined) {
-      hint(result.fix);
-    }
+/**
+ * Prints one prerequisite: a line for what passed, a warning or a failure — and its fix — for
+ * what did not.
+ *
+ * @param {CheckResult} result
+ */
+function report(result) {
+  if (result.status === 'ok') {
+    ok(result.name, result.detail);
+    return;
   }
 
-  const failures = results.filter((result) => result.status === 'fail').length;
-  const warnings = results.filter((result) => result.status === 'warn').length;
+  if (result.status === 'warn') {
+    warn(`${result.name} — ${result.detail}`);
+  } else {
+    fail(`${result.name} — ${result.detail}`);
+  }
 
+  if (result.fix !== undefined) {
+    hint(result.fix);
+  }
+}
+
+/**
+ * Prints the verdict over every prerequisite.
+ *
+ * @param {number} failures
+ * @param {number} warnings
+ */
+function summarize(failures, warnings) {
   line();
   if (failures > 0) {
     fail(`${failures} prerequisite(s) missing`, 'solve them before running anything else');
@@ -61,6 +64,25 @@ async function main() {
   if (!strict && warnings > 0) {
     line(dim('run with --strict to have warnings fail the command (CI uses it)'));
   }
+}
+
+async function main() {
+  title('doctor — environment prerequisites');
+
+  const results = await inspectEnvironment({
+    nodeVersion: process.version,
+    run: (command, args) => run(command, args, { timeoutMs: 20_000 }),
+    isPortFree: (port) => isPortFree(port),
+  });
+
+  for (const result of results) {
+    report(result);
+  }
+
+  summarize(
+    results.filter((result) => result.status === 'fail').length,
+    results.filter((result) => result.status === 'warn').length,
+  );
 
   return exitCodeFor(results, { strict });
 }

@@ -308,39 +308,9 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
       return { value: undefined, done: true };
     }
 
-    const queued = this.pending.shift();
-    if (queued !== undefined) {
-      return { value: queued, done: false };
-    }
-
-    // Held until interrupted, with nothing arriving: a tool that takes minutes looks exactly
-    // like this from the outside.
-    if (this.holding.length > 0) {
-      await new Promise<void>((resolve) => {
-        this.release = resolve;
-      });
-
-      this.pending.push(...this.holding);
-      this.holding = [];
-
-      const resumed = this.pending.shift();
-      if (resumed !== undefined) {
-        return { value: resumed, done: false };
-      }
-    }
-
-    // The tool has been announced and the model is waiting on it: this is where the real stream
-    // fires `PreToolUse`, asks `canUseTool` and then reports the result.
-    if (this.hooksPending) {
-      this.hooksPending = false;
-      await this.replayHooks();
-      this.pending.push(...this.afterHooks);
-      this.afterHooks = [];
-
-      const next = this.pending.shift();
-      if (next !== undefined) {
-        return { value: next, done: false };
-      }
+    const ready = this.pending.shift() ?? (await this.resumed()) ?? (await this.pastTheHooks());
+    if (ready !== undefined) {
+      return { value: ready, done: false };
     }
 
     const prompt = await this.nextPrompt();
@@ -352,6 +322,54 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
       throw this.script.failWith;
     }
 
+    await this.openTurn(prompt);
+
+    const first = this.pending.shift();
+    return first === undefined ? { value: undefined, done: true } : { value: first, done: false };
+  }
+
+  /**
+   * What a held turn lets go of once it is interrupted, or `undefined` when no turn is held.
+   *
+   * Held until interrupted, with nothing arriving: a tool that takes minutes looks exactly like
+   * this from the outside.
+   */
+  private async resumed(): Promise<SDKMessage | undefined> {
+    if (this.holding.length === 0) {
+      return undefined;
+    }
+
+    await new Promise<void>((resolve) => {
+      this.release = resolve;
+    });
+
+    this.pending.push(...this.holding);
+    this.holding = [];
+
+    return this.pending.shift();
+  }
+
+  /**
+   * What follows the tool call, once the hooks have run — or `undefined` when the turn owes none.
+   *
+   * The tool has been announced and the model is waiting on it: this is where the real stream
+   * fires `PreToolUse`, asks `canUseTool` and then reports the result.
+   */
+  private async pastTheHooks(): Promise<SDKMessage | undefined> {
+    if (!this.hooksPending) {
+      return undefined;
+    }
+
+    this.hooksPending = false;
+    await this.replayHooks();
+    this.pending.push(...this.afterHooks);
+    this.afterHooks = [];
+
+    return this.pending.shift();
+  }
+
+  /** Starts the turn a prompt asks for: its recording, its `UserPromptSubmit`, its replay queued. */
+  private async openTurn(prompt: string): Promise<void> {
     // A prompt may name the recording it wants replayed. It is how one running stack covers both
     // the turn that asks for permission and the turn that does not — an end-to-end suite gets one
     // backend per run, and starting a second one per scenario would cost more than it proves.
@@ -367,35 +385,37 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     // Every turn opens with `UserPromptSubmit`, as the real SDK does. A fake that skipped it would
     // leave the checkpoint of the turn unopened, and the undo point unlabelled.
     this.record.turns.push(prompt);
-    await this.fire(
-      'UserPromptSubmit',
-      this.script.sparseHooks === true ? {} : { prompt, prompt_id: this.promptId },
-    );
+    await this.fire('UserPromptSubmit', { prompt, prompt_id: this.promptId });
 
-    // The messages up to and including the one that announces the tool, then the hooks, then the
-    // rest. A fake that fired every hook before emitting anything would have `canUseTool` block a
-    // session that has not started answering yet — and the status machine, which only reaches
-    // `waitingPermission` from `thinking` or `running`, would never get there. The real stream
-    // never does that: a tool call is something the model decided partway through a turn.
+    this.queueReplay(HOLD_TAG.test(prompt));
+  }
+
+  /**
+   * Queues the turn's replay: the messages up to and including the one that announces the tool,
+   * then the hooks, then the rest.
+   *
+   * A fake that fired every hook before emitting anything would have `canUseTool` block a session
+   * that has not started answering yet — and the status machine, which only reaches
+   * `waitingPermission` from `thinking` or `running`, would never get there. The real stream never
+   * does that: a tool call is something the model decided partway through a turn.
+   *
+   * @param held whether the turn keeps its last message — the `result` — back until somebody
+   *   interrupts it. It is how a long-running tool is modelled: the session sits in `running` with
+   *   nothing arriving, which is exactly the case `session.interrupt` exists for.
+   */
+  private queueReplay(held: boolean): void {
     const replay = [
       ...this.fixture.messages,
       ...((this.script.extraMessages ?? []) as SDKMessage[]),
     ];
     const split = firstToolCallIn(replay);
 
-    // A held turn keeps its last message — the `result` — back until somebody interrupts it. It
-    // is how a long-running tool is modelled: the session sits in `running` with nothing arriving,
-    // which is exactly the case `session.interrupt` exists for.
-    const held = HOLD_TAG.test(prompt);
     const body = held ? replay.slice(0, -1) : replay;
     this.holding = held ? replay.slice(-1) : [];
 
     this.pending.push(...body.slice(0, split));
     this.afterHooks = body.slice(split);
     this.hooksPending = this.fixture.preToolUse.length > 0;
-
-    const first = this.pending.shift();
-    return first === undefined ? { value: undefined, done: true } : { value: first, done: false };
   }
 
   /** Messages produced for the current turn and not yet taken. */
@@ -528,61 +548,64 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
 
     for (const [index, invocation] of this.fixture.preToolUse.entries()) {
       const consulted = this.consultationFor(invocation, consultations);
-      const input = this.performed(
-        invocation.toolName,
-        this.recordedInputOf(invocation.toolUseId) ?? consulted?.input,
-      );
+      const input =
+        this.performed(
+          invocation.toolName,
+          this.recordedInputOf(invocation.toolUseId) ?? consulted?.input,
+        ) ?? {};
       const toolUseId = invocation.toolUseId ?? `tool-${String(index)}${turnSuffix(this.turns)}`;
 
       this.record.hooked.push(invocation.toolName);
       await this.fire(
         'PreToolUse',
-        this.script.sparseHooks === true
-          ? {}
-          : {
-              tool_name: invocation.toolName,
-              tool_input: input ?? {},
-              tool_use_id: toolUseId,
-              prompt_id: this.promptId,
-            },
-        this.script.sparseHooks === true ? undefined : toolUseId,
+        {
+          tool_name: invocation.toolName,
+          tool_input: input,
+          tool_use_id: toolUseId,
+          prompt_id: this.promptId,
+        },
+        toolUseId,
       );
 
       if (consulted !== null) {
-        this.record.asked.push(invocation.toolName);
-        await this.options.canUseTool?.(
-          invocation.toolName,
-          (input ?? {}) as Record<string, unknown>,
-          {
-            signal: new AbortController().signal,
-            // `requestId` is the idempotency key the permission bridge branches on, so a fake
-            // that left it constant would make every request look like a redelivery of the first
-            // — and one that only varied within a run would make the second **session** inherit
-            // the first session's answers. Nor may it repeat across the turns of one session: the
-            // second turn would inherit the first turn's answer, and a revoked rule would look as
-            // if it still applied. The real SDK mints a fresh one per call.
-            requestId: `${this.runId}-request-${String((this.asks += 1))}-${String(index)}`,
-            toolUseID: toolUseId,
-          },
-        );
+        await this.consult(invocation.toolName, input, toolUseId, index);
       }
 
       this.write(invocation.toolName, input);
       this.record.completed.push(invocation.toolName);
       await this.fire(
         'PostToolUse',
-        this.script.sparseHooks === true
-          ? {}
-          : {
-              tool_name: invocation.toolName,
-              tool_input: input ?? {},
-              tool_response: {},
-              tool_use_id: toolUseId,
-              prompt_id: this.promptId,
-            },
-        this.script.sparseHooks === true ? undefined : toolUseId,
+        {
+          tool_name: invocation.toolName,
+          tool_input: input,
+          tool_response: {},
+          tool_use_id: toolUseId,
+          prompt_id: this.promptId,
+        },
+        toolUseId,
       );
     }
+  }
+
+  /** Asks `canUseTool` about one invocation, as the real run asked about it. */
+  private async consult(
+    toolName: string,
+    input: unknown,
+    toolUseId: string,
+    index: number,
+  ): Promise<void> {
+    this.record.asked.push(toolName);
+    await this.options.canUseTool?.(toolName, input as Record<string, unknown>, {
+      signal: new AbortController().signal,
+      // `requestId` is the idempotency key the permission bridge branches on, so a fake
+      // that left it constant would make every request look like a redelivery of the first
+      // — and one that only varied within a run would make the second **session** inherit
+      // the first session's answers. Nor may it repeat across the turns of one session: the
+      // second turn would inherit the first turn's answer, and a revoked rule would look as
+      // if it still applied. The real SDK mints a fresh one per call.
+      requestId: `${this.runId}-request-${String((this.asks += 1))}-${String(index)}`,
+      toolUseID: toolUseId,
+    });
   }
 
   /**
@@ -670,21 +693,27 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     }
   }
 
-  /** One hook call, through every matcher the options registered for that event. */
+  /**
+   * One hook call, through every matcher the options registered for that event.
+   *
+   * With {@link ScriptOptions.sparseHooks}, the input and the tool use id are dropped: only the
+   * fields the SDK guarantees reach the hook.
+   */
   private async fire(
     event: 'PreToolUse' | 'PostToolUse' | 'UserPromptSubmit',
     input: Record<string, unknown>,
     toolUseId?: string,
   ): Promise<void> {
     const matchers: readonly HookCallbackMatcher[] = this.options.hooks?.[event] ?? [];
+    const sparse = this.script.sparseHooks === true;
+    const fields = sparse ? {} : input;
+    const id = sparse ? undefined : toolUseId;
 
     for (const matcher of matchers) {
       for (const hook of matcher.hooks) {
-        await hook(
-          { hook_event_name: event, session_id: 'scripted', ...input } as never,
-          toolUseId,
-          { signal: new AbortController().signal },
-        );
+        await hook({ hook_event_name: event, session_id: 'scripted', ...fields } as never, id, {
+          signal: new AbortController().signal,
+        });
       }
     }
   }

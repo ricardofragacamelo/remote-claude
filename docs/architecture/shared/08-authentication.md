@@ -82,7 +82,8 @@ Toda requisição HTTP e todo handshake WS validam o access token, **na ordem**:
 4. `exp` e `nbf`, com tolerância de relógio de no máximo 60 s.
 5. Algoritmo está na allowlist (`RS256` / `ES256`). **Nunca aceite `alg` do token**, e
    **nunca** `none` — aceitar o que o token declara é a vulnerabilidade clássica de JWT.
-6. Escopos/claims necessários estão presentes.
+6. Claims exigidas estão presentes: `sub`, `email` e `email_verified: true`. Nenhuma role ou
+   grupo do provedor é lida — a autorização é local ([D-06 do plano 05](../../plans/05-hardening-operations/decisions.md)).
 
 Falha em qualquer passo → `401 UNAUTHENTICATED`. Não diga **qual** passo falhou na resposta;
 diga no log.

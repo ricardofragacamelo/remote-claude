@@ -57,7 +57,6 @@ function verdictOf(row: AuditRow): AuditVerdict | null {
  */
 export function toRow(entry: AuditEntry, traceId: string | null): AuditInsert {
   const snapshot = entry.snapshot();
-  const verdict = snapshot.verdict;
 
   return {
     id: snapshot.id,
@@ -71,12 +70,33 @@ export function toRow(entry: AuditEntry, traceId: string | null): AuditInsert {
     deviceId: snapshot.origin.deviceId,
     ip: snapshot.origin.ip,
     traceId,
-    requestId: verdict?.requestId ?? null,
-    auto: verdict?.auto ?? null,
-    ruleId: verdict?.ruleId ?? null,
-    scope: verdict?.scope ?? null,
-    resolvedBy: verdict?.resolvedBy?.value ?? null,
-    resolvedFrom: verdict?.resolvedFrom ?? null,
+    ...verdictColumns(snapshot.verdict),
     at: snapshot.at,
   };
+}
+
+/** The columns only a decision entry fills. */
+type VerdictColumns = Pick<
+  AuditInsert,
+  'requestId' | 'auto' | 'ruleId' | 'scope' | 'resolvedBy' | 'resolvedFrom'
+>;
+
+/** An entry without a verdict — every `recorded` one: its verdict columns are written empty. */
+const NO_VERDICT: VerdictColumns = {
+  requestId: null,
+  auto: null,
+  ruleId: null,
+  scope: null,
+  resolvedBy: null,
+  resolvedFrom: null,
+};
+
+/** The verdict's columns, the way {@link verdictOf} reads them back — or {@link NO_VERDICT}. */
+function verdictColumns(verdict: AuditVerdict | null): VerdictColumns {
+  if (verdict === null) {
+    return NO_VERDICT;
+  }
+
+  const { requestId, auto, ruleId, scope, resolvedBy, resolvedFrom } = verdict;
+  return { requestId, auto, ruleId, scope, resolvedBy: resolvedBy?.value ?? null, resolvedFrom };
 }

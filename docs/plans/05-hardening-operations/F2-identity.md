@@ -34,6 +34,10 @@ JWKS ao ver `kid` desconhecido, allowlist de `alg`.
 **Nunca aceite o `alg` do token, nunca `none`.** Resposta `401` não revela qual validação
 falhou; o log revela.
 
+Claims exigidas ([D-06](decisions.md)): escopos `openid profile email` (e `offline_access` nos clientes); o token traz `sub`,
+`email` e `email_verified: true`. Faltou qualquer uma, ou `email_verified` é `false` → `401`.
+Nenhuma role ou grupo do provedor é lida — a autorização é local.
+
 ### B-13 — Rotação de refresh e detecção de reuso 🔲
 
 Refresh usado duas vezes significa credencial vazada → revoga a **família** inteira. Renovação
@@ -56,7 +60,7 @@ estava anotada como dívida do bootstrap.
 
 ## Cenários cobertos
 
-S-23…S-32.
+S-23…S-32, S-61.
 
 ---
 

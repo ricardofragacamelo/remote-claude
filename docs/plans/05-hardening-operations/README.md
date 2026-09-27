@@ -10,7 +10,8 @@ pnpm verify:full     # portões 1-11, agora com osv-scanner no 10, sai com códi
 pnpm test:e2e:live   # a suíte smoke-live, sai com código 0
 ```
 
-E o portão 12 — o quality gate do Sonar — passa a existir no CI, onde ele mora.
+O portão 12 — o quality gate do Sonar — **não** entra: foi adiado ([D-07](decisions.md)) e fica
+declarado ausente.
 
 Arquivos irmãos: [matriz de cenários](scenarios.md) · [decisões em aberto](decisions.md) ·
 [progresso](progress.md).
@@ -48,7 +49,7 @@ pontas, tela de diagnóstico, `osv-scanner`, Sonar e o job de e2e mobile no CI
 | Rate limit e limites anunciados por connection | F0 |
 | Tela de diagnóstico: `debug` em release sem recompilar | F1 |
 | Provedor de identidade real como **configuração**, rotação e revogação | F2 |
-| `osv-scanner`, quality gate do Sonar, e2e mobile no CI, nightly do smoke-live | F3 |
+| `osv-scanner`, nightly do smoke-live e limite de complexidade | F3 |
 | E2E dos limites e da expiração de credencial | F4 |
 
 ### Não entra
@@ -74,7 +75,7 @@ verde.
 | F0 | [Limites](F0-limits.md) | RAM, TTL, órfã, shutdown, rate limit, nova tentativa do push, e o que o plano 04 deixou | B-01…B-07, B-25…B-27 | 🔄 |
 | F1 | [Diagnóstico](F1-diagnostics.md) | `debug` em release, e de volta ao sair | B-11 | 🔄 |
 | F2 | [Identidade](F2-identity.md) | provedor real por configuração, rotação, revogação | B-12…B-15 | 🔲 |
-| F3 | [Portões](F3-gates.md) | osv-scanner, Sonar, CI do mobile, nightly | B-16…B-20 | 🔲 |
+| F3 | [Portões](F3-gates.md) | osv-scanner, nightly, complexidade | B-16, B-19, B-20, B-28 | 🔲 |
 | F4 | [E2E](F4-e2e.md) | limites e credencial pela porta do usuário | B-21…B-23 | 🔲 |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
@@ -99,13 +100,14 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Anexar e heartbeat sob carga dentro dos limites | B-05, B-07 | [backend/06-realtime](../../architecture/backend/06-realtime.md#heartbeat-e-limites) | S-59, S-60 |
 | `debug` em release é ligável sem recompilar | B-11 | [mobile/05-logging](../../architecture/mobile/05-logging.md) | S-21 |
 | Trocar de provedor é trocar configuração | B-12 | [08-authentication](../../architecture/shared/08-authentication.md#configuração) | S-23, S-24, S-32 |
-| Validação de token não confia no token | B-12 | [08-authentication](../../architecture/shared/08-authentication.md#validação-no-backend) | S-25, S-26 |
+| Validação de token não confia no token | B-12 | [08-authentication](../../architecture/shared/08-authentication.md#validação-no-backend) | S-25, S-26, S-61 |
 | Refresh rotaciona, e reuso revoga a família | B-13 | [08-authentication](../../architecture/shared/08-authentication.md#renovação-e-expiração) | S-27, S-28 |
 | Expiração com socket aberto não derruba a conexão | B-14 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#handshake) | S-29, S-30 |
 | Logout encerra também no provedor | B-15 | [web/07-auth](../../architecture/web/07-auth.md) | S-31 |
 | Dependência vulnerável não entra | B-16 | [09-code-quality](../../architecture/shared/09-code-quality.md) | S-33, S-34 |
-| Quality gate e portões caros existem onde cabem | B-17, B-18 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md#portões-de-ci) | S-35, S-36, S-40 |
-| Quebra do SDK vira aviso automático | B-19 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md#portões-de-ci) | S-37, S-38 |
+| Scanner que não verificou não aprova | B-16 | [09-code-quality](../../architecture/shared/09-code-quality.md) | S-35 |
+| Quebra do SDK vira aviso automático | B-19 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md#portões-de-ci) | S-37, S-38, S-40 |
+| Complexidade tem limite, nas três pontas | B-28 | [09-code-quality](../../architecture/shared/09-code-quality.md) | S-62…S-68 |
 | Pré-requisito novo é detectado pelo `doctor` | B-20 | [11-validation-protocol](../../architecture/shared/11-validation-protocol.md#automação-script-não-orquestração-pelo-agente) | S-39 |
 | Os limites provados pela porta do usuário | B-21…B-23 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-41…S-45 |
 
@@ -141,7 +143,7 @@ scripts/doctor.mjs                 pré-requisitos novos
 | R-02 | Derivar o limite da RAM pode ficar otimista em máquina compartilhada | o limite tem piso e teto configuráveis; a fórmula é regra pura e testada (S-01) |
 | R-03 | Matar "sessão órfã" no boot pode matar processo que não é nosso | a varredura casa por marca própria do processo, e S-07 existe para provar que ela não passa disso |
 | R-04 | Ingestão de log é uma porta que aceita texto do cliente | **descartado em 2026-09-27**: a ingestão saiu do escopo |
-| R-05 | Sonar e o runner de e2e mobile exigem infraestrutura que ninguém levantou | é parte da F3, e enquanto não existir o job fica **declarado como ausente**, não fingido como verde |
+| R-05 | Sonar e o runner de e2e mobile exigem infraestrutura que ninguém levantou | **decidido em 2026-09-27** ([D-07, D-08](decisions.md)): nenhum dos dois é levantado; o portão 12 fica **declarado ausente** e o e2e mobile segue local — nunca fingidos verdes |
 
 ---
 

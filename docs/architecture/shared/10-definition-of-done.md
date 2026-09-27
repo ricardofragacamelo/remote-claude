@@ -55,7 +55,7 @@ ordem de importância — é conjunção, não ponderação.
 - [ ] Typecheck strict passando. Nenhum `any`, nenhum `dynamic`, nenhum `@ts-ignore`.
 - [ ] **Regras de arquitetura** passando (`dependency-cruiser`, `boundaries`, `import_lint`).
 - [ ] **Duplicação** dentro do limite ([linhas repetidas](09-code-quality.md#linhas-repetidas)).
-- [ ] Complexidade dentro do limite.
+- [ ] Complexidade dentro do limite: ≤ 10 por função, no `pnpm lint`.
 - [ ] `gitleaks`, `semgrep` e scanner de dependência sem achado novo.
 - [ ] Supressão de regra, se houver, tem justificativa e link de issue.
 
@@ -78,7 +78,8 @@ ordem de importância — é conjunção, não ponderação.
 ### 6. CI
 
 - [ ] Pipeline **inteiro** verde. Não "verde menos um job conhecido".
-- [ ] Quality gate do SonarQube aprovado.
+- [ ] Quality gate do SonarQube aprovado — **não se aplica enquanto o portão 12 estiver ausente**
+      ([D-07 do plano 05](../../plans/05-hardening-operations/decisions.md)).
 
 ---
 

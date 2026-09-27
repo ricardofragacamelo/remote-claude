@@ -56,7 +56,38 @@ function emitInterface(declaration) {
 }
 
 /**
- * The runtime check for one field of a guard, or null when the field carries no checkable shape.
+ * The helpers a guard may call, each emitted once and only into a file that uses it.
+ *
+ * They exist so that a guard is a flat **list** of conditions, with no `&&` or `||` of its own:
+ * a guard that chains its checks with operators grows one branch per field, and the complexity
+ * gate (plan 05, D-10) would then fail on whichever payload happens to have the most fields.
+ * With the operators here, every guard has the same small complexity, however many fields it
+ * checks.
+ */
+const GUARD_HELPERS = [
+  {
+    name: 'isNonNullObject',
+    source: [
+      '/** Whether `value` is an object and not `null` — the one case `typeof` alone gets wrong. */',
+      'function isNonNullObject(value: unknown): value is Readonly<Record<string, unknown>> {',
+      "  return typeof value === 'object' && value !== null;",
+      '}',
+    ],
+  },
+  {
+    name: 'requiredWhen',
+    source: [
+      '/** Whether a conditional requirement holds: when it `applies`, its field has to be `present`. */',
+      'function requiredWhen(applies: boolean, present: boolean): boolean {',
+      '  return !applies || present;',
+      '}',
+    ],
+  },
+];
+
+/**
+ * The runtime check for one field of a guard — an expression that is true when the field has the
+ * required shape — or null when the field carries no checkable shape.
  *
  * @param {import('./contracts-model.mjs').Field} field
  * @returns {string | null}
@@ -67,25 +98,25 @@ function fieldCheck(field) {
   switch (field.type.kind) {
     case 'string':
     case 'enum':
-      return `typeof ${access} !== 'string'`;
+      return `typeof ${access} === 'string'`;
     case 'integer':
-      return `typeof ${access} !== 'number'`;
+      return `typeof ${access} === 'number'`;
     case 'boolean':
-      return `typeof ${access} !== 'boolean'`;
+      return `typeof ${access} === 'boolean'`;
     case 'const':
-      return `${access} !== ${typeof field.type.value === 'string' ? `'${String(field.type.value)}'` : String(field.type.value)}`;
+      return `${access} === ${typeof field.type.value === 'string' ? `'${String(field.type.value)}'` : String(field.type.value)}`;
     case 'record':
-      return `typeof ${access} !== 'object' || ${access} === null`;
+      return `isNonNullObject(${access})`;
     case 'array':
-      return `!Array.isArray(${access})`;
+      return `Array.isArray(${access})`;
     case 'object':
-      return `!is${field.type.name}(${access})`;
+      return `is${field.type.name}(${access})`;
   }
 }
 
 /**
- * The runtime check for one conditional requirement: the deciding field has the value that makes
- * the other one mandatory, and the other one is missing or of the wrong shape.
+ * The runtime check for one conditional requirement: true unless the deciding field has the value
+ * that makes the other one mandatory and the other one is missing or of the wrong shape.
  *
  * The field is known to exist — `buildModel` refuses a rule that names one nobody declared, which
  * is why there is no branch for it here.
@@ -103,7 +134,7 @@ function conditionalCheck(declaration, conditional) {
   const expected =
     typeof conditional.equals === 'string' ? `'${conditional.equals}'` : String(conditional.equals);
 
-  return `(${decides} === ${expected} && ${String(fieldCheck(field))})`;
+  return `requiredWhen(${decides} === ${expected}, ${String(fieldCheck(field))})`;
 }
 
 /**
@@ -136,13 +167,7 @@ function emitGuard(declaration) {
     '',
     ...(checks.length === 0
       ? ['  return true;']
-      : [
-          '  return !(',
-          ...checks.map(
-            (check, index) => `    ${check}${index === checks.length - 1 ? '' : ' ||'}`,
-          ),
-          '  );',
-        ]),
+      : ['  return [', ...checks.map((check) => `    ${check},`), '  ].every(Boolean);']),
     '}',
   ];
 
@@ -189,6 +214,7 @@ export function emitTypeScript(model) {
   const declarations = [model.envelope, ...model.interfaces];
   // A payload-only contract has a type and a guard and no frame: see PAYLOAD_KINDS.
   const frames = model.messages.filter((message) => message.frame);
+  const guards = declarations.map((declaration) => emitGuard(declaration));
 
   const blocks = [
     BANNER,
@@ -202,7 +228,10 @@ export function emitTypeScript(model) {
     `] as const;`,
     '',
     ...declarations.flatMap((declaration) => [emitInterface(declaration), '']),
-    ...declarations.flatMap((declaration) => [emitGuard(declaration), '']),
+    ...GUARD_HELPERS.filter((helper) =>
+      guards.some((guard) => guard.includes(`${helper.name}(`)),
+    ).flatMap((helper) => [...helper.source, '']),
+    ...guards.flatMap((guard) => [guard, '']),
     ...frames.flatMap((message) => [emitFrame(message), '']),
   ];
 

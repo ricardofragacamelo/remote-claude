@@ -28,16 +28,26 @@ export interface DeviceOptions {
  */
 export function aDevice(options: DeviceOptions = {}): Device {
   return Device.register({
-    id: options.id ?? 'dev_1',
-    userId: options.userId ?? deviceOwner,
-    installId: options.installId ?? 'install-1',
-    name: options.name ?? 'Pixel 8',
-    platform: options.platform ?? 'android',
-    appVersion: options.appVersion ?? '1.0.0',
-    pushToken: options.pushToken === undefined ? 'push-token-abcdef' : options.pushToken,
-    locale: options.locale === undefined ? 'pt-BR' : options.locale,
-    at: options.at ?? registeredAt,
+    id: given(options.id, 'dev_1'),
+    userId: given(options.userId, deviceOwner),
+    installId: given(options.installId, 'install-1'),
+    name: given(options.name, 'Pixel 8'),
+    platform: given(options.platform, 'android'),
+    appVersion: given(options.appVersion, '1.0.0'),
+    pushToken: given(options.pushToken, 'push-token-abcdef'),
+    locale: given(options.locale, 'pt-BR'),
+    at: given(options.at, registeredAt),
   });
+}
+
+/**
+ * What the test asked for, or the default when it asked for nothing.
+ *
+ * Only `undefined` falls back: an explicit `null` — a device with no push token, or no locale — is
+ * something a test asks for, and it has to reach the entity as it was given.
+ */
+function given<T>(value: T | undefined, fallback: T): T {
+  return value === undefined ? fallback : value;
 }
 
 /** A device somebody has already approved. */

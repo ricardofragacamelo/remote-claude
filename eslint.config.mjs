@@ -54,6 +54,10 @@ export default tseslint.config(
       // Every log goes through the structured logger of its module
       // (docs/architecture/shared/03-logging.md). Scripts print through scripts/lib/ui.mjs.
       'no-console': 'error',
+      // At most 10 paths through a function, on every end and in the scripts: the bar the
+      // SonarQube gate would have held, and the one `mobile.mjs analyze` holds for Dart. Split
+      // the function rather than raise it — D-10 of docs/plans/05-hardening-operations.
+      complexity: ['error', 10],
       // Suppressing a rule is allowed; suppressing it in silence is not.
       '@eslint-community/eslint-comments/require-description': [
         'error',

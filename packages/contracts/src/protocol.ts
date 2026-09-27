@@ -461,6 +461,16 @@ export interface PermissionResolvePayload {
   readonly reason?: string;
 }
 
+/** Whether `value` is an object and not `null` — the one case `typeof` alone gets wrong. */
+function isNonNullObject(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null;
+}
+
+/** Whether a conditional requirement holds: when it `applies`, its field has to be `present`. */
+function requiredWhen(applies: boolean, present: boolean): boolean {
+  return !applies || present;
+}
+
 /**
  * Whether `value` carries every required field of {@link Envelope}. Unknown fields are accepted.
  *
@@ -473,14 +483,14 @@ export function isEnvelope(value: unknown): value is Envelope {
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    record['v'] !== 1 ||
-    typeof record['id'] !== 'string' ||
-    typeof record['kind'] !== 'string' ||
-    typeof record['type'] !== 'string' ||
-    typeof record['ts'] !== 'string' ||
-    (record['kind'] === 'event' && typeof record['seq'] !== 'number')
-  );
+  return [
+    record['v'] === 1,
+    typeof record['id'] === 'string',
+    typeof record['kind'] === 'string',
+    typeof record['type'] === 'string',
+    typeof record['ts'] === 'string',
+    requiredWhen(record['kind'] === 'event', typeof record['seq'] === 'number'),
+  ].every(Boolean);
 }
 
 /**
@@ -493,9 +503,9 @@ export function isCommandAcceptedPayload(value: unknown): value is CommandAccept
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['command'] !== 'string'
-  );
+  return [
+    typeof record['command'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -508,12 +518,12 @@ export function isConnectionReadyPayloadLimits(value: unknown): value is Connect
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['maxFrameBytes'] !== 'number' ||
-    typeof record['maxFramesPerSecond'] !== 'number' ||
-    typeof record['maxAttachedSessions'] !== 'number' ||
-    typeof record['replayBufferSize'] !== 'number'
-  );
+  return [
+    typeof record['maxFrameBytes'] === 'number',
+    typeof record['maxFramesPerSecond'] === 'number',
+    typeof record['maxAttachedSessions'] === 'number',
+    typeof record['replayBufferSize'] === 'number',
+  ].every(Boolean);
 }
 
 /**
@@ -526,11 +536,11 @@ export function isConnectionReadyPayload(value: unknown): value is ConnectionRea
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['connectionId'] !== 'string' ||
-    typeof record['serverVersion'] !== 'string' ||
-    !isConnectionReadyPayloadLimits(record['limits'])
-  );
+  return [
+    typeof record['connectionId'] === 'string',
+    typeof record['serverVersion'] === 'string',
+    isConnectionReadyPayloadLimits(record['limits']),
+  ].every(Boolean);
 }
 
 /**
@@ -543,12 +553,12 @@ export function isSessionAttachedPayload(value: unknown): value is SessionAttach
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['sessionId'] !== 'string' ||
-    typeof record['replayed'] !== 'number' ||
-    typeof record['oldestAvailableSeq'] !== 'number' ||
-    typeof record['gap'] !== 'boolean'
-  );
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['replayed'] === 'number',
+    typeof record['oldestAvailableSeq'] === 'number',
+    typeof record['gap'] === 'boolean',
+  ].every(Boolean);
 }
 
 /**
@@ -561,10 +571,10 @@ export function isConnectionAuthenticatePayloadClient(value: unknown): value is 
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['kind'] !== 'string' ||
-    typeof record['version'] !== 'string'
-  );
+  return [
+    typeof record['kind'] === 'string',
+    typeof record['version'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -577,11 +587,11 @@ export function isConnectionAuthenticatePayload(value: unknown): value is Connec
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['token'] !== 'string' ||
-    typeof record['locale'] !== 'string' ||
-    !isConnectionAuthenticatePayloadClient(record['client'])
-  );
+  return [
+    typeof record['token'] === 'string',
+    typeof record['locale'] === 'string',
+    isConnectionAuthenticatePayloadClient(record['client']),
+  ].every(Boolean);
 }
 
 /**
@@ -594,9 +604,9 @@ export function isConnectionReauthenticatePayload(value: unknown): value is Conn
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['token'] !== 'string'
-  );
+  return [
+    typeof record['token'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -609,12 +619,12 @@ export function isDeviceRegisterPayload(value: unknown): value is DeviceRegister
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['installId'] !== 'string' ||
-    typeof record['name'] !== 'string' ||
-    typeof record['platform'] !== 'string' ||
-    typeof record['appVersion'] !== 'string'
-  );
+  return [
+    typeof record['installId'] === 'string',
+    typeof record['name'] === 'string',
+    typeof record['platform'] === 'string',
+    typeof record['appVersion'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -627,9 +637,9 @@ export function isDiagPingPayload(value: unknown): value is DiagPingPayload {
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['nonce'] !== 'string'
-  );
+  return [
+    typeof record['nonce'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -642,9 +652,9 @@ export function isPermissionExtendPayload(value: unknown): value is PermissionEx
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['requestId'] !== 'string'
-  );
+  return [
+    typeof record['requestId'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -657,9 +667,9 @@ export function isSessionAttachPayload(value: unknown): value is SessionAttachPa
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['sessionId'] !== 'string'
-  );
+  return [
+    typeof record['sessionId'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -672,9 +682,9 @@ export function isSessionClosePayload(value: unknown): value is SessionClosePayl
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['sessionId'] !== 'string'
-  );
+  return [
+    typeof record['sessionId'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -687,9 +697,9 @@ export function isSessionDetachPayload(value: unknown): value is SessionDetachPa
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['sessionId'] !== 'string'
-  );
+  return [
+    typeof record['sessionId'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -702,9 +712,9 @@ export function isSessionInterruptPayload(value: unknown): value is SessionInter
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['sessionId'] !== 'string'
-  );
+  return [
+    typeof record['sessionId'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -717,9 +727,9 @@ export function isSessionPromptPayloadAttachmentsItem(value: unknown): value is 
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['path'] !== 'string'
-  );
+  return [
+    typeof record['path'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -732,10 +742,10 @@ export function isSessionPromptPayload(value: unknown): value is SessionPromptPa
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['sessionId'] !== 'string' ||
-    typeof record['text'] !== 'string'
-  );
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['text'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -748,10 +758,10 @@ export function isSessionRewindFilesPayload(value: unknown): value is SessionRew
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['sessionId'] !== 'string' ||
-    typeof record['promptId'] !== 'string'
-  );
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['promptId'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -764,9 +774,9 @@ export function isSessionSetLocalePayload(value: unknown): value is SessionSetLo
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['locale'] !== 'string'
-  );
+  return [
+    typeof record['locale'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -779,10 +789,10 @@ export function isSessionSetModelPayload(value: unknown): value is SessionSetMod
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['sessionId'] !== 'string' ||
-    typeof record['model'] !== 'string'
-  );
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['model'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -795,10 +805,10 @@ export function isSessionSetPermissionModePayload(value: unknown): value is Sess
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['sessionId'] !== 'string' ||
-    typeof record['mode'] !== 'string'
-  );
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['mode'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -811,9 +821,9 @@ export function isSessionStartPayload(value: unknown): value is SessionStartPayl
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['workspacePath'] !== 'string'
-  );
+  return [
+    typeof record['workspacePath'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -826,12 +836,12 @@ export function isDiagPongPayload(value: unknown): value is DiagPongPayload {
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['sessionId'] !== 'string' ||
-    typeof record['pingedAt'] !== 'string' ||
-    typeof record['pingCount'] !== 'number' ||
-    typeof record['nonce'] !== 'string'
-  );
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['pingedAt'] === 'string',
+    typeof record['pingCount'] === 'number',
+    typeof record['nonce'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -844,10 +854,10 @@ export function isErrorPayloadDetailsItem(value: unknown): value is ErrorPayload
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['field'] !== 'string' ||
-    typeof record['rule'] !== 'string'
-  );
+  return [
+    typeof record['field'] === 'string',
+    typeof record['rule'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -860,11 +870,11 @@ export function isErrorPayload(value: unknown): value is ErrorPayload {
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['code'] !== 'string' ||
-    typeof record['messageKey'] !== 'string' ||
-    typeof record['traceId'] !== 'string'
-  );
+  return [
+    typeof record['code'] === 'string',
+    typeof record['messageKey'] === 'string',
+    typeof record['traceId'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -877,9 +887,9 @@ export function isMessageCompletedPayloadContentItem(value: unknown): value is M
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['type'] !== 'string'
-  );
+  return [
+    typeof record['type'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -892,11 +902,11 @@ export function isMessageCompletedPayload(value: unknown): value is MessageCompl
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['messageId'] !== 'string' ||
-    typeof record['role'] !== 'string' ||
-    !Array.isArray(record['content'])
-  );
+  return [
+    typeof record['messageId'] === 'string',
+    typeof record['role'] === 'string',
+    Array.isArray(record['content']),
+  ].every(Boolean);
 }
 
 /**
@@ -909,10 +919,10 @@ export function isMessageDeltaPayload(value: unknown): value is MessageDeltaPayl
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['messageId'] !== 'string' ||
-    typeof record['delta'] !== 'string'
-  );
+  return [
+    typeof record['messageId'] === 'string',
+    typeof record['delta'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -925,11 +935,11 @@ export function isPermissionExtendedPayload(value: unknown): value is Permission
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['requestId'] !== 'string' ||
-    typeof record['expiresAt'] !== 'string' ||
-    typeof record['remainingExtensions'] !== 'number'
-  );
+  return [
+    typeof record['requestId'] === 'string',
+    typeof record['expiresAt'] === 'string',
+    typeof record['remainingExtensions'] === 'number',
+  ].every(Boolean);
 }
 
 /**
@@ -942,10 +952,10 @@ export function isPermissionRequestedPayloadSuggestionsItem(value: unknown): val
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['scope'] !== 'string' ||
-    typeof record['labelKey'] !== 'string'
-  );
+  return [
+    typeof record['scope'] === 'string',
+    typeof record['labelKey'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -958,16 +968,16 @@ export function isPermissionRequestedPayload(value: unknown): value is Permissio
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['requestId'] !== 'string' ||
-    typeof record['toolUseId'] !== 'string' ||
-    typeof record['toolName'] !== 'string' ||
-    typeof record['title'] !== 'string' ||
-    typeof record['input'] !== 'object' || record['input'] === null ||
-    typeof record['riskHint'] !== 'string' ||
-    typeof record['defaultToNo'] !== 'boolean' ||
-    typeof record['expiresAt'] !== 'string'
-  );
+  return [
+    typeof record['requestId'] === 'string',
+    typeof record['toolUseId'] === 'string',
+    typeof record['toolName'] === 'string',
+    typeof record['title'] === 'string',
+    isNonNullObject(record['input']),
+    typeof record['riskHint'] === 'string',
+    typeof record['defaultToNo'] === 'boolean',
+    typeof record['expiresAt'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -982,12 +992,12 @@ export function isPermissionResolvedPayload(value: unknown): value is Permission
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['requestId'] !== 'string' ||
-    typeof record['decision'] !== 'string' ||
-    typeof record['auto'] !== 'boolean' ||
-    (record['auto'] === false && typeof record['resolvedBy'] !== 'string')
-  );
+  return [
+    typeof record['requestId'] === 'string',
+    typeof record['decision'] === 'string',
+    typeof record['auto'] === 'boolean',
+    requiredWhen(record['auto'] === false, typeof record['resolvedBy'] === 'string'),
+  ].every(Boolean);
 }
 
 /**
@@ -1000,10 +1010,10 @@ export function isSessionClosedPayload(value: unknown): value is SessionClosedPa
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['sessionId'] !== 'string' ||
-    typeof record['reason'] !== 'string'
-  );
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['reason'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -1016,10 +1026,10 @@ export function isSessionRewoundPayloadRevertedItem(value: unknown): value is Se
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['path'] !== 'string' ||
-    typeof record['action'] !== 'string'
-  );
+  return [
+    typeof record['path'] === 'string',
+    typeof record['action'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -1032,10 +1042,10 @@ export function isSessionRewoundPayloadPreservedItem(value: unknown): value is S
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['path'] !== 'string' ||
-    typeof record['reason'] !== 'string'
-  );
+  return [
+    typeof record['path'] === 'string',
+    typeof record['reason'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -1048,9 +1058,9 @@ export function isSessionRewoundPayloadUnchangedItem(value: unknown): value is S
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['path'] !== 'string'
-  );
+  return [
+    typeof record['path'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -1063,9 +1073,9 @@ export function isSessionRewoundPayloadFailedItem(value: unknown): value is Sess
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['path'] !== 'string'
-  );
+  return [
+    typeof record['path'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -1078,13 +1088,13 @@ export function isSessionRewoundPayload(value: unknown): value is SessionRewound
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['promptId'] !== 'string' ||
-    !Array.isArray(record['reverted']) ||
-    !Array.isArray(record['preserved']) ||
-    !Array.isArray(record['unchanged']) ||
-    !Array.isArray(record['failed'])
-  );
+  return [
+    typeof record['promptId'] === 'string',
+    Array.isArray(record['reverted']),
+    Array.isArray(record['preserved']),
+    Array.isArray(record['unchanged']),
+    Array.isArray(record['failed']),
+  ].every(Boolean);
 }
 
 /**
@@ -1097,13 +1107,13 @@ export function isSessionStartedPayload(value: unknown): value is SessionStarted
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['sessionId'] !== 'string' ||
-    typeof record['workspacePath'] !== 'string' ||
-    typeof record['model'] !== 'string' ||
-    typeof record['permissionMode'] !== 'string' ||
-    typeof record['claudeSessionId'] !== 'string'
-  );
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['workspacePath'] === 'string',
+    typeof record['model'] === 'string',
+    typeof record['permissionMode'] === 'string',
+    typeof record['claudeSessionId'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -1116,9 +1126,9 @@ export function isSessionStatusChangedPayload(value: unknown): value is SessionS
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['status'] !== 'string'
-  );
+  return [
+    typeof record['status'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -1131,10 +1141,10 @@ export function isToolCompletedPayload(value: unknown): value is ToolCompletedPa
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['toolUseId'] !== 'string' ||
-    typeof record['status'] !== 'string'
-  );
+  return [
+    typeof record['toolUseId'] === 'string',
+    typeof record['status'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -1147,10 +1157,10 @@ export function isToolProgressPayload(value: unknown): value is ToolProgressPayl
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['toolUseId'] !== 'string' ||
-    typeof record['chunk'] !== 'string'
-  );
+  return [
+    typeof record['toolUseId'] === 'string',
+    typeof record['chunk'] === 'string',
+  ].every(Boolean);
 }
 
 /**
@@ -1163,11 +1173,11 @@ export function isToolStartedPayload(value: unknown): value is ToolStartedPayloa
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['toolUseId'] !== 'string' ||
-    typeof record['toolName'] !== 'string' ||
-    typeof record['input'] !== 'object' || record['input'] === null
-  );
+  return [
+    typeof record['toolUseId'] === 'string',
+    typeof record['toolName'] === 'string',
+    isNonNullObject(record['input']),
+  ].every(Boolean);
 }
 
 /**
@@ -1180,12 +1190,12 @@ export function isTurnCompletedPayload(value: unknown): value is TurnCompletedPa
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['turnId'] !== 'string' ||
-    typeof record['usage'] !== 'object' || record['usage'] === null ||
-    typeof record['costUsd'] !== 'string' ||
-    typeof record['durationMs'] !== 'number'
-  );
+  return [
+    typeof record['turnId'] === 'string',
+    isNonNullObject(record['usage']),
+    typeof record['costUsd'] === 'string',
+    typeof record['durationMs'] === 'number',
+  ].every(Boolean);
 }
 
 /**
@@ -1200,11 +1210,11 @@ export function isPermissionResolvePayload(value: unknown): value is PermissionR
 
   const record = value as Readonly<Record<string, unknown>>;
 
-  return !(
-    typeof record['requestId'] !== 'string' ||
-    typeof record['decision'] !== 'string' ||
-    (record['decision'] === 'deny' && typeof record['reason'] !== 'string')
-  );
+  return [
+    typeof record['requestId'] === 'string',
+    typeof record['decision'] === 'string',
+    requiredWhen(record['decision'] === 'deny', typeof record['reason'] === 'string'),
+  ].every(Boolean);
 }
 
 /** A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream. */

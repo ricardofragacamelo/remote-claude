@@ -40,6 +40,21 @@ const defaultSleep = (/** @type {number} */ ms) =>
   });
 
 /**
+ * The clock, the pause and the two durations of a wait, with the defaults filled in.
+ *
+ * @param {WaitOptions} options
+ * @returns {{ now: () => number, sleep: (ms: number) => Promise<void>, timeoutMs: number, intervalMs: number }}
+ */
+function pacingOf(options) {
+  return {
+    now: options.now ?? Date.now,
+    sleep: options.sleep ?? defaultSleep,
+    timeoutMs: options.timeoutMs ?? 120_000,
+    intervalMs: options.intervalMs ?? 500,
+  };
+}
+
+/**
  * Polls `probe` until it answers true, the deadline passes, or `abortIf` gives a reason.
  *
  * @param {WaitOptions} options
@@ -47,10 +62,7 @@ const defaultSleep = (/** @type {number} */ ms) =>
  * @throws {WaitError}
  */
 export async function waitUntil(options) {
-  const now = options.now ?? Date.now;
-  const sleep = options.sleep ?? defaultSleep;
-  const timeoutMs = options.timeoutMs ?? 120_000;
-  const intervalMs = options.intervalMs ?? 500;
+  const { now, sleep, timeoutMs, intervalMs } = pacingOf(options);
   const startedAt = now();
 
   for (;;) {

@@ -55,9 +55,7 @@ export class UnsafeSdkOptionsError extends Error {
 export const realQueryFactory: QueryFactory = ({ prompt, options }) => {
   const hooks = options.hooks?.PreToolUse ?? [];
 
-  if (options.settingSources?.length !== 1 || options.settingSources[0] !== 'project') {
-    throw new UnsafeSdkOptionsError("settingSources must be exactly ['project']");
-  }
+  assertProjectScopeOnly(options.settingSources);
 
   if (hooks.length === 0 || hooks.every((matcher) => matcher.hooks.length === 0)) {
     throw new UnsafeSdkOptionsError('hooks.PreToolUse must carry the audit hook');
@@ -67,16 +65,7 @@ export const realQueryFactory: QueryFactory = ({ prompt, options }) => {
     throw new UnsafeSdkOptionsError('canUseTool must be the permission bridge');
   }
 
-  if (options.env === undefined) {
-    throw new UnsafeSdkOptionsError('env must be set, or the CLI inherits the whole backend');
-  }
-
-  const leaked = Object.keys(options.env).filter(isBackendVariable);
-  if (leaked.length > 0) {
-    throw new UnsafeSdkOptionsError(
-      `env must not carry the backend configuration (${leaked.join(', ')})`,
-    );
-  }
+  assertIsolatedEnvironment(options.env);
 
   return query({
     prompt,
@@ -88,5 +77,26 @@ export const realQueryFactory: QueryFactory = ({ prompt, options }) => {
     },
   });
 };
+
+/** The first check: the SDK reads the project's settings and nothing else. */
+function assertProjectScopeOnly(settingSources: Options['settingSources']): void {
+  if (settingSources?.length !== 1 || settingSources[0] !== 'project') {
+    throw new UnsafeSdkOptionsError("settingSources must be exactly ['project']");
+  }
+}
+
+/** The fourth check: an environment of its own, with none of the backend's configuration in it. */
+function assertIsolatedEnvironment(env: Options['env']): void {
+  if (env === undefined) {
+    throw new UnsafeSdkOptionsError('env must be set, or the CLI inherits the whole backend');
+  }
+
+  const leaked = Object.keys(env).filter(isBackendVariable);
+  if (leaked.length > 0) {
+    throw new UnsafeSdkOptionsError(
+      `env must not carry the backend configuration (${leaked.join(', ')})`,
+    );
+  }
+}
 
 export const QUERY_FACTORY = Symbol('QueryFactory');

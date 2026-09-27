@@ -99,7 +99,7 @@ Ordem **obrigatória**: do mais barato ao mais caro. O objetivo é falhar em 5 s
 | # | Portão | Comando | O que pega |
 |---|---|---|---|
 | 1 | Formatação | `pnpm format:check` | estilo |
-| 2 | Lint | `pnpm lint` | regra sintática, `console.log`, literal na UI |
+| 2 | Lint | `pnpm lint` | regra sintática, `console.log`, literal na UI, complexidade > 10 |
 | 3 | Tipagem | `pnpm typecheck` | `any`, `dynamic`, tipo quebrado |
 | 4 | Arquitetura | `pnpm lint:arch` | Dependency Rule, import cruzado, SDK vazando |
 | 5 | Duplicação | `pnpm lint:dup` | [linhas repetidas](09-code-quality.md#linhas-repetidas) |
@@ -109,7 +109,7 @@ Ordem **obrigatória**: do mais barato ao mais caro. O objetivo é falhar em 5 s
 | 9 | E2E | `pnpm test:e2e` | fluxo pela porta do usuário |
 | 10 | Segurança | `pnpm scan:security` | segredo, dependência vulnerável, padrão inseguro |
 | 11 | Contrato & i18n | `pnpm contracts:check && pnpm i18n:check` | contrato dessincronizado, chave faltando |
-| 12 | Quality gate | SonarQube (CI) | complexidade, smell, hotspot |
+| 12 | Quality gate | SonarQube (CI) — **ausente, declarado** | smell, hotspot |
 
 Atalhos:
 
@@ -117,6 +117,10 @@ Atalhos:
 pnpm verify        # portões 1-7   — o ciclo rápido, use durante a implementação
 pnpm verify:full   # portões 1-11  — o que define "pronto"
 ```
+
+O portão 12 **não existe hoje**: o Sonar foi adiado ([D-07 do plano 05](../../plans/05-hardening-operations/decisions.md)).
+Fica na tabela como ausente declarado, não como verde. A complexidade, que era dele, foi para o
+portão 2 ([D-10 do plano 05](../../plans/05-hardening-operations/decisions.md#d-10--complexidade-sem-o-sonar)).
 
 **Leia a saída.** Comando que "rodou" mas cuja saída não foi lida não conta como portão
 executado. Exit code 0 é o mínimo, não a evidência.

@@ -96,8 +96,8 @@ export function useAuditTrail(filters: AuditFilters): AuditTrail {
       });
   }, [key, query]);
 
-  const current = trail?.query === query ? trail : null;
-  const currentMore = more?.query === query ? more : null;
+  const current = ofQuery(trail, query);
+  const currentMore = ofQuery(more, query);
 
   const loadMore = useCallback(() => {
     if (current?.status !== 'ready' || current.nextCursor === null) {
@@ -145,13 +145,35 @@ export function useAuditTrail(filters: AuditFilters): AuditTrail {
   }, []);
 
   return {
-    isLoading: current === null,
-    error: current?.status === 'failed' ? current.error : null,
-    entries: current?.status === 'ready' ? current.entries : [],
-    hasMore: current?.status === 'ready' && current.nextCursor !== null,
+    ...firstPageOf(current),
     isLoadingMore: currentMore?.isLoading ?? false,
     moreError: currentMore?.error ?? null,
     loadMore,
     reload,
+  };
+}
+
+/** The state, when it belongs to this query; `null` when it answers another one. */
+function ofQuery<T extends { readonly query: string }>(state: T | null, query: string): T | null {
+  return state?.query === query ? state : null;
+}
+
+/** The four states of the first page, as the screen reads them. */
+function firstPageOf(
+  current: Trail | null,
+): Pick<AuditTrail, 'isLoading' | 'error' | 'entries' | 'hasMore'> {
+  if (current === null) {
+    return { isLoading: true, error: null, entries: [], hasMore: false };
+  }
+
+  if (current.status === 'failed') {
+    return { isLoading: false, error: current.error, entries: [], hasMore: false };
+  }
+
+  return {
+    isLoading: false,
+    error: null,
+    entries: current.entries,
+    hasMore: current.nextCursor !== null,
   };
 }

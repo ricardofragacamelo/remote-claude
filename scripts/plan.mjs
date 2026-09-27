@@ -54,19 +54,39 @@ function existingPlans() {
 }
 
 /**
+ * The phases asked for with `--phases a,b,c` — just `foundation` when the flag is absent, and
+ * none at all when it is given empty.
+ *
+ * @param {readonly string[]} args
+ * @returns {string[]}
+ */
+function phasesOf(args) {
+  const phasesFlag = args.indexOf('--phases');
+  if (phasesFlag === -1) {
+    return ['foundation'];
+  }
+  return (args[phasesFlag + 1] ?? '')
+    .split(',')
+    .map((phase) => phase.trim())
+    .filter((phase) => phase !== '');
+}
+
+/**
+ * The two-digit number the next plan takes: one after the highest, `00` for the first.
+ *
+ * @returns {string}
+ */
+function nextPlanNumber() {
+  return String((existingPlans().at(-1)?.number ?? -1) + 1).padStart(2, '0');
+}
+
+/**
  * @param {readonly string[]} args
  * @returns {number}
  */
 function createPlan(args) {
   const slug = args[0];
-  const phasesFlag = args.indexOf('--phases');
-  const phases =
-    phasesFlag === -1
-      ? ['foundation']
-      : (args[phasesFlag + 1] ?? '')
-          .split(',')
-          .map((phase) => phase.trim())
-          .filter((phase) => phase !== '');
+  const phases = phasesOf(args);
 
   if (slug === undefined || !isValidSlug(slug)) {
     fail('a plan name in kebab-case is required', 'e.g. pnpm plan new claude-integration');
@@ -80,8 +100,7 @@ function createPlan(args) {
     return 1;
   }
 
-  const plans = existingPlans();
-  const nextNumber = String((plans.at(-1)?.number ?? -1) + 1).padStart(2, '0');
+  const nextNumber = nextPlanNumber();
   const planDir = path.join(plansDir, `${nextNumber}-${slug}`);
 
   if (fs.existsSync(planDir)) {

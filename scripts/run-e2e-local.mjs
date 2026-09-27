@@ -189,6 +189,61 @@ let device = null;
 let appBuilt = false;
 
 /**
+ * Takes this run's compose project down, if it got as far as having one.
+ */
+function takeStackDown() {
+  if (compose === null) {
+    return;
+  }
+
+  // `down --volumes`, not `stop`: nothing of an e2e run is worth keeping, and a volume kept is
+  // a volume that outlives the project that owned it.
+  const down = compose(['down', '--volumes', '--remove-orphans'], { ownProcessGroup: true });
+  if (down.code !== 0) {
+    warn('compose down did not exit cleanly', `exit ${String(down.code)}`);
+  }
+}
+
+/**
+ * Gives back the device of an app run: an emulator of ours goes down, one that was attached
+ * before the run stays as it was.
+ */
+async function giveDeviceBack() {
+  if (device === null) {
+    return;
+  }
+
+  const released = await releaseDevice(device, deviceTools);
+  if (released === 'kept') {
+    ok('device left as it was', `${device.serial} was attached before the run`);
+  } else {
+    ok(
+      'emulator down',
+      released === 'killed' ? 'it ignored emu kill, so it was killed' : device.serial,
+    );
+  }
+}
+
+/**
+ * Stops the Gradle daemons the app's build left behind — only when the app was built at all.
+ */
+function stopGradleDaemons() {
+  if (!appBuilt || !fs.existsSync(gradleWrapper)) {
+    return;
+  }
+
+  const stopped = run(gradleWrapper, ['--stop'], {
+    cwd: path.dirname(gradleWrapper),
+    timeoutMs: 60_000,
+  });
+  if (stopped.code === 0) {
+    ok('Gradle daemons stopped');
+  } else {
+    warn('gradlew --stop did not exit cleanly', `exit ${String(stopped.code)}`);
+  }
+}
+
+/**
  * Reverse of the start order, and idempotent: a second Ctrl+C arrives while the first teardown is
  * still running, and the `finally` below runs on the same shutdown as the signal handler.
  */
@@ -200,38 +255,9 @@ const teardown = cleanupOnce(async () => {
     await kill(child);
   }
 
-  if (compose !== null) {
-    // `down --volumes`, not `stop`: nothing of an e2e run is worth keeping, and a volume kept is
-    // a volume that outlives the project that owned it.
-    const down = compose(['down', '--volumes', '--remove-orphans'], { ownProcessGroup: true });
-    if (down.code !== 0) {
-      warn('compose down did not exit cleanly', `exit ${String(down.code)}`);
-    }
-  }
-
-  if (device !== null) {
-    const released = await releaseDevice(device, deviceTools);
-    if (released === 'kept') {
-      ok('device left as it was', `${device.serial} was attached before the run`);
-    } else {
-      ok(
-        'emulator down',
-        released === 'killed' ? 'it ignored emu kill, so it was killed' : device.serial,
-      );
-    }
-  }
-
-  if (appBuilt && fs.existsSync(gradleWrapper)) {
-    const stopped = run(gradleWrapper, ['--stop'], {
-      cwd: path.dirname(gradleWrapper),
-      timeoutMs: 60_000,
-    });
-    if (stopped.code === 0) {
-      ok('Gradle daemons stopped');
-    } else {
-      warn('gradlew --stop did not exit cleanly', `exit ${String(stopped.code)}`);
-    }
-  }
+  takeStackDown();
+  await giveDeviceBack();
+  stopGradleDaemons();
 
   // Even when the run failed: a stale file pointing at ports nothing listens on turns the next
   // `pnpm exec playwright test` into a confusing timeout instead of a clear "run the script".
@@ -340,14 +366,147 @@ function claimAndBoot() {
 }
 
 /**
+ * The name of this run in its title — `test:e2e`, plus the suffix of each flag it was given.
+ *
+ * @returns {string}
+ */
+function runLabel() {
+  return `test:e2e${mobile ? ':mobile' : ''}${push ? ':push' : ''}${live ? ':live' : ''}`;
+}
+
+/**
+ * Step 0, before a single container of this run exists: what earlier runs left behind.
+ *
+ * @param {import('./lib/compose.mjs').ComposeCli} cli
+ */
+function purgeLeftovers(cli) {
+  const purged = purgeStaleProjects(
+    (command, args) => run(command, args, { cwd: repoRoot, timeoutMs: STACK_TIMEOUT_MS }),
+    cli,
+    { prefix: E2E_PROJECT_PREFIX },
+  );
+
+  if (purged.projects.length + purged.volumes.length > 0) {
+    warn(
+      `purged ${String(purged.projects.length)} stale project(s) and ${String(purged.volumes.length)} orphan volume(s)`,
+      'left by a run that was killed',
+    );
+  }
+  for (const failure of purged.failures) {
+    warn('could not purge', failure);
+  }
+}
+
+/**
+ * Starts the backend and waits for it to answer.
+ *
+ * The backend applies its migrations on the way up, so there is no separate migrate step: an
+ * extra one here would be a second implementation of "bring the schema up to date".
+ * The scripted entry point is the same application with the Agent SDK replaced by a replay of a
+ * recorded run; `--live` starts the product's own. Neither is a flag inside `src/`: a switch in
+ * the product that replaces the Agent SDK is a switch that eventually ships switched on.
+ *
+ * @param {{ backend: string }} urls
+ * @param {NodeJS.ProcessEnv} env
+ */
+async function startBackend(urls, env) {
+  fs.rmSync(backendLogPath, { force: true });
+
+  const backendProc = startService(
+    'backend',
+    ['--filter', './backend', live ? 'start' : 'start:scripted'],
+    env,
+    // Only the live suite reads it. Keeping a log of every run would be a file that grows and
+    // that nothing ever looks at.
+    live ? backendLogPath : undefined,
+  );
+  await waitForHttp(`${urls.backend}/health`, {
+    proc: backendProc,
+    timeoutMs: SERVICE_TIMEOUT_MS,
+    intervalMs: 500,
+  });
+  ok('backend', urls.backend);
+}
+
+/**
+ * Builds the web bundle and serves it.
+ *
+ * Built, then served — the suite exercises the bundle a user would get, not the dev server's
+ * on-the-fly transforms. `VITE_*` is computed from this env at build time (web/env.ts), which
+ * is why the build has to happen here and not before the ports were allocated.
+ *
+ * `NODE_ENV=production` for this half only. Vite hands `process.env.NODE_ENV` straight to the
+ * bundle, and anything but `production` there ships the **development** build of React — which
+ * double-invokes every effect and is not the artefact a user runs. The backend keeps `test`.
+ *
+ * @param {{ web: string }} urls
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {Promise<number | null>} the exit code of a build that failed, or `null` once it serves
+ */
+async function startWeb(urls, env) {
+  const webEnv = { ...env, NODE_ENV: 'production' };
+
+  const build = run('pnpm', ['--filter', './web', 'build'], {
+    cwd: repoRoot,
+    env: webEnv,
+    timeoutMs: SERVICE_TIMEOUT_MS,
+  });
+  if (build.code !== 0) {
+    fail(`the web build failed with exit ${String(build.code)}`);
+    line(build.stdout.trim());
+    line(build.stderr.trim());
+    return build.code;
+  }
+
+  const webProc = startService('web', ['--filter', './web', 'preview'], webEnv, undefined);
+  await waitForHttp(urls.web, { proc: webProc, timeoutMs: SERVICE_TIMEOUT_MS, intervalMs: 500 });
+  ok('web', urls.web);
+  return null;
+}
+
+/**
+ * Runs the suite this run is for, and prints what it said.
+ *
+ * `runAttached` would have been simpler, but the suite's own output is what a reader needs and
+ * both runners write their report to stdout; piping and re-emitting keeps the output *and* the
+ * exit code, which is the one thing this script must not lose.
+ *
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {number} the suite's exit code
+ */
+function runSuite(env) {
+  appBuilt = mobile;
+  const suite = mobile
+    ? run(
+        process.execPath,
+        [path.join(repoRoot, 'scripts/mobile.mjs'), push ? 'test:e2e:push' : 'test:e2e'],
+        {
+          cwd: repoRoot,
+          env,
+          timeoutMs: 1_800_000,
+        },
+      )
+    : run('pnpm', ['--filter', './e2e', 'exec', 'playwright', 'test', ...playwrightArgs], {
+        cwd: repoRoot,
+        env,
+        timeoutMs: 1_800_000,
+      });
+
+  line(suite.stdout.trimEnd());
+  if (suite.stderr.trim() !== '') {
+    line(suite.stderr.trimEnd());
+  }
+
+  return suite.code;
+}
+
+/**
  * Brings the stack up and runs the suite.
  *
  * @returns {Promise<number>} the exit code of the suite, or of whatever stopped it from running
  */
 async function main() {
-  title(
-    `test:e2e${mobile ? ':mobile' : ''}${push ? ':push' : ''}${live ? ':live' : ''} — ephemeral stack`,
-  );
+  title(`${runLabel()} — ephemeral stack`);
 
   if (live) {
     warn('this run talks to the real Claude', 'it is not hermetic, and it costs money');
@@ -367,22 +526,7 @@ async function main() {
     return STACK_FAILED;
   }
 
-  // Step 0, before a single container of this run exists: what earlier runs left behind.
-  const purged = purgeStaleProjects(
-    (command, args) => run(command, args, { cwd: repoRoot, timeoutMs: STACK_TIMEOUT_MS }),
-    composeCli,
-    { prefix: E2E_PROJECT_PREFIX },
-  );
-
-  if (purged.projects.length + purged.volumes.length > 0) {
-    warn(
-      `purged ${String(purged.projects.length)} stale project(s) and ${String(purged.volumes.length)} orphan volume(s)`,
-      'left by a run that was killed',
-    );
-  }
-  for (const failure of purged.failures) {
-    warn('could not purge', failure);
-  }
+  purgeLeftovers(composeCli);
 
   const [postgres, keycloak, backend, web] = await Promise.all([
     findFreePort(),
@@ -420,52 +564,12 @@ async function main() {
 
   await bringUp(compose, urls);
 
-  // The backend applies its migrations on the way up, so there is no separate migrate step: an
-  // extra one here would be a second implementation of "bring the schema up to date".
-  // The scripted entry point is the same application with the Agent SDK replaced by a replay of a
-  // recorded run; `--live` starts the product's own. Neither is a flag inside `src/`: a switch in
-  // the product that replaces the Agent SDK is a switch that eventually ships switched on.
-  fs.rmSync(backendLogPath, { force: true });
+  await startBackend(urls, env);
 
-  const backendProc = startService(
-    'backend',
-    ['--filter', './backend', live ? 'start' : 'start:scripted'],
-    env,
-    // Only the live suite reads it. Keeping a log of every run would be a file that grows and
-    // that nothing ever looks at.
-    live ? backendLogPath : undefined,
-  );
-  await waitForHttp(`${urls.backend}/health`, {
-    proc: backendProc,
-    timeoutMs: SERVICE_TIMEOUT_MS,
-    intervalMs: 500,
-  });
-  ok('backend', urls.backend);
-
-  // Built, then served — the suite exercises the bundle a user would get, not the dev server's
-  // on-the-fly transforms. `VITE_*` is computed from this env at build time (web/env.ts), which
-  // is why the build has to happen here and not before the ports were allocated.
-  //
-  // `NODE_ENV=production` for this half only. Vite hands `process.env.NODE_ENV` straight to the
-  // bundle, and anything but `production` there ships the **development** build of React — which
-  // double-invokes every effect and is not the artefact a user runs. The backend keeps `test`.
-  const webEnv = { ...env, NODE_ENV: 'production' };
-
-  const build = run('pnpm', ['--filter', './web', 'build'], {
-    cwd: repoRoot,
-    env: webEnv,
-    timeoutMs: SERVICE_TIMEOUT_MS,
-  });
-  if (build.code !== 0) {
-    fail(`the web build failed with exit ${String(build.code)}`);
-    line(build.stdout.trim());
-    line(build.stderr.trim());
-    return build.code;
+  const buildFailure = await startWeb(urls, env);
+  if (buildFailure !== null) {
+    return buildFailure;
   }
-
-  const webProc = startService('web', ['--filter', './web', 'preview'], webEnv, undefined);
-  await waitForHttp(urls.web, { proc: webProc, timeoutMs: SERVICE_TIMEOUT_MS, intervalMs: 500 });
-  ok('web', urls.web);
 
   const bootProblem = await booted;
   if (bootProblem !== null) {
@@ -482,32 +586,7 @@ async function main() {
   line(dim('the suite reads e2e/.env; everything here is torn down when it ends'));
   line();
 
-  // `runAttached` would have been simpler, but the suite's own output is what a reader needs and
-  // both runners write their report to stdout; piping and re-emitting keeps the output *and* the
-  // exit code, which is the one thing this script must not lose.
-  appBuilt = mobile;
-  const suite = mobile
-    ? run(
-        process.execPath,
-        [path.join(repoRoot, 'scripts/mobile.mjs'), push ? 'test:e2e:push' : 'test:e2e'],
-        {
-          cwd: repoRoot,
-          env,
-          timeoutMs: 1_800_000,
-        },
-      )
-    : run('pnpm', ['--filter', './e2e', 'exec', 'playwright', 'test', ...playwrightArgs], {
-        cwd: repoRoot,
-        env,
-        timeoutMs: 1_800_000,
-      });
-
-  line(suite.stdout.trimEnd());
-  if (suite.stderr.trim() !== '') {
-    line(suite.stderr.trimEnd());
-  }
-
-  return suite.code;
+  return runSuite(env);
 }
 
 // 130 is the shell's convention for "terminated by a signal": not a test failure, and not a

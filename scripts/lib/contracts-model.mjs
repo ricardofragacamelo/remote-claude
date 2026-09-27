@@ -143,54 +143,92 @@ function resolveType(source, name, schema, collected) {
   }
 
   if (schema['const'] !== undefined) {
-    const value = schema['const'];
-    const of = declared === 'integer' ? 'integer' : declared === 'boolean' ? 'boolean' : 'string';
-    return { kind: 'const', value, of };
+    return { kind: 'const', value: schema['const'], of: constKind(declared) };
   }
 
   if (schema['enum'] !== undefined) {
-    const values = schema['enum'];
-    if (!Array.isArray(values) || values.some((entry) => typeof entry !== 'string')) {
-      throw new ContractError(source, `\`${name}\` has an enum that is not a list of strings`);
-    }
-    return { kind: 'enum', values: /** @type {string[]} */ (values) };
+    return resolveEnum(source, name, schema['enum']);
   }
 
-  switch (declared) {
-    case 'string':
-    case 'integer':
-    case 'boolean':
-      return { kind: declared };
-
-    case 'array': {
-      const items = schema['items'];
-      if (typeof items !== 'object' || items === null) {
-        throw new ContractError(source, `\`${name}\` is an array without \`items\``);
-      }
-      return {
-        kind: 'array',
-        items: resolveType(
-          source,
-          `${name}Item`,
-          /** @type {Record<string, unknown>} */ (items),
-          collected,
-        ),
-      };
-    }
-
-    case 'object': {
-      if (schema['properties'] === undefined) {
-        // An object with no declared properties is an open map — `params` of an error, say.
-        return { kind: 'record' };
-      }
-      collected.push(toInterface(source, name, schema, collected));
-      return { kind: 'object', name };
-    }
-
-    default:
-      throw new ContractError(source, `\`${name}\` has unsupported type \`${declared}\``);
+  const resolve = RESOLVERS.get(declared);
+  if (resolve === undefined) {
+    throw new ContractError(source, `\`${name}\` has unsupported type \`${declared}\``);
   }
+  return resolve(source, name, schema, collected);
 }
+
+/**
+ * The primitive a `const` is a value of; anything but an integer or a boolean is a string.
+ *
+ * @param {string} declared
+ * @returns {ConstType['of']}
+ */
+function constKind(declared) {
+  return declared === 'integer' || declared === 'boolean' ? declared : 'string';
+}
+
+/**
+ * @param {string} source
+ * @param {string} name
+ * @param {unknown} values the schema's `enum`
+ * @returns {EnumType}
+ */
+function resolveEnum(source, name, values) {
+  if (!Array.isArray(values) || values.some((entry) => typeof entry !== 'string')) {
+    throw new ContractError(source, `\`${name}\` has an enum that is not a list of strings`);
+  }
+  return { kind: 'enum', values: /** @type {string[]} */ (values) };
+}
+
+/**
+ * Resolves a schema of one declared `type`, once `const` and `enum` are ruled out.
+ *
+ * @typedef {(source: string, name: string, schema: Record<string, unknown>, collected: Interface[]) => TypeRef} Resolver
+ */
+
+/**
+ * An array, whose items resolve under the name of the array plus `Item`.
+ *
+ * @type {Resolver}
+ */
+function resolveArray(source, name, schema, collected) {
+  const items = schema['items'];
+  if (typeof items !== 'object' || items === null) {
+    throw new ContractError(source, `\`${name}\` is an array without \`items\``);
+  }
+  return {
+    kind: 'array',
+    items: resolveType(
+      source,
+      `${name}Item`,
+      /** @type {Record<string, unknown>} */ (items),
+      collected,
+    ),
+  };
+}
+
+/**
+ * An object, collected as a named interface — or an open map when it declares no properties.
+ *
+ * @type {Resolver}
+ */
+function resolveObject(source, name, schema, collected) {
+  if (schema['properties'] === undefined) {
+    // An object with no declared properties is an open map — `params` of an error, say.
+    return { kind: 'record' };
+  }
+  collected.push(toInterface(source, name, schema, collected));
+  return { kind: 'object', name };
+}
+
+/** @type {ReadonlyMap<string, Resolver>} */
+const RESOLVERS = new Map([
+  ['string', () => ({ kind: 'string' })],
+  ['integer', () => ({ kind: 'integer' })],
+  ['boolean', () => ({ kind: 'boolean' })],
+  ['array', resolveArray],
+  ['object', resolveObject],
+]);
 
 /**
  * Reads `x-required-when`, refusing a rule that could never fire.
@@ -219,45 +257,86 @@ function toConditionals(source, name, schema, required, properties) {
 
   return declared.map((entry) => {
     const rule = /** @type {Record<string, unknown>} */ (entry);
-    const field = rule['field'];
     const when = /** @type {Record<string, unknown>} */ (rule['when'] ?? {});
-    const whenField = when['field'];
-    const equals = when['equals'];
-    const because = rule['because'];
 
-    if (typeof field !== 'string' || properties[field] === undefined) {
-      throw new ContractError(
-        source,
-        `\`x-required-when\` of \`${name}\` names \`${String(field)}\`, which is never declared`,
-      );
-    }
-    if (required.has(field)) {
-      throw new ContractError(
-        source,
-        `\`${field}\` of \`${name}\` is already required, so the condition can never fire`,
-      );
-    }
-    if (typeof whenField !== 'string' || properties[whenField] === undefined) {
-      throw new ContractError(
-        source,
-        `\`x-required-when\` of \`${name}\` decides on \`${String(whenField)}\`, which is never declared`,
-      );
-    }
-    if (typeof equals !== 'string' && typeof equals !== 'boolean') {
-      throw new ContractError(
-        source,
-        `\`x-required-when\` of \`${name}\` compares \`${whenField}\` with something that is not a string or a boolean`,
-      );
-    }
-    if (typeof because !== 'string' || because === '') {
-      throw new ContractError(
-        source,
-        `\`x-required-when\` of \`${name}\` has no \`because\` — a rule nobody can review is a rule nobody maintains`,
-      );
-    }
+    const field = conditionalField(source, name, rule['field'], required, properties);
+    const { whenField, equals } = conditionalTrigger(source, name, when, properties);
+    const because = conditionalReason(source, name, rule['because']);
 
     return { field, whenField, equals, because };
   });
+}
+
+/**
+ * The field an `x-required-when` rule makes required: declared, and not already required.
+ *
+ * @param {string} source
+ * @param {string} name
+ * @param {unknown} field
+ * @param {Set<string>} required
+ * @param {Record<string, unknown>} properties
+ * @returns {string}
+ */
+function conditionalField(source, name, field, required, properties) {
+  if (typeof field !== 'string' || properties[field] === undefined) {
+    throw new ContractError(
+      source,
+      `\`x-required-when\` of \`${name}\` names \`${String(field)}\`, which is never declared`,
+    );
+  }
+  if (required.has(field)) {
+    throw new ContractError(
+      source,
+      `\`${field}\` of \`${name}\` is already required, so the condition can never fire`,
+    );
+  }
+  return field;
+}
+
+/**
+ * The `when` of an `x-required-when` rule: a declared field, compared with a string or a boolean.
+ *
+ * @param {string} source
+ * @param {string} name
+ * @param {Record<string, unknown>} when
+ * @param {Record<string, unknown>} properties
+ * @returns {Pick<Conditional, 'whenField' | 'equals'>}
+ */
+function conditionalTrigger(source, name, when, properties) {
+  const whenField = when['field'];
+  const equals = when['equals'];
+
+  if (typeof whenField !== 'string' || properties[whenField] === undefined) {
+    throw new ContractError(
+      source,
+      `\`x-required-when\` of \`${name}\` decides on \`${String(whenField)}\`, which is never declared`,
+    );
+  }
+  if (typeof equals !== 'string' && typeof equals !== 'boolean') {
+    throw new ContractError(
+      source,
+      `\`x-required-when\` of \`${name}\` compares \`${whenField}\` with something that is not a string or a boolean`,
+    );
+  }
+  return { whenField, equals };
+}
+
+/**
+ * The `because` of an `x-required-when` rule, which may not be missing or empty.
+ *
+ * @param {string} source
+ * @param {string} name
+ * @param {unknown} because
+ * @returns {string}
+ */
+function conditionalReason(source, name, because) {
+  if (typeof because !== 'string' || because === '') {
+    throw new ContractError(
+      source,
+      `\`x-required-when\` of \`${name}\` has no \`because\` — a rule nobody can review is a rule nobody maintains`,
+    );
+  }
+  return because;
 }
 
 /**
@@ -315,37 +394,9 @@ export function buildModel(envelope, messages) {
   const built = [];
 
   for (const { source, schema } of messages) {
-    const title = schema['title'];
-    const frameKind = schema['x-kind'];
-    const frameType = schema['x-type'];
-
-    if (typeof title !== 'string' || title === '') {
-      throw new ContractError(source, 'a message schema needs a `title`');
-    }
-    if (typeof frameType !== 'string' || frameType === '') {
-      throw new ContractError(source, 'a message schema needs an `x-type`');
-    }
-    if (
-      typeof frameKind !== 'string' ||
-      (!FRAME_KINDS.includes(frameKind) && !PAYLOAD_KINDS.includes(frameKind))
-    ) {
-      throw new ContractError(
-        source,
-        `\`x-kind\` is ${JSON.stringify(frameKind)}, which the envelope does not allow (${[...FRAME_KINDS, ...PAYLOAD_KINDS].join(', ')})`,
-      );
-    }
-
-    const payload = `${title}Payload`;
-    interfaces.push(toInterface(source, payload, schema, interfaces));
-
-    built.push({
-      name: title,
-      frameKind,
-      frameType,
-      frame: FRAME_KINDS.includes(frameKind),
-      description: String(schema['description'] ?? ''),
-      payload,
-    });
+    const message = toMessage(source, schema);
+    interfaces.push(toInterface(source, message.payload, schema, interfaces));
+    built.push(message);
   }
 
   const duplicate = built.find(
@@ -356,4 +407,42 @@ export function buildModel(envelope, messages) {
   }
 
   return { envelope: envelopeInterface, interfaces, messages: built };
+}
+
+/**
+ * Reads what a message schema says about the message itself, refusing one that says too little.
+ *
+ * @param {string} source
+ * @param {Record<string, unknown>} schema
+ * @returns {Message}
+ */
+function toMessage(source, schema) {
+  const title = schema['title'];
+  const frameKind = schema['x-kind'];
+  const frameType = schema['x-type'];
+
+  if (typeof title !== 'string' || title === '') {
+    throw new ContractError(source, 'a message schema needs a `title`');
+  }
+  if (typeof frameType !== 'string' || frameType === '') {
+    throw new ContractError(source, 'a message schema needs an `x-type`');
+  }
+  if (
+    typeof frameKind !== 'string' ||
+    (!FRAME_KINDS.includes(frameKind) && !PAYLOAD_KINDS.includes(frameKind))
+  ) {
+    throw new ContractError(
+      source,
+      `\`x-kind\` is ${JSON.stringify(frameKind)}, which the envelope does not allow (${[...FRAME_KINDS, ...PAYLOAD_KINDS].join(', ')})`,
+    );
+  }
+
+  return {
+    name: title,
+    frameKind,
+    frameType,
+    frame: FRAME_KINDS.includes(frameKind),
+    description: String(schema['description'] ?? ''),
+    payload: `${title}Payload`,
+  };
 }

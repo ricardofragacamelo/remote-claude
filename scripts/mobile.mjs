@@ -20,6 +20,7 @@ import process from 'node:process';
 
 import { EMULATOR_API_LEVEL, apiLevelProblem, suiteProblem } from './lib/android.mjs';
 import { COVERAGE_THRESHOLDS } from './lib/coverage.mjs';
+import { complexityVerdict } from './lib/dart-metrics.mjs';
 import { commandExists, run, runAttached } from './lib/exec.mjs';
 import { parseViolations } from './lib/import-lint.mjs';
 import { checkCoverage, readReport, reportPathOf } from './lib/lcov.mjs';
@@ -158,6 +159,52 @@ function generate() {
   // Formatting `lib` here rather than leaving it to the next `format:check` keeps the two in
   // step; it is idempotent, so covering more than what was just written costs nothing.
   return inModule('dart', ['format', 'lib']);
+}
+
+/**
+ * The analyzer, then the complexity bar the analyzer does not have.
+ *
+ * Cyclomatic complexity of at most 10 per function (D-10 of plan 05), measured over `lib/` only:
+ * the metric folds every closure into the function that holds it, so a test file's `main` would
+ * grow with each test added, and the bar would punish writing tests. ESLint counts each function
+ * apart, which is why the other two ends measure their tests and this one does not.
+ *
+ * @returns {number}
+ */
+function analyze() {
+  const analyzer = inModule('flutter', ['analyze']);
+
+  if (analyzer !== 0) {
+    return analyzer;
+  }
+
+  const result = run(
+    'dart',
+    ['run', 'dart_code_linter:metrics', 'analyze', 'lib', '--set-exit-on-violation-level=warning'],
+    { cwd: mobileDir, timeoutMs: 900_000 },
+  );
+  const verdict = complexityVerdict(result.code, `${result.stdout}\n${result.stderr}`);
+
+  if (verdict.kind === 'violations') {
+    for (const violation of verdict.violations) {
+      fail(
+        `${violation.file} ${violation.member}`,
+        `cyclomatic complexity ${String(violation.value)}`,
+      );
+    }
+    hint('split the function; the bar is D-10 of docs/plans/05-hardening-operations/decisions.md');
+    return 1;
+  }
+
+  // A tool that could not run is not a tool that found nothing.
+  if (verdict.kind === 'broken') {
+    fatal(`dart_code_linter metrics ${verdict.reason}`);
+    line(result.stderr.trim());
+    return 1;
+  }
+
+  ok('every function is within the complexity bar');
+  return 0;
 }
 
 /** @returns {number} */
@@ -510,7 +557,7 @@ const TASKS = {
   generate,
   format: () => inModule('dart', ['format', '.']),
   'format:check': () => inModule('dart', ['format', '--output=none', '--set-exit-if-changed', '.']),
-  analyze: () => inModule('flutter', ['analyze']),
+  analyze,
   arch: architecture,
   'test:unit': () => inModule('flutter', ['test', 'test/unit']),
   'test:widget': () => inModule('flutter', ['test', 'test/widget']),

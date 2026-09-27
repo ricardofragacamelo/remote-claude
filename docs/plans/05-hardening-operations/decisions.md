@@ -56,7 +56,7 @@ ou vira porta de escrita para qualquer um que alcance a máquina.
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-05 | **Qual provedor OIDC real**: tenant, audience e quem administra | conta, custo, e quem responde quando alguém perde o acesso | B-12, e a F2 inteira | 2026-09-26 · **Keycloak próprio**, hospedado junto da instalação e administrado por quem a opera — decisão do usuário; emenda na ADR-010 (o Auth0 deixa de ser o alvo); o código, agnóstico, não muda | ✅ |
-| D-06 | Quais escopos e claims são exigidos, e se a autorização local usa papel próprio | quantas pessoas usarão — depende de [D-03 do plano 01](../01-live-session/decisions.md) | B-12 | — | 🔲 |
+| D-06 | Quais escopos e claims são exigidos, e se a autorização local usa papel próprio | quantas pessoas usarão — depende de [D-03 do plano 01](../01-live-session/decisions.md) | B-12 | 2026-09-27 · **claims mínimas, sem papel**: escopos `openid profile email` (mais `offline_access` nos clientes, para o refresh); o token precisa de `sub`, `email` e `email_verified: true`, com `iss` e `aud` validados. Nenhuma role ou grupo do provedor é lida; a autorização continua **toda** local (a raiz declara quem a usa, a regra é de um usuário). Papel próprio fica para quando houver um caso que o exija | ✅ |
 
 ### D-05 — o provedor real
 
@@ -71,8 +71,26 @@ Keycloak local — teste que depende de tenant externo é flaky e acopla o CI a 
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-07 | SonarQube hospedado por nós ou SonarCloud, e quem administra o quality gate | custo e quem cuida — hoje ninguém levantou a infraestrutura | B-17 | — | 🔲 |
-| D-08 | O runner do e2e mobile: máquina dedicada, CI hospedado com virtualização, ou segue só local | custo por execução, medido na primeira rodada | B-18 | — | 🔲 |
+| D-07 | SonarQube hospedado por nós ou SonarCloud, e quem administra o quality gate | custo e quem cuida — hoje ninguém levantou a infraestrutura | B-17 | 2026-09-27 · **adiado — sem Sonar por ora**, decisão do usuário. O portão 12 fica **declarado ausente**, não fingido de verde; B-17 e S-36 saem da F3 ([progresso](progress.md#escopo-reduzido-ou-adiado)). Consequência dita: complexidade ficaria sem portão — coberta pela [D-10](#d-10--complexidade-sem-o-sonar); duplicação segue no `jscpd`, hotspot em parte no `semgrep` | ✅ |
+| D-10 | Com o Sonar adiado, quem mede complexidade, e com que limite | quantas funções de hoje passam de cada limiar: acima de 10, 27 (backend 6, web 5, scripts 13, contracts 1, mobile 2); acima de 15, 5; acima de 20, 1 | B-28 | 2026-09-27 · **complexidade ciclomática ≤ 10 por função, nas três pontas e nos scripts**, decisão do usuário: `complexity` do ESLint e a métrica `cyclomatic-complexity` do `dart_code_linter`, as duas no portão 2 (`pnpm lint`). As 27 funções de hoje são refatoradas, não suprimidas | ✅ |
+| D-08 | O runner do e2e mobile: máquina dedicada, CI hospedado com virtualização, ou segue só local | custo por execução, medido na primeira rodada | B-18 | 2026-09-27 · **segue só local, declarado**, decisão do usuário: `pnpm test:e2e:mobile` (e o `run-e2e-local`, que já cuida do emulador) continua sendo onde ele roda; nenhum job de CI. B-18 sai da F3; S-40, que é sobre jobs de CI simultâneos e não sobre o emulador, passa para B-19 | ✅ |
+
+### D-10 — complexidade sem o Sonar
+
+Nasceu da D-07: sem o Sonar, nenhum portão media complexidade. O limite é o padrão do Sonar para
+complexidade de função (10), que é o alvo que o portão substitui; valor igual ao limite passa,
+acima dele reprova, nas duas ferramentas.
+
+Por que o `dart_code_linter` e não o `solid_lints`: o `solid_lints` exige `analyzer ^14.1` e o
+`import_lint` 2.0.0, já em uso, exige `^12.1` — os plugins do analyzer são resolvidos juntos, e o
+`dart analyze` recusa subir os dois. O `dart_code_linter` aceita as duas faixas. A métrica dele
+roda pela CLI (`dart run dart_code_linter:metrics`), que sai 2 quando alguma função passa do
+limite — o plugin só registra regras, não métricas.
+
+No Dart, só `lib/` é medido: a métrica soma as closures à função que as contém, e o `main` de um
+arquivo de teste (um `test(...)` é uma closure) cresceria a cada teste escrito — o limite puniria
+escrever teste. O ESLint conta cada função à parte, e por isso os testes do backend, do web e dos
+scripts continuam medidos.
 
 ### D-08 — onde o emulador cabe
 

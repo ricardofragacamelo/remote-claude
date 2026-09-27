@@ -20,7 +20,7 @@ Os planos 06 a 16 esperam este plano fechar ([06 · D-02](../06-workbench/decisi
 F0 ████████████████████ 100%   ✅ concluída
 F1 ████████████████████ 100%   ✅ concluída
 F2 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
-F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
+F3 █████░░░░░░░░░░░░░░░  25%   🔄 em andamento
 F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 ```
 
@@ -35,9 +35,9 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 | [F0](F0-limits.md) | B-01…B-07, B-25…B-27 | 10/10 | ✅ |
 | [F1](F1-diagnostics.md) | B-11 | 1/1 | ✅ |
 | [F2](F2-identity.md) | B-12…B-15 | 0/4 | 🔲 |
-| [F3](F3-gates.md) | B-16…B-20 | 0/5 | 🔲 |
+| [F3](F3-gates.md) | B-16, B-19, B-20, B-28 | 1/4 | 🔄 |
 | [F4](F4-e2e.md) | B-21…B-23 | 0/3 | 🔲 |
-| **Total** | **B-01…B-07, B-11…B-23, B-25…B-27** | **11/23** | 🔄 |
+| **Total** | **B-01…B-07, B-11…B-16, B-19…B-23, B-25…B-28** | **12/22** | 🔄 |
 
 ---
 
@@ -45,7 +45,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 52 | 23 | 0 | 29 | 0 |
+| [Matriz](scenarios.md) | 59 | 23 | 0 | 36 | 0 |
 
 ---
 
@@ -56,7 +56,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 9 | 3 | 0 | 6 | 0 |
+| [Decisões](decisions.md) | 10 | 0 | 0 | 10 | 0 |
 
 ---
 
@@ -79,6 +79,7 @@ Um registro por **ciclo**, conforme o
 | 10 | 2026-09-27 | F0, F1 | nenhum | depois de tirar o envio de log dos clientes (escopo reduzido, abaixo) | — | **11 portões verdes** |
 | 11 | 2026-09-27 | F0 | — (e2e de push real, fora do `verify:full`) | S-53 ainda 🟡: o emulador era ligado e desligado à mão, e o `gradlew --stop` também — passo esquecível, e daemon esquecido derruba o portão 7 seguinte | `run-e2e-local.mjs` passa a cuidar do aparelho das corridas do app (`scripts/lib/emulator.mjs`): usa o que já está conectado e o deixa como estava, ou sobe a AVD sem janela em paralelo com a stack e a derruba no teardown (`adb emu kill`, depois o grupo), e para os daemons do Gradle quando o app foi compilado. `pnpm test:e2e:mobile:push` saiu 0 com S-53 provado, e não deixou emulador nem daemon do projeto | reinício do portão 1 |
 | 12 | 2026-09-27 | F0, F1 | nenhum | depois do ciclo do emulador em script | — | **11 portões verdes** |
+| 13 | 2026-09-27 | F3 · B-28 (antecipada) | nenhum no `verify:full`; antes dele, 5 — duplicação | a refatoração de `RewindBoard._copy` em duas cópias nomeadas deixou os dois construtores iguais (clone de 11 linhas); e o `scripts/mobile.mjs` fora do Prettier | `_withPoints` passa por um construtor nomeado, `RewindBoard._repointed`, que copia o lado do desfazer pela lista de inicialização; Prettier no arquivo. As 27 funções acima de 10 refatoradas — nenhuma supressão; o gerador de contrato passou a emitir guards em lista (`[…].every(Boolean)`), de complexidade fixa | **11 portões verdes** |
 
 ---
 
@@ -100,6 +101,8 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 | 2026-09-26 | `levelFor` vai de `app/bootstrap.dart` para `core/logging/log_level.dart` (o bootstrap o reexporta) | a tela de diagnóstico, que é feature, precisa dele e não pode importar `app/` | mobile |
 | 2026-09-26 | O S-25 do plano 04 (`session-resume.spec.ts`) passa a reconhecer a resposta de cada retomada pelo `correlationId` | falhou uma vez sob carga: quem junta já está anexado e pode receber o `session.started` de quem abriu antes do próprio ack — o que o protocolo permite. Os outros dois vermelhos daquela execução eram consequência da sessão que ficou aberta | teste de integração |
 | 2026-09-26 | Os testes de integração passam a acreditar numa máquina de 64 GB (`ROOMY_MACHINE`), salvo a suíte que é sobre a capacidade | com o limite derivado da RAM, a capacidade de uma suíte dependeria da máquina que a roda | `backend/test/support/app/test-app.ts` |
+| 2026-09-27 | D-06, D-07 e D-08 decididas pelo usuário | eram as últimas em aberto | [decisions.md](decisions.md): claims mínimas sem papel (B-12 ganha S-61); Sonar adiado e e2e mobile só local (B-17, B-18 e S-36 saem; S-40 vai para B-19); [11-validation-protocol](../../architecture/shared/11-validation-protocol.md), [09-code-quality](../../architecture/shared/09-code-quality.md), [10-definition-of-done](../../architecture/shared/10-definition-of-done.md) e [08-authentication](../../architecture/shared/08-authentication.md) |
+| 2026-09-27 | **D-10: complexidade ciclomática ≤ 10 por função, no portão 2** — B-28 entra na F3 e é **antecipada** | pedido do usuário, como compensação da D-07: sem o Sonar, nenhum portão media complexidade. Limite escolhido pelo usuário com a medição na mão (27 funções acima de 10) | `eslint.config.mjs` (`complexity`), `mobile/analysis_options.yaml` e `pubspec.yaml` (`dart_code_linter`), `scripts/mobile.mjs analyze` e `scripts/lib/dart-metrics.mjs`; S-62…S-68; [09-code-quality](../../architecture/shared/09-code-quality.md), [11-validation-protocol](../../architecture/shared/11-validation-protocol.md), [10-definition-of-done](../../architecture/shared/10-definition-of-done.md) |
 | 2026-09-27 | **O envio de log do web e do app ao backend sai do escopo** — B-08, B-09, B-10 e, na F4, B-24; S-15…S-20, S-22 e S-46; D-03 e D-04 descartadas; o `LogBuffer`/`beaconShipper` do web e o `LogBuffer` do app, herdados do bootstrap, removidos | decisão do usuário: o log do cliente fica no cliente, e o `traceId` que o erro mostra e o backend grava é o que liga os dois lados. Sai também o que só existia para isso: o guard de bearer opcional e a redação por forma de texto. Fica a correção do filtro (corpo acima do limite do parser → `413`, não `500`), que é geral e ganhou testes próprios | F1 vira "Diagnóstico" (só B-11), F4, [matriz](scenarios.md), [decisions.md](decisions.md), [plano 16](../16-logs-and-diagnostics/README.md), [03-logging](../../architecture/shared/03-logging.md) e as docs de logging de web e mobile |
 
 ---
@@ -111,6 +114,8 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 | Data | O que saiu | Por quê | Para onde foi |
 |---|---|---|---|
 | 2026-09-26 | B-10: persistir o buffer de log do app em disco antes do background, e enviar só em Wi-Fi por padrão — **superado em 2026-09-27** pela linha abaixo | exigiam plugins nativos novos | ia para o plano 17; não vai mais |
+| 2026-09-27 | B-17 (quality gate do SonarQube) e S-36 | [D-07](decisions.md), decisão do usuário: sem infraestrutura de Sonar por ora. O portão 12 fica declarado ausente; **complexidade** fica sem portão | **a lugar nenhum por enquanto** — volta como tarefa quando alguém decidir hospedar o Sonar |
+| 2026-09-27 | B-18 (job de e2e mobile no CI) | [D-08](decisions.md), decisão do usuário: o e2e mobile segue local, por `pnpm test:e2e:mobile`, sem runner | a lugar nenhum — [06-testing-strategy](../../architecture/shared/06-testing-strategy.md#portões-de-ci) já o declara sob demanda |
 | 2026-09-27 | B-08, B-09, B-10 e B-24 — o envio de log do web e do app ao backend, o endpoint que o recebia e o e2e que o provava | decisão do usuário: não é necessário. O log do cliente fica no cliente; o `traceId` liga um erro na tela ao log do backend | **a lugar nenhum** — removido do código e dos planos. O [plano 16](../16-logs-and-diagnostics/README.md), que lia essas linhas, foi ajustado para mostrar só as do backend |
 
 ---
@@ -126,8 +131,9 @@ plano assume. Item herdado sem dono vira item esquecido.
 | `LogBuffer` do app sem endpoint que o receba | **removido** em 2026-09-27 — o envio saiu do escopo |
 | Tela de diagnóstico que liga `debug` em release | B-11 |
 | Logout no `end_session_endpoint` (a metade do web) | B-15 |
-| `osv-scanner` e o quality gate do SonarQube | B-16, B-17 |
-| Job de e2e mobile no CI | B-18 |
+| `osv-scanner` | B-16 |
+| Quality gate do SonarQube | **adiado** em 2026-09-27 ([D-07](decisions.md)) — portão 12 declarado ausente |
+| Job de e2e mobile no CI | **não será feito** por ora ([D-08](decisions.md)) — segue local |
 
 ---
 
@@ -154,7 +160,7 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 | R-02 | Limite derivado da RAM pode ficar otimista | ✅ mitigado | fração da RAM **total**, piso e teto configuráveis, limite do cgroup respeitado; fórmula pura e testada (S-01), capacidade dita no boot |
 | R-03 | Varredura de órfã pode matar processo alheio | ✅ mitigado | casa por marca própria **e** por backend morto; S-07 prova em processos reais que o sem marca e o de backend vivo ficam |
 | R-04 | Ingestão de log aceita texto do cliente | ✅ descartado | a ingestão saiu do escopo em 2026-09-27 |
-| R-05 | Sonar e runner de e2e mobile exigem infraestrutura | 🔲 aberto | enquanto não existir, fica declarado ausente — nunca fingido verde |
+| R-05 | Sonar e runner de e2e mobile exigem infraestrutura | ✅ **decidido** 2026-09-27 | nenhum dos dois é levantado ([D-07, D-08](decisions.md)); ficam declarados ausentes — nunca fingidos verdes |
 
 ---
 

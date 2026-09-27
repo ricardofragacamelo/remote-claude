@@ -36,7 +36,7 @@ Rodam nesta ordem: o mais barato primeiro, para o feedback chegar rápido.
 | Lint | ESLint (flat config) | ESLint (flat config) | `dart analyze` |
 | Tipagem | `tsc --noEmit` (strict) | `tsc --noEmit` (strict) | analyzer em modo strict |
 | Arquitetura | `dependency-cruiser` | ESLint `no-restricted-imports` por escopo | `import_lint` |
-| Complexidade | SonarQube | SonarQube | SonarQube (plugin Dart) |
+| Complexidade | ESLint `complexity` (≤ 10) | ESLint `complexity` (≤ 10) | `dart_code_linter` metrics (≤ 10), no `mobile.mjs analyze` |
 | **Linhas repetidas** | SonarQube + `jscpd` | SonarQube + `jscpd` | SonarQube + `jscpd` (tokeniza Dart) |
 | Dependência vulnerável | `pnpm audit` | idem | `dart pub outdated` |
 | Segredo commitado | `gitleaks` | `gitleaks` | `gitleaks` |
@@ -44,6 +44,16 @@ Rodam nesta ordem: o mais barato primeiro, para o feedback chegar rápido.
 
 **SonarQube é o portão agregador**, comum aos três. É onde complexidade, duplicação,
 cobertura e *security hotspot* viram um único veredito por PR.
+
+> **Hoje ele não existe.** Foi adiado em 2026-09-27 ([D-07 do plano 05](../../plans/05-hardening-operations/decisions.md)):
+> duplicação segue no `jscpd`, cobertura no portão 7, padrão inseguro no `semgrep`, e a
+> **complexidade ciclomática** (≤ 10 por função) está no portão 2, o lint — ESLint nas duas
+> pontas TypeScript e nos scripts, `dart_code_linter` no app ([D-10 do plano 05](../../plans/05-hardening-operations/decisions.md#d-10--complexidade-sem-o-sonar)). As demais linhas
+> "SonarQube" desta página descrevem o alvo, não o que roda.
+>
+> Uma assimetria, dita: no Dart só `lib/` é medido. A métrica soma as closures à função que as
+> contém, e o `main` de um arquivo de teste cresceria a cada teste escrito. O ESLint conta cada
+> função à parte, por isso os testes das outras pontas são medidos.
 
 ---
 
@@ -150,7 +160,7 @@ Roda por PR e **bloqueia o merge**. Os limites valem para os três módulos:
 |---|---|---|
 | Cobertura em código novo | **≥ 90 %**, nas 4 dimensões | [cobertura](06-testing-strategy.md#cobertura) |
 | **Duplicação (linhas repetidas)** | **≤ 3 %** | ver [Linhas repetidas](#linhas-repetidas) |
-| Complexidade ciclomática | ≤ 10 por função | acima disso não se testa nem se lê |
+| Complexidade ciclomática | ≤ 10 por função | acima disso não se testa nem se lê — **verificado hoje no portão 2** ([D-10 do plano 05](../../plans/05-hardening-operations/decisions.md#d-10--complexidade-sem-o-sonar)) |
 | Profundidade de aninhamento | ≤ 4 | |
 | Tamanho de função | ≤ 50 linhas | |
 | Parâmetros | ≤ 4 | mais que isso, é um objeto |
@@ -272,7 +282,7 @@ atualização de segurança em prioridade.
 | **Pre-commit** (`husky` + `lint-staged`) | formatação, lint e `gitleaks` nos arquivos tocados | segundos, pega 80 % |
 | **Pre-push** | typecheck + unit + `jscpd` | evita CI vermelho por descuido |
 | **CI, todo push** | lint, typecheck, unit, cobertura, regras de arquitetura, i18n | |
-| **CI, todo PR** | tudo acima + integração + e2e + SonarQube + segurança | |
+| **CI, todo PR** | tudo acima + integração + e2e + segurança (SonarQube: ausente, [D-07](../../plans/05-hardening-operations/decisions.md)) | |
 | **Nightly** | `semgrep` completo e `smoke-live` | checagem cara, fora do caminho crítico |
 
 Pre-commit **não** roda a suíte inteira. Hook lento é hook que o time aprende a pular com

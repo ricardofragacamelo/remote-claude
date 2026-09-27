@@ -22,7 +22,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 02-mobile-approval       ████████████████████ 100%   ✅ concluído
 03-rules-and-audit       ████████████████████ 100%   ✅ concluído
 04-transcript-and-resume ████████████████████ 100%   ✅ concluído
-05-hardening-operations  ██████████░░░░░░░░░░  48%   🔄 em andamento
+05-hardening-operations  ███████████░░░░░░░░░  55%   🔄 em andamento
 06-workbench             ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 07-explorer-and-editor   ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 08-claude-panel          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
@@ -50,7 +50,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [02 — Aprovação pelo celular](02-mobile-approval/README.md) | 5/5 | 34/34 | 89/89 | 25/26 | ✅ |
 | [03 — Regras e trilha](03-rules-and-audit/README.md) | 5/5 | 23/23 | 92/92 | 22/22 | ✅ |
 | [04 — Histórico e retomada](04-transcript-and-resume/README.md) | 6/6 | 25/25 | 88/88 | 7/7 | ✅ |
-| [05 — Endurecimento e operação](05-hardening-operations/README.md) | 2/5 | 11/23 | 29/52 | 6/9 | 🔄 |
+| [05 — Endurecimento e operação](05-hardening-operations/README.md) | 2/5 | 12/22 | 36/59 | 10/10 | 🔄 |
 | [06 — Workbench](06-workbench/README.md) | 0/7 | 0/39 | 0/166 | 3/17 | 🔲 |
 | [07 — Explorer e editor](07-explorer-and-editor/README.md) | 0/9 | 0/61 | 0/360 | 0/20 | 🔲 |
 | [08 — Painel do Claude](08-claude-panel/README.md) | 0/7 | 0/58 | 0/272 | 0/23 | 🔲 |
@@ -63,7 +63,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [15 — Dispositivos](15-devices/README.md) | 0/4 | 0/28 | 0/118 | 0/12 | 🔲 |
 | [16 — Logs e diagnóstico](16-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 2/16 | 🔲 |
 | [17 — Distribuição](17-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/7 | 🔲 |
-| **Total** | **33/100** | **192/646** | **533/2651** | **94/273** | 🔄 |
+| **Total** | **33/100** | **193/645** | **540/2658** | **98/274** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -294,7 +294,7 @@ ficou órfão:
 | Redutor de `message.delta` por `messageId` | [01 · B-32](01-live-session/F5-web-session.md) |
 | `e2e/smoke-live/` vazio | [01 · B-41](01-live-session/F6-e2e.md) |
 | Tela de device, cenários de auth do mobile, teto do Gradle | [02](02-mobile-approval/progress.md) |
-| `LogBuffer` sem endpoint, tela de diagnóstico, `osv-scanner`, Sonar, CI do e2e mobile | [05](05-hardening-operations/progress.md) |
+| `LogBuffer` sem endpoint, tela de diagnóstico, `osv-scanner` (Sonar e CI do e2e mobile adiados — 05 · D-07, D-08) | [05](05-hardening-operations/progress.md) |
 
 ---
 

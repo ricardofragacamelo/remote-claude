@@ -112,6 +112,18 @@ import_lint:
       from: "package:remote_claude/features/**"
       except: []
 
+# Cyclomatic complexity, at most 10 per function — the same bar ESLint's `complexity` holds on the
+# other two ends (D-10 of plan 05). `dart analyze` has no such rule of its own, so the metric is
+# `dart_code_linter`'s, run by `node scripts/mobile.mjs analyze` right after the analyzer.
+dart_code_linter:
+  metrics:
+    cyclomatic-complexity: 10
+  metrics-exclude:
+    # Territory of a generator, the same as the analyzer's exclusions below.
+    - lib/**/*.g.dart
+    - lib/**/*.freezed.dart
+    - lib/l10n/generated/**
+
 analyzer:
   language:
     strict-casts: true

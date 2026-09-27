@@ -37,6 +37,14 @@ class RewindBoard extends Equatable {
     this.refreshFailure,
   });
 
+  /// [from] with the points read again, and its undo side kept as it was.
+  RewindBoard._repointed(RewindBoard from, this.checkpoints, this.refreshFailure)
+    : pendingPromptId = from.pendingPromptId,
+      wasNotSent = from.wasNotSent,
+      refusal = from.refusal,
+      outcome = from.outcome,
+      incomplete = from.incomplete;
+
   /// Newest first.
   final List<Checkpoint> checkpoints;
 
@@ -62,28 +70,32 @@ class RewindBoard extends Equatable {
   /// Whether an undo is in flight.
   bool get isPending => pendingPromptId != null;
 
-  RewindBoard _copy({
-    List<Checkpoint>? checkpoints,
+  /// This board with the undo side replaced by what is passed, and the points kept.
+  ///
+  /// What is not passed is forgotten — the point in flight included, so a call without
+  /// [pendingPromptId] settles the undo. One call forgets the last answer and records the new one.
+  RewindBoard _answered({
     String? pendingPromptId,
-    bool? wasNotSent,
+    bool wasNotSent = false,
     Failure? refusal,
     RewindOutcome? outcome,
     Failure? incomplete,
-    Failure? refreshFailure,
-    bool settled = false,
-    bool clearAnswer = false,
-    bool clearRefreshFailure = false,
   }) => RewindBoard(
-    checkpoints: checkpoints ?? this.checkpoints,
-    // What is passed wins; what is cleared is cleared before it, so one call can forget the last
-    // answer and record the new one.
-    pendingPromptId: pendingPromptId ?? (settled ? null : this.pendingPromptId),
-    wasNotSent: wasNotSent ?? (!clearAnswer && this.wasNotSent),
-    refusal: refusal ?? (clearAnswer ? null : this.refusal),
-    outcome: outcome ?? (clearAnswer ? null : this.outcome),
-    incomplete: incomplete ?? (clearAnswer ? null : this.incomplete),
-    refreshFailure: clearRefreshFailure ? null : refreshFailure ?? this.refreshFailure,
+    checkpoints: checkpoints,
+    pendingPromptId: pendingPromptId,
+    wasNotSent: wasNotSent,
+    refusal: refusal,
+    outcome: outcome,
+    incomplete: incomplete,
+    refreshFailure: refreshFailure,
   );
+
+  /// This board with the points read again, and the undo side kept.
+  ///
+  /// [refreshFailure] is why the reading failed, when it did — and then [checkpoints] are the last
+  /// ones read. A reading that worked forgets the failure of the one before.
+  RewindBoard _withPoints(List<Checkpoint> checkpoints, {Failure? refreshFailure}) =>
+      RewindBoard._repointed(this, checkpoints, refreshFailure);
 
   @override
   List<Object?> get props => <Object?>[
@@ -130,8 +142,8 @@ class RewindController extends _$RewindController {
 
     state = AsyncValue<RewindBoard>.data(
       _commandId == null
-          ? board._copy(clearAnswer: true, wasNotSent: true)
-          : board._copy(clearAnswer: true, pendingPromptId: promptId),
+          ? board._answered(wasNotSent: true)
+          : board._answered(pendingPromptId: promptId),
     );
   }
 
@@ -140,7 +152,8 @@ class RewindController extends _$RewindController {
     final RewindBoard? board = state.value;
 
     if (board != null) {
-      state = AsyncValue<RewindBoard>.data(board._copy(clearAnswer: true));
+      // The answer goes; an undo still in flight does not.
+      state = AsyncValue<RewindBoard>.data(board._answered(pendingPromptId: board.pendingPromptId));
     }
   }
 
@@ -158,7 +171,7 @@ class RewindController extends _$RewindController {
       // read again either way — but only the one this sheet asked for is its outcome to show.
       case EventReceived(event: FilesRewound(:final RewindOutcome outcome)):
         if (outcome.promptId == board.pendingPromptId) {
-          _publish(board._copy(outcome: outcome, settled: true));
+          _publish(board._answered(outcome: outcome));
         }
         unawaited(_refresh());
 
@@ -168,11 +181,11 @@ class RewindController extends _$RewindController {
 
       case CommandRefused(:final String commandId, :final Failure failure)
           when commandId == _commandId && board.isPending:
-        _publish(board._copy(refusal: failure, settled: true));
+        _publish(board._answered(refusal: failure));
 
       // The session saying the undo it just reported could not put every file back.
       case SessionFailed(:final Failure failure) when board.outcome?.failed.isNotEmpty ?? false:
-        _publish(board._copy(incomplete: failure));
+        _publish(board._answered(outcome: board.outcome, incomplete: failure));
 
       case EventReceived():
       case StreamGap():
@@ -188,12 +201,12 @@ class RewindController extends _$RewindController {
 
     try {
       final List<Checkpoint> checkpoints = await _read();
+      _settle(reading, (RewindBoard now) => now._withPoints(checkpoints));
+    } on Object catch (error) {
       _settle(
         reading,
-        (RewindBoard now) => now._copy(checkpoints: checkpoints, clearRefreshFailure: true),
+        (RewindBoard now) => now._withPoints(now.checkpoints, refreshFailure: asFailure(error)),
       );
-    } on Object catch (error) {
-      _settle(reading, (RewindBoard now) => now._copy(refreshFailure: asFailure(error)));
     }
   }
 

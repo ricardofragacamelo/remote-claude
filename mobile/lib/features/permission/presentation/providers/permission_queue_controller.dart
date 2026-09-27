@@ -103,19 +103,38 @@ class PermissionQueueController extends _$PermissionQueueController {
     // still a second tap (S-48).
     _update(state.markSending(requestId));
 
-    if (decision == PermissionDecision.allow) {
-      final ApprovalGate gate = await ref.read(gateApprovalProvider)(lockReason);
+    // Only a yes asks the lock: a no can only make things safer.
+    final AnswerResult? stopped = decision == PermissionDecision.allow
+        ? await _unlock(requestId, lockReason)
+        : null;
 
-      if (!ref.mounted) {
-        return AnswerResult.ignored;
-      }
+    return stopped ?? _send(requestId, decision, scope);
+  }
 
-      if (gate != ApprovalGate.open) {
-        _update(state.release(requestId));
-        return gate == ApprovalGate.noLock ? AnswerResult.noLock : AnswerResult.lockRefused;
-      }
+  /// Asks the owner of the phone to confirm it is them, before a yes on [requestId] leaves.
+  ///
+  /// @returns why the yes stops here, or null when it may go on
+  Future<AnswerResult?> _unlock(String requestId, String lockReason) async {
+    final ApprovalGate gate = await ref.read(gateApprovalProvider)(lockReason);
+
+    if (!ref.mounted) {
+      return AnswerResult.ignored;
     }
 
+    switch (gate) {
+      case ApprovalGate.open:
+        return null;
+      case ApprovalGate.noLock:
+        _update(state.release(requestId));
+        return AnswerResult.noLock;
+      case ApprovalGate.refused:
+        _update(state.release(requestId));
+        return AnswerResult.lockRefused;
+    }
+  }
+
+  /// Sends [decision] on [requestId] to the frame the request is on **now**.
+  AnswerResult _send(String requestId, PermissionDecision decision, PermissionScope scope) {
     // Read again after the prompt: the request may have been answered elsewhere while the owner
     // was touching the sensor, and a reconnect may have re-delivered it under another frame.
     final String? frameId = state.cardOf(requestId)?.frameId;

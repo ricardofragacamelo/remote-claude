@@ -81,83 +81,160 @@ export function lineAt(source, index) {
  * @returns {string}
  */
 export function withoutComments(source, blankStrings = false) {
-  /** @type {string[]} */
-  const out = [];
-  /** @type {'code' | 'line' | 'block' | 'single' | 'double' | 'template' | 'regex'} */
-  let state = 'code';
-  let previous = '';
+  /** @type {Scanner} */
+  const scanner = { source, blankStrings, out: [], state: 'code', previous: '' };
 
-  for (let index = 0; index < source.length; index += 1) {
-    const character = source[index] ?? '';
-    const next = source[index + 1] ?? '';
-
-    if (state === 'code') {
-      if (character === '/' && (next === '/' || next === '*')) {
-        state = next === '/' ? 'line' : 'block';
-        out.push(' ', ' ');
-        index += 1;
-        continue;
-      }
-
-      if (character === '/' && startsAValue(previous)) {
-        state = 'regex';
-      } else if (character === "'" || character === '"' || character === '`') {
-        state = character === "'" ? 'single' : character === '"' ? 'double' : 'template';
-      }
-
-      out.push(character);
-      if (character.trim() !== '') {
-        previous = character;
-      }
-      continue;
-    }
-
-    if (state === 'line' || state === 'block') {
-      const ends = state === 'line' ? character === '\n' : character === '*' && next === '/';
-
-      if (ends && state === 'block') {
-        state = 'code';
-        out.push(' ', ' ');
-        index += 1;
-        continue;
-      }
-      if (ends) {
-        state = 'code';
-      }
-
-      out.push(character === '\n' ? '\n' : ' ');
-      continue;
-    }
-
-    // Inside a string or a regular expression. An escape swallows the next character, so a
-    // closing quote that is escaped does not close anything.
-    if (character === '\\') {
-      const escaped = source[index + 1] ?? '';
-      out.push(blankStrings ? ' ' : character, blankStrings && escaped !== '\n' ? ' ' : escaped);
-      index += 1;
-      continue;
-    }
-
-    const closes =
-      (state === 'single' && character === "'") ||
-      (state === 'double' && character === '"') ||
-      (state === 'template' && character === '`') ||
-      (state === 'regex' && character === '/') ||
-      // An unterminated string does not run past its line, and neither should this.
-      (state !== 'template' && character === '\n');
-
-    // The delimiters stay even when the contents go, so the result still parses as code to a
-    // reader — and so a lost quote cannot make the next line look like the inside of a string.
-    out.push(blankStrings && !closes ? ' ' : character);
-
-    if (closes) {
-      state = 'code';
-      previous = character === '\n' ? previous : 'x';
-    }
+  for (let index = 0; index < source.length;) {
+    index += SCANNERS[scanner.state](scanner, index);
   }
 
-  return out.join('');
+  return scanner.out.join('');
 }
+
+/**
+ * Where the scan of [withoutComments] stands: what it has written, what it is inside of, and the
+ * last character of code that was not whitespace.
+ *
+ * @typedef {'code' | 'line' | 'block' | 'single' | 'double' | 'template' | 'regex'} ScanState
+ * @typedef {object} Scanner
+ * @property {string} source
+ * @property {boolean} blankStrings
+ * @property {string[]} out
+ * @property {ScanState} state
+ * @property {string} previous
+ */
+
+/**
+ * One state of the scan: reads the character at [index], writes what it becomes, may move the
+ * scan to another state, and answers how many characters it consumed.
+ *
+ * @typedef {(scanner: Scanner, index: number) => number} ScanStep
+ */
+
+/** @type {ReadonlyMap<string, ScanState>} */
+const OPENING_QUOTES = new Map([
+  ["'", 'single'],
+  ['"', 'double'],
+  ['`', 'template'],
+]);
+
+/** @type {Readonly<Record<string, string>>} */
+const CLOSING_DELIMITERS = { single: "'", double: '"', template: '`', regex: '/' };
+
+/**
+ * Code: a comment, a string or a regular expression may begin here; anything else is copied.
+ *
+ * @type {ScanStep}
+ */
+function scanCode(scanner, index) {
+  const character = scanner.source.charAt(index);
+  const next = scanner.source.charAt(index + 1);
+
+  if (character === '/' && (next === '/' || next === '*')) {
+    scanner.state = next === '/' ? 'line' : 'block';
+    scanner.out.push(' ', ' ');
+    return 2;
+  }
+
+  if (character === '/' && startsAValue(scanner.previous)) {
+    scanner.state = 'regex';
+  } else {
+    scanner.state = OPENING_QUOTES.get(character) ?? 'code';
+  }
+
+  scanner.out.push(character);
+  if (character.trim() !== '') {
+    scanner.previous = character;
+  }
+  return 1;
+}
+
+/**
+ * A `//` comment, which the end of its line closes.
+ *
+ * @type {ScanStep}
+ */
+function scanLineComment(scanner, index) {
+  const character = scanner.source.charAt(index);
+
+  if (character === '\n') {
+    scanner.state = 'code';
+  }
+  scanner.out.push(character === '\n' ? '\n' : ' ');
+  return 1;
+}
+
+/**
+ * A block comment, which only its `*` + `/` closes.
+ *
+ * @type {ScanStep}
+ */
+function scanBlockComment(scanner, index) {
+  const character = scanner.source.charAt(index);
+
+  if (character === '*' && scanner.source[index + 1] === '/') {
+    scanner.state = 'code';
+    scanner.out.push(' ', ' ');
+    return 2;
+  }
+  scanner.out.push(character === '\n' ? '\n' : ' ');
+  return 1;
+}
+
+/**
+ * An escape inside a string or a regular expression: the backslash and the character it swallows,
+ * blanked together — except a newline, which always stays one.
+ *
+ * @type {ScanStep}
+ */
+function scanEscape(scanner, index) {
+  const { source, blankStrings, out } = scanner;
+  const escaped = source.charAt(index + 1);
+
+  out.push(blankStrings ? ' ' : '\\', blankStrings && escaped !== '\n' ? ' ' : escaped);
+  return 2;
+}
+
+/**
+ * Inside a string or a regular expression. An escape swallows the next character, so a closing
+ * quote that is escaped does not close anything.
+ *
+ * @type {ScanStep}
+ */
+function scanLiteral(scanner, index) {
+  const { source, blankStrings, out, state } = scanner;
+  const character = source.charAt(index);
+
+  if (character === '\\') {
+    return scanEscape(scanner, index);
+  }
+
+  const closes =
+    character === CLOSING_DELIMITERS[state] ||
+    // An unterminated string does not run past its line, and neither should this.
+    (state !== 'template' && character === '\n');
+
+  // The delimiters stay even when the contents go, so the result still parses as code to a
+  // reader — and so a lost quote cannot make the next line look like the inside of a string.
+  out.push(blankStrings && !closes ? ' ' : character);
+
+  if (closes) {
+    scanner.state = 'code';
+    scanner.previous = character === '\n' ? scanner.previous : 'x';
+  }
+  return 1;
+}
+
+/** @type {Readonly<Record<ScanState, ScanStep>>} */
+const SCANNERS = {
+  code: scanCode,
+  line: scanLineComment,
+  block: scanBlockComment,
+  single: scanLiteral,
+  double: scanLiteral,
+  template: scanLiteral,
+  regex: scanLiteral,
+};
 
 /**
  * Whether a `/` after this character begins a regular expression rather than a division.

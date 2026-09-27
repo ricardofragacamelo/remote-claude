@@ -375,6 +375,65 @@ async function writeCatalogue(query) {
   ok(CATALOGUE.name, `${String(commands.length)} commands`);
 }
 
+/**
+ * Records one scenario and writes its fixture, or reports why it could not — which fails the run
+ * without stopping the scenarios after it.
+ *
+ * @param {(params: unknown) => AsyncIterable<unknown> & { close(): void }} query
+ * @param {(typeof SCENARIOS)[number]} scenario
+ */
+async function recordScenario(query, scenario) {
+  info(`${bold(scenario.name)} — ${dim(scenario.why)}`);
+
+  const started = Date.now();
+  const workspace = makeWorkspace({});
+  fs.rmSync(workspace, { recursive: true, force: true });
+
+  let result;
+  try {
+    result = await record(query, scenario);
+  } catch (error) {
+    fail(`${scenario.name} failed`, String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  // The `system:init` message is the only one that reports the working directory, and it is
+  // what the throwaway path is normalised out of.
+  const init = /** @type {{ cwd?: string } | undefined} */ (
+    result.messages.find((m) => m !== null && typeof m === 'object' && 'cwd' in m)
+  );
+  const cwd = String(init?.cwd ?? '');
+
+  const fixture = {
+    $comment:
+      'Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. ' +
+      'Do not edit by hand — re-record instead. See docs/plans/01-live-session/F2-session-runtime.md.',
+    name: scenario.name,
+    why: scenario.why,
+    prompt: scenario.prompt,
+    recordedAt: new Date().toISOString().slice(0, 10),
+    sdkVersion: sdkVersion(),
+    counts: {
+      messages: result.messages.length,
+      preToolUse: result.preToolUse.length,
+      canUseTool: result.canUseTool.length,
+    },
+    preToolUse: normalise(result.preToolUse, cwd),
+    canUseTool: normalise(result.canUseTool, cwd),
+    stderr: result.stderr,
+    messages: normalise(result.messages, cwd),
+  };
+
+  await writeFixture(path.join(FIXTURES_DIR, `${scenario.name}.json`), fixture);
+
+  ok(
+    scenario.name,
+    `${String(fixture.counts.messages)} messages · ${String(fixture.counts.preToolUse)} hooks · ` +
+      `${String(fixture.counts.canUseTool)} canUseTool · ${String(Date.now() - started)}ms`,
+  );
+}
+
 async function main() {
   if (process.argv.includes('--normalise')) {
     await normaliseCommitted();
@@ -408,55 +467,7 @@ async function main() {
   fs.mkdirSync(FIXTURES_DIR, { recursive: true });
 
   for (const scenario of chosen) {
-    info(`${bold(scenario.name)} — ${dim(scenario.why)}`);
-
-    const started = Date.now();
-    const workspace = makeWorkspace({});
-    fs.rmSync(workspace, { recursive: true, force: true });
-
-    let result;
-    try {
-      result = await record(sdk.query, scenario);
-    } catch (error) {
-      fail(`${scenario.name} failed`, String(error));
-      process.exitCode = 1;
-      continue;
-    }
-
-    // The `system:init` message is the only one that reports the working directory, and it is
-    // what the throwaway path is normalised out of.
-    const init = /** @type {{ cwd?: string } | undefined} */ (
-      result.messages.find((m) => m !== null && typeof m === 'object' && 'cwd' in m)
-    );
-    const cwd = String(init?.cwd ?? '');
-
-    const fixture = {
-      $comment:
-        'Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. ' +
-        'Do not edit by hand — re-record instead. See docs/plans/01-live-session/F2-session-runtime.md.',
-      name: scenario.name,
-      why: scenario.why,
-      prompt: scenario.prompt,
-      recordedAt: new Date().toISOString().slice(0, 10),
-      sdkVersion: sdkVersion(),
-      counts: {
-        messages: result.messages.length,
-        preToolUse: result.preToolUse.length,
-        canUseTool: result.canUseTool.length,
-      },
-      preToolUse: normalise(result.preToolUse, cwd),
-      canUseTool: normalise(result.canUseTool, cwd),
-      stderr: result.stderr,
-      messages: normalise(result.messages, cwd),
-    };
-
-    await writeFixture(path.join(FIXTURES_DIR, `${scenario.name}.json`), fixture);
-
-    ok(
-      scenario.name,
-      `${String(fixture.counts.messages)} messages · ${String(fixture.counts.preToolUse)} hooks · ` +
-        `${String(fixture.counts.canUseTool)} canUseTool · ${String(Date.now() - started)}ms`,
-    );
+    await recordScenario(sdk.query, scenario);
   }
 
   if (catalogue) {

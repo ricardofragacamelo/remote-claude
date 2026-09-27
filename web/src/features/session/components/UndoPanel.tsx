@@ -6,6 +6,8 @@ import { ErrorState } from '@/shared/components/ErrorState';
 import { Button } from '@/shared/components/ui/button';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { useUndo } from '../hooks/useUndo';
+import type { Undo } from '../hooks/useUndo';
+import type { Checkpoint } from '../types/checkpoint';
 import { Disclosure } from './Disclosure';
 import { RewindReport } from './RewindReport';
 import { UndoConfirmation } from './UndoConfirmation';
@@ -41,8 +43,6 @@ function UndoPoints({ sessionId }: UndoPanelProps): React.JSX.Element {
   const { t } = useTranslation();
   const [chosen, setChosen] = useState<string | null>(null);
   const undo = useUndo(sessionId);
-  const canConfirm = undo.availability === 'ready' && !undo.isRewinding;
-  const showsList = !undo.isLoading && undo.error === null;
 
   return (
     <>
@@ -54,82 +54,134 @@ function UndoPoints({ sessionId }: UndoPanelProps): React.JSX.Element {
         </p>
       ) : (
         <>
-          {undo.availability === 'busy' && (
-            <p className="text-sm" role="note">
-              {t('undo.panel.busy')}
-            </p>
-          )}
-
-          {undo.isRewinding && (
-            <p className="text-sm" role="status">
-              {t('undo.panel.rewinding')}
-            </p>
-          )}
-
-          {undo.refusal !== null && <ErrorState error={undo.refusal} />}
-          {undo.incomplete !== null && <ErrorState error={undo.incomplete} />}
-          {undo.outcome !== null && <RewindReport outcome={undo.outcome} />}
-
-          {undo.isLoading && (
-            <Skeleton className="h-16 w-full" aria-label={t('undo.panel.loading')} />
-          )}
-
-          {undo.error !== null && <ErrorState error={undo.error} onRetry={undo.reload} />}
-
-          {showsList && undo.checkpoints.length === 0 && (
-            <EmptyState
-              title={t('undo.panel.emptyTitle')}
-              description={t('undo.panel.emptyDescription')}
-            />
-          )}
-
-          {showsList && undo.checkpoints.length > 0 && (
-            <ul className="flex flex-col gap-2" aria-label={t('undo.panel.title')}>
-              {undo.checkpoints.map((checkpoint) => {
-                const label = checkpoint.label ?? t('undo.panel.untitled');
-
-                return (
-                  <li key={checkpoint.promptId} className="flex flex-col gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      className="h-auto w-full justify-start py-2"
-                      aria-expanded={chosen === checkpoint.promptId}
-                      disabled={undo.isRewinding}
-                      onClick={() => {
-                        setChosen(checkpoint.promptId);
-                      }}
-                    >
-                      <span className="flex flex-col items-start gap-0.5 text-left">
-                        <span className="text-sm font-medium">{label}</span>
-                        <span className="text-xs opacity-70">
-                          {t('undo.panel.startedAt', { at: checkpoint.at })}
-                        </span>
-                      </span>
-                    </Button>
-
-                    {chosen === checkpoint.promptId && (
-                      <UndoConfirmation
-                        checkpoint={checkpoint}
-                        label={label}
-                        canConfirm={canConfirm}
-                        onConfirm={() => {
-                          setChosen(null);
-                          undo.rewind(checkpoint.promptId);
-                        }}
-                        onCancel={() => {
-                          setChosen(null);
-                        }}
-                      />
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <UndoStatus undo={undo} />
+          <Checkpoints undo={undo} chosen={chosen} onChoose={setChosen} />
         </>
       )}
     </>
+  );
+}
+
+/** Where the session stands, and what the last undo did or why it did not. */
+function UndoStatus({ undo }: { readonly undo: Undo }): React.JSX.Element {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      {undo.availability === 'busy' && (
+        <p className="text-sm" role="note">
+          {t('undo.panel.busy')}
+        </p>
+      )}
+
+      {undo.isRewinding && (
+        <p className="text-sm" role="status">
+          {t('undo.panel.rewinding')}
+        </p>
+      )}
+
+      {undo.refusal !== null && <ErrorState error={undo.refusal} />}
+      {undo.incomplete !== null && <ErrorState error={undo.incomplete} />}
+      {undo.outcome !== null && <RewindReport outcome={undo.outcome} />}
+    </>
+  );
+}
+
+interface CheckpointsProps {
+  readonly undo: Undo;
+
+  /** The point whose confirmation is open, if any. */
+  readonly chosen: string | null;
+  onChoose(promptId: string | null): void;
+}
+
+/** The four states of the points: loading, failed, none, and the list. */
+function Checkpoints({ undo, chosen, onChoose }: CheckpointsProps): React.JSX.Element {
+  const { t } = useTranslation();
+  const showsList = !undo.isLoading && undo.error === null;
+
+  return (
+    <>
+      {undo.isLoading && <Skeleton className="h-16 w-full" aria-label={t('undo.panel.loading')} />}
+
+      {undo.error !== null && <ErrorState error={undo.error} onRetry={undo.reload} />}
+
+      {showsList && undo.checkpoints.length === 0 && (
+        <EmptyState
+          title={t('undo.panel.emptyTitle')}
+          description={t('undo.panel.emptyDescription')}
+        />
+      )}
+
+      {showsList && undo.checkpoints.length > 0 && (
+        <ul className="flex flex-col gap-2" aria-label={t('undo.panel.title')}>
+          {undo.checkpoints.map((checkpoint) => (
+            <CheckpointItem
+              key={checkpoint.promptId}
+              checkpoint={checkpoint}
+              undo={undo}
+              isChosen={chosen === checkpoint.promptId}
+              onChoose={onChoose}
+            />
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+interface CheckpointItemProps {
+  readonly checkpoint: Checkpoint;
+  readonly undo: Undo;
+  readonly isChosen: boolean;
+  onChoose(promptId: string | null): void;
+}
+
+/** One point to go back to, and — once chosen — the reach of going back to it. */
+function CheckpointItem({
+  checkpoint,
+  undo,
+  isChosen,
+  onChoose,
+}: CheckpointItemProps): React.JSX.Element {
+  const { t } = useTranslation();
+  const label = checkpoint.label ?? t('undo.panel.untitled');
+
+  return (
+    <li className="flex flex-col gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="touch"
+        className="h-auto w-full justify-start py-2"
+        aria-expanded={isChosen}
+        disabled={undo.isRewinding}
+        onClick={() => {
+          onChoose(checkpoint.promptId);
+        }}
+      >
+        <span className="flex flex-col items-start gap-0.5 text-left">
+          <span className="text-sm font-medium">{label}</span>
+          <span className="text-xs opacity-70">
+            {t('undo.panel.startedAt', { at: checkpoint.at })}
+          </span>
+        </span>
+      </Button>
+
+      {isChosen && (
+        <UndoConfirmation
+          checkpoint={checkpoint}
+          label={label}
+          canConfirm={undo.availability === 'ready' && !undo.isRewinding}
+          onConfirm={() => {
+            onChoose(null);
+            undo.rewind(checkpoint.promptId);
+          }}
+          onCancel={() => {
+            onChoose(null);
+          }}
+        />
+      )}
+    </li>
   );
 }
