@@ -32,3 +32,26 @@ String sessionRouteFor(String sessionId) => '/sessions/$sessionId';
 /// the payload (docs/architecture/mobile/03-state-and-data.md).
 String permissionRouteFor(String sessionId, String requestId) =>
     '${sessionRouteFor(sessionId)}/permissions/$requestId';
+
+/// The conversations of Claude's store, one workspace at a time — the second level of the
+/// history ([04 · D-03](../../../../docs/plans/04-transcript-and-resume/decisions.md#d-03--a-forma-da-lista)).
+const String historyRoute = '/history';
+
+/// The query parameter that names the workspace of a history screen.
+const String workspacePathParameter = 'workspacePath';
+
+/// The conversations of one workspace.
+///
+/// The workspace is a query parameter rather than a path segment: it is an absolute path, and its
+/// slashes would be segments of the address.
+String historyRouteFor(String workspacePath) => Uri(
+  path: historyRoute,
+  queryParameters: <String, String>{workspacePathParameter: workspacePath},
+).toString();
+
+/// One conversation of the history, read-only, with the workspace it ran in — which is where a
+/// resume of it has to run too.
+String conversationRouteFor(String conversationId, String workspacePath) => Uri(
+  path: '$historyRoute/${Uri.encodeComponent(conversationId)}',
+  queryParameters: <String, String>{workspacePathParameter: workspacePath},
+).toString();

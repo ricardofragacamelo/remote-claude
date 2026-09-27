@@ -26,4 +26,7 @@ class SessionRepositoryImpl implements SessionRepository {
 
   @override
   bool send(String type, Map<String, Object?> payload) => _source.send(type, payload);
+
+  @override
+  String? issue(String type, Map<String, Object?> payload) => _source.issue(type, payload);
 }

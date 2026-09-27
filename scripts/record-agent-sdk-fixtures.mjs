@@ -15,9 +15,14 @@
  * the scenarios ask Claude to write files, and a scenario that wrote into the working tree would
  * be a recording tool with a side effect nobody asked for.
  *
+ * Two kinds of recording. A **turn** sends one prompt and keeps everything the stream, the hooks and
+ * `canUseTool` produced. The **catalogue** sends no prompt at all: it opens the `query()`, asks
+ * `supportedCommands()` and closes — which costs no quota, because nothing is ever said to the model.
+ *
  * Usage:
- *   pnpm fixtures:record             # every scenario
- *   pnpm fixtures:record text-turn   # one of them, by name
+ *   pnpm fixtures:record               # every scenario
+ *   pnpm fixtures:record text-turn     # one of them, by name
+ *   pnpm fixtures:record --normalise   # re-apply the normalisation to what is committed, no SDK
  */
 
 import { createRequire } from 'node:module';
@@ -26,6 +31,8 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
+
+import * as prettier from 'prettier';
 
 import { repoRoot } from './lib/paths.mjs';
 import { bold, dim, fail, info, ok, title, warn } from './lib/ui.mjs';
@@ -58,7 +65,45 @@ const SCENARIOS = [
       'Work through it step by step and do not ask me anything.',
     files: { 'notes.md': 'The project has two goals: be safe, and be fast.\n' },
   },
+  {
+    name: 'init-turn',
+    why: '`/init` sent as a prompt runs the command, and its `Write` asks through canUseTool',
+    prompt: '/init',
+    files: {
+      'README.md': '# Tally\n\nCounts words in a file.\n',
+      'tally.js':
+        "const fs = require('fs');\nconsole.log(fs.readFileSync(process.argv[2], 'utf8').split(/\\s+/).length);\n",
+    },
+  },
 ];
+
+/**
+ * What the catalogue recording asks for: the commands of the installation, with no prompt.
+ *
+ * The same `settingSources` the product runs with — the list depends on it (54 commands with
+ * `['project']`, 57 with the default, measured), and a fixture taken under different settings would
+ * be a list of some other installation.
+ */
+const CATALOGUE = {
+  name: 'commands',
+  why: 'what supportedCommands() answers, dead and internal entries included — the menu filters them by metadata',
+};
+
+/**
+ * Writes a fixture the way `pnpm format:check` expects it.
+ *
+ * `JSON.stringify` expands every array, and Prettier folds the short ones back onto one line — a
+ * fixture written raw fails gate 1 the moment it is recorded again.
+ *
+ * @param {string} file
+ * @param {unknown} fixture
+ */
+async function writeFixture(file, fixture) {
+  const options = (await prettier.resolveConfig(file)) ?? {};
+  const text = await prettier.format(JSON.stringify(fixture), { ...options, filepath: file });
+
+  fs.writeFileSync(file, text, 'utf8');
+}
 
 /** @param {string} message */
 function abort(message) {
@@ -167,19 +212,107 @@ async function record(query, scenario) {
 }
 
 /**
- * Rewrites the throwaway workspace path out of a recording.
+ * Asks the installation for its slash commands, and says nothing to the model.
  *
- * The path contains the machine's temp directory and a random suffix, so leaving it in would make
- * every recording differ from every other for a reason that has nothing to do with the SDK.
+ * The prompt iterable never yields: `supportedCommands()` is answered from the initialisation of the
+ * subprocess, and a prompt would spend quota to learn nothing more.
+ *
+ * @param {(params: unknown) => { supportedCommands(): Promise<unknown[]>, close(): void }} query
+ */
+async function recordCatalogue(query) {
+  const workspace = makeWorkspace({});
+  // An iterable whose first `next()` never settles: the CLI waits for a prompt that never comes.
+  const idle = { [Symbol.asyncIterator]: () => ({ next: () => new Promise(() => undefined) }) };
+
+  const session = query({
+    prompt: idle,
+    options: {
+      cwd: workspace,
+      settingSources: ['project'],
+      hooks: { PreToolUse: [{ hooks: [() => Promise.resolve({ continue: true })] }] },
+      canUseTool: () => Promise.resolve({ behavior: 'deny', message: 'recording the catalogue' }),
+      allowDangerouslySkipPermissions: false,
+    },
+  });
+
+  try {
+    return await session.supportedCommands();
+  } finally {
+    session.close();
+    fs.rmSync(workspace, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Rewrites what belongs to this machine out of a recording.
+ *
+ * The throwaway path contains the temp directory and a random suffix, and the CLI writes it twice:
+ * as a path, and as the **slug** it names its per-project folders with (`/tmp/rc-fixture-x` →
+ * `-tmp-rc-fixture-x`, under the user's home). Left in, every recording would differ from every
+ * other for a reason that has nothing to do with the SDK — and the home directory of whoever
+ * recorded it would be committed to the repository.
+ *
+ * Fragments of the path inside a streamed delta are cut wherever the model's tokens fell and are
+ * left as they are: rewriting half a token would make the deltas stop adding up to the message they
+ * stream.
  *
  * @param {unknown} value
  * @param {string} workspace
  * @returns {unknown}
  */
 function normalise(value, workspace) {
-  return JSON.parse(
-    JSON.stringify(value).split(JSON.stringify(workspace).slice(1, -1)).join('/workspace'),
-  );
+  const exact = JSON.stringify(value)
+    .split(JSON.stringify(workspace).slice(1, -1))
+    .join('/workspace')
+    .split(slugOf(workspace))
+    .join('-workspace');
+
+  return JSON.parse(anonymised(exact));
+}
+
+/**
+ * The folder name the CLI gives a project directory: every non-alphanumeric character a dash.
+ *
+ * @param {string} directory
+ * @returns {string}
+ */
+function slugOf(directory) {
+  return directory.replace(/[^A-Za-z0-9]/g, '-');
+}
+
+/** Any throwaway directory of this recorder, as a path or as a slug. */
+const THROWAWAY = /\/tmp\/rc-fixture-[A-Za-z0-9]{6}/g;
+const THROWAWAY_SLUG = /-tmp-rc-fixture-[A-Za-z0-9]{6}/g;
+
+/**
+ * The rules that need no knowledge of which run produced the text: any throwaway directory of this
+ * recorder, and the home directory of the machine.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function anonymised(text) {
+  return text
+    .replace(THROWAWAY, '/workspace')
+    .replace(THROWAWAY_SLUG, '-workspace')
+    .split(os.homedir())
+    .join('/home/user');
+}
+
+/**
+ * Applies the rules to the fixtures already committed, without running the SDK — for a rule added
+ * after they were recorded. It spends no quota, and it changes nothing the SDK said.
+ */
+async function normaliseCommitted() {
+  title('Agent SDK — normalising the recorded fixtures');
+
+  for (const file of fs.readdirSync(FIXTURES_DIR).filter((name) => name.endsWith('.json'))) {
+    const full = path.join(FIXTURES_DIR, file);
+    const before = fs.readFileSync(full, 'utf8');
+
+    await writeFixture(full, JSON.parse(anonymised(JSON.stringify(JSON.parse(before)))));
+    ok(file, fs.readFileSync(full, 'utf8') === before ? 'unchanged' : 'normalised');
+  }
 }
 
 /**
@@ -208,16 +341,55 @@ function sdkVersion() {
   }
 }
 
+/**
+ * Records the catalogue and writes it beside the turns.
+ *
+ * @param {(params: unknown) => { supportedCommands(): Promise<unknown[]>, close(): void }} query
+ */
+async function writeCatalogue(query) {
+  info(`${bold(CATALOGUE.name)} — ${dim(CATALOGUE.why)}`);
+
+  let commands;
+  try {
+    commands = await recordCatalogue(query);
+  } catch (error) {
+    fail(`${CATALOGUE.name} failed`, String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  const fixture = {
+    $comment:
+      'Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. ' +
+      'Do not edit by hand — re-record instead. See docs/plans/04-transcript-and-resume/F3-commands.md.',
+    name: CATALOGUE.name,
+    why: CATALOGUE.why,
+    recordedAt: new Date().toISOString().slice(0, 10),
+    sdkVersion: sdkVersion(),
+    counts: { commands: commands.length },
+    commands,
+  };
+
+  await writeFixture(path.join(FIXTURES_DIR, `${CATALOGUE.name}.json`), fixture);
+
+  ok(CATALOGUE.name, `${String(commands.length)} commands`);
+}
+
 async function main() {
+  if (process.argv.includes('--normalise')) {
+    await normaliseCommitted();
+    return;
+  }
+
   title('Agent SDK — recording fixtures');
 
   const wanted = process.argv.slice(2);
   const chosen = wanted.length === 0 ? SCENARIOS : SCENARIOS.filter((s) => wanted.includes(s.name));
+  const catalogue = wanted.length === 0 || wanted.includes(CATALOGUE.name);
 
-  if (chosen.length === 0) {
-    abort(
-      `no scenario named ${wanted.join(', ')}; known: ${SCENARIOS.map((s) => s.name).join(', ')}`,
-    );
+  if (chosen.length === 0 && !catalogue) {
+    const known = [...SCENARIOS.map((s) => s.name), CATALOGUE.name];
+    abort(`no scenario named ${wanted.join(', ')}; known: ${known.join(', ')}`);
   }
 
   if (!fs.existsSync(path.join(os.homedir(), '.claude', '.credentials.json'))) {
@@ -278,14 +450,17 @@ async function main() {
       messages: normalise(result.messages, cwd),
     };
 
-    const file = path.join(FIXTURES_DIR, `${scenario.name}.json`);
-    fs.writeFileSync(file, `${JSON.stringify(fixture, null, 2)}\n`, 'utf8');
+    await writeFixture(path.join(FIXTURES_DIR, `${scenario.name}.json`), fixture);
 
     ok(
       scenario.name,
       `${String(fixture.counts.messages)} messages · ${String(fixture.counts.preToolUse)} hooks · ` +
         `${String(fixture.counts.canUseTool)} canUseTool · ${String(Date.now() - started)}ms`,
     );
+  }
+
+  if (catalogue) {
+    await writeCatalogue(sdk.query);
   }
 
   if (chosen.some((s) => s.name === 'tool-turn')) {

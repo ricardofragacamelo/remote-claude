@@ -148,6 +148,26 @@ describe('the Dependency Rule, as the build enforces it', () => {
     ).toBe(false);
   });
 
+  it('refuses persistence reaching what reads a conversation — plan 04, S-28', async () => {
+    expect(
+      broke(
+        await violations(),
+        'transcript-is-never-persisted',
+        'adapter/outbound/persistence/copies-the-transcript.ts',
+      ),
+    ).toBe(true);
+  });
+
+  it('lets the transcript read its own store, which is not persisting it', async () => {
+    expect(
+      broke(
+        await violations(),
+        'transcript-is-never-persisted',
+        'application/transcript/reads-the-file.ts',
+      ),
+    ).toBe(false);
+  });
+
   it('carries a comment on every rule, so a failure says why the rule exists', () => {
     for (const rule of configuration.forbidden ?? []) {
       expect(rule.comment, rule.name).toBeTruthy();

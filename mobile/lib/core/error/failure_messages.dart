@@ -48,6 +48,34 @@ String translateFailure(AppLocalizations l10n, Failure failure) {
       return l10n.sessionErrorNotFound;
     case 'session.error.invalidSessionId':
       return l10n.sessionErrorInvalidSessionId(failure.params['sessionId'] ?? '');
+    case 'session.error.limitReached':
+      return l10n.sessionErrorLimitReached(failure.params['limit'] ?? '');
+    case 'session.error.claudeUnavailable':
+      return l10n.sessionErrorClaudeUnavailable;
+    case 'session.error.claudeTimeout':
+      return l10n.sessionErrorClaudeTimeout;
+    case 'session.error.unknownCommand':
+      return l10n.sessionErrorUnknownCommand(failure.params['command'] ?? '');
+    case 'session.error.locked':
+      return l10n.sessionErrorLocked;
+    case 'session.error.rewindTargetUnknown':
+      return l10n.sessionErrorRewindTargetUnknown;
+    case 'session.error.rewindIncomplete':
+      return l10n.sessionErrorRewindIncomplete(failure.params['failed'] ?? '');
+    case 'workspace.error.notAllowed':
+      return l10n.workspaceErrorNotAllowed(failure.params['path'] ?? '');
+    case 'workspace.error.forbidden':
+      return l10n.workspaceErrorForbidden;
+    case 'transcript.error.notFound':
+      return l10n.transcriptErrorNotFound;
+    case 'transcript.error.invalidSessionId':
+      return l10n.transcriptErrorInvalidSessionId(failure.params['sessionId'] ?? '');
+    case 'transcript.error.claudeUnavailable':
+      return l10n.transcriptErrorClaudeUnavailable;
+    case 'transcript.error.claudeTimeout':
+      return l10n.transcriptErrorClaudeTimeout;
+    case 'transcript.error.cursorStale':
+      return l10n.transcriptErrorCursorStale;
     case 'permission.error.requestNotFound':
       return l10n.permissionErrorRequestNotFound;
     case 'permission.error.requestExpired':

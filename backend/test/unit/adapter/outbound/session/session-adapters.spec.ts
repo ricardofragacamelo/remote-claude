@@ -11,9 +11,11 @@ import { ConnectionRegistry } from '@infra/websocket/connection-registry';
 import { EventBuffer } from '@infra/websocket/event-buffer';
 import { FrameBuilder } from '@infra/websocket/frame-builder';
 import { SessionHub } from '@infra/websocket/session-hub';
+import { aConversation } from '../../../../support/builders/session.builder';
 import { aWorkspace } from '../../../../support/builders/workspace.builder';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
 import { FixedClock } from '../../../../support/fakes/fixed-clock';
+import { ManualScheduler } from '../../../../support/fakes/manual-scheduler';
 import { StubPermissionGate } from '../../../../support/fakes/stub-permission-gate';
 import { RecordingJournal } from '../../../../support/fakes/recording-journal';
 import { RecordingLogger } from '../../../../support/fakes/recording-logger';
@@ -109,6 +111,8 @@ describe('AgentSdkClaudeSessionAdapter', () => {
       new StubPermissionGate(),
       { maxBudgetUsd: 10, maxTurns: 100 },
       new FixedClock(now),
+      new ManualScheduler(),
+      '2.1.277',
       new RecordingLogger().logger,
     );
 
@@ -117,8 +121,7 @@ describe('AgentSdkClaudeSessionAdapter', () => {
       workspace: WorkspacePath.create('/srv/projects/app'),
       model: null,
       permissionMode: 'default',
-      resumeSessionId: null,
-      claudeSessionId: null,
+      conversation: aConversation(),
       onEvent: () => undefined,
       onClosed: () => undefined,
     });

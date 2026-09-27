@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/features/session/domain/entities/checkpoint.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
@@ -265,6 +266,16 @@ void main() {
       expect(after.status, SessionStatus.closed);
     });
 
+    test('an undo is about files on disk: nothing said changes, the resume point moves', () {
+      final Conversation after = const Conversation(
+        status: SessionStatus.idle,
+      ).apply(const FilesRewound(4, RewindOutcome(promptId: 'p-1')));
+
+      expect(after.isEmpty, isTrue);
+      expect(after.status, SessionStatus.idle);
+      expect(after.lastSeq, 4);
+    });
+
     test('a pong belongs to the round trip, not to the conversation', () {
       final Conversation after = const Conversation().apply(
         const PongArrived(
@@ -281,6 +292,97 @@ void main() {
 
       expect(after.isEmpty, isTrue);
       expect(after.lastSeq, 1);
+    });
+  });
+
+  group('laying the live stream over the history', () {
+    /// Every event in order, from nothing — the live half.
+    Conversation live(List<SessionEvent> events) =>
+        events.fold(const Conversation(), (Conversation state, SessionEvent e) => state.apply(e));
+
+    const List<SessionEvent> history = <SessionEvent>[
+      MessageFinished(0, messageId: 'h1', text: 'what broke?', isFromUser: true),
+      MessageFinished(0, messageId: 'h2', text: 'the build', isFromUser: false),
+      ToolInvoked(0, toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{'command': 'ls'}),
+      ToolFinished(0, toolUseId: 't1', status: ToolStatus.succeeded),
+    ];
+
+    List<String> ids(Conversation conversation) => conversation.messages
+        .map((StreamMessage message) => message.messageId)
+        .toList(growable: false);
+
+    test('no history leaves the conversation exactly as it was', () {
+      final Conversation now = live(<SessionEvent>[
+        const MessageFragment(1, messageId: 'm1', delta: 'hi'),
+      ]);
+
+      expect(now.withHistory(const <SessionEvent>[]), same(now));
+    });
+
+    test('history alone is the whole conversation, and moves no resume point', () {
+      final Conversation shown = const Conversation().withHistory(history);
+
+      expect(ids(shown), <String>['h1', 'h2']);
+      expect(shown.messages.first.isFromUser, isTrue);
+      expect(shown.tools.single.status, ToolStatus.succeeded);
+      expect(shown.lastSeq, 0);
+      // History says nothing about where the live session is; only the stream does.
+      expect(shown.status, SessionStatus.starting);
+    });
+
+    test('what is live and new comes after the history, in the order it arrived', () {
+      final Conversation shown = live(<SessionEvent>[
+        const MessageFinished(1, messageId: 'n1', text: 'fixed', isFromUser: false),
+        const MessageFragment(2, messageId: 'n2', delta: 'and'),
+      ]).withHistory(history);
+
+      expect(ids(shown), <String>['h1', 'h2', 'n1', 'n2']);
+    });
+
+    test('S-15 · a live message with a historical id replaces it in place, never twice', () {
+      final Conversation shown = live(<SessionEvent>[
+        const MessageFinished(7, messageId: 'h2', text: 'the build, again', isFromUser: false),
+        const ToolInvoked(8, toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{}),
+      ]).withHistory(history);
+
+      expect(ids(shown), <String>['h1', 'h2']);
+      expect(shown.messages.last.text, 'the build, again');
+      // The live tool is re-running: what the stream says now wins over what the transcript said.
+      expect(shown.tools.single.status, ToolStatus.running);
+    });
+
+    test('a live message still streaming never replaces a historical one that is whole', () {
+      final Conversation shown = live(<SessionEvent>[
+        const MessageFragment(3, messageId: 'h2', delta: 'the bu'),
+      ]).withHistory(history);
+
+      expect(shown.messages.last.text, 'the build');
+      expect(shown.messages.last.isComplete, isTrue);
+    });
+
+    test('S-21 · status, resume point, last turn and ending stay the live ones', () {
+      const TurnSummary turn = TurnSummary(turnId: 'turn-1', costUsd: '0.01', durationMs: 5);
+      const SessionEnding ending = SessionEnding(reason: SessionCloseReason.completed, at: 'now');
+      final Conversation now = live(<SessionEvent>[
+        const SessionStatusReported(1, SessionStatus.running),
+        const TurnFinished(2, turn),
+        const SessionFinished(3, ending),
+      ]);
+
+      final Conversation shown = now.withHistory(history);
+
+      expect(shown.status, SessionStatus.closed);
+      expect(shown.lastSeq, 3);
+      expect(shown.lastTurn, turn);
+      expect(shown.ending, ending);
+    });
+
+    test('laying it over again changes nothing — a reload is idempotent', () {
+      final Conversation now = live(<SessionEvent>[
+        const MessageFinished(1, messageId: 'h2', text: 'the build', isFromUser: false),
+      ]);
+
+      expect(now.withHistory(history), now.withHistory(history).withHistory(history));
     });
   });
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { auditLocation, readAuditSearch } from '@/app/AuditRoute';
+import { historyLocation, readHistorySearch } from '@/app/HistoryRoute';
 import { router } from '@/app/router';
 import { CALLBACK_PATH } from '@/features/auth';
 
@@ -29,6 +30,35 @@ describe('the routes', () => {
 
   it('gives the trail a route of its own — B-13', () => {
     expect(Object.keys(router.routesById)).toContain('/audit');
+  });
+
+  it('gives the history two levels of its own — plan 04, D-03', () => {
+    expect(Object.keys(router.routesById)).toEqual(
+      expect.arrayContaining(['/history', '/history/$conversationId']),
+    );
+  });
+});
+
+describe('the workspace of the history, read from the URL — plan 04', () => {
+  it('keeps a workspace the link names, trimmed', () => {
+    expect(readHistorySearch({ workspacePath: ' /srv/projects/app ' })).toEqual({
+      workspacePath: '/srv/projects/app',
+    });
+  });
+
+  it.each([
+    ['absent', {}],
+    ['empty', { workspacePath: '  ' }],
+    ['not text', { workspacePath: 3 }],
+  ])('drops one that is %s', (_case, search) => {
+    expect(readHistorySearch(search)).toEqual({});
+  });
+
+  it('writes its own address back, workspace included', () => {
+    expect(historyLocation({})).toBe('/history');
+    expect(historyLocation({ workspacePath: '/srv/projects/app' })).toBe(
+      '/history?workspacePath=%2Fsrv%2Fprojects%2Fapp',
+    );
   });
 });
 

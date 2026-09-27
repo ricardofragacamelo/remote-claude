@@ -1,4 +1,4 @@
-import { check, index, pgTable, text } from 'drizzle-orm/pg-core';
+import { check, index, jsonb, pgTable, text } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 import { keysetIndexes, trailColumns } from './columns';
@@ -25,6 +25,13 @@ export const auditEvents = pgTable(
     subjectId: text('subject_id').notNull(),
     /** Recognisable label of the subject, so the trail reads without a second query. */
     subjectLabel: text('subject_label').notNull(),
+
+    /**
+     * What an event needs said beyond its subject — the paths an undo put back and the ones it
+     * left, with why. `NULL` for every kind that needs nothing more. Never a file's contents, never
+     * a message of a conversation.
+     */
+    details: jsonb('details').$type<Record<string, unknown>>(),
     ...trailColumns,
   },
   (table) => [
@@ -33,7 +40,7 @@ export const auditEvents = pgTable(
     index('audit_events_at_idx').on(table.at),
     check(
       'audit_events_kind_known',
-      sql`${table.kind} IN ('device.registered', 'device.approved', 'device.revoked', 'device.expired', 'permission.ruleGranted', 'permission.ruleRevoked')`,
+      sql`${table.kind} IN ('device.registered', 'device.approved', 'device.revoked', 'device.expired', 'permission.ruleGranted', 'permission.ruleRevoked', 'session.resumed', 'session.forked', 'session.filesRewound')`,
     ),
   ],
 );

@@ -18,19 +18,20 @@ import {
 import { realTranscriptSdk, TRANSCRIPT_SDK } from '@adapter/outbound/claude/transcript-sdk';
 import { SessionModuleOriginSource } from '@adapter/outbound/transcript/session-module-origin.source';
 import { AuthModule } from './auth.module';
-import { SessionModule } from './session.module';
+import { SessionOriginModule } from './session-origin.module';
 import { WorkspaceModule } from './workspace.module';
 
 /**
  * The `transcript` module: the history, read through the Agent SDK and fenced by the allowlist.
  *
- * A leaf. It imports the allowlist from `workspace` — the same fence that decides where Claude may
- * run decides what may be read — and the provenance from `session`, and nobody imports it. It
- * holds no live session and writes nothing: the transcript is Claude's file, shared with the
+ * It imports the allowlist from `workspace` — the same fence that decides where Claude may run
+ * decides what may be read — and the provenance `session` keeps, through the module that holds it.
+ * `session` imports it back for one thing, the store: continuing a conversation asks where it ran.
+ * It holds no live session and writes nothing: the transcript is Claude's file, shared with the
  * editor, and never ours to change (docs/architecture/backend/03-modules.md#transcript).
  */
 @Module({
-  imports: [AuthModule, WorkspaceModule, SessionModule],
+  imports: [AuthModule, WorkspaceModule, SessionOriginModule],
   controllers: [TranscriptController],
   providers: [
     { provide: TRANSCRIPT_SDK, useValue: realTranscriptSdk },
@@ -56,5 +57,8 @@ import { WorkspaceModule } from './workspace.module';
       ) => new ReadTranscriptUseCase(allowlist, store, origins),
     },
   ],
+  // The store alone: `session` asks it where a conversation ran before continuing one. The use
+  // cases stay here — nobody else lists or reads the history.
+  exports: [TRANSCRIPT_STORE],
 })
 export class TranscriptModule {}

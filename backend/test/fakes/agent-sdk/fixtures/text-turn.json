@@ -5,11 +5,7 @@
   "prompt": "Reply with exactly the word: pong. Do not use any tool.",
   "recordedAt": "2026-09-19",
   "sdkVersion": "0.3.277",
-  "counts": {
-    "messages": 12,
-    "preToolUse": 0,
-    "canUseTool": 0
-  },
+  "counts": { "messages": 12, "preToolUse": 0, "canUseTool": 0 },
   "preToolUse": [],
   "canUseTool": [],
   "stderr": [],
@@ -148,21 +144,13 @@
         "run",
         "run-skill-generator"
       ],
-      "plugins": [
-        {
-          "name": "agents-md",
-          "path": "builtin",
-          "source": "agents-md@builtin"
-        }
-      ],
+      "plugins": [{ "name": "agents-md", "path": "builtin", "source": "agents-md@builtin" }],
       "capabilities": ["interrupt_receipt_v1", "interrupt_cancel_queued_v1", "msg_lifecycle_v1"],
       "analytics_disabled": false,
       "product_feedback_disabled": false,
       "uuid": "906d7b29-1e38-4030-b550-d2c3583edd49",
-      "memory_paths": {
-        "auto": "/home/ricardocamelo/.claude/projects/-tmp-rc-fixture-zV2AcN/memory/"
-      },
-      "scratchpad_path": "/tmp/claude-1000/-tmp-rc-fixture-zV2AcN/faa8c951-6f27-4cf5-acf7-a7a9de8726d9/scratchpad",
+      "memory_paths": { "auto": "/home/user/.claude/projects/-workspace/memory/" },
+      "scratchpad_path": "/tmp/claude-1000/-workspace/faa8c951-6f27-4cf5-acf7-a7a9de8726d9/scratchpad",
       "messaging_socket_path": "/run/user/1000/cc-socks/1274853.sock",
       "fast_mode_state": "off",
       "fast_mode_disabled_reason": "unknown"
@@ -184,14 +172,8 @@
         "overageDisabledReason": "member_zero_credit_limit",
         "isUsingOverage": false,
         "unifiedWindows": {
-          "five_hour": {
-            "utilization": 0.29,
-            "resetsAt": 1789789800
-          },
-          "seven_day": {
-            "utilization": 0.15,
-            "resetsAt": 1790269200
-          }
+          "five_hour": { "utilization": 0.29, "resetsAt": 1789789800 },
+          "seven_day": { "utilization": 0.15, "resetsAt": 1790269200 }
         }
       },
       "uuid": "5399b4fc-8f9a-4484-a969-6cf82c3b52da",
@@ -215,10 +197,7 @@
             "input_tokens": 2,
             "cache_creation_input_tokens": 4489,
             "cache_read_input_tokens": 22814,
-            "cache_creation": {
-              "ephemeral_5m_input_tokens": 0,
-              "ephemeral_1h_input_tokens": 4489
-            },
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 4489 },
             "output_tokens": 1,
             "service_tier": "standard",
             "inference_geo": "not_available"
@@ -238,10 +217,7 @@
       "event": {
         "type": "content_block_start",
         "index": 0,
-        "content_block": {
-          "type": "text",
-          "text": ""
-        }
+        "content_block": { "type": "text", "text": "" }
       },
       "session_id": "faa8c951-6f27-4cf5-acf7-a7a9de8726d9",
       "parent_tool_use_id": null,
@@ -252,10 +228,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "p"
-        }
+        "delta": { "type": "text_delta", "text": "p" }
       },
       "session_id": "faa8c951-6f27-4cf5-acf7-a7a9de8726d9",
       "parent_tool_use_id": null,
@@ -266,10 +239,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "ong"
-        }
+        "delta": { "type": "text_delta", "text": "ong" }
       },
       "session_id": "faa8c951-6f27-4cf5-acf7-a7a9de8726d9",
       "parent_tool_use_id": null,
@@ -282,12 +252,7 @@
         "id": "msg_011CfBt2zxRPAVTipSDvyZh8",
         "type": "message",
         "role": "assistant",
-        "content": [
-          {
-            "type": "text",
-            "text": "pong"
-          }
-        ],
+        "content": [{ "type": "text", "text": "pong" }],
         "container": null,
         "stop_reason": null,
         "stop_sequence": null,
@@ -296,10 +261,7 @@
           "input_tokens": 2,
           "cache_creation_input_tokens": 4489,
           "cache_read_input_tokens": 22814,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 4489
-          },
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 4489 },
           "output_tokens": 1,
           "service_tier": "standard",
           "inference_geo": "not_available"
@@ -316,10 +278,7 @@
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "content_block_stop",
-        "index": 0
-      },
+      "event": { "type": "content_block_stop", "index": 0 },
       "session_id": "faa8c951-6f27-4cf5-acf7-a7a9de8726d9",
       "parent_tool_use_id": null,
       "uuid": "07346e3d-3706-48f9-a616-b4d0a7743eb7"
@@ -339,9 +298,7 @@
           "cache_creation_input_tokens": 4489,
           "cache_read_input_tokens": 22814,
           "output_tokens": 4,
-          "output_tokens_details": {
-            "thinking_tokens": 0
-          },
+          "output_tokens_details": { "thinking_tokens": 0 },
           "iterations": [
             {
               "input_tokens": 2,
@@ -356,9 +313,7 @@
             }
           ]
         },
-        "context_management": {
-          "applied_edits": []
-        }
+        "context_management": { "applied_edits": [] }
       },
       "session_id": "faa8c951-6f27-4cf5-acf7-a7a9de8726d9",
       "parent_tool_use_id": null,
@@ -366,9 +321,7 @@
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "message_stop"
-      },
+      "event": { "type": "message_stop" },
       "session_id": "faa8c951-6f27-4cf5-acf7-a7a9de8726d9",
       "parent_tool_use_id": null,
       "uuid": "e26c6055-cca5-4a53-8951-cc0eebd92933"
@@ -383,18 +336,10 @@
         "cache_creation_input_tokens": 4489,
         "cache_read_input_tokens": 22814,
         "output_tokens": 4,
-        "output_tokens_details": {
-          "thinking_tokens": 0
-        },
-        "server_tool_use": {
-          "web_search_requests": 0,
-          "web_fetch_requests": 0
-        },
+        "output_tokens_details": { "thinking_tokens": 0 },
+        "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
         "service_tier": "standard",
-        "cache_creation": {
-          "ephemeral_1h_input_tokens": 4489,
-          "ephemeral_5m_input_tokens": 0
-        },
+        "cache_creation": { "ephemeral_1h_input_tokens": 4489, "ephemeral_5m_input_tokens": 0 },
         "inference_geo": "not_available",
         "iterations": [
           {
@@ -402,10 +347,7 @@
             "output_tokens": 4,
             "cache_read_input_tokens": 22814,
             "cache_creation_input_tokens": 4489,
-            "cache_creation": {
-              "ephemeral_5m_input_tokens": 0,
-              "ephemeral_1h_input_tokens": 4489
-            },
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 4489 },
             "type": "message"
           }
         ],
@@ -447,26 +389,14 @@
       "fast_mode_disabled_reason": "preference",
       "subagent_stats": {
         "spawned": 0,
-        "requested": {
-          "background": 0,
-          "foreground": 0,
-          "unset": 0
-        },
+        "requested": { "background": 0, "foreground": 0, "unset": 0 },
         "started_in_background": 0,
         "max_depth": 0,
         "spawned_by_subagents": 0,
         "completed": 0,
         "failed": 0,
-        "killed": {
-          "parent": 0,
-          "user": 0,
-          "system": 0
-        },
-        "refused": {
-          "depth_limit": 0,
-          "concurrency_limit": 0,
-          "budget": 0
-        },
+        "killed": { "parent": 0, "user": 0, "system": 0 },
+        "refused": { "depth_limit": 0, "concurrency_limit": 0, "budget": 0 },
         "by_type": {}
       },
       "is_error": false,

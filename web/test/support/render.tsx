@@ -23,20 +23,28 @@ import type { Locale } from '@/shared/i18n';
  * docs/architecture/web/06-testing.md.
  */
 export function render(ui: ReactElement, locale: Locale = 'en'): RenderResult {
+  return rtlRender(ui, { wrapper: providers(locale) });
+}
+
+/**
+ * The same providers, as a `wrapper` for `renderHook` — a hook that reads the query cache needs a
+ * cache to read, and a fresh one per test so no answer leaks from one to the next.
+ */
+export function providers(
+  locale: Locale = 'en',
+): (props: { readonly children: ReactNode }) => React.JSX.Element {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const i18n = createI18n(locale);
 
-  function Wrapper({ children }: { readonly children: ReactNode }): React.JSX.Element {
+  return function Wrapper({ children }: { readonly children: ReactNode }): React.JSX.Element {
     return (
       <I18nextProvider i18n={i18n}>
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
       </I18nextProvider>
     );
-  }
-
-  return rtlRender(ui, { wrapper: Wrapper });
+  };
 }
 
 /**

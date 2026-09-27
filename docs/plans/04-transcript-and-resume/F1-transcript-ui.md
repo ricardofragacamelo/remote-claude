@@ -20,7 +20,7 @@ não havia o que carregar. A regra existia sem destino; aqui ela passa a funcion
 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 
-### B-06 — Lista de sessões no web 🔲
+### B-06 — Lista de sessões no web ✅
 
 **Dois níveis** ([D-03](decisions.md#d-03--a-forma-da-lista)): os workspaces da allowlist, e
 dentro de cada um as suas sessões — com paginação própria, porque um workspace pode ter mais de
@@ -30,7 +30,7 @@ vazando de outro lugar.
 O rótulo é **"externa"**, não "VSCode", e vem do nosso banco: o SDK não informa procedência
 ([D-01](decisions.md#d-01--o-que-aparece-de-fora)).
 
-### B-07 — Leitura do transcript, e a recarga do `gap` 🔲
+### B-07 — Leitura do transcript, e a recarga do `gap` ✅
 
 A tela carrega o histórico paginado, e o store usa esse mesmo caminho quando o `attach` devolve
 `gap: true`: limpa e recarrega, sem tentar costurar
@@ -38,12 +38,12 @@ A tela carrega o histórico paginado, e o store usa esse mesmo caminho quando o 
 
 Recarregar enquanto o stream vivo continua chegando **não** pode duplicar mensagem.
 
-### B-08 — Histórico no app 🔲
+### B-08 — Histórico no app ✅
 
 Mesma capacidade, com os quatro estados de tela. Parsing de transcript longo em `compute()`,
 fora da thread de UI ([mobile/03](../../architecture/mobile/03-state-and-data.md)).
 
-### B-09 — i18n e l10n das telas novas 🔲
+### B-09 — i18n e l10n das telas novas ✅
 
 `en` e `pt-BR` no web, ARB `en` e `pt` no app, com paridade verificada.
 
@@ -51,7 +51,7 @@ fora da thread de UI ([mobile/03](../../architecture/mobile/03-state-and-data.md
 
 ## Cenários cobertos
 
-S-11…S-18.
+S-11…S-18, e os descobertos na implementação: S-78 (o ack nomeia a conversa a recarregar) e S-80 (fragmento vivo não desfaz mensagem inteira do histórico).
 
 ---
 

@@ -153,6 +153,14 @@ produziram 6 hooks e apenas 2 `canUseTool`. Fake escrito de memória prova que *
 funciona: ele não pode ser otimista a respeito de um stream que ele mesmo inventou. Gravar
 fixture é, portanto, ferramenta do repositório, não tarefa manual.
 
+**O backend roteirizado é _um_ Claude.** O que o replay diz ele grava no store de conversas que o
+mesmo backend lê — como o `persistSession: true` grava —, sob a conversa que as opções nomeiam
+(nova, continuada no mesmo arquivo, ou bifurcada), com ids **próprios** a cada turno, como o CLI.
+E escreve os arquivos que a gravação escreveu, no diretório em que a sessão roda. Então o
+histórico, a retomada, a recarga do `gap` e o desfazer são provados sobre o que o **próprio
+produto** produziu na execução, nunca sobre um transcript ou um arquivo plantado pelo teste
+([plano 04, F5](../../plans/04-transcript-and-resume/F5-e2e.md)).
+
 Existe **uma** suíte separada, `e2e/smoke-live/`, que roda contra o Claude real. Não roda em PR
 e **não roda em nightly**: roda **sob demanda**, porque não há credencial do Claude no CI nem
 máquina ligada à noite. A consequência está dita e não é confortável — o risco de o fake divergir

@@ -164,4 +164,21 @@ describe('ContractCommandHandler', () => {
       }).handle(aWsContext({ frame: frame(valid) })),
     ).rejects.toThrow('the use case refused');
   });
+
+  it('runs what must follow the ack only when the gateway publishes, and publishes nothing else', async () => {
+    const order: string[] = [];
+    const published: EventDraft[] = [];
+    const outcome = await handler(() => ({
+      afterAck: () => {
+        order.push('handed to the CLI');
+      },
+    })).handle(aWsContext({ frame: frame(valid), publish: (_id, event) => published.push(event) }));
+
+    expect(order).toEqual([]);
+    order.push('acked');
+    outcome.publish();
+
+    expect(order).toEqual(['acked', 'handed to the CLI']);
+    expect(published).toEqual([]);
+  });
 });

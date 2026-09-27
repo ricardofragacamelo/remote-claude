@@ -50,7 +50,13 @@
       "notFound": "Essa sessão não existe mais.",
       "invalidSessionId": "{{sessionId}} não é um identificador de sessão.",
       "claudeUnavailable": "O Claude parou de responder nesta máquina.",
-      "forbidden": "Essa sessão é de outra pessoa."
+      "forbidden": "Essa sessão é de outra pessoa.",
+      "limitReached": "Esta máquina já está rodando {{limit}} sessões, o máximo que ela permite. Encerre uma e tente de novo.",
+      "unknownCommand": "Esta instalação não tem o comando /{{command}}. Veja na lista de comandos os que ela oferece.",
+      "claudeTimeout": "O Claude demorou demais para responder. Tente de novo.",
+      "locked": "Um turno está em execução, ou outro desfazer desta sessão está em andamento. Espere terminar e tente de novo.",
+      "rewindTargetUnknown": "Esse não é um ponto para o qual esta sessão pode voltar. Recarregue a lista e escolha de novo.",
+      "rewindIncomplete": "O desfazer parou antes do fim: {{failed}} arquivo(s) não puderam voltar, e cada um ficou exatamente como estava."
     },
     "ping": {
       "title": "Ida e volta",
@@ -114,6 +120,10 @@
       "interrupt": "Interromper",
       "close": "Encerrar sessão",
       "closeNotOwner": "Só o navegador que abriu esta sessão pode encerrá-la."
+    },
+    "history": {
+      "loading": "Carregando a parte anterior desta conversa…",
+      "open": "Ver a conversa inteira"
     }
   },
   "workspace": {
@@ -131,7 +141,9 @@
       "lastUsed": "Aberta pela última vez em {{at}}",
       "neverUsed": "Nunca aberta",
       "emptyTitle": "Nenhuma pasta disponível para você",
-      "emptyDescription": "A allowlist desta máquina ainda não menciona a sua conta. Quem instalou o remote-claude pode acrescentar uma pasta."
+      "emptyDescription": "A allowlist desta máquina ainda não menciona a sua conta. Quem instalou o remote-claude pode acrescentar uma pasta.",
+      "history": "Histórico",
+      "historyOf": "Conversas em {{label}}"
     }
   },
   "permission": {
@@ -346,6 +358,100 @@
       "claudeUnavailable": "O Claude não conseguiu ler o histórico nesta máquina.",
       "claudeTimeout": "O Claude demorou demais para ler o histórico. Tente de novo.",
       "cursorStale": "Esta conversa mudou enquanto você a lia. Recarregue a partir das mensagens mais recentes."
+    },
+    "screen": {
+      "title": "Histórico",
+      "noWorkspaceTitle": "Nenhuma pasta escolhida",
+      "noWorkspaceDescription": "Abra o histórico a partir de uma das suas pastas na tela inicial."
+    },
+    "list": {
+      "title": "Conversas",
+      "description": "Tudo o que foi dito nesta pasta — aqui, no editor ou num terminal —, da escrita mais recente para a mais antiga.",
+      "loading": "Carregando as conversas desta pasta…",
+      "emptyTitle": "Ainda não há conversa nesta pasta",
+      "emptyDescription": "Abra uma sessão aqui, ou converse com o Claude nesta pasta pelo editor: a conversa aparece nesta lista.",
+      "loadMore": "Carregar mais",
+      "loadingMore": "Carregando…",
+      "untitled": "Conversa sem título",
+      "lastModified": "Escrita pela última vez em {{at}}",
+      "lastModifiedOnBranch": "Escrita pela última vez em {{at}}, em {{branch}}"
+    }
+  },
+  "history": {
+    "origin": {
+      "ours": "Aberta aqui",
+      "external": "Começou fora deste app — no editor ou num terminal"
+    },
+    "screen": {
+      "title": "Conversa",
+      "description": "O que foi dito, como o histórico desta máquina guarda. Ler não muda nada.",
+      "loading": "Carregando a conversa…",
+      "resume": "Continuar esta conversa",
+      "resuming": "Continuando…",
+      "externalNote": "Esta conversa começou fora deste app. Continuá-la aqui abre uma cópia com um id novo: o editor não verá as respostas dadas aqui.",
+      "loadEarlier": "Carregar mensagens anteriores",
+      "loadingEarlier": "Carregando mensagens anteriores…",
+      "emptyTitle": "Nada foi dito nesta conversa",
+      "emptyDescription": "Continue-a para dizer a primeira coisa."
+    }
+  },
+  "commands": {
+    "menu": {
+      "toggle": "Comandos",
+      "title": "Comandos desta instalação",
+      "search": "Buscar comandos",
+      "searchPlaceholder": "Nome, apelido ou descrição",
+      "loading": "Carregando os comandos desta instalação…",
+      "unavailable": "A lista de comandos não está disponível agora. Você ainda pode digitar qualquer comando no prompt.",
+      "emptyTitle": "Esta instalação não oferece nenhum comando",
+      "emptyDescription": "Você ainda pode digitar o que quiser no prompt abaixo.",
+      "noMatch": "Nenhum comando corresponde a “{{search}}”.",
+      "suggested": "Sugeridos",
+      "all": "Todos os outros comandos",
+      "version": "Do Claude Code {{version}} desta máquina."
+    }
+  },
+  "undo": {
+    "panel": {
+      "toggle": "Desfazer alterações em arquivos",
+      "title": "Pontos de desfazer",
+      "description": "Devolve os arquivos que esta sessão escreveu ao estado de antes de um turno. Um arquivo alterado fora da sessão depois disso fica como está.",
+      "loading": "Carregando os pontos de desfazer desta sessão…",
+      "emptyTitle": "Nada para desfazer ainda",
+      "emptyDescription": "Quando um turno escrever arquivos, você pode devolvê-los por aqui.",
+      "untitled": "Turno sem prompt",
+      "startedAt": "Turno iniciado em {{at}}",
+      "busy": "O desfazer fica disponível quando o turno em execução terminar.",
+      "ended": "Não é possível desfazer em uma sessão que já foi encerrada.",
+      "rewinding": "Desfazendo…"
+    },
+    "confirm": {
+      "title": "Desfazer estas alterações em arquivos?",
+      "target": "Os arquivos voltam ao que eram antes do turno “{{label}}”, iniciado em {{at}}.",
+      "nothing": "Nada aqui mudaria: todo arquivo já está como era, ou fica como está.",
+      "cancel": "Manter os arquivos",
+      "confirm": "Desfazer estes arquivos"
+    },
+    "scope": {
+      "restore": "Voltam ao que eram",
+      "remove": "Apagados — o turno os criou",
+      "preserve": "Ficam como estão",
+      "unchanged": "Já estão como eram"
+    },
+    "reason": {
+      "modifiedOutside": "Alterado fora da sessão depois, por isso é mantido.",
+      "notRestorable": "Grande demais ou ilegível para ter sido guardado.",
+      "unsafePath": "Virou um link ou deixou de ser um arquivo comum.",
+      "noBaseline": "Nada registra como a sessão o deixou, então o desfazer não vai adivinhar."
+    },
+    "outcome": {
+      "title": "Último desfazer",
+      "restored": "Devolvidos",
+      "deleted": "Apagados",
+      "preserved": "Mantidos como estavam",
+      "unchanged": "Já estavam como eram",
+      "failed": "Não puderam voltar — ficaram exatamente como estavam",
+      "nothing": "O desfazer não encontrou nada para mudar."
     }
   }
 }

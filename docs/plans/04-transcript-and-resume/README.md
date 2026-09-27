@@ -66,11 +66,11 @@ verde.
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
 | F0 | [Transcript](F0-transcript.md) | listar e ler histórico pelas funções do SDK | B-01…B-05 | ✅ |
-| F1 | [Telas de histórico](F1-transcript-ui.md) | histórico no web e no app, e a recarga do `gap` | B-06…B-09 | 🔲 |
-| F2 | [Retomada](F2-resume.md) | continuar sessão encerrada, inclusive a do VSCode | B-10…B-13 | 🔲 |
-| F3 | [Slash commands](F3-commands.md) | menu vindo da instalação, e o `/init` | B-14…B-17 | 🔲 |
-| F4 | [Desfazer](F4-checkpoint.md) | `rewindFiles()` com alcance explícito e auditado | B-18…B-21 | 🔲 |
-| F5 | [E2E](F5-e2e.md) | o ciclo pela porta do usuário, e o smoke-live dos comandos | B-22…B-25 | 🔲 |
+| F1 | [Telas de histórico](F1-transcript-ui.md) | histórico no web e no app, e a recarga do `gap` | B-06…B-09 | ✅ |
+| F2 | [Retomada](F2-resume.md) | continuar sessão encerrada, inclusive a do VSCode | B-10…B-13 | ✅ |
+| F3 | [Slash commands](F3-commands.md) | menu vindo da instalação, e o `/init` | B-14…B-17 | ✅ |
+| F4 | [Desfazer](F4-checkpoint.md) | desfazer nosso, com alcance explícito e auditado | B-18…B-21 | ✅ |
+| F5 | [E2E](F5-e2e.md) | o ciclo pela porta do usuário, e o smoke-live dos comandos | B-22…B-25 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 
@@ -106,7 +106,7 @@ Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 
 ```
 packages/contracts/schema/
-├── commands/    session-rewind-files · session-list-commands
+├── commands/    session-rewind-files      (o menu é HTTP: GET /sessions/:id/commands)
 └── events/      session-rewound
 
 backend/src/

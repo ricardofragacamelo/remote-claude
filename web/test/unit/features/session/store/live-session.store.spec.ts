@@ -77,7 +77,102 @@ describe('the live session store', () => {
 
     expect(store().messages).toEqual([]);
     expect(store().lastSeq).toBe(0);
-    expect(store().sessionId).toBeNull();
+    // The session on screen is still the one on screen: what it said is what goes (plan 04).
+    expect(store().sessionId).toBe(SESSION);
+    expect(store().historyFrom).toBeNull();
+  });
+
+  describe('the history under the stream — plan 04', () => {
+    const CONVERSATION = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
+    const SOURCE = '0f0e0d0c-0b0a-4908-8706-050403020100';
+
+    const completed = (
+      messageId: string,
+      text: string,
+    ): { type: string; payload: Record<string, unknown> } => ({
+      type: 'message.completed',
+      payload: { messageId, role: 'assistant', content: [{ type: 'text', text }] },
+    });
+
+    it('learns the conversation from `session.started`', () => {
+      store().apply(
+        event('session.started', 1, { sessionId: SESSION, claudeSessionId: CONVERSATION }),
+      );
+
+      expect(store().conversationId).toBe(CONVERSATION);
+      expect(store().historyFrom).toBeNull();
+    });
+
+    it('asks for the history a resumed session continues — B-11', () => {
+      store().apply(
+        event('session.started', 1, {
+          sessionId: SESSION,
+          claudeSessionId: CONVERSATION,
+          resumedFrom: SOURCE,
+        }),
+      );
+
+      expect(store().historyFrom).toBe(SOURCE);
+    });
+
+    it('asks, after a gap, for the history of the conversation the ack named — S-14', () => {
+      store().apply(event('message.delta', 1, { messageId: 'm1', delta: 'half' }));
+
+      store().reset(CONVERSATION);
+
+      expect(store().messages).toEqual([]);
+      expect(store().historyFrom).toBe(CONVERSATION);
+      expect(store().conversationId).toBe(CONVERSATION);
+    });
+
+    it('lays the history under what the stream brought meanwhile, without a duplicate — S-15', () => {
+      store().reset(CONVERSATION);
+      // The stream kept arriving while the page was in flight: `m2` is in both, `m3` only live.
+      store().apply(event('message.completed', 7, completed('m2', 'two, live').payload));
+      store().apply(event('message.completed', 8, completed('m3', 'three').payload));
+
+      store().hydrate(CONVERSATION, [completed('m1', 'one'), completed('m2', 'two, history')]);
+
+      expect(store().messages.map((message) => [message.messageId, message.text])).toEqual([
+        ['m1', 'one'],
+        ['m2', 'two, live'],
+        ['m3', 'three'],
+      ]);
+      expect(store().historyFrom).toBeNull();
+    });
+
+    it('keeps the history out of the numbering — S-21', () => {
+      store().reset(CONVERSATION);
+      store().apply(event('message.delta', 3, { messageId: 'm9', delta: 'x' }));
+
+      store().hydrate(CONVERSATION, [completed('m1', 'one')]);
+
+      expect(store().lastSeq).toBe(3);
+    });
+
+    it('drops a page of a conversation it is no longer waiting for', () => {
+      store().reset(CONVERSATION);
+      store().hydrate(SOURCE, [completed('m1', 'one')]);
+
+      expect(store().messages).toEqual([]);
+      expect(store().historyFrom).toBe(CONVERSATION);
+    });
+
+    it('stops calling what is on screen partial once the history is under it', () => {
+      store().open(SESSION, { partial: true });
+      store().apply(
+        event('session.started', 1, {
+          sessionId: SESSION,
+          claudeSessionId: CONVERSATION,
+          resumedFrom: SOURCE,
+        }),
+      );
+      expect(store().isPartial).toBe(true);
+
+      store().hydrate(SOURCE, []);
+
+      expect(store().isPartial).toBe(false);
+    });
   });
 
   describe('messages', () => {
@@ -344,5 +439,25 @@ describe('the live session store', () => {
     store().open(SESSION, { partial: true });
 
     expect(store().isPartial).toBe(true);
+  });
+
+  it('keeps what the last undo did, whoever asked for it — plan 04, B-19', () => {
+    store().apply(event('message.delta', 1, { messageId: 'm1', delta: 'hi' }));
+    expect(store().lastRewind).toBeNull();
+
+    store().apply(
+      event('session.rewound', 2, {
+        promptId: 'prompt-2',
+        reverted: [{ path: '/a.ts', action: 'restored' }],
+        preserved: [],
+        unchanged: [],
+        failed: [],
+      }),
+    );
+
+    expect(store().lastRewind).toMatchObject({ promptId: 'prompt-2', restored: ['/a.ts'] });
+    // A later event of another kind leaves it where it is.
+    store().apply(event('session.statusChanged', 3, { status: 'idle' }));
+    expect(store().lastRewind?.promptId).toBe('prompt-2');
   });
 });

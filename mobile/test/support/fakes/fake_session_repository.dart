@@ -56,6 +56,12 @@ class FakeSessionRepository implements SessionRepository {
     return accepts;
   }
 
+  @override
+  String? issue(String type, Map<String, Object?> payload) {
+    commands.add((type, payload));
+    return accepts ? 'command-${commands.length}' : null;
+  }
+
   /// Pushes one update at the controller.
   void emit(SessionUpdate update) => _updates.add(update);
 

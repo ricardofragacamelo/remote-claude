@@ -113,7 +113,7 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `FORBIDDEN` | 403 | workspace, session, auth, audit | Existe, e é de outra pessoa — ou o pedido parte de quem não pode fazê-lo (aparelho aprovando aparelho). Na trilha: filtrar pela sessão de outra pessoa |
 | `WORKSPACE_NOT_A_DIRECTORY` | 422 | workspace | Caminho existe, mas é arquivo |
 | `SESSION_NOT_FOUND` | 404 | session | Sessão inexistente |
-| `SESSION_LOCKED` | 423 | session | Em uso exclusivo por outra connection |
+| `SESSION_LOCKED` | 423 | session | Em uso exclusivo, ou ocupada: um turno em execução, ou outro desfazer da mesma sessão em curso (`session.error.locked`) |
 | `SESSION_LIMIT_REACHED` | 429 | session | Máximo de sessões simultâneas |
 | `PERMISSION_REQUEST_NOT_FOUND` | 404 | permission | `requestId` desconhecido |
 | `PERMISSION_REQUEST_EXPIRED` | 410 | permission | Timeout — foi negado automaticamente |
@@ -121,14 +121,14 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `PERMISSION_RULE_PATTERN_INVALID` | 400 | permission | Padrão fora da gramática de regra |
 | `PERMISSION_RULE_EXPIRY_TOO_LONG` | 422 | permission | Validade pedida acima do teto configurado |
 | `PERMISSION_RULE_NOT_FOUND` | 404 | permission | `ruleId` que não existe |
-| `CLAUDE_UNAVAILABLE` | 502 | session, transcript | Subprocesso do CLI falhou — ou a leitura do histórico pelo SDK |
-| `CLAUDE_TIMEOUT` | 504 | session, transcript | Sem resposta no prazo — inclusive a leitura do histórico |
+| `CLAUDE_UNAVAILABLE` | 502 | session, transcript | Subprocesso do CLI falhou — ou a leitura do histórico pelo SDK, ou a lista de slash commands |
+| `CLAUDE_TIMEOUT` | 504 | session, transcript | Sem resposta no prazo — inclusive a leitura do histórico e a lista de slash commands (`session.error.claudeTimeout`) |
 | `RATE_LIMITED` | 429 | — | Limite nosso ou do plano Claude |
 | `PAYLOAD_TOO_LARGE` | 413 | — | Corpo ou frame acima do limite anunciado |
-| `INVALID_INPUT` | 400 | —, transcript | Falha de validação; detalhe em `details[]`. No histórico, também o cursor cuja mensagem sumiu (`transcript.error.cursorStale`) |
+| `INVALID_INPUT` | 400 | —, transcript, session | Falha de validação; detalhe em `details[]`. No histórico, também o cursor cuja mensagem sumiu (`transcript.error.cursorStale`). Na sessão, o slash command que a instalação não tem (`session.error.unknownCommand`) e o ponto de desfazer que não é da sessão (`session.error.rewindTargetUnknown`) |
 | `FORBIDDEN` | 403 | — | Autenticado, e ainda assim não pode |
 | `NOT_FOUND` | 404 | —, auth, transcript | Rota ou recurso inexistente, sem dono de módulo. Device de outra pessoa responde este, igual ao que não existe: dizer que um id existe já é dizer que ele existe. Conversa do histórico que o chamador não pode ler também |
-| `INTERNAL_ERROR` | 500 | — | Não previsto |
+| `INTERNAL_ERROR` | 500 | —, session | Não previsto. No desfazer, o caminho que não pôde ser restaurado (`session.error.rewindIncomplete`, depois do `session.rewound` que o lista) |
 
 **`SESSION_ALREADY_RUNNING` não existe mais.** Um segundo prompt durante um turno é
 **enfileirado**, não rejeitado — [R-02, decidido](../../plans/00-bootstrap/progress.md#decisões-tomadas-durante-a-execução).

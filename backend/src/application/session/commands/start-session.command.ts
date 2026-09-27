@@ -12,6 +12,14 @@ export interface StartSessionCommand {
   readonly workspacePath: string;
   readonly model: string | null;
   readonly permissionMode: PermissionMode | null;
+
+  /**
+   * The conversation of Claude to continue — an id from the history — or `null` for a new one.
+   *
+   * Looked up **inside** `workspacePath`: the conversation has to have run there, which is what the
+   * history lists it under and what the SDK finds its file by.
+   */
   readonly resumeSessionId: string | null;
+
   readonly userId: UserId;
 }

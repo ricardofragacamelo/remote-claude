@@ -6,6 +6,7 @@
 /// counted the routes.
 library;
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -23,8 +24,12 @@ import 'package:remote_claude/features/auth/auth.dart';
 import 'package:remote_claude/features/auth/auth_providers.dart';
 import 'package:remote_claude/features/auth/domain/repositories/auth_repository.dart';
 import 'package:remote_claude/features/device/device.dart';
-import 'package:remote_claude/features/session/presentation/pages/session_page.dart';
+import 'package:remote_claude/features/session/domain/repositories/history_repository.dart';
+import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
+import 'package:remote_claude/features/transcript/domain/repositories/transcript_repository.dart';
+import 'package:remote_claude/features/transcript/transcript.dart';
+import 'package:remote_claude/features/transcript/transcript_providers.dart';
 import 'package:remote_claude/features/workspace/domain/repositories/workspace_repository.dart';
 import 'package:remote_claude/features/workspace/presentation/pages/workspace_list_page.dart';
 import 'package:remote_claude/features/workspace/workspace_providers.dart';
@@ -32,6 +37,8 @@ import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
 
 import '../../support/fakes/fake_auth_repository.dart';
+import '../../support/fakes/fake_history_repository.dart';
+import '../../support/fakes/fake_transcript_repository.dart';
 import '../../support/fakes/fake_session_repository.dart';
 import '../../support/fakes/fake_workspace_repository.dart';
 import '../../support/fakes/recording_writer.dart';
@@ -78,6 +85,10 @@ void main() {
           FakeAuthRepository(stored: signedIn()) as AuthRepository,
         ),
         sessionRepositoryProvider.overrideWithValue(sessions),
+        historyRepositoryProvider.overrideWithValue(FakeHistoryRepository() as HistoryRepository),
+        transcriptRepositoryProvider.overrideWithValue(
+          FakeTranscriptRepository() as TranscriptRepository,
+        ),
         workspaceRepositoryProvider.overrideWithValue(
           FakeWorkspaceRepository() as WorkspaceRepository,
         ),
@@ -134,6 +145,45 @@ void main() {
     );
     // And the screen asked the server rather than trusting whoever sent it there (S-45).
     expect(permissions.lookedUp['request-8'], 1);
+  });
+
+  testWidgets('the history of a folder lives at an address that names the folder', (
+    WidgetTester tester,
+  ) async {
+    await pumpApp(tester);
+
+    container.read(routerProvider).go(historyRouteFor('/home/someone/my project'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<ConversationListPage>(find.byType(ConversationListPage)).workspacePath,
+      '/home/someone/my project',
+    );
+  });
+
+  testWidgets('one conversation has an address of its own, above the list of its folder', (
+    WidgetTester tester,
+  ) async {
+    await pumpApp(tester);
+
+    container.read(routerProvider).go(conversationRouteFor('conv/7', '/home/someone/project'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<ConversationHistoryPage>(find.byType(ConversationHistoryPage)).conversationId,
+      'conv/7',
+    );
+    // Nested, so "back" lands on the conversations of the same folder.
+    expect(
+      tester
+          .widget<ConversationListPage>(find.byType(ConversationListPage, skipOffstage: false))
+          .workspacePath,
+      '/home/someone/project',
+    );
+
+    // The conversation is kept for a while after the screen goes; let that run out.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(historyKeptFor + const Duration(seconds: 1));
   });
 
   testWidgets('a tap on a notification moves the app, once', (WidgetTester tester) async {

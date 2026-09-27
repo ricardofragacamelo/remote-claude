@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/session-rewound.json",
+  "title": "SessionRewound",
+  "description": "What an undo did to the disk, file by file — never a boolean. Fanned out to every connection watching the session, because the files changed for all of them. A path in `failed` means the undo stopped short there; an `error` with `INTERNAL_ERROR` follows, and nothing listed as reverted is left half-written.",
+  "x-kind": "event",
+  "x-type": "session.rewound",
+  "type": "object",
+  "required": ["promptId", "reverted", "preserved", "unchanged", "failed"],
+  "properties": {
+    "promptId": { "type": "string", "description": "The turn the files went back to." },
+    "reverted": {
+      "type": "array",
+      "description": "Paths put back the way they were before the turn.",
+      "items": {
+        "type": "object",
+        "required": ["path", "action"],
+        "properties": {
+          "path": { "type": "string" },
+          "action": {
+            "type": "string",
+            "enum": ["restored", "deleted"],
+            "description": "`deleted` for a file the session created: before the turn it was not there."
+          }
+        }
+      }
+    },
+    "preserved": {
+      "type": "array",
+      "description": "Paths left as they are, each with the reason.",
+      "items": {
+        "type": "object",
+        "required": ["path", "reason"],
+        "properties": {
+          "path": { "type": "string" },
+          "reason": {
+            "type": "string",
+            "enum": ["modifiedOutside", "notRestorable", "unsafePath", "noBaseline"],
+            "description": "`modifiedOutside` — somebody changed it after the session did; `notRestorable` — it was too large or unreadable to snapshot; `unsafePath` — it became a link or something other than a regular file, or its directory no longer resolves; `noBaseline` — nothing records how the session left it, so the undo will not guess."
+          }
+        }
+      }
+    },
+    "unchanged": {
+      "type": "array",
+      "description": "Paths that were already the way they were before the turn. A second undo to the same point lands here — it is idempotent.",
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "properties": { "path": { "type": "string" } }
+      }
+    },
+    "failed": {
+      "type": "array",
+      "description": "Paths the undo tried to put back and could not. Each is left exactly as it was: restoring writes a temporary file beside it and renames it over.",
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "properties": { "path": { "type": "string" } }
+      }
+    }
+  }
+}

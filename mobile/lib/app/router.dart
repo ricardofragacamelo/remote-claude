@@ -12,6 +12,7 @@ import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/features/auth/auth.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/session.dart';
+import 'package:remote_claude/features/transcript/transcript.dart';
 import 'package:remote_claude/features/workspace/workspace.dart';
 
 /// Decides the destination of one navigation.
@@ -63,6 +64,24 @@ GoRouter buildRouter(Ref ref) {
         path: rulesRoute,
         name: 'rules',
         builder: (BuildContext context, GoRouterState state) => const RulesPage(),
+      ),
+      GoRoute(
+        path: historyRoute,
+        name: 'history',
+        builder: (BuildContext context, GoRouterState state) => ConversationListPage(
+          workspacePath: state.uri.queryParameters[workspacePathParameter] ?? '',
+        ),
+        routes: <RouteBase>[
+          // Nested under the list, so "back" lands on the conversations of the same workspace —
+          // the address carries that workspace for exactly this reason.
+          GoRoute(
+            path: ':conversationId',
+            name: 'history-conversation',
+            builder: (BuildContext context, GoRouterState state) => ConversationHistoryPage(
+              conversationId: state.pathParameters['conversationId'] ?? '',
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: '/sessions/:sessionId',

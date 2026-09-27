@@ -601,4 +601,295 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get rulesRevoking => 'Revogando…';
+
+  @override
+  String workspaceErrorNotAllowed(String path) {
+    return 'Esta instalação não permite $path.';
+  }
+
+  @override
+  String get workspaceErrorForbidden => 'Essa pasta não é sua para abrir.';
+
+  @override
+  String sessionErrorLimitReached(String limit) {
+    return 'Esta máquina já está rodando $limit sessões, o máximo que ela permite. Encerre uma e tente de novo.';
+  }
+
+  @override
+  String get sessionErrorClaudeUnavailable => 'O Claude parou de responder nesta máquina.';
+
+  @override
+  String get transcriptErrorNotFound => 'Essa conversa não existe, ou não é sua para ler.';
+
+  @override
+  String transcriptErrorInvalidSessionId(String sessionId) {
+    return '$sessionId não é um identificador de conversa.';
+  }
+
+  @override
+  String get transcriptErrorClaudeUnavailable =>
+      'O Claude não conseguiu ler o histórico nesta máquina.';
+
+  @override
+  String get transcriptErrorClaudeTimeout =>
+      'O Claude demorou demais para ler o histórico. Tente de novo.';
+
+  @override
+  String get transcriptErrorCursorStale =>
+      'Esta conversa mudou enquanto você a lia. Recarregue a partir das mensagens mais recentes.';
+
+  @override
+  String workspaceHistoryOpen(String label) {
+    return 'Histórico de $label';
+  }
+
+  @override
+  String get historyListTitle => 'Histórico';
+
+  @override
+  String get historyListLoading => 'Carregando conversas';
+
+  @override
+  String get historyListEmptyTitle => 'Nenhuma conversa nesta pasta';
+
+  @override
+  String get historyListEmptyBody =>
+      'Nada foi dito aqui ainda — por este app, pelo editor ou pelo terminal. Abra uma sessão nesta pasta pela lista de pastas para começar uma.';
+
+  @override
+  String get historyOriginOurs => 'Aberta por este app';
+
+  @override
+  String get historyOriginExternal => 'Começou fora deste app';
+
+  @override
+  String historyLastActive(String at) {
+    return 'Última atividade $at';
+  }
+
+  @override
+  String historyBranch(String branch) {
+    return 'Branch $branch';
+  }
+
+  @override
+  String get historyUntitled => 'Conversa sem título';
+
+  @override
+  String get historyLoadMore => 'Carregar mais';
+
+  @override
+  String get historyLoadingMore => 'Carregando…';
+
+  @override
+  String get historyConversationTitle => 'Conversa';
+
+  @override
+  String get historyConversationLoading => 'Carregando a conversa';
+
+  @override
+  String get historyConversationEmptyTitle => 'Nada foi dito nesta conversa';
+
+  @override
+  String get historyConversationEmptyBody =>
+      'Ela não tem mensagens para mostrar. Retome-a para dizer algo.';
+
+  @override
+  String get historyLoadEarlier => 'Carregar mensagens anteriores';
+
+  @override
+  String get historyResumeAction => 'Retomar';
+
+  @override
+  String get historyResumePending => 'Retomando…';
+
+  @override
+  String get historyResumeOffline =>
+      'Retomar precisa da conexão com o backend, e este aparelho não está conectado.';
+
+  @override
+  String get historyResumeNotSent =>
+      'A conversa não foi retomada: este aparelho não está conectado.';
+
+  @override
+  String get historyExternalNote =>
+      'Esta conversa começou fora deste app. Retomá-la aqui a continua com um novo id: o editor ou o terminal de onde ela veio não verá as respostas dadas aqui.';
+
+  @override
+  String get sessionHistoryLoading => 'Carregando o que foi dito antes';
+
+  @override
+  String sessionErrorUnknownCommand(String command) {
+    return '$command não é um comando que o Claude oferece nesta máquina.';
+  }
+
+  @override
+  String get sessionErrorClaudeTimeout =>
+      'O Claude demorou demais para responder nesta máquina. Tente de novo.';
+
+  @override
+  String get sessionErrorLocked =>
+      'A sessão está ocupada: um turno está em execução ou outro desfazer está em andamento. Tente de novo quando ela estiver ociosa.';
+
+  @override
+  String get sessionErrorRewindTargetUnknown =>
+      'Esse ponto de desfazer não pertence a esta sessão.';
+
+  @override
+  String sessionErrorRewindIncomplete(String failed) {
+    return 'Alguns arquivos não puderam ser restaurados ($failed). Cada um deles ficou exatamente como estava.';
+  }
+
+  @override
+  String get sessionCommandsOpen => 'Comandos';
+
+  @override
+  String get sessionCommandsTitle => 'Comandos';
+
+  @override
+  String get sessionCommandsDescription =>
+      'O que o Claude oferece nesta máquina. A caixa de prompt aceita qualquer comando, listado aqui ou não.';
+
+  @override
+  String get sessionCommandsSearch => 'Buscar comandos';
+
+  @override
+  String get sessionCommandsSuggested => 'Sugeridos';
+
+  @override
+  String get sessionCommandsAll => 'Todos os comandos';
+
+  @override
+  String get sessionCommandsLoading => 'Carregando os comandos';
+
+  @override
+  String get sessionCommandsEmptyTitle => 'Nenhum comando nesta máquina';
+
+  @override
+  String get sessionCommandsEmptyBody =>
+      'O Claude daqui não oferece comandos. Você ainda pode digitar qualquer coisa na caixa de prompt.';
+
+  @override
+  String sessionCommandsNoMatch(String query) {
+    return 'Nenhum comando corresponde a “$query”.';
+  }
+
+  @override
+  String get sessionUndoOpen => 'Desfazer alterações de arquivos';
+
+  @override
+  String get sessionUndoTitle => 'Desfazer alterações de arquivos';
+
+  @override
+  String get sessionUndoDescription =>
+      'Devolva os arquivos que esta sessão escreveu ao estado de antes de um dos turnos dela. Um arquivo alterado fora da sessão fica como está.';
+
+  @override
+  String get sessionUndoLoading => 'Carregando os pontos de desfazer';
+
+  @override
+  String get sessionUndoEmptyTitle => 'Nada a desfazer ainda';
+
+  @override
+  String get sessionUndoEmptyBody =>
+      'Cada turno que escreve arquivos vira um ponto ao qual esta sessão pode voltar.';
+
+  @override
+  String get sessionUndoUntitled => 'Turno sem título';
+
+  @override
+  String sessionUndoPointAt(String date, String time) {
+    return '$date às $time';
+  }
+
+  @override
+  String sessionUndoFileCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count arquivos',
+      one: '1 arquivo',
+      zero: 'Nenhum arquivo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String sessionUndoConfirmTitle(String label) {
+    return 'Voltar para antes de “$label”';
+  }
+
+  @override
+  String get sessionUndoGoesBack => 'Volta';
+
+  @override
+  String get sessionUndoStays => 'Fica como está';
+
+  @override
+  String get sessionUndoAlready => 'Já está como era';
+
+  @override
+  String get sessionUndoRestore => 'O conteúdo de antes do turno é restaurado';
+
+  @override
+  String get sessionUndoDelete => 'Apagado: este turno o criou';
+
+  @override
+  String get sessionUndoReasonModifiedOutside =>
+      'Alterado fora da sessão depois que ela o escreveu';
+
+  @override
+  String get sessionUndoReasonNotRestorable => 'Grande demais ou ilegível para ter sido guardado';
+
+  @override
+  String get sessionUndoReasonUnsafePath =>
+      'Deixou de ser um arquivo comum, ou a pasta dele deixou de existir';
+
+  @override
+  String get sessionUndoReasonNoBaseline => 'Nada registra como a sessão o deixou';
+
+  @override
+  String get sessionUndoReasonOther => 'Mantido por um motivo que este app não conhece';
+
+  @override
+  String get sessionUndoNothingToRevert => 'Nada mudaria: nenhum arquivo deste ponto pode voltar.';
+
+  @override
+  String get sessionUndoConfirm => 'Desfazer';
+
+  @override
+  String get sessionUndoPending => 'Desfazendo…';
+
+  @override
+  String get sessionUndoBack => 'Voltar aos pontos de desfazer';
+
+  @override
+  String get sessionUndoBusy =>
+      'Desfazer só está disponível com a sessão ociosa. Espere o turno terminar.';
+
+  @override
+  String get sessionUndoClosed =>
+      'Esta sessão está encerrada, então os arquivos dela não podem mais ser desfeitos daqui.';
+
+  @override
+  String get sessionUndoOffline =>
+      'Desfazer precisa da conexão com o backend, e este aparelho não está conectado.';
+
+  @override
+  String get sessionUndoNotSent => 'Nada foi desfeito: este aparelho não está conectado.';
+
+  @override
+  String get sessionUndoDoneTitle => 'Desfazer concluído';
+
+  @override
+  String get sessionUndoReverted => 'Restaurados';
+
+  @override
+  String get sessionUndoRestored => 'Restaurado ao estado de antes do turno';
+
+  @override
+  String get sessionUndoDeleted => 'Apagado: o turno o tinha criado';
+
+  @override
+  String get sessionUndoFailed => 'Não puderam ser restaurados';
 }

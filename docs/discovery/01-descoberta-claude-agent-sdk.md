@@ -660,6 +660,21 @@ de novo.
 
 Chamar `supportedCommands()` não custa token: basta abrir a `query()` e nunca ceder prompt.
 
+**Remedido em 2026-09-26** (SDK `0.3.277`, CLI `2.1.277`, [plano 04 · F3](../plans/04-transcript-and-resume/F3-commands.md)),
+com a gravação que agora é fixture (`pnpm fixtures:record commands`):
+
+- **55** comandos. Os mortos são os mesmos dois (`agents`, `extra-usage`); o único com prefixo `__`
+  é `__remote-workflow`. **`workflow-launch-exec` não tem prefixo** nem outro metadado de interno —
+  a nota acima estava errada, e pelo filtro por metadado ele fica no menu. Hoje todo item vem com
+  `builtin: true` e alguns com `aliases` (`review` → `code-review`, `cost`/`stats` → `usage`);
+- **o `system:init` não chega antes do primeiro prompt.** Com a `query()` aberta e ociosa por 4 s,
+  nenhuma mensagem saiu do stream; `supportedCommands()` respondeu em ~0,5 s. Logo, a versão do CLI
+  — que só o `system:init` traz (`claude_code_version`) — não existe quando o menu costuma ser
+  aberto. O `manifest.json` do SDK diz a mesma versão (2.1.277) desde o início;
+- **`/init` enviado como prompt**, num projeto de dois arquivos: 6 `PreToolUse` (3 `Bash`, 2
+  `Read`, 1 `Write`), 2 `canUseTool` (`Bash`, `Write`), `result: success`, em 33 s. É a fixture
+  `init-turn`.
+
 ### Como reproduzir
 
 Scripts em `scratchpad/sdkprobe/`: `measure-store.mjs`, `probe-pagination.mjs`,

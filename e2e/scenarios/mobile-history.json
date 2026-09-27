@@ -1,0 +1,13 @@
+{
+  "id": "04·S-48",
+  "title": "a session begun in the browser opens on the phone with everything said so far",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "text-turn",
+    "answer": "pong",
+    "prompt": "Reply with the single word: pong."
+  }
+}

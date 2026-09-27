@@ -77,6 +77,12 @@ void main() {
           builder: (BuildContext context, GoRouterState state) =>
               const Scaffold(body: Text('the rules')),
         ),
+        GoRoute(
+          path: historyRoute,
+          builder: (BuildContext context, GoRouterState state) => Scaffold(
+            body: Text('history of ${state.uri.queryParameters[workspacePathParameter]}'),
+          ),
+        ),
       ],
       initialLocation: workspacesRoute,
       overrides: <Override>[
@@ -145,6 +151,32 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('the rules'), findsOneWidget);
+  });
+
+  group('D-03 · the history of a folder is one tap from it', () {
+    testWidgets('opens the conversations of that folder, and only that one', (
+      WidgetTester tester,
+    ) async {
+      await pumpList(tester);
+
+      await tester.tap(find.byTooltip(l10n.workspaceHistoryOpen('project')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('history of /home/someone/project'), findsOneWidget);
+      // Reading what was said opens no session.
+      expect(sessions.commands, isEmpty);
+    });
+
+    testWidgets('is reachable with the socket down — reading needs no live connection', (
+      WidgetTester tester,
+    ) async {
+      await pumpList(tester, connection: ConnectionStatus.closed);
+
+      await tester.tap(find.byTooltip(l10n.workspaceHistoryOpen('project')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('history of /home/someone/project'), findsOneWidget);
+    });
   });
 
   testWidgets('S-75 · opening a session takes the screen to it when the id arrives', (

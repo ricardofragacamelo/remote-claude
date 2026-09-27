@@ -6,19 +6,24 @@ import type {
   PermissionResult,
   Query,
   SDKMessage,
+  SlashCommand as SdkSlashCommand,
 } from '@anthropic-ai/claude-agent-sdk';
 
 import type {
   ClaudeSessionHandle,
   ClaudeSessionStart,
+  JournalScope,
   SessionFileJournal,
   SessionPermissionGate,
   ToolInvocationRecorder,
 } from '@application/session';
+import type { Scheduler } from '@application/shared';
 import type { Clock } from '@domain/shared';
-import type { PermissionMode, SessionCloseReason } from '@domain/session';
+import { ClaudeTimeoutError, ClaudeUnavailableError } from '@domain/session';
+import type { PermissionMode, SessionCloseReason, SlashCommand } from '@domain/session';
 import type { Logger } from '@shared/logging/logger';
 import { currentTraceId, runWithTrace } from '@shared/logging/trace-context';
+import { withinDeadline } from './deadline';
 import { pathsWrittenBy } from './file-tools';
 import { SessionInputQueue } from './input-queue';
 import type { QueryFactory } from './query.factory';
@@ -30,6 +35,13 @@ import { clearTrustMark } from './trusted-directory';
 /** How much of a prompt reaches the log. It can carry a secret, so it is cut, never redacted away. */
 const PROMPT_LOG_LIMIT = 2_048;
 
+/**
+ * How long `supportedCommands()` may take. Measured at half a second on a fresh session; the
+ * deadline is the same ten seconds a read of the transcript store gets, because it is the same kind
+ * of question — local, cheap, and wrong if it never answers.
+ */
+export const COMMANDS_TIMEOUT_MS = 10_000;
+
 /** What a runner needs besides the start request itself. */
 export interface SessionRunnerDeps {
   readonly createQuery: QueryFactory;
@@ -40,6 +52,17 @@ export interface SessionRunnerDeps {
   readonly permissions: SessionPermissionGate;
   readonly limits: SessionLimits;
   readonly clock: Clock;
+
+  /** Where the deadline of a control request comes from. */
+  readonly scheduler: Scheduler;
+
+  /**
+   * The version of the binary the SDK ships, read before anything is spawned, or `null`.
+   *
+   * What `cliVersion` answers until the CLI reports its own in `system:init` — which it does only
+   * once a turn begins.
+   */
+  readonly bundledCliVersion: string | null;
   readonly logger: Logger;
 }
 
@@ -80,6 +103,9 @@ export class SessionRunner implements ClaudeSessionHandle {
   /** The trace the current turn runs under: the prompt's, once the CLI says the turn began. */
   private turnTrace: string | null = null;
 
+  /** What the CLI said its own version is, in `system:init`. It wins over the manifest. */
+  private reportedVersion: string | null = null;
+
   constructor(
     private readonly start: ClaudeSessionStart,
     private readonly deps: SessionRunnerDeps,
@@ -109,8 +135,10 @@ export class SessionRunner implements ClaudeSessionHandle {
         sessionId,
         phase: 'starting',
         workspacePath: directory,
-        claudeSessionId: this.start.claudeSessionId?.value ?? this.start.resumeSessionId,
+        claudeSessionId: this.start.conversation.claudeSessionId.value,
+        resumedFrom: this.start.conversation.resumedFrom?.value ?? null,
         trustMark: clearance,
+        cliVersion: this.deps.bundledCliVersion,
       },
       'opening a claude session',
     );
@@ -119,8 +147,10 @@ export class SessionRunner implements ClaudeSessionHandle {
       workspace: this.start.workspace,
       model: this.start.model,
       permissionMode: this.start.permissionMode,
-      resumeSessionId: this.start.resumeSessionId,
-      claudeSessionId: this.start.claudeSessionId?.value ?? null,
+      conversation: {
+        claudeSessionId: this.start.conversation.claudeSessionId.value,
+        resumedFrom: this.start.conversation.resumedFrom?.value ?? null,
+      },
       limits: this.deps.limits,
       abortController: this.abort,
       onStderr: (data) => {
@@ -236,6 +266,67 @@ export class SessionRunner implements ClaudeSessionHandle {
     await this.query?.setPermissionMode(mode as SdkPermissionMode);
   }
 
+  get cliVersion(): string | null {
+    return this.reportedVersion ?? this.deps.bundledCliVersion;
+  }
+
+  /**
+   * `supportedCommands()`, under a deadline, in our own shape.
+   *
+   * It says nothing to the model and costs no quota: the CLI answers from its own initialisation.
+   * Asked of **this** session's query because the list depends on its workspace — a project's
+   * `.claude/` brings commands of its own — and on the settings it was opened with.
+   */
+  async supportedCommands(): Promise<readonly SlashCommand[]> {
+    const sessionId = this.start.sessionId.value;
+    const query = this.query;
+    const startedAt = Date.now();
+
+    if (query === null || this.closed) {
+      throw new ClaudeUnavailableError(sessionId);
+    }
+
+    try {
+      const listed = await withinDeadline(
+        this.deps.scheduler,
+        COMMANDS_TIMEOUT_MS,
+        query.supportedCommands(),
+        () => new ClaudeTimeoutError(sessionId, 'list its slash commands', COMMANDS_TIMEOUT_MS),
+      );
+
+      this.deps.logger.debug(
+        {
+          op: 'claude.commands',
+          layer: 'adapter',
+          sessionId,
+          count: listed.length,
+          cliVersion: this.cliVersion,
+          durationMs: Date.now() - startedAt,
+        },
+        'slash commands listed',
+      );
+
+      return listed.map(toSlashCommand);
+    } catch (error) {
+      const timedOut = error instanceof ClaudeTimeoutError;
+
+      this.deps.logger.warn(
+        {
+          op: 'claude.commands',
+          layer: 'adapter',
+          sessionId,
+          durationMs: Date.now() - startedAt,
+          err: error,
+        },
+        timedOut
+          ? 'the cli did not list its commands in time'
+          : 'the cli failed to list its commands',
+      );
+
+      throw timedOut ? error : new ClaudeUnavailableError(sessionId);
+    }
+  }
+
   /** Ends the session. Safe to call twice, from a command and from the shutdown hook at once. */
   close(): Promise<void> {
     this.finish('closedByUser');
@@ -302,9 +393,41 @@ export class SessionRunner implements ClaudeSessionHandle {
       );
     }
 
+    this.noteVersion(message);
+
     for (const event of mapped.events) {
       this.start.onEvent(event);
     }
+  }
+
+  /**
+   * Takes the CLI's own word for its version, from `system:init`.
+   *
+   * The manifest said which binary the SDK would spawn; this is the binary saying what it is. When
+   * the two disagree the CLI wins — and it is logged, because it means the menu cached so far was
+   * keyed by a version that was not the one running.
+   */
+  private noteVersion(message: SDKMessage): void {
+    if (message.type !== 'system' || message.subtype !== 'init') {
+      return;
+    }
+
+    const reported = message.claude_code_version;
+
+    if (this.reportedVersion === null && reported !== this.deps.bundledCliVersion) {
+      this.deps.logger.warn(
+        {
+          op: 'claude.session.lifecycle',
+          layer: 'adapter',
+          sessionId: this.start.sessionId.value,
+          bundledCliVersion: this.deps.bundledCliVersion,
+          reportedCliVersion: reported,
+        },
+        'the cli reports a version other than the one the sdk manifest names',
+      );
+    }
+
+    this.reportedVersion = reported;
   }
 
   /**
@@ -376,7 +499,7 @@ export class SessionRunner implements ClaudeSessionHandle {
         // a snapshot that somehow failed must not be able to stop a tool the trail already recorded.
         for (const path of pathsWrittenBy(hook.tool_name ?? '', hook.tool_input)) {
           await this.deps.journal.captureBefore(
-            this.start.sessionId,
+            this.journalScope(),
             hook.prompt_id ?? 'unknown',
             path,
           );
@@ -429,11 +552,19 @@ export class SessionRunner implements ClaudeSessionHandle {
         const hook = input as { tool_name?: string; tool_input?: unknown };
 
         for (const path of pathsWrittenBy(hook.tool_name ?? '', hook.tool_input)) {
-          await this.deps.journal.recordResult(this.start.sessionId, path);
+          await this.deps.journal.recordResult(this.journalScope(), path);
         }
 
         return { continue: true };
       });
+  }
+
+  /** Which session writes, and which conversation it is — what the undo later reaches by. */
+  private journalScope(): JournalScope {
+    return {
+      sessionId: this.start.sessionId,
+      claudeSessionId: this.start.conversation.claudeSessionId,
+    };
   }
 
   /**
@@ -514,4 +645,14 @@ export class SessionRunner implements ClaudeSessionHandle {
 
     this.start.onClosed(reason);
   }
+}
+
+/** A command as the SDK describes it → ours. An absent list of aliases is an empty one. */
+function toSlashCommand(command: SdkSlashCommand): SlashCommand {
+  return {
+    name: command.name,
+    description: command.description,
+    argumentHint: command.argumentHint,
+    aliases: command.aliases ?? [],
+  };
 }

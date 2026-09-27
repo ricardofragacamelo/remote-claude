@@ -11,6 +11,7 @@ import 'package:remote_claude/features/session/domain/entities/conversation.dart
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 
 import '../../../../../support/builders/frames.dart';
+import '../../../../../support/builders/undo.dart';
 
 /// The event carried by one line of wire text.
 SessionEvent? read(String raw) => sessionEventFrom(decodeEnvelope(raw)!);
@@ -20,7 +21,25 @@ void main() {
     final SessionEvent? event = read(sessionStarted(sessionId: 'session-1'));
 
     expect(event, isA<SessionOpened>());
-    expect((event! as SessionOpened).sessionId, 'session-1');
+    final SessionOpened opened = event! as SessionOpened;
+    expect(opened.sessionId, 'session-1');
+    expect(opened.claudeSessionId, isNull);
+    expect(opened.resumedFrom, isNull);
+  });
+
+  test('B-11 · a session opening names its conversation, and the one it continues', () {
+    final SessionOpened opened =
+        read(
+              sessionStarted(
+                sessionId: 'session-1',
+                claudeSessionId: 'conv-2',
+                resumedFrom: 'conv-1',
+              ),
+            )!
+            as SessionOpened;
+
+    expect(opened.claudeSessionId, 'conv-2');
+    expect(opened.resumedFrom, 'conv-1');
   });
 
   test('reads each status the contract carries', () {
@@ -215,6 +234,83 @@ void main() {
           ),
         ),
         isNull,
+      );
+    });
+  });
+
+  group('S-02 · history goes through the same reader as the live frames', () {
+    test('a historical message is the event the live one would be, with no seq', () {
+      final String raw = messageCompleted(messageId: 'm1', text: 'Hello', seq: 12, role: 'user');
+
+      final SessionEvent historical = historyEventFrom(historyEntry(raw))!;
+
+      expect(
+        historical,
+        const MessageFinished(historySeq, messageId: 'm1', text: 'Hello', isFromUser: true),
+      );
+      expect(historical.seq, 0);
+    });
+
+    test('a historical tool and its outcome read as the live ones do', () {
+      expect(
+        historyEventFrom(historyEntry(toolStarted(toolUseId: 't1', seq: 3))),
+        const ToolInvoked(
+          historySeq,
+          toolUseId: 't1',
+          toolName: 'Bash',
+          input: <String, Object?>{'command': 'ls'},
+        ),
+      );
+      expect(
+        historyEventFrom(historyEntry(toolCompleted(toolUseId: 't1', seq: 4, summary: 'ok'))),
+        const ToolFinished(
+          historySeq,
+          toolUseId: 't1',
+          status: ToolStatus.succeeded,
+          summary: 'ok',
+        ),
+      );
+    });
+
+    test('an entry this build cannot read is dropped — it has no seq to move past', () {
+      final List<Object?> unreadable = <Object?>[
+        null,
+        'message.completed',
+        <String, Object?>{'type': 'message.completed'},
+        <String, Object?>{'payload': <String, Object?>{}},
+        <String, Object?>{'type': 7, 'payload': <String, Object?>{}},
+        <String, Object?>{'type': 'message.completed', 'payload': <String, Object?>{}},
+        <String, Object?>{
+          'type': 'diag.pong',
+          'payload': <String, Object?>{'nonce': 'n'},
+        },
+        <String, Object?>{'type': 'something.new', 'payload': <String, Object?>{}},
+      ];
+
+      for (final Object? entry in unreadable) {
+        expect(historyEventFrom(entry), isNull, reason: '$entry');
+      }
+    });
+  });
+
+  group('B-18 · what an undo did', () {
+    test('reaches the app as the outcome, with the seq that moves the resume point', () {
+      final SessionEvent? event = read(sessionRewound(seq: 7, payload: rewoundPayload()));
+
+      expect(event, FilesRewound(7, anOutcome()));
+    });
+
+    test('an outcome this build cannot read still moves the resume point', () {
+      expect(
+        read(sessionRewound(seq: 8, payload: <String, Object?>{'promptId': 'p-1'})),
+        const UnreadEvent(8),
+      );
+    });
+
+    test('in the history it is read the same way, with no seq of its own', () {
+      expect(
+        historyEventFrom(historyEntry(sessionRewound(seq: 3, payload: rewoundPayload()))),
+        FilesRewound(historySeq, anOutcome()),
       );
     });
   });

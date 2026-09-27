@@ -106,6 +106,19 @@ plano assume. Item herdado sem dono vira item esquecido.
 
 ---
 
+## Dívida herdada do plano 04
+
+O que o [plano 04](../04-transcript-and-resume/progress.md#escopo-reduzido-ou-adiado) adiou e
+**este** plano assume. Nenhuma tarefa daqui cobre os dois ainda: entram como tarefas da F0 quando
+ela começar, com a matriz de cenários de cada uma.
+
+| Herdado | Onde fecha |
+|---|---|
+| Prazo no cliente para uma retomada (`session.start` com `resumeSessionId`) que não recebe resposta — hoje o backend sempre responde, e sem socket o comando nem sai | [F0](F0-limits.md), tarefa a criar |
+| Prompt que chega **durante** um desfazer: a trava recusa desfazer durante turno, mas não impede um prompt de entrar na fila enquanto os arquivos voltam (cada arquivo em si é atômico) | [F0](F0-limits.md), tarefa a criar |
+
+---
+
 ## Riscos — acompanhamento
 
 Riscos do [plano](README.md#riscos-e-decisões-em-aberto).

@@ -8,7 +8,14 @@ import {
   SessionLimitReachedError,
   SessionNotFoundError,
 } from '@domain/session';
-import { aSession, RecordingHandle, SESSION_ID } from '../../../support/builders/session.builder';
+import { ClaudeSessionId } from '@domain/transcript';
+import {
+  aConversation,
+  aSession,
+  CONVERSATION_ID,
+  RecordingHandle,
+  SESSION_ID,
+} from '../../../support/builders/session.builder';
 
 const owner = UserId.create('auth|owner');
 const stranger = UserId.create('auth|stranger');
@@ -17,14 +24,17 @@ const id = (raw = SESSION_ID): SessionId => SessionId.create(raw);
 /** A registry with the given limit, and a helper that adds one more session to it. */
 function build(limit = 10): {
   registry: SessionRegistry;
-  add: (session?: ReturnType<typeof aSession>) => void;
+  add: (
+    session?: ReturnType<typeof aSession>,
+    conversation?: ReturnType<typeof aConversation>,
+  ) => void;
 } {
   const registry = new SessionRegistry(limit);
 
   return {
     registry,
-    add: (session = aSession()) => {
-      registry.add({ session, handle: new RecordingHandle() });
+    add: (session = aSession(), conversation = aConversation()) => {
+      registry.add({ session, handle: new RecordingHandle(), conversation });
     },
   };
 }
@@ -140,5 +150,59 @@ describe('SessionRegistry', () => {
 
   it('forgets a session that is not there without complaining', () => {
     expect(() => build().registry.remove(id())).not.toThrow();
+  });
+
+  describe('by conversation — plan 04, S-24', () => {
+    const SOURCE = '0f0e0d0c-0b0a-4908-8706-050403020100';
+    const conversation = (raw: string): ClaudeSessionId => ClaudeSessionId.create(raw);
+
+    it('says which conversation a live session is', () => {
+      const { registry, add } = build();
+      add();
+
+      expect(registry.conversationOf(id())?.claudeSessionId.value).toBe(CONVERSATION_ID);
+      expect(registry.conversationOf(id('01J0ABCDEFGHJKMNPQRSTVWXY0'))).toBeNull();
+    });
+
+    it("finds the caller's live session by the conversation it is", () => {
+      const { registry, add } = build();
+      add();
+
+      expect(
+        registry.findConversation(conversation(CONVERSATION_ID), owner)?.session.id.value,
+      ).toBe(SESSION_ID);
+    });
+
+    it('finds a fork by the conversation it continues — resuming it twice is one request', () => {
+      const { registry, add } = build();
+      add(aSession(), aConversation(CONVERSATION_ID, SOURCE));
+
+      expect(registry.findConversation(conversation(SOURCE), owner)).not.toBeNull();
+    });
+
+    it("does not hand the caller somebody else's live session", () => {
+      // A continuation of a conversation begun elsewhere is theirs; the caller gets a fork of
+      // their own, not an attach to a stream they may not watch.
+      const { registry, add } = build();
+      add();
+
+      expect(registry.findConversation(conversation(CONVERSATION_ID), stranger)).toBeNull();
+    });
+
+    it('does not count a session that has closed and not yet left', () => {
+      const { registry, add } = build();
+      const session = aSession();
+      add(session);
+      session.close('closedByUser');
+
+      expect(registry.findConversation(conversation(CONVERSATION_ID), owner)).toBeNull();
+    });
+
+    it('answers nothing for a conversation no live session is', () => {
+      const { registry, add } = build();
+      add();
+
+      expect(registry.findConversation(conversation(SOURCE), owner)).toBeNull();
+    });
   });
 });

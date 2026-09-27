@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 import 'package:remote_claude/features/session/domain/entities/session_stream.dart';
@@ -90,7 +91,32 @@ void main() {
     expect(EventReceived(arrival), EventReceived(arrival));
     expect(StreamGap(), StreamGap());
     expect(EventReceived(arrival), isNot(StreamGap()));
-    expect(StreamGap().props, isEmpty);
+    expect(StreamGap().props, <Object?>[null]);
+    expect(StreamGap(claudeSessionId: 'c-1'), isNot(StreamGap()));
+    expect(
+      SessionJoined(sessionId: 's-1', claudeSessionId: 'c-1'),
+      SessionJoined(sessionId: 's-1', claudeSessionId: 'c-1'),
+    );
+    expect(
+      CommandRefused(
+        commandId: 'x',
+        failure: UnexpectedFailure(traceId: 't'),
+      ),
+      isNot(
+        CommandRefused(
+          commandId: 'y',
+          failure: UnexpectedFailure(traceId: 't'),
+        ),
+      ),
+    );
+    expect(
+      SessionFailed(UnexpectedFailure(traceId: 't')),
+      SessionFailed(UnexpectedFailure(traceId: 't')),
+    );
+    expect(
+      SessionFailed(UnexpectedFailure(traceId: 't')),
+      isNot(SessionFailed(UnexpectedFailure(traceId: 'u'))),
+    );
   });
 
   test('pongs compare by value, so a replay of one is not a second round trip', () {

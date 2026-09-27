@@ -50,7 +50,13 @@
       "notFound": "That session no longer exists.",
       "invalidSessionId": "{{sessionId}} is not a session identifier.",
       "claudeUnavailable": "Claude stopped responding on this machine.",
-      "forbidden": "That session belongs to somebody else."
+      "forbidden": "That session belongs to somebody else.",
+      "limitReached": "This machine is already running {{limit}} sessions, which is as many as it allows. End one and try again.",
+      "unknownCommand": "This installation has no /{{command}} command. Check the list of commands for the ones it offers.",
+      "claudeTimeout": "Claude took too long to answer. Try again.",
+      "locked": "A turn is running, or another undo of this session is in progress. Wait for it to finish and try again.",
+      "rewindTargetUnknown": "That is not a point this session can go back to. Reload the list and choose again.",
+      "rewindIncomplete": "The undo stopped short: {{failed}} file(s) could not be put back, and each of them was left exactly as it was."
     },
     "ping": {
       "title": "Round trip",
@@ -114,6 +120,10 @@
       "interrupt": "Interrupt",
       "close": "End session",
       "closeNotOwner": "Only the browser that opened this session can end it."
+    },
+    "history": {
+      "loading": "Loading the earlier part of this conversation…",
+      "open": "See the whole conversation"
     }
   },
   "workspace": {
@@ -131,7 +141,9 @@
       "lastUsed": "Last opened {{at}}",
       "neverUsed": "Never opened",
       "emptyTitle": "No folder is available to you",
-      "emptyDescription": "The allowlist of this machine does not mention your account yet. Whoever installed remote-claude can add a folder to it."
+      "emptyDescription": "The allowlist of this machine does not mention your account yet. Whoever installed remote-claude can add a folder to it.",
+      "history": "History",
+      "historyOf": "Conversations in {{label}}"
     }
   },
   "permission": {
@@ -346,6 +358,100 @@
       "claudeUnavailable": "Claude could not read its history on this machine.",
       "claudeTimeout": "Claude took too long to read its history. Try again.",
       "cursorStale": "This conversation changed while you were reading it. Reload it from the latest messages."
+    },
+    "screen": {
+      "title": "History",
+      "noWorkspaceTitle": "No folder chosen",
+      "noWorkspaceDescription": "Open the history from one of your folders on the start screen."
+    },
+    "list": {
+      "title": "Conversations",
+      "description": "Everything said in this folder — here, in the editor or in a terminal — most recently written first.",
+      "loading": "Loading the conversations of this folder…",
+      "emptyTitle": "No conversation in this folder yet",
+      "emptyDescription": "Start a session here, or talk to Claude in this folder from the editor: the conversation shows up in this list.",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
+      "untitled": "Untitled conversation",
+      "lastModified": "Last written {{at}}",
+      "lastModifiedOnBranch": "Last written {{at}}, on {{branch}}"
+    }
+  },
+  "history": {
+    "origin": {
+      "ours": "Opened here",
+      "external": "Begun outside this app — in the editor or a terminal"
+    },
+    "screen": {
+      "title": "Conversation",
+      "description": "What was said, as the history of this machine keeps it. Reading it changes nothing.",
+      "loading": "Loading the conversation…",
+      "resume": "Continue this conversation",
+      "resuming": "Continuing…",
+      "externalNote": "This conversation began outside this app. Continuing it here starts a copy under a new id: the editor will not see the answers given here.",
+      "loadEarlier": "Load earlier messages",
+      "loadingEarlier": "Loading earlier messages…",
+      "emptyTitle": "Nothing was said in this conversation",
+      "emptyDescription": "Continue it to say the first thing."
+    }
+  },
+  "commands": {
+    "menu": {
+      "toggle": "Commands",
+      "title": "Commands of this installation",
+      "search": "Search commands",
+      "searchPlaceholder": "Name, alias or description",
+      "loading": "Loading the commands of this installation…",
+      "unavailable": "The list of commands is not available right now. You can still type any command in the prompt.",
+      "emptyTitle": "This installation offers no command",
+      "emptyDescription": "You can still type anything in the prompt below.",
+      "noMatch": "No command matches “{{search}}”.",
+      "suggested": "Suggested",
+      "all": "All other commands",
+      "version": "From Claude Code {{version}} on this machine."
+    }
+  },
+  "undo": {
+    "panel": {
+      "toggle": "Undo file changes",
+      "title": "Undo points",
+      "description": "Puts the files this session wrote back the way they were before a turn. A file changed outside the session afterwards is kept as it is.",
+      "loading": "Loading the undo points of this session…",
+      "emptyTitle": "Nothing to undo yet",
+      "emptyDescription": "Once a turn writes files, you can put them back from here.",
+      "untitled": "Turn with no prompt",
+      "startedAt": "Turn started {{at}}",
+      "busy": "Undo is available once the turn that is running finishes.",
+      "ended": "Undo is not available for a session that has ended.",
+      "rewinding": "Undoing…"
+    },
+    "confirm": {
+      "title": "Undo these file changes?",
+      "target": "The files go back to how they were before the turn “{{label}}”, started {{at}}.",
+      "nothing": "Nothing here would change: every file is already the way it was, or stays as it is.",
+      "cancel": "Keep the files",
+      "confirm": "Undo these files"
+    },
+    "scope": {
+      "restore": "Go back to how they were",
+      "remove": "Deleted — the turn created them",
+      "preserve": "Stay as they are",
+      "unchanged": "Already the way they were"
+    },
+    "reason": {
+      "modifiedOutside": "Changed outside the session afterwards, so it is kept.",
+      "notRestorable": "Too large or unreadable to have been saved.",
+      "unsafePath": "It became a link or is no longer a regular file.",
+      "noBaseline": "Nothing records how the session left it, so the undo will not guess."
+    },
+    "outcome": {
+      "title": "Last undo",
+      "restored": "Put back",
+      "deleted": "Deleted",
+      "preserved": "Kept as they were",
+      "unchanged": "Were already the way they were",
+      "failed": "Could not be put back — left exactly as they were",
+      "nothing": "The undo found nothing to change."
     }
   }
 }

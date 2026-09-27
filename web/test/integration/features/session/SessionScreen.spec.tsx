@@ -1,14 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
 import { SessionScreen, useLiveSessionStore } from '@/features/session';
+import { api } from '@/shared/api/api';
 import { setAccessToken } from '@/shared/api/credentials';
 import { wsClient } from '@/shared/api/ws';
 import { render, translator } from '../../../support/render';
 import { installFakeWebSocket } from '../../../support/fake-websocket';
 import type { InstalledWebSocket } from '../../../support/fake-websocket';
+import { aHistoryPage, claudeUnavailable, said } from '../../../support/history';
+import { ack, aLiveSocket, hubEvent } from '../../../support/live-socket';
+import type { LiveSocket } from '../../../support/live-socket';
 
 const t = translator('en');
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
@@ -334,5 +338,133 @@ describe('the session screen', () => {
     await waitFor(async () => {
       expect(await axe(container)).toHaveNoViolations();
     });
+  });
+});
+
+describe('the session screen, with the history under the stream — plan 04', () => {
+  const CONVERSATION = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
+  const SOURCE = '0f0e0d0c-0b0a-4908-8706-050403020100';
+  let live: LiveSocket;
+
+  const gap = ack('session.attached', {
+    sessionId: SESSION,
+    replayed: 0,
+    oldestAvailableSeq: 900,
+    gap: true,
+    claudeSessionId: CONVERSATION,
+  });
+
+  beforeEach(() => {
+    useLiveSessionStore.getState().reset();
+    live = aLiveSocket();
+  });
+
+  afterEach(() => {
+    live.close();
+    vi.restoreAllMocks();
+  });
+
+  it('reloads the conversation over HTTP when the replay has a gap — S-14', async () => {
+    const get = vi
+      .spyOn(api, 'get')
+      .mockResolvedValue(aHistoryPage([said('m1', 'From before the gap.')]));
+    render(<SessionScreen sessionId={SESSION} />);
+    live.connect();
+    live.receive(hubEvent(SESSION, 'message.delta', 1, { messageId: 'mX', delta: 'stale' }));
+
+    live.receive(gap);
+
+    expect(await screen.findByText('From before the gap.')).toBeInTheDocument();
+    // Cleared, not stitched: what was on screen before the hole is gone.
+    expect(screen.queryByText('stale')).toBeNull();
+    expect(get).toHaveBeenCalledWith(`/transcripts/${CONVERSATION}/messages`);
+  });
+
+  it('never shows a message twice when the stream keeps arriving during the reload — S-15', async () => {
+    let answer: (page: unknown) => void = () => undefined;
+    vi.spyOn(api, 'get').mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    render(<SessionScreen sessionId={SESSION} />);
+    live.connect();
+
+    live.receive(gap);
+    expect(screen.getByLabelText(t('session.history.loading'))).toBeInTheDocument();
+    live.receive(
+      hubEvent(SESSION, 'message.completed', 901, {
+        messageId: 'm2',
+        role: 'assistant',
+        content: [{ type: 'text', text: 'Arrived live.' }],
+      }),
+    );
+    act(() => {
+      answer(aHistoryPage([said('m1', 'Earlier.'), said('m2', 'Arrived live.')]));
+    });
+
+    await screen.findByText('Earlier.');
+    expect(screen.getAllByText('Arrived live.')).toHaveLength(1);
+    expect(screen.queryByLabelText(t('session.history.loading'))).toBeNull();
+  });
+
+  it('says why the history could not be read, keeps the stream, and tries again — S-17', async () => {
+    vi.spyOn(api, 'get')
+      .mockRejectedValueOnce(claudeUnavailable)
+      .mockResolvedValueOnce(aHistoryPage([said('m1', 'Read at last.')]));
+    render(<SessionScreen sessionId={SESSION} />);
+    live.connect();
+
+    live.receive(gap);
+    live.receive(hubEvent(SESSION, 'message.delta', 901, { messageId: 'm9', delta: 'still live' }));
+
+    expect(await screen.findByText(t('transcript.error.claudeUnavailable'))).toBeInTheDocument();
+    expect(screen.getByText('still live')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: t('common.action.retry') }));
+
+    expect(await screen.findByText('Read at last.')).toBeInTheDocument();
+    expect(screen.getByText('still live')).toBeInTheDocument();
+  });
+
+  it('lays what a resumed session continues under what it says now — B-11, S-21', async () => {
+    const get = vi
+      .spyOn(api, 'get')
+      .mockResolvedValue(aHistoryPage([said('m0', 'Said in the editor.')]));
+    render(<SessionScreen sessionId={SESSION} />);
+    live.connect();
+
+    live.receive(
+      hubEvent(SESSION, 'session.started', 1, {
+        sessionId: SESSION,
+        claudeSessionId: CONVERSATION,
+        resumedFrom: SOURCE,
+      }),
+      hubEvent(SESSION, 'message.delta', 2, { messageId: 'm1', delta: 'Said now.' }),
+    );
+
+    expect(await screen.findByText('Said in the editor.')).toBeInTheDocument();
+    const texts = screen.getAllByText(/Said (in the editor|now)\./).map((node) => node.textContent);
+    expect(texts).toEqual(['Said in the editor.', 'Said now.']);
+    expect(get).toHaveBeenCalledWith(`/transcripts/${SOURCE}/messages`);
+    expect(useLiveSessionStore.getState().lastSeq).toBe(2);
+  });
+
+  it('opens the whole conversation once it knows which one it is', async () => {
+    const onOpenHistory = vi.fn();
+    render(<SessionScreen sessionId={SESSION} onOpenHistory={onOpenHistory} />);
+    live.connect();
+
+    expect(screen.queryByRole('button', { name: t('session.history.open') })).toBeNull();
+    live.receive(
+      hubEvent(SESSION, 'session.started', 1, {
+        sessionId: SESSION,
+        claudeSessionId: CONVERSATION,
+      }),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: t('session.history.open') }));
+
+    expect(onOpenHistory).toHaveBeenCalledWith(CONVERSATION);
   });
 });

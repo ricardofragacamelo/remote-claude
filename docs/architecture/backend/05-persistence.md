@@ -17,6 +17,10 @@ Voltar para o [índice do backend](README.md).
 **Não duplique o transcript.** O Claude já persiste em `~/.claude/projects/*.jsonl`, e é o
 mesmo arquivo que o VSCode usa. Copiar para o Postgres cria duas fontes de verdade que
 divergem. Leia via funções do SDK. Ver [04-claude-integration.md](04-claude-integration.md).
+A regra é de máquina: `pnpm lint:arch` reprova (`transcript-is-never-persisted`) qualquer arquivo
+de `adapter/outbound/persistence/` ou `infrastructure/database/` que alcance o que lê uma conversa
+— os casos de uso e o store do `transcript`, os adapters sobre o SDK, o tipo da mensagem. Nomear
+uma conversa pelo id (`@domain/transcript`) continua permitido.
 
 **O que o banco guarda sobre sessão de Claude é procedência, não conteúdo:** que *nós*
 iniciamos aquele `sessionId`. O SDK não informa a origem de uma sessão, e é esse registro que
@@ -27,6 +31,13 @@ Esse registro é a tabela `session_origins` — `claude_session_id` (chave), `se
 `user_id`, `workspace_path`, `opened_at`, e nenhuma coluna de conteúdo. Dona é `session`, que a
 grava **antes** do `query()`, com o UUID que ela mesma cunhou e passou ao SDK como `sessionId`;
 falha ao gravar não abre a sessão. Gravar a mesma conversa duas vezes mantém o primeiro dono.
+Uma **retomada por fork** grava a linha do id novo antes do `query()`, pela mesma regra; a conversa
+de origem, começada fora, continua sem linha — não é nossa. Uma retomada **in-place** não grava
+nada: a linha foi escrita quando a conversa foi aberta.
+
+A migration `0012` acrescenta `session.resumed` e `session.forked` ao CHECK de
+`audit_events.kind`: retomar é fato da trilha, gravado antes do subprocesso, com a conversa
+continuada como sujeito e o workspace como rótulo — nunca o resumo, que é o primeiro prompt.
 
 **E guarda o estado em que a sessão deixou cada arquivo** — caminho, hash e mtime, gravados no
 hook `PostToolUse`. É o que permite ao desfazer distinguir "como a sessão deixou" de "alterado
@@ -44,6 +55,25 @@ SDK não aceita filtro de arquivo — reverter alguns e preservar outros só é 
 próprio. Conteúdo grande **não** vai para o Postgres: a linha guarda o metadado e aponta para o
 blob em disco, com teto e purga que nunca alcança sessão viva (referência medida: o store
 equivalente do CLI ocupa 6,6 MB para 54 sessões).
+
+A migration `0013` ([plano 04 · F4](../../plans/04-transcript-and-resume/F4-checkpoint.md)) muda
+três coisas, uma razão cada:
+
+- **`claude_session_id` nas duas tabelas do journal.** Uma conversa nossa continuada in-place é
+  uma sessão viva **nova** sobre a **mesma** conversa, e os pontos de desfazer das sessões
+  anteriores são dela também: o alcance do desfazer é a sessão viva **mais** a conversa que ela é.
+  Anulável — linha anterior à `0013` não nomeia conversa e só é alcançada pela própria sessão;
+- **`session_file_states.hash` anulável.** `NULL` diz que a sessão deixou **nenhum arquivo** ali: o
+  próprio desfazer removeu um que o turno desfeito criara. Continua sendo linha de base — sem ela,
+  um segundo desfazer para um ponto anterior leria o arquivo ausente como obra de outra pessoa;
+- **`audit_events.details` (jsonb) e o tipo `session.filesRewound`.** Desfazer muda o disco e
+  entra na trilha **antes** de escrever, com o ponto e cada caminho com o que acontecerá a ele —
+  nunca conteúdo de arquivo, nunca mensagem da conversa. Trilha indisponível não desfaz.
+
+A purga do store de snapshots roda num job interno (`SnapshotPurgeJob`, a cada 10 minutos, o
+primeiro um minuto depois do boot) e preserva o que qualquer sessão viva alcança — as dela e as das
+sessões anteriores da mesma conversa. As linhas do que ela remove saem junto, para nenhum
+checkpoint apontar para blob que não existe.
 
 ---
 

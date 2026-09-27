@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth';
 import { DeviceList } from '@/features/devices';
 import { SessionPingPanel, SessionStarter } from '@/features/session';
 import { useWorkspaceStore, WorkspaceSelector } from '@/features/workspace';
+import { useOpenSession } from './navigation';
 import { Screen, SignedIn } from './Screen';
 
 /**
@@ -21,9 +22,12 @@ export function App(): React.JSX.Element {
   const navigate = useNavigate();
 
   // Stable across renders, because the starter rebuilds its subscription whenever it changes.
-  const open = useCallback(
-    (sessionId: string) => {
-      void navigate({ to: '/sessions/$sessionId', params: { sessionId } });
+  const open = useOpenSession();
+
+  // The conversations of a workspace — the second level of the history (D-03 of plan 04).
+  const openHistory = useCallback(
+    (workspacePath: string) => {
+      void navigate({ to: '/history', search: { workspacePath } });
     },
     [navigate],
   );
@@ -41,7 +45,7 @@ export function App(): React.JSX.Element {
       }
     >
       <SignedIn returnTo="/">
-        <WorkspaceSelector />
+        <WorkspaceSelector onOpenHistory={openHistory} />
         <SessionStarter workspacePath={workspacePath} onStarted={open} />
         <SessionPingPanel />
         <DeviceList />

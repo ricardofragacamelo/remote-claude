@@ -5,28 +5,12 @@
   "prompt": "Read notes.md, then run `ls` in this directory, then read notes.md again, then write a file called summary.md containing one line summarising notes.md. Work through it step by step and do not ask me anything.",
   "recordedAt": "2026-09-19",
   "sdkVersion": "0.3.277",
-  "counts": {
-    "messages": 111,
-    "preToolUse": 4,
-    "canUseTool": 1
-  },
+  "counts": { "messages": 111, "preToolUse": 4, "canUseTool": 1 },
   "preToolUse": [
-    {
-      "toolName": "Read",
-      "toolUseId": "toolu_01NLyNonqrTV5G8abkAX5UpD"
-    },
-    {
-      "toolName": "Bash",
-      "toolUseId": "toolu_01XRgMhcbn5bruiAojzFqK9K"
-    },
-    {
-      "toolName": "Read",
-      "toolUseId": "toolu_01KuFfLRvj9TcMpDw2XCuFz3"
-    },
-    {
-      "toolName": "Write",
-      "toolUseId": "toolu_0163zLG2PtDSvb4vLncpjMoF"
-    }
+    { "toolName": "Read", "toolUseId": "toolu_01NLyNonqrTV5G8abkAX5UpD" },
+    { "toolName": "Bash", "toolUseId": "toolu_01XRgMhcbn5bruiAojzFqK9K" },
+    { "toolName": "Read", "toolUseId": "toolu_01KuFfLRvj9TcMpDw2XCuFz3" },
+    { "toolName": "Write", "toolUseId": "toolu_0163zLG2PtDSvb4vLncpjMoF" }
   ],
   "canUseTool": [
     {
@@ -173,21 +157,13 @@
         "run",
         "run-skill-generator"
       ],
-      "plugins": [
-        {
-          "name": "agents-md",
-          "path": "builtin",
-          "source": "agents-md@builtin"
-        }
-      ],
+      "plugins": [{ "name": "agents-md", "path": "builtin", "source": "agents-md@builtin" }],
       "capabilities": ["interrupt_receipt_v1", "interrupt_cancel_queued_v1", "msg_lifecycle_v1"],
       "analytics_disabled": false,
       "product_feedback_disabled": false,
       "uuid": "e4bb3f61-dda0-470e-acdd-ac02cd1fefb5",
-      "memory_paths": {
-        "auto": "/home/ricardocamelo/.claude/projects/-tmp-rc-fixture-MIM3vo/memory/"
-      },
-      "scratchpad_path": "/tmp/claude-1000/-tmp-rc-fixture-MIM3vo/6b41b192-a41b-46c2-b8d7-5098d8c825be/scratchpad",
+      "memory_paths": { "auto": "/home/user/.claude/projects/-workspace/memory/" },
+      "scratchpad_path": "/tmp/claude-1000/-workspace/6b41b192-a41b-46c2-b8d7-5098d8c825be/scratchpad",
       "messaging_socket_path": "/run/user/1000/cc-socks/1275535.sock",
       "fast_mode_state": "off",
       "fast_mode_disabled_reason": "unknown"
@@ -209,14 +185,8 @@
         "overageDisabledReason": "member_zero_credit_limit",
         "isUsingOverage": false,
         "unifiedWindows": {
-          "five_hour": {
-            "utilization": 0.29,
-            "resetsAt": 1789789800
-          },
-          "seven_day": {
-            "utilization": 0.15,
-            "resetsAt": 1790269200
-          }
+          "five_hour": { "utilization": 0.29, "resetsAt": 1789789800 },
+          "seven_day": { "utilization": 0.15, "resetsAt": 1790269200 }
         }
       },
       "uuid": "9dae962f-c316-476d-9387-d441ee14ce00",
@@ -240,10 +210,7 @@
             "input_tokens": 2,
             "cache_creation_input_tokens": 4529,
             "cache_read_input_tokens": 22814,
-            "cache_creation": {
-              "ephemeral_5m_input_tokens": 0,
-              "ephemeral_1h_input_tokens": 4529
-            },
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 4529 },
             "output_tokens": 1,
             "service_tier": "standard",
             "inference_geo": "not_available"
@@ -263,10 +230,7 @@
       "event": {
         "type": "content_block_start",
         "index": 0,
-        "content_block": {
-          "type": "text",
-          "text": ""
-        }
+        "content_block": { "type": "text", "text": "" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -277,10 +241,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "I"
-        }
+        "delta": { "type": "text_delta", "text": "I" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -291,10 +252,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "'ll work"
-        }
+        "delta": { "type": "text_delta", "text": "'ll work" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -305,10 +263,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " through these"
-        }
+        "delta": { "type": "text_delta", "text": " through these" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -319,10 +274,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " steps in order."
-        }
+        "delta": { "type": "text_delta", "text": " steps in order." }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -335,12 +287,7 @@
         "id": "msg_011CfBt3dW7fvcFMjaRBuCFa",
         "type": "message",
         "role": "assistant",
-        "content": [
-          {
-            "type": "text",
-            "text": "I'll work through these steps in order."
-          }
-        ],
+        "content": [{ "type": "text", "text": "I'll work through these steps in order." }],
         "container": null,
         "stop_reason": null,
         "stop_sequence": null,
@@ -349,10 +296,7 @@
           "input_tokens": 2,
           "cache_creation_input_tokens": 4529,
           "cache_read_input_tokens": 22814,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 4529
-          },
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 4529 },
           "output_tokens": 1,
           "service_tier": "standard",
           "inference_geo": "not_available"
@@ -369,10 +313,7 @@
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "content_block_stop",
-        "index": 0
-      },
+      "event": { "type": "content_block_stop", "index": 0 },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
       "uuid": "8eff9204-3a3e-446f-92a4-77185c3bd562"
@@ -387,9 +328,7 @@
           "id": "toolu_01NLyNonqrTV5G8abkAX5UpD",
           "name": "Read",
           "input": {},
-          "caller": {
-            "type": "direct"
-          }
+          "caller": { "type": "direct" }
         }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
@@ -401,10 +340,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": ""
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -415,10 +351,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "{\"file_path\": \"/"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "{\"file_path\": \"/" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -429,10 +362,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "tmp/r"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "tmp/r" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -443,10 +373,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "c-fix"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "c-fix" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -457,10 +384,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "ture-MI"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "ture-MI" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -471,10 +395,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "M3v"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "M3v" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -485,10 +406,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "o/notes.md"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "o/notes.md" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -499,10 +417,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "\"}"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -520,12 +435,8 @@
             "type": "tool_use",
             "id": "toolu_01NLyNonqrTV5G8abkAX5UpD",
             "name": "Read",
-            "input": {
-              "file_path": "/workspace/notes.md"
-            },
-            "caller": {
-              "type": "direct"
-            }
+            "input": { "file_path": "/workspace/notes.md" },
+            "caller": { "type": "direct" }
           }
         ],
         "container": null,
@@ -536,10 +447,7 @@
           "input_tokens": 2,
           "cache_creation_input_tokens": 4529,
           "cache_read_input_tokens": 22814,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 4529
-          },
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 4529 },
           "output_tokens": 1,
           "service_tier": "standard",
           "inference_geo": "not_available"
@@ -554,17 +462,12 @@
       "timestamp": "2026-09-19T00:50:48.297Z",
       "request_id": "req_011CfBt3d54zHkTgbNrRpvPd",
       "wire_tool_inputs": {
-        "toolu_01NLyNonqrTV5G8abkAX5UpD": {
-          "file_path": "/workspace/notes.md"
-        }
+        "toolu_01NLyNonqrTV5G8abkAX5UpD": { "file_path": "/workspace/notes.md" }
       }
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "content_block_stop",
-        "index": 1
-      },
+      "event": { "type": "content_block_stop", "index": 1 },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
       "uuid": "e4238dd0-242f-4396-b468-a69560cd5a16"
@@ -584,9 +487,7 @@
           "cache_creation_input_tokens": 4529,
           "cache_read_input_tokens": 22814,
           "output_tokens": 82,
-          "output_tokens_details": {
-            "thinking_tokens": 0
-          },
+          "output_tokens_details": { "thinking_tokens": 0 },
           "iterations": [
             {
               "input_tokens": 2,
@@ -601,9 +502,7 @@
             }
           ]
         },
-        "context_management": {
-          "applied_edits": []
-        }
+        "context_management": { "applied_edits": [] }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -611,9 +510,7 @@
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "message_stop"
-      },
+      "event": { "type": "message_stop" },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
       "uuid": "5b15eb82-6796-4ed7-a329-637320cdea78"
@@ -670,10 +567,7 @@
             "input_tokens": 2,
             "cache_creation_input_tokens": 2247,
             "cache_read_input_tokens": 27343,
-            "cache_creation": {
-              "ephemeral_5m_input_tokens": 0,
-              "ephemeral_1h_input_tokens": 2247
-            },
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2247 },
             "output_tokens": 17,
             "service_tier": "standard",
             "inference_geo": "not_available"
@@ -698,9 +592,7 @@
           "id": "toolu_01XRgMhcbn5bruiAojzFqK9K",
           "name": "Bash",
           "input": {},
-          "caller": {
-            "type": "direct"
-          }
+          "caller": { "type": "direct" }
         }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
@@ -712,10 +604,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": ""
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -726,10 +615,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "{\"command\": \"ls"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "{\"command\": \"ls" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -754,10 +640,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "ory"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "ory" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -768,10 +651,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "\"}"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -789,13 +669,8 @@
             "type": "tool_use",
             "id": "toolu_01XRgMhcbn5bruiAojzFqK9K",
             "name": "Bash",
-            "input": {
-              "command": "ls",
-              "description": "List files in current directory"
-            },
-            "caller": {
-              "type": "direct"
-            }
+            "input": { "command": "ls", "description": "List files in current directory" },
+            "caller": { "type": "direct" }
           }
         ],
         "container": null,
@@ -806,10 +681,7 @@
           "input_tokens": 2,
           "cache_creation_input_tokens": 2247,
           "cache_read_input_tokens": 27343,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 2247
-          },
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2247 },
           "output_tokens": 17,
           "service_tier": "standard",
           "inference_geo": "not_available"
@@ -832,10 +704,7 @@
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "content_block_stop",
-        "index": 0
-      },
+      "event": { "type": "content_block_stop", "index": 0 },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
       "uuid": "1bd712ad-fa5f-476e-b48c-c3a4a51f020b"
@@ -855,9 +724,7 @@
           "cache_creation_input_tokens": 2247,
           "cache_read_input_tokens": 27343,
           "output_tokens": 74,
-          "output_tokens_details": {
-            "thinking_tokens": 0
-          },
+          "output_tokens_details": { "thinking_tokens": 0 },
           "iterations": [
             {
               "input_tokens": 2,
@@ -872,9 +739,7 @@
             }
           ]
         },
-        "context_management": {
-          "applied_edits": []
-        }
+        "context_management": { "applied_edits": [] }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -882,9 +747,7 @@
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "message_stop"
-      },
+      "event": { "type": "message_stop" },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
       "uuid": "ec1a081c-0b99-4bc1-8e57-7fae5152bb03"
@@ -939,10 +802,7 @@
             "input_tokens": 2,
             "cache_creation_input_tokens": 107,
             "cache_read_input_tokens": 29590,
-            "cache_creation": {
-              "ephemeral_5m_input_tokens": 0,
-              "ephemeral_1h_input_tokens": 107
-            },
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 107 },
             "output_tokens": 16,
             "service_tier": "standard",
             "inference_geo": "not_available"
@@ -967,9 +827,7 @@
           "id": "toolu_01KuFfLRvj9TcMpDw2XCuFz3",
           "name": "Read",
           "input": {},
-          "caller": {
-            "type": "direct"
-          }
+          "caller": { "type": "direct" }
         }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
@@ -981,10 +839,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": ""
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -995,10 +850,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "{\"file_path\": \"/tmp"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "{\"file_path\": \"/tmp" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1009,10 +861,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "/rc"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "/rc" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1023,10 +872,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "-f"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "-f" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1037,10 +883,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "ixture-MI"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "ixture-MI" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1051,10 +894,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "M3v"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "M3v" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1065,10 +905,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "o"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "o" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1079,10 +916,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "/notes.md"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "/notes.md" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1093,10 +927,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "\"}"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1114,12 +945,8 @@
             "type": "tool_use",
             "id": "toolu_01KuFfLRvj9TcMpDw2XCuFz3",
             "name": "Read",
-            "input": {
-              "file_path": "/workspace/notes.md"
-            },
-            "caller": {
-              "type": "direct"
-            }
+            "input": { "file_path": "/workspace/notes.md" },
+            "caller": { "type": "direct" }
           }
         ],
         "container": null,
@@ -1130,10 +957,7 @@
           "input_tokens": 2,
           "cache_creation_input_tokens": 107,
           "cache_read_input_tokens": 29590,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 107
-          },
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 107 },
           "output_tokens": 16,
           "service_tier": "standard",
           "inference_geo": "not_available"
@@ -1148,17 +972,12 @@
       "timestamp": "2026-09-19T00:50:51.911Z",
       "request_id": "req_011CfBt3zkJdHviSDPp2mv6o",
       "wire_tool_inputs": {
-        "toolu_01KuFfLRvj9TcMpDw2XCuFz3": {
-          "file_path": "/workspace/notes.md"
-        }
+        "toolu_01KuFfLRvj9TcMpDw2XCuFz3": { "file_path": "/workspace/notes.md" }
       }
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "content_block_stop",
-        "index": 0
-      },
+      "event": { "type": "content_block_stop", "index": 0 },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
       "uuid": "ef43c0b9-f09a-489a-bf90-fb00fdff9941"
@@ -1179,12 +998,7 @@
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "uuid": "ad89a5c0-1a18-4995-ae4c-4abb9e1b7490",
       "timestamp": "2026-09-19T00:50:51.923Z",
-      "tool_use_result": {
-        "type": "file_unchanged",
-        "file": {
-          "filePath": "/workspace/notes.md"
-        }
-      }
+      "tool_use_result": { "type": "file_unchanged", "file": { "filePath": "/workspace/notes.md" } }
     },
     {
       "type": "stream_event",
@@ -1201,9 +1015,7 @@
           "cache_creation_input_tokens": 107,
           "cache_read_input_tokens": 29590,
           "output_tokens": 70,
-          "output_tokens_details": {
-            "thinking_tokens": 0
-          },
+          "output_tokens_details": { "thinking_tokens": 0 },
           "iterations": [
             {
               "input_tokens": 2,
@@ -1218,9 +1030,7 @@
             }
           ]
         },
-        "context_management": {
-          "applied_edits": []
-        }
+        "context_management": { "applied_edits": [] }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1228,9 +1038,7 @@
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "message_stop"
-      },
+      "event": { "type": "message_stop" },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
       "uuid": "a2492121-0a5c-4e47-a9b6-5a925dbe0473"
@@ -1260,10 +1068,7 @@
             "input_tokens": 2,
             "cache_creation_input_tokens": 131,
             "cache_read_input_tokens": 29697,
-            "cache_creation": {
-              "ephemeral_5m_input_tokens": 0,
-              "ephemeral_1h_input_tokens": 131
-            },
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 131 },
             "output_tokens": 3,
             "service_tier": "standard",
             "inference_geo": "not_available"
@@ -1283,11 +1088,7 @@
       "event": {
         "type": "content_block_start",
         "index": 0,
-        "content_block": {
-          "type": "thinking",
-          "thinking": "",
-          "signature": ""
-        }
+        "content_block": { "type": "thinking", "thinking": "", "signature": "" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1298,11 +1099,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "thinking_delta",
-          "thinking": "",
-          "estimated_tokens": null
-        }
+        "delta": { "type": "thinking_delta", "thinking": "", "estimated_tokens": null }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1344,10 +1141,7 @@
           "input_tokens": 2,
           "cache_creation_input_tokens": 131,
           "cache_read_input_tokens": 29697,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 131
-          },
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 131 },
           "output_tokens": 3,
           "service_tier": "standard",
           "inference_geo": "not_available"
@@ -1364,10 +1158,7 @@
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "content_block_stop",
-        "index": 0
-      },
+      "event": { "type": "content_block_stop", "index": 0 },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
       "uuid": "d175b6ed-dee1-4392-b447-4bf04f28e766"
@@ -1382,9 +1173,7 @@
           "id": "toolu_0163zLG2PtDSvb4vLncpjMoF",
           "name": "Write",
           "input": {},
-          "caller": {
-            "type": "direct"
-          }
+          "caller": { "type": "direct" }
         }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
@@ -1396,10 +1185,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": ""
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1410,10 +1196,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "{\"file_path\": \"/tmp/rc"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "{\"file_path\": \"/tmp/rc" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1424,10 +1207,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "-fixture-MIM"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "-fixture-MIM" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1438,10 +1218,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "3vo/summary.md"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "3vo/summary.md" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1466,10 +1243,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": " goals: safety and speed"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": " goals: safety and speed" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1480,10 +1254,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": ".\\n"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": ".\\n" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1494,10 +1265,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 1,
-        "delta": {
-          "type": "input_json_delta",
-          "partial_json": "\"}"
-        }
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1519,9 +1287,7 @@
               "file_path": "/workspace/summary.md",
               "content": "The project has two goals: safety and speed.\n"
             },
-            "caller": {
-              "type": "direct"
-            }
+            "caller": { "type": "direct" }
           }
         ],
         "container": null,
@@ -1532,10 +1298,7 @@
           "input_tokens": 2,
           "cache_creation_input_tokens": 131,
           "cache_read_input_tokens": 29697,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 131
-          },
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 131 },
           "output_tokens": 3,
           "service_tier": "standard",
           "inference_geo": "not_available"
@@ -1558,10 +1321,7 @@
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "content_block_stop",
-        "index": 1
-      },
+      "event": { "type": "content_block_stop", "index": 1 },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
       "uuid": "6cf30b0a-9196-4880-a8c7-3a22f3a33605"
@@ -1581,9 +1341,7 @@
           "cache_creation_input_tokens": 131,
           "cache_read_input_tokens": 29697,
           "output_tokens": 129,
-          "output_tokens_details": {
-            "thinking_tokens": 24
-          },
+          "output_tokens_details": { "thinking_tokens": 24 },
           "iterations": [
             {
               "input_tokens": 2,
@@ -1598,9 +1356,7 @@
             }
           ]
         },
-        "context_management": {
-          "applied_edits": []
-        }
+        "context_management": { "applied_edits": [] }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1608,9 +1364,7 @@
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "message_stop"
-      },
+      "event": { "type": "message_stop" },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
       "uuid": "2408ced4-e1e6-4f19-92c8-a75f878b8a42"
@@ -1665,10 +1419,7 @@
             "input_tokens": 2,
             "cache_creation_input_tokens": 205,
             "cache_read_input_tokens": 29828,
-            "cache_creation": {
-              "ephemeral_5m_input_tokens": 0,
-              "ephemeral_1h_input_tokens": 205
-            },
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 205 },
             "output_tokens": 3,
             "service_tier": "standard",
             "inference_geo": "not_available"
@@ -1688,10 +1439,7 @@
       "event": {
         "type": "content_block_start",
         "index": 0,
-        "content_block": {
-          "type": "text",
-          "text": ""
-        }
+        "content_block": { "type": "text", "text": "" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1702,10 +1450,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "Done,"
-        }
+        "delta": { "type": "text_delta", "text": "Done," }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1716,10 +1461,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " in order:\n\n1. **"
-        }
+        "delta": { "type": "text_delta", "text": " in order:\n\n1. **" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1730,10 +1472,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "Read not"
-        }
+        "delta": { "type": "text_delta", "text": "Read not" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1744,10 +1483,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "es.md** —"
-        }
+        "delta": { "type": "text_delta", "text": "es.md** —" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1758,10 +1494,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " one line: \""
-        }
+        "delta": { "type": "text_delta", "text": " one line: \"" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1772,10 +1505,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "The project has two goals: be"
-        }
+        "delta": { "type": "text_delta", "text": "The project has two goals: be" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1786,10 +1516,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " safe, and be f"
-        }
+        "delta": { "type": "text_delta", "text": " safe, and be f" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1800,10 +1527,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "ast.\"\n2. **`"
-        }
+        "delta": { "type": "text_delta", "text": "ast.\"\n2. **`" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1814,10 +1538,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "ls`** — only `not"
-        }
+        "delta": { "type": "text_delta", "text": "ls`** — only `not" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1828,10 +1549,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "es.md` was"
-        }
+        "delta": { "type": "text_delta", "text": "es.md` was" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1842,10 +1560,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " in the directory.\n3."
-        }
+        "delta": { "type": "text_delta", "text": " in the directory.\n3." }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1856,10 +1571,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " **Re-read notes."
-        }
+        "delta": { "type": "text_delta", "text": " **Re-read notes." }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1870,10 +1582,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "md** — the harness bloc"
-        }
+        "delta": { "type": "text_delta", "text": "md** — the harness bloc" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1884,10 +1593,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "ked it"
-        }
+        "delta": { "type": "text_delta", "text": "ked it" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1898,10 +1604,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " as a w"
-        }
+        "delta": { "type": "text_delta", "text": " as a w" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1912,10 +1615,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "asted call since"
-        }
+        "delta": { "type": "text_delta", "text": "asted call since" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1926,10 +1626,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " the file h"
-        }
+        "delta": { "type": "text_delta", "text": " the file h" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1940,10 +1637,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "adn't changed,"
-        }
+        "delta": { "type": "text_delta", "text": "adn't changed," }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1954,10 +1648,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " so the"
-        }
+        "delta": { "type": "text_delta", "text": " so the" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1968,10 +1659,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " content"
-        }
+        "delta": { "type": "text_delta", "text": " content" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1982,10 +1670,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " from step"
-        }
+        "delta": { "type": "text_delta", "text": " from step" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -1996,10 +1681,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " 1 still"
-        }
+        "delta": { "type": "text_delta", "text": " 1 still" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -2010,10 +1692,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " stands.\n4. **"
-        }
+        "delta": { "type": "text_delta", "text": " stands.\n4. **" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -2024,10 +1703,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "Wrote summ"
-        }
+        "delta": { "type": "text_delta", "text": "Wrote summ" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -2038,10 +1714,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": "ary.md** — `The project"
-        }
+        "delta": { "type": "text_delta", "text": "ary.md** — `The project" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -2052,10 +1725,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " has two goals: safety and"
-        }
+        "delta": { "type": "text_delta", "text": " has two goals: safety and" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -2066,10 +1736,7 @@
       "event": {
         "type": "content_block_delta",
         "index": 0,
-        "delta": {
-          "type": "text_delta",
-          "text": " speed.`"
-        }
+        "delta": { "type": "text_delta", "text": " speed.`" }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -2096,10 +1763,7 @@
           "input_tokens": 2,
           "cache_creation_input_tokens": 205,
           "cache_read_input_tokens": 29828,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 205
-          },
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 205 },
           "output_tokens": 3,
           "service_tier": "standard",
           "inference_geo": "not_available"
@@ -2116,10 +1780,7 @@
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "content_block_stop",
-        "index": 0
-      },
+      "event": { "type": "content_block_stop", "index": 0 },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
       "uuid": "86a95164-c36d-478f-a564-e500edfa25a3"
@@ -2139,9 +1800,7 @@
           "cache_creation_input_tokens": 205,
           "cache_read_input_tokens": 29828,
           "output_tokens": 141,
-          "output_tokens_details": {
-            "thinking_tokens": 0
-          },
+          "output_tokens_details": { "thinking_tokens": 0 },
           "iterations": [
             {
               "input_tokens": 2,
@@ -2156,9 +1815,7 @@
             }
           ]
         },
-        "context_management": {
-          "applied_edits": []
-        }
+        "context_management": { "applied_edits": [] }
       },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
@@ -2166,9 +1823,7 @@
     },
     {
       "type": "stream_event",
-      "event": {
-        "type": "message_stop"
-      },
+      "event": { "type": "message_stop" },
       "session_id": "6b41b192-a41b-46c2-b8d7-5098d8c825be",
       "parent_tool_use_id": null,
       "uuid": "5cdf73c2-51dd-4cd3-8cd8-bf958e888d13"
@@ -2183,18 +1838,10 @@
         "cache_creation_input_tokens": 7219,
         "cache_read_input_tokens": 139272,
         "output_tokens": 496,
-        "output_tokens_details": {
-          "thinking_tokens": 24
-        },
-        "server_tool_use": {
-          "web_search_requests": 0,
-          "web_fetch_requests": 0
-        },
+        "output_tokens_details": { "thinking_tokens": 24 },
+        "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
         "service_tier": "standard",
-        "cache_creation": {
-          "ephemeral_1h_input_tokens": 7219,
-          "ephemeral_5m_input_tokens": 0
-        },
+        "cache_creation": { "ephemeral_1h_input_tokens": 7219, "ephemeral_5m_input_tokens": 0 },
         "inference_geo": "not_available",
         "iterations": [
           {
@@ -2202,10 +1849,7 @@
             "output_tokens": 141,
             "cache_read_input_tokens": 29828,
             "cache_creation_input_tokens": 205,
-            "cache_creation": {
-              "ephemeral_5m_input_tokens": 0,
-              "ephemeral_1h_input_tokens": 205
-            },
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 205 },
             "type": "message"
           }
         ],
@@ -2247,26 +1891,14 @@
       "fast_mode_disabled_reason": "preference",
       "subagent_stats": {
         "spawned": 0,
-        "requested": {
-          "background": 0,
-          "foreground": 0,
-          "unset": 0
-        },
+        "requested": { "background": 0, "foreground": 0, "unset": 0 },
         "started_in_background": 0,
         "max_depth": 0,
         "spawned_by_subagents": 0,
         "completed": 0,
         "failed": 0,
-        "killed": {
-          "parent": 0,
-          "user": 0,
-          "system": 0
-        },
-        "refused": {
-          "depth_limit": 0,
-          "concurrency_limit": 0,
-          "budget": 0
-        },
+        "killed": { "parent": 0, "user": 0, "system": 0 },
+        "refused": { "depth_limit": 0, "concurrency_limit": 0, "budget": 0 },
         "by_type": {}
       },
       "is_error": false,

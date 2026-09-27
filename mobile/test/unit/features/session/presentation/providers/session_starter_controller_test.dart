@@ -92,6 +92,17 @@ void main() {
     expect(container.read(sessionStarterControllerProvider), isNull);
   });
 
+  test('a session that continues a conversation is the history screen’s, not this one’s', () async {
+    final ProviderContainer container = build();
+    container.read(sessionStarterControllerProvider);
+
+    repository.emit(arrivalOf(sessionStarted(sessionId: 'session-7', resumedFrom: 'conv-1')));
+    await settle();
+
+    // Taking it here too would navigate twice, once from a screen that is not even on top.
+    expect(container.read(sessionStarterControllerProvider), isNull);
+  });
+
   test('once the screen has acted on it, it is forgotten', () async {
     final ProviderContainer container = build();
     container.read(sessionStarterControllerProvider);

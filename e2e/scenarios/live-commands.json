@@ -1,0 +1,13 @@
+{
+  "id": "04·S-52",
+  "title": "against the real Claude: the installation lists its commands, and /init finishes after asking for its Write",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "command": "init",
+    "toolName": "Write",
+    "file": "CLAUDE.md"
+  }
+}

@@ -15,6 +15,7 @@ export const sessionSchemas = {
   model: z.object({ sessionId: z.string().min(1), model: z.string().min(1) }),
   mode: z.object({ sessionId: z.string().min(1), mode: z.enum(PERMISSION_MODES) }),
   locale: z.object({ locale: z.enum(['en', 'pt-BR']) }),
+  rewind: z.object({ sessionId: z.string().min(1), promptId: z.string().min(1).max(256) }),
 };
 
 /** DI tokens of the session commands, one per `type` of the contract. */
@@ -27,4 +28,5 @@ export const SESSION_HANDLERS = {
   setLocale: Symbol('session.setLocale handler'),
   close: Symbol('session.close handler'),
   detach: Symbol('session.detach handler'),
+  rewind: Symbol('session.rewindFiles handler'),
 };

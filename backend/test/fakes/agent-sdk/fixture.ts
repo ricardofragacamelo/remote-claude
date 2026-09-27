@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { SDKMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 
 /** One recorded run of the real Agent SDK. */
 export interface AgentSdkFixture {
@@ -35,4 +35,19 @@ const DIRECTORY = path.join(import.meta.dirname, 'fixtures');
  */
 export function loadFixture(name: string): AgentSdkFixture {
   return JSON.parse(readFileSync(path.join(DIRECTORY, `${name}.json`), 'utf8')) as AgentSdkFixture;
+}
+
+/** What `supportedCommands()` answered on a real installation, dead and internal entries included. */
+export interface CommandCatalogueFixture {
+  readonly name: string;
+  readonly recordedAt: string;
+  readonly sdkVersion: string;
+  readonly commands: readonly SlashCommand[];
+}
+
+/** The recorded catalogue — `pnpm fixtures:record commands`, which says nothing to the model. */
+export function loadCommands(): CommandCatalogueFixture {
+  return JSON.parse(
+    readFileSync(path.join(DIRECTORY, 'commands.json'), 'utf8'),
+  ) as CommandCatalogueFixture;
 }

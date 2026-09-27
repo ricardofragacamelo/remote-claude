@@ -5,6 +5,7 @@ import { HubSessionBroadcaster } from '@adapter/outbound/session/hub-session.bro
 import type { FileSnapshotStore } from '@adapter/outbound/checkpoint/file-snapshot.store';
 import type { DrizzleSessionFileRepository } from '@adapter/outbound/persistence/session/drizzle-session-file.repository';
 import { SessionId } from '@domain/session';
+import { ClaudeSessionId } from '@domain/transcript';
 import type { TurnFileCheckpoint } from '@domain/session';
 import { ConnectionRegistry } from '@infra/websocket/connection-registry';
 import { EventBuffer } from '@infra/websocket/event-buffer';
@@ -16,6 +17,15 @@ import { RecordingLogger } from '../../../../support/fakes/recording-logger';
 import { SequentialIds } from '../../../../support/fakes/sequential-ids';
 
 const sessionId = SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ');
+
+/** The conversation every session of this suite was. */
+const CONVERSATION = ClaudeSessionId.create('6b41b192-a41b-46c2-b8d7-5098d8c825be');
+
+/** What the journal is told about a session: which one, and which conversation it was. */
+const scopeOf = (id: SessionId): { sessionId: SessionId; claudeSessionId: ClaudeSessionId } => ({
+  sessionId: id,
+  claudeSessionId: CONVERSATION,
+});
 const now = new Date('2026-09-18T12:00:00.000Z');
 
 /** A store that answers one fixed thing, so a branch can be reached without a filesystem. */
@@ -45,7 +55,7 @@ describe('DiskSessionFileJournal, at its edges', () => {
     const saved: TurnFileCheckpoint[] = [];
 
     return build(storeAnswering('unreadable'), saved)
-      .captureBefore(sessionId, 'prompt-1', '/srv/a.md')
+      .captureBefore(scopeOf(sessionId), 'prompt-1', '/srv/a.md')
       .then(() => {
         expect(saved[0]?.restorable).toBe('unreadable');
         expect(saved[0]?.canBeRestored).toBe(false);
@@ -56,7 +66,7 @@ describe('DiskSessionFileJournal, at its edges', () => {
     const saved: TurnFileCheckpoint[] = [];
 
     return build(storeAnswering('tooLarge'), saved)
-      .captureBefore(sessionId, 'prompt-1', '/srv/a.md')
+      .captureBefore(scopeOf(sessionId), 'prompt-1', '/srv/a.md')
       .then(() => {
         expect(saved[0]?.snapshot()).toMatchObject({ restorable: 'tooLarge', sizeBytes: 99 });
       });
@@ -68,7 +78,7 @@ describe('DiskSessionFileJournal, at its edges', () => {
 
     await journal.openTurn(sessionId, 'prompt-1', 'refactor the parser');
     journal.forget(sessionId);
-    await journal.captureBefore(sessionId, 'prompt-1', '/srv/a.md');
+    await journal.captureBefore(scopeOf(sessionId), 'prompt-1', '/srv/a.md');
 
     // A label kept for a session that has ended is memory the process never gives back.
     expect(saved[0]?.snapshot().promptText).toBeNull();
@@ -80,7 +90,7 @@ describe('DiskSessionFileJournal, at its edges', () => {
 
     await journal.openTurn(sessionId, 'prompt-1', 'refactor the parser');
     journal.forget(SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXY0'));
-    await journal.captureBefore(sessionId, 'prompt-1', '/srv/a.md');
+    await journal.captureBefore(scopeOf(sessionId), 'prompt-1', '/srv/a.md');
 
     expect(saved[0]?.snapshot().promptText).toBe('refactor the parser');
   });

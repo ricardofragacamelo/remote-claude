@@ -44,7 +44,7 @@ final class SessionStreamControllerProvider
   }
 }
 
-String _$sessionStreamControllerHash() => r'86e900148a543b7dc82c034f62b27e98d37b766e';
+String _$sessionStreamControllerHash() => r'f379a6b713dbb188c999ba1e7f0bbb6f2a4bf2ca';
 
 /// The live stream of the session on screen.
 

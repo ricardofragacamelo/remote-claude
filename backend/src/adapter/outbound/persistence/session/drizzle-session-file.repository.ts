@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, or } from 'drizzle-orm';
 
 import { SessionFileState, TurnFileCheckpoint } from '@domain/session';
 import type { SessionId } from '@domain/session';
+import type { ClaudeSessionId } from '@domain/transcript';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
 import { sessionFileStates, turnFileCheckpoints } from '@infra/database/schema';
@@ -38,6 +39,7 @@ export class DrizzleSessionFileRepository {
         .onConflictDoUpdate({
           target: [sessionFileStates.sessionId, sessionFileStates.path],
           set: {
+            claudeSessionId: row.claudeSessionId,
             hash: row.hash,
             mtime: row.mtime,
             sizeBytes: row.sizeBytes,
@@ -106,6 +108,84 @@ export class DrizzleSessionFileRepository {
     );
 
     return rows.map(toCheckpointEntity);
+  }
+
+  /**
+   * Every snapshot of a live session **and** of the earlier sessions that were the same conversation.
+   *
+   * By the conversation, because one of ours continued in place is a new live session on the same
+   * conversation; by the session too, because the rows written before migration `0013` name no
+   * conversation and are still this session's.
+   */
+  async checkpointsOfConversation(
+    sessionId: SessionId,
+    claudeSessionId: ClaudeSessionId,
+  ): Promise<readonly TurnFileCheckpoint[]> {
+    const rows = await runLogged(
+      this.context.logger,
+      'sessionFile.checkpointsOfConversation',
+      this.context.db
+        .select()
+        .from(turnFileCheckpoints)
+        .where(
+          or(
+            eq(turnFileCheckpoints.claudeSessionId, claudeSessionId.value),
+            eq(turnFileCheckpoints.sessionId, sessionId.value),
+          ),
+        ),
+    );
+
+    return rows.map(toCheckpointEntity);
+  }
+
+  /** How each session of the conversation left each path — several rows per path, possibly. */
+  async statesOfConversation(
+    sessionId: SessionId,
+    claudeSessionId: ClaudeSessionId,
+  ): Promise<readonly SessionFileState[]> {
+    const rows = await runLogged(
+      this.context.logger,
+      'sessionFile.statesOfConversation',
+      this.context.db
+        .select()
+        .from(sessionFileStates)
+        .where(
+          or(
+            eq(sessionFileStates.claudeSessionId, claudeSessionId.value),
+            eq(sessionFileStates.sessionId, sessionId.value),
+          ),
+        ),
+    );
+
+    return rows.map(toStateEntity);
+  }
+
+  /**
+   * The sessions whose snapshots belong to any of these conversations.
+   *
+   * What a purge must keep for a live session: its own snapshots, and those of the earlier sessions
+   * of its conversation, which its undo still reaches.
+   */
+  async sessionsOfConversations(claudeSessionIds: readonly string[]): Promise<readonly string[]> {
+    if (claudeSessionIds.length === 0) {
+      return [];
+    }
+
+    const rows = await runLogged(
+      this.context.logger,
+      'sessionFile.sessionsOfConversations',
+      this.context.db
+        .selectDistinct({ sessionId: turnFileCheckpoints.sessionId })
+        .from(turnFileCheckpoints)
+        .where(
+          and(
+            isNotNull(turnFileCheckpoints.claudeSessionId),
+            inArray(turnFileCheckpoints.claudeSessionId, [...claudeSessionIds]),
+          ),
+        ),
+    );
+
+    return rows.map((row) => row.sessionId);
   }
 
   /** Forgets the snapshots of sessions a purge removed from disk, so no row points at nothing. */

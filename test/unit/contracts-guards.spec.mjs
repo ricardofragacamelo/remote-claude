@@ -77,6 +77,8 @@ describe('the generated protocol surface', () => {
       'session.detach',
       'session.interrupt',
       'session.prompt',
+      'session.rewindFiles',
+      'session.rewound',
       'session.setLocale',
       'session.setModel',
       'session.setPermissionMode',
@@ -94,6 +96,12 @@ describe('the generated protocol surface', () => {
   it('no longer carries the name the bootstrap used', () => {
     expect(FRAME_TYPES).not.toContain('session.ping');
     expect(FRAME_TYPES).not.toContain('session.pong');
+  });
+
+  /** Plan 04, S-45 — the undo is a command and its outcome an event, in the one contract. */
+  it('carries the undo: session.rewindFiles and session.rewound', () => {
+    expect(FRAME_TYPES).toContain('session.rewindFiles');
+    expect(FRAME_TYPES).toContain('session.rewound');
   });
 
   /** S-01 — the command the web client has been sending since the walking skeleton. */

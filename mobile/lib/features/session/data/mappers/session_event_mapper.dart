@@ -12,6 +12,8 @@ library;
 
 import 'package:remote_claude/core/network/contracts/protocol.g.dart';
 import 'package:remote_claude/features/session/data/mappers/pong_mapper.dart';
+import 'package:remote_claude/features/session/data/mappers/rewind_mapper.dart';
+import 'package:remote_claude/features/session/domain/entities/checkpoint.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
@@ -27,35 +29,86 @@ SessionEvent? sessionEventFrom(Envelope frame) {
     return null;
   }
 
-  final Map<String, Object?> payload = frame.payload ?? const <String, Object?>{};
-
-  return switch (frame.type) {
-    'session.started' => _opened(seq, payload, frame.sessionId),
-    'session.statusChanged' => _status(seq, payload),
-    'message.delta' => _fragment(seq, payload),
-    'message.completed' => _finished(seq, payload),
-    'tool.started' => _invoked(seq, payload),
-    'tool.progress' => _output(seq, payload),
-    'tool.completed' => _toolOutcome(seq, payload),
-    'turn.completed' => _turn(seq, payload),
-    'session.closed' => _closed(seq, payload, frame.ts),
-    _ => _pongOr(seq, frame),
-  };
+  return _eventOf(
+    frame.type,
+    seq,
+    frame.payload ?? const <String, Object?>{},
+    sessionId: frame.sessionId,
+    at: frame.ts,
+    pong: () => pongFrom(frame),
+  );
 }
+
+/// The `seq` every event of the history carries: none.
+///
+/// History is read from Claude's store, not from a live session's buffer, so it has no place in
+/// any session's numbering. Zero is at or below every resume point, which is what keeps it from
+/// ever moving one (S-21).
+const int historySeq = 0;
+
+/// One entry of the history — a frame of the live contract without its envelope — as an event,
+/// or `null` when this build cannot read it.
+///
+/// The **same** function the live frames go through: the transcript sends `message.completed`,
+/// `tool.started` and `tool.completed` with the payloads and ids the socket uses, and one reader
+/// of that shape is what keeps the two from disagreeing. An entry it cannot read is dropped: it
+/// has no `seq` to move past, and one malformed entry should cost the person that entry, not the
+/// page.
+SessionEvent? historyEventFrom(Object? entry) {
+  if (entry is! Map<String, Object?>) {
+    return null;
+  }
+
+  final Object? type = entry['type'];
+  final Object? payload = entry['payload'];
+
+  if (type is! String || payload is! Map<String, Object?>) {
+    return null;
+  }
+
+  final SessionEvent event = _eventOf(type, historySeq, payload, at: '', pong: () => null);
+
+  return event is UnreadEvent ? null : event;
+}
+
+SessionEvent _eventOf(
+  String type,
+  int seq,
+  Map<String, Object?> payload, {
+  required String at,
+  required Pong? Function() pong,
+  String? sessionId,
+}) => switch (type) {
+  'session.started' => _opened(seq, payload, sessionId),
+  'session.statusChanged' => _status(seq, payload),
+  'message.delta' => _fragment(seq, payload),
+  'message.completed' => _finished(seq, payload),
+  'tool.started' => _invoked(seq, payload),
+  'tool.progress' => _output(seq, payload),
+  'tool.completed' => _toolOutcome(seq, payload),
+  'turn.completed' => _turn(seq, payload),
+  'session.closed' => _closed(seq, payload, at),
+  'session.rewound' => _rewound(seq, payload),
+  _ => _pongOr(seq, pong()),
+};
 
 SessionEvent _opened(int seq, Map<String, Object?> payload, String? onFrame) {
   // The payload names it, and the envelope names it too. Either will do; a frame that names it
   // nowhere is one this build cannot act on.
   final String? sessionId = _text(payload, 'sessionId') ?? onFrame;
 
-  return sessionId == null ? UnreadEvent(seq) : SessionOpened(seq, sessionId);
+  return sessionId == null
+      ? UnreadEvent(seq)
+      : SessionOpened(
+          seq,
+          sessionId,
+          claudeSessionId: _text(payload, 'claudeSessionId'),
+          resumedFrom: _text(payload, 'resumedFrom'),
+        );
 }
 
-SessionEvent _pongOr(int seq, Envelope frame) {
-  final Pong? pong = pongFrom(frame);
-
-  return pong == null ? UnreadEvent(seq) : PongArrived(seq, pong);
-}
+SessionEvent _pongOr(int seq, Pong? pong) =>
+    pong == null ? UnreadEvent(seq) : PongArrived(seq, pong);
 
 SessionEvent _status(int seq, Map<String, Object?> payload) {
   final SessionStatus? status = switch (_text(payload, 'status')) {
@@ -168,6 +221,12 @@ SessionEvent _closed(int seq, Map<String, Object?> payload, String at) {
   return reason == null
       ? UnreadEvent(seq)
       : SessionFinished(seq, SessionEnding(reason: reason, at: at));
+}
+
+SessionEvent _rewound(int seq, Map<String, Object?> payload) {
+  final RewindOutcome? outcome = rewindOutcomeFrom(payload);
+
+  return outcome == null ? UnreadEvent(seq) : FilesRewound(seq, outcome);
 }
 
 /// A string field, or `null` when it is absent or is something else.

@@ -70,7 +70,13 @@ leitura: re-registrar sobrescreveria o push token a cada token expirado (S-56).
 Idênticas às do web, porque o problema é o mesmo:
 
 1. **Descarte evento com `seq <= lastSeq`** — replay reentrega; sem isso, mensagem duplica.
-2. **`gap: true` → limpe o estado e recarregue o transcript por HTTP.** Não costure buraco.
+2. **`gap: true` → limpe o estado e recarregue o transcript por HTTP.** Não costure buraco. A
+   conversa a recarregar é a que o ack nomeia em `claudeSessionId` (o `onGap` do `SessionSubscriber`
+   a recebe), e a página é posta **por baixo** do que o stream trouxer enquanto ela carrega
+   (`Conversation.withHistory`): mesmo `messageId`/`toolUseId` fica com o stream — salvo fragmento
+   ainda em curso de uma mensagem que o histórico já tem inteira —, o resto do stream vem depois, e
+   `lastSeq` não se move. O mesmo vale para uma sessão retomada: o que veio antes dela é lido da
+   conversa em `resumedFrom`, nunca do ring buffer. O parsing da página roda em `compute()`.
 3. **`message.delta` acumula por `messageId`**; `message.completed` substitui o acumulado.
 
 ### Ciclo de vida do app — o que é específico do mobile
@@ -166,6 +172,20 @@ Stream<SessionEvent> sessionEvents(Ref ref, SessionId id) {
 subscrição e o app passa a processar evento de tela que já saiu.
 
 ---
+
+## Menu de comandos e desfazer
+
+Os dois são consulta HTTP, cada um com seu controller, e abrem em bottom sheet a partir da tela da
+sessão ([plano 04 · F3/F4](../../plans/04-transcript-and-resume/README.md)):
+
+- **o menu** (`GET /sessions/:id/commands`) chega filtrado e ordenado pelo backend; a busca é local.
+  Indisponível, mostra o erro com ação de tentar de novo, e o composer continua enviando;
+- **a recusa de um prompt** é reconhecida pelo `correlationId` — `DriveSession.prompt` envia com
+  `issue` e guarda o id —, e some no próximo envio;
+- **a prévia do desfazer** (`GET /sessions/:id/checkpoints`) é relida depois de `turn.completed` e de
+  `session.rewound`; o sheet só trata um `session.rewound` como resultado **dele** enquanto o seu
+  desfazer está pendente e o `promptId` coincide. O `error` sem `correlationId`
+  (`session.error.rewindIncomplete`) chega como `SessionFailed`.
 
 ## Performance
 

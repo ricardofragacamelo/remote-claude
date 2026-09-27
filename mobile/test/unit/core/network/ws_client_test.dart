@@ -20,6 +20,7 @@ import '../../../support/fakes/recording_writer.dart';
 class _Subscriber implements SessionSubscriber {
   final List<Envelope> events = <Envelope>[];
   int gaps = 0;
+  final List<String?> gapConversations = <String?>[];
   int seq = 0;
 
   @override
@@ -29,7 +30,10 @@ class _Subscriber implements SessionSubscriber {
   void onEvent(Envelope frame) => events.add(frame);
 
   @override
-  void onGap() => gaps += 1;
+  void onGap(String? claudeSessionId) {
+    gaps += 1;
+    gapConversations.add(claudeSessionId);
+  }
 }
 
 /// Drives the client's delays by hand.
@@ -257,13 +261,13 @@ void main() {
       expect(payload['resumeFromSeq'], 12);
     });
 
-    test('a first attach asks for no replay', () async {
+    test('a first attach resumes from zero, so the buffer is replayed — S-88', () async {
       await connectAndHandshake();
       client.attach('ses-1', _Subscriber());
 
       final Map<String, Object?> payload =
           decode(socket().sent.last)['payload']! as Map<String, Object?>;
-      expect(payload.containsKey('resumeFromSeq'), isFalse);
+      expect(payload['resumeFromSeq'], 0);
     });
 
     test('detaching stops the subscription and tells the server', () async {
@@ -338,13 +342,48 @@ void main() {
       expect(subscriber.gaps, 0);
     });
 
-    test('an attach ack for a session nobody follows is ignored', () async {
+    test('a gap names the conversation to reload from, when the ack does', () async {
       await connectAndHandshake();
+      final _Subscriber subscriber = _Subscriber();
+      client.attach('ses-1', subscriber);
 
-      socket().deliver(sessionAttached(sessionId: 'other', gap: true));
+      socket()
+        ..deliver(sessionAttached(sessionId: 'ses-1', gap: true, claudeSessionId: 'conv-1'))
+        ..deliver(sessionAttached(sessionId: 'ses-1', gap: true));
+      await settle();
+
+      // The diagnostic stream has no conversation, and says so by leaving the field out.
+      expect(subscriber.gapConversations, <String?>['conv-1', null]);
+    });
+
+    test('S-24 · an attach ack for a session nobody follows reaches the observers', () async {
+      await connectAndHandshake();
+      final _Subscriber other = _Subscriber();
+      client.attach('ses-1', other);
+      final List<Envelope> seen = <Envelope>[];
+      client.observe(seen.add);
+
+      // What a resume of a conversation already live is answered with: the session it joined,
+      // which nothing here watches yet.
+      socket().deliver(sessionAttached(sessionId: 'joined', claudeSessionId: 'conv-1'));
       await settle();
 
       expect(client.status, ConnectionStatus.ready);
+      expect(seen.single.type, 'session.attached');
+      expect(seen.single.payload?['sessionId'], 'joined');
+      expect(other.gaps, 0);
+    });
+
+    test('an attach ack for a watched session is not handed to the observers', () async {
+      await connectAndHandshake();
+      client.attach('ses-1', _Subscriber());
+      final List<Envelope> seen = <Envelope>[];
+      client.observe(seen.add);
+
+      socket().deliver(sessionAttached(sessionId: 'ses-1', gap: true));
+      await settle();
+
+      expect(seen, isEmpty);
     });
   });
 
@@ -411,7 +450,7 @@ void main() {
 
       final Map<String, Object?> payload =
           decode(socket().sent.last)['payload']! as Map<String, Object?>;
-      expect(payload.containsKey('resumeFromSeq'), isFalse);
+      expect(payload['resumeFromSeq'], 0);
     });
 
     test('a reconnect resumes from the furthest behind, once per session', () async {

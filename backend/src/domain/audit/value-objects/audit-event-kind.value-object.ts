@@ -6,6 +6,12 @@
  * granting and revoking a permission rule: a rule is an authorisation given in advance, and "who
  * allowed this to run without asking, and when did they stop" has to be answerable from the trail.
  *
+ * So is picking a conversation up again: a resume hands whoever asks the context of everything said
+ * before, and a fork of one begun in the editor gives it a second life under a new id.
+ *
+ * And so is an undo: it changes files on the user's disk, and a change to the disk that leaves no
+ * trace is exactly what the trail exists to prevent.
+ *
  * They do not fit `audit_entries`, which is shaped around one invocation — a session, a tool, an
  * input — so they get their own table in the same module rather than three nullable columns in
  * that one.
@@ -17,6 +23,9 @@ export const AUDIT_EVENT_KINDS = [
   'device.expired',
   'permission.ruleGranted',
   'permission.ruleRevoked',
+  'session.resumed',
+  'session.forked',
+  'session.filesRewound',
 ] as const;
 
 export type AuditEventKind = (typeof AUDIT_EVENT_KINDS)[number];

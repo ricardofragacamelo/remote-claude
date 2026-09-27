@@ -29,8 +29,14 @@ export interface SessionSubscriber {
    */
   onEvent(frame: Envelope): void;
 
-  /** The buffer no longer holds what this subscriber missed: drop local state and reload. */
-  onGap(): void;
+  /**
+   * The buffer no longer holds what this subscriber missed: drop local state and reload.
+   *
+   * @param claudeSessionId the conversation to reload the history from, as the ack named it — the
+   *   only place left that says so once the buffer has lost the `session.started` that did. `null`
+   *   for a stream that is not a conversation.
+   */
+  onGap(claudeSessionId: string | null): void;
 
   /** The highest `seq` the subscriber has applied, so a reconnect can resume from it. */
   lastSeq(): number;
@@ -166,10 +172,14 @@ export class WsClient {
   }
 
   /**
-   * Watches events that belong to no attached session. Answers the unsubscribe.
+   * Watches what belongs to no attached session. Answers the unsubscribe.
    *
    * A command may **open** the session it is about — the first ping of the walking skeleton does —
-   * so the event announcing it arrives before anything could have attached to it.
+   * so the event announcing it arrives before anything could have attached to it. The same holds
+   * for a resume of a conversation that is already live: it is answered with a `session.attached`
+   * for a session nobody here is watching yet. And a command that failed answers with an `error`
+   * frame whose `correlationId` is the command's id — which is how the caller that sent it with
+   * {@link issue} knows the refusal is its own.
    */
   observe(listener: (frame: Envelope) => void): () => void {
     this.observers.add(listener);
@@ -178,6 +188,16 @@ export class WsClient {
 
   /** Sends a command. Silently queues nothing: a command sent while down is a command lost. */
   command(type: string, payload: Readonly<Record<string, unknown>>): boolean {
+    return this.issue(type, payload) !== null;
+  }
+
+  /**
+   * Sends a command and answers the id of its frame, or `null` when it did not leave.
+   *
+   * For the caller that has to recognise the answer to **its** command among everything else on
+   * the socket: an `error` names the command it refuses by that id, in `correlationId`.
+   */
+  issue(type: string, payload: Readonly<Record<string, unknown>>): string | null {
     return this.send('command', type, payload);
   }
 
@@ -187,16 +207,18 @@ export class WsClient {
    * The envelope fields are filled in here and nowhere else, so nothing that sends a frame can
    * forget one. Positional arguments rather than a draft object, because there are four of them
    * and three are always present.
+   *
+   * @returns the id of the frame, or `null` when it did not leave
    */
   private send(
     kind: Envelope['kind'],
     type: string,
     payload: Readonly<Record<string, unknown>>,
     correlationId?: string,
-  ): boolean {
+  ): string | null {
     const socket = this.socket;
     if (socket === null || this.status !== 'ready') {
-      return false;
+      return null;
     }
 
     const frame: Envelope = {
@@ -212,7 +234,7 @@ export class WsClient {
 
     logger.debug({ op: 'ws.outbound', kind, type }, 'ws frame sent');
     socket.send(JSON.stringify(frame));
-    return true;
+    return frame.id;
   }
 
   /**
@@ -229,7 +251,7 @@ export class WsClient {
     payload: Readonly<Record<string, unknown>>,
     correlationId: string,
   ): boolean {
-    return this.send('response', type, payload, correlationId);
+    return this.send('response', type, payload, correlationId) !== null;
   }
 
   /** The delay before the next attempt: exponential, capped, and jittered. */
@@ -299,6 +321,13 @@ export class WsClient {
     // waiting. Both belong to a session and both go to whoever is watching it.
     if (parsed.kind === 'event' || parsed.kind === 'request') {
       this.deliver(parsed);
+      return;
+    }
+
+    // A refusal belongs to the command that caused it, not to a session; whoever sent that command
+    // recognises it by `correlationId`.
+    if (parsed.kind === 'error') {
+      this.notify(parsed);
     }
   }
 
@@ -318,6 +347,11 @@ export class WsClient {
    * The minimum and not the maximum: resuming from the one that is ahead would leave the other
    * with a hole it has no way to notice. Re-delivering what a subscriber already applied costs
    * nothing, because discarding `seq <= lastSeq` is the first rule of every store.
+   *
+   * **Zero is sent, never left out.** A screen that has applied nothing has zero, and saying so is
+   * what brings back what the buffer holds — or the `gap` that sends it to the transcript when the
+   * buffer has lost the start. An attach with no `resumeFromSeq` asks for nothing past, and a
+   * screen opened on a session already under way would show only what came after it arrived.
    */
   private requestAttach(sessionId: string): void {
     const applied = [...(this.subscribers.get(sessionId) ?? [])].map((subscriber) =>
@@ -325,25 +359,39 @@ export class WsClient {
     );
     const resumeFromSeq = applied.length === 0 ? 0 : Math.min(...applied);
 
-    this.command('session.attach', {
-      sessionId,
-      ...(resumeFromSeq > 0 ? { resumeFromSeq } : {}),
-    });
+    this.command('session.attach', { sessionId, resumeFromSeq });
   }
 
   private attached(frame: Envelope): void {
-    const payload = frame.payload as { sessionId?: unknown; gap?: unknown } | undefined;
+    const payload = frame.payload as
+      { sessionId?: unknown; gap?: unknown; claudeSessionId?: unknown } | undefined;
     const sessionId = typeof payload?.sessionId === 'string' ? payload.sessionId : null;
     const watching = sessionId === null ? undefined : this.subscribers.get(sessionId);
 
-    if (watching === undefined || payload?.gap !== true) {
+    // Nobody here watches it yet: it answers a resume of a conversation that was already live, and
+    // the screen that asked for the resume is watching for exactly that.
+    if (watching === undefined) {
+      this.notify(frame);
+      return;
+    }
+
+    if (payload?.gap !== true) {
       return;
     }
 
     logger.warn({ op: 'ws.connection', sessionId }, 'replay gap — reloading the transcript');
+    const claudeSessionId =
+      typeof payload.claudeSessionId === 'string' ? payload.claudeSessionId : null;
 
     for (const subscriber of watching) {
-      subscriber.onGap();
+      subscriber.onGap(claudeSessionId);
+    }
+  }
+
+  /** Hands a frame that belongs to nobody attached to whoever observes. */
+  private notify(frame: Envelope): void {
+    for (const observer of this.observers) {
+      observer(frame);
     }
   }
 
@@ -358,9 +406,7 @@ export class WsClient {
       return;
     }
 
-    for (const observer of this.observers) {
-      observer(frame);
-    }
+    this.notify(frame);
   }
 
   private dropped(code: number): void {

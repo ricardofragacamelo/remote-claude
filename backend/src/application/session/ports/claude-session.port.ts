@@ -1,4 +1,4 @@
-import type { PermissionMode, SessionCloseReason, SessionId } from '@domain/session';
+import type { PermissionMode, SessionCloseReason, SessionId, SlashCommand } from '@domain/session';
 import type { ClaudeSessionId } from '@domain/transcript';
 import type { WorkspacePath } from '@domain/workspace';
 
@@ -17,6 +17,33 @@ export interface SessionEvent {
   readonly payload: Readonly<Record<string, unknown>>;
 }
 
+/**
+ * Which conversation of Claude a live session is, and how it came to be.
+ *
+ * Our `SessionId` names the live session — a subprocess and a stream, gone when it ends. This names
+ * the conversation in Claude's store, which outlives every session that ever continued it: it is
+ * what the history reads, and what a client reloads from when the replay buffer has lost what it
+ * missed.
+ */
+export interface SessionConversation {
+  /**
+   * The id the conversation has in Claude's store.
+   *
+   * Minted by us and recorded as ours **before** the subprocess exists, for a new conversation and
+   * for a fork; the id it already had, for one of ours continued in place.
+   */
+  readonly claudeSessionId: ClaudeSessionId;
+
+  /**
+   * The conversation this session continues, or `null` for a fresh one.
+   *
+   * Equal to `claudeSessionId` when one of our own is continued in its file; different when one
+   * begun elsewhere is forked — and then nothing is ever written into the original
+   * ([D-04](../../../../docs/plans/04-transcript-and-resume/decisions.md)).
+   */
+  readonly resumedFrom: ClaudeSessionId | null;
+}
+
 /** Everything the adapter needs in order to open a session. */
 export interface ClaudeSessionStart {
   readonly sessionId: SessionId;
@@ -27,16 +54,8 @@ export interface ClaudeSessionStart {
 
   readonly permissionMode: PermissionMode;
 
-  /** Session of the Agent SDK to continue, or `null` to start fresh. */
-  readonly resumeSessionId: string | null;
-
-  /**
-   * The id the new conversation takes in Claude's store — ours, already recorded as ours.
-   *
-   * `null` when resuming: the conversation keeps the id it already has. Handing the SDK an id of
-   * our choosing is what lets the provenance be written before the subprocess exists.
-   */
-  readonly claudeSessionId: ClaudeSessionId | null;
+  /** Which conversation of Claude this session is — new, continued in place, or forked. */
+  readonly conversation: SessionConversation;
 
   /** Called for every event the stream produced, in order. */
   onEvent(event: SessionEvent): void;
@@ -65,6 +84,28 @@ export interface ClaudeSessionHandle {
   interrupt(): Promise<void>;
   setModel(model: string): Promise<void>;
   setPermissionMode(mode: PermissionMode): Promise<void>;
+
+  /**
+   * The version of the CLI this session spawned, as the CLI itself reported it, or `null` until it
+   * has.
+   *
+   * The version of the binary **the SDK spawns**, and never the one on `PATH`: a machine with the
+   * terminal's CLI and the editor's in different versions is the ordinary case, and a menu cached
+   * by the wrong one is the menu of another installation
+   * ([D-05](../../../../docs/plans/04-transcript-and-resume/decisions.md#d-05--o-menu-é-descoberta-não-fronteira)).
+   */
+  readonly cliVersion: string | null;
+
+  /**
+   * The slash commands the installation offers this session — `supportedCommands()`, which costs
+   * no quota: nothing is said to the model.
+   *
+   * The whole list, the dead and the internal included; what the menu hides is the domain's call.
+   *
+   * @throws {import('@domain/session').ClaudeUnavailableError} the CLI failed to answer
+   * @throws {import('@domain/session').ClaudeTimeoutError} the CLI did not answer in time
+   */
+  supportedCommands(): Promise<readonly SlashCommand[]>;
 
   /**
    * Ends the session and releases its subprocess.

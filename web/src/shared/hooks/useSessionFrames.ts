@@ -8,8 +8,12 @@ export interface SessionFrameHandlers {
   /** One frame of the session: an `event`, or the `request` that a permission is. */
   apply(frame: Envelope): void;
 
-  /** The buffer no longer holds what was missed: drop local state and start again. */
-  reset(): void;
+  /**
+   * The buffer no longer holds what was missed: drop local state and start again.
+   *
+   * @param claudeSessionId where the history of the stream reloads from, when it is a conversation
+   */
+  reset(claudeSessionId: string | null): void;
 
   /** The highest `seq` this feature has applied, so a reconnect can resume from it. */
   lastSeq(): number;
@@ -49,8 +53,8 @@ export function useSessionFrames(sessionId: string | null, handlers: SessionFram
       onEvent: (frame) => {
         latest.current.apply(frame);
       },
-      onGap: () => {
-        latest.current.reset();
+      onGap: (claudeSessionId) => {
+        latest.current.reset(claudeSessionId);
       },
       lastSeq: () => latest.current.lastSeq(),
     });

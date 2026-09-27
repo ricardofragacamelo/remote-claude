@@ -40,7 +40,7 @@ A linha de base e os snapshots vêm da [B-46](../01-live-session/F3-audit.md) e 
 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 
-### B-18 — Comando de rewind no contrato 🔲
+### B-18 — Comando de rewind no contrato ✅
 
 O desfazer exposto como comando WS, com o evento de resultado — que carrega **revertidos e
 preservados**, não um booleano. Contrato muda nas três pontas na mesma entrega — é a regra dos
@@ -49,7 +49,7 @@ preservados**, não um booleano. Contrato muda nas três pontas na mesma entrega
 O alvo é o `prompt_id` de um turno, que é a chave do nosso checkpoint; não um uuid de mensagem
 do transcript.
 
-### B-19 — UI com alcance explícito 🔲
+### B-19 — UI com alcance explícito ✅
 
 Antes de desfazer, a tela diz **quais arquivos** voltam, **quais ficam** e **para qual ponto**.
 Confirmação sem lista é confirmação sem informação.
@@ -58,12 +58,12 @@ A lista é **diff nosso**, entre o snapshot e o conteúdo atual — e é o que p
 própria tela, o que a sessão escreveu do que o usuário editou depois. O ponto de desfazer é
 rotulado pelo prompt do turno, que o hook `UserPromptSubmit` guardou.
 
-### B-20 — Rewind é auditado 🔲
+### B-20 — Rewind é auditado ✅
 
 Entra em `audit` com a lista de arquivos e o ponto de destino. Alteração em disco que não
 deixa rastro é exatamente o que a trilha existe para impedir.
 
-### B-21 — Limites do rewind 🔲
+### B-21 — Limites do rewind ✅
 
 Só alcança o que **aquela sessão** tocou; sessão fechada não desfaz; durante um turno em
 execução é recusado com `SESSION_LOCKED`. Falha no meio não deixa estado parcial silencioso —
@@ -90,7 +90,17 @@ E três requisitos que passaram a ser **nossos** no momento em que o revert deix
 
 ## Cenários cobertos
 
-S-37…S-45, S-61…S-67.
+S-37…S-45, S-61…S-67, e os descobertos na implementação S-83…S-87.
+
+## Como ficou
+
+- **O ponto é um momento, não um turno isolado**: voltar para antes do turno `T` alcança todo
+  caminho que `T` ou um turno posterior tocou, cada um no snapshot mais antigo desse intervalo.
+- **O alcance é a conversa**, não só a sessão viva — a coluna `claude_session_id` do journal
+  (migration `0013`) é o que alcança os pontos de uma conversa nossa continuada in-place (a metade
+  da S-59 que a F2 deixou para cá).
+- **Prévia e desfazer são o mesmo cálculo** (`UndoPlanner`), e a trilha recebe o plano **antes** de
+  qualquer escrita. A purga do store roda num job (`SnapshotPurgeJob`).
 
 ---
 

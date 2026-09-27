@@ -1,14 +1,27 @@
+import type { RecordAuditEventUseCase } from '@application/audit';
 import type { Clock, IdGenerator } from '@domain/shared';
-import { ClaudeUnavailableError, Session, SessionId } from '@domain/session';
-import type { PermissionMode, SessionCloseReason } from '@domain/session';
+import {
+  ClaudeUnavailableError,
+  resumeStrategyFor,
+  Session,
+  SessionId,
+  SessionNotFoundError,
+} from '@domain/session';
+import type { PermissionMode, ResumeStrategy, SessionCloseReason } from '@domain/session';
 import { ClaudeSessionId } from '@domain/transcript';
+import type { WorkspacePath } from '@domain/workspace';
 import type { StartSessionCommand } from './commands/start-session.command';
-import type { ClaudeSessionPort, SessionEvent } from './ports/claude-session.port';
+import type {
+  ClaudeSessionPort,
+  SessionConversation,
+  SessionEvent,
+} from './ports/claude-session.port';
+import type { ResumableConversationSource } from './ports/resumable-conversation.source';
 import type { SessionBroadcaster } from './ports/session-broadcaster.port';
 import type { SessionOriginRepository } from './ports/session-origin.repository';
 import type { WorkspaceResolver } from './ports/workspace-resolver.port';
 import { observedStatus } from './session-status';
-import type { SessionRegistry } from './session-registry';
+import type { LiveSession, SessionRegistry } from './session-registry';
 
 /** What the installation opens a session with when the client states no preference. */
 export interface SessionDefaults {
@@ -28,8 +41,28 @@ export interface SessionProvenance {
   readonly origins: SessionOriginRepository;
 }
 
+/** What continuing a conversation needs beyond opening one: where to ask about it, and the trail. */
+export interface SessionResumption {
+  readonly conversations: ResumableConversationSource;
+
+  /** Picking a conversation up again is a fact of the trail, written before anything is spawned. */
+  readonly trail: RecordAuditEventUseCase;
+}
+
+/** A session a `session.start` answered with. */
+export interface StartedSession {
+  readonly session: Session;
+  readonly conversation: SessionConversation;
+
+  /**
+   * The conversation was already live for the caller, and nothing was spawned: the caller joins
+   * the session that holds it. Resuming what is live is an attach (S-24).
+   */
+  readonly joined: boolean;
+}
+
 /**
- * Opens a session of Claude on a workspace.
+ * Opens a session of Claude on a workspace — a new conversation, or one continued.
  *
  * The order of the first two steps is the security of the product: the path clears the allowlist
  * **before** a slot is taken and long before a subprocess exists, because `cwd` of the SDK's
@@ -40,8 +73,20 @@ export interface SessionProvenance {
  * that the conversation is ours — and so whose it is, and whether a resume may write into it
  * ([D-04](../../../../docs/plans/04-transcript-and-resume/decisions.md)). A session whose origin
  * could not be recorded is not opened: it would read as somebody else's for the rest of its life.
+ *
+ * A resume adds three rules of its own (B-10…B-13):
+ *
+ * - **the origin decides how** — ours continues in its file, one begun elsewhere is forked under a
+ *   new id of ours. See `resumeStrategyFor`;
+ * - **what is live is joined, never spawned again** — a second `query()` on one conversation is two
+ *   writers in one JSONL (S-24), and two resumes arriving together are one (S-25);
+ * - **it is written to the trail before anything is spawned** (S-27), and a trail that cannot take
+ *   it is a resume that does not happen — the same rule an approval follows.
  */
 export class StartSessionUseCase {
+  /** Resumes in flight, by caller and conversation, so a second one joins the first (S-25). */
+  private readonly resuming = new Map<string, Promise<StartedSession>>();
+
   constructor(
     private readonly workspaces: WorkspaceResolver,
     private readonly registry: SessionRegistry,
@@ -51,16 +96,115 @@ export class StartSessionUseCase {
     private readonly ids: IdGenerator,
     private readonly defaults: SessionDefaults,
     private readonly provenance: SessionProvenance,
+    private readonly resumption: SessionResumption,
   ) {}
 
   /**
-   * @throws {import('@domain/workspace').WorkspaceNotAllowedError} path outside every root
-   * @throws {import('@domain/session').SessionLimitReachedError} the installation is full
-   * @throws whatever recording the provenance threw — and then nothing was spawned
+   * @throws {import('@domain/workspace').WorkspaceNotAllowedError} path outside every root (S-23)
+   * @throws {import('@domain/transcript').InvalidClaudeSessionIdError} a resume id that is no UUID
+   * @throws {SessionNotFoundError} a conversation that does not exist in that workspace, or is
+   *   somebody else's — the same answer (S-22)
+   * @throws {import('@domain/session').SessionLimitReachedError} the installation is full (S-26)
+   * @throws whatever recording the provenance or the trail threw — and then nothing was spawned
    */
-  async execute(command: StartSessionCommand): Promise<Session> {
+  async execute(command: StartSessionCommand): Promise<StartedSession> {
     const workspace = await this.workspaces.resolve(command.workspacePath, command.userId);
 
+    if (command.resumeSessionId === null) {
+      return this.launch(command, workspace, async (session) => ({
+        claudeSessionId: await this.recordOrigin(session),
+        resumedFrom: null,
+      }));
+    }
+
+    return this.resume(command, workspace, ClaudeSessionId.create(command.resumeSessionId));
+  }
+
+  /** Joins what is live, joins what is starting, and only otherwise continues the conversation. */
+  private async resume(
+    command: StartSessionCommand,
+    workspace: WorkspacePath,
+    id: ClaudeSessionId,
+  ): Promise<StartedSession> {
+    const live = this.registry.findConversation(id, command.userId);
+
+    if (live !== null) {
+      return joined(live);
+    }
+
+    // Checked and set with no `await` in between, so two resumes arriving together cannot both
+    // find the map empty.
+    const key = `${command.userId.value} ${id.value}`;
+    const inFlight = this.resuming.get(key);
+
+    if (inFlight !== undefined) {
+      return { ...(await inFlight), joined: true };
+    }
+
+    const resuming = this.continueConversation(command, workspace, id);
+    this.resuming.set(key, resuming);
+
+    try {
+      return await resuming;
+    } finally {
+      this.resuming.delete(key);
+    }
+  }
+
+  private async continueConversation(
+    command: StartSessionCommand,
+    workspace: WorkspacePath,
+    id: ClaudeSessionId,
+  ): Promise<StartedSession> {
+    const candidate = await this.resumption.conversations.find(id);
+    const strategy =
+      candidate === null
+        ? null
+        : resumeStrategyFor(candidate, { userId: command.userId, workspace });
+
+    if (strategy === null) {
+      throw new SessionNotFoundError(id.value);
+    }
+
+    return this.launch(command, workspace, async (session) => {
+      const conversation = await this.conversationFor(session, id, strategy);
+
+      await this.resumption.trail.execute({
+        userId: session.ownerId,
+        kind: strategy === 'fork' ? 'session.forked' : 'session.resumed',
+        subjectId: id.value,
+        // The workspace, and never the summary: the summary is the first prompt, and nothing the
+        // conversation said is copied into this database (S-28).
+        subjectLabel: workspace.value,
+        at: session.openedAt,
+      });
+
+      return conversation;
+    });
+  }
+
+  /** In place keeps the id; a fork gets one of ours, recorded as ours before it exists. */
+  private async conversationFor(
+    session: Session,
+    id: ClaudeSessionId,
+    strategy: ResumeStrategy,
+  ): Promise<SessionConversation> {
+    return strategy === 'fork'
+      ? { claudeSessionId: await this.recordOrigin(session), resumedFrom: id }
+      : { claudeSessionId: id, resumedFrom: id };
+  }
+
+  /**
+   * Takes a slot, settles the conversation, spawns, and registers.
+   *
+   * @param conversationFor what the conversation is. It runs once the session has an id and before
+   *   anything is spawned — that is where the provenance and the trail are written.
+   */
+  private async launch(
+    command: StartSessionCommand,
+    workspace: WorkspacePath,
+    conversationFor: (session: Session) => Promise<SessionConversation>,
+  ): Promise<StartedSession> {
     // Taken before anything is spawned, and given back in the `finally`. Checking the count and
     // only then awaiting a subprocess would let two starts both see room and both spawn, which is
     // the orphan the limit exists to prevent.
@@ -76,18 +220,14 @@ export class StartSessionUseCase {
         openedAt: this.clock.now(),
       });
 
-      // A resume keeps the id the conversation already has, and whose it is was settled when it
-      // was opened. Resuming is the next phase's (F2); until then it records nothing new.
-      const claudeSessionId =
-        command.resumeSessionId === null ? await this.recordOrigin(session) : null;
+      const conversation = await conversationFor(session);
 
       const handle = await this.claude.start({
         sessionId: session.id,
         workspace,
         model: command.model,
         permissionMode: session.permissionMode,
-        resumeSessionId: command.resumeSessionId,
-        claudeSessionId,
+        conversation,
         onEvent: (event) => {
           this.onEvent(session, event);
         },
@@ -102,15 +242,15 @@ export class StartSessionUseCase {
       // transition, be dropped by `observe`, and leave the status frozen for the life of the
       // session.
       session.observe('idle');
-      this.registry.add({ session, handle });
+      this.registry.add({ session, handle, conversation });
 
-      return session;
+      return { session, conversation, joined: false };
     } finally {
       this.registry.release();
     }
   }
 
-  /** Mints the id of the new conversation and records it as ours, before anything is spawned. */
+  /** Mints the id of a new conversation and records it as ours, before anything is spawned. */
   private async recordOrigin(session: Session): Promise<ClaudeSessionId> {
     const claudeSessionId = ClaudeSessionId.create(this.provenance.ids.next());
 
@@ -170,4 +310,9 @@ export class StartSessionUseCase {
       payload: { sessionId: session.id.value, reason: session.closeReason ?? reason },
     });
   }
+}
+
+/** A live session, as the answer to a resume that found it already running. */
+function joined(live: LiveSession): StartedSession {
+  return { session: live.session, conversation: live.conversation, joined: true };
 }

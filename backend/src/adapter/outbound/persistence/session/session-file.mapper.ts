@@ -1,5 +1,6 @@
 import { SessionFileState, SessionId, TurnFileCheckpoint } from '@domain/session';
 import type { FilePresence, Restorability } from '@domain/session';
+import { ClaudeSessionId } from '@domain/transcript';
 import type { sessionFileStates, turnFileCheckpoints } from '@infra/database/schema';
 
 type StateRow = typeof sessionFileStates.$inferSelect;
@@ -11,6 +12,7 @@ type CheckpointInsert = typeof turnFileCheckpoints.$inferInsert;
 export function toStateEntity(row: StateRow): SessionFileState {
   return SessionFileState.record({
     sessionId: SessionId.create(row.sessionId),
+    claudeSessionId: conversationOf(row.claudeSessionId),
     path: row.path,
     hash: row.hash,
     mtime: row.mtime,
@@ -25,6 +27,7 @@ export function toStateRow(state: SessionFileState): StateInsert {
 
   return {
     sessionId: snapshot.sessionId.value,
+    claudeSessionId: snapshot.claudeSessionId?.value ?? null,
     path: snapshot.path,
     hash: snapshot.hash,
     mtime: snapshot.mtime,
@@ -37,6 +40,7 @@ export function toStateRow(state: SessionFileState): StateInsert {
 export function toCheckpointEntity(row: CheckpointRow): TurnFileCheckpoint {
   return TurnFileCheckpoint.capture({
     sessionId: SessionId.create(row.sessionId),
+    claudeSessionId: conversationOf(row.claudeSessionId),
     promptId: row.promptId,
     path: row.path,
     existedBefore: row.existedBefore as FilePresence,
@@ -55,6 +59,7 @@ export function toCheckpointRow(checkpoint: TurnFileCheckpoint): CheckpointInser
 
   return {
     sessionId: snapshot.sessionId.value,
+    claudeSessionId: snapshot.claudeSessionId?.value ?? null,
     promptId: snapshot.promptId,
     path: snapshot.path,
     existedBefore: snapshot.existedBefore,
@@ -65,4 +70,9 @@ export function toCheckpointRow(checkpoint: TurnFileCheckpoint): CheckpointInser
     promptText: snapshot.promptText,
     capturedAt: snapshot.capturedAt,
   };
+}
+
+/** The conversation a row names, or `null` for a row written before migration `0013`. */
+function conversationOf(value: string | null): ClaudeSessionId | null {
+  return value === null ? null : ClaudeSessionId.create(value);
 }

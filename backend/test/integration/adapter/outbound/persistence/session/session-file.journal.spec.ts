@@ -8,6 +8,7 @@ import { FileSnapshotStore } from '@adapter/outbound/checkpoint/file-snapshot.st
 import { DrizzleSessionFileRepository } from '@adapter/outbound/persistence/session/drizzle-session-file.repository';
 import { DiskSessionFileJournal } from '@adapter/outbound/session/disk-session-file.journal';
 import { SessionId } from '@domain/session';
+import { ClaudeSessionId } from '@domain/transcript';
 import { openDatabase } from '@infra/database/connection';
 import type { DatabaseConnection } from '@infra/database/connection';
 import { migrate } from '@infra/database/migrator';
@@ -18,6 +19,15 @@ import { aPersistenceContext } from '../../../../../support/fakes/persistence-co
 import { RecordingLogger } from '../../../../../support/fakes/recording-logger';
 
 const sessionId = SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ');
+
+/** The conversation every session of this suite was. */
+const CONVERSATION = ClaudeSessionId.create('6b41b192-a41b-46c2-b8d7-5098d8c825be');
+
+/** What the journal is told about a session: which one, and which conversation it was. */
+const scopeOf = (id: SessionId): { sessionId: SessionId; claudeSessionId: ClaudeSessionId } => ({
+  sessionId: id,
+  claudeSessionId: CONVERSATION,
+});
 const otherSession = SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXY0');
 const now = new Date('2026-09-18T12:00:00.000Z');
 
@@ -80,7 +90,7 @@ describe('the session file journal', () => {
   describe('how the session left a file — B-46', () => {
     it('records path, hash and mtime after a write — S-99', async () => {
       await write('after');
-      await journal.recordResult(sessionId, file());
+      await journal.recordResult(scopeOf(sessionId), file());
 
       const [state] = await files.statesOf(sessionId);
       expect(state?.path).toBe(file());
@@ -91,10 +101,10 @@ describe('the session file journal', () => {
 
     it('leaves one row with the latest state after two writes — S-100', async () => {
       await write('first');
-      await journal.recordResult(sessionId, file());
+      await journal.recordResult(scopeOf(sessionId), file());
 
       await write('second');
-      await journal.recordResult(sessionId, file());
+      await journal.recordResult(scopeOf(sessionId), file());
 
       const states = await files.statesOf(sessionId);
       expect(states).toHaveLength(1);
@@ -104,15 +114,15 @@ describe('the session file journal', () => {
     it('records nothing when there is no file at the path — S-101', async () => {
       // A tool that failed did not change the file. Recording a hash here would create a baseline
       // the undo would later act on, for a write that never happened.
-      await journal.recordResult(sessionId, file('never-written.md'));
+      await journal.recordResult(scopeOf(sessionId), file('never-written.md'));
 
       expect(await files.statesOf(sessionId)).toEqual([]);
     });
 
     it('keeps two sessions apart even on the same path', async () => {
       await write('shared');
-      await journal.recordResult(sessionId, file());
-      await journal.recordResult(otherSession, file());
+      await journal.recordResult(scopeOf(sessionId), file());
+      await journal.recordResult(scopeOf(otherSession), file());
 
       expect(await files.statesOf(sessionId)).toHaveLength(1);
       expect(await files.statesOf(otherSession)).toHaveLength(1);
@@ -131,14 +141,14 @@ describe('the session file journal', () => {
       );
       await write('after');
 
-      await expect(broken.recordResult(sessionId, file())).resolves.toBeUndefined();
+      await expect(broken.recordResult(scopeOf(sessionId), file())).resolves.toBeUndefined();
       expect(log.withOp('sessionFile.journal')[0]).toMatchObject({ level: 'warn' });
     });
 
     it('never touches the audit trail, which still refuses an UPDATE — S-103', async () => {
       await write('after');
-      await journal.recordResult(sessionId, file());
-      await journal.recordResult(sessionId, file());
+      await journal.recordResult(scopeOf(sessionId), file());
+      await journal.recordResult(scopeOf(sessionId), file());
 
       // Two writes, one row updated — the very operation the trail's trigger aborts. That is why
       // this is a table of its own.
@@ -153,10 +163,10 @@ describe('the session file journal', () => {
     it('keeps the contents, and only on the first touch — S-104', async () => {
       await write('original');
       await journal.openTurn(sessionId, 'prompt-1', 'refactor the parser');
-      await journal.captureBefore(sessionId, 'prompt-1', file());
+      await journal.captureBefore(scopeOf(sessionId), 'prompt-1', file());
 
       await write('halfway');
-      await journal.captureBefore(sessionId, 'prompt-1', file());
+      await journal.captureBefore(scopeOf(sessionId), 'prompt-1', file());
 
       const [checkpoint] = await files.checkpointsOf(sessionId, 'prompt-1');
       const blob = checkpoint?.snapshot().blobPath;
@@ -166,7 +176,7 @@ describe('the session file journal', () => {
     it('labels the checkpoint with the prompt, which is what the UI shows', async () => {
       await write('original');
       await journal.openTurn(sessionId, 'prompt-1', 'refactor the parser');
-      await journal.captureBefore(sessionId, 'prompt-1', file());
+      await journal.captureBefore(scopeOf(sessionId), 'prompt-1', file());
 
       expect((await files.checkpointsOf(sessionId, 'prompt-1'))[0]?.snapshot().promptText).toBe(
         'refactor the parser',
@@ -177,7 +187,7 @@ describe('the session file journal', () => {
       // Not a gap: it is what lets undo **delete** the file, instead of leaving it behind because
       // there was nothing to restore.
       await journal.openTurn(sessionId, 'prompt-1', 'create it');
-      await journal.captureBefore(sessionId, 'prompt-1', file('new.md'));
+      await journal.captureBefore(scopeOf(sessionId), 'prompt-1', file('new.md'));
 
       const [checkpoint] = await files.checkpointsOf(sessionId, 'prompt-1');
       expect(checkpoint?.existedBefore).toBe('absent');
@@ -188,11 +198,11 @@ describe('the session file journal', () => {
     it('gives two turns their own checkpoint of the same path — S-106', async () => {
       await write('one');
       await journal.openTurn(sessionId, 'prompt-1', 'first');
-      await journal.captureBefore(sessionId, 'prompt-1', file());
+      await journal.captureBefore(scopeOf(sessionId), 'prompt-1', file());
 
       await write('two');
       await journal.openTurn(sessionId, 'prompt-2', 'second');
-      await journal.captureBefore(sessionId, 'prompt-2', file());
+      await journal.captureBefore(scopeOf(sessionId), 'prompt-2', file());
 
       const first = await files.checkpointsOf(sessionId, 'prompt-1');
       const second = await files.checkpointsOf(sessionId, 'prompt-2');
@@ -205,7 +215,7 @@ describe('the session file journal', () => {
       // moment somebody asks for their work back.
       await write('x'.repeat(MAX_FILE_BYTES + 1));
       await journal.openTurn(sessionId, 'prompt-1', 'touch the big one');
-      await journal.captureBefore(sessionId, 'prompt-1', file());
+      await journal.captureBefore(scopeOf(sessionId), 'prompt-1', file());
 
       const [checkpoint] = await files.checkpointsOf(sessionId, 'prompt-1');
       expect(checkpoint?.restorable).toBe('tooLarge');
@@ -224,7 +234,9 @@ describe('the session file journal', () => {
       );
       await write('original');
 
-      await expect(broken.captureBefore(sessionId, 'prompt-1', file())).resolves.toBeUndefined();
+      await expect(
+        broken.captureBefore(scopeOf(sessionId), 'prompt-1', file()),
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -262,7 +274,7 @@ describe('the session file journal', () => {
 
     it('forgets the rows of the sessions it removed, so none points at nothing', async () => {
       await write('original');
-      await journal.captureBefore(otherSession, 'prompt-1', file());
+      await journal.captureBefore(scopeOf(otherSession), 'prompt-1', file());
 
       await files.forgetCheckpoints([otherSession.value]);
 

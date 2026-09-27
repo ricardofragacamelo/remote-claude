@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
   CloseSessionUseCase,
+  CommandCatalog,
   InterruptSessionUseCase,
+  ListSessionCommandsUseCase,
   PromptSessionUseCase,
   SessionRegistry,
   SetSessionModelUseCase,
@@ -10,12 +12,15 @@ import {
 } from '@application/session';
 import { UserId } from '@domain/auth';
 import {
+  ClaudeUnavailableError,
   InvalidSessionIdError,
   SessionForbiddenError,
   SessionNotFoundError,
+  UnknownCommandError,
 } from '@domain/session';
 import type { Session } from '@domain/session';
 import {
+  aCommand,
   aRegistry,
   aSession,
   RecordingHandle,
@@ -41,49 +46,190 @@ describe('the commands that drive a running session', () => {
   });
 
   describe('prompt', () => {
-    it('queues the turn', () => {
-      new PromptSessionUseCase(registry).execute(SESSION_ID, 'hello', owner);
+    const prompter = (): PromptSessionUseCase =>
+      new PromptSessionUseCase(registry, new CommandCatalog());
+
+    /**
+     * A prompt as the gateway handles it: checked, and handed to the CLI once acknowledged — here, as
+     * soon as the check resolves, so the order of the sends is the order the checks resolved in.
+     */
+    const sent = (prompt: PromptSessionUseCase, text: string): Promise<void> =>
+      prompt.execute(SESSION_ID, text, owner).then((send) => {
+        send();
+      });
+
+    it('queues the turn', async () => {
+      await sent(prompter(), 'hello');
 
       expect(handle.prompts).toEqual(['hello']);
     });
 
-    it('queues a second prompt rather than refusing it — S-22', () => {
+    it('queues a second prompt rather than refusing it — S-22', async () => {
       // The SDK does this natively, it was measured, and it is what the Claude Code UI does.
       // Rejecting a concurrent prompt with a conflict was our own policy and it was wrong.
-      const prompt = new PromptSessionUseCase(registry);
+      const prompt = prompter();
 
-      prompt.execute(SESSION_ID, 'first', owner);
-      prompt.execute(SESSION_ID, 'second', owner);
+      await Promise.all([sent(prompt, 'first'), sent(prompt, 'second')]);
 
       expect(handle.prompts).toEqual(['first', 'second']);
     });
 
-    it('preserves the order the prompts arrived in — S-23', () => {
-      const prompt = new PromptSessionUseCase(registry);
+    it('preserves the order the prompts arrived in — S-23', async () => {
+      const prompt = prompter();
 
-      for (const text of ['a', 'b', 'c']) {
-        prompt.execute(SESSION_ID, text, owner);
-      }
+      await Promise.all(['a', 'b', 'c'].map((text) => sent(prompt, text)));
 
       expect(handle.prompts).toEqual(['a', 'b', 'c']);
     });
 
-    it('refuses a session that is not running', () => {
-      expect(() =>
-        new PromptSessionUseCase(aRegistry([]).registry).execute(SESSION_ID, 'x', owner),
-      ).toThrow(SessionNotFoundError);
+    it('refuses a session that is not running', async () => {
+      await expect(
+        new PromptSessionUseCase(aRegistry([]).registry, new CommandCatalog()).execute(
+          SESSION_ID,
+          'x',
+          owner,
+        ),
+      ).rejects.toThrow(SessionNotFoundError);
     });
 
-    it("refuses somebody else's session as forbidden, not as absent", () => {
-      expect(() => new PromptSessionUseCase(registry).execute(SESSION_ID, 'x', stranger)).toThrow(
+    it("refuses somebody else's session as forbidden, not as absent", async () => {
+      await expect(prompter().execute(SESSION_ID, 'x', stranger)).rejects.toThrow(
         SessionForbiddenError,
       );
     });
 
-    it('refuses an id that is not a ULID', () => {
-      expect(() => new PromptSessionUseCase(registry).execute('nope', 'x', owner)).toThrow(
-        InvalidSessionIdError,
+    it('refuses an id that is not a ULID', async () => {
+      await expect(prompter().execute('nope', 'x', owner)).rejects.toThrow(InvalidSessionIdError);
+    });
+
+    describe('a slash command', () => {
+      beforeEach(() => {
+        handle.cliVersion = '2.1.277';
+        handle.commands = [
+          aCommand('init'),
+          aCommand('usage', { aliases: ['cost'] }),
+          aCommand('agents', { description: '(removed) Ask Claude to manage subagents' }),
+        ];
+      });
+
+      it('sends a command the installation has — S-32', async () => {
+        await sent(prompter(), '/init');
+
+        expect(handle.prompts).toEqual(['/init']);
+      });
+
+      it('sends a command named by its alias', async () => {
+        await sent(prompter(), '/cost');
+
+        expect(handle.prompts).toEqual(['/cost']);
+      });
+
+      it('sends a command the menu hides: hiding is not refusing — D-05', async () => {
+        await sent(prompter(), '/agents');
+
+        expect(handle.prompts).toEqual(['/agents']);
+      });
+
+      it('hands nothing to the CLI until the caller runs the send — the ack goes first', async () => {
+        const send = await prompter().execute(SESSION_ID, '/init', owner);
+
+        expect(handle.prompts).toEqual([]);
+        send();
+        expect(handle.prompts).toEqual(['/init']);
+      });
+
+      it('refuses a command the installation does not have, and sends nothing — S-34', async () => {
+        const refusal = prompter().execute(SESSION_ID, '/heapsnap now', owner);
+
+        await expect(refusal).rejects.toThrow(UnknownCommandError);
+        await expect(refusal).rejects.toMatchObject({
+          code: 'INVALID_INPUT',
+          messageKey: 'session.error.unknownCommand',
+          params: { command: 'heapsnap' },
+        });
+        expect(handle.prompts).toEqual([]);
+      });
+
+      it('never asks the installation about a prompt that is not a command', async () => {
+        await sent(prompter(), '/tmp/build is empty, why?');
+
+        expect(handle.prompts).toEqual(['/tmp/build is empty, why?']);
+        expect(handle.commandCalls).toBe(0);
+      });
+
+      it('refuses nothing when the list cannot be had — S-31', async () => {
+        handle.commandsFailWith = new ClaudeUnavailableError(SESSION_ID);
+
+        await sent(prompter(), '/whatever');
+
+        expect(handle.prompts).toEqual(['/whatever']);
+      });
+
+      it('keeps the order when a command has to wait for the list', async () => {
+        let release = (): void => undefined;
+        handle.commandsHeld = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        const prompt = prompter();
+
+        const first = sent(prompt, '/init');
+        const second = sent(prompt, 'and then this');
+        release();
+        await Promise.all([first, second]);
+
+        expect(handle.prompts).toEqual(['/init', 'and then this']);
+      });
+
+      it('lets the prompt after a refused one through', async () => {
+        const prompt = prompter();
+
+        const refused = sent(prompt, '/nope');
+        const next = sent(prompt, 'hello');
+
+        await expect(refused).rejects.toThrow(UnknownCommandError);
+        await next;
+        expect(handle.prompts).toEqual(['hello']);
+      });
+    });
+  });
+
+  describe('list commands', () => {
+    it('answers the menu with the version of the CLI — S-29, S-60', async () => {
+      handle.cliVersion = '2.1.277';
+      handle.commands = [
+        aCommand('zeta'),
+        aCommand('init'),
+        aCommand('__remote-workflow'),
+        aCommand('extra-usage', { description: 'Renamed to /usage-credits' }),
+      ];
+
+      const menu = await new ListSessionCommandsUseCase(registry, new CommandCatalog()).execute(
+        SESSION_ID,
+        owner,
       );
+
+      expect(menu.cliVersion).toBe('2.1.277');
+      expect(menu.commands.map((command) => [command.name, command.suggested])).toEqual([
+        ['init', true],
+        ['zeta', false],
+      ]);
+    });
+
+    it("refuses somebody else's session", async () => {
+      await expect(
+        new ListSessionCommandsUseCase(registry, new CommandCatalog()).execute(
+          SESSION_ID,
+          stranger,
+        ),
+      ).rejects.toThrow(SessionForbiddenError);
+    });
+
+    it('lets the failure of the CLI through — S-31', async () => {
+      handle.commandsFailWith = new ClaudeUnavailableError(SESSION_ID);
+
+      await expect(
+        new ListSessionCommandsUseCase(registry, new CommandCatalog()).execute(SESSION_ID, owner),
+      ).rejects.toThrow(ClaudeUnavailableError);
     });
   });
 

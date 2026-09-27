@@ -4,11 +4,19 @@ import {
   CLAUDE_SESSION_ID_GENERATOR,
   CLAUDE_SESSION_PORT,
   CloseSessionUseCase,
+  CommandCatalog,
   InterruptSessionUseCase,
+  ListSessionCommandsUseCase,
+  ListUndoPointsUseCase,
+  RewindFilesUseCase,
+  UNDO_DISK,
+  UNDO_JOURNAL,
+  UndoPlanner,
   PromptSessionUseCase,
   SESSION_BROADCASTER,
   SESSION_FILE_JOURNAL,
   SESSION_ORIGIN_REPOSITORY,
+  RESUMABLE_CONVERSATION_SOURCE,
   SESSION_PERMISSION_GATE,
   SessionRegistry,
   SetSessionModelUseCase,
@@ -19,6 +27,9 @@ import {
 } from '@application/session';
 import type {
   ClaudeSessionPort,
+  UndoDisk,
+  UndoJournal,
+  ResumableConversationSource,
   SessionBroadcaster,
   SessionOriginRepository,
   WorkspaceResolver,
@@ -26,18 +37,25 @@ import type {
 import { CLOCK, ID_GENERATOR } from '@application/shared';
 import type { Clock, IdGenerator } from '@domain/shared';
 import { ContractCommandHandler } from '@adapter/inbound/ws/contract-command.gateway-handler';
+import { SessionController } from '@adapter/inbound/http/session/session.controller';
+import { SessionRewindHandler } from '@adapter/inbound/ws/session/session-rewind.gateway-handler';
+import { NodeUndoDisk } from '@adapter/outbound/checkpoint/node-undo.disk';
+import { JournalUndoStore } from '@adapter/outbound/session/journal-undo.store';
+import { SnapshotPurgeJob } from '../jobs/snapshot-purge.job';
 import { PermissionBridge } from '@adapter/outbound/claude/permission-bridge';
 import {
   RecordDecisionOnResolved,
   ReleaseAgentLoopOnResolved,
 } from '@adapter/outbound/permission/permission-resolved.listeners';
 import { SESSION_HANDLERS, sessionSchemas } from '@adapter/inbound/ws/session/session-commands';
+import { SessionStartHandler } from '@adapter/inbound/ws/session/session-start.gateway-handler';
 import { AgentSdkClaudeSessionAdapter } from '@adapter/outbound/claude/agent-sdk.adapter';
 import { QUERY_FACTORY, realQueryFactory } from '@adapter/outbound/claude/query.factory';
+import { BUNDLED_CLI_VERSION, bundledCliVersion } from '@adapter/outbound/claude/cli-version';
 import { SESSION_LIMITS } from '@adapter/outbound/claude/session-limits';
 import { FileSnapshotStore } from '@adapter/outbound/checkpoint/file-snapshot.store';
 import { DrizzleSessionFileRepository } from '@adapter/outbound/persistence/session/drizzle-session-file.repository';
-import { DrizzleSessionOriginRepository } from '@adapter/outbound/persistence/session/drizzle-session-origin.repository';
+import { TranscriptModuleConversationSource } from '@adapter/outbound/session/transcript-module-conversation.source';
 import { AuditToolInvocationRecorder } from '@adapter/outbound/session/audit-tool-invocation.recorder';
 import { DiskSessionFileJournal } from '@adapter/outbound/session/disk-session-file.journal';
 import { HubSessionBroadcaster } from '@adapter/outbound/session/hub-session.broadcaster';
@@ -45,12 +63,16 @@ import { RegistrySessionOwnership } from '@adapter/outbound/session/registry-ses
 import { WorkspaceModuleResolver } from '@adapter/outbound/session/workspace-module.resolver';
 import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
+import { RecordAuditEventUseCase } from '@application/audit';
 import { EndSessionPermissionsUseCase, RequestPermissionUseCase } from '@application/permission';
 import { UuidGenerator } from '@shared/ids/uuid-generator';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { AuditModule } from './audit.module';
+import { AuthModule } from './auth.module';
 import { PermissionModule } from './permission.module';
 import { WebsocketModule } from './websocket.module';
+import { SessionOriginModule } from './session-origin.module';
+import { TranscriptModule } from './transcript.module';
 import { WorkspaceModule } from './workspace.module';
 
 /**
@@ -61,9 +83,19 @@ import { WorkspaceModule } from './workspace.module';
  * with `new` in a factory — three lines each, and what keeps `application/` free of decorators.
  */
 @Module({
-  imports: [AuditModule, PermissionModule, WorkspaceModule, WebsocketModule],
+  imports: [
+    AuditModule,
+    AuthModule,
+    PermissionModule,
+    SessionOriginModule,
+    TranscriptModule,
+    WorkspaceModule,
+    WebsocketModule,
+  ],
+  controllers: [SessionController],
   providers: [
     { provide: QUERY_FACTORY, useValue: realQueryFactory },
+    { provide: BUNDLED_CLI_VERSION, useFactory: () => bundledCliVersion() },
     {
       provide: SESSION_LIMITS,
       inject: [APP_CONFIG],
@@ -81,8 +113,35 @@ import { WorkspaceModule } from './workspace.module';
         }),
     },
     { provide: SESSION_FILE_JOURNAL, useClass: DiskSessionFileJournal },
-    // That we opened a conversation: written before anything is spawned, read by `transcript`.
-    { provide: SESSION_ORIGIN_REPOSITORY, useClass: DrizzleSessionOriginRepository },
+    // The undo: the journal read by conversation, the disk written atomically and never through a
+    // link, and the planner the preview and the undo share so they can never disagree.
+    { provide: UNDO_JOURNAL, useClass: JournalUndoStore },
+    { provide: UNDO_DISK, useClass: NodeUndoDisk },
+    {
+      provide: UndoPlanner,
+      inject: [UNDO_JOURNAL, UNDO_DISK, CLOCK],
+      useFactory: (journal: UndoJournal, disk: UndoDisk, clock: Clock) =>
+        new UndoPlanner(journal, disk, clock),
+    },
+    {
+      provide: ListUndoPointsUseCase,
+      inject: [SessionRegistry, UndoPlanner],
+      useFactory: (registry: SessionRegistry, planner: UndoPlanner) =>
+        new ListUndoPointsUseCase(registry, planner),
+    },
+    {
+      provide: RewindFilesUseCase,
+      inject: [SessionRegistry, UndoPlanner, RecordAuditEventUseCase, CLOCK],
+      useFactory: (
+        registry: SessionRegistry,
+        planner: UndoPlanner,
+        trail: RecordAuditEventUseCase,
+        clock: Clock,
+      ) => new RewindFilesUseCase(registry, planner, trail, clock),
+    },
+    SnapshotPurgeJob,
+    // Where a conversation to continue ran, and who opened it here — `transcript` and provenance.
+    { provide: RESUMABLE_CONVERSATION_SOURCE, useClass: TranscriptModuleConversationSource },
     { provide: CLAUDE_SESSION_ID_GENERATOR, useClass: UuidGenerator },
     {
       // Built by factory rather than by reflection, because it needs the broadcaster token and a
@@ -130,6 +189,8 @@ import { WorkspaceModule } from './workspace.module';
         APP_CONFIG,
         CLAUDE_SESSION_ID_GENERATOR,
         SESSION_ORIGIN_REPOSITORY,
+        RESUMABLE_CONVERSATION_SOURCE,
+        RecordAuditEventUseCase,
       ],
       useFactory: (
         workspaces: WorkspaceResolver,
@@ -141,6 +202,8 @@ import { WorkspaceModule } from './workspace.module';
         config: AppConfig,
         claudeIds: IdGenerator,
         origins: SessionOriginRepository,
+        conversations: ResumableConversationSource,
+        trail: RecordAuditEventUseCase,
       ) =>
         new StartSessionUseCase(
           workspaces,
@@ -151,13 +214,24 @@ import { WorkspaceModule } from './workspace.module';
           ids,
           config.session.defaults,
           { ids: claudeIds, origins },
+          { conversations, trail },
         ),
     },
 
+    // One per process, like the registry: the list is a property of the installation, and two
+    // catalogues would ask the CLI twice for the same answer (S-36).
+    { provide: CommandCatalog, useValue: new CommandCatalog() },
     {
       provide: PromptSessionUseCase,
-      inject: [SessionRegistry],
-      useFactory: (registry: SessionRegistry) => new PromptSessionUseCase(registry),
+      inject: [SessionRegistry, CommandCatalog],
+      useFactory: (registry: SessionRegistry, catalog: CommandCatalog) =>
+        new PromptSessionUseCase(registry, catalog),
+    },
+    {
+      provide: ListSessionCommandsUseCase,
+      inject: [SessionRegistry, CommandCatalog],
+      useFactory: (registry: SessionRegistry, catalog: CommandCatalog) =>
+        new ListSessionCommandsUseCase(registry, catalog),
     },
     {
       provide: InterruptSessionUseCase,
@@ -180,48 +254,22 @@ import { WorkspaceModule } from './workspace.module';
       useFactory: (registry: SessionRegistry, broadcaster: SessionBroadcaster) =>
         new CloseSessionUseCase(registry, broadcaster),
     },
-    {
-      provide: SESSION_HANDLERS.start,
-      inject: [StartSessionUseCase],
-      useFactory: (startSession: StartSessionUseCase) =>
-        new ContractCommandHandler(
-          'session.start',
-          sessionSchemas.start,
-          async (command, context) => {
-            const session = await startSession.execute({
-              workspacePath: command.workspacePath,
-              model: command.model ?? null,
-              permissionMode: command.permissionMode ?? null,
-              resumeSessionId: command.resumeSessionId ?? null,
-              userId: context.userId,
-            });
-
-            // Whoever opened the session is watching it: fan-out only reaches attached connections,
-            // so without this the caller would miss the events of the session it just opened.
-            context.attach(session.id.value);
-
-            return {
-              sessionId: session.id.value,
-              type: 'session.started',
-              payload: {
-                sessionId: session.id.value,
-                workspacePath: session.workspace.value,
-                model: session.model,
-                permissionMode: session.permissionMode,
-              },
-            };
-          },
-        ),
-    },
+    { provide: SESSION_HANDLERS.start, useClass: SessionStartHandler },
+    { provide: SESSION_HANDLERS.rewind, useClass: SessionRewindHandler },
     {
       provide: SESSION_HANDLERS.prompt,
       inject: [PromptSessionUseCase],
       useFactory: (prompt: PromptSessionUseCase) =>
-        new ContractCommandHandler('session.prompt', sessionSchemas.prompt, (command, context) => {
-          // Queued and never refused, even mid-turn: it is what the SDK does natively and what
-          // the Claude Code UI does. Rejecting a concurrent prompt was our own policy, and wrong.
-          prompt.execute(command.sessionId, command.text, context.userId);
-        }),
+        new ContractCommandHandler(
+          'session.prompt',
+          sessionSchemas.prompt,
+          async (command, context) =>
+            // Queued and never refused for arriving mid-turn: it is what the SDK does natively and
+            // what the Claude Code UI does. What is refused is a slash command the installation does
+            // not have, and that refusal is this command's `error` (S-34). The prompt reaches the CLI
+            // only after the ack, so no event of its turn can overtake it.
+            ({ afterAck: await prompt.execute(command.sessionId, command.text, context.userId) }),
+        ),
     },
     {
       provide: SESSION_HANDLERS.interrupt,
@@ -284,11 +332,6 @@ import { WorkspaceModule } from './workspace.module';
       ),
     },
   ],
-  exports: [
-    ...Object.values(SESSION_HANDLERS),
-    RegistrySessionOwnership,
-    SessionRegistry,
-    SESSION_ORIGIN_REPOSITORY,
-  ],
+  exports: [...Object.values(SESSION_HANDLERS), RegistrySessionOwnership, SessionRegistry],
 })
 export class SessionModule {}

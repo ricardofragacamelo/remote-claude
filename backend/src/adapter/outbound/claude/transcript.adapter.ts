@@ -11,6 +11,7 @@ import {
 } from '@domain/transcript';
 import type { TranscriptMessage, TranscriptSession } from '@domain/transcript';
 import { LOGGER, type Logger } from '@shared/logging/logger';
+import { withinDeadline } from './deadline';
 import { historicalEvents } from './sdk-message.mapper';
 import { ReadLimiter, TRANSCRIPT_LIMITS, TranscriptCache } from './transcript-reads';
 import type { TranscriptReadLimits } from './transcript-reads';
@@ -143,7 +144,12 @@ export class AgentSdkTranscriptAdapter implements TranscriptStore {
     );
 
     try {
-      return await this.withinDeadline(operation, this.limiter.run(read));
+      return await withinDeadline(
+        this.scheduler,
+        this.limits.timeoutMs,
+        this.limiter.run(read),
+        () => new TranscriptTimeoutError(operation, this.limits.timeoutMs),
+      );
     } catch (error) {
       const durationMs = Date.now() - startedAt;
 
@@ -168,25 +174,6 @@ export class AgentSdkTranscriptAdapter implements TranscriptStore {
       );
       throw new TranscriptUnavailableError(operation);
     }
-  }
-
-  private withinDeadline<T>(operation: TranscriptOperation, read: Promise<T>): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      const cancel = this.scheduler.after(this.limits.timeoutMs, () => {
-        reject(new TranscriptTimeoutError(operation, this.limits.timeoutMs));
-      });
-
-      read.then(
-        (value) => {
-          cancel();
-          resolve(value);
-        },
-        (error: unknown) => {
-          cancel();
-          reject(error instanceof Error ? error : new Error(String(error)));
-        },
-      );
-    });
   }
 }
 

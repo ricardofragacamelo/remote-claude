@@ -11,7 +11,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** todas concluídas. **O plano fechou.**
-**Última atualização:** 2026-09-19
+**Última atualização:** 2026-09-26
 **Bloqueios:** nenhum.
 
 **O produto faz o que o plano existia para provar.** Uma `query()` do Agent SDK roda de verdade
@@ -86,7 +86,7 @@ F6 ████████████████████ 100%   ✅ concl
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 108 | 3 | 0 | 105 | 0 |
+| [Matriz](scenarios.md) | 108 | 1 | 0 | 107 | 0 |
 
 ---
 
@@ -181,7 +181,7 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 | Data | O que saiu | Por quê | Para onde foi |
 |---|---|---|---|
 | 2026-09-19 | **S-36 — backpressure: fila estourada fecha com `1013`** | não foi implementado. O fan-out já é fire-and-forget e um envio que falha derruba a connection, então o loop do Agent SDK nunca fica preso; o que falta é o limite de fila e o código de fechamento | **plano 05**, com o resto dos limites derivados da máquina. Continua ⬜ na matriz |
-| 2026-09-19 | **S-89, S-90 — as fixtures gravadas** | a gravação roda e está commitada, mas mediu `4 tool calls → 4 hooks → 1 canUseTool`, e não os `6 → 6 → 2` do spike. A **assimetria** — que é o que a ADR-011 afirma — se confirma; os números não, porque o prompt é outro. A idempotência da regravação (S-89) não é testável como escrita: o modelo não repete o mesmo stream | a medição está registrada abaixo; os dois cenários são reescritos ou removidos no [plano 04](../04-transcript-and-resume/README.md), que volta a mexer em fixture |
+| 2026-09-19 | **S-89, S-90 — as fixtures gravadas** | a gravação roda e está commitada, mas mediu `4 tool calls → 4 hooks → 1 canUseTool`, e não os `6 → 6 → 2` do spike. A **assimetria** — que é o que a ADR-011 afirma — se confirma; os números não, porque o prompt é outro. A idempotência da regravação (S-89) não é testável como escrita: o modelo não repete o mesmo stream | a medição está registrada abaixo; os dois cenários são reescritos ou removidos no [plano 04](../04-transcript-and-resume/README.md), que volta a mexer em fixture — **reescritos e passando em 2026-09-26** ([progresso do 04](../04-transcript-and-resume/progress.md#decisões-tomadas-durante-a-execução)) |
 
 ---
 

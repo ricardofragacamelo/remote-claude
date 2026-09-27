@@ -18,6 +18,7 @@ export const FRAME_TYPES = [
   'session.detach',
   'session.interrupt',
   'session.prompt',
+  'session.rewindFiles',
   'session.setLocale',
   'session.setModel',
   'session.setPermissionMode',
@@ -30,6 +31,7 @@ export const FRAME_TYPES = [
   'permission.requested',
   'permission.resolved',
   'session.closed',
+  'session.rewound',
   'session.started',
   'session.statusChanged',
   'tool.completed',
@@ -83,7 +85,7 @@ export interface ConnectionReadyPayload {
   readonly limits: ConnectionReadyPayloadLimits;
 }
 
-/** Answer to `session.attach`. Says what was replayed and whether anything was lost. */
+/** Answer to `session.attach` — and to a `session.start` whose `resumeSessionId` names a conversation already live for the caller. Says what was replayed and whether anything was lost. */
 export interface SessionAttachedPayload {
   readonly sessionId: string;
   /** How many buffered events follow this ack. */
@@ -92,6 +94,10 @@ export interface SessionAttachedPayload {
   readonly oldestAvailableSeq: number;
   /** The requested sequence had already fallen out of the buffer. The client drops its local state and reloads over HTTP — it never stitches a partial hole. */
   readonly gap: boolean;
+  /** The conversation of a live session of Claude — where a client reloads from after a `gap`, which is exactly when the buffer no longer holds the `session.started` that named it. Absent for a stream that is not a conversation, such as the diagnostic round trip. */
+  readonly claudeSessionId?: string;
+  /** The conversation this session continues, when it is a resume. Present on the ack a `session.start` answers with when the conversation it asked to resume was already live for the caller: resuming what is live is an attach, never a second subprocess. */
+  readonly resumedFrom?: string;
 }
 
 /** Who is connecting, for diagnostics and for the deprecation window. */
@@ -152,7 +158,7 @@ export interface PermissionExtendPayload {
 export interface SessionAttachPayload {
   /** Session to observe. */
   readonly sessionId: string;
-  /** Highest `seq` the client already has. The server replays from the next one, or answers `gap: true` when that sequence has fallen out of the buffer. */
+  /** Highest `seq` the client already has — `0` when it has none, which replays everything the buffer holds. The server replays from the next one, or answers `gap: true` when that sequence has fallen out of the buffer. Absent, nothing past is replayed: the connection only observes from now on. */
   readonly resumeFromSeq?: number;
 }
 
@@ -185,6 +191,13 @@ export interface SessionPromptPayload {
   readonly text: string;
   /** Files carried with the prompt. */
   readonly attachments?: readonly SessionPromptPayloadAttachmentsItem[];
+}
+
+/** Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not `rewindFiles()` of the SDK: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`. */
+export interface SessionRewindFilesPayload {
+  readonly sessionId: string;
+  /** The turn to go back to, as `GET /sessions/:sessionId/checkpoints` names it — the `prompt_id` the hooks carry, never a message id of the transcript. */
+  readonly promptId: string;
 }
 
 /** Changes the language of **this connection**, not of the user. A phone in Portuguese and a browser in English watch the same session at the same time. */
@@ -339,6 +352,40 @@ export interface SessionClosedPayload {
   readonly reason: 'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown';
 }
 
+export interface SessionRewoundPayloadRevertedItem {
+  readonly path: string;
+  /** `deleted` for a file the session created: before the turn it was not there. */
+  readonly action: 'restored' | 'deleted';
+}
+
+export interface SessionRewoundPayloadPreservedItem {
+  readonly path: string;
+  /** `modifiedOutside` — somebody changed it after the session did; `notRestorable` — it was too large or unreadable to snapshot; `unsafePath` — it became a link or something other than a regular file, or its directory no longer resolves; `noBaseline` — nothing records how the session left it, so the undo will not guess. */
+  readonly reason: 'modifiedOutside' | 'notRestorable' | 'unsafePath' | 'noBaseline';
+}
+
+export interface SessionRewoundPayloadUnchangedItem {
+  readonly path: string;
+}
+
+export interface SessionRewoundPayloadFailedItem {
+  readonly path: string;
+}
+
+/** What an undo did to the disk, file by file — never a boolean. Fanned out to every connection watching the session, because the files changed for all of them. A path in `failed` means the undo stopped short there; an `error` with `INTERNAL_ERROR` follows, and nothing listed as reverted is left half-written. */
+export interface SessionRewoundPayload {
+  /** The turn the files went back to. */
+  readonly promptId: string;
+  /** Paths put back the way they were before the turn. */
+  readonly reverted: readonly SessionRewoundPayloadRevertedItem[];
+  /** Paths left as they are, each with the reason. */
+  readonly preserved: readonly SessionRewoundPayloadPreservedItem[];
+  /** Paths that were already the way they were before the turn. A second undo to the same point lands here — it is idempotent. */
+  readonly unchanged: readonly SessionRewoundPayloadUnchangedItem[];
+  /** Paths the undo tried to put back and could not. Each is left exactly as it was: restoring writes a temporary file beside it and renames it over. */
+  readonly failed: readonly SessionRewoundPayloadFailedItem[];
+}
+
 /** The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` — an SDKMessage is never emitted raw (ADR-006). */
 export interface SessionStartedPayload {
   readonly sessionId: string;
@@ -346,6 +393,10 @@ export interface SessionStartedPayload {
   readonly workspacePath: string;
   readonly model: string;
   readonly permissionMode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+  /** The id of the conversation in Claude's store, which is not ours: it is what `GET /transcripts/:sessionId/messages` reads and what a later `session.start` takes as `resumeSessionId`. Equal to `resumedFrom` when one of our own conversations is continued in place; new when a conversation begun elsewhere is forked. */
+  readonly claudeSessionId: string;
+  /** The conversation this session continues, when it is a resume. Absent for a fresh session. The history before the first turn of this session is read from it, over HTTP — the replay buffer only ever holds what this session said. */
+  readonly resumedFrom?: string;
 }
 
 /** Where the session stands. Derived by us, not read off a single SDK message. */
@@ -681,6 +732,22 @@ export function isSessionPromptPayload(value: unknown): value is SessionPromptPa
 }
 
 /**
+ * Whether `value` carries every required field of {@link SessionRewindFilesPayload}. Unknown fields are accepted.
+ */
+export function isSessionRewindFilesPayload(value: unknown): value is SessionRewindFilesPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['sessionId'] !== 'string' ||
+    typeof record['promptId'] !== 'string'
+  );
+}
+
+/**
  * Whether `value` carries every required field of {@link SessionSetLocalePayload}. Unknown fields are accepted.
  */
 export function isSessionSetLocalePayload(value: unknown): value is SessionSetLocalePayload {
@@ -933,6 +1000,87 @@ export function isSessionClosedPayload(value: unknown): value is SessionClosedPa
 }
 
 /**
+ * Whether `value` carries every required field of {@link SessionRewoundPayloadRevertedItem}. Unknown fields are accepted.
+ */
+export function isSessionRewoundPayloadRevertedItem(value: unknown): value is SessionRewoundPayloadRevertedItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['path'] !== 'string' ||
+    typeof record['action'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionRewoundPayloadPreservedItem}. Unknown fields are accepted.
+ */
+export function isSessionRewoundPayloadPreservedItem(value: unknown): value is SessionRewoundPayloadPreservedItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['path'] !== 'string' ||
+    typeof record['reason'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionRewoundPayloadUnchangedItem}. Unknown fields are accepted.
+ */
+export function isSessionRewoundPayloadUnchangedItem(value: unknown): value is SessionRewoundPayloadUnchangedItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['path'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionRewoundPayloadFailedItem}. Unknown fields are accepted.
+ */
+export function isSessionRewoundPayloadFailedItem(value: unknown): value is SessionRewoundPayloadFailedItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['path'] !== 'string'
+  );
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionRewoundPayload}. Unknown fields are accepted.
+ */
+export function isSessionRewoundPayload(value: unknown): value is SessionRewoundPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return !(
+    typeof record['promptId'] !== 'string' ||
+    !Array.isArray(record['reverted']) ||
+    !Array.isArray(record['preserved']) ||
+    !Array.isArray(record['unchanged']) ||
+    !Array.isArray(record['failed'])
+  );
+}
+
+/**
  * Whether `value` carries every required field of {@link SessionStartedPayload}. Unknown fields are accepted.
  */
 export function isSessionStartedPayload(value: unknown): value is SessionStartedPayload {
@@ -946,7 +1094,8 @@ export function isSessionStartedPayload(value: unknown): value is SessionStarted
     typeof record['sessionId'] !== 'string' ||
     typeof record['workspacePath'] !== 'string' ||
     typeof record['model'] !== 'string' ||
-    typeof record['permissionMode'] !== 'string'
+    typeof record['permissionMode'] !== 'string' ||
+    typeof record['claudeSessionId'] !== 'string'
   );
 }
 
@@ -1091,7 +1240,7 @@ export function isConnectionReadyFrame(value: unknown): value is ConnectionReady
   );
 }
 
-/** Answer to `session.attach`. Says what was replayed and whether anything was lost. */
+/** Answer to `session.attach` — and to a `session.start` whose `resumeSessionId` names a conversation already live for the caller. Says what was replayed and whether anything was lost. */
 export interface SessionAttachedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'ack';
   readonly type: 'session.attached';
@@ -1288,6 +1437,26 @@ export function isSessionPromptFrame(value: unknown): value is SessionPromptFram
     value.kind === 'command' &&
     value.type === 'session.prompt' &&
     isSessionPromptPayload(value.payload)
+  );
+}
+
+/** Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not `rewindFiles()` of the SDK: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`. */
+export interface SessionRewindFilesFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.rewindFiles';
+  readonly payload: SessionRewindFilesPayload;
+}
+
+/** Whether `value` is a {@link SessionRewindFilesFrame}. */
+export function isSessionRewindFilesFrame(value: unknown): value is SessionRewindFilesFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.rewindFiles' &&
+    isSessionRewindFilesPayload(value.payload)
   );
 }
 
@@ -1528,6 +1697,26 @@ export function isSessionClosedFrame(value: unknown): value is SessionClosedFram
     value.kind === 'event' &&
     value.type === 'session.closed' &&
     isSessionClosedPayload(value.payload)
+  );
+}
+
+/** What an undo did to the disk, file by file — never a boolean. Fanned out to every connection watching the session, because the files changed for all of them. A path in `failed` means the undo stopped short there; an `error` with `INTERNAL_ERROR` follows, and nothing listed as reverted is left half-written. */
+export interface SessionRewoundFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'session.rewound';
+  readonly payload: SessionRewoundPayload;
+}
+
+/** Whether `value` is a {@link SessionRewoundFrame}. */
+export function isSessionRewoundFrame(value: unknown): value is SessionRewoundFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'session.rewound' &&
+    isSessionRewoundPayload(value.payload)
   );
 }
 

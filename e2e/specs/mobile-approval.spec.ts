@@ -9,6 +9,7 @@ import {
   permissionAsked,
   prompt,
   startSession,
+  timelineOf,
   workspaceFor,
 } from '../fixtures/live-session';
 import type { E2eSocket } from '../fixtures/ws';
@@ -181,13 +182,8 @@ test(`${sameStream.id} — ${sameStream.title}`, async () => {
 
   // The same events, with the same numbers, in the same order — the phone got the first ones by
   // replay and the rest live, and it cannot tell the difference. Neither can anybody reading it.
-  const timeline = (socket: E2eSocket): string[] =>
-    socket.frames
-      .filter((frame) => frame.kind === 'event' && frame.sessionId === sessionId)
-      .map((frame) => `${String(frame.seq)}:${frame.type}`);
-
-  expect(timeline(mobile)).toEqual(timeline(web));
-  expect(timeline(web).length).toBeGreaterThan(3);
+  expect(timelineOf(mobile, sessionId)).toEqual(timelineOf(web, sessionId));
+  expect(timelineOf(web, sessionId).length).toBeGreaterThan(3);
 
   await finished(ends);
 });

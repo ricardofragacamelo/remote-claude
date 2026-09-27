@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import type { SessionFileJournal } from '@application/session';
+import type { JournalScope, SessionFileJournal } from '@application/session';
 import { CLOCK } from '@application/shared';
 import type { Clock } from '@domain/shared';
 import { SessionFileState, TurnFileCheckpoint } from '@domain/session';
@@ -47,13 +47,16 @@ export class DiskSessionFileJournal implements SessionFileJournal {
     return Promise.resolve();
   }
 
-  async captureBefore(sessionId: SessionId, promptId: string, path: string): Promise<void> {
+  async captureBefore(scope: JournalScope, promptId: string, path: string): Promise<void> {
+    const { sessionId } = scope;
+
     try {
       const snapshot = await this.snapshots.capture(sessionId.value, promptId, path);
 
       await this.files.saveCheckpointIfAbsent(
         TurnFileCheckpoint.capture({
           sessionId,
+          claudeSessionId: scope.claudeSessionId,
           promptId,
           path,
           existedBefore: snapshot.kind === 'absent' ? 'absent' : 'present',
@@ -70,7 +73,9 @@ export class DiskSessionFileJournal implements SessionFileJournal {
     }
   }
 
-  async recordResult(sessionId: SessionId, path: string): Promise<void> {
+  async recordResult(scope: JournalScope, path: string): Promise<void> {
+    const { sessionId } = scope;
+
     try {
       const measured = await this.snapshots.measure(path);
 
@@ -84,6 +89,7 @@ export class DiskSessionFileJournal implements SessionFileJournal {
       await this.files.saveState(
         SessionFileState.record({
           sessionId,
+          claudeSessionId: scope.claudeSessionId,
           path,
           hash: measured.hash,
           mtime: measured.mtime,

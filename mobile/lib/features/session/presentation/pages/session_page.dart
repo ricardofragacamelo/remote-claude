@@ -8,21 +8,27 @@
 /// conversation itself.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/connection_line.dart';
 import 'package:remote_claude/core/widgets/empty_view.dart';
+import 'package:remote_claude/core/widgets/error_view.dart';
 import 'package:remote_claude/core/widgets/loading_view.dart';
 import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/presentation/providers/live_session_controller.dart';
 import 'package:remote_claude/features/session/presentation/widgets/conversation_view.dart';
+import 'package:remote_claude/features/session/presentation/widgets/command_menu_sheet.dart';
 import 'package:remote_claude/features/session/presentation/widgets/prompt_composer.dart';
+import 'package:remote_claude/features/session/presentation/widgets/rewind_sheet.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// The live session screen.
@@ -35,7 +41,8 @@ class SessionPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final Conversation conversation = ref.watch(liveSessionControllerProvider(sessionId));
+    final LiveSession session = ref.watch(liveSessionControllerProvider(sessionId));
+    final Conversation conversation = session.conversation;
     final ConnectionStatus connection = connectionOf(ref.watch(connectionStatusProvider));
     final bool isLive = connection == ConnectionStatus.ready;
 
@@ -57,6 +64,14 @@ class SessionPage extends ConsumerWidget {
                 : null,
             child: Text(l10n.sessionInterruptAction),
           ),
+        // Always reachable: the sheet is what says why undo is not available right now — a turn
+        // running, the device offline, the session closed (S-39) — rather than a button that is
+        // grey for a reason nobody reads.
+        IconButton(
+          icon: const Icon(Icons.undo),
+          tooltip: l10n.sessionUndoOpen,
+          onPressed: () => unawaited(showRewindSheet(context, sessionId)),
+        ),
         IconButton(
           icon: const Icon(Icons.stop_circle_outlined),
           tooltip: l10n.sessionCloseAction,
@@ -87,10 +102,18 @@ class SessionPage extends ConsumerWidget {
               ),
             ),
             Expanded(
-              child: _Body(conversation: conversation, connection: connection),
+              child: _Body(
+                session: session,
+                connection: connection,
+                onRetryHistory: () => unawaited(
+                  ref.read(liveSessionControllerProvider(sessionId).notifier).retryHistory(),
+                ),
+              ),
             ),
             PromptComposer(
               isEnabled: isLive && conversation.status != SessionStatus.closed,
+              failure: session.promptFailure,
+              onOpenCommands: () => pickCommand(context, sessionId),
               onSend: (String text) =>
                   ref.read(liveSessionControllerProvider(sessionId).notifier).prompt(text),
             ),
@@ -141,28 +164,53 @@ class _Header extends StatelessWidget {
 
 /// The conversation, or the reason there is not one yet.
 class _Body extends StatelessWidget {
-  const _Body({required this.conversation, required this.connection});
+  const _Body({required this.session, required this.connection, required this.onRetryHistory});
 
-  final Conversation conversation;
+  final LiveSession session;
   final ConnectionStatus connection;
+  final VoidCallback onRetryHistory;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final Conversation conversation = session.conversation;
+    final Failure? historyFailure = session.historyFailure;
+
+    // What was said before this screen could see it failed to arrive. Said above whatever did
+    // arrive, with the way to ask again — never in place of the live conversation (S-17).
+    final Widget? history = historyFailure != null
+        ? ErrorView(failure: historyFailure, onRetry: onRetryHistory)
+        : null;
 
     if (conversation.isEmpty) {
-      // Nothing has arrived. Which of the two reasons it is decides what the person reads: a
-      // socket still opening is a wait, and a socket that is gone is not.
+      // Nothing has arrived. Which of the reasons it is decides what the person reads: a socket
+      // still opening is a wait, history being read is a wait too, and a socket that is gone is
+      // not.
       final bool waiting =
           connection == ConnectionStatus.connecting || connection == ConnectionStatus.reconnecting;
 
-      return waiting
-          ? LoadingView(label: connectionLabel(l10n, connection))
-          : EmptyView(title: l10n.sessionEmptyTitle, description: l10n.sessionEmptyBody);
+      return Column(
+        children: <Widget>[
+          ?history,
+          if (waiting)
+            LoadingView(label: connectionLabel(l10n, connection))
+          else if (session.isLoadingHistory)
+            LoadingView(label: l10n.sessionHistoryLoading)
+          else if (history == null)
+            EmptyView(title: l10n.sessionEmptyTitle, description: l10n.sessionEmptyBody),
+        ],
+      );
     }
 
     return Column(
       children: <Widget>[
+        ?history,
+        if (session.isLoadingHistory)
+          Semantics(
+            label: l10n.sessionHistoryLoading,
+            liveRegion: true,
+            child: const LinearProgressIndicator(),
+          ),
         Expanded(child: ConversationView(conversation: conversation)),
         if (conversation.ending != null) _Ending(ending: conversation.ending!),
       ],

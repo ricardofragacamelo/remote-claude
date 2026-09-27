@@ -55,11 +55,16 @@ class ApiClient {
   final Dio _dio;
   final TraceIds _traceIds;
 
-  /// A `GET`.
+  /// A `GET`, with [query] as its query string.
+  ///
+  /// The query travels apart from the path rather than spliced into it: Dio encodes it, and the
+  /// logging interceptor reports the path alone — a cursor or a folder name is not what an I/O
+  /// log line is for.
   ///
   /// @throws [Failure] always — a problem never reaches a caller as a `DioException`, because
   ///   then every caller would have to know what Dio is
-  Future<Object?> get(String path) => _send(() => _dio.get<Object?>(path));
+  Future<Object?> get(String path, {Map<String, Object?>? query}) =>
+      _send(() => _dio.get<Object?>(path, queryParameters: query));
 
   /// A `POST`.
   ///

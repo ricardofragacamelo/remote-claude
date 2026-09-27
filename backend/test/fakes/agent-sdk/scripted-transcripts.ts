@@ -74,8 +74,14 @@ export function capturedTranscript(name = 'tool-turn', copy?: number): SessionMe
 }
 
 /** A uuid of the same shape, made distinct per copy: the last group carries the copy number. */
-function renumber(uuid: string, copy: number): string {
+export function renumber(uuid: string, copy: number): string {
   return `${uuid.slice(0, 24)}${copy.toString(16).padStart(12, '0')}`;
+}
+
+/** The text of a prompt, when the message is one — what the SDK falls back to as the summary. */
+function promptTextOf(message: SessionMessage | undefined): string | undefined {
+  const body = message?.message as { content?: unknown } | undefined;
+  return typeof body?.content === 'string' ? body.content : undefined;
 }
 
 /**
@@ -130,6 +136,51 @@ export class ScriptedTranscripts implements TranscriptSdk {
     const conversation = this.require(sessionId);
     conversation.messages = [...messages];
     conversation.info = { ...conversation.info, lastModified };
+  }
+
+  /**
+   * What the CLI does with `persistSession: true`: the conversation is filed under the directory the
+   * session runs in, created by its first message and growing with every one after.
+   *
+   * Every write moves `lastModified` on, strictly — two turns written inside one millisecond would
+   * otherwise leave the key the backend caches a read by where it was, and the second turn would be
+   * served from the cache of the first.
+   */
+  persist(sessionId: string, cwd: string, messages: readonly SessionMessage[]): void {
+    const existing = this.conversations.get(sessionId);
+    const lastModified = Math.max(Date.now(), (existing?.info.lastModified ?? 0) + 1);
+
+    if (existing === undefined) {
+      const summary = promptTextOf(messages[0]);
+      this.add({
+        sessionId,
+        directory: cwd,
+        cwd,
+        lastModified,
+        messages,
+        ...(summary === undefined ? {} : { summary }),
+      });
+      return;
+    }
+
+    this.append(sessionId, messages, lastModified);
+  }
+
+  /**
+   * A fork: the history of `from` copied under `to`, filed where the fork runs — and nothing written
+   * to `from`, which is the whole point of forking a conversation somebody else may be writing.
+   */
+  fork(from: string, to: string, cwd: string): void {
+    const source = this.conversations.get(from);
+
+    this.add({
+      sessionId: to,
+      directory: cwd,
+      cwd,
+      lastModified: Date.now(),
+      messages: (source?.messages ?? []).map((message) => ({ ...message, session_id: to })),
+      ...(source === undefined ? {} : { summary: source.info.summary }),
+    });
   }
 
   /** Holds every read of messages from now on, until the gate is opened. */

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { PermissionQueuePanel } from '@/features/permission';
 import { SessionScreen } from '@/features/session';
+import { useOpenConversation } from './navigation';
 import { Screen, SignedIn } from './Screen';
 
 /**
@@ -27,10 +28,13 @@ export function SessionRoute(): React.JSX.Element {
     void navigate({ to: '/rules' });
   }, [navigate]);
 
+  // The whole conversation this session is — the part the ring buffer never held included.
+  const openHistory = useOpenConversation();
+
   return (
     <Screen title={t('session.screen.title')}>
       <SignedIn returnTo={`/sessions/${sessionId}`}>
-        <SessionScreen sessionId={sessionId} />
+        <SessionScreen sessionId={sessionId} onOpenHistory={openHistory} />
         <PermissionQueuePanel sessionId={sessionId} onOpenRules={openRules} />
       </SignedIn>
     </Screen>

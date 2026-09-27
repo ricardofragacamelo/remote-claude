@@ -93,6 +93,23 @@ export default {
       },
     },
     {
+      name: 'transcript-is-never-persisted',
+      comment:
+        "No message of a transcript is copied into PostgreSQL. The conversation is Claude's file, " +
+        'shared with the editor; a copy of it here is a second source of truth that diverges the ' +
+        'first time either is written, and a store of every conversation of the machine that ' +
+        'nobody released. What the database keeps is provenance — that we opened a conversation — ' +
+        'and never what it said. Persistence may name a conversation (`@domain/transcript` for its ' +
+        'id) but may not reach what reads one: the transcript use cases and store, the adapters ' +
+        'over the SDK, or the message type. See docs/architecture/backend/05-persistence.md and ' +
+        'S-28 of plan 04.',
+      severity: 'error',
+      from: { path: '^src/(adapter/outbound/persistence/|infrastructure/database/)' },
+      to: {
+        path: '^src/(application/transcript/|adapter/outbound/transcript/|adapter/outbound/claude/transcript|domain/transcript/value-objects/transcript-message)',
+      },
+    },
+    {
       name: 'no-line-reader',
       comment:
         'Reading a file line by line is how a JSONL parser begins, and nothing in this backend ' +

@@ -1,16 +1,26 @@
+import { randomUUID } from 'node:crypto';
+import { writeFileSync } from 'node:fs';
+
 import type {
   HookCallbackMatcher,
   Options,
   Query,
   SDKMessage,
   SDKUserMessage,
+  SessionMessage,
+  SlashCommand,
 } from '@anthropic-ai/claude-agent-sdk';
 
-import { loadFixture } from './fixture';
+import { loadCommands, loadFixture } from './fixture';
 import type { AgentSdkFixture } from './fixture';
+import { renumber } from './scripted-transcripts';
+import type { ScriptedTranscripts } from './scripted-transcripts';
 
 /** How many scripted runs this process has opened, so each one can name itself. */
 let runs = 0;
+
+/** How many turns this process has written to a store — what makes every written turn's ids its own. */
+let written = 0;
 
 /**
  * Where the hooks of a turn belong in its replay.
@@ -65,6 +75,8 @@ export interface ScriptRecord {
   interrupts: number;
   /** How many times `close()` was called. */
   closes: number;
+  /** How many times `supportedCommands()` was asked. */
+  commandCalls: number;
   /** The options the runner built, so a test can assert on what was sent to the SDK. */
   options: Options | null;
 }
@@ -96,6 +108,51 @@ export interface ScriptOptions {
 
   /** Messages appended to the replay, for variants no fixture happens to contain. */
   readonly extraMessages?: readonly unknown[];
+
+  /**
+   * What `supportedCommands()` answers instead of the recorded catalogue: a narrower installation,
+   * or an error to throw — the CLI failing to list, or never answering at all (`'hang'`).
+   */
+  readonly commands?: readonly SlashCommand[] | Error | 'hang';
+
+  /**
+   * Performs the file writes the recording describes, under this directory instead of the
+   * recording's `/workspace`, between `PreToolUse` and `PostToolUse` — where the real CLI writes.
+   * `'cwd'` is the directory the session runs in, which is where the real CLI writes.
+   *
+   * A replay that only fired the hooks left the disk untouched, and the undo, which is about the
+   * disk, would have had nothing real to put back. Only `Write` is performed: it is what the
+   * recordings contain, and its input says everything the write needs.
+   */
+  readonly performWritesIn?: string;
+
+  /**
+   * The store of conversations the replay writes into, as the real CLI does with
+   * `persistSession: true`: the prompt and every message of the turn, under the conversation the
+   * options name — a new one, one continued in place, or a fork of one begun elsewhere.
+   *
+   * With a store, every turn's ids are **its own**: the uuids, the API message ids and the tool use
+   * ids. The real CLI never writes the same id twice into a conversation, and a replay that did would
+   * fold every turn of a continued conversation into one message on screen. Without a store the
+   * first turn stays the recording byte for byte.
+   */
+  readonly transcripts?: ScriptedTranscripts;
+}
+
+/** Whether two inputs are the same, whatever order their keys were written in. */
+function sameInput(left: unknown, right: unknown): boolean {
+  return canonical(left) === canonical(right);
+}
+
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonical).join(',')}]`;
+  }
+  if (typeof value === 'object' && value !== null) {
+    const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right));
+    return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
 }
 
 /** What a turn after the first appends to every tool use id it replays. Nothing on the first. */
@@ -126,6 +183,79 @@ function forTurn(fixture: AgentSdkFixture, turn: number): AgentSdkFixture {
   }
 
   return JSON.parse(text) as AgentSdkFixture;
+}
+
+/** Whether a string is a uuid, which a minted id has to stay: the history pages by it. */
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Every id a recording carries that a conversation may not see twice. */
+function idsOf(fixture: AgentSdkFixture): Set<string> {
+  const ids = new Set<string>();
+
+  for (const invocation of fixture.preToolUse) {
+    if (invocation.toolUseId !== undefined) {
+      ids.add(invocation.toolUseId);
+    }
+  }
+
+  for (const message of fixture.messages) {
+    if (typeof message.uuid === 'string') {
+      ids.add(message.uuid);
+    }
+    if (message.type !== 'assistant') {
+      continue;
+    }
+    if (typeof message.message.id === 'string') {
+      ids.add(message.message.id);
+    }
+    for (const block of Array.isArray(message.message.content) ? message.message.content : []) {
+      if (block.type === 'tool_use') {
+        ids.add(block.id);
+      }
+    }
+  }
+
+  return ids;
+}
+
+/**
+ * The recording as turn `turn` of the conversation `conversationId` writes it: every id minted
+ * afresh, in the stream and in the hooks alike, and every message filed under the conversation.
+ *
+ * A uuid stays a uuid — the history pages by it — and every other id keeps its prefix, so a
+ * `toolu_…` still reads as one.
+ */
+function asTurnOf(fixture: AgentSdkFixture, conversationId: string, turn: number): AgentSdkFixture {
+  let text = JSON.stringify(fixture);
+
+  for (const id of idsOf(fixture)) {
+    text = text.replaceAll(id, UUID_SHAPE.test(id) ? renumber(id, turn) : `${id}-${String(turn)}`);
+  }
+
+  const recorded = new Set(fixture.messages.map((message) => message.session_id));
+  for (const sessionId of recorded) {
+    if (sessionId !== undefined) {
+      text = text.replaceAll(sessionId, conversationId);
+    }
+  }
+
+  return JSON.parse(text) as AgentSdkFixture;
+}
+
+/** A message of the stream as `getSessionMessages` returns it, or `null` when it is not one. */
+function asStored(message: SDKMessage): SessionMessage | null {
+  if (message.type !== 'user' && message.type !== 'assistant') {
+    return null;
+  }
+
+  return {
+    type: message.type,
+    uuid: String(message.uuid),
+    session_id: String(message.session_id),
+    message: message.message,
+    parent_tool_use_id: message.parent_tool_use_id,
+    parent_agent_id: null,
+  };
 }
 
 /**
@@ -163,6 +293,17 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
   }
 
   async next(): Promise<IteratorResult<SDKMessage, void>> {
+    const produced = await this.produce();
+
+    if (produced.done !== true) {
+      this.persist(produced.value);
+    }
+
+    return produced;
+  }
+
+  /** The next message of the replay, before anything is written about it. */
+  private async produce(): Promise<IteratorResult<SDKMessage, void>> {
     if (this.closed) {
       return { value: undefined, done: true };
     }
@@ -215,10 +356,13 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     // the turn that asks for permission and the turn that does not — an end-to-end suite gets one
     // backend per run, and starting a second one per scenario would cost more than it proves.
     this.turns += 1;
-    this.fixture = forTurn(
-      loadFixture(fixtureNamedIn(prompt) ?? this.script.fixture ?? 'text-turn'),
-      this.turns,
-    );
+    const recording = loadFixture(fixtureNamedIn(prompt) ?? this.script.fixture ?? 'text-turn');
+    const conversation = this.conversation;
+    this.fixture =
+      conversation === null
+        ? forTurn(recording, this.turns)
+        : asTurnOf(recording, conversation.id, (written += 1));
+    this.persistPrompt();
 
     // Every turn opens with `UserPromptSubmit`, as the real SDK does. A fake that skipped it would
     // leave the checkpoint of the turn unopened, and the undo point unlabelled.
@@ -269,6 +413,65 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
   /** Released by `interrupt()`, for a turn that was told to hold until somebody stops it. */
   private release: (() => void) | null = null;
 
+  /** The prompt the current turn answers, as the input iterable handed it over. */
+  private prompted: SDKUserMessage | null = null;
+
+  /** Whether the fork this run is has been written yet. A fork is written by its first prompt. */
+  private forked = false;
+
+  /**
+   * The conversation this run writes to, and where it is filed — or `null` when there is no store.
+   *
+   * Named the way the options name it: `sessionId` for a new conversation and for a fork, `resume`
+   * alone for one continued in place.
+   */
+  private get conversation(): { readonly id: string; readonly cwd: string } | null {
+    const id = this.options.sessionId ?? this.options.resume;
+
+    if (this.script.transcripts === undefined || id === undefined) {
+      return null;
+    }
+
+    return { id, cwd: this.options.cwd ?? process.cwd() };
+  }
+
+  /** Writes the prompt that opened a turn, forking the conversation first when this run is one. */
+  private persistPrompt(): void {
+    const conversation = this.conversation;
+    const store = this.script.transcripts;
+
+    if (conversation === null || store === undefined || this.prompted === null) {
+      return;
+    }
+
+    const origin = this.options.resume;
+    if (this.options.forkSession === true && origin !== undefined && !this.forked) {
+      store.fork(origin, conversation.id, conversation.cwd);
+      this.forked = true;
+    }
+
+    store.persist(conversation.id, conversation.cwd, [
+      {
+        type: 'user',
+        uuid: randomUUID(),
+        session_id: conversation.id,
+        message: this.prompted.message,
+        parent_tool_use_id: null,
+        parent_agent_id: null,
+      },
+    ]);
+  }
+
+  /** Writes a message the turn produced, when it is one a transcript keeps. */
+  private persist(message: SDKMessage): void {
+    const conversation = this.conversation;
+    const stored = asStored(message);
+
+    if (conversation !== null && stored !== null) {
+      this.script.transcripts?.persist(conversation.id, conversation.cwd, [stored]);
+    }
+  }
+
   /** The text of the next prompt, or `null` when the input ended or the run was closed. */
   private async nextPrompt(): Promise<string | null> {
     this.iterator ??= this.prompt[Symbol.asyncIterator]();
@@ -281,6 +484,7 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     const content = next.value.message.content;
     const text = typeof content === 'string' ? content : JSON.stringify(content);
     this.record.prompts.push(text);
+    this.prompted = next.value;
 
     if (this.script.silent === true) {
       // A session that is up and producing nothing. Waiting for ever is the honest shape of it,
@@ -291,8 +495,16 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     return text;
   }
 
-  /** The turn the current replay belongs to. Every hook of the SDK carries it. */
-  private readonly promptId = 'prompt-1';
+  /**
+   * The turn the current replay belongs to. Every hook of the SDK carries it.
+   *
+   * One per turn, as the real SDK mints one per prompt: a constant made every turn of a session
+   * the same turn, and the undo — whose point is a turn — would have had only one point to go back
+   * to, however many turns wrote files.
+   */
+  private get promptId(): string {
+    return `${this.runId}-prompt-${String(this.turns)}`;
+  }
 
   /** Unique to this scripted run, so no two sessions ever mint the same `requestId`. */
   private readonly runId = `run-${String((runs += 1))}`;
@@ -311,12 +523,15 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
    * `PostToolUse` — which is where the file journal learns what the write left behind.
    */
   private async replayHooks(): Promise<void> {
-    const asked = new Set(this.fixture.canUseTool.map((entry) => entry.toolName));
+    // Consumed as they are matched: each recorded consultation answers exactly one invocation.
+    const consultations = [...this.fixture.canUseTool];
 
     for (const [index, invocation] of this.fixture.preToolUse.entries()) {
-      const input = this.fixture.canUseTool.find(
-        (entry) => entry.toolName === invocation.toolName,
-      )?.input;
+      const consulted = this.consultationFor(invocation, consultations);
+      const input = this.performed(
+        invocation.toolName,
+        this.recordedInputOf(invocation.toolUseId) ?? consulted?.input,
+      );
       const toolUseId = invocation.toolUseId ?? `tool-${String(index)}${turnSuffix(this.turns)}`;
 
       this.record.hooked.push(invocation.toolName);
@@ -333,7 +548,7 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
         this.script.sparseHooks === true ? undefined : toolUseId,
       );
 
-      if (asked.has(invocation.toolName)) {
+      if (consulted !== null) {
         this.record.asked.push(invocation.toolName);
         await this.options.canUseTool?.(
           invocation.toolName,
@@ -352,6 +567,7 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
         );
       }
 
+      this.write(invocation.toolName, input);
       this.record.completed.push(invocation.toolName);
       await this.fire(
         'PostToolUse',
@@ -366,6 +582,91 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
             },
         this.script.sparseHooks === true ? undefined : toolUseId,
       );
+    }
+  }
+
+  /**
+   * The input the model gave an invocation, read off its `tool_use` block in the recording.
+   *
+   * What the real hook receives is that input, whatever the tool — a replay that only knew the input
+   * of the tools `canUseTool` was asked about would hand every `Read` an empty one.
+   */
+  private recordedInputOf(toolUseId: string | undefined): unknown {
+    for (const message of this.fixture.messages) {
+      if (message.type !== 'assistant' || !Array.isArray(message.message.content)) {
+        continue;
+      }
+
+      for (const block of message.message.content) {
+        if (block.type === 'tool_use' && block.id === toolUseId) {
+          return block.input;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * The recorded consultation of `canUseTool` that belongs to this invocation, or `null` when the
+   * real run did not ask about it.
+   *
+   * Matched by the tool **and its input**, because that is what the CLI decides on: in the recorded
+   * `/init`, three `Bash` calls ran and one was asked about. A replay that asked about every
+   * invocation of a tool whose name was ever asked about turned that one question into three — and
+   * the asymmetry the audit trail rests on (every tool reaches the hook, only some reach
+   * `canUseTool`) would have held in the recording and not in the replay (plan 01, S-90).
+   *
+   * An invocation recorded without its `tool_use` falls back to the first unanswered consultation of
+   * the same tool.
+   */
+  private consultationFor(
+    invocation: { readonly toolName: string; readonly toolUseId?: string },
+    consultations: { readonly toolName: string; readonly input: unknown }[],
+  ): { readonly toolName: string; readonly input: unknown } | null {
+    const recorded = this.recordedInputOf(invocation.toolUseId);
+    const position = consultations.findIndex(
+      (entry) =>
+        entry.toolName === invocation.toolName &&
+        (recorded === undefined || sameInput(entry.input, recorded)),
+    );
+
+    return position === -1 ? null : (consultations.splice(position, 1)[0] ?? null);
+  }
+
+  /** The recorded input, moved under {@link ScriptOptions.performWritesIn} when writes are performed. */
+  private performed(toolName: string, input: unknown): unknown {
+    const root = this.writesRoot;
+
+    if (root === undefined || toolName !== 'Write' || typeof input !== 'object' || input === null) {
+      return input;
+    }
+
+    const recorded = input as { file_path?: unknown };
+    return typeof recorded.file_path === 'string'
+      ? { ...input, file_path: recorded.file_path.replace(/^\/workspace(?=\/)/, root) }
+      : input;
+  }
+
+  /** Where this run performs its writes, or `undefined` when it performs none. */
+  private get writesRoot(): string | undefined {
+    const root = this.script.performWritesIn;
+    return root === 'cwd' ? this.options.cwd : root;
+  }
+
+  /** What the CLI does between the two hooks of a `Write`, when this run performs writes. */
+  private write(toolName: string, input: unknown): void {
+    if (this.writesRoot === undefined || toolName !== 'Write') {
+      return;
+    }
+
+    const { file_path: target, content } = (input ?? {}) as {
+      file_path?: unknown;
+      content?: unknown;
+    };
+
+    if (typeof target === 'string' && typeof content === 'string') {
+      writeFileSync(target, content, 'utf8');
     }
   }
 
@@ -425,6 +726,26 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     return Promise.resolve();
   }
 
+  /**
+   * The installation's commands, as recorded from a real one.
+   *
+   * Answered with no prompt at all, as the real CLI does: the list comes from the initialisation of
+   * the subprocess, and nothing is said to the model.
+   */
+  supportedCommands(): Promise<SlashCommand[]> {
+    this.record.commandCalls += 1;
+    const commands = this.script.commands;
+
+    if (commands === 'hang') {
+      return new Promise<SlashCommand[]>(() => undefined);
+    }
+    if (commands instanceof Error) {
+      return Promise.reject(commands);
+    }
+
+    return Promise.resolve([...(commands ?? loadCommands().commands)]);
+  }
+
   close(): void {
     this.record.closes += 1;
     this.closed = true;
@@ -448,6 +769,7 @@ export function scriptedSdk(script: ScriptOptions = {}): {
     asked: [],
     interrupts: 0,
     closes: 0,
+    commandCalls: 0,
     options: null,
   };
 

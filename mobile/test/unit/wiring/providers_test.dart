@@ -43,12 +43,24 @@ import 'package:remote_claude/features/permission/domain/usecases/list_rules.dar
 import 'package:remote_claude/features/permission/domain/usecases/revoke_rule.dart';
 import 'package:remote_claude/features/permission/domain/usecases/watch_permissions.dart';
 import 'package:remote_claude/features/permission/permission_providers.dart';
+import 'package:remote_claude/features/session/data/datasources/history_api_data_source.dart';
+import 'package:remote_claude/features/session/data/datasources/session_api_data_source.dart';
 import 'package:remote_claude/features/session/data/datasources/session_ws_data_source.dart';
+import 'package:remote_claude/features/session/domain/repositories/checkpoint_repository.dart';
+import 'package:remote_claude/features/session/domain/repositories/command_repository.dart';
+import 'package:remote_claude/features/session/domain/repositories/history_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/session_repository.dart';
 import 'package:remote_claude/features/session/domain/usecases/drive_session.dart';
+import 'package:remote_claude/features/session/domain/usecases/list_checkpoints.dart';
+import 'package:remote_claude/features/session/domain/usecases/list_commands.dart';
 import 'package:remote_claude/features/session/domain/usecases/ping_session.dart';
+import 'package:remote_claude/features/session/domain/usecases/read_history.dart';
 import 'package:remote_claude/features/session/domain/usecases/watch_session.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
+import 'package:remote_claude/features/transcript/data/datasources/transcript_api_data_source.dart';
+import 'package:remote_claude/features/transcript/domain/repositories/transcript_repository.dart';
+import 'package:remote_claude/features/transcript/domain/usecases/list_conversations.dart';
+import 'package:remote_claude/features/transcript/transcript_providers.dart';
 import 'package:remote_claude/features/workspace/data/datasources/workspace_api_data_source.dart';
 import 'package:remote_claude/features/workspace/domain/repositories/workspace_repository.dart';
 import 'package:remote_claude/features/workspace/domain/usecases/list_workspaces.dart';
@@ -149,6 +161,20 @@ void main() {
     expect(container.read(watchSessionProvider), isA<WatchSession>());
     expect(container.read(pingSessionProvider), isA<PingSession>());
     expect(container.read(driveSessionProvider), isA<DriveSession>());
+    expect(container.read(historyApiDataSourceProvider), isA<HistoryApiDataSource>());
+    expect(container.read(historyRepositoryProvider), isA<HistoryRepository>());
+    expect(container.read(readHistoryProvider), isA<ReadHistory>());
+    expect(container.read(sessionApiDataSourceProvider), isA<SessionApiDataSource>());
+    expect(container.read(commandRepositoryProvider), isA<CommandRepository>());
+    expect(container.read(listCommandsProvider), isA<ListCommands>());
+    expect(container.read(checkpointRepositoryProvider), isA<CheckpointRepository>());
+    expect(container.read(listCheckpointsProvider), isA<ListCheckpoints>());
+  });
+
+  test('the transcript feature assembles end to end', () {
+    expect(container.read(transcriptApiDataSourceProvider), isA<TranscriptApiDataSource>());
+    expect(container.read(transcriptRepositoryProvider), isA<TranscriptRepository>());
+    expect(container.read(listConversationsProvider), isA<ListConversations>());
   });
 
   test('the permission feature assembles end to end, with the real lock and store', () {
@@ -210,7 +236,16 @@ void main() {
       signInRoute,
       workspacesRoute,
       rulesRoute,
+      historyRoute,
       '/sessions/:sessionId',
+    ]);
+
+    // One conversation hangs under the list of its workspace, so "back" lands on that list.
+    final GoRoute history = router.configuration.routes.whereType<GoRoute>().firstWhere(
+      (GoRoute route) => route.path == historyRoute,
+    );
+    expect(history.routes.whereType<GoRoute>().map((GoRoute route) => route.path), <String>[
+      ':conversationId',
     ]);
 
     final GoRoute live = router.configuration.routes.whereType<GoRoute>().firstWhere(

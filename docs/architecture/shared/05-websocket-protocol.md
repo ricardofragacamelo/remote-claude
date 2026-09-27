@@ -105,7 +105,7 @@ Regras:
 | `connection.authenticate` | `{ token, locale, client }` | handshake |
 | `connection.reauthenticate` | `{ token }` | renova a credencial sem reabrir o socket |
 | `diag.ping` | `{ sessionId?, nonce }` | diagnóstico do gateway: atravessa as camadas sem tocar no Agent SDK. Sem `sessionId`, abre uma sessão |
-| `session.start` | `{ workspacePath, model?, permissionMode?, resumeSessionId? }` | abre sessão |
+| `session.start` | `{ workspacePath, model?, permissionMode?, resumeSessionId? }` | abre sessão — ou continua uma conversa do histórico, com `resumeSessionId` (ver [Retomada](#retomada)) |
 | `session.attach` | `{ sessionId }` | observa sessão existente |
 | `session.detach` | `{ sessionId }` | para de observar |
 | `session.prompt` | `{ sessionId, text, attachments? }` | envia um turno |
@@ -114,12 +114,15 @@ Regras:
 | `session.setModel` | `{ sessionId, model }` | troca o modelo em execução |
 | `session.close` | `{ sessionId }` | encerra e libera o subprocesso |
 | `session.setLocale` | `{ locale }` | muda o idioma da connection |
+| `session.rewindFiles` | `{ sessionId, promptId }` | devolve os arquivos que a sessão escreveu ao estado de **antes** de um turno — ver [Desfazer arquivos](#desfazer-arquivos) |
 | `permission.extend` | `{ requestId }` | estende o prazo do pedido pendente. O cliente **não** escolha o número: incremento e teto vêm da configuração do backend |
 | `permission.resolve` | *(é `response`, não command — ver abaixo)* | |
 
 Todo comando recebe `ack` ou `error`. `ack` significa **aceito**, não **concluído** — o
 resultado chega como `event`. O ack genérico é `command.accepted { command }`; `session.attach`
-responde `session.attached { sessionId, replayed, oldestAvailableSeq, gap }`.
+responde `session.attached { sessionId, replayed, oldestAvailableSeq, gap, claudeSessionId?, resumedFrom? }`
+— e `session.start` também, quando retoma uma conversa que **já está viva** para o chamador
+(ver [Retomada](#retomada)).
 
 **Ordem garantida:** o `ack` sai antes de qualquer frame causado pelo comando. Um cliente nunca vê
 o resultado antes de saber que o comando foi aceito.
@@ -133,7 +136,7 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 
 | `type` | Payload | Origem no SDK |
 |---|---|---|
-| `session.started` | `{ sessionId, workspacePath, model, permissionMode }` | `system:init` |
+| `session.started` | `{ sessionId, workspacePath, model, permissionMode, claudeSessionId, resumedFrom? }` | `system:init` |
 | `session.statusChanged` | `{ status }` — `idle`·`thinking`·`running`·`waitingPermission`·`closed` | derivado |
 | `message.delta` | `{ messageId, delta }` | `stream_event` |
 | `message.completed` | `{ messageId, role, content[], promptedBy? }` | `assistant` / `user` |
@@ -146,9 +149,23 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `session.closed` | `{ sessionId, reason }` — `closedByUser`·`completed`·`failed`·`auditUnavailable`·`shutdown` | fim do generator |
 | `diag.pong` | `{ sessionId, pingedAt, pingCount, nonce }` | resposta do `diag.ping` |
 | `permission.extended` | `{ requestId, expiresAt, remainingExtensions }` | derivado do `permission.extend` |
+| `session.rewound` | `{ promptId, reverted[], preserved[], unchanged[], failed[] }` | derivado do `session.rewindFiles` |
 | `error` | envelope de erro | qualquer falha |
 
 **`seq` é obrigatório em todo `event`**, monotônico por sessão. É o que viabiliza o replay.
+
+### Dois ids: a sessão viva e a conversa
+
+`sessionId` nomeia a **sessão viva** — um subprocesso e um stream, que morrem com ela.
+`claudeSessionId` nomeia a **conversa** no store do Claude, que sobrevive a toda sessão que a
+continuou: é por ela que o histórico é lido (`GET /transcripts/:claudeSessionId/messages`) e é ela
+que uma retomada aceita como `resumeSessionId`. `resumedFrom` diz qual conversa a sessão continua,
+quando é uma retomada — igual a `claudeSessionId` quando uma conversa **nossa** continua no mesmo
+arquivo, diferente quando uma conversa começada fora é **bifurcada** num id novo. Ver
+[backend/04 — Retomada](../backend/04-claude-integration.md#retomada--fork-fora-in-place-dentro).
+
+`session.attached` repete os dois campos porque um `gap` é justamente quando o buffer já não guarda
+o `session.started` que os disse. Ausentes para um stream que não é conversa (o `diag.*`).
 
 ### `diag.*` é diagnóstico, não sessão
 
@@ -272,6 +289,99 @@ sendo o `permission.resolve` deste contrato. Ver
 
 ---
 
+## Retomada
+
+`session.start` com `resumeSessionId` continua uma conversa do histórico. `workspacePath` é o `cwd`
+da conversa — ela é procurada **dentro** desse workspace, e é por ele que o SDK acha o arquivo.
+
+| Situação | Resposta |
+|---|---|
+| a conversa pode ser continuada | `command.accepted` e depois `session.started` de uma sessão **nova** — `seq` recomeça em 1 —, com `claudeSessionId` e `resumedFrom` |
+| a conversa já está **viva para o chamador** (em sessão aberta ou retomada por ele) | `session.attached { sessionId, replayed: 0, gap: false, claudeSessionId, resumedFrom? }` da sessão viva — **retomar o que está vivo é attach**, nunca um segundo subprocesso. A conexão já fica anexada; a tela que segue faz o próprio `session.attach` para o replay |
+| duas retomadas da mesma conversa chegam juntas | uma `query()` só: a primeira abre, a segunda recebe o `session.attached` |
+| workspace fora da allowlist | `error` `WORKSPACE_NOT_ALLOWED` (`403`) |
+| conversa inexistente, de outro workspace, sem `cwd`, ou aberta aqui por outra pessoa | `error` `SESSION_NOT_FOUND` (`404`) — a mesma resposta, de propósito |
+| id que não é UUID | `error` `INVALID_INPUT` (`transcript.error.invalidSessionId`) |
+| instalação no limite | `error` `SESSION_LIMIT_REACHED` |
+
+O cliente reconhece a resposta à **sua** retomada por um de três frames: `session.started` ou
+`session.attached` cujo `claudeSessionId` ou `resumedFrom` é a conversa pedida, ou `error` cujo
+`correlationId` é o `id` do comando. O histórico anterior à retomada vem do transcript (HTTP), nunca
+do ring buffer — que só guarda o que esta sessão disse.
+
+---
+
+## Slash commands
+
+O menu vem da **instalação**, nunca de uma lista nossa: `GET /sessions/:sessionId/commands`
+(Bearer) pergunta ao `supportedCommands()` da sessão viva. É HTTP e não comando, pela mesma razão
+do estado de um pedido de permissão — é uma pergunta com resposta, não um fato do stream.
+
+```jsonc
+{ "cliVersion": "2.1.277",          // do binário que o SDK spawnou; null antes do primeiro turno
+  "commands": [
+    { "name": "init", "description": "…", "argumentHint": "", "aliases": [], "suggested": true }
+  ] }
+```
+
+| Status | Quando |
+|---|---|
+| `200` | a lista, **sem** os internos (`__`) e os mortos (`(removed)`, `Renamed to`) — filtrados por metadado, no backend, uma vez; os sugeridos primeiro, na ordem do ranking, e os demais por nome |
+| `400` `INVALID_INPUT` | `sessionId` que não é um |
+| `403` / `404` | sessão de outra pessoa / sessão que não está viva |
+| `502` `CLAUDE_UNAVAILABLE` / `504` `CLAUDE_TIMEOUT` | o SDK falhou ou não respondeu no prazo — **a caixa de prompt continua utilizável**: o menu é descoberta, não fronteira |
+
+Disparar o comando é mandar o texto como prompt (`session.prompt { text: "/init" }`), e ele passa
+pelo fluxo normal de permissão. Comando que **não existe** na instalação — nem como nome nem como
+alias, incluídos os que o menu esconde — é recusado antes de chegar ao Claude:
+`error` `INVALID_INPUT` (`session.error.unknownCommand`, `params.command`), com `correlationId` do
+`session.prompt`. Lista indisponível não recusa nada: o prompt segue. Ver
+[backend/04 — Slash commands](../backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd).
+
+---
+
+## Desfazer arquivos
+
+Dois passos, porque confirmação sem lista é confirmação sem informação.
+
+**1. O alcance — `GET /sessions/:sessionId/checkpoints`** (Bearer). Os pontos de desfazer da
+sessão viva (e, numa retomada in-place, das sessões anteriores da mesma conversa), mais novo
+primeiro, cada um com o que aconteceria **agora** a cada arquivo — diff nosso entre o snapshot, o
+que a sessão deixou e o que está no disco:
+
+```jsonc
+{ "checkpoints": [
+  { "promptId": "…", "label": "refatore o parser",   // o prompt do turno; null se não houve
+    "at": "2026-09-26T12:00:00.000Z",
+    "files": [
+      { "path": "/…/a.ts", "outcome": "revert",   "action": "restore" },   // ou "delete"
+      { "path": "/…/b.ts", "outcome": "preserve", "reason": "modifiedOutside" },
+      { "path": "/…/c.ts", "outcome": "unchanged" }
+    ] } ] }
+```
+
+`400` para id malformado, `403`/`404` como acima.
+
+**2. O desfazer — `session.rewindFiles { sessionId, promptId }`.** Os arquivos voltam ao estado
+de **antes** do turno `promptId`: todo caminho que esse turno **ou um posterior** tocou, cada um
+ao snapshot do primeiro desses turnos que o tocou.
+
+| Situação | Resposta |
+|---|---|
+| desfez | `command.accepted` e depois `session.rewound` para todos que observam, com `reverted`, `preserved` (com motivo), `unchanged` e `failed` |
+| algum arquivo não pôde ser restaurado | o mesmo `session.rewound`, com o caminho em `failed`, seguido de `error` `INTERNAL_ERROR` (`session.error.rewindIncomplete`, `params.failed`) — nenhum arquivo fica pela metade |
+| um turno está em execução, ou outro desfazer da mesma sessão está em curso | `error` `SESSION_LOCKED` (`session.error.locked`) |
+| sessão encerrada ou inexistente | `error` `SESSION_NOT_FOUND` |
+| `promptId` que não é ponto de desfazer desta sessão | `error` `INVALID_INPUT` (`session.error.rewindTargetUnknown`) |
+| trilha indisponível | `error` `INTERNAL_ERROR` — **nada** foi tocado: desfazer sem rastro não acontece |
+
+Motivos de `preserved`: `modifiedOutside` (alguém alterou depois da sessão), `notRestorable`
+(grande demais ou ilegível para snapshot), `unsafePath` (virou link, deixou de ser arquivo regular,
+ou o diretório deixou de resolver) e `noBaseline` (nada registra como a sessão o deixou). Ver
+[backend/04 — Desfazer arquivos](../backend/04-claude-integration.md#desfazer-arquivos--o-store-é-nosso).
+
+---
+
 ## Reconexão e replay
 
 O backend mantém um **ring buffer dos últimos 1000 eventos por sessão**.
@@ -283,8 +393,17 @@ Cliente reconecta
   ← event    seq 1421, 1422, …
 ```
 
+- **A tela que abre uma sessão manda `resumeFromSeq: 0`**, nunca o campo ausente: é o maior `seq`
+  que ela tem, e zero traz tudo o que o buffer guarda — ou o `gap` que a manda ao transcript, quando
+  o buffer já perdeu o começo. **Sem o campo, o backend não reenvia nada**: é observar daqui em
+  diante. Uma tela que omitisse o zero abriria a sessão começada no navegador mostrando só o que
+  veio depois (plano 04, S-88).
 - `resumeFromSeq` menor que `oldestAvailableSeq` → `gap: true`. O cliente **descarta o
-  estado local e recarrega o transcript por HTTP**. Não tente costurar buraco.
+  estado local e recarrega o transcript por HTTP** — da conversa que o ack nomeia em
+  `claudeSessionId`. Não tente costurar buraco. A página recarregada é **posta por baixo** do que o
+  stream trouxer enquanto ela carrega, casando por `messageId` e `toolUseId`, com o stream por
+  cima: recarregar com o stream chegando não duplica mensagem, e o histórico não entra na
+  numeração de `seq`.
 - Ao reatar, o backend republica os permission requests ainda pendentes a partir do registro
   do módulo `permission` — a `Promise` do `canUseTool` nunca foi perdida, só ficou sem quem
   respondesse. Ver [ADR-012](00-decisions.md#adr-012--reconexão-não-usa-reinitialize-o-registro-de-pendentes-é-nosso).

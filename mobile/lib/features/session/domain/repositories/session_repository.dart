@@ -30,4 +30,11 @@ abstract interface class SessionRepository {
   /// @returns whether the command left; a socket that is not ready sends nothing, and the screen
   ///   says so rather than pretending the prompt is on its way (S-76)
   bool send(String type, Map<String, Object?> payload);
+
+  /// Sends one of the session's commands and answers the id it left with, or `null` when nothing
+  /// left.
+  ///
+  /// The id is what a refusal names, so a screen that has to tell **its** refusal from anybody
+  /// else's on the same socket keeps it.
+  String? issue(String type, Map<String, Object?> payload);
 }

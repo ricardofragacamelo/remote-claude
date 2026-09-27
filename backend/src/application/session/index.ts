@@ -1,15 +1,39 @@
 /** Public surface of the `session` use cases. */
 export { AttachSessionUseCase } from './attach-session.use-case';
+export type { AttachedSession, SessionConversations } from './attach-session.use-case';
 export { StartSessionUseCase } from './start-session.use-case';
-export type { SessionDefaults, SessionProvenance } from './start-session.use-case';
+export type {
+  SessionDefaults,
+  SessionProvenance,
+  SessionResumption,
+  StartedSession,
+} from './start-session.use-case';
 export type { StartSessionCommand } from './commands/start-session.command';
+export { CommandCatalog, MAX_CACHED_LISTS } from './command-catalog';
 export {
   CloseSessionUseCase,
   InterruptSessionUseCase,
+  ListSessionCommandsUseCase,
   PromptSessionUseCase,
   SetSessionModelUseCase,
   SetSessionPermissionModeUseCase,
 } from './drive-session.use-cases';
+export type { SessionCommandMenu } from './drive-session.use-cases';
+export {
+  ListUndoPointsUseCase,
+  MAX_UNDO_POINTS,
+  RewindFilesUseCase,
+  UndoPlanner,
+} from './rewind-files.use-cases';
+export type {
+  FilePreview,
+  RewindFilesCommand,
+  RewindOutcome,
+  UndoPointPreview,
+} from './rewind-files.use-cases';
+export type { RestoredFile, UndoDisk, UndoJournal, UndoReach } from './ports/undo.ports';
+export { UNDO_DISK, UNDO_JOURNAL } from './ports/undo.ports';
+export type { JournalScope } from './ports/session-file-journal.port';
 export { SessionRegistry } from './session-registry';
 export { observedStatus } from './session-status';
 export type { LiveSession } from './session-registry';
@@ -17,8 +41,14 @@ export type {
   ClaudeSessionHandle,
   ClaudeSessionPort,
   ClaudeSessionStart,
+  SessionConversation,
   SessionEvent,
 } from './ports/claude-session.port';
+export type {
+  ResumableConversation,
+  ResumableConversationSource,
+} from './ports/resumable-conversation.source';
+export { RESUMABLE_CONVERSATION_SOURCE } from './ports/resumable-conversation.source';
 export { CLAUDE_SESSION_PORT } from './ports/claude-session.port';
 export type { SessionBroadcaster } from './ports/session-broadcaster.port';
 export type { SessionAccess, SessionOwnership } from './ports/session-ownership.port';

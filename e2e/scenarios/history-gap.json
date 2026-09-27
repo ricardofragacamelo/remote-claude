@@ -1,0 +1,13 @@
+{
+  "id": "04·S-47",
+  "title": "away long enough to overflow the buffer: the screen drops what it had, reloads the transcript over HTTP and shows each message once",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "text-turn",
+    "answer": "pong",
+    "overflowMargin": 50
+  }
+}

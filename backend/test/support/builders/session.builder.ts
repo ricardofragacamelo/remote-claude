@@ -1,12 +1,27 @@
 import { SessionRegistry } from '@application/session';
-import type { ClaudeSessionHandle } from '@application/session';
+import type { ClaudeSessionHandle, SessionConversation } from '@application/session';
 import { UserId } from '@domain/auth';
 import { Session, SessionId } from '@domain/session';
-import type { PermissionMode } from '@domain/session';
+import type { PermissionMode, SlashCommand } from '@domain/session';
+import { ClaudeSessionId } from '@domain/transcript';
 import { WorkspacePath } from '@domain/workspace';
 
 /** The id most session tests use. A real ULID, because the value object insists on one. */
 export const SESSION_ID = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
+
+/** The conversation most session tests use: a UUID, because the SDK insists on one. */
+export const CONVERSATION_ID = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
+
+/** A conversation of Claude — fresh unless it says what it continues. */
+export function aConversation(
+  claudeSessionId = CONVERSATION_ID,
+  resumedFrom: string | null = null,
+): SessionConversation {
+  return {
+    claudeSessionId: ClaudeSessionId.create(claudeSessionId),
+    resumedFrom: resumedFrom === null ? null : ClaudeSessionId.create(resumedFrom),
+  };
+}
 
 /** A live session with sensible defaults, so a test states only what it cares about. */
 export function aSession(
@@ -40,6 +55,19 @@ export class RecordingHandle implements ClaudeSessionHandle {
   /** When set, every control request rejects with it — the subprocess having died, say. */
   failWith: Error | null = null;
 
+  /** What `cliVersion` answers. `null` is a CLI that has not said yet. */
+  cliVersion: string | null = null;
+
+  /** What `supportedCommands()` answers, and how many times it was asked. */
+  commands: SlashCommand[] = [];
+  commandCalls = 0;
+
+  /** Held until released, so a test can put two asks in flight at once. */
+  commandsHeld: Promise<void> | null = null;
+
+  /** When set, `supportedCommands()` rejects with it. */
+  commandsFailWith: Error | null = null;
+
   prompt(text: string): void {
     this.prompts.push(text);
   }
@@ -64,6 +92,17 @@ export class RecordingHandle implements ClaudeSessionHandle {
     return this.settle();
   }
 
+  async supportedCommands(): Promise<readonly SlashCommand[]> {
+    this.commandCalls += 1;
+    await this.commandsHeld;
+
+    if (this.commandsFailWith !== null) {
+      throw this.commandsFailWith;
+    }
+
+    return this.commands;
+  }
+
   private settle(): Promise<void> {
     return this.failWith === null ? Promise.resolve() : Promise.reject(this.failWith);
   }
@@ -80,8 +119,18 @@ export function aRegistry(
   for (const session of sessions) {
     const handle = new RecordingHandle();
     handles.set(session.id.value, handle);
-    registry.add({ session, handle });
+    registry.add({ session, handle, conversation: aConversation() });
   }
 
   return { registry, handles };
+}
+
+/** A command of the installation, as `supportedCommands()` would list it. */
+export function aCommand(name: string, overrides: Partial<SlashCommand> = {}): SlashCommand {
+  return {
+    name,
+    description: overrides.description ?? `the ${name} command`,
+    argumentHint: overrides.argumentHint ?? '',
+    aliases: overrides.aliases ?? [],
+  };
 }

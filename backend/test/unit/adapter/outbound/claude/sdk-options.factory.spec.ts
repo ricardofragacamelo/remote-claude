@@ -4,12 +4,15 @@ import { buildSdkOptions } from '@adapter/outbound/claude/sdk-options.factory';
 import type { SdkOptionsInput } from '@adapter/outbound/claude/sdk-options.factory';
 import { WorkspacePath } from '@domain/workspace';
 
+/** A conversation minted here, and one begun elsewhere. */
+const NEW = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
+const SOURCE = '0f0e0d0c-0b0a-4908-8706-050403020100';
+
 const input = (overrides: Partial<SdkOptionsInput> = {}): SdkOptionsInput => ({
   workspace: WorkspacePath.create('/srv/projects/app'),
   model: null,
   permissionMode: 'default',
-  resumeSessionId: null,
-  claudeSessionId: null,
+  conversation: { claudeSessionId: NEW, resumedFrom: null },
   limits: { maxBudgetUsd: 10, maxTurns: 100 },
   abortController: new AbortController(),
   onStderr: () => undefined,
@@ -90,40 +93,37 @@ describe('buildSdkOptions', () => {
 
     it('omits the resume, so the session starts fresh', () => {
       expect('resume' in buildSdkOptions(input())).toBe(false);
+      expect('forkSession' in buildSdkOptions(input())).toBe(false);
     });
 
     it('sets the model when one was asked for', () => {
       expect(buildSdkOptions(input({ model: 'claude-opus-5' })).model).toBe('claude-opus-5');
     });
+  });
 
-    it('sets the resume when one was asked for', () => {
-      expect(buildSdkOptions(input({ resumeSessionId: 'sdk-7' })).resume).toBe('sdk-7');
+  describe('which conversation it is — plan 04, D-04', () => {
+    it('names a new conversation with the id recorded as ours — S-71', () => {
+      expect(buildSdkOptions(input()).sessionId).toBe(NEW);
     });
 
-    it('names a new conversation with the id recorded as ours — plan 04, S-71', () => {
-      const conversation = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
-
-      expect(buildSdkOptions(input({ claudeSessionId: conversation })).sessionId).toBe(
-        conversation,
-      );
-    });
-
-    it('lets the SDK pick no id when none was minted', () => {
-      expect('sessionId' in buildSdkOptions(input())).toBe(false);
-    });
-
-    it('never names the conversation beside a resume, which keeps the id it has', () => {
-      // The SDK refuses `sessionId` next to `resume` unless forking: a resume continues a file
-      // that already has a name.
+    it('continues one of ours in its own file, under the id it has — S-59', () => {
+      // The SDK refuses `sessionId` next to `resume` unless forking: a resume in place continues a
+      // file that already has a name.
       const options = buildSdkOptions(
-        input({
-          resumeSessionId: 'sdk-7',
-          claudeSessionId: '6b41b192-a41b-46c2-b8d7-5098d8c825be',
-        }),
+        input({ conversation: { claudeSessionId: SOURCE, resumedFrom: SOURCE } }),
       );
 
-      expect(options.resume).toBe('sdk-7');
+      expect(options.resume).toBe(SOURCE);
       expect('sessionId' in options).toBe(false);
+      expect('forkSession' in options).toBe(false);
+    });
+
+    it('forks one begun elsewhere under an id of ours, never writing into it — S-58', () => {
+      const options = buildSdkOptions(
+        input({ conversation: { claudeSessionId: NEW, resumedFrom: SOURCE } }),
+      );
+
+      expect(options).toMatchObject({ resume: SOURCE, forkSession: true, sessionId: NEW });
     });
   });
 });

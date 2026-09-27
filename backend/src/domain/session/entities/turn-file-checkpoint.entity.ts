@@ -1,3 +1,4 @@
+import type { ClaudeSessionId } from '@domain/transcript';
 import type { SessionId } from '../value-objects/session-id.value-object';
 
 /** Whether the file was there before the turn touched it. */
@@ -14,6 +15,9 @@ export type Restorability = 'yes' | 'tooLarge' | 'unreadable';
 /** The persisted shape, as the mapper on either side of the repository sees it. */
 export interface TurnFileCheckpointSnapshot {
   readonly sessionId: SessionId;
+
+  /** The conversation the session was, or `null` for a row older than the undo that reads it. */
+  readonly claudeSessionId: ClaudeSessionId | null;
   readonly promptId: string;
   readonly path: string;
   readonly existedBefore: FilePresence;
@@ -62,6 +66,25 @@ export class TurnFileCheckpoint {
 
   get restorable(): Restorability {
     return this.state.restorable;
+  }
+
+  /** SHA-256 of what the path held before the turn, or `null` when nothing was kept. */
+  get hash(): string | null {
+    return this.state.hash;
+  }
+
+  /** Where the previous contents are, or `null` when nothing was kept. */
+  get blobPath(): string | null {
+    return this.state.blobPath;
+  }
+
+  /** The prompt that opened the turn — the label of the undo point — or `null`. */
+  get promptText(): string | null {
+    return this.state.promptText;
+  }
+
+  get capturedAt(): Date {
+    return this.state.capturedAt;
   }
 
   /** Whether undo can put this path back the way it was. */

@@ -14,14 +14,14 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 
 ## Panorama
 
-**Última atualização:** 2026-09-25
+**Última atualização:** 2026-09-27
 
 ```
 00-bootstrap             ████████████████████ 100%   ✅ concluído
 01-live-session          ████████████████████ 100%   ✅ concluído
 02-mobile-approval       ████████████████████ 100%   ✅ concluído
 03-rules-and-audit       ████████████████████ 100%   ✅ concluído
-04-transcript-and-resume ████░░░░░░░░░░░░░░░░  20%   🔄 em andamento
+04-transcript-and-resume ████████████████████ 100%   ✅ concluído
 05-hardening-operations  ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 06-distribution          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 ```
@@ -35,13 +35,13 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | Plano | Fases | Tarefas | Cenários | Decisões | Estado |
 |---|---|---|---|---|---|
 | [00 — Bootstrap](00-bootstrap/README.md) | 8/8 | 52/52 | 118/119 | 5/6 | ✅ |
-| [01 — Sessão viva](01-live-session/README.md) | 7/7 | 47/47 | 105/108 | 17/17 | ✅ |
+| [01 — Sessão viva](01-live-session/README.md) | 7/7 | 47/47 | 107/108 | 17/17 | ✅ |
 | [02 — Aprovação pelo celular](02-mobile-approval/README.md) | 5/5 | 34/34 | 89/89 | 25/26 | ✅ |
 | [03 — Regras e trilha](03-rules-and-audit/README.md) | 5/5 | 23/23 | 92/92 | 22/22 | ✅ |
-| [04 — Histórico e retomada](04-transcript-and-resume/README.md) | 1/6 | 5/25 | 22/74 | 7/7 | 🔄 |
+| [04 — Histórico e retomada](04-transcript-and-resume/README.md) | 6/6 | 25/25 | 88/88 | 7/7 | ✅ |
 | [05 — Endurecimento e operação](05-hardening-operations/README.md) | 0/5 | 0/25 | 0/53 | 0/9 | 🔲 |
 | [06 — Distribuição](06-distribution/README.md) | 0/4 | 0/19 | 0/38 | 0/7 | 🔲 |
-| **Total** | **26/40** | **161/225** | **426/573** | **76/94** | 🔄 |
+| **Total** | **31/40** | **181/225** | **494/587** | **76/94** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -136,6 +136,32 @@ eventos vivos. E a sessão aberta aqui passou a gravar a **procedência antes do
 um id que nós cunhamos e o SDK usa — é o que rotula "nossa" e "externa", e o que a F2 vai usar para
 decidir entre continuar o arquivo e fazer fork.
 
+Ainda em 2026-09-25 fecharam a **F1 e a F2**: o histórico tem tela nas duas pontas, a recarga que o
+`gap: true` exige finalmente tem de onde recarregar, e uma conversa encerrada continua — a nossa no
+mesmo arquivo, a do VSCode por fork num id nosso, e a que já está viva por `attach`, nunca por um
+segundo subprocesso.
+
+Em 2026-09-26 fecharam a **F3 e a F4**. O menu de slash commands vem da **instalação**
+(`supportedCommands()`), sem lista no código, sem os comandos internos e mortos, cacheado por versão
+do CLI e workspace; o `/init` é um prompt como outro qualquer e pede o `Write` pelo fluxo normal —
+provado com uma gravação real. E o **desfazer é nosso**, não o `rewindFiles()` do SDK: a tela mostra
+antes o que volta, o que fica e por quê; arquivo editado à mão depois da sessão é preservado; nada é
+escrito através de link nem pela metade; a trilha recebe o desfazer antes do disco; e uma conversa
+continuada in-place alcança os pontos das sessões anteriores.
+
+Ainda em 2026-09-26 a **F5 fechou, e com ela o [plano 04](04-transcript-and-resume/README.md)**: o
+ciclo está provado pela porta do usuário — continuar pela tela de histórico uma conversa encerrada,
+voltar de um `gap` com o transcript recarregado por HTTP e cada mensagem uma vez só, abrir no
+celular a sessão que começou no navegador, `/init` pelo menu, desfazer pela tela e a recusa durante
+um turno, e a retomada de uma pasta apagada ou que saiu da allowlist, recusada em palavras. Para
+isso o backend roteirizado passou a ser **um** Claude: grava as conversas que reproduz e escreve os
+arquivos que a gravação escreveu. O `smoke-live` dos comandos reais e do `/init` passou contra o
+Claude da máquina. Escrever os cenários achou dois defeitos: web e app abriam uma sessão já em
+andamento **sem pedir replay** — o celular via só o que viesse depois —, e um `CLAUDE_CONFIG_DIR`
+vazio no `.env`, como o exemplo manda, deixava o CLI **sem login** e limpava a marca de confiança
+no arquivo errado. Os dois estão corrigidos, com teste. O próximo é o
+[plano 05](05-hardening-operations/README.md).
+
 O parágrafo abaixo descreve o ponto de partida, e continua valendo para o que ainda não foi feito.
 
 ---
@@ -184,7 +210,8 @@ mitigação está entregue e provada pela porta do usuário (S-98).
 
 ### Duas escolhas que o plano 01 deixou, e que não travam ninguém
 
-Cenários que ficaram fora do que ele entregou. Nenhum bloqueia um plano; os dois têm dono.
+Cenários que ficaram fora do que ele entregou. Nenhum bloqueia um plano; os dois têm dono — e o
+segundo já fechou.
 
 O terceiro — **S-38** — foi decidido em 2026-09-19 pela
 [D-17](01-live-session/decisions.md#d-17--usar-o-código-http-que-cada-coisa-é): o produto usa a
@@ -196,7 +223,7 @@ que a herdava, foi corrigida junto.
 | O quê | Por quê ficou | Quem assume |
 |---|---|---|
 | **S-36** — fila estourada fecha com `1013` | o fan-out já é fire-and-forget, então o loop do SDK nunca fica preso; falta o limite de fila e o código de fechamento | [05 — endurecimento](05-hardening-operations/README.md), com o resto dos limites |
-| **S-89, S-90** — os números da fixture gravada | a assimetria que a ADR-011 afirma se confirma; os números não se repetem, porque o prompt é outro. S-89 não é testável como escrita: o modelo não repete o mesmo stream | reescrever ou remover, no [plano 04](04-transcript-and-resume/README.md), que volta a mexer em fixture |
+| ~~**S-89, S-90** — os números da fixture gravada~~ | **fechado em 2026-09-26, no plano 04**: reescritos como o que é testável — a forma da fixture (formatada, sem diretório descartável nem o home da máquina) e a assimetria no replay. Escrevê-los achou dois defeitos: o fake perguntava ao `canUseTool` por nome de tool (4 perguntas onde o `/init` real fez 2), e as gravações carregavam o home de quem gravou | [plano 04](04-transcript-and-resume/progress.md#decisões-tomadas-durante-a-execução) |
 
 ---
 
@@ -222,6 +249,10 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-09-26 | **Plano 04 concluído — F5** | o ciclo pela porta do usuário: S-46…S-51 e S-53 no Playwright (e2e 45/45), S-48 também no `integration_test` do app, e S-52 no `smoke-live` contra o Claude real (`pnpm test:e2e:live` 2/2). O backend roteirizado grava o que reproduz e escreve os `Write` no `cwd`. Corrigidos no caminho: o primeiro `session.attach` dos dois clientes passou a mandar `resumeFromSeq: 0` (S-88), e `CLAUDE_CONFIG_DIR` vazio deixou de chegar ao CLI. `pnpm verify:full` 0; `pnpm test:e2e:mobile` 9/9 |
+| 2026-09-26 | **Plano 04, F3 e F4 concluídas; escopo movido para o plano 05** | F3: menu vindo de `supportedCommands()` por `GET /sessions/:id/commands`, filtro por metadado no backend, cache por versão do CLI e workspace, comando inexistente recusado com `INVALID_INPUT`, `/init` pelo fluxo normal. Fechou também a dívida S-89/S-90 do plano 01. F4: desfazer nosso — prévia por `GET /sessions/:id/checkpoints`, `session.rewindFiles`/`session.rewound` nas três pontas, alteração manual preservada, sem link, atômico, auditado antes do disco, alcance pela conversa (migration `0013`) e purga em job. `pnpm verify:full` 0. Movidos para o [plano 05](05-hardening-operations/progress.md#dívida-herdada-do-plano-04): prompt durante um desfazer, e o prazo no cliente para uma retomada sem resposta |
+| 2026-09-25 | **Plano 04, F1 e F2 concluídas** | histórico nas duas pontas e a recarga do `gap`; retomada in-place (nossa), por fork (externa) e por `attach` (viva), auditada antes do subprocesso (migration `0012`). `pnpm verify:full` 0 |
+| 2026-09-25 | **Plano 04, F0 concluída** | o histórico lido só pelas funções do SDK, cercado pela allowlist, paginado pela cauda com cursor estável, e a procedência gravada antes do subprocesso (migration `0011`) |
 | 2026-09-24 | **Plano 03 concluído — F3 e F4** | F3: retenção de 90 dias (2160 h), purga que se registra na mesma instrução, job e `pnpm db purge`. F4: o ciclo da regra pela porta do usuário, S-41…S-46 e S-92, no Playwright e — S-44, S-46 — no `integration_test` do app. Corrigidos no caminho: revogação simultânea registrada duas vezes, filtro da trilha perdido no login, e a frase do app para resolução por regra. `pnpm verify:full` 0 (e2e 36/36); `pnpm test:e2e:mobile` 8/8 |
 | 2026-09-24 | **Plano 03, F2 concluída** | a trilha é consultável: filtro, paginação por cursor estável sob escrita concorrente, índices verificados por plano de execução, e a tela `/audit`. O veredito e o `traceId` nascem com a entrada (D-15, D-16, migration `0009`); da entrada auto-resolvida se abre a regra, inclusive revogada (D-18). `pnpm verify:full` 0. E2E da trilha segue na F4; a trilha no app não tem dono |
 | 2026-09-24 | **Plano 03, F1 concluída** | as regras têm tela nas duas pontas, e a aprovação oferece `project`/`always` com o padrão e a validade na própria sugestão (D-12, mudança de contrato nas três pontas); escopo persistido sempre em dois passos (D-14). `pnpm verify:full` 0, com o e2e novo (S-68) revogando pelo navegador |

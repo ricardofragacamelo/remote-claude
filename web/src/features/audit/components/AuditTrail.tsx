@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/shared/components/ui/button';
 import { LoadedList } from '@/shared/components/LoadedList';
+import { LoadMore } from '@/shared/components/LoadMore';
 import type { ListKeys } from '@/shared/components/LoadedList';
 import { auditFiltersKey, useAuditTrail } from '../hooks/useAuditTrail';
 import type { AuditFilters } from '../types/audit';
@@ -65,17 +65,14 @@ export function AuditTrail({ filters, onFilter, onOpenRule }: AuditTrailProps): 
         ))}
       </LoadedList>
 
-      {hasMore && (
-        <Button variant="outline" size="touch" disabled={isLoadingMore} onClick={loadMore}>
-          {isLoadingMore ? t('audit.list.loadingMore') : t('audit.list.loadMore')}
-        </Button>
-      )}
-
-      {moreError !== null && (
-        <p className="text-xs text-destructive" role="alert">
-          {t(moreError.messageKey, moreError.params)}
-        </p>
-      )}
+      <LoadMore
+        hasMore={hasMore}
+        isLoading={isLoadingMore}
+        error={moreError}
+        onLoadMore={loadMore}
+        label={t('audit.list.loadMore')}
+        loadingLabel={t('audit.list.loadingMore')}
+      />
     </div>
   );
 }

@@ -598,4 +598,294 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rulesRevoking => 'Revoking…';
+
+  @override
+  String workspaceErrorNotAllowed(String path) {
+    return 'This installation does not allow $path.';
+  }
+
+  @override
+  String get workspaceErrorForbidden => 'That folder is not yours to open.';
+
+  @override
+  String sessionErrorLimitReached(String limit) {
+    return 'This machine is already running $limit sessions, which is as many as it allows. End one and try again.';
+  }
+
+  @override
+  String get sessionErrorClaudeUnavailable => 'Claude stopped responding on this machine.';
+
+  @override
+  String get transcriptErrorNotFound =>
+      'That conversation does not exist, or it is not yours to read.';
+
+  @override
+  String transcriptErrorInvalidSessionId(String sessionId) {
+    return '$sessionId is not a conversation identifier.';
+  }
+
+  @override
+  String get transcriptErrorClaudeUnavailable =>
+      'Claude could not read its history on this machine.';
+
+  @override
+  String get transcriptErrorClaudeTimeout => 'Claude took too long to read its history. Try again.';
+
+  @override
+  String get transcriptErrorCursorStale =>
+      'This conversation changed while you were reading it. Reload it from the latest messages.';
+
+  @override
+  String workspaceHistoryOpen(String label) {
+    return 'History of $label';
+  }
+
+  @override
+  String get historyListTitle => 'History';
+
+  @override
+  String get historyListLoading => 'Loading conversations';
+
+  @override
+  String get historyListEmptyTitle => 'No conversations in this folder';
+
+  @override
+  String get historyListEmptyBody =>
+      'Nothing has been said here yet — from this app, the editor or the terminal. Open a session on this folder from the folder list to start one.';
+
+  @override
+  String get historyOriginOurs => 'Opened from this app';
+
+  @override
+  String get historyOriginExternal => 'Began outside this app';
+
+  @override
+  String historyLastActive(String at) {
+    return 'Last active $at';
+  }
+
+  @override
+  String historyBranch(String branch) {
+    return 'Branch $branch';
+  }
+
+  @override
+  String get historyUntitled => 'Untitled conversation';
+
+  @override
+  String get historyLoadMore => 'Load more';
+
+  @override
+  String get historyLoadingMore => 'Loading…';
+
+  @override
+  String get historyConversationTitle => 'Conversation';
+
+  @override
+  String get historyConversationLoading => 'Loading the conversation';
+
+  @override
+  String get historyConversationEmptyTitle => 'Nothing said in this conversation';
+
+  @override
+  String get historyConversationEmptyBody =>
+      'It has no messages to show. Resume it to say something.';
+
+  @override
+  String get historyLoadEarlier => 'Load earlier messages';
+
+  @override
+  String get historyResumeAction => 'Resume';
+
+  @override
+  String get historyResumePending => 'Resuming…';
+
+  @override
+  String get historyResumeOffline =>
+      'Resuming needs the connection to the backend, and this device is not connected.';
+
+  @override
+  String get historyResumeNotSent =>
+      'The conversation was not resumed: this device is not connected.';
+
+  @override
+  String get historyExternalNote =>
+      'This conversation began outside this app. Resuming it here continues it under a new id: the editor or terminal it came from will not see the answers given here.';
+
+  @override
+  String get sessionHistoryLoading => 'Loading what was said before';
+
+  @override
+  String sessionErrorUnknownCommand(String command) {
+    return '$command is not a command Claude offers on this machine.';
+  }
+
+  @override
+  String get sessionErrorClaudeTimeout =>
+      'Claude took too long to answer on this machine. Try again.';
+
+  @override
+  String get sessionErrorLocked =>
+      'The session is busy: a turn is running or another undo is in progress. Try again once it is idle.';
+
+  @override
+  String get sessionErrorRewindTargetUnknown => 'That undo point does not belong to this session.';
+
+  @override
+  String sessionErrorRewindIncomplete(String failed) {
+    return 'Some files could not be put back ($failed). Each of them was left exactly as it was.';
+  }
+
+  @override
+  String get sessionCommandsOpen => 'Commands';
+
+  @override
+  String get sessionCommandsTitle => 'Commands';
+
+  @override
+  String get sessionCommandsDescription =>
+      'What Claude offers on this machine. The prompt box accepts any command, listed here or not.';
+
+  @override
+  String get sessionCommandsSearch => 'Search commands';
+
+  @override
+  String get sessionCommandsSuggested => 'Suggested';
+
+  @override
+  String get sessionCommandsAll => 'All commands';
+
+  @override
+  String get sessionCommandsLoading => 'Loading commands';
+
+  @override
+  String get sessionCommandsEmptyTitle => 'No commands on this machine';
+
+  @override
+  String get sessionCommandsEmptyBody =>
+      'Claude here offers no commands. You can still type anything in the prompt box.';
+
+  @override
+  String sessionCommandsNoMatch(String query) {
+    return 'No command matches “$query”.';
+  }
+
+  @override
+  String get sessionUndoOpen => 'Undo file changes';
+
+  @override
+  String get sessionUndoTitle => 'Undo file changes';
+
+  @override
+  String get sessionUndoDescription =>
+      'Put the files this session wrote back to how they were before one of its turns. A file changed outside the session stays as it is.';
+
+  @override
+  String get sessionUndoLoading => 'Loading undo points';
+
+  @override
+  String get sessionUndoEmptyTitle => 'Nothing to undo yet';
+
+  @override
+  String get sessionUndoEmptyBody =>
+      'Every turn that writes files becomes a point this session can go back to.';
+
+  @override
+  String get sessionUndoUntitled => 'Untitled turn';
+
+  @override
+  String sessionUndoPointAt(String date, String time) {
+    return '$date at $time';
+  }
+
+  @override
+  String sessionUndoFileCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files',
+      one: '1 file',
+      zero: 'No files',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String sessionUndoConfirmTitle(String label) {
+    return 'Go back to before “$label”';
+  }
+
+  @override
+  String get sessionUndoGoesBack => 'Goes back';
+
+  @override
+  String get sessionUndoStays => 'Stays as it is';
+
+  @override
+  String get sessionUndoAlready => 'Already as it was';
+
+  @override
+  String get sessionUndoRestore => 'Its content before the turn is put back';
+
+  @override
+  String get sessionUndoDelete => 'Deleted: this turn created it';
+
+  @override
+  String get sessionUndoReasonModifiedOutside => 'Changed outside the session after it wrote it';
+
+  @override
+  String get sessionUndoReasonNotRestorable => 'Too large or unreadable to have been saved';
+
+  @override
+  String get sessionUndoReasonUnsafePath =>
+      'No longer a regular file, or its folder no longer resolves';
+
+  @override
+  String get sessionUndoReasonNoBaseline => 'Nothing records how the session left it';
+
+  @override
+  String get sessionUndoReasonOther => 'Kept for a reason this app does not know';
+
+  @override
+  String get sessionUndoNothingToRevert =>
+      'Nothing would change: no file of this point can go back.';
+
+  @override
+  String get sessionUndoConfirm => 'Undo';
+
+  @override
+  String get sessionUndoPending => 'Undoing…';
+
+  @override
+  String get sessionUndoBack => 'Back to the undo points';
+
+  @override
+  String get sessionUndoBusy =>
+      'Undo is available only while the session is idle. Wait for the turn to finish.';
+
+  @override
+  String get sessionUndoClosed =>
+      'This session is closed, so its files can no longer be undone from here.';
+
+  @override
+  String get sessionUndoOffline =>
+      'Undoing needs the connection to the backend, and this device is not connected.';
+
+  @override
+  String get sessionUndoNotSent => 'Nothing was undone: this device is not connected.';
+
+  @override
+  String get sessionUndoDoneTitle => 'The undo is done';
+
+  @override
+  String get sessionUndoReverted => 'Put back';
+
+  @override
+  String get sessionUndoRestored => 'Restored to how it was before the turn';
+
+  @override
+  String get sessionUndoDeleted => 'Deleted: the turn had created it';
+
+  @override
+  String get sessionUndoFailed => 'Could not be put back';
 }

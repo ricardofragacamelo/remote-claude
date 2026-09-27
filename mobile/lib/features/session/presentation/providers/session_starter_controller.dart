@@ -5,10 +5,9 @@
 /// watches for it, so the screen that asked can move to the session that answered (S-75).
 library;
 
-import 'dart:async';
-
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
+import 'package:remote_claude/features/session/presentation/providers/session_updates.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -19,12 +18,7 @@ part 'session_starter_controller.g.dart';
 class SessionStarterController extends _$SessionStarterController {
   @override
   String? build() {
-    final StreamSubscription<SessionUpdate> subscription = ref
-        .watch(watchSessionProvider)()
-        .listen(_apply);
-
-    ref.onDispose(() => unawaited(subscription.cancel()));
-
+    listenToUpdates(ref, _apply);
     return null;
   }
 
@@ -43,7 +37,12 @@ class SessionStarterController extends _$SessionStarterController {
   void acknowledge() => state = null;
 
   void _apply(SessionUpdate update) {
-    if (update case EventReceived(event: final SessionOpened opened)) {
+    // A session that continues a conversation was asked for by the history screen, and that screen
+    // is the one that moves to it. Taking it here too would navigate twice — once from a screen
+    // that is not even the one on top.
+    if (update case EventReceived(
+      event: final SessionOpened opened,
+    ) when opened.resumedFrom == null) {
       state = opened.sessionId;
     }
   }

@@ -11,11 +11,20 @@ export interface CausedEvent {
   readonly payload: Readonly<Record<string, unknown>>;
 }
 
+/**
+ * Something a command does that must not happen before its ack: handing a prompt to the CLI, whose
+ * first events would otherwise be able to reach the client ahead of the `command.accepted` of the
+ * very prompt that caused them.
+ */
+export interface AfterAck {
+  readonly afterAck: () => void;
+}
+
 /** What a command does once its frame has been validated. */
 export type CommandAction<T> = (
   command: T,
   context: WsCommandContext,
-) => Promise<CausedEvent | void> | CausedEvent | void;
+) => Promise<CausedEvent | AfterAck | void> | CausedEvent | AfterAck | void;
 
 /**
  * One command of the contract: validate the frame, do one thing, ack, and maybe publish.
@@ -43,6 +52,11 @@ export class ContractCommandHandler<T> implements WsCommandHandler {
       ack: accepted(this.type),
       then: [],
       publish: () => {
+        if (caused !== null && 'afterAck' in caused) {
+          caused.afterAck();
+          return;
+        }
+
         if (caused !== null) {
           context.publish(caused.sessionId, {
             type: caused.type,

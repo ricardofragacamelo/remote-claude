@@ -2,21 +2,33 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/events/session-started.json",
   "title": "SessionStarted",
-  "description": "The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` — an SDKMessage is never emitted raw (ADR-006).",
+  "description": "The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` \u2014 an SDKMessage is never emitted raw (ADR-006).",
   "x-kind": "event",
   "x-type": "session.started",
   "type": "object",
-  "required": ["sessionId", "workspacePath", "model", "permissionMode"],
+  "required": ["sessionId", "workspacePath", "model", "permissionMode", "claudeSessionId"],
   "properties": {
-    "sessionId": { "type": "string" },
+    "sessionId": {
+      "type": "string"
+    },
     "workspacePath": {
       "type": "string",
       "description": "The workspace the session runs in, already normalised and already inside the allowlist."
     },
-    "model": { "type": "string" },
+    "model": {
+      "type": "string"
+    },
     "permissionMode": {
       "type": "string",
       "enum": ["default", "acceptEdits", "bypassPermissions", "plan"]
+    },
+    "claudeSessionId": {
+      "type": "string",
+      "description": "The id of the conversation in Claude's store, which is not ours: it is what `GET /transcripts/:sessionId/messages` reads and what a later `session.start` takes as `resumeSessionId`. Equal to `resumedFrom` when one of our own conversations is continued in place; new when a conversation begun elsewhere is forked."
+    },
+    "resumedFrom": {
+      "type": "string",
+      "description": "The conversation this session continues, when it is a resume. Absent for a fresh session. The history before the first turn of this session is read from it, over HTTP \u2014 the replay buffer only ever holds what this session said."
     }
   }
 }

@@ -3,7 +3,7 @@ import type { Envelope } from '@remote-claude/contracts';
 
 import { SessionAttachHandler } from '@adapter/inbound/ws/session/session-attach.gateway-handler';
 import type { WsCommandContext } from '@adapter/inbound/ws/ws-command';
-import { AttachSessionUseCase } from '@application/session';
+import { AttachSessionUseCase, SessionRegistry } from '@application/session';
 import { UserId } from '@domain/auth';
 import { SessionNotFoundError } from '@domain/session';
 import { ConnectionRegistry } from '@infra/websocket/connection-registry';
@@ -12,7 +12,13 @@ import { FrameBuilder } from '@infra/websocket/frame-builder';
 import { SessionHub } from '@infra/websocket/session-hub';
 import { InputValidationError } from '@shared/errors/input-validation.error';
 import { aPermissionModule } from '../../../../../support/builders/permission.builder';
-import { aRegistry, aSession } from '../../../../../support/builders/session.builder';
+import {
+  aConversation,
+  aRegistry,
+  aSession,
+  CONVERSATION_ID,
+  RecordingHandle,
+} from '../../../../../support/builders/session.builder';
 import { RegistrySessionOwnership } from '@adapter/outbound/session/registry-session.ownership';
 import { aWsContext } from '../../../../../support/builders/ws-context.builder';
 import { FixedClock } from '../../../../../support/fakes/fixed-clock';
@@ -20,6 +26,11 @@ import { RecordingLogger } from '../../../../../support/fakes/recording-logger';
 import { SequentialIds } from '../../../../../support/fakes/sequential-ids';
 
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
+const SOURCE = '0f0e0d0c-0b0a-4908-8706-050403020100';
+
+/** The use case as the gateway composes it: the live sessions answer both questions. */
+const attachUseCase = (registry: SessionRegistry): AttachSessionUseCase =>
+  new AttachSessionUseCase([new RegistrySessionOwnership(registry)], registry);
 const owner = UserId.create('auth|owner');
 const now = new Date('2026-09-13T12:00:00.000Z');
 
@@ -68,7 +79,7 @@ describe('SessionAttachHandler', () => {
     );
     permissions = aPermissionModule();
     handler = new SessionAttachHandler(
-      new AttachSessionUseCase([new RegistrySessionOwnership(aRegistry([aSession()]).registry)]),
+      attachUseCase(aRegistry([aSession()]).registry),
       permissions.request,
       new FrameBuilder(new FixedClock(now), new SequentialIds('01J0REQ000000000000000')),
     );
@@ -82,7 +93,34 @@ describe('SessionAttachHandler', () => {
     expect(attached).toEqual([SESSION]);
     expect(outcome.ack).toEqual({
       type: 'session.attached',
-      payload: { sessionId: SESSION, replayed: 0, oldestAvailableSeq: 1, gap: false },
+      payload: {
+        sessionId: SESSION,
+        replayed: 0,
+        oldestAvailableSeq: 1,
+        gap: false,
+        claudeSessionId: CONVERSATION_ID,
+      },
+    });
+  });
+
+  it('names the conversation it continues, when it is a resume — plan 04, B-11', async () => {
+    const registry = new SessionRegistry(10);
+    registry.add({
+      session: aSession(),
+      handle: new RecordingHandle(),
+      conversation: aConversation(CONVERSATION_ID, SOURCE),
+    });
+    const resumed = new SessionAttachHandler(
+      attachUseCase(registry),
+      permissions.request,
+      new FrameBuilder(new FixedClock(now), new SequentialIds('01J0REQ000000000000000')),
+    );
+
+    const outcome = await resumed.handle(contextFor({ sessionId: SESSION }));
+
+    expect(outcome.ack.payload).toMatchObject({
+      claudeSessionId: CONVERSATION_ID,
+      resumedFrom: SOURCE,
     });
   });
 
@@ -116,7 +154,7 @@ describe('SessionAttachHandler', () => {
 
   it("refuses somebody else's session, and attaches nothing", async () => {
     const other = new SessionAttachHandler(
-      new AttachSessionUseCase([new RegistrySessionOwnership(aRegistry([]).registry)]),
+      attachUseCase(aRegistry([]).registry),
       permissions.request,
       new FrameBuilder(new FixedClock(now), new SequentialIds('01J0REQ000000000000000')),
     );

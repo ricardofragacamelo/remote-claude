@@ -41,7 +41,7 @@ final class SessionStarterControllerProvider
   }
 }
 
-String _$sessionStarterControllerHash() => r'a754e414c8e5d2c2d8f5205dd9a8cea1017ab568';
+String _$sessionStarterControllerHash() => r'266f1d688f8d5750218bfa8a74eb9f4d0035cf89';
 
 /// The session this app opened most recently, or `null` before it opened one.
 

@@ -14,6 +14,14 @@ const KEYS: ListKeys = {
   emptyDescription: 'workspace.selector.emptyDescription',
 };
 
+export interface WorkspaceSelectorProps {
+  /**
+   * Opens the conversations of one workspace — the first level of the history leads to the second.
+   * The route's to perform: the feature never learns the router exists.
+   */
+  onOpenHistory?(workspacePath: string): void;
+}
+
 /**
  * Where the session will run.
  *
@@ -23,7 +31,9 @@ const KEYS: ListKeys = {
  *
  * It imports a hook, and nothing else: no service, no `api.ts`.
  */
-export function WorkspaceSelector(): React.JSX.Element {
+export function WorkspaceSelector({
+  onOpenHistory,
+}: WorkspaceSelectorProps = {}): React.JSX.Element {
   const { t } = useTranslation();
   const { isLoading, error, workspaces, selected, select, reload } = useWorkspaces();
 
@@ -36,7 +46,7 @@ export function WorkspaceSelector(): React.JSX.Element {
       onRetry={reload}
     >
       {workspaces.map((workspace) => (
-        <li key={workspace.path}>
+        <li key={workspace.path} className="flex flex-col gap-1">
           <Button
             variant={workspace.path === selected ? 'primary' : 'outline'}
             size="touch"
@@ -56,6 +66,18 @@ export function WorkspaceSelector(): React.JSX.Element {
               </span>
             </span>
           </Button>
+          {onOpenHistory !== undefined && (
+            <Button
+              variant="outline"
+              className="self-start"
+              aria-label={t('workspace.selector.historyOf', { label: workspace.label })}
+              onClick={() => {
+                onOpenHistory(workspace.path);
+              }}
+            >
+              {t('workspace.selector.history')}
+            </Button>
+          )}
         </li>
       ))}
     </LoadedList>

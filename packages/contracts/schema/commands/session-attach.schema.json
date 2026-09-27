@@ -11,7 +11,7 @@
     "sessionId": { "type": "string", "description": "Session to observe." },
     "resumeFromSeq": {
       "type": "integer",
-      "description": "Highest `seq` the client already has. The server replays from the next one, or answers `gap: true` when that sequence has fallen out of the buffer."
+      "description": "Highest `seq` the client already has — `0` when it has none, which replays everything the buffer holds. The server replays from the next one, or answers `gap: true` when that sequence has fallen out of the buffer. Absent, nothing past is replayed: the connection only observes from now on."
     }
   }
 }

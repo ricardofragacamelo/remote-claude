@@ -17,6 +17,7 @@ const row = {
   kind: 'device.approved',
   subjectId: 'dev_1',
   subjectLabel: 'Pixel 8',
+  details: null,
   at,
   createdAt: at,
 };
@@ -43,8 +44,26 @@ describe('the audit event mapper', () => {
       kind: 'device.approved',
       subjectId: 'dev_1',
       subjectLabel: 'Pixel 8',
+      details: null,
       at,
     });
+  });
+
+  it('carries the details of an event that has them, as a copy', () => {
+    const details = { files: [{ path: '/srv/a.md', outcome: 'unchanged' }] };
+    const rewound = AuditEvent.record({
+      id: row.id,
+      userId: UserId.create('auth|owner'),
+      kind: 'session.filesRewound',
+      subjectId: 'prompt-1',
+      subjectLabel: '/srv',
+      details,
+      at,
+    });
+
+    expect(toRow(rewound).details).toEqual(details);
+    expect(toRow(rewound).details).not.toBe(details);
+    expect(toEntity({ ...row, kind: 'session.filesRewound', details }).details).toEqual(details);
   });
 
   it('refuses a kind this build does not know', () => {

@@ -17,7 +17,16 @@ const draft = {
 
 describe('AuditEvent', () => {
   it('records who, what, about which subject, and when', () => {
-    expect(AuditEvent.record(draft).snapshot()).toEqual(draft);
+    // An event with nothing more to say says so: `details` is `null`, never missing.
+    expect(AuditEvent.record(draft).snapshot()).toEqual({ ...draft, details: null });
+  });
+
+  it('keeps the details of an event that has them', () => {
+    const details = { files: [{ path: '/srv/a.md', outcome: 'revert', action: 'restore' }] };
+
+    expect(AuditEvent.record({ ...draft, kind: 'session.filesRewound', details }).details).toEqual(
+      details,
+    );
   });
 
   it('rehydrates to something indistinguishable from what was recorded', () => {

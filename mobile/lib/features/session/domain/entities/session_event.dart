@@ -11,6 +11,7 @@
 library;
 
 import 'package:equatable/equatable.dart';
+import 'package:remote_claude/features/session/domain/entities/checkpoint.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 
@@ -30,12 +31,21 @@ sealed class SessionEvent extends Equatable {
 /// It **names** the session, and that is the point of it: `session.start` carries no id — it is
 /// what creates one — so this is where the screen that asked learns which session answered.
 final class SessionOpened extends SessionEvent {
-  const SessionOpened(super.seq, this.sessionId);
+  const SessionOpened(super.seq, this.sessionId, {this.claudeSessionId, this.resumedFrom});
 
   final String sessionId;
 
+  /// The conversation in Claude's store this session writes to — what its history is read by and
+  /// what a later resume names. `null` only from a build of the backend that did not say.
+  final String? claudeSessionId;
+
+  /// The conversation this session continues, when it is a resume. Everything said before this
+  /// session's first turn is read from it, over HTTP: the replay buffer only holds what **this**
+  /// session said (B-11).
+  final String? resumedFrom;
+
   @override
-  List<Object?> get props => <Object?>[seq, sessionId];
+  List<Object?> get props => <Object?>[seq, sessionId, claudeSessionId, resumedFrom];
 }
 
 /// The session moved.
@@ -136,6 +146,18 @@ final class SessionFinished extends SessionEvent {
 
   @override
   List<Object?> get props => <Object?>[seq, ending];
+}
+
+/// The files of the session went back to a point, and this is what happened to each.
+///
+/// Everyone watching the session receives it, whoever asked for the undo.
+final class FilesRewound extends SessionEvent {
+  const FilesRewound(super.seq, this.outcome);
+
+  final RewindOutcome outcome;
+
+  @override
+  List<Object?> get props => <Object?>[seq, outcome];
 }
 
 /// A round trip of the walking skeleton came back.

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import type { AppError } from '@/shared/api/errors';
 import { wsClient } from '@/shared/api/ws';
 import type { ConnectionStatus } from '@/shared/api/ws-client';
 import { useSessionFrames } from '@/shared/hooks/useSessionFrames';
+import { fetchHistoryPage } from '../services/history.service';
 import {
   closeSession,
   interruptSession,
@@ -13,6 +15,20 @@ import {
 } from '../services/live-session.service';
 import { useLiveSessionStore } from '../store/live-session.store';
 import type { Conversation } from '../types/live-session';
+import { useCommandRefusal } from './useCommandRefusal';
+
+/** Where the history under the stream is: arriving, failed, or not being waited for. */
+export interface HistoryStatus {
+  readonly isLoading: boolean;
+
+  /** Why it could not be read. What the stream brought stays on screen beside it. */
+  readonly error: AppError | null;
+
+  /** The conversation of Claude this session is, once known — what the whole history is read by. */
+  readonly conversationId: string | null;
+
+  retry(): void;
+}
 
 /** What the screen gets: the conversation, where it stands, and what it can do about it. */
 export interface LiveSession extends Conversation {
@@ -24,6 +40,15 @@ export interface LiveSession extends Conversation {
 
   /** Whether this browser opened the session, which is what decides who may close it. */
   readonly isOwner: boolean;
+
+  /** The part of the conversation the ring buffer does not hold. */
+  readonly history: HistoryStatus;
+
+  /**
+   * Why the last prompt was refused — a slash command this installation does not have. Cleared
+   * when the next one leaves.
+   */
+  readonly promptError: AppError | null;
 
   start(workspacePath: string): void;
   prompt(text: string): void;
@@ -58,12 +83,17 @@ export function useLiveSession(sessionId: string | null): LiveSession {
 
   // `session.start` **opens** the session it is about, so `session.started` arrives before
   // anything could have attached to it.
+  //
+  // A resume of a conversation that was already live is answered with `session.attached` for a
+  // session nobody here watches yet, and the backend only ever joins the caller to their **own**
+  // live session — so that one is this browser's to close as well.
   useEffect(
     () =>
       wsClient.observe((frame) => {
         const started = frame.payload?.['sessionId'];
+        const opened = frame.type === 'session.started' || frame.type === 'session.attached';
 
-        if (frame.type === 'session.started' && typeof started === 'string') {
+        if (opened && typeof started === 'string') {
           setOwned((previous) => [...previous, started]);
         }
       }),
@@ -84,11 +114,14 @@ export function useLiveSession(sessionId: string | null): LiveSession {
     apply: (frame) => {
       useLiveSessionStore.getState().apply(frame);
     },
-    reset: () => {
-      useLiveSessionStore.getState().reset();
+    reset: (claudeSessionId) => {
+      useLiveSessionStore.getState().reset(claudeSessionId);
     },
     lastSeq: () => useLiveSessionStore.getState().lastSeq,
   });
+
+  const history = useHistoryUnderStream(state.historyFrom, state.conversationId);
+  const { error: promptError, expect: expectRefusal } = useCommandRefusal();
 
   const start = useCallback((workspacePath: string) => {
     startSession(wsClient, workspacePath);
@@ -113,12 +146,16 @@ export function useLiveSession(sessionId: string | null): LiveSession {
     ending: state.ending,
     isPartial: state.isPartial,
     isOwner: sessionId !== null && owned.includes(sessionId),
+    history,
+    promptError,
     start,
     prompt: useCallback(
       (text: string) => {
-        drive((id) => sendPrompt(wsClient, id, text));
+        drive((id) => {
+          expectRefusal(sendPrompt(wsClient, id, text));
+        });
       },
-      [drive],
+      [drive, expectRefusal],
     ),
     interrupt: useCallback(() => {
       drive((id) => interruptSession(wsClient, id));
@@ -138,5 +175,64 @@ export function useLiveSession(sessionId: string | null): LiveSession {
     close: useCallback(() => {
       drive((id) => closeSession(wsClient, id));
     }, [drive]),
+  };
+}
+
+/** A failed load, and which conversation it failed for. */
+interface HistoryFailure {
+  readonly from: string;
+  readonly attempt: number;
+  readonly error: AppError;
+}
+
+/**
+ * Loads the latest page of a conversation whenever the store is waiting for one, and lays it under
+ * the stream.
+ *
+ * Always from the network, never from a cache: it answers a gap, and a gap means what is on screen
+ * can no longer be trusted — a copy kept from before it would be the same lie. The latest page is
+ * what it reads; the whole conversation is one link away, on the history screen.
+ *
+ * The stream keeps arriving while the page is in flight, and that is fine by construction: the page
+ * is **merged** by message id under whatever the stream brought meanwhile (S-15). An answer for a
+ * conversation the store no longer waits on lands nowhere.
+ */
+function useHistoryUnderStream(from: string | null, conversationId: string | null): HistoryStatus {
+  const [attempt, setAttempt] = useState(0);
+  const [failure, setFailure] = useState<HistoryFailure | null>(null);
+
+  useEffect(() => {
+    if (from === null) {
+      return;
+    }
+
+    let current = true;
+
+    void fetchHistoryPage(from, null)
+      .then((page) => {
+        if (current) {
+          useLiveSessionStore.getState().hydrate(from, page.events);
+        }
+      })
+      .catch((error: AppError) => {
+        if (current) {
+          setFailure({ from, attempt, error });
+        }
+      });
+
+    return () => {
+      current = false;
+    };
+  }, [from, attempt]);
+
+  const failed = failure !== null && failure.from === from && failure.attempt === attempt;
+
+  return {
+    isLoading: from !== null && !failed,
+    error: failed ? failure.error : null,
+    conversationId,
+    retry: useCallback(() => {
+      setAttempt((previous) => previous + 1);
+    }, []),
   };
 }

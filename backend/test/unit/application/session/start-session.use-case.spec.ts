@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { RecordAuditEventUseCase } from '@application/audit';
 import { SessionRegistry, StartSessionUseCase } from '@application/session';
 import type {
   ClaudeSessionHandle,
@@ -8,15 +9,18 @@ import type {
   SessionEvent,
 } from '@application/session';
 import { UserId } from '@domain/auth';
-import { SessionLimitReachedError } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { SessionLimitReachedError, SessionNotFoundError } from '@domain/session';
+import type { Session } from '@domain/session';
+import { ClaudeSessionId, InvalidClaudeSessionIdError } from '@domain/transcript';
 import { WorkspaceNotAllowedError, WorkspacePath } from '@domain/workspace';
 import { RecordingHandle } from '../../../support/builders/session.builder';
 import { RecordingBroadcaster } from '../../../support/fakes/recording-broadcaster';
 import { FixedClock } from '../../../support/fakes/fixed-clock';
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
 import { SequentialUuids } from '../../../support/fakes/sequential-uuids';
+import { InMemoryResumableConversations } from '../../../support/fakes/in-memory-resumable-conversations';
 import { InMemorySessionOriginRepository } from '../../../support/fakes/in-memory-session-origin.repository';
+import { RecordingAuditEvents } from '../../../support/fakes/recording-audit-events';
 
 const owner = UserId.create('auth|owner');
 const now = new Date('2026-09-18T12:00:00.000Z');
@@ -47,6 +51,8 @@ describe('StartSessionUseCase', () => {
   let broadcaster: RecordingBroadcaster;
   let resolved: string[];
   let origins: InMemorySessionOriginRepository;
+  let conversations: InMemoryResumableConversations;
+  let trail: RecordingAuditEvents;
 
   // Shared across builds on purpose: a fresh generator per call would mint the same id twice, and
   // two sessions with one id is a registry holding one entry and a limit that never trips.
@@ -69,6 +75,8 @@ describe('StartSessionUseCase', () => {
     resolved = [];
     ids = new SequentialIds();
     origins = new InMemorySessionOriginRepository();
+    conversations = new InMemoryResumableConversations();
+    trail = new RecordingAuditEvents();
   });
 
   const build = (): StartSessionUseCase =>
@@ -81,16 +89,22 @@ describe('StartSessionUseCase', () => {
       ids,
       defaults,
       { ids: new SequentialUuids(), origins },
+      {
+        conversations,
+        trail: new RecordAuditEventUseCase(trail, new SequentialIds('01J0AUD0000000000000000')),
+      },
     );
 
-  const start = (workspacePath = '/srv/projects/app'): ReturnType<StartSessionUseCase['execute']> =>
-    build().execute({
-      workspacePath,
-      model: null,
-      permissionMode: null,
-      resumeSessionId: null,
-      userId: owner,
-    });
+  const start = async (workspacePath = '/srv/projects/app'): Promise<Session> =>
+    (
+      await build().execute({
+        workspacePath,
+        model: null,
+        permissionMode: null,
+        resumeSessionId: null,
+        userId: owner,
+      })
+    ).session;
 
   it('opens a session on a workspace that cleared the allowlist — S-21', async () => {
     const session = await start();
@@ -111,17 +125,16 @@ describe('StartSessionUseCase', () => {
   });
 
   it('opens with what the client asked for when it asked', async () => {
-    const session = await build().execute({
+    const { session } = await build().execute({
       workspacePath: '/srv/projects/app',
       model: 'claude-opus-5',
       permissionMode: 'plan',
-      resumeSessionId: 'sdk-1',
+      resumeSessionId: null,
       userId: owner,
     });
 
     expect(session.model).toBe('claude-opus-5');
     expect(claude.starts[0]?.permissionMode).toBe('plan');
-    expect(claude.starts[0]?.resumeSessionId).toBe('sdk-1');
   });
 
   describe('the provenance — plan 04, S-71', () => {
@@ -136,7 +149,10 @@ describe('StartSessionUseCase', () => {
         workspace: session.workspace,
         openedAt: now,
       });
-      expect(claude.starts[0]?.claudeSessionId?.equals(ClaudeSessionId.create(FIRST))).toBe(true);
+      expect(
+        claude.starts[0]?.conversation.claudeSessionId.equals(ClaudeSessionId.create(FIRST)),
+      ).toBe(true);
+      expect(claude.starts[0]?.conversation.resumedFrom).toBeNull();
     });
 
     it('records it before anything is spawned', async () => {
@@ -163,18 +179,207 @@ describe('StartSessionUseCase', () => {
       expect(claude.starts).toEqual([]);
       expect(registry.size).toBe(0);
     });
+  });
 
-    it('records nothing new on a resume, which keeps the id it has', async () => {
-      await build().execute({
-        workspacePath: '/srv/projects/app',
+  describe('resuming a conversation — plan 04, F2', () => {
+    /** One of ours, opened by the owner, and one begun in the editor. */
+    const OURS = '0f0e0d0c-0b0a-4908-8706-050403020100';
+    const EDITOR = '1f1e1d1c-1b1a-4918-9716-151413121110';
+    const FIRST = '00000000-0000-4000-8000-000000000001';
+
+    // One instance, as Nest holds one: the resumes in flight are the use case's to remember.
+    let useCase: StartSessionUseCase;
+
+    const resume = (
+      resumeSessionId: string,
+      overrides: { workspacePath?: string; userId?: UserId } = {},
+    ): ReturnType<StartSessionUseCase['execute']> =>
+      useCase.execute({
+        workspacePath: overrides.workspacePath ?? '/srv/projects/app',
         model: null,
         permissionMode: null,
-        resumeSessionId: 'sdk-1',
-        userId: owner,
+        resumeSessionId,
+        userId: overrides.userId ?? owner,
       });
 
+    beforeEach(() => {
+      useCase = build();
+      conversations.add({ id: OURS, openedBy: owner.value }).add({ id: EDITOR });
+    });
+
+    it('continues one of ours in place, under the id it has — S-19, S-59', async () => {
+      const started = await resume(OURS);
+
+      expect(started.joined).toBe(false);
+      expect(started.conversation.claudeSessionId.value).toBe(OURS);
+      expect(started.conversation.resumedFrom?.value).toBe(OURS);
+      expect(claude.starts[0]?.conversation).toEqual(started.conversation);
+      // In place writes nothing new about where it came from: it was recorded when it was opened.
       expect(origins.rows.size).toBe(0);
-      expect(claude.starts[0]?.claudeSessionId).toBeNull();
+    });
+
+    it('forks one begun elsewhere under a new id of ours, recorded first — S-20, S-58', async () => {
+      let recordedBeforeSpawn = false;
+      const record = origins.record.bind(origins);
+      origins.record = (origin) => {
+        recordedBeforeSpawn = claude.starts.length === 0;
+        return record(origin);
+      };
+
+      const started = await resume(EDITOR);
+
+      expect(started.conversation.claudeSessionId.value).toBe(FIRST);
+      expect(started.conversation.resumedFrom?.value).toBe(EDITOR);
+      expect(origins.rows.get(FIRST)?.openedBy).toEqual(owner);
+      expect(recordedBeforeSpawn).toBe(true);
+      // Nothing about the original is claimed as ours: it stays the editor's.
+      expect(origins.rows.has(EDITOR)).toBe(false);
+    });
+
+    it('is a new live session, with a new id of its own — S-21', async () => {
+      const first = await resume(OURS);
+      claude.starts[0]?.onClosed('completed');
+
+      const second = await resume(OURS);
+
+      expect(second.session.id.equals(first.session.id)).toBe(false);
+    });
+
+    it('writes the resume to the trail, before anything is spawned — S-27', async () => {
+      // How many subprocesses existed when each entry was written: none of this resume's own.
+      const spawnedWhenTrailed: number[] = [];
+      const append = trail.append.bind(trail);
+      trail.append = (event) => {
+        spawnedWhenTrailed.push(claude.starts.length);
+        return append(event);
+      };
+
+      await resume(OURS);
+      claude.starts[0]?.onClosed('completed');
+      await resume(EDITOR);
+
+      expect(trail.kinds).toEqual(['session.resumed', 'session.forked']);
+      expect(trail.appended[0]?.snapshot()).toMatchObject({
+        userId: owner,
+        subjectId: OURS,
+        subjectLabel: '/srv/projects/app',
+        at: now,
+      });
+      expect(spawnedWhenTrailed).toEqual([0, 1]);
+    });
+
+    it('does not resume when the trail cannot take it, and gives the slot back', async () => {
+      trail.failure = new Error('the trail is gone');
+
+      await expect(resume(OURS)).rejects.toThrow('the trail is gone');
+      expect(claude.starts).toEqual([]);
+      expect(registry.size).toBe(0);
+    });
+
+    it('refuses a conversation that does not exist — S-22', async () => {
+      await expect(resume('2f2e2d2c-2b2a-4928-a726-252423222120')).rejects.toThrow(
+        SessionNotFoundError,
+      );
+      expect(claude.starts).toEqual([]);
+    });
+
+    it("refuses somebody else's with the answer an absent one gets", async () => {
+      conversations.add({ id: OURS, openedBy: 'auth|somebody-else' });
+
+      await expect(resume(OURS)).rejects.toThrow(SessionNotFoundError);
+      expect(claude.starts).toEqual([]);
+    });
+
+    it('refuses one that ran in another workspace, or recorded none', async () => {
+      conversations.add({ id: OURS, cwd: '/srv/projects/other', openedBy: owner.value });
+      conversations.add({ id: EDITOR, cwd: null });
+
+      await expect(resume(OURS)).rejects.toThrow(SessionNotFoundError);
+      await expect(resume(EDITOR)).rejects.toThrow(SessionNotFoundError);
+    });
+
+    it('refuses a workspace that left the allowlist before asking the store — S-23', async () => {
+      await expect(resume(OURS, { workspacePath: '/etc' })).rejects.toThrow(
+        WorkspaceNotAllowedError,
+      );
+      expect(conversations.lookups).toBe(0);
+    });
+
+    it('refuses an id that is not a conversation id before asking the store', async () => {
+      await expect(resume('sdk-1')).rejects.toThrow(InvalidClaudeSessionIdError);
+      expect(conversations.lookups).toBe(0);
+    });
+
+    it('refuses the resume beyond the limit, and spawns nothing — S-26', async () => {
+      await start();
+      await start();
+
+      await expect(resume(OURS)).rejects.toThrow(SessionLimitReachedError);
+      expect(claude.starts).toHaveLength(2);
+    });
+
+    it('joins what is already live instead of spawning it again — S-24', async () => {
+      const first = await resume(OURS);
+      const second = await resume(OURS);
+
+      expect(second.joined).toBe(true);
+      expect(second.session).toBe(first.session);
+      expect(claude.starts).toHaveLength(1);
+      expect(trail.kinds).toEqual(['session.resumed']);
+    });
+
+    it('joins a live session of ours that was opened here, not resumed', async () => {
+      const opened = await start();
+      const conversation = claude.starts[0]?.conversation.claudeSessionId.value ?? '';
+      conversations.add({ id: conversation, openedBy: owner.value });
+
+      const again = await resume(conversation);
+
+      expect(again).toMatchObject({ joined: true, session: opened });
+      expect(claude.starts).toHaveLength(1);
+    });
+
+    it('joins the live fork when the conversation begun elsewhere is resumed again', async () => {
+      await resume(EDITOR);
+      const again = await resume(EDITOR);
+
+      expect(again.joined).toBe(true);
+      expect(claude.starts).toHaveLength(1);
+    });
+
+    it('makes two resumes arriving together one `query()` — S-25', async () => {
+      const [first, second] = await Promise.all([resume(OURS), resume(OURS)]);
+
+      expect(claude.starts).toHaveLength(1);
+      expect(second.session).toBe(first.session);
+      expect([first.joined, second.joined].sort()).toEqual([false, true]);
+    });
+
+    it('lets the next resume try again once one that was in flight failed', async () => {
+      claude.failWith = new Error('spawn failed');
+      await expect(resume(OURS)).rejects.toThrow('spawn failed');
+
+      claude.failWith = null;
+
+      await expect(resume(OURS)).resolves.toMatchObject({ joined: false });
+    });
+
+    it("gives another person's resume of the editor's conversation a fork of their own", async () => {
+      const stranger = UserId.create('auth|stranger');
+      await resume(EDITOR);
+
+      const theirs = await resume(EDITOR, { userId: stranger });
+
+      expect(theirs.joined).toBe(false);
+      expect(claude.starts).toHaveLength(2);
+    });
+
+    it('fails like the store does when the SDK is down, and spawns nothing', async () => {
+      conversations.failWith = new Error('the SDK is down');
+
+      await expect(resume(OURS)).rejects.toThrow('the SDK is down');
+      expect(claude.starts).toEqual([]);
+      expect(registry.size).toBe(0);
     });
   });
 

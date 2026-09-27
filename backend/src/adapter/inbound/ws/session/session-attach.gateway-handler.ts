@@ -7,6 +7,7 @@ import { AttachSessionUseCase } from '@application/session';
 import type { SessionId } from '@domain/session';
 import { FrameBuilder } from '@infra/websocket/frame-builder';
 import { payloadOf } from '../frame-payload';
+import { conversationFields } from './session-conversation';
 import type { WsCommandContext, WsCommandHandler, WsCommandOutcome } from '../ws-command';
 
 const attachSchema = z.object({
@@ -42,7 +43,10 @@ export class SessionAttachHandler implements WsCommandHandler {
   async handle(context: WsCommandContext): Promise<WsCommandOutcome> {
     const command = payloadOf(context.frame, attachSchema);
 
-    const sessionId = await this.attachSession.execute(command.sessionId, context.userId);
+    const { sessionId, conversation } = await this.attachSession.execute(
+      command.sessionId,
+      context.userId,
+    );
     context.attach(sessionId.value);
 
     const replay = context.replay(sessionId.value, command.resumeFromSeq ?? null);
@@ -55,6 +59,7 @@ export class SessionAttachHandler implements WsCommandHandler {
           replayed: replay.events.length,
           oldestAvailableSeq: replay.oldestAvailableSeq,
           gap: replay.gap,
+          ...conversationFields(conversation),
         },
       },
       then: [...replay.events, ...this.pendingRequests(sessionId)],

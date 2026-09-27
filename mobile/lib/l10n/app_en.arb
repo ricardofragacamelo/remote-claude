@@ -630,5 +630,281 @@
   "@rulesRevoke": { "description": "Revokes a rule" },
 
   "rulesRevoking": "Revoking…",
-  "@rulesRevoking": { "description": "While a revocation is in flight" }
+  "@rulesRevoking": { "description": "While a revocation is in flight" },
+
+  "workspaceErrorNotAllowed": "This installation does not allow {path}.",
+  "@workspaceErrorNotAllowed": {
+    "description": "The server answered WORKSPACE_NOT_ALLOWED",
+    "placeholders": { "path": { "type": "String" } }
+  },
+
+  "workspaceErrorForbidden": "That folder is not yours to open.",
+  "@workspaceErrorForbidden": { "description": "The workspace belongs to somebody else" },
+
+  "sessionErrorLimitReached": "This machine is already running {limit} sessions, which is as many as it allows. End one and try again.",
+  "@sessionErrorLimitReached": {
+    "description": "The server answered SESSION_LIMIT_REACHED",
+    "placeholders": { "limit": { "type": "String" } }
+  },
+
+  "sessionErrorClaudeUnavailable": "Claude stopped responding on this machine.",
+  "@sessionErrorClaudeUnavailable": { "description": "The server answered CLAUDE_UNAVAILABLE for a session" },
+
+  "transcriptErrorNotFound": "That conversation does not exist, or it is not yours to read.",
+  "@transcriptErrorNotFound": { "description": "The history answered NOT_FOUND" },
+
+  "transcriptErrorInvalidSessionId": "{sessionId} is not a conversation identifier.",
+  "@transcriptErrorInvalidSessionId": {
+    "description": "The conversation id failed validation",
+    "placeholders": { "sessionId": { "type": "String" } }
+  },
+
+  "transcriptErrorClaudeUnavailable": "Claude could not read its history on this machine.",
+  "@transcriptErrorClaudeUnavailable": { "description": "The history answered CLAUDE_UNAVAILABLE" },
+
+  "transcriptErrorClaudeTimeout": "Claude took too long to read its history. Try again.",
+  "@transcriptErrorClaudeTimeout": { "description": "The history answered CLAUDE_TIMEOUT" },
+
+  "transcriptErrorCursorStale": "This conversation changed while you were reading it. Reload it from the latest messages.",
+  "@transcriptErrorCursorStale": { "description": "The page cursor no longer points into the conversation" },
+
+  "workspaceHistoryOpen": "History of {label}",
+  "@workspaceHistoryOpen": {
+    "description": "Tooltip of the action that opens the conversations of one folder",
+    "placeholders": { "label": { "type": "String" } }
+  },
+
+  "historyListTitle": "History",
+  "@historyListTitle": { "description": "Title of the screen listing the conversations of one folder" },
+
+  "historyListLoading": "Loading conversations",
+  "@historyListLoading": { "description": "Shown while the conversations of a folder are being read" },
+
+  "historyListEmptyTitle": "No conversations in this folder",
+  "@historyListEmptyTitle": { "description": "Title of the empty state of the conversation list" },
+
+  "historyListEmptyBody": "Nothing has been said here yet — from this app, the editor or the terminal. Open a session on this folder from the folder list to start one.",
+  "@historyListEmptyBody": { "description": "Body of the empty state of the conversation list: what to do about it" },
+
+  "historyOriginOurs": "Opened from this app",
+  "@historyOriginOurs": { "description": "Origin of a conversation opened from this product" },
+
+  "historyOriginExternal": "Began outside this app",
+  "@historyOriginExternal": { "description": "Origin of a conversation begun in the editor or the terminal — never name the editor: nothing says which" },
+
+  "historyLastActive": "Last active {at}",
+  "@historyLastActive": {
+    "description": "When anything was last said in a conversation",
+    "placeholders": { "at": { "type": "String" } }
+  },
+
+  "historyBranch": "Branch {branch}",
+  "@historyBranch": {
+    "description": "The git branch the conversation ran on",
+    "placeholders": { "branch": { "type": "String" } }
+  },
+
+  "historyUntitled": "Untitled conversation",
+  "@historyUntitled": { "description": "Shown for a conversation the store gives no summary" },
+
+  "historyLoadMore": "Load more",
+  "@historyLoadMore": { "description": "Reads the next page of conversations" },
+
+  "historyLoadingMore": "Loading…",
+  "@historyLoadingMore": { "description": "While the next or the earlier page is being read" },
+
+  "historyConversationTitle": "Conversation",
+  "@historyConversationTitle": { "description": "Title of the read-only screen of one conversation" },
+
+  "historyConversationLoading": "Loading the conversation",
+  "@historyConversationLoading": { "description": "Shown while the latest messages of a conversation are being read" },
+
+  "historyConversationEmptyTitle": "Nothing said in this conversation",
+  "@historyConversationEmptyTitle": { "description": "Title of the empty state of a conversation" },
+
+  "historyConversationEmptyBody": "It has no messages to show. Resume it to say something.",
+  "@historyConversationEmptyBody": { "description": "Body of the empty state of a conversation: what to do about it" },
+
+  "historyLoadEarlier": "Load earlier messages",
+  "@historyLoadEarlier": { "description": "Reads the page before the oldest message on screen" },
+
+  "historyResumeAction": "Resume",
+  "@historyResumeAction": { "description": "Continues the conversation in a live session" },
+
+  "historyResumePending": "Resuming…",
+  "@historyResumePending": { "description": "While the resume waits for the session that continues it" },
+
+  "historyResumeOffline": "Resuming needs the connection to the backend, and this device is not connected.",
+  "@historyResumeOffline": { "description": "Why the resume button is disabled" },
+
+  "historyResumeNotSent": "The conversation was not resumed: this device is not connected.",
+  "@historyResumeNotSent": { "description": "Shown when the resume could not leave because the socket is down" },
+
+  "historyExternalNote": "This conversation began outside this app. Resuming it here continues it under a new id: the editor or terminal it came from will not see the answers given here.",
+  "@historyExternalNote": { "description": "Said before resuming a conversation begun elsewhere (D-04)" },
+
+  "sessionHistoryLoading": "Loading what was said before",
+  "@sessionHistoryLoading": { "description": "While the history of a resumed or reloaded session is being read" },
+
+  "sessionErrorUnknownCommand": "{command} is not a command Claude offers on this machine.",
+  "@sessionErrorUnknownCommand": {
+    "description": "The server answered INVALID_INPUT for a slash command the installation does not have",
+    "placeholders": { "command": { "type": "String" } }
+  },
+
+  "sessionErrorClaudeTimeout": "Claude took too long to answer on this machine. Try again.",
+  "@sessionErrorClaudeTimeout": { "description": "The server answered CLAUDE_TIMEOUT for a session" },
+
+  "sessionErrorLocked": "The session is busy: a turn is running or another undo is in progress. Try again once it is idle.",
+  "@sessionErrorLocked": { "description": "The server answered SESSION_LOCKED to an undo" },
+
+  "sessionErrorRewindTargetUnknown": "That undo point does not belong to this session.",
+  "@sessionErrorRewindTargetUnknown": { "description": "The server answered INVALID_INPUT: the undo point is not one of this session's" },
+
+  "sessionErrorRewindIncomplete": "Some files could not be put back ({failed}). Each of them was left exactly as it was.",
+  "@sessionErrorRewindIncomplete": {
+    "description": "The session reported an undo that could not restore every file",
+    "placeholders": { "failed": { "type": "String" } }
+  },
+
+  "sessionCommandsOpen": "Commands",
+  "@sessionCommandsOpen": { "description": "Tooltip of the button that opens the slash command menu" },
+
+  "sessionCommandsTitle": "Commands",
+  "@sessionCommandsTitle": { "description": "Title of the slash command menu" },
+
+  "sessionCommandsDescription": "What Claude offers on this machine. The prompt box accepts any command, listed here or not.",
+  "@sessionCommandsDescription": { "description": "What the command menu is — discovery, not a boundary (D-05)" },
+
+  "sessionCommandsSearch": "Search commands",
+  "@sessionCommandsSearch": { "description": "Label of the search box of the command menu" },
+
+  "sessionCommandsSuggested": "Suggested",
+  "@sessionCommandsSuggested": { "description": "Heading of the group of suggested commands" },
+
+  "sessionCommandsAll": "All commands",
+  "@sessionCommandsAll": { "description": "Heading of every other command" },
+
+  "sessionCommandsLoading": "Loading commands",
+  "@sessionCommandsLoading": { "description": "While the commands of the installation are being read" },
+
+  "sessionCommandsEmptyTitle": "No commands on this machine",
+  "@sessionCommandsEmptyTitle": { "description": "Title of the empty state of the command menu" },
+
+  "sessionCommandsEmptyBody": "Claude here offers no commands. You can still type anything in the prompt box.",
+  "@sessionCommandsEmptyBody": { "description": "Body of the empty state of the command menu: what to do about it" },
+
+  "sessionCommandsNoMatch": "No command matches “{query}”.",
+  "@sessionCommandsNoMatch": {
+    "description": "Shown when the search of the command menu finds nothing",
+    "placeholders": { "query": { "type": "String" } }
+  },
+
+  "sessionUndoOpen": "Undo file changes",
+  "@sessionUndoOpen": { "description": "Tooltip of the action that opens the undo sheet" },
+
+  "sessionUndoTitle": "Undo file changes",
+  "@sessionUndoTitle": { "description": "Title of the undo sheet" },
+
+  "sessionUndoDescription": "Put the files this session wrote back to how they were before one of its turns. A file changed outside the session stays as it is.",
+  "@sessionUndoDescription": { "description": "What undoing does, above the list of undo points" },
+
+  "sessionUndoLoading": "Loading undo points",
+  "@sessionUndoLoading": { "description": "While the undo points of the session are being read" },
+
+  "sessionUndoEmptyTitle": "Nothing to undo yet",
+  "@sessionUndoEmptyTitle": { "description": "Title of the empty state of the undo sheet" },
+
+  "sessionUndoEmptyBody": "Every turn that writes files becomes a point this session can go back to.",
+  "@sessionUndoEmptyBody": { "description": "Body of the empty state of the undo sheet" },
+
+  "sessionUndoUntitled": "Untitled turn",
+  "@sessionUndoUntitled": { "description": "Shown for an undo point whose turn had no prompt" },
+
+  "sessionUndoPointAt": "{date} at {time}",
+  "@sessionUndoPointAt": {
+    "description": "When the turn of an undo point began",
+    "placeholders": { "date": { "type": "String" }, "time": { "type": "String" } }
+  },
+
+  "sessionUndoFileCount": "{count, plural, =0{No files} =1{1 file} other{{count} files}}",
+  "@sessionUndoFileCount": {
+    "description": "How many files an undo point reaches",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "sessionUndoConfirmTitle": "Go back to before “{label}”",
+  "@sessionUndoConfirmTitle": {
+    "description": "Heading of the confirmation: the point the files go back to",
+    "placeholders": { "label": { "type": "String" } }
+  },
+
+  "sessionUndoGoesBack": "Goes back",
+  "@sessionUndoGoesBack": { "description": "Heading of the files an undo would put back" },
+
+  "sessionUndoStays": "Stays as it is",
+  "@sessionUndoStays": { "description": "Heading of the files an undo would leave alone" },
+
+  "sessionUndoAlready": "Already as it was",
+  "@sessionUndoAlready": { "description": "Heading of the files already the way they were before the turn" },
+
+  "sessionUndoRestore": "Its content before the turn is put back",
+  "@sessionUndoRestore": { "description": "What undoing does to a file the turn changed" },
+
+  "sessionUndoDelete": "Deleted: this turn created it",
+  "@sessionUndoDelete": { "description": "What undoing does to a file the turn created" },
+
+  "sessionUndoReasonModifiedOutside": "Changed outside the session after it wrote it",
+  "@sessionUndoReasonModifiedOutside": { "description": "Why a file stays: somebody edited it after the session" },
+
+  "sessionUndoReasonNotRestorable": "Too large or unreadable to have been saved",
+  "@sessionUndoReasonNotRestorable": { "description": "Why a file stays: no snapshot of it could be taken" },
+
+  "sessionUndoReasonUnsafePath": "No longer a regular file, or its folder no longer resolves",
+  "@sessionUndoReasonUnsafePath": { "description": "Why a file stays: it became a link or its directory moved" },
+
+  "sessionUndoReasonNoBaseline": "Nothing records how the session left it",
+  "@sessionUndoReasonNoBaseline": { "description": "Why a file stays: the undo will not guess" },
+
+  "sessionUndoReasonOther": "Kept for a reason this app does not know",
+  "@sessionUndoReasonOther": { "description": "Why a file stays, when the reason is newer than this app" },
+
+  "sessionUndoNothingToRevert": "Nothing would change: no file of this point can go back.",
+  "@sessionUndoNothingToRevert": { "description": "Why the undo button is disabled for this point" },
+
+  "sessionUndoConfirm": "Undo",
+  "@sessionUndoConfirm": { "description": "Confirms the undo, once the files are listed" },
+
+  "sessionUndoPending": "Undoing…",
+  "@sessionUndoPending": { "description": "While the undo waits for its result" },
+
+  "sessionUndoBack": "Back to the undo points",
+  "@sessionUndoBack": { "description": "Leaves the confirmation or the result for the list" },
+
+  "sessionUndoBusy": "Undo is available only while the session is idle. Wait for the turn to finish.",
+  "@sessionUndoBusy": { "description": "Why the undo button is disabled while a turn runs" },
+
+  "sessionUndoClosed": "This session is closed, so its files can no longer be undone from here.",
+  "@sessionUndoClosed": { "description": "What the undo sheet says for a closed session" },
+
+  "sessionUndoOffline": "Undoing needs the connection to the backend, and this device is not connected.",
+  "@sessionUndoOffline": { "description": "Why the undo button is disabled while offline" },
+
+  "sessionUndoNotSent": "Nothing was undone: this device is not connected.",
+  "@sessionUndoNotSent": { "description": "Shown when the undo could not leave because the socket is down" },
+
+  "sessionUndoDoneTitle": "The undo is done",
+  "@sessionUndoDoneTitle": { "description": "Heading of the result of an undo" },
+
+  "sessionUndoReverted": "Put back",
+  "@sessionUndoReverted": { "description": "Heading of the files the undo put back" },
+
+  "sessionUndoRestored": "Restored to how it was before the turn",
+  "@sessionUndoRestored": { "description": "A file the undo put back" },
+
+  "sessionUndoDeleted": "Deleted: the turn had created it",
+  "@sessionUndoDeleted": { "description": "A file the undo removed" },
+
+  "sessionUndoFailed": "Could not be put back",
+  "@sessionUndoFailed": { "description": "Heading of the files the undo could not restore" }
 }

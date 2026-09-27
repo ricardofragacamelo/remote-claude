@@ -37,3 +37,16 @@ is in it.
 
 See [S-83](../../docs/plans/01-live-session/scenarios.md) and
 [D-12](../../docs/plans/01-live-session/decisions.md#d-12--onde-o-smoke-live-roda).
+
+## What it runs
+
+| Spec | Scenario | What it proves against the real CLI |
+|---|---|---|
+| `sdk-contract.spec.ts` | [01 · S-83](../../docs/plans/01-live-session/scenarios.md) | a real turn answers, and every message of it maps |
+| `commands-and-init.spec.ts` | [04 · S-52](../../docs/plans/04-transcript-and-resume/scenarios.md) | `supportedCommands()` lists this installation's commands, `/init` among the suggested; `/init` asks for its `Write` through the normal flow and finishes, and the file is there |
+
+`/init` **writes into the project**, so it never runs against a fixed repository or against ours: the
+spec makes one for the run — `git init` in a folder of its own inside the allowlist, two files, one
+commit — and removes it at the end ([D-07](../../docs/plans/04-transcript-and-resume/decisions.md#d-07--onde-o-init-pode-escrever)).
+Of the questions the real `/init` asks, the spec allows only a write inside that folder, and refuses
+the rest.

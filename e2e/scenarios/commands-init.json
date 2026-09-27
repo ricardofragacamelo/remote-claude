@@ -1,0 +1,15 @@
+{
+  "id": "04·S-49",
+  "title": "/init picked from the menu asks for the Write through the normal flow, and writes the file",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "init-turn",
+    "command": "/init",
+    "toolName": "Write",
+    "refused": "Bash",
+    "file": "CLAUDE.md"
+  }
+}

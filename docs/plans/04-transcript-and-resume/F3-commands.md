@@ -23,7 +23,7 @@ por versão (57 comandos na instalação medida, 54 com `settingSources: []`).
 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 
-### B-14 — `supportedCommands()` exposto 🔲
+### B-14 — `supportedCommands()` exposto ✅
 
 O backend expõe o que a instalação oferece. Lista hardcoded é proibida — ela envelhece na
 primeira atualização do CLI e passa a oferecer comando que não existe.
@@ -31,7 +31,7 @@ primeira atualização do CLI e passa a oferecer comando que não existe.
 Comando ou endpoint novo é mudança de contrato: schema, TS, Dart e o
 [documento](../../architecture/shared/05-websocket-protocol.md) na mesma entrega.
 
-### B-15 — Menu nas duas pontas 🔲
+### B-15 — Menu nas duas pontas ✅
 
 A UI monta a partir da resposta, como lista buscável. Instalação sem um comando não o mostra;
 instalação sem nenhum continua utilizável — a caixa de prompt não depende do menu.
@@ -40,12 +40,12 @@ Filtra interno (`__`) e morto (`(removed)`, `Renamed to`) por **metadado**, nunc
 põe um grupo de sugeridos por cima ([D-05](decisions.md#d-05--o-menu-é-descoberta-não-fronteira)).
 O menu é descoberta, não fronteira: impedir comando é regra de deny.
 
-### B-16 — `/init` pelo fluxo normal 🔲
+### B-16 — `/init` pelo fluxo normal ✅
 
 Sem atalho e sem privilégio: a sessão explora o projeto e escreve o arquivo com `Write`, o que
 **pede autorização**. Isso é correto — é escrita no projeto do usuário.
 
-### B-17 — Cache por instalação e versão 🔲
+### B-17 — Cache por instalação e versão ✅
 
 A lista é cacheada e invalidada quando a versão do CLI muda. Duas sessões pedindo ao mesmo
 tempo fazem **uma** chamada.
@@ -54,7 +54,18 @@ tempo fazem **uma** chamada.
 
 ## Cenários cobertos
 
-S-29…S-36.
+S-29…S-36, S-60, e os descobertos na implementação S-81 e S-82.
+
+## Como ficou
+
+- **O menu é HTTP** (`GET /sessions/:sessionId/commands`), não comando do socket: é uma pergunta
+  com resposta, como o estado de um pedido de permissão — ver o
+  [contrato](../../architecture/shared/05-websocket-protocol.md#slash-commands) e o
+  [progresso](progress.md#decisões-tomadas-durante-a-execução).
+- **O filtro e o ranking vivem no backend** (`menuOf`), uma vez, em vez de duas vezes em duas
+  linguagens; web e app renderizam o que chega.
+- **O `/init` não tem código próprio**: é um prompt, passa pelo `canUseTool` e escreve com `Write` —
+  provado com a gravação real `init-turn`.
 
 ---
 

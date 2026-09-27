@@ -1,6 +1,7 @@
-import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+
+import { digestOf, isAbsent } from './file-facts';
 
 /** What a file held before a turn touched it, or why nothing was kept. */
 export type Snapshot =
@@ -157,10 +158,6 @@ export class FileSnapshotStore {
   }
 }
 
-function digestOf(content: Buffer): string {
-  return createHash('sha256').update(content).digest('hex');
-}
-
 /** Bytes under a directory, following nothing and counting regular files only. */
 async function bytesUnder(directory: string): Promise<number> {
   let total = 0;
@@ -171,11 +168,4 @@ async function bytesUnder(directory: string): Promise<number> {
   }
 
   return total;
-}
-
-/** Whether the failure means there is nothing there, rather than that we could not look. */
-function isAbsent(error: unknown): boolean {
-  const code = (error as { code?: unknown } | null)?.code;
-
-  return code === 'ENOENT' || code === 'ENOTDIR';
 }

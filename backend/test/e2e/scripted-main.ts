@@ -15,8 +15,14 @@ import { ScriptedTranscripts } from '../fakes/agent-sdk/scripted-transcripts';
  * **The same application**: the same module graph, the same gateway, the same four layers, the
  * same PostgreSQL. Two providers are replaced — the function that would spawn the Claude CLI, and
  * the three that read Claude's store of conversations. The first replays a run captured from the
- * real SDK (`pnpm fixtures:record`); the second is an empty store, so an end-to-end run never reads
- * the history of whoever happens to run it.
+ * real SDK (`pnpm fixtures:record`); the second is a store that starts empty, so an end-to-end run
+ * never reads the history of whoever happens to run it.
+ *
+ * The two are **one** Claude, as on a real machine: what the replay says is written to that store,
+ * the way `persistSession: true` writes it — so a conversation opened by the suite can be listed,
+ * read back after a `gap` and continued (plan 04, F5). And the replay writes the files a recording
+ * wrote, in the directory the session runs in, because the undo is about the disk and would
+ * otherwise have nothing real to put back.
  *
  * It exists because the end-to-end suite has to be deterministic and Claude is not, and because
  * every run of it would otherwise cost money. The suite that talks to the real thing is
@@ -29,13 +35,14 @@ async function bootstrap(): Promise<void> {
   loadDotEnv();
 
   const fixture = process.env['RC_E2E_FIXTURE'] ?? 'tool-turn';
-  const scripted = scriptedSdk({ fixture });
+  const transcripts = new ScriptedTranscripts();
+  const scripted = scriptedSdk({ fixture, transcripts, performWritesIn: 'cwd' });
 
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(QUERY_FACTORY)
     .useValue(scripted.createQuery)
     .overrideProvider(TRANSCRIPT_SDK)
-    .useValue(new ScriptedTranscripts())
+    .useValue(transcripts)
     .compile();
 
   const app = moduleRef.createNestApplication({ bufferLogs: true });

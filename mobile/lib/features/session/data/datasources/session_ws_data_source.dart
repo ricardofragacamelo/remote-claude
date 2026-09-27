@@ -8,6 +8,7 @@ import 'dart:async';
 
 import 'package:remote_claude/core/network/contracts/protocol.g.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
+import 'package:remote_claude/features/session/data/mappers/command_answer_mapper.dart';
 import 'package:remote_claude/features/session/data/mappers/session_event_mapper.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
@@ -56,11 +57,14 @@ class SessionWsDataSource implements SessionSubscriber {
   /// Sends one of the session's commands, with [payload] exactly as the contract carries it.
   bool send(String type, Map<String, Object?> payload) => _client.command(type, payload);
 
+  /// Sends one of the session's commands and answers the id it left with, or `null`.
+  String? issue(String type, Map<String, Object?> payload) => _client.send(type, payload);
+
   @override
   void onEvent(Envelope frame) => _onFrame(frame);
 
   @override
-  void onGap() => _emit(const StreamGap());
+  void onGap(String? claudeSessionId) => _emit(StreamGap(claudeSessionId: claudeSessionId));
 
   /// Releases the subscription and closes the stream.
   Future<void> dispose() async {
@@ -73,9 +77,15 @@ class SessionWsDataSource implements SessionSubscriber {
     final SessionEvent? event = sessionEventFrom(frame);
 
     // A frame with no `seq` is not part of a session's history — a question is asked, not
-    // recorded — and belongs to the permission queue rather than here.
-    if (event != null) {
-      _emit(EventReceived(event));
+    // recorded — and belongs to the permission queue rather than here. Three of them are this
+    // feature's, though: joining a session that was already live, a refusal, and a failure the
+    // session reports without naming a command.
+    final SessionUpdate? update = event == null
+        ? sessionJoinedFrom(frame) ?? commandRefusedFrom(frame) ?? sessionFailedFrom(frame)
+        : EventReceived(event);
+
+    if (update != null) {
+      _emit(update);
     }
   }
 

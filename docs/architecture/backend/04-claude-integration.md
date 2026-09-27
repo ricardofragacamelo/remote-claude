@@ -84,7 +84,7 @@ O `for await` **é** a fonte do stream. Ele roda pela vida inteira da sessão.
   model: session.model,
   maxBudgetUsd: config.session.maxBudgetUsd,
   maxTurns: config.session.maxTurns,
-  resume: session.resumeFrom,
+  ...conversationOptions(session.conversation),  // sessionId · resume · forkSession — ver Retomada
   persistSession: true,                   // mantém o JSONL, compartilhado com o VSCode
   enableFileCheckpointing: true,          // o /rewind do usuário no editor, não o nosso desfazer
   abortController,
@@ -433,9 +433,24 @@ Cada item traz `name`, `description` e `argumentHint`. Chamar não custa token: 
 por nome: lista de nomes é a lista hardcoded de volta, e envelhece na próxima versão do CLI.
 Ver [descoberta §9.6](../../discovery/01-descoberta-claude-agent-sdk.md#96--supportedcommands-traz-comando-morto-e-interno).
 
-**O cache da lista é chaveado pela versão do binário que o SDK spawna** — não pela do `PATH`.
-Uma máquina com o CLI do `PATH` e o da extensão do VSCode em versões diferentes é o caso comum,
-não o exótico; cachear pela versão errada serve o menu de outra instalação.
+**O cache da lista é chaveado pela versão do binário que o SDK spawna** — não pela do `PATH` —
+**e pelo workspace**, porque o `.claude/` de um projeto traz comandos e skills próprios. Uma
+máquina com o CLI do `PATH` e o da extensão do VSCode em versões diferentes é o caso comum, não o
+exótico; cachear pela versão errada serve o menu de outra instalação.
+
+**De onde vem a versão — medido.** O CLI só diz a própria versão no `system:init`, e esse
+`system:init` **não chega antes do primeiro prompt**: uma sessão deixada ociosa por 4 s não emitiu
+mensagem nenhuma, enquanto `supportedCommands()` respondeu em ~0,5 s. Como abrir o menu numa sessão
+recém-aberta é o caso comum, a versão sai do `manifest.json` do próprio SDK — o arquivo que fixa o
+binário que ele spawna, com checksum por plataforma (2.1.277, igual ao que o `system:init` reportou).
+Quando o `system:init` chega, a palavra do CLI vale mais, e divergência entre as duas é logada em
+`warn`.
+
+**Comando que não existe é recusado antes do Claude.** Um prompt `/nome` cujo `nome` a instalação
+não tem — nem como nome, nem como alias, e contando os comandos que o menu esconde — é `INVALID_INPUT`
+(`session.error.unknownCommand`). Enviado, o CLI responderia com prosa própria, dentro da conversa.
+Lista indisponível não recusa nada: o menu é descoberta, não fronteira. Caminho absoluto não é
+comando (`/tmp/x está vazio` para no segundo `/`).
 
 **Confirmado por spike:** enviar `"/init"` como prompt **dispara o comando**. A sessão explora
 o projeto com `Bash`/`Read` e escreve o arquivo com `Write`, terminando em `result: success`.
@@ -461,6 +476,24 @@ dizem qual `sessionId` está aberto. Logo, a regra não pode depender de detecç
 |---|---|---|
 | **nossa** (temos linha dela no banco) | `resume` puro | um `sessionId`, um transcript, histórico de undo preservado |
 | **externa** (VSCode, terminal) | `resume` + `forkSession: true` | nunca escrevemos no arquivo que outro consumidor pode estar usando |
+
+Em opções do SDK, os três casos (`conversationOptions` na `sdk-options.factory`):
+
+| Conversa | Opções |
+|---|---|
+| nova | `sessionId: <uuid nosso>` |
+| nossa, continuada | `resume: <id>` — sem `sessionId`, que o SDK recusa ao lado de `resume` sem fork |
+| começada fora | `resume: <origem>`, `forkSession: true`, `sessionId: <uuid nosso>` — o id do fork é cunhado e gravado como nosso **antes** do `query()`, pela mesma regra da sessão nova |
+
+E três regras de execução, porque um segundo escritor no mesmo arquivo é o defeito que isto tudo
+existe para evitar:
+
+- **o que está vivo é juntado.** Retomar uma conversa que já tem sessão viva do mesmo usuário
+  responde `session.attached` dessa sessão, sem segundo `query()` (S-24). "Viva" vale pelo id da
+  conversa e pelo que ela continua — retomar a do editor duas vezes junta-se ao fork que já roda;
+- **duas retomadas simultâneas são uma** (S-25): a segunda espera a primeira e junta-se a ela;
+- **a retomada é auditada antes do subprocesso** (S-27), e trilha indisponível não retoma — a
+  mesma regra que vale para aprovar.
 
 Duas consequências que a UI precisa dizer, não esconder:
 
@@ -502,15 +535,22 @@ A chave é `(session_id, prompt_id, path)`. O `prompt_id` vem do `BaseHookInput`
 ("UUID correlating a user prompt with all subsequent events until the next prompt"), então o
 turno de um snapshot é sabido sem ler o transcript.
 
-Desfazer para um `prompt_id`, então, é: para cada caminho que aquele turno tocou, comparar o
-estado atual com o que a sessão deixou —
+Desfazer para um `prompt_id`, então, é voltar ao **momento anterior** àquele turno: para cada
+caminho que aquele turno **ou um posterior** tocou — cada um no snapshot do primeiro desses turnos
+que o tocou —, comparar o estado atual com o que a sessão deixou por último. Um arquivo que um turno
+posterior escreveu também não estava assim naquele momento, e "voltar para antes deste turno" é um
+ponto no tempo. O alcance é a sessão viva **e as sessões anteriores da mesma conversa** — uma nossa
+continuada in-place —, pela coluna `claude_session_id` do journal; um fork não alcança nada da
+origem. Antes de qualquer outra pergunta, o caminho que **já está** como estava no ponto fica como
+está: é o que torna o segundo desfazer para o mesmo ponto idempotente —
 
 | Situação | O que fazemos |
 |---|---|
 | igual ao que a sessão deixou | restaura o snapshot |
 | **diferente** — alguém editou depois | **preserva**, e o resultado diz qual arquivo e por quê |
 | virou symlink, hard link ou arquivo não regular, ou o pai deixou de resolver | recusa: sem essa checagem, restaurar é caminho para escrever fora do workspace |
-| não foi snapshotado (acima do limite de tamanho) | preserva, e a UI não promete o que não pode cumprir |
+| não foi snapshotado (acima do limite de tamanho, ou ilegível) | preserva (`notRestorable`), e a UI não promete o que não pode cumprir |
+| nada registra como a sessão o deixou | preserva (`noBaseline`): o desfazer não adivinha |
 
 Mais três regras que o revert próprio obriga:
 
@@ -519,7 +559,12 @@ Mais três regras que o revert próprio obriga:
 - **resultado parcial é first-class:** o evento carrega revertidos **e** preservados, com motivo
   — não um booleano;
 - **não exige sessão viva.** `rewindFiles` era método de `Query`; nosso store não é. "Sessão
-  fechada não desfaz" permanece como **política**, não como limitação.
+  fechada não desfaz" permanece como **política**, não como limitação;
+- **o próprio desfazer é escrita da sessão**: depois de restaurar (ou apagar) um caminho, a linha de
+  base passa a ser o que o desfazer deixou — sem isso, um segundo desfazer para um ponto anterior
+  leria o arquivo restaurado como edição de outra pessoa;
+- **fora de `idle` é recusado** com `SESSION_LOCKED`, e dois desfazeres da mesma sessão também: o
+  segundo planejaria contra um disco que o primeiro está reescrevendo.
 
 `enableFileCheckpointing: true` continua ligado, porque é o `/rewind` do próprio usuário no
 editor. Ele não é mais o nosso mecanismo.

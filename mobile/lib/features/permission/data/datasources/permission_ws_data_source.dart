@@ -53,7 +53,7 @@ class SocketPermissionFeed implements PermissionFeed, SessionSubscriber {
   }
 
   @override
-  void onGap() => _emit(const PermissionFeedReset());
+  void onGap(String? claudeSessionId) => _emit(const PermissionFeedReset());
 
   @override
   bool answer({

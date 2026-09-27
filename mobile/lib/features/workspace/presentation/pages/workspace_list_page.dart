@@ -114,6 +114,13 @@ class _Workspaces extends ConsumerWidget {
             workspace.lastUsedAt?.toIso8601String() ?? l10n.workspaceNeverOpened,
             style: identifierStyle(context),
           ),
+          // The history is read over HTTP, not over the socket, so it stays reachable while the
+          // row itself is disabled — reading what was said needs no live connection (04 · D-03).
+          trailing: IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: l10n.workspaceHistoryOpen(workspace.label),
+            onPressed: () => unawaited(context.push(historyRouteFor(workspace.path))),
+          ),
           // Disabled with the reason said out loud, never disabled in silence: a dead control
           // with no explanation is a rule that looks like a bug.
           enabled: connected,

@@ -1,4 +1,5 @@
 /** Public surface of the `session` feature. */
+export { HistoryScreen } from './components/HistoryScreen';
 export { SessionPingPanel } from './components/SessionPingPanel';
 export { SessionScreen } from './components/SessionScreen';
 export { SessionStarter } from './components/SessionStarter';
@@ -14,3 +15,5 @@ export type {
 export { useSessionStream } from './hooks/useSessionStream';
 export { useSessionStreamStore } from './store/session-stream.store';
 export type { Pong } from './types/pong';
+export { toConversationSummary } from './services/history.service';
+export type { ConversationOrigin, ConversationSummary } from './types/history';

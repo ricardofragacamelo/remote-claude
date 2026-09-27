@@ -6,12 +6,15 @@ import {
   SessionNotFoundError,
 } from '@domain/session';
 import type { SessionId } from '@domain/session';
-import type { ClaudeSessionHandle } from './ports/claude-session.port';
+import type { ClaudeSessionId } from '@domain/transcript';
+import type { SessionConversations } from './attach-session.use-case';
+import type { ClaudeSessionHandle, SessionConversation } from './ports/claude-session.port';
 
-/** A live session and the subprocess behind it. */
+/** A live session, the subprocess behind it, and the conversation of Claude it is. */
 export interface LiveSession {
   readonly session: Session;
   readonly handle: ClaudeSessionHandle;
+  readonly conversation: SessionConversation;
 }
 
 /**
@@ -28,7 +31,7 @@ export interface LiveSession {
  * it happens **before** anything is spawned — that is what leaves no orphan behind
  * ([D-05](../../../../docs/plans/01-live-session/decisions.md)).
  */
-export class SessionRegistry {
+export class SessionRegistry implements SessionConversations {
   private readonly live = new Map<string, LiveSession>();
 
   /** Reservations taken before a subprocess exists, so two starts cannot both pass the limit. */
@@ -71,6 +74,35 @@ export class SessionRegistry {
   /** The session, or `null` when no live session has that id. */
   find(id: SessionId): LiveSession | null {
     return this.live.get(id.value) ?? null;
+  }
+
+  /** The conversation of a live session, or `null` when no live session has that id. */
+  conversationOf(id: SessionId): SessionConversation | null {
+    return this.find(id)?.conversation ?? null;
+  }
+
+  /**
+   * The live session of this user that **is** a conversation — or continues it — or `null`.
+   *
+   * It is what makes resuming what is already live an attach rather than a second subprocess on
+   * the same conversation (S-24). Both ids are asked: the conversation itself, for one of ours
+   * continued in place, and the one it continues, for a fork — resuming the editor's conversation
+   * twice is the same request, and a second fork of it would be a second subprocess answering it.
+   *
+   * Only the caller's own: somebody else's live continuation of a conversation begun elsewhere is
+   * theirs, and the caller gets a fork of their own.
+   */
+  findConversation(id: ClaudeSessionId, userId: UserId): LiveSession | null {
+    for (const entry of this.live.values()) {
+      const { claudeSessionId, resumedFrom } = entry.conversation;
+      const continues = claudeSessionId.equals(id) || (resumedFrom?.equals(id) ?? false);
+
+      if (continues && entry.session.isOwnedBy(userId) && !entry.session.isClosed) {
+        return entry;
+      }
+    }
+
+    return null;
   }
 
   /**

@@ -195,9 +195,15 @@ export async function pushPastSeq(
   }
 }
 
-/** The highest sequence this socket has seen. */
+/**
+ * The highest sequence this socket has seen.
+ *
+ * The highest, and not the last frame's: an ack or an error carries no `seq`, and a batch that
+ * happened to end on one read as sequence zero — the loop above then sent batch after batch until
+ * the worker ran out of memory.
+ */
 export function lastSeqOf(socket: E2eSocket): number {
-  return socket.frames.at(-1)?.seq ?? 0;
+  return socket.frames.reduce((highest, frame) => Math.max(highest, frame.seq ?? 0), 0);
 }
 
 /**
@@ -229,6 +235,18 @@ export function sequencesOf(socket: E2eSocket, sessionId: string): number[] {
   return socket.frames
     .filter((frame) => frame.kind === 'event' && frame.sessionId === sessionId)
     .map((frame) => frame.seq ?? 0);
+}
+
+/**
+ * What a socket saw of a session: each event as `seq:type`, in arrival order.
+ *
+ * Two ends that watched the same stream have the same timeline — replayed or live, a client cannot
+ * tell the difference, and neither can anybody reading it.
+ */
+export function timelineOf(socket: E2eSocket, sessionId: string): string[] {
+  return socket.frames
+    .filter((frame) => frame.kind === 'event' && frame.sessionId === sessionId)
+    .map((frame) => `${String(frame.seq)}:${frame.type}`);
 }
 
 /** The CLI's configuration of this run, isolated from the developer's own. */

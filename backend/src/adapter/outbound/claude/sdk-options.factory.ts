@@ -17,10 +17,14 @@ export interface SdkOptionsInput {
   readonly workspace: WorkspacePath;
   readonly model: string | null;
   readonly permissionMode: PermissionMode;
-  readonly resumeSessionId: string | null;
 
-  /** The id the new conversation takes in Claude's store, already recorded as ours. */
-  readonly claudeSessionId: string | null;
+  /**
+   * The conversation: the id it has in Claude's store, and the one it continues, if any.
+   *
+   * Equal ids continue a conversation of ours in its file; different ids fork one begun elsewhere
+   * into a new one of ours ([D-04](../../../../../docs/plans/04-transcript-and-resume/decisions.md)).
+   */
+  readonly conversation: { readonly claudeSessionId: string; readonly resumedFrom: string | null };
   readonly limits: SessionLimits;
   readonly abortController: AbortController;
 
@@ -81,13 +85,32 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
     stderr: input.onStderr,
 
     ...(input.model === null ? {} : { model: input.model }),
-    ...(input.resumeSessionId === null ? {} : { resume: input.resumeSessionId }),
-
-    // Ours, and recorded as ours before this call: it is what later tells this conversation from
-    // one the editor began. The SDK refuses it beside `resume` unless forking, and a resume keeps
-    // the id it has — so it is only ever set on a conversation that starts here.
-    ...(input.claudeSessionId === null || input.resumeSessionId !== null
-      ? {}
-      : { sessionId: input.claudeSessionId }),
+    ...conversationOptions(input.conversation),
   };
+}
+
+/**
+ * How the SDK is told which conversation this is — the three cases of
+ * docs/architecture/backend/04-claude-integration.md#retomada--fork-fora-in-place-dentro.
+ *
+ * - **new** — `sessionId`, ours and recorded as ours before this call: it is what later tells this
+ *   conversation from one the editor began;
+ * - **ours, continued** — `resume` alone. The SDK refuses `sessionId` beside `resume` unless
+ *   forking, and a conversation continued in place keeps the id it has;
+ * - **begun elsewhere** — `resume` with `forkSession: true`, under a `sessionId` of ours. The file
+ *   the editor may be using is never written: two writers in one JSONL fork the chain of
+ *   `parentUuid`, and one side vanishes from every later read.
+ */
+function conversationOptions(
+  conversation: SdkOptionsInput['conversation'],
+): Pick<Options, 'forkSession' | 'resume' | 'sessionId'> {
+  const { claudeSessionId, resumedFrom } = conversation;
+
+  if (resumedFrom === null) {
+    return { sessionId: claudeSessionId };
+  }
+
+  return resumedFrom === claudeSessionId
+    ? { resume: resumedFrom }
+    : { resume: resumedFrom, forkSession: true, sessionId: claudeSessionId };
 }

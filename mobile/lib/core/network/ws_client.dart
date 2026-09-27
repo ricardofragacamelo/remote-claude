@@ -55,7 +55,11 @@ abstract interface class SessionSubscriber {
   void onEvent(Envelope frame);
 
   /// The buffer no longer holds what this subscriber missed: drop local state and reload.
-  void onGap();
+  ///
+  /// [claudeSessionId] is the conversation to reload the history from, as the ack named it — the
+  /// only place left that says so once the buffer has lost the `session.started` that did. `null`
+  /// for a stream that is not a conversation, such as the diagnostic round trip.
+  void onGap(String? claudeSessionId);
 
   /// The highest `seq` already applied, so a reconnect can resume from it.
   int get lastSeq;
@@ -254,9 +258,11 @@ class WsClient {
   /// Watches frames that belong to no attached session. Answers the unsubscribe.
   ///
   /// A command may **open** the session it is about — the first ping of the walking skeleton
-  /// does — so the event announcing it arrives before anything could have attached to it. An
-  /// `error` frame belongs to no session either: it answers a command, by `correlationId`, and
-  /// whoever sent that command is the one listening for it.
+  /// does — so the event announcing it arrives before anything could have attached to it. The
+  /// same holds for resuming a conversation that is already live: `session.start` is answered
+  /// with a `session.attached` for a session nobody here watches yet, and that ack reaches the
+  /// observers too. An `error` frame belongs to no session either: it answers a command, by
+  /// `correlationId`, and whoever sent that command is the one listening for it.
   void Function() observe(void Function(Envelope frame) listener) {
     _observers.add(listener);
     return () => _observers.remove(listener);
@@ -429,6 +435,11 @@ class WsClient {
   /// The furthest behind, not the furthest ahead: resuming from the latter would leave the other
   /// with a hole it has no way to notice. Re-delivering what a subscriber already applied costs
   /// nothing, because discarding `seq <= lastSeq` is the first rule of every stream state.
+  ///
+  /// **Zero is sent, never left out.** A screen that has applied nothing has zero, and saying so is
+  /// what brings back what the buffer holds — or the `gap` that sends it to the transcript when the
+  /// buffer has lost the start. An attach with no `resumeFromSeq` asks for nothing past, and a
+  /// session opened on the phone after it began in the browser would show only what came after.
   void _requestAttach(String sessionId) {
     final Iterable<int> applied = (_subscribers[sessionId] ?? const <SessionSubscriber>{}).map(
       (SessionSubscriber subscriber) => subscriber.lastSeq,
@@ -437,7 +448,7 @@ class WsClient {
 
     command('session.attach', <String, Object?>{
       'sessionId': sessionId,
-      if (resumeFromSeq > 0) 'resumeFromSeq': resumeFromSeq,
+      'resumeFromSeq': resumeFromSeq,
     });
   }
 
@@ -445,7 +456,17 @@ class WsClient {
     final Object? sessionId = frame.payload?['sessionId'];
     final Set<SessionSubscriber>? watching = sessionId is String ? _subscribers[sessionId] : null;
 
-    if (watching != null && frame.payload?['gap'] == true) {
+    // An ack for a session nobody here watches answers a command that joined one — a resume of a
+    // conversation already live. Whoever sent that command is observing, and it is the one that
+    // has to learn which session it landed on.
+    if (watching == null) {
+      _notifyObservers(frame);
+      return;
+    }
+
+    if (frame.payload?['gap'] == true) {
+      final Object? conversation = frame.payload?['claudeSessionId'];
+
       _logger.warn(
         'replay gap — reloading the transcript',
         op: LogOp.wsConnection,
@@ -453,7 +474,7 @@ class WsClient {
       );
 
       for (final SessionSubscriber subscriber in watching.toList(growable: false)) {
-        subscriber.onGap();
+        subscriber.onGap(conversation is String ? conversation : null);
       }
     }
   }
@@ -469,6 +490,10 @@ class WsClient {
       return;
     }
 
+    _notifyObservers(frame);
+  }
+
+  void _notifyObservers(Envelope frame) {
     for (final void Function(Envelope) observer in _observers.toList(growable: false)) {
       observer(frame);
     }

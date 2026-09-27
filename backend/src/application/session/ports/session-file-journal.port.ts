@@ -1,4 +1,17 @@
 import type { SessionId } from '@domain/session';
+import type { ClaudeSessionId } from '@domain/transcript';
+
+/**
+ * Which session wrote, and which conversation it was.
+ *
+ * Both, because the undo reaches by conversation: one of ours continued in place is a new live
+ * session on the same conversation, and the points the sessions before it recorded are its points
+ * too (plan 04, F4).
+ */
+export interface JournalScope {
+  readonly sessionId: SessionId;
+  readonly claudeSessionId: ClaudeSessionId;
+}
 
 /**
  * What the session did to the disk, and what the disk looked like before.
@@ -28,10 +41,10 @@ export interface SessionFileJournal {
    * replace the state at the start of the turn with an intermediate one, and the start of the turn
    * is what the undo point means.
    */
-  captureBefore(sessionId: SessionId, promptId: string, path: string): Promise<void>;
+  captureBefore(scope: JournalScope, promptId: string, path: string): Promise<void>;
 
   /** Records how the session left a path, after a write that succeeded. */
-  recordResult(sessionId: SessionId, path: string): Promise<void>;
+  recordResult(scope: JournalScope, path: string): Promise<void>;
 }
 
 export const SESSION_FILE_JOURNAL = Symbol('SessionFileJournal');

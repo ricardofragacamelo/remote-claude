@@ -220,7 +220,11 @@ mapper, que é onde uma quebra de contrato vira aviso em vez de bug silencioso. 
 `backend/test/fakes/agent-sdk/fixtures/`, que é o que o fake replica nos testes. Existe porque um
 fake escrito de memória prova que o fake funciona — ver
 [D-04](docs/plans/01-live-session/decisions.md#d-04--o-fake-e-o-que-ele-pode-mentir). Regravar é
-`pnpm fixtures:record` ou `pnpm fixtures:record <cenário>`, e o resultado entra no commit.
+`pnpm fixtures:record` ou `pnpm fixtures:record <cenário>`, e o resultado entra no commit. O
+cenário `commands` não manda prompt nenhum — abre a `query()`, pergunta `supportedCommands()` e
+fecha —, então não gasta cota; os demais (`text-turn`, `tool-turn`, `init-turn`) gastam.
+`pnpm fixtures:record --normalise` reaplica a normalização (caminho descartável, slug do projeto e
+home da máquina) às fixtures commitadas, sem chamar o SDK.
 
 Na cobertura não há média que compense: um arquivo em 70 % não é salvo por outro em 99 %.
 

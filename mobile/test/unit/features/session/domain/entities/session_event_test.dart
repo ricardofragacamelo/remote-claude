@@ -6,6 +6,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/features/session/domain/entities/checkpoint.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
@@ -55,6 +56,10 @@ void main() {
     );
     expect(PongArrived(1, pong()), PongArrived(1, pong()));
     expect(UnreadEvent(1), UnreadEvent(1));
+    expect(
+      FilesRewound(1, RewindOutcome(promptId: 'p')),
+      FilesRewound(1, RewindOutcome(promptId: 'p')),
+    );
   });
 
   test('a different event, or the same one at a different place in the order, is not equal', () {
@@ -94,6 +99,10 @@ void main() {
     );
     expect(PongArrived(1, pong()), isNot(PongArrived(1, pong(nonce: 'n-2'))));
     expect(UnreadEvent(1), isNot(UnreadEvent(2)));
+    expect(
+      FilesRewound(1, RewindOutcome(promptId: 'p')),
+      isNot(FilesRewound(1, RewindOutcome(promptId: 'q'))),
+    );
   });
 
   test('every event says where it sits in the order', () {
@@ -108,6 +117,7 @@ void main() {
       TurnFinished(7, TurnSummary(turnId: 't', costUsd: '0.1', durationMs: 2)),
       SessionFinished(7, SessionEnding(reason: SessionCloseReason.completed, at: 'now')),
       PongArrived(7, pong()),
+      FilesRewound(7, RewindOutcome(promptId: 'p')),
       UnreadEvent(7),
     ];
 

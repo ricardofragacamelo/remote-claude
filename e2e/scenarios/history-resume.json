@@ -1,0 +1,13 @@
+{
+  "id": "04·S-46",
+  "title": "a session that ended is continued from its history screen, and the conversation goes on in the same file",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "text-turn",
+    "answer": "pong",
+    "continued": "Say it once more. [fixture:text-turn]"
+  }
+}

@@ -13,9 +13,11 @@ import type {
   SessionPermissionGate,
   ToolInvocationRecorder,
 } from '@application/session';
-import { CLOCK } from '@application/shared';
+import { CLOCK, SCHEDULER } from '@application/shared';
+import type { Scheduler } from '@application/shared';
 import type { Clock } from '@domain/shared';
 import { LOGGER, type Logger } from '@shared/logging/logger';
+import { BUNDLED_CLI_VERSION } from './cli-version';
 import { QUERY_FACTORY } from './query.factory';
 import type { QueryFactory } from './query.factory';
 import { SESSION_LIMITS } from './session-limits';
@@ -39,6 +41,10 @@ export class AgentSdkClaudeSessionAdapter implements ClaudeSessionPort {
     @Inject(SESSION_PERMISSION_GATE) private readonly permissions: SessionPermissionGate,
     @Inject(SESSION_LIMITS) private readonly limits: SessionLimits,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(SCHEDULER) private readonly scheduler: Scheduler,
+    // Read once, when the container is built: the binary the SDK spawns does not change while the
+    // process runs.
+    @Inject(BUNDLED_CLI_VERSION) private readonly cliVersion: string | null,
     @Inject(LOGGER) private readonly logger: Logger,
   ) {}
 
@@ -50,6 +56,8 @@ export class AgentSdkClaudeSessionAdapter implements ClaudeSessionPort {
       permissions: this.permissions,
       limits: this.limits,
       clock: this.clock,
+      scheduler: this.scheduler,
+      bundledCliVersion: this.cliVersion,
       logger: this.logger,
     });
 

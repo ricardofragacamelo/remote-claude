@@ -206,6 +206,65 @@ class Conversation extends Equatable {
     return _applied(event).copyWith(lastSeq: event.seq);
   }
 
+  /// This conversation laid **over** [history] — what the transcript says was said before.
+  ///
+  /// The history is folded into a conversation of its own, and what is live goes on top of it:
+  ///
+  /// - a live message or tool with the id of a historical one **replaces** it, in its place. That
+  ///   is what lets the history be reloaded while the stream keeps arriving without anything
+  ///   appearing twice (S-15): the replay re-delivers what the transcript also holds, and both
+  ///   carry the same `messageId` and `toolUseId`;
+  /// - a live message that is still streaming never replaces a historical one that is whole — the
+  ///   same rule that keeps a late fragment from reopening a completed message;
+  /// - everything live the history does not know comes after it, in the order it arrived;
+  /// - [status], [lastSeq], [lastTurn] and [ending] stay the live ones. History has no `seq`, and
+  ///   letting it move the resume point would mix two numberings: a resumed session starts its
+  ///   `seq` again from one, and the history is not part of it (S-21).
+  Conversation withHistory(List<SessionEvent> history) {
+    if (history.isEmpty) {
+      return this;
+    }
+
+    final Conversation past = history.fold(
+      const Conversation(),
+      (Conversation folded, SessionEvent event) => folded._applied(event),
+    );
+
+    return copyWith(
+      messages: _overlay(
+        past.messages,
+        messages,
+        (StreamMessage message) => message.messageId,
+        (StreamMessage before, StreamMessage now) =>
+            before.isComplete && !now.isComplete ? before : now,
+      ),
+      tools: _overlay(
+        past.tools,
+        tools,
+        (ToolExecution tool) => tool.toolUseId,
+        (ToolExecution before, ToolExecution now) => now,
+      ),
+    );
+  }
+
+  /// [past] with [live] laid over it, by the id [idOf] reads.
+  static List<T> _overlay<T>(
+    List<T> past,
+    List<T> live,
+    String Function(T item) idOf,
+    T Function(T before, T now) pick,
+  ) {
+    final Map<String, T> liveById = <String, T>{for (final T item in live) idOf(item): item};
+    final Set<String> known = past.map(idOf).toSet();
+
+    return <T>[
+      for (final T item in past)
+        if (liveById[idOf(item)] case final T now) pick(item, now) else item,
+      for (final T item in live)
+        if (!known.contains(idOf(item))) item,
+    ];
+  }
+
   Conversation _applied(SessionEvent event) => switch (event) {
     // Derived here rather than waiting for a status event: a screen that waited would say
     // "starting" until the first fragment of the first answer arrived.
@@ -227,8 +286,10 @@ class Conversation extends Equatable {
       status: SessionStatus.closed,
       ending: ending,
     ),
-    // Neither belongs to the conversation: the round trip is the walking skeleton's own screen,
-    // and an unreadable event is only here to move the resume point.
+    // None belongs to the conversation: the round trip is the walking skeleton's own screen, an
+    // undo is about files on disk rather than anything said, and an unreadable event is only here
+    // to move the resume point.
+    FilesRewound() => this,
     PongArrived() => this,
     UnreadEvent() => this,
   };

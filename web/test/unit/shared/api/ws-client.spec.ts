@@ -187,12 +187,12 @@ describe('WsClient', () => {
       });
     });
 
-    it('asks for no resume when it has nothing yet', () => {
+    it('resumes from zero when it has nothing yet, so the buffer is replayed — S-88', () => {
       const socket = connectAndReady();
 
       client.attach('s1', { onEvent: () => undefined, onGap: () => undefined, lastSeq: () => 0 });
 
-      expect(socket.frames().at(-1)?.['payload']).toEqual({ sessionId: 's1' });
+      expect(socket.frames().at(-1)?.['payload']).toEqual({ sessionId: 's1', resumeFromSeq: 0 });
     });
 
     it('re-attaches everything it was watching after a reconnect', () => {
@@ -290,6 +290,62 @@ describe('WsClient', () => {
       );
 
       expect(gaps).toHaveBeenCalledTimes(1);
+      expect(gaps).toHaveBeenCalledWith(null);
+    });
+
+    it('hands the subscriber the conversation the ack says to reload from — plan 04, B-07', () => {
+      const gaps = vi.fn();
+      const socket = connectAndReady();
+      client.attach('s1', { onEvent: () => undefined, onGap: gaps, lastSeq: () => 1 });
+
+      socket.receive(
+        serverFrame({
+          kind: 'ack',
+          type: 'session.attached',
+          payload: {
+            sessionId: 's1',
+            replayed: 0,
+            oldestAvailableSeq: 900,
+            gap: true,
+            claudeSessionId: '6b41b192-a41b-46c2-b8d7-5098d8c825be',
+          },
+        }),
+      );
+
+      expect(gaps).toHaveBeenCalledWith('6b41b192-a41b-46c2-b8d7-5098d8c825be');
+    });
+
+    it('offers an attach nobody here asked for to the observers — a resume that joined, S-24', () => {
+      const seen: Envelope[] = [];
+      const socket = connectAndReady();
+      client.observe((frame) => seen.push(frame));
+
+      socket.receive(
+        serverFrame({
+          kind: 'ack',
+          type: 'session.attached',
+          payload: { sessionId: 's9', replayed: 0, oldestAvailableSeq: 1, gap: false },
+        }),
+      );
+
+      expect(seen.map((frame) => frame.type)).toEqual(['session.attached']);
+    });
+
+    it('keeps an attach of a watched session away from the observers', () => {
+      const seen: Envelope[] = [];
+      const socket = connectAndReady();
+      client.attach('s1', { onEvent: () => undefined, onGap: () => undefined, lastSeq: () => 0 });
+      client.observe((frame) => seen.push(frame));
+
+      socket.receive(
+        serverFrame({
+          kind: 'ack',
+          type: 'session.attached',
+          payload: { sessionId: 's1', replayed: 0, oldestAvailableSeq: 1, gap: false },
+        }),
+      );
+
+      expect(seen).toEqual([]);
     });
 
     it('says nothing when the replay had no gap', () => {
@@ -336,6 +392,32 @@ describe('WsClient', () => {
   });
 
   describe('sending', () => {
+    it('answers the id of a command it sent, and nothing for one that did not leave', () => {
+      expect(client.issue('diag.ping', { nonce: 'n' })).toBeNull();
+
+      const socket = connectAndReady();
+      const id = client.issue('diag.ping', { nonce: 'n' });
+
+      expect(id).toBe(socket.frames().at(-1)?.['id']);
+    });
+
+    it('offers a refusal to the observers, naming the command it refuses', () => {
+      const seen: Envelope[] = [];
+      const socket = connectAndReady();
+      client.observe((frame) => seen.push(frame));
+
+      socket.receive(
+        serverFrame({
+          kind: 'error',
+          type: 'error',
+          correlationId: 'cmd-1',
+          payload: { code: 'SESSION_NOT_FOUND', messageKey: 'session.error.notFound' },
+        }),
+      );
+
+      expect(seen).toMatchObject([{ kind: 'error', correlationId: 'cmd-1' }]);
+    });
+
     it('sends a command once the connection is ready', () => {
       const socket = connectAndReady();
 

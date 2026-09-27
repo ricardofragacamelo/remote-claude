@@ -1,9 +1,7 @@
-import fs from 'node:fs';
-
 import { expect, test } from '@playwright/test';
 import type { Browser } from '@playwright/test';
 
-import { environment } from '../fixtures/environment';
+import { unknownVariants } from '../fixtures/backend-log';
 import { connected, openWorkspace, startSession } from '../fixtures/live-session';
 import type { LiveSessionContext } from '../fixtures/live-session';
 import { scenario } from '../scenarios';
@@ -83,17 +81,4 @@ function answerOf(socket: Awaited<ReturnType<typeof connected>>): string {
     .flatMap((frame) => (frame.payload as { content?: { text?: string }[] }).content ?? [])
     .map((block) => block.text ?? '')
     .join(' ');
-}
-
-/** Every SDK message variant this build failed to recognise during the run. */
-function unknownVariants(): string[] {
-  const log = fs.readFileSync(environment.backendLog, 'utf8');
-
-  return log
-    .split('\n')
-    .filter((line) => line.includes('unmapped sdk message variant'))
-    .map((line) => {
-      const parsed = JSON.parse(line) as { variant?: string };
-      return parsed.variant ?? 'unknown';
-    });
 }

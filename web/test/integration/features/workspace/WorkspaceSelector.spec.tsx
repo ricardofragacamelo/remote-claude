@@ -179,4 +179,31 @@ describe('the workspace selector', () => {
 
     expect(await axe(container)).toHaveNoViolations();
   });
+
+  describe('the way to the history — plan 04, D-03', () => {
+    it('opens the conversations of the workspace it is beside', async () => {
+      answers(projects, other);
+      const onOpenHistory = vi.fn();
+      render(<WorkspaceSelector onOpenHistory={onOpenHistory} />);
+
+      await userEvent.click(
+        await screen.findByRole('button', {
+          name: t('workspace.selector.historyOf', { label: 'Other' }),
+        }),
+      );
+
+      expect(onOpenHistory).toHaveBeenCalledWith('/srv/other');
+      // Choosing where to look is not choosing where to run.
+      expect(useWorkspaceStore.getState().selected).toBeNull();
+    });
+
+    it('offers no way there when nobody gave it one', async () => {
+      answers(projects);
+      render(<WorkspaceSelector />);
+
+      await screen.findByText('Projects');
+
+      expect(screen.queryByText(t('workspace.selector.history'))).toBeNull();
+    });
+  });
 });

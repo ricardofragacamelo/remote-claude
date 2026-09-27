@@ -11,13 +11,13 @@ Plano: [04 — Histórico e retomada](README.md) · Cenários: [scenarios.md](sc
 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 
-### B-10 — `session.start` com `resumeSessionId` 🔲
+### B-10 — `session.start` com `resumeSessionId` ✅
 
 O campo já existe no contrato desde a [F0 do plano 01](../01-live-session/F0-contract.md); o
 que nasce aqui é o comportamento. A opção `resume` do SDK é montada pela
 `sdk-options.factory`.
 
-### B-11 — Continuidade de `seq` e do buffer 🔲
+### B-11 — Continuidade de `seq` e do buffer ✅
 
 A sessão retomada é uma sessão **viva nova**: `seq` recomeça, e o cliente precisa saber disso
 para não misturar o que veio do histórico com o que está chegando.
@@ -25,7 +25,7 @@ para não misturar o que veio do histórico com o que está chegando.
 O contrato do replay não muda; o que muda é de onde o cliente pega a parte antiga — do
 transcript (F0), não do ring buffer.
 
-### B-12 — Retomar a sessão criada fora 🔲
+### B-12 — Retomar a sessão criada fora ✅
 
 É a promessa que justifica `persistSession: true`: começar no editor e continuar do celular.
 Ela precisa funcionar de verdade, não só listar.
@@ -35,7 +35,7 @@ in-place ([D-04](decisions.md#d-04--duas-bocas-no-mesmo-arquivo)). Não existe d
 "aberta agora no editor" — a regra não depende dela. A UI diz que a continuação vive num id
 novo e que o editor não verá as respostas.
 
-### B-13 — Os erros da retomada 🔲
+### B-13 — Os erros da retomada ✅
 
 Sessão inexistente → `SESSION_NOT_FOUND`. Workspace que saiu da allowlist →
 `WORKSPACE_NOT_ALLOWED`. Acima do limite → `SESSION_LIMIT_REACHED`.
@@ -47,7 +47,7 @@ E a regra que evita o pior defeito possível aqui: retomar uma sessão **que já
 
 ## Cenários cobertos
 
-S-19…S-28.
+S-19…S-28, S-58, S-59, e os descobertos na implementação: S-75 (junta-se ao fork vivo), S-76 (trilha indisponível não retoma), S-77 (fora do workspace é inexistente) e S-79 (recusa traduzida na tela que pediu).
 
 ---
 

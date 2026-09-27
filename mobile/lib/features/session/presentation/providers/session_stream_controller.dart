@@ -106,6 +106,12 @@ class SessionStreamController extends _$SessionStreamController {
 
       case StreamGap():
         state = const SessionScreenState();
+
+      // Answers to the commands of a conversation. The round trip sends none of them.
+      case SessionJoined():
+      case CommandRefused():
+      case SessionFailed():
+        return;
     }
   }
 }

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { loadDotEnv, repositoryDotEnv } from '../../src/bootstrap';
+import { forgetEmptyClaudeConfigDir, loadDotEnv, repositoryDotEnv } from '../../src/bootstrap';
 
 /**
  * The `.env` the product loads when nobody exported it.
@@ -31,6 +31,22 @@ describe('loadDotEnv', () => {
     expect(process.env['RC_DOTENV_PROBE']).toBe('loaded');
   });
 
+  it('never hands the CLI an empty CLAUDE_CONFIG_DIR, which it would take for a directory', () => {
+    const file = path.join(directory, '.env');
+    const before = process.env['CLAUDE_CONFIG_DIR'];
+    delete process.env['CLAUDE_CONFIG_DIR'];
+    writeFileSync(file, 'CLAUDE_CONFIG_DIR=\n', 'utf8');
+
+    try {
+      expect(loadDotEnv(file)).toBe(true);
+      expect('CLAUDE_CONFIG_DIR' in process.env).toBe(false);
+    } finally {
+      if (before !== undefined) {
+        process.env['CLAUDE_CONFIG_DIR'] = before;
+      }
+    }
+  });
+
   it('says there was nothing to load rather than failing', () => {
     expect(loadDotEnv(path.join(directory, 'absent'))).toBe(false);
   });
@@ -39,5 +55,31 @@ describe('loadDotEnv', () => {
     // From `src/`, two levels up: a path computed from `import.meta.url` rather than from the
     // working directory, because the process is started from the package and from the repository.
     expect(repositoryDotEnv().endsWith(path.join('remote-claude', '.env'))).toBe(true);
+  });
+});
+
+describe('forgetEmptyClaudeConfigDir', () => {
+  it('drops a value that is only blank, exported or loaded alike', () => {
+    const env: NodeJS.ProcessEnv = { CLAUDE_CONFIG_DIR: '  ', OTHER: '' };
+
+    forgetEmptyClaudeConfigDir(env);
+
+    expect(env).toEqual({ OTHER: '' });
+  });
+
+  it('keeps a directory that was really chosen', () => {
+    const env: NodeJS.ProcessEnv = { CLAUDE_CONFIG_DIR: '/srv/claude' };
+
+    forgetEmptyClaudeConfigDir(env);
+
+    expect(env).toEqual({ CLAUDE_CONFIG_DIR: '/srv/claude' });
+  });
+
+  it('leaves an environment without it as it was', () => {
+    const env: NodeJS.ProcessEnv = {};
+
+    forgetEmptyClaudeConfigDir(env);
+
+    expect(env).toEqual({});
   });
 });

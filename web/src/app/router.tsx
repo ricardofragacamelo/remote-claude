@@ -4,6 +4,8 @@ import { CALLBACK_PATH } from '@/features/auth';
 import { App } from './App';
 import { AuditRoute, readAuditSearch } from './AuditRoute';
 import { Callback } from './Callback';
+import { ConversationRoute } from './ConversationRoute';
+import { HistoryRoute, readHistorySearch } from './HistoryRoute';
 import { RuleRoute } from './RuleRoute';
 import { RulesRoute } from './RulesRoute';
 import { SessionRoute } from './SessionRoute';
@@ -58,6 +60,21 @@ const auditRoute = createRoute({
   component: AuditRoute,
 });
 
+/** The conversations of one workspace, with the workspace in the search so the list is a link. */
+const historyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/history',
+  validateSearch: readHistorySearch,
+  component: HistoryRoute,
+});
+
+/** One conversation of the history, by its id in Claude's store. */
+const conversationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/history/$conversationId',
+  component: ConversationRoute,
+});
+
 export const router = createRouter({
   routeTree: rootRoute.addChildren([
     indexRoute,
@@ -66,6 +83,8 @@ export const router = createRouter({
     rulesRoute,
     ruleRoute,
     auditRoute,
+    historyRoute,
+    conversationRoute,
   ]),
 });
 

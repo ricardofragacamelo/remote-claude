@@ -1,10 +1,19 @@
+import type { ClaudeSessionId } from '@domain/transcript';
 import type { SessionId } from '../value-objects/session-id.value-object';
 
 /** The persisted shape, as the mapper on either side of the repository sees it. */
 export interface SessionFileStateSnapshot {
   readonly sessionId: SessionId;
+
+  /** The conversation the session was, or `null` for a row older than the undo that reads it. */
+  readonly claudeSessionId: ClaudeSessionId | null;
   readonly path: string;
-  readonly hash: string;
+
+  /**
+   * SHA-256 of what the session left, or `null` when it left **no file** — its own undo removed
+   * one the undone turn had created.
+   */
+  readonly hash: string | null;
   readonly mtime: Date;
   readonly sizeBytes: number;
   readonly updatedAt: Date;
@@ -23,34 +32,38 @@ export interface SessionFileStateSnapshot {
  * other is "what happened, for ever".
  */
 export class SessionFileState {
-  private constructor(
-    readonly sessionId: SessionId,
-    readonly path: string,
-    readonly hash: string,
-    readonly mtime: Date,
-    readonly sizeBytes: number,
-    readonly updatedAt: Date,
-  ) {}
+  private constructor(private readonly state: SessionFileStateSnapshot) {}
 
   static record(snapshot: SessionFileStateSnapshot): SessionFileState {
-    return new SessionFileState(
-      snapshot.sessionId,
-      snapshot.path,
-      snapshot.hash,
-      snapshot.mtime,
-      snapshot.sizeBytes,
-      snapshot.updatedAt,
-    );
+    return new SessionFileState(snapshot);
+  }
+
+  get sessionId(): SessionId {
+    return this.state.sessionId;
+  }
+
+  get path(): string {
+    return this.state.path;
+  }
+
+  /** What the session left, or `null` when it left no file there. */
+  get hash(): string | null {
+    return this.state.hash;
+  }
+
+  get mtime(): Date {
+    return this.state.mtime;
+  }
+
+  get sizeBytes(): number {
+    return this.state.sizeBytes;
+  }
+
+  get updatedAt(): Date {
+    return this.state.updatedAt;
   }
 
   snapshot(): SessionFileStateSnapshot {
-    return {
-      sessionId: this.sessionId,
-      path: this.path,
-      hash: this.hash,
-      mtime: this.mtime,
-      sizeBytes: this.sizeBytes,
-      updatedAt: this.updatedAt,
-    };
+    return this.state;
   }
 }

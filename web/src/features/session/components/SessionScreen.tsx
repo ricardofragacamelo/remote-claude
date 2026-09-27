@@ -1,14 +1,25 @@
 import { useTranslation } from 'react-i18next';
 
+import { ErrorState } from '@/shared/components/ErrorState';
 import { Panel } from '@/shared/components/Panel';
+import { Button } from '@/shared/components/ui/button';
+import { Skeleton } from '@/shared/components/ui/skeleton';
 import { useLiveSession } from '../hooks/useLiveSession';
+import { CommandMenu } from './CommandMenu';
 import { Conversation } from './Conversation';
 import { PromptComposer } from './PromptComposer';
 import { SessionControls } from './SessionControls';
+import { UndoPanel } from './UndoPanel';
 
 export interface SessionScreenProps {
   /** The session in the URL. Pasting the link on another device has to reproduce this screen. */
   readonly sessionId: string;
+
+  /**
+   * Opens the whole conversation this session is, on the history screen. The route's to perform:
+   * the feature never learns the router exists.
+   */
+  onOpenHistory?(conversationId: string): void;
 }
 
 /**
@@ -19,12 +30,22 @@ export interface SessionScreenProps {
  * what happens after every restart of the backend, not a rare edge
  * ([D-10](../../../../../docs/plans/01-live-session/decisions.md)).
  *
+ * Since plan 04 there is a fifth thing on it, and it is not a state of the stream: the part of the
+ * conversation the ring buffer does not hold — the history before a resume, or everything after a
+ * gap. It loads beside the stream, and a failure to load it says so with a way to try again (S-17)
+ * without taking away what the stream already showed.
+ *
+ * And two things beside the prompt box, both closed until asked for: the slash commands of this
+ * installation, which write into the box and never stand in its way (B-15), and the undo of what
+ * the session wrote to disk, which shows its whole reach before it touches anything (B-19).
+ *
  * It imports a hook and nothing else: no service, no `api.ts`.
  */
-export function SessionScreen({ sessionId }: SessionScreenProps): React.JSX.Element {
+export function SessionScreen({ sessionId, onOpenHistory }: SessionScreenProps): React.JSX.Element {
   const { t } = useTranslation();
   const session = useLiveSession(sessionId);
-  const { ending } = session;
+  const { ending, history } = session;
+  const conversationId = history.conversationId;
 
   return (
     <Panel
@@ -49,6 +70,25 @@ export function SessionScreen({ sessionId }: SessionScreenProps): React.JSX.Elem
         onClose={session.close}
       />
 
+      {history.isLoading && (
+        <Skeleton className="h-16 w-full" aria-label={t('session.history.loading')} />
+      )}
+
+      {/* What the stream brought stays on screen beside the failure: it is still true. */}
+      {history.error !== null && <ErrorState error={history.error} onRetry={history.retry} />}
+
+      {conversationId !== null && onOpenHistory !== undefined && (
+        <Button
+          variant="outline"
+          className="self-start"
+          onClick={() => {
+            onOpenHistory(conversationId);
+          }}
+        >
+          {t('session.history.open')}
+        </Button>
+      )}
+
       <Conversation
         messages={session.messages}
         tools={session.tools}
@@ -64,7 +104,19 @@ export function SessionScreen({ sessionId }: SessionScreenProps): React.JSX.Elem
         </p>
       )}
 
-      <PromptComposer disabled={ending !== null} onSubmit={session.prompt} />
+      <UndoPanel sessionId={sessionId} />
+
+      <PromptComposer
+        disabled={ending !== null}
+        onSubmit={session.prompt}
+        error={session.promptError}
+        // An ended session has no installation left to ask: the menu goes with it.
+        menu={
+          ending === null
+            ? (insert) => <CommandMenu sessionId={sessionId} onPick={insert} />
+            : undefined
+        }
+      />
     </Panel>
   );
 }

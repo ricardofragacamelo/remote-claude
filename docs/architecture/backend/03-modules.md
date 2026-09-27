@@ -134,8 +134,39 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   que o SDK já faz nativamente, medido em spike, e é o comportamento da UI do Claude Code —
   rejeitar com `409` era política nossa, e era a errada. Ver
   [descoberta §8.6](../../discovery/01-descoberta-claude-agent-sdk.md#86--segundo-prompt-durante-um-turno-é-enfileirado-pelo-sdk)
+- **Retomada** (`session.start` com `resumeSessionId`,
+  [plano 04 · F2](../../plans/04-transcript-and-resume/F2-resume.md)): a conversa é procurada
+  **dentro** do workspace pedido, que passa pela allowlist antes de qualquer pergunta ao store. A
+  origem decide como (`resumeStrategyFor`, domínio puro): nossa → `resume` in-place; nunca aberta
+  aqui → `resume` + `forkSession` num id nosso, gravado antes do `query()`; aberta aqui por outra
+  pessoa, sem `cwd` ou de outro `cwd` → `SESSION_NOT_FOUND`. A conversa **já viva para o chamador**
+  — aberta ou retomada por ele, pelo id dela ou pelo que ela continua — é **juntada**, nunca
+  aberta de novo, e duas retomadas simultâneas são uma só. Toda retomada entra em `audit_events`
+  (`session.resumed` / `session.forked`) antes do subprocesso; trilha indisponível não retoma.
+  Cada sessão viva guarda a sua conversa (`claudeSessionId`, `resumedFrom`), que o
+  `session.started` e o `session.attached` levam ao cliente
+- **Slash commands** ([plano 04 · F3](../../plans/04-transcript-and-resume/F3-commands.md)): o menu
+  vem do `supportedCommands()` da sessão viva, filtrado por metadado no domínio (`menuOf`: sem
+  `__`, sem `(removed)`/`Renamed to`, sugeridos primeiro) e cacheado pelo `CommandCatalog`, um por
+  processo, chaveado por **versão do CLI e workspace** — duas sessões juntas fazem uma chamada;
+  versão desconhecida e falha nunca ficam no cache. Prompt que invoca comando que a instalação não
+  tem (nem como alias) é recusado com `INVALID_INPUT`; lista indisponível não recusa nada. Os
+  prompts de uma sessão chegam à fila na ordem em que chegaram, mesmo quando um deles espera a lista
+- **Desfazer** ([plano 04 · F4](../../plans/04-transcript-and-resume/F4-checkpoint.md)): o
+  `UndoPlanner` monta os pontos (um por turno que tocou arquivo) e o que cada um faria **agora** a
+  cada arquivo — o mesmo cálculo para a prévia e para o desfazer, então os dois não divergem.
+  `RewindFilesUseCase` recusa com `SESSION_LOCKED` fora de `idle` ou com outro desfazer da sessão em
+  curso, grava `session.filesRewound` na trilha **antes** de tocar o disco e devolve revertidos,
+  preservados (com motivo), inalterados e falhos. O disco é o `NodeUndoDisk`: nunca através de
+  link, restauração atômica (temporário + `rename`) e snapshot conferido pelo hash
+- **HTTP — `GET /sessions/:sessionId/commands`** e **`GET /sessions/:sessionId/checkpoints`**
+  (Bearer): o menu e a prévia do desfazer. `400` para id malformado, `403`/`404` para sessão de
+  outra pessoa / que não está viva, e — só no menu — `502`/`504` quando o CLI falha ou não responde.
+  Formato em [05-websocket-protocol](../shared/05-websocket-protocol.md#slash-commands)
 - **Erros:** `SESSION_NOT_FOUND`, `SESSION_LOCKED`,
-  `SESSION_LIMIT_REACHED`, `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT`
+  `SESSION_LIMIT_REACHED`, `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT`, `INVALID_INPUT`
+  (`session.error.unknownCommand`, `session.error.rewindTargetUnknown`), `INTERNAL_ERROR`
+  (`session.error.rewindIncomplete`)
 - Ver [04-claude-integration.md](04-claude-integration.md).
 
 ### `permission`
@@ -255,7 +286,14 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   Claude é um UUID **cunhado por nós** e passado ao SDK como `sessionId`; a linha em
   `session_origins` é gravada antes do `query()`. Falha ao gravar **não abre a sessão** — uma
   conversa nossa sem registro leria como de outra pessoa para sempre. A tabela é do `session`;
-  o `transcript` pergunta por uma porta própria (`TranscriptOriginSource`).
+  o `transcript` pergunta por uma porta própria (`TranscriptOriginSource`). O repositório mora
+  num módulo Nest próprio (`SessionOriginModule`), importado pelos dois: o `session` precisa do
+  store do `transcript` para retomar, e com o repositório dentro do `session` os dois se
+  importariam — o ciclo que a regra 3 das fronteiras proíbe. É fiação, não dono novo.
+- **O `session` pergunta ao `transcript` onde uma conversa rodou**, antes de retomá-la — pela porta
+  `ResumableConversationSource`, declarada no `session` e implementada por um adapter que usa o
+  store (`TRANSCRIPT_STORE`, o único export do módulo) e a procedência. Nenhuma mensagem é lida
+  para decidir.
 - **Quem vê o quê** é regra pura de domínio (`transcriptOriginFor`): sem `cwd` → oculta;
   `cwd` fora das raízes do chamador → oculta; aberta aqui por outra pessoa → oculta; aberta aqui
   pelo chamador → `ours`; o resto → `external`. Ler o que não se lista responde `404`, igual ao
@@ -334,7 +372,8 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   celular foi aprovado". Os fatos de conta que o
   [08-authentication](../shared/08-authentication.md#logging) manda registrar moram em
   `audit_events` — e com eles conceder e revogar uma regra de permissão (`permission.ruleGranted`,
-  `permission.ruleRevoked`), que é autorização antecipada do mesmo peso —, tabela irmã com a mesma disciplina: `seq` que ordena enquanto `at` filtra, ULID
+  `permission.ruleRevoked`), que é autorização antecipada do mesmo peso — e retomar uma conversa
+  (`session.resumed`, `session.forked`) —, tabela irmã com a mesma disciplina: `seq` que ordena enquanto `at` filtra, ULID
   cunhado pelo domínio, e trigger que recusa `UPDATE` sempre e `DELETE` dentro do piso de 90 dias.
   Alargar a primeira com colunas anuláveis transformaria cada `NOT NULL` dela em talvez, justo na
   tabela cuja razão de existir é poder ser confiada.

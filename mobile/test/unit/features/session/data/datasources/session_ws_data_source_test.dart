@@ -180,6 +180,115 @@ void main() {
     expect(socket().sent.last, contains('session.prompt'));
   });
 
+  test('S-14 · a gap carries the conversation the ack named', () async {
+    await ready();
+    repository.follow('ses-1', () => 0);
+    final Future<SessionUpdate> first = repository.updates.first;
+
+    socket().deliver(sessionAttached(sessionId: 'ses-1', gap: true, claudeSessionId: 'conv-1'));
+
+    expect(await first, const StreamGap(claudeSessionId: 'conv-1'));
+  });
+
+  test('S-24 · joining a live session reaches the stream, naming what it continues', () async {
+    await ready();
+    final Future<SessionUpdate> first = repository.updates.first;
+
+    socket().deliver(
+      sessionAttached(sessionId: 'ses-9', claudeSessionId: 'conv-1', resumedFrom: 'conv-0'),
+    );
+
+    expect(
+      await first,
+      const SessionJoined(sessionId: 'ses-9', claudeSessionId: 'conv-1', resumedFrom: 'conv-0'),
+    );
+  });
+
+  test('B-13 · a refusal reaches the stream with the command it refuses and why', () async {
+    await ready();
+    final Future<SessionUpdate> first = repository.updates.first;
+
+    socket().deliver(
+      commandError(
+        correlationId: 'cmd-1',
+        code: 'SESSION_LIMIT_REACHED',
+        messageKey: 'session.error.limitReached',
+        params: <String, Object?>{'limit': 4},
+      ),
+    );
+
+    final CommandRefused refused = await first as CommandRefused;
+    expect(refused.commandId, 'cmd-1');
+    expect(refused.failure.code, 'SESSION_LIMIT_REACHED');
+    expect(refused.failure.params, <String, String>{'limit': '4'});
+    expect(refused.failure.traceId, 'trace-1');
+  });
+
+  // Plan 04, F4: an `error` that names no command is the session reporting, not refusing — the
+  // undo that could not put every file back is the one that exists (S-44). It is nobody's refusal,
+  // so it never becomes a CommandRefused.
+  test('an error that names no command is the session reporting, never a refusal', () async {
+    await ready();
+    final List<SessionUpdate> seen = <SessionUpdate>[];
+    final StreamSubscription<SessionUpdate> subscription = repository.updates.listen(seen.add);
+    addTearDown(subscription.cancel);
+
+    socket().deliver(
+      commandError(
+        correlationId: null,
+        code: 'INTERNAL_ERROR',
+        messageKey: 'session.error.rewindIncomplete',
+        params: <String, Object?>{'failed': 1},
+      ),
+    );
+    await settle();
+
+    final SessionFailed failed = seen.single as SessionFailed;
+    expect(failed.failure.messageKey, 'session.error.rewindIncomplete');
+    expect(failed.failure.params, <String, String>{'failed': '1'});
+  });
+
+  test('a session.rewound reaches the stream as what the undo did', () async {
+    await ready();
+    final Future<SessionUpdate> first = repository.updates.first;
+
+    socket().deliver(
+      frame(
+        kind: 'event',
+        type: 'session.rewound',
+        sessionId: 'ses-1',
+        seq: 4,
+        payload: <String, Object?>{
+          'promptId': 'p-1',
+          'reverted': <Object?>[],
+          'preserved': <Object?>[],
+          'unchanged': <Object?>[],
+          'failed': <Object?>[],
+        },
+      ),
+    );
+
+    final EventReceived received = await first as EventReceived;
+    expect(received.event, isA<FilesRewound>());
+  });
+
+  test('a command issued answers the id it left with, which a refusal will name', () async {
+    await ready();
+
+    final String? id = repository.issue('session.start', <String, Object?>{
+      'workspacePath': '/p',
+      'resumeSessionId': 'conv-1',
+    });
+
+    expect(id, isNotNull);
+    expect(socket().sent.last, contains('"id":"$id"'));
+    expect(socket().sent.last, contains('resumeSessionId'));
+  });
+
+  test('a command issued before the handshake answers no id', () {
+    expect(repository.issue('session.start', <String, Object?>{'workspacePath': '/p'}), isNull);
+  });
+
   test('a command sent before the handshake answers false rather than vanishing', () {
     // The screen has to be able to say the prompt did not leave (S-76).
     expect(repository.send('session.prompt', <String, Object?>{'sessionId': 'ses-1'}), isFalse);

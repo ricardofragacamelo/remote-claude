@@ -104,7 +104,7 @@ void main() {
       await settle();
 
       final Map<String, Object?> attach = sentOfType('session.attach').single;
-      expect(attach['payload'], <String, Object?>{'sessionId': 'session-1'});
+      expect(attach['payload'], <String, Object?>{'sessionId': 'session-1', 'resumeFromSeq': 0});
     });
 
     test('attaches at once when the socket is already ready', () async {
@@ -411,7 +411,7 @@ void main() {
       await deliver(commandError(correlationId: id, code: 'PERMISSION_REQUEST_EXPIRED'));
       feed
         ..onEvent(decodeEnvelope(permissionRequested())!)
-        ..onGap();
+        ..onGap(null);
       await settle();
 
       expect(seen, isEmpty);

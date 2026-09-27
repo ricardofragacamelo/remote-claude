@@ -1142,6 +1142,486 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Revoking…'**
   String get rulesRevoking;
+
+  /// The server answered WORKSPACE_NOT_ALLOWED
+  ///
+  /// In en, this message translates to:
+  /// **'This installation does not allow {path}.'**
+  String workspaceErrorNotAllowed(String path);
+
+  /// The workspace belongs to somebody else
+  ///
+  /// In en, this message translates to:
+  /// **'That folder is not yours to open.'**
+  String get workspaceErrorForbidden;
+
+  /// The server answered SESSION_LIMIT_REACHED
+  ///
+  /// In en, this message translates to:
+  /// **'This machine is already running {limit} sessions, which is as many as it allows. End one and try again.'**
+  String sessionErrorLimitReached(String limit);
+
+  /// The server answered CLAUDE_UNAVAILABLE for a session
+  ///
+  /// In en, this message translates to:
+  /// **'Claude stopped responding on this machine.'**
+  String get sessionErrorClaudeUnavailable;
+
+  /// The history answered NOT_FOUND
+  ///
+  /// In en, this message translates to:
+  /// **'That conversation does not exist, or it is not yours to read.'**
+  String get transcriptErrorNotFound;
+
+  /// The conversation id failed validation
+  ///
+  /// In en, this message translates to:
+  /// **'{sessionId} is not a conversation identifier.'**
+  String transcriptErrorInvalidSessionId(String sessionId);
+
+  /// The history answered CLAUDE_UNAVAILABLE
+  ///
+  /// In en, this message translates to:
+  /// **'Claude could not read its history on this machine.'**
+  String get transcriptErrorClaudeUnavailable;
+
+  /// The history answered CLAUDE_TIMEOUT
+  ///
+  /// In en, this message translates to:
+  /// **'Claude took too long to read its history. Try again.'**
+  String get transcriptErrorClaudeTimeout;
+
+  /// The page cursor no longer points into the conversation
+  ///
+  /// In en, this message translates to:
+  /// **'This conversation changed while you were reading it. Reload it from the latest messages.'**
+  String get transcriptErrorCursorStale;
+
+  /// Tooltip of the action that opens the conversations of one folder
+  ///
+  /// In en, this message translates to:
+  /// **'History of {label}'**
+  String workspaceHistoryOpen(String label);
+
+  /// Title of the screen listing the conversations of one folder
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get historyListTitle;
+
+  /// Shown while the conversations of a folder are being read
+  ///
+  /// In en, this message translates to:
+  /// **'Loading conversations'**
+  String get historyListLoading;
+
+  /// Title of the empty state of the conversation list
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations in this folder'**
+  String get historyListEmptyTitle;
+
+  /// Body of the empty state of the conversation list: what to do about it
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing has been said here yet — from this app, the editor or the terminal. Open a session on this folder from the folder list to start one.'**
+  String get historyListEmptyBody;
+
+  /// Origin of a conversation opened from this product
+  ///
+  /// In en, this message translates to:
+  /// **'Opened from this app'**
+  String get historyOriginOurs;
+
+  /// Origin of a conversation begun in the editor or the terminal — never name the editor: nothing says which
+  ///
+  /// In en, this message translates to:
+  /// **'Began outside this app'**
+  String get historyOriginExternal;
+
+  /// When anything was last said in a conversation
+  ///
+  /// In en, this message translates to:
+  /// **'Last active {at}'**
+  String historyLastActive(String at);
+
+  /// The git branch the conversation ran on
+  ///
+  /// In en, this message translates to:
+  /// **'Branch {branch}'**
+  String historyBranch(String branch);
+
+  /// Shown for a conversation the store gives no summary
+  ///
+  /// In en, this message translates to:
+  /// **'Untitled conversation'**
+  String get historyUntitled;
+
+  /// Reads the next page of conversations
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get historyLoadMore;
+
+  /// While the next or the earlier page is being read
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get historyLoadingMore;
+
+  /// Title of the read-only screen of one conversation
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation'**
+  String get historyConversationTitle;
+
+  /// Shown while the latest messages of a conversation are being read
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the conversation'**
+  String get historyConversationLoading;
+
+  /// Title of the empty state of a conversation
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing said in this conversation'**
+  String get historyConversationEmptyTitle;
+
+  /// Body of the empty state of a conversation: what to do about it
+  ///
+  /// In en, this message translates to:
+  /// **'It has no messages to show. Resume it to say something.'**
+  String get historyConversationEmptyBody;
+
+  /// Reads the page before the oldest message on screen
+  ///
+  /// In en, this message translates to:
+  /// **'Load earlier messages'**
+  String get historyLoadEarlier;
+
+  /// Continues the conversation in a live session
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get historyResumeAction;
+
+  /// While the resume waits for the session that continues it
+  ///
+  /// In en, this message translates to:
+  /// **'Resuming…'**
+  String get historyResumePending;
+
+  /// Why the resume button is disabled
+  ///
+  /// In en, this message translates to:
+  /// **'Resuming needs the connection to the backend, and this device is not connected.'**
+  String get historyResumeOffline;
+
+  /// Shown when the resume could not leave because the socket is down
+  ///
+  /// In en, this message translates to:
+  /// **'The conversation was not resumed: this device is not connected.'**
+  String get historyResumeNotSent;
+
+  /// Said before resuming a conversation begun elsewhere (D-04)
+  ///
+  /// In en, this message translates to:
+  /// **'This conversation began outside this app. Resuming it here continues it under a new id: the editor or terminal it came from will not see the answers given here.'**
+  String get historyExternalNote;
+
+  /// While the history of a resumed or reloaded session is being read
+  ///
+  /// In en, this message translates to:
+  /// **'Loading what was said before'**
+  String get sessionHistoryLoading;
+
+  /// The server answered INVALID_INPUT for a slash command the installation does not have
+  ///
+  /// In en, this message translates to:
+  /// **'{command} is not a command Claude offers on this machine.'**
+  String sessionErrorUnknownCommand(String command);
+
+  /// The server answered CLAUDE_TIMEOUT for a session
+  ///
+  /// In en, this message translates to:
+  /// **'Claude took too long to answer on this machine. Try again.'**
+  String get sessionErrorClaudeTimeout;
+
+  /// The server answered SESSION_LOCKED to an undo
+  ///
+  /// In en, this message translates to:
+  /// **'The session is busy: a turn is running or another undo is in progress. Try again once it is idle.'**
+  String get sessionErrorLocked;
+
+  /// The server answered INVALID_INPUT: the undo point is not one of this session's
+  ///
+  /// In en, this message translates to:
+  /// **'That undo point does not belong to this session.'**
+  String get sessionErrorRewindTargetUnknown;
+
+  /// The session reported an undo that could not restore every file
+  ///
+  /// In en, this message translates to:
+  /// **'Some files could not be put back ({failed}). Each of them was left exactly as it was.'**
+  String sessionErrorRewindIncomplete(String failed);
+
+  /// Tooltip of the button that opens the slash command menu
+  ///
+  /// In en, this message translates to:
+  /// **'Commands'**
+  String get sessionCommandsOpen;
+
+  /// Title of the slash command menu
+  ///
+  /// In en, this message translates to:
+  /// **'Commands'**
+  String get sessionCommandsTitle;
+
+  /// What the command menu is — discovery, not a boundary (D-05)
+  ///
+  /// In en, this message translates to:
+  /// **'What Claude offers on this machine. The prompt box accepts any command, listed here or not.'**
+  String get sessionCommandsDescription;
+
+  /// Label of the search box of the command menu
+  ///
+  /// In en, this message translates to:
+  /// **'Search commands'**
+  String get sessionCommandsSearch;
+
+  /// Heading of the group of suggested commands
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested'**
+  String get sessionCommandsSuggested;
+
+  /// Heading of every other command
+  ///
+  /// In en, this message translates to:
+  /// **'All commands'**
+  String get sessionCommandsAll;
+
+  /// While the commands of the installation are being read
+  ///
+  /// In en, this message translates to:
+  /// **'Loading commands'**
+  String get sessionCommandsLoading;
+
+  /// Title of the empty state of the command menu
+  ///
+  /// In en, this message translates to:
+  /// **'No commands on this machine'**
+  String get sessionCommandsEmptyTitle;
+
+  /// Body of the empty state of the command menu: what to do about it
+  ///
+  /// In en, this message translates to:
+  /// **'Claude here offers no commands. You can still type anything in the prompt box.'**
+  String get sessionCommandsEmptyBody;
+
+  /// Shown when the search of the command menu finds nothing
+  ///
+  /// In en, this message translates to:
+  /// **'No command matches “{query}”.'**
+  String sessionCommandsNoMatch(String query);
+
+  /// Tooltip of the action that opens the undo sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Undo file changes'**
+  String get sessionUndoOpen;
+
+  /// Title of the undo sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Undo file changes'**
+  String get sessionUndoTitle;
+
+  /// What undoing does, above the list of undo points
+  ///
+  /// In en, this message translates to:
+  /// **'Put the files this session wrote back to how they were before one of its turns. A file changed outside the session stays as it is.'**
+  String get sessionUndoDescription;
+
+  /// While the undo points of the session are being read
+  ///
+  /// In en, this message translates to:
+  /// **'Loading undo points'**
+  String get sessionUndoLoading;
+
+  /// Title of the empty state of the undo sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to undo yet'**
+  String get sessionUndoEmptyTitle;
+
+  /// Body of the empty state of the undo sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Every turn that writes files becomes a point this session can go back to.'**
+  String get sessionUndoEmptyBody;
+
+  /// Shown for an undo point whose turn had no prompt
+  ///
+  /// In en, this message translates to:
+  /// **'Untitled turn'**
+  String get sessionUndoUntitled;
+
+  /// When the turn of an undo point began
+  ///
+  /// In en, this message translates to:
+  /// **'{date} at {time}'**
+  String sessionUndoPointAt(String date, String time);
+
+  /// How many files an undo point reaches
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No files} =1{1 file} other{{count} files}}'**
+  String sessionUndoFileCount(int count);
+
+  /// Heading of the confirmation: the point the files go back to
+  ///
+  /// In en, this message translates to:
+  /// **'Go back to before “{label}”'**
+  String sessionUndoConfirmTitle(String label);
+
+  /// Heading of the files an undo would put back
+  ///
+  /// In en, this message translates to:
+  /// **'Goes back'**
+  String get sessionUndoGoesBack;
+
+  /// Heading of the files an undo would leave alone
+  ///
+  /// In en, this message translates to:
+  /// **'Stays as it is'**
+  String get sessionUndoStays;
+
+  /// Heading of the files already the way they were before the turn
+  ///
+  /// In en, this message translates to:
+  /// **'Already as it was'**
+  String get sessionUndoAlready;
+
+  /// What undoing does to a file the turn changed
+  ///
+  /// In en, this message translates to:
+  /// **'Its content before the turn is put back'**
+  String get sessionUndoRestore;
+
+  /// What undoing does to a file the turn created
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted: this turn created it'**
+  String get sessionUndoDelete;
+
+  /// Why a file stays: somebody edited it after the session
+  ///
+  /// In en, this message translates to:
+  /// **'Changed outside the session after it wrote it'**
+  String get sessionUndoReasonModifiedOutside;
+
+  /// Why a file stays: no snapshot of it could be taken
+  ///
+  /// In en, this message translates to:
+  /// **'Too large or unreadable to have been saved'**
+  String get sessionUndoReasonNotRestorable;
+
+  /// Why a file stays: it became a link or its directory moved
+  ///
+  /// In en, this message translates to:
+  /// **'No longer a regular file, or its folder no longer resolves'**
+  String get sessionUndoReasonUnsafePath;
+
+  /// Why a file stays: the undo will not guess
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing records how the session left it'**
+  String get sessionUndoReasonNoBaseline;
+
+  /// Why a file stays, when the reason is newer than this app
+  ///
+  /// In en, this message translates to:
+  /// **'Kept for a reason this app does not know'**
+  String get sessionUndoReasonOther;
+
+  /// Why the undo button is disabled for this point
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing would change: no file of this point can go back.'**
+  String get sessionUndoNothingToRevert;
+
+  /// Confirms the undo, once the files are listed
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get sessionUndoConfirm;
+
+  /// While the undo waits for its result
+  ///
+  /// In en, this message translates to:
+  /// **'Undoing…'**
+  String get sessionUndoPending;
+
+  /// Leaves the confirmation or the result for the list
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the undo points'**
+  String get sessionUndoBack;
+
+  /// Why the undo button is disabled while a turn runs
+  ///
+  /// In en, this message translates to:
+  /// **'Undo is available only while the session is idle. Wait for the turn to finish.'**
+  String get sessionUndoBusy;
+
+  /// What the undo sheet says for a closed session
+  ///
+  /// In en, this message translates to:
+  /// **'This session is closed, so its files can no longer be undone from here.'**
+  String get sessionUndoClosed;
+
+  /// Why the undo button is disabled while offline
+  ///
+  /// In en, this message translates to:
+  /// **'Undoing needs the connection to the backend, and this device is not connected.'**
+  String get sessionUndoOffline;
+
+  /// Shown when the undo could not leave because the socket is down
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was undone: this device is not connected.'**
+  String get sessionUndoNotSent;
+
+  /// Heading of the result of an undo
+  ///
+  /// In en, this message translates to:
+  /// **'The undo is done'**
+  String get sessionUndoDoneTitle;
+
+  /// Heading of the files the undo put back
+  ///
+  /// In en, this message translates to:
+  /// **'Put back'**
+  String get sessionUndoReverted;
+
+  /// A file the undo put back
+  ///
+  /// In en, this message translates to:
+  /// **'Restored to how it was before the turn'**
+  String get sessionUndoRestored;
+
+  /// A file the undo removed
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted: the turn had created it'**
+  String get sessionUndoDeleted;
+
+  /// Heading of the files the undo could not restore
+  ///
+  /// In en, this message translates to:
+  /// **'Could not be put back'**
+  String get sessionUndoFailed;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -69,8 +69,8 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-38 | `session.close` por quem não é dono da sessão | err | integração | `FORBIDDEN` | B-19 | ✅ |
 | S-39 | `query()` sem `settingSources: ['project']` ou sem o hook → `scan:security` falha | err | unit | — | B-13 | ✅ |
 | S-88 | 11ª sessão com o teto em 10: recusada, traduzida e **sem subprocesso órfão** | fron | integração | `SESSION_LIMIT_REACHED` | B-17 | ✅ |
-| S-89 | fixture regravada do mesmo roteiro produz o mesmo arquivo | idem | integração | — | B-44 | ⬜ |
-| S-90 | fixture gravada reproduz `6 tool calls → 6 hooks → 2 canUseTool` | eq | integração | — | B-44 | ⬜ |
+| S-89 | fixture gravada é estável na forma: formatada como o portão 1 exige, sem o diretório descartável e sem o home da máquina — *reescrito no plano 04: o modelo não repete o mesmo stream, então "regravar produz o mesmo arquivo" não era testável* | idem | integração | — | B-44 | ✅ |
+| S-90 | a gravação carrega a assimetria — todo `tool_use` chega ao hook, só parte ao `canUseTool` — e o replay dispara e pergunta **exatamente** o que a gravação registrou — *reescrito no plano 04: os números mudam com o prompt; a assimetria não* | eq | integração | — | B-44 | ✅ |
 
 ## Auditoria — B-21…B-24, B-46, B-47
 

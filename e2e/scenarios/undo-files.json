@@ -1,0 +1,13 @@
+{
+  "id": "04·S-50",
+  "title": "undoing from the screen puts the file the turn wrote back the way it was",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "tool-turn",
+    "file": "summary.md",
+    "before": "the version from before the turn\n"
+  }
+}

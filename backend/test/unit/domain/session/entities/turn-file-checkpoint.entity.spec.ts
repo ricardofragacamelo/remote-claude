@@ -10,6 +10,7 @@ const snapshot = (
   overrides: Partial<TurnFileCheckpointSnapshot> = {},
 ): TurnFileCheckpointSnapshot => ({
   sessionId,
+  claudeSessionId: null,
   promptId: 'prompt-1',
   path: '/srv/projects/app/a.md',
   existedBefore: 'present',

@@ -43,78 +43,92 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-11 | a lista mostra a origem (VSCode ou remoto) de cada sessão | eq | integração | — | B-06 | ⬜ |
-| S-12 | filtro por workspace devolve só as sessões daquele workspace | eq | integração | — | B-06 | ⬜ |
-| S-13 | sem nenhuma sessão, a tela mostra o estado vazio | fron | integração | — | B-06 | ⬜ |
-| S-14 | `gap: true` limpa o store e recarrega o transcript por HTTP | est | integração | — | B-07 | ⬜ |
-| S-15 | recarregar com o stream vivo chegando **não** duplica mensagem | conc | integração | — | B-07 | ⬜ |
-| S-16 | abrir o mesmo transcript duas vezes usa cache, sem refazer a chamada | idem | integração | — | B-07 | ⬜ |
-| S-17 | falha ao carregar mostra erro traduzido, com ação de recuperação | err | integração | `CLAUDE_UNAVAILABLE` | B-08 | ⬜ |
-| S-18 | literal apresentável nas telas novas → `lint` e `i18n:check` falham | err | unit | — | B-09 | ⬜ |
+| S-11 | a lista mostra a origem (VSCode ou remoto) de cada sessão | eq | integração | — | B-06 | ✅ |
+| S-12 | filtro por workspace devolve só as sessões daquele workspace | eq | integração | — | B-06 | ✅ |
+| S-13 | sem nenhuma sessão, a tela mostra o estado vazio | fron | integração | — | B-06 | ✅ |
+| S-14 | `gap: true` limpa o store e recarrega o transcript por HTTP | est | integração | — | B-07 | ✅ |
+| S-15 | recarregar com o stream vivo chegando **não** duplica mensagem | conc | integração | — | B-07 | ✅ |
+| S-16 | abrir o mesmo transcript duas vezes usa cache, sem refazer a chamada | idem | integração | — | B-07 | ✅ |
+| S-17 | falha ao carregar mostra erro traduzido, com ação de recuperação | err | integração | `CLAUDE_UNAVAILABLE` | B-08 | ✅ |
+| S-18 | literal apresentável nas telas novas → `lint` e `i18n:check` falham | err | unit | — | B-09 | ✅ |
 
 ## Retomada — B-10…B-13
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-19 | retomar sessão encerrada continua a conversa com o contexto anterior | eq | integração | — | B-10 | ⬜ |
-| S-20 | retomar sessão criada no VSCode funciona | eq | integração | — | B-12 | ⬜ |
-| S-21 | `seq` recomeça na sessão retomada, sem misturar com o histórico | est | integração | — | B-11 | ⬜ |
-| S-22 | retomar sessão inexistente | err | unit | `SESSION_NOT_FOUND` | B-13 | ⬜ |
-| S-23 | retomar sessão cujo workspace saiu da allowlist | err | integração | `WORKSPACE_NOT_ALLOWED` | B-13 | ⬜ |
-| S-24 | retomar sessão **que já está viva** vira `attach`, não um segundo `start` | idem | integração | — | B-13 | ⬜ |
-| S-25 | dois clientes retomam ao mesmo tempo → uma única `query()` | conc | integração | — | B-13 | ⬜ |
-| S-26 | retomar acima do limite de sessões simultâneas | fron | integração | `SESSION_LIMIT_REACHED` | B-13 | ⬜ |
-| S-27 | a retomada entra em `audit` | eq | integração | — | B-10 | ⬜ |
-| S-28 | nenhuma mensagem de transcript é copiada para o Postgres → `lint:arch` reprova | err | unit | — | B-11 | ⬜ |
-| S-58 | retomar sessão **externa** cria `sessionId` novo e não escreve no transcript de origem | est | integração | — | B-12 | ⬜ |
-| S-59 | retomar sessão **nossa** mantém o mesmo `sessionId` e preserva o histórico de undo | est | integração | — | B-10 | ⬜ |
+| S-19 | retomar sessão encerrada continua a conversa com o contexto anterior | eq | integração | — | B-10 | ✅ |
+| S-20 | retomar sessão criada no VSCode funciona | eq | integração | — | B-12 | ✅ |
+| S-21 | `seq` recomeça na sessão retomada, sem misturar com o histórico | est | integração | — | B-11 | ✅ |
+| S-22 | retomar sessão inexistente | err | unit | `SESSION_NOT_FOUND` | B-13 | ✅ |
+| S-23 | retomar sessão cujo workspace saiu da allowlist | err | integração | `WORKSPACE_NOT_ALLOWED` | B-13 | ✅ |
+| S-24 | retomar sessão **que já está viva** vira `attach`, não um segundo `start` | idem | integração | — | B-13 | ✅ |
+| S-25 | dois clientes retomam ao mesmo tempo → uma única `query()` | conc | integração | — | B-13 | ✅ |
+| S-26 | retomar acima do limite de sessões simultâneas | fron | integração | `SESSION_LIMIT_REACHED` | B-13 | ✅ |
+| S-27 | a retomada entra em `audit` | eq | integração | — | B-10 | ✅ |
+| S-28 | nenhuma mensagem de transcript é copiada para o Postgres → `lint:arch` reprova | err | unit | — | B-11 | ✅ |
+| S-58 | retomar sessão **externa** cria `sessionId` novo e não escreve no transcript de origem | est | integração | — | B-12 | ✅ |
+| S-59 | retomar sessão **nossa** mantém o mesmo `sessionId` e preserva o histórico de undo | est | integração | — | B-10 | ✅ |
+| S-75 | retomar de novo a conversa externa junta-se ao fork vivo do mesmo usuário; a de outra pessoa ganha fork próprio | idem | integração | — | B-13 | ✅ |
+| S-76 | trilha indisponível na retomada → nada é aberto, e o slot volta | err | unit | `INTERNAL_ERROR` | B-10 | ✅ |
+| S-77 | conversa de outro workspace, sem `cwd` ou aberta aqui por outra pessoa → a resposta de inexistente | err | unit | `SESSION_NOT_FOUND` | B-13 | ✅ |
+| S-78 | o ack do `attach` nomeia a conversa a recarregar depois do `gap` | est | integração | — | B-07 | ✅ |
+| S-79 | recusa da retomada chega traduzida na tela que a pediu, reconhecida pelo `correlationId` | err | integração | `SESSION_LIMIT_REACHED` | B-13 | ✅ |
+| S-80 | fragmento vivo de uma mensagem que o histórico já tem inteira não a desfaz | conc | unit | — | B-07 | ✅ |
 
 ## Slash commands — B-14…B-17
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-29 | a lista vem de `supportedCommands()`, sem constante no código | eq | integração | — | B-14 | ⬜ |
-| S-30 | instalação com menos comandos reflete na UI | eq | integração | — | B-15 | ⬜ |
-| S-31 | lista indisponível → a caixa de prompt continua utilizável | err | integração | — | B-15 | ⬜ |
-| S-32 | `/init` dispara o comando e termina em sucesso | eq | integração | — | B-16 | ⬜ |
-| S-33 | `/init` pede autorização de `Write` pelo fluxo normal de permissão | est | integração | — | B-16 | ⬜ |
-| S-34 | comando inexistente digitado pelo usuário → erro traduzido | err | integração | `INVALID_INPUT` | B-15 | ⬜ |
-| S-35 | a lista é cacheada e invalidada quando a versão do CLI muda | idem | integração | — | B-17 | ⬜ |
-| S-36 | duas sessões pedindo a lista ao mesmo tempo fazem **uma** chamada | conc | integração | — | B-17 | ⬜ |
-| S-60 | comando interno (`__`) ou morto (`(removed)`, `Renamed to`) não aparece no menu | eq | integração | — | B-15 | ⬜ |
+| S-29 | a lista vem de `supportedCommands()`, sem constante no código | eq | integração | — | B-14 | ✅ |
+| S-30 | instalação com menos comandos reflete na UI | eq | integração | — | B-15 | ✅ |
+| S-31 | lista indisponível → a caixa de prompt continua utilizável | err | integração | — | B-15 | ✅ |
+| S-32 | `/init` dispara o comando e termina em sucesso | eq | integração | — | B-16 | ✅ |
+| S-33 | `/init` pede autorização de `Write` pelo fluxo normal de permissão | est | integração | — | B-16 | ✅ |
+| S-34 | comando inexistente digitado pelo usuário → erro traduzido | err | integração | `INVALID_INPUT` | B-15 | ✅ |
+| S-35 | a lista é cacheada e invalidada quando a versão do CLI muda | idem | integração | — | B-17 | ✅ |
+| S-36 | duas sessões pedindo a lista ao mesmo tempo fazem **uma** chamada | conc | integração | — | B-17 | ✅ |
+| S-60 | comando interno (`__`) ou morto (`(removed)`, `Renamed to`) não aparece no menu | eq | integração | — | B-15 | ✅ |
+| S-81 | antes do primeiro turno a versão do CLI vem do manifesto do SDK, e o `system:init` a corrige quando diverge | eq | unit | — | B-17 | ✅ |
+| S-82 | um prompt enviado logo depois de um comando que espera a lista não o ultrapassa na fila | conc | unit | — | B-15 | ✅ |
 
 ## Desfazer — B-18…B-21
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-37 | desfazer devolve os arquivos ao ponto escolhido | eq | integração | — | B-18 | ⬜ |
-| S-38 | a confirmação mostra **quais** arquivos voltam e para qual ponto | est | integração | — | B-19 | ⬜ |
-| S-39 | desfazer em sessão fechada | err | unit | `SESSION_NOT_FOUND` | B-21 | ⬜ |
-| S-40 | desfazer não alcança arquivo que aquela sessão não tocou | fron | integração | — | B-21 | ⬜ |
-| S-41 | desfazer duas vezes para o mesmo ponto é idempotente | idem | integração | — | B-21 | ⬜ |
-| S-42 | o desfazer entra em `audit`, com a lista de arquivos | eq | integração | — | B-20 | ⬜ |
-| S-43 | desfazer com um turno em execução é recusado | conc | integração | `SESSION_LOCKED` | B-21 | ⬜ |
-| S-44 | falha no meio do rewind informa o que foi e o que não foi revertido | err | integração | `INTERNAL_ERROR` | B-21 | ⬜ |
-| S-45 | o comando de rewind existe nas três pontas → `contracts:check` verde | eq | unit | — | B-18 | ⬜ |
-| S-61 | alvo de rewind que não é checkpoint nosso é recusado | err | unit | `INVALID_INPUT` | B-21 | ⬜ |
-| S-62 | falha no meio da restauração informa o que voltou e o que não voltou | err | integração | `INTERNAL_ERROR` | B-21 | ⬜ |
-| S-63 | arquivo alterado fora da sessão é **preservado**, e os demais revertem | est | integração | — | B-21 | ⬜ |
-| S-65 | caminho que virou symlink, hard link ou arquivo não regular é recusado, não restaurado | err | integração | — | B-21 | ⬜ |
-| S-66 | restauração é atômica: falha na escrita não deixa arquivo truncado | err | integração | — | B-21 | ⬜ |
-| S-67 | store de snapshots respeita o teto, e a purga não apaga o que uma sessão viva ainda alcança | fron | integração | — | B-21 | ⬜ |
+| S-37 | desfazer devolve os arquivos ao ponto escolhido | eq | integração | — | B-18 | ✅ |
+| S-38 | a confirmação mostra **quais** arquivos voltam e para qual ponto | est | integração | — | B-19 | ✅ |
+| S-39 | desfazer em sessão fechada | err | unit | `SESSION_NOT_FOUND` | B-21 | ✅ |
+| S-40 | desfazer não alcança arquivo que aquela sessão não tocou | fron | integração | — | B-21 | ✅ |
+| S-41 | desfazer duas vezes para o mesmo ponto é idempotente | idem | integração | — | B-21 | ✅ |
+| S-42 | o desfazer entra em `audit`, com a lista de arquivos | eq | integração | — | B-20 | ✅ |
+| S-43 | desfazer com um turno em execução é recusado | conc | integração | `SESSION_LOCKED` | B-21 | ✅ |
+| S-44 | falha no meio do rewind informa o que foi e o que não foi revertido | err | integração | `INTERNAL_ERROR` | B-21 | ✅ |
+| S-45 | o comando de rewind existe nas três pontas → `contracts:check` verde | eq | unit | — | B-18 | ✅ |
+| S-61 | alvo de rewind que não é checkpoint nosso é recusado | err | unit | `INVALID_INPUT` | B-21 | ✅ |
+| S-62 | falha no meio da restauração informa o que voltou e o que não voltou | err | integração | `INTERNAL_ERROR` | B-21 | ✅ |
+| S-63 | arquivo alterado fora da sessão é **preservado**, e os demais revertem | est | integração | — | B-21 | ✅ |
+| S-65 | caminho que virou symlink, hard link ou arquivo não regular é recusado, não restaurado | err | integração | — | B-21 | ✅ |
+| S-66 | restauração é atômica: falha na escrita não deixa arquivo truncado | err | integração | — | B-21 | ✅ |
+| S-67 | store de snapshots respeita o teto, e a purga não apaga o que uma sessão viva ainda alcança | fron | integração | — | B-21 | ✅ |
+| S-83 | um segundo desfazer da mesma sessão, com o primeiro em curso, é recusado | conc | unit | `SESSION_LOCKED` | B-21 | ✅ |
+| S-84 | snapshot adulterado ou ausente é recusado, e o arquivo fica exatamente como está | err | integração | — | B-21 | ✅ |
+| S-85 | voltar a um ponto alcança também o que turnos posteriores tocaram, cada caminho no snapshot mais antigo | est | unit | — | B-18 | ✅ |
+| S-86 | o desfazer alcança os pontos das sessões anteriores da conversa continuada in-place, e nunca os de outra conversa | est | integração | — | B-21 | ✅ |
+| S-87 | trilha indisponível no desfazer → nada no disco é tocado | err | unit | `INTERNAL_ERROR` | B-20 | ✅ |
 
 ## E2E — B-22…B-25
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-46 | retomar uma sessão encerrada e continuar a conversa | eq | e2e | — | B-23 | ⬜ |
-| S-47 | `gap: true` → recarrega o transcript por HTTP e a tela volta coerente | est | e2e | — | B-23 | ⬜ |
-| S-48 | abrir no celular a sessão que começou no navegador | eq | e2e | — | B-22 | ⬜ |
-| S-49 | `/init` pelo menu pede `Write` e escreve o arquivo | est | e2e | — | B-25 | ⬜ |
-| S-50 | desfazer pela UI devolve o arquivo ao estado anterior | eq | e2e | — | B-24 | ⬜ |
-| S-51 | desfazer durante um turno em execução é recusado, com explicação | conc | e2e | `SESSION_LOCKED` | B-24 | ⬜ |
-| S-52 | `smoke-live`: `supportedCommands()` real e `/init` terminando em sucesso | eq | e2e | — | B-25 | ⬜ |
-| S-53 | retomar sessão cujo workspace foi removido mostra erro traduzido | err | e2e | `WORKSPACE_NOT_ALLOWED` | B-23 | ⬜ |
+| S-46 | retomar uma sessão encerrada e continuar a conversa | eq | e2e | — | B-23 | ✅ |
+| S-47 | `gap: true` → recarrega o transcript por HTTP e a tela volta coerente | est | e2e | — | B-23 | ✅ |
+| S-48 | abrir no celular a sessão que começou no navegador | eq | e2e | — | B-22 | ✅ |
+| S-49 | `/init` pelo menu pede `Write` e escreve o arquivo | est | e2e | — | B-25 | ✅ |
+| S-50 | desfazer pela UI devolve o arquivo ao estado anterior | eq | e2e | — | B-24 | ✅ |
+| S-51 | desfazer durante um turno em execução é recusado, com explicação | conc | e2e | `SESSION_LOCKED` | B-24 | ✅ |
+| S-52 | `smoke-live`: `supportedCommands()` real e `/init` terminando em sucesso | eq | e2e | — | B-25 | ✅ |
+| S-53 | retomar sessão cujo workspace foi removido — apagado, ou agora fora da allowlist — mostra erro traduzido | err | e2e | `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_ALLOWED` | B-23 | ✅ |
+| S-88 | a tela que abre uma sessão já em andamento pede o replay (`resumeFromSeq: 0`) e recebe o que o buffer guarda — ou o `gap`, quando ele perdeu o começo | est | unit | — | B-22 | ✅ |
 
 ---
 

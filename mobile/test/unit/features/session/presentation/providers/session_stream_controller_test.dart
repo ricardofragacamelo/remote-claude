@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 import 'package:remote_claude/features/session/presentation/providers/session_stream_controller.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
@@ -149,6 +150,23 @@ void main() {
     expect(state().stream.pongs, isEmpty);
     expect(state().stream.lastSeq, 0);
     expect(state().isSending, isFalse);
+  });
+
+  test('answers to a conversation’s commands leave the round trip alone', () async {
+    repository.emit(pongUpdate(seq: 4));
+    await settle();
+
+    repository
+      ..emit(const SessionJoined(sessionId: 'session-9'))
+      ..emit(
+        const CommandRefused(
+          commandId: 'c-1',
+          failure: UnexpectedFailure(traceId: 't'),
+        ),
+      );
+    await settle();
+
+    expect(state().stream.pongs, hasLength(1));
   });
 
   test('disposing the screen leaves the stream — no subscription outlives it', () {

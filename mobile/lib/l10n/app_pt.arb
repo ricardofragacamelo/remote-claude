@@ -316,5 +316,165 @@
 
   "rulesRevoke": "Revogar",
 
-  "rulesRevoking": "Revogando…"
+  "rulesRevoking": "Revogando…",
+
+  "workspaceErrorNotAllowed": "Esta instalação não permite {path}.",
+
+  "workspaceErrorForbidden": "Essa pasta não é sua para abrir.",
+
+  "sessionErrorLimitReached": "Esta máquina já está rodando {limit} sessões, o máximo que ela permite. Encerre uma e tente de novo.",
+
+  "sessionErrorClaudeUnavailable": "O Claude parou de responder nesta máquina.",
+
+  "transcriptErrorNotFound": "Essa conversa não existe, ou não é sua para ler.",
+
+  "transcriptErrorInvalidSessionId": "{sessionId} não é um identificador de conversa.",
+
+  "transcriptErrorClaudeUnavailable": "O Claude não conseguiu ler o histórico nesta máquina.",
+
+  "transcriptErrorClaudeTimeout": "O Claude demorou demais para ler o histórico. Tente de novo.",
+
+  "transcriptErrorCursorStale": "Esta conversa mudou enquanto você a lia. Recarregue a partir das mensagens mais recentes.",
+
+  "workspaceHistoryOpen": "Histórico de {label}",
+
+  "historyListTitle": "Histórico",
+
+  "historyListLoading": "Carregando conversas",
+
+  "historyListEmptyTitle": "Nenhuma conversa nesta pasta",
+
+  "historyListEmptyBody": "Nada foi dito aqui ainda — por este app, pelo editor ou pelo terminal. Abra uma sessão nesta pasta pela lista de pastas para começar uma.",
+
+  "historyOriginOurs": "Aberta por este app",
+
+  "historyOriginExternal": "Começou fora deste app",
+
+  "historyLastActive": "Última atividade {at}",
+
+  "historyBranch": "Branch {branch}",
+
+  "historyUntitled": "Conversa sem título",
+
+  "historyLoadMore": "Carregar mais",
+
+  "historyLoadingMore": "Carregando…",
+
+  "historyConversationTitle": "Conversa",
+
+  "historyConversationLoading": "Carregando a conversa",
+
+  "historyConversationEmptyTitle": "Nada foi dito nesta conversa",
+
+  "historyConversationEmptyBody": "Ela não tem mensagens para mostrar. Retome-a para dizer algo.",
+
+  "historyLoadEarlier": "Carregar mensagens anteriores",
+
+  "historyResumeAction": "Retomar",
+
+  "historyResumePending": "Retomando…",
+
+  "historyResumeOffline": "Retomar precisa da conexão com o backend, e este aparelho não está conectado.",
+
+  "historyResumeNotSent": "A conversa não foi retomada: este aparelho não está conectado.",
+
+  "historyExternalNote": "Esta conversa começou fora deste app. Retomá-la aqui a continua com um novo id: o editor ou o terminal de onde ela veio não verá as respostas dadas aqui.",
+
+  "sessionHistoryLoading": "Carregando o que foi dito antes",
+
+  "sessionErrorUnknownCommand": "{command} não é um comando que o Claude oferece nesta máquina.",
+
+  "sessionErrorClaudeTimeout": "O Claude demorou demais para responder nesta máquina. Tente de novo.",
+
+  "sessionErrorLocked": "A sessão está ocupada: um turno está em execução ou outro desfazer está em andamento. Tente de novo quando ela estiver ociosa.",
+
+  "sessionErrorRewindTargetUnknown": "Esse ponto de desfazer não pertence a esta sessão.",
+
+  "sessionErrorRewindIncomplete": "Alguns arquivos não puderam ser restaurados ({failed}). Cada um deles ficou exatamente como estava.",
+
+  "sessionCommandsOpen": "Comandos",
+
+  "sessionCommandsTitle": "Comandos",
+
+  "sessionCommandsDescription": "O que o Claude oferece nesta máquina. A caixa de prompt aceita qualquer comando, listado aqui ou não.",
+
+  "sessionCommandsSearch": "Buscar comandos",
+
+  "sessionCommandsSuggested": "Sugeridos",
+
+  "sessionCommandsAll": "Todos os comandos",
+
+  "sessionCommandsLoading": "Carregando os comandos",
+
+  "sessionCommandsEmptyTitle": "Nenhum comando nesta máquina",
+
+  "sessionCommandsEmptyBody": "O Claude daqui não oferece comandos. Você ainda pode digitar qualquer coisa na caixa de prompt.",
+
+  "sessionCommandsNoMatch": "Nenhum comando corresponde a “{query}”.",
+
+  "sessionUndoOpen": "Desfazer alterações de arquivos",
+
+  "sessionUndoTitle": "Desfazer alterações de arquivos",
+
+  "sessionUndoDescription": "Devolva os arquivos que esta sessão escreveu ao estado de antes de um dos turnos dela. Um arquivo alterado fora da sessão fica como está.",
+
+  "sessionUndoLoading": "Carregando os pontos de desfazer",
+
+  "sessionUndoEmptyTitle": "Nada a desfazer ainda",
+
+  "sessionUndoEmptyBody": "Cada turno que escreve arquivos vira um ponto ao qual esta sessão pode voltar.",
+
+  "sessionUndoUntitled": "Turno sem título",
+
+  "sessionUndoPointAt": "{date} às {time}",
+
+  "sessionUndoFileCount": "{count, plural, =0{Nenhum arquivo} =1{1 arquivo} other{{count} arquivos}}",
+
+  "sessionUndoConfirmTitle": "Voltar para antes de “{label}”",
+
+  "sessionUndoGoesBack": "Volta",
+
+  "sessionUndoStays": "Fica como está",
+
+  "sessionUndoAlready": "Já está como era",
+
+  "sessionUndoRestore": "O conteúdo de antes do turno é restaurado",
+
+  "sessionUndoDelete": "Apagado: este turno o criou",
+
+  "sessionUndoReasonModifiedOutside": "Alterado fora da sessão depois que ela o escreveu",
+
+  "sessionUndoReasonNotRestorable": "Grande demais ou ilegível para ter sido guardado",
+
+  "sessionUndoReasonUnsafePath": "Deixou de ser um arquivo comum, ou a pasta dele deixou de existir",
+
+  "sessionUndoReasonNoBaseline": "Nada registra como a sessão o deixou",
+
+  "sessionUndoReasonOther": "Mantido por um motivo que este app não conhece",
+
+  "sessionUndoNothingToRevert": "Nada mudaria: nenhum arquivo deste ponto pode voltar.",
+
+  "sessionUndoConfirm": "Desfazer",
+
+  "sessionUndoPending": "Desfazendo…",
+
+  "sessionUndoBack": "Voltar aos pontos de desfazer",
+
+  "sessionUndoBusy": "Desfazer só está disponível com a sessão ociosa. Espere o turno terminar.",
+
+  "sessionUndoClosed": "Esta sessão está encerrada, então os arquivos dela não podem mais ser desfeitos daqui.",
+
+  "sessionUndoOffline": "Desfazer precisa da conexão com o backend, e este aparelho não está conectado.",
+
+  "sessionUndoNotSent": "Nada foi desfeito: este aparelho não está conectado.",
+
+  "sessionUndoDoneTitle": "Desfazer concluído",
+
+  "sessionUndoReverted": "Restaurados",
+
+  "sessionUndoRestored": "Restaurado ao estado de antes do turno",
+
+  "sessionUndoDeleted": "Apagado: o turno o tinha criado",
+
+  "sessionUndoFailed": "Não puderam ser restaurados"
 }

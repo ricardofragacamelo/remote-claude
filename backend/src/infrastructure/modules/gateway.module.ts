@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { WS_COMMAND_HANDLERS } from '@adapter/inbound/ws/ws-command';
 import type { WsCommandHandler } from '@adapter/inbound/ws/ws-command';
-import { AttachSessionUseCase } from '@application/session';
+import { AttachSessionUseCase, SessionRegistry } from '@application/session';
 import { DIAG_HANDLERS } from '@adapter/inbound/ws/diag/diag-commands';
 import { PERMISSION_HANDLERS } from '@adapter/inbound/ws/permission/permission-commands';
 import { DiagSessionOwnership } from '@adapter/outbound/diag/diag-session.ownership';
@@ -37,9 +37,12 @@ const HANDLERS = [
       // whether this user owns this stream, and a live session and the diagnostic round trip are
       // two different things that can both answer yes.
       provide: AttachSessionUseCase,
-      inject: [RegistrySessionOwnership, DiagSessionOwnership],
-      useFactory: (live: RegistrySessionOwnership, diag: DiagSessionOwnership) =>
-        new AttachSessionUseCase([live, diag]),
+      inject: [RegistrySessionOwnership, DiagSessionOwnership, SessionRegistry],
+      useFactory: (
+        live: RegistrySessionOwnership,
+        diag: DiagSessionOwnership,
+        registry: SessionRegistry,
+      ) => new AttachSessionUseCase([live, diag], registry),
     },
     SessionAttachHandler,
     {

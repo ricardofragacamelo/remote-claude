@@ -29,6 +29,12 @@ const Map<String, String> violations = <String, String>{
       "import 'package:remote_claude/features/session/domain/entities/pong.dart';\n",
   'lib/core/network/_arch_core_knows_features.dart':
       "import 'package:remote_claude/features/session/domain/entities/pong.dart';\n",
+  'lib/features/session/presentation/pages/_arch_session_knows_transcript.dart':
+      "import 'package:remote_claude/features/transcript/transcript.dart';\n",
+  'lib/features/transcript/presentation/pages/_arch_transcript_reaches_session.dart':
+      "import 'package:remote_claude/features/session/domain/entities/history_page.dart';\n",
+  'lib/features/workspace/presentation/pages/_arch_workspace_reaches_transcript.dart':
+      "import 'package:remote_claude/features/transcript/domain/entities/conversation_summary.dart';\n",
 };
 
 /// The rule each violation is expected to trip.
@@ -40,6 +46,10 @@ const Map<String, String> expectedRules = <String, String>{
   '_arch_socket.dart': 'domain_is_pure_socket',
   '_arch_reaches_data.dart': 'presentation_cannot_reach_data',
   '_arch_core_knows_features.dart': 'core_cannot_import_features',
+  // The history is two features, and the one the other imports never imports it back.
+  '_arch_session_knows_transcript.dart': 'session_never_imports_transcript',
+  '_arch_transcript_reaches_session.dart': 'no_cross_feature_internals_session_from_transcript',
+  '_arch_workspace_reaches_transcript.dart': 'no_cross_feature_internals_transcript',
 };
 
 Future<ProcessResult> runImportLint() =>

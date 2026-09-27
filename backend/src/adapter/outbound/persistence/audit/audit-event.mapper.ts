@@ -25,6 +25,7 @@ export function toEntity(row: AuditEventRow): AuditEvent {
     kind: row.kind,
     subjectId: row.subjectId,
     subjectLabel: row.subjectLabel,
+    details: row.details,
     at: row.at,
   });
 }
@@ -37,6 +38,7 @@ export function toRow(event: AuditEvent): AuditEventInsert {
     kind: event.kind,
     subjectId: event.subjectId,
     subjectLabel: event.subjectLabel,
+    details: event.details === null ? null : { ...event.details },
     at: event.at,
   };
 }

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-rewind-files.json",
+  "title": "SessionRewindFiles",
+  "description": "Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not `rewindFiles()` of the SDK: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`.",
+  "x-kind": "command",
+  "x-type": "session.rewindFiles",
+  "type": "object",
+  "required": ["sessionId", "promptId"],
+  "properties": {
+    "sessionId": { "type": "string" },
+    "promptId": {
+      "type": "string",
+      "description": "The turn to go back to, as `GET /sessions/:sessionId/checkpoints` names it — the `prompt_id` the hooks carry, never a message id of the transcript."
+    }
+  }
+}

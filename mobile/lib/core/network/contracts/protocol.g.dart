@@ -20,6 +20,7 @@ const List<String> frameTypes = <String>[
   'session.detach',
   'session.interrupt',
   'session.prompt',
+  'session.rewindFiles',
   'session.setLocale',
   'session.setModel',
   'session.setPermissionMode',
@@ -32,6 +33,7 @@ const List<String> frameTypes = <String>[
   'permission.requested',
   'permission.resolved',
   'session.closed',
+  'session.rewound',
   'session.started',
   'session.statusChanged',
   'tool.completed',
@@ -113,6 +115,12 @@ const String sessionPromptKind = 'command';
 /// `type` of a session.prompt frame.
 const String sessionPromptType = 'session.prompt';
 
+/// `kind` of a session.rewindFiles frame.
+const String sessionRewindFilesKind = 'command';
+
+/// `type` of a session.rewindFiles frame.
+const String sessionRewindFilesType = 'session.rewindFiles';
+
 /// `kind` of a session.setLocale frame.
 const String sessionSetLocaleKind = 'command';
 
@@ -184,6 +192,12 @@ const String sessionClosedKind = 'event';
 
 /// `type` of a session.closed frame.
 const String sessionClosedType = 'session.closed';
+
+/// `kind` of a session.rewound frame.
+const String sessionRewoundKind = 'event';
+
+/// `type` of a session.rewound frame.
+const String sessionRewoundType = 'session.rewound';
 
 /// `kind` of a session.started frame.
 const String sessionStartedKind = 'event';
@@ -418,13 +432,15 @@ class ConnectionReadyPayload {
   }
 }
 
-/// Answer to `session.attach`. Says what was replayed and whether anything was lost.
+/// Answer to `session.attach` — and to a `session.start` whose `resumeSessionId` names a conversation already live for the caller. Says what was replayed and whether anything was lost.
 class SessionAttachedPayload {
   const SessionAttachedPayload({
     required this.sessionId,
     required this.replayed,
     required this.oldestAvailableSeq,
     required this.gap,
+    this.claudeSessionId,
+    this.resumedFrom,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -433,6 +449,8 @@ class SessionAttachedPayload {
         replayed: json['replayed']! as int,
         oldestAvailableSeq: json['oldestAvailableSeq']! as int,
         gap: json['gap']! as bool,
+        claudeSessionId: json['claudeSessionId'] as String?,
+        resumedFrom: json['resumedFrom'] as String?,
       );
 
   final String sessionId;
@@ -446,6 +464,12 @@ class SessionAttachedPayload {
   /// The requested sequence had already fallen out of the buffer. The client drops its local state and reloads over HTTP — it never stitches a partial hole.
   final bool gap;
 
+  /// The conversation of a live session of Claude — where a client reloads from after a `gap`, which is exactly when the buffer no longer holds the `session.started` that named it. Absent for a stream that is not a conversation, such as the diagnostic round trip.
+  final String? claudeSessionId;
+
+  /// The conversation this session continues, when it is a resume. Present on the ack a `session.start` answers with when the conversation it asked to resume was already live for the caller: resuming what is live is an attach, never a second subprocess.
+  final String? resumedFrom;
+
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
@@ -454,6 +478,14 @@ class SessionAttachedPayload {
       'oldestAvailableSeq': oldestAvailableSeq,
       'gap': gap,
     };
+
+    if (claudeSessionId != null) {
+      json['claudeSessionId'] = claudeSessionId;
+    }
+
+    if (resumedFrom != null) {
+      json['resumedFrom'] = resumedFrom;
+    }
 
     return json;
   }
@@ -689,7 +721,7 @@ class SessionAttachPayload {
   /// Session to observe.
   final String sessionId;
 
-  /// Highest `seq` the client already has. The server replays from the next one, or answers `gap: true` when that sequence has fallen out of the buffer.
+  /// Highest `seq` the client already has — `0` when it has none, which replays everything the buffer holds. The server replays from the next one, or answers `gap: true` when that sequence has fallen out of the buffer. Absent, nothing past is replayed: the connection only observes from now on.
   final int? resumeFromSeq;
 
   /// A JSON map with the absent optional fields left out.
@@ -840,6 +872,35 @@ class SessionPromptPayload {
     if (attachments != null) {
       json['attachments'] = attachments?.map((item) => item.toJson()).toList(growable: false);
     }
+
+    return json;
+  }
+}
+
+/// Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not `rewindFiles()` of the SDK: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`.
+class SessionRewindFilesPayload {
+  const SessionRewindFilesPayload({
+    required this.sessionId,
+    required this.promptId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionRewindFilesPayload.fromJson(Map<String, Object?> json) => SessionRewindFilesPayload(
+        sessionId: json['sessionId']! as String,
+        promptId: json['promptId']! as String,
+      );
+
+  final String sessionId;
+
+  /// The turn to go back to, as `GET /sessions/:sessionId/checkpoints` names it — the `prompt_id` the hooks carry, never a message id of the transcript.
+  final String promptId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+      'promptId': promptId,
+    };
 
     return json;
   }
@@ -1480,6 +1541,154 @@ class SessionClosedPayload {
   }
 }
 
+class SessionRewoundPayloadRevertedItem {
+  const SessionRewoundPayloadRevertedItem({
+    required this.path,
+    required this.action,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionRewoundPayloadRevertedItem.fromJson(Map<String, Object?> json) => SessionRewoundPayloadRevertedItem(
+        path: json['path']! as String,
+        action: json['action']! as String,
+      );
+
+  final String path;
+
+  /// `deleted` for a file the session created: before the turn it was not there.
+  final String action;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'action': action,
+    };
+
+    return json;
+  }
+}
+
+class SessionRewoundPayloadPreservedItem {
+  const SessionRewoundPayloadPreservedItem({
+    required this.path,
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionRewoundPayloadPreservedItem.fromJson(Map<String, Object?> json) => SessionRewoundPayloadPreservedItem(
+        path: json['path']! as String,
+        reason: json['reason']! as String,
+      );
+
+  final String path;
+
+  /// `modifiedOutside` — somebody changed it after the session did; `notRestorable` — it was too large or unreadable to snapshot; `unsafePath` — it became a link or something other than a regular file, or its directory no longer resolves; `noBaseline` — nothing records how the session left it, so the undo will not guess.
+  final String reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'reason': reason,
+    };
+
+    return json;
+  }
+}
+
+class SessionRewoundPayloadUnchangedItem {
+  const SessionRewoundPayloadUnchangedItem({
+    required this.path,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionRewoundPayloadUnchangedItem.fromJson(Map<String, Object?> json) => SessionRewoundPayloadUnchangedItem(
+        path: json['path']! as String,
+      );
+
+  final String path;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+    };
+
+    return json;
+  }
+}
+
+class SessionRewoundPayloadFailedItem {
+  const SessionRewoundPayloadFailedItem({
+    required this.path,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionRewoundPayloadFailedItem.fromJson(Map<String, Object?> json) => SessionRewoundPayloadFailedItem(
+        path: json['path']! as String,
+      );
+
+  final String path;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+    };
+
+    return json;
+  }
+}
+
+/// What an undo did to the disk, file by file — never a boolean. Fanned out to every connection watching the session, because the files changed for all of them. A path in `failed` means the undo stopped short there; an `error` with `INTERNAL_ERROR` follows, and nothing listed as reverted is left half-written.
+class SessionRewoundPayload {
+  const SessionRewoundPayload({
+    required this.promptId,
+    required this.reverted,
+    required this.preserved,
+    required this.unchanged,
+    required this.failed,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionRewoundPayload.fromJson(Map<String, Object?> json) => SessionRewoundPayload(
+        promptId: json['promptId']! as String,
+        reverted: (json['reverted']! as List<Object?>).map((item) => SessionRewoundPayloadRevertedItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        preserved: (json['preserved']! as List<Object?>).map((item) => SessionRewoundPayloadPreservedItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        unchanged: (json['unchanged']! as List<Object?>).map((item) => SessionRewoundPayloadUnchangedItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        failed: (json['failed']! as List<Object?>).map((item) => SessionRewoundPayloadFailedItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// The turn the files went back to.
+  final String promptId;
+
+  /// Paths put back the way they were before the turn.
+  final List<SessionRewoundPayloadRevertedItem> reverted;
+
+  /// Paths left as they are, each with the reason.
+  final List<SessionRewoundPayloadPreservedItem> preserved;
+
+  /// Paths that were already the way they were before the turn. A second undo to the same point lands here — it is idempotent.
+  final List<SessionRewoundPayloadUnchangedItem> unchanged;
+
+  /// Paths the undo tried to put back and could not. Each is left exactly as it was: restoring writes a temporary file beside it and renames it over.
+  final List<SessionRewoundPayloadFailedItem> failed;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'promptId': promptId,
+      'reverted': reverted.map((item) => item.toJson()).toList(growable: false),
+      'preserved': preserved.map((item) => item.toJson()).toList(growable: false),
+      'unchanged': unchanged.map((item) => item.toJson()).toList(growable: false),
+      'failed': failed.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
 /// The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` — an SDKMessage is never emitted raw (ADR-006).
 class SessionStartedPayload {
   const SessionStartedPayload({
@@ -1487,6 +1696,8 @@ class SessionStartedPayload {
     required this.workspacePath,
     required this.model,
     required this.permissionMode,
+    required this.claudeSessionId,
+    this.resumedFrom,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -1495,6 +1706,8 @@ class SessionStartedPayload {
         workspacePath: json['workspacePath']! as String,
         model: json['model']! as String,
         permissionMode: json['permissionMode']! as String,
+        claudeSessionId: json['claudeSessionId']! as String,
+        resumedFrom: json['resumedFrom'] as String?,
       );
 
   final String sessionId;
@@ -1506,6 +1719,12 @@ class SessionStartedPayload {
 
   final String permissionMode;
 
+  /// The id of the conversation in Claude's store, which is not ours: it is what `GET /transcripts/:sessionId/messages` reads and what a later `session.start` takes as `resumeSessionId`. Equal to `resumedFrom` when one of our own conversations is continued in place; new when a conversation begun elsewhere is forked.
+  final String claudeSessionId;
+
+  /// The conversation this session continues, when it is a resume. Absent for a fresh session. The history before the first turn of this session is read from it, over HTTP — the replay buffer only ever holds what this session said.
+  final String? resumedFrom;
+
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
@@ -1513,7 +1732,12 @@ class SessionStartedPayload {
       'workspacePath': workspacePath,
       'model': model,
       'permissionMode': permissionMode,
+      'claudeSessionId': claudeSessionId,
     };
+
+    if (resumedFrom != null) {
+      json['resumedFrom'] = resumedFrom;
+    }
 
     return json;
   }

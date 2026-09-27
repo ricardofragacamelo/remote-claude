@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { SessionRunner } from '@adapter/outbound/claude/session-runner';
+import { COMMANDS_TIMEOUT_MS, SessionRunner } from '@adapter/outbound/claude/session-runner';
 import type { SessionEvent, ToolInvocation } from '@application/session';
 import type { SessionCloseReason } from '@domain/session';
-import { SessionId } from '@domain/session';
+import { ClaudeTimeoutError, ClaudeUnavailableError, SessionId } from '@domain/session';
 import { ClaudeSessionId } from '@domain/transcript';
+import { aConversation } from '../../../../support/builders/session.builder';
 import { WorkspacePath } from '@domain/workspace';
-import { loadFixture } from '../../../../fakes/agent-sdk/fixture';
+import { loadCommands, loadFixture } from '../../../../fakes/agent-sdk/fixture';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
 import type { ScriptOptions, ScriptRecord } from '../../../../fakes/agent-sdk/scripted-query';
 import { FixedClock } from '../../../../support/fakes/fixed-clock';
+import { ManualScheduler } from '../../../../support/fakes/manual-scheduler';
 import { StubPermissionGate } from '../../../../support/fakes/stub-permission-gate';
 import { RecordingJournal } from '../../../../support/fakes/recording-journal';
 import { RecordingLogger } from '../../../../support/fakes/recording-logger';
@@ -21,7 +23,10 @@ const CONVERSATION = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
 const now = new Date('2026-09-18T12:00:00.000Z');
 
 /** A runner over a scripted stream, with everything it produced collected. */
-function runner(script: ScriptOptions = {}): {
+function runner(
+  script: ScriptOptions = {},
+  extra: { scheduler?: ManualScheduler; bundledCliVersion?: string | null } = {},
+): {
   runner: SessionRunner;
   events: SessionEvent[];
   closed: SessionCloseReason[];
@@ -46,8 +51,7 @@ function runner(script: ScriptOptions = {}): {
       workspace: WorkspacePath.create('/srv/projects/app'),
       model: null,
       permissionMode: 'default',
-      resumeSessionId: null,
-      claudeSessionId: ClaudeSessionId.create(CONVERSATION),
+      conversation: { claudeSessionId: ClaudeSessionId.create(CONVERSATION), resumedFrom: null },
       onEvent: (event) => events.push(event),
       onClosed: (reason) => closed.push(reason),
     },
@@ -63,6 +67,9 @@ function runner(script: ScriptOptions = {}): {
       permissions: gate,
       limits: { maxBudgetUsd: 10, maxTurns: 100 },
       clock: new FixedClock(now),
+      scheduler: extra.scheduler ?? new ManualScheduler(),
+      bundledCliVersion:
+        extra.bundledCliVersion === undefined ? '2.1.277' : extra.bundledCliVersion,
       logger: log.logger,
     },
   );
@@ -237,8 +244,7 @@ describe('SessionRunner', () => {
           workspace: WorkspacePath.create('/srv/projects/app'),
           model: null,
           permissionMode: 'default',
-          resumeSessionId: null,
-          claudeSessionId: null,
+          conversation: aConversation(),
           onEvent: (event) => refused.events.push(event),
           onClosed: (reason) => refused.closed.push(reason),
         },
@@ -249,6 +255,8 @@ describe('SessionRunner', () => {
           permissions: new StubPermissionGate(),
           limits: { maxBudgetUsd: 10, maxTurns: 100 },
           clock: new FixedClock(now),
+          scheduler: new ManualScheduler(),
+          bundledCliVersion: '2.1.277',
           logger: refused.log.logger,
         },
       );
@@ -596,6 +604,106 @@ describe('SessionRunner', () => {
       await harness.settle();
 
       expect(harness.log.withOp('claude.output').every((line) => !('traceId' in line))).toBe(true);
+    });
+  });
+
+  describe('the slash commands of the installation — plan 04, F3', () => {
+    it('lists them from the query, in our shape — S-29', async () => {
+      harness.runner.run();
+
+      const commands = await harness.runner.supportedCommands();
+
+      expect(commands.length).toBe(loadCommands().commands.length);
+      expect(commands.find((command) => command.name === 'usage')).toEqual({
+        name: 'usage',
+        description: expect.any(String) as string,
+        argumentHint: '',
+        aliases: ['cost', 'stats'],
+      });
+      expect(harness.record.commandCalls).toBe(1);
+    });
+
+    it('gives an empty list of aliases to a command that has none', async () => {
+      const narrow = runner({
+        commands: [{ name: 'init', description: 'Initialise', argumentHint: '' }],
+      });
+      narrow.runner.run();
+
+      expect(await narrow.runner.supportedCommands()).toEqual([
+        { name: 'init', description: 'Initialise', argumentHint: '', aliases: [] },
+      ]);
+    });
+
+    it('logs the count and never the list', async () => {
+      harness.runner.run();
+      await harness.runner.supportedCommands();
+
+      const [line] = harness.log.withOp('claude.commands');
+      expect(line).toMatchObject({ level: 'debug', count: loadCommands().commands.length });
+      expect(JSON.stringify(line)).not.toContain('Initialize a new CLAUDE.md');
+    });
+
+    it('answers unavailable when the CLI fails to list — S-31', async () => {
+      const failing = runner({ commands: new Error('the subprocess is gone') });
+      failing.runner.run();
+
+      await expect(failing.runner.supportedCommands()).rejects.toThrow(ClaudeUnavailableError);
+      expect(failing.log.withOp('claude.commands')[0]).toMatchObject({ level: 'warn' });
+    });
+
+    it('answers a timeout when the CLI never answers — S-31', async () => {
+      const scheduler = new ManualScheduler();
+      const hanging = runner({ commands: 'hang' }, { scheduler });
+      hanging.runner.run();
+
+      const listing = hanging.runner.supportedCommands();
+      scheduler.fire();
+
+      await expect(listing).rejects.toThrow(ClaudeTimeoutError);
+      expect(scheduler.delays).toEqual([COMMANDS_TIMEOUT_MS]);
+    });
+
+    it('answers unavailable before the session is running, and after it closed', async () => {
+      await expect(harness.runner.supportedCommands()).rejects.toThrow(ClaudeUnavailableError);
+
+      harness.runner.run();
+      await harness.runner.close();
+
+      await expect(harness.runner.supportedCommands()).rejects.toThrow(ClaudeUnavailableError);
+    });
+
+    it('names the bundled version until the CLI reports its own — S-35', async () => {
+      const fresh = runner({}, { bundledCliVersion: '2.1.000' });
+      fresh.runner.run();
+
+      expect(fresh.runner.cliVersion).toBe('2.1.000');
+
+      fresh.runner.prompt('hello');
+      await fresh.settle();
+
+      // The fixture was recorded from a real CLI, which reported itself in `system:init`.
+      expect(fresh.runner.cliVersion).toBe('2.1.277');
+      expect(
+        fresh.log.lines.filter((line) => line.msg.includes('reports a version other')),
+      ).toHaveLength(1);
+    });
+
+    it('says nothing when the CLI confirms the bundled version', async () => {
+      harness.runner.run();
+      harness.runner.prompt('hello');
+      await harness.settle();
+
+      expect(harness.runner.cliVersion).toBe('2.1.277');
+      expect(harness.log.lines.some((line) => line.msg.includes('reports a version other'))).toBe(
+        false,
+      );
+    });
+
+    it('knows no version when neither the manifest nor the CLI has said one', () => {
+      const unknown = runner({}, { bundledCliVersion: null });
+      unknown.runner.run();
+
+      expect(unknown.runner.cliVersion).toBeNull();
     });
   });
 });

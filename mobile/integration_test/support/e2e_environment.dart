@@ -324,10 +324,10 @@ class BrowserSocket {
   }
 
   /// Sends a turn to [sessionId], naming the recording the scripted backend replays.
-  void prompt(String sessionId, String fixture) => _send('session.prompt', <String, Object?>{
-    'sessionId': sessionId,
-    'text': 'do the work [fixture:$fixture]',
-  });
+  void prompt(String sessionId, String fixture, {String text = 'do the work'}) => _send(
+    'session.prompt',
+    <String, Object?>{'sessionId': sessionId, 'text': '$text [fixture:$fixture]'},
+  );
 
   /// Closes the socket the way a browser does.
   Future<void> close() => _socket.close(1000);

@@ -13,6 +13,11 @@ part of 'live_session_controller.dart';
 /// Keyed by the session, because the session on screen is **navigation state** and lives in the
 /// route. Opening another one builds another instance, and the one being left is disposed — which
 /// is what makes the detach below fire at the right moment.
+///
+/// Two sources make up what it shows, and they are kept apart until the last moment: the live
+/// stream, which has a `seq`, and the history read over HTTP, which has none. Folding them into
+/// one another would let the history move the resume point, or the replay duplicate the history;
+/// laying one over the other at render time is what keeps both from happening (S-15, S-21).
 
 @ProviderFor(LiveSessionController)
 final liveSessionControllerProvider = LiveSessionControllerFamily._();
@@ -22,13 +27,23 @@ final liveSessionControllerProvider = LiveSessionControllerFamily._();
 /// Keyed by the session, because the session on screen is **navigation state** and lives in the
 /// route. Opening another one builds another instance, and the one being left is disposed — which
 /// is what makes the detach below fire at the right moment.
+///
+/// Two sources make up what it shows, and they are kept apart until the last moment: the live
+/// stream, which has a `seq`, and the history read over HTTP, which has none. Folding them into
+/// one another would let the history move the resume point, or the replay duplicate the history;
+/// laying one over the other at render time is what keeps both from happening (S-15, S-21).
 final class LiveSessionControllerProvider
-    extends $NotifierProvider<LiveSessionController, Conversation> {
+    extends $NotifierProvider<LiveSessionController, LiveSession> {
   /// The live conversation of one session.
   ///
   /// Keyed by the session, because the session on screen is **navigation state** and lives in the
   /// route. Opening another one builds another instance, and the one being left is disposed — which
   /// is what makes the detach below fire at the right moment.
+  ///
+  /// Two sources make up what it shows, and they are kept apart until the last moment: the live
+  /// stream, which has a `seq`, and the history read over HTTP, which has none. Folding them into
+  /// one another would let the history move the resume point, or the replay duplicate the history;
+  /// laying one over the other at render time is what keeps both from happening (S-15, S-21).
   LiveSessionControllerProvider._({
     required LiveSessionControllerFamily super.from,
     required String super.argument,
@@ -55,10 +70,10 @@ final class LiveSessionControllerProvider
   LiveSessionController create() => LiveSessionController();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(Conversation value) {
+  Override overrideWithValue(LiveSession value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<Conversation>(value),
+      providerOverride: $SyncValueProvider<LiveSession>(value),
     );
   }
 
@@ -73,23 +88,22 @@ final class LiveSessionControllerProvider
   }
 }
 
-String _$liveSessionControllerHash() => r'86e0bc668e38f159dbd6fa549a7ff4340aa61338';
+String _$liveSessionControllerHash() => r'f7c0d5f4fbcb019c3b795e2f90054f28f98690d1';
 
 /// The live conversation of one session.
 ///
 /// Keyed by the session, because the session on screen is **navigation state** and lives in the
 /// route. Opening another one builds another instance, and the one being left is disposed — which
 /// is what makes the detach below fire at the right moment.
+///
+/// Two sources make up what it shows, and they are kept apart until the last moment: the live
+/// stream, which has a `seq`, and the history read over HTTP, which has none. Folding them into
+/// one another would let the history move the resume point, or the replay duplicate the history;
+/// laying one over the other at render time is what keeps both from happening (S-15, S-21).
 
 final class LiveSessionControllerFamily extends $Family
     with
-        $ClassFamilyOverride<
-          LiveSessionController,
-          Conversation,
-          Conversation,
-          Conversation,
-          String
-        > {
+        $ClassFamilyOverride<LiveSessionController, LiveSession, LiveSession, LiveSession, String> {
   LiveSessionControllerFamily._()
     : super(
         retry: null,
@@ -104,6 +118,11 @@ final class LiveSessionControllerFamily extends $Family
   /// Keyed by the session, because the session on screen is **navigation state** and lives in the
   /// route. Opening another one builds another instance, and the one being left is disposed — which
   /// is what makes the detach below fire at the right moment.
+  ///
+  /// Two sources make up what it shows, and they are kept apart until the last moment: the live
+  /// stream, which has a `seq`, and the history read over HTTP, which has none. Folding them into
+  /// one another would let the history move the resume point, or the replay duplicate the history;
+  /// laying one over the other at render time is what keeps both from happening (S-15, S-21).
 
   LiveSessionControllerProvider call(String sessionId) =>
       LiveSessionControllerProvider._(argument: sessionId, from: this);
@@ -117,21 +136,26 @@ final class LiveSessionControllerFamily extends $Family
 /// Keyed by the session, because the session on screen is **navigation state** and lives in the
 /// route. Opening another one builds another instance, and the one being left is disposed — which
 /// is what makes the detach below fire at the right moment.
+///
+/// Two sources make up what it shows, and they are kept apart until the last moment: the live
+/// stream, which has a `seq`, and the history read over HTTP, which has none. Folding them into
+/// one another would let the history move the resume point, or the replay duplicate the history;
+/// laying one over the other at render time is what keeps both from happening (S-15, S-21).
 
-abstract class _$LiveSessionController extends $Notifier<Conversation> {
+abstract class _$LiveSessionController extends $Notifier<LiveSession> {
   late final _$args = ref.$arg as String;
   String get sessionId => _$args;
 
-  Conversation build(String sessionId);
+  LiveSession build(String sessionId);
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
-    final ref = this.ref as $Ref<Conversation, Conversation>;
+    final ref = this.ref as $Ref<LiveSession, LiveSession>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<Conversation, Conversation>,
-              Conversation,
+              AnyNotifier<LiveSession, LiveSession>,
+              LiveSession,
               Object?,
               Object?
             >;

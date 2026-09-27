@@ -5,6 +5,7 @@ import 'dart:convert';
 
 import 'package:remote_claude/core/network/contracts/frame_codec.dart';
 import 'package:remote_claude/features/session/data/mappers/session_event_mapper.dart';
+import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 
 /// One envelope, as JSON text.
@@ -38,12 +39,14 @@ String connectionReady({String connectionId = 'conn-1'}) => frame(
   },
 );
 
-/// The answer to `session.attach`.
+/// The answer to `session.attach` — or to a `session.start` that joined a live conversation.
 String sessionAttached({
   required String sessionId,
   bool gap = false,
   int replayed = 0,
   int oldestAvailableSeq = 0,
+  String? claudeSessionId,
+  String? resumedFrom,
 }) => frame(
   kind: 'ack',
   type: 'session.attached',
@@ -52,6 +55,8 @@ String sessionAttached({
     'replayed': replayed,
     'oldestAvailableSeq': oldestAvailableSeq,
     'gap': gap,
+    'claudeSessionId': ?claudeSessionId,
+    'resumedFrom': ?resumedFrom,
   },
 );
 
@@ -75,12 +80,22 @@ String diagPong({
 );
 
 /// The event that announces a session.
-String sessionStarted({required String sessionId, int seq = 1}) => frame(
+String sessionStarted({
+  required String sessionId,
+  int seq = 1,
+  String? claudeSessionId,
+  String? resumedFrom,
+}) => frame(
   kind: 'event',
   type: 'session.started',
   sessionId: sessionId,
   seq: seq,
-  payload: <String, Object?>{'sessionId': sessionId, 'workspacePath': '/tmp/work'},
+  payload: <String, Object?>{
+    'sessionId': sessionId,
+    'workspacePath': '/tmp/work',
+    'claudeSessionId': ?claudeSessionId,
+    'resumedFrom': ?resumedFrom,
+  },
 );
 
 /// One fragment of a message.
@@ -252,6 +267,8 @@ String commandError({
   String code = 'INVALID_INPUT',
   String messageKey = 'common.error.invalidInput',
   String id = 'err-1',
+  String? traceId,
+  Map<String, Object?>? params,
 }) => jsonEncode(<String, Object?>{
   'v': 1,
   'id': id,
@@ -259,5 +276,55 @@ String commandError({
   'type': 'error',
   'ts': '2026-09-14T12:00:00.000Z',
   'correlationId': ?correlationId,
-  'payload': <String, Object?>{'code': code, 'messageKey': messageKey, 'traceId': 'trace-1'},
+  'traceId': ?traceId,
+  'payload': <String, Object?>{
+    'code': code,
+    'messageKey': messageKey,
+    'traceId': 'trace-1',
+    'params': ?params,
+  },
 });
+
+/// One entry of the history endpoint: a frame of the live contract without its envelope.
+///
+/// Built from the same builders as the live frames, so a test that compares the two compares what
+/// the backend actually sends on both paths — the same payload and the same ids.
+Map<String, Object?> historyEntry(String raw) {
+  final Map<String, Object?> envelope = jsonDecode(raw)! as Map<String, Object?>;
+  return <String, Object?>{'type': envelope['type'], 'payload': envelope['payload']};
+}
+
+/// The body of `GET /transcripts/:sessionId/messages`.
+Map<String, Object?> historyBody({
+  String conversationId = 'conv-1',
+  String origin = 'ours',
+  String cwd = '/home/someone/project',
+  String summary = 'Fix the build',
+  List<Map<String, Object?>> events = const <Map<String, Object?>>[],
+  String? nextCursor,
+}) => <String, Object?>{
+  'session': <String, Object?>{
+    'sessionId': conversationId,
+    'summary': summary,
+    'origin': origin,
+    'cwd': cwd,
+    'gitBranch': 'main',
+    'createdAt': '2026-09-20T10:00:00.000Z',
+    'lastModified': '2026-09-24T18:30:00.000Z',
+  },
+  'events': events,
+  'nextCursor': nextCursor,
+};
+
+/// The events of a history made of [raws], through the real mapper — the one the live frames go
+/// through too.
+List<SessionEvent> historyOf(List<String> raws) =>
+    raws.map((String raw) => historyEventFrom(historyEntry(raw))!).toList(growable: false);
+
+/// What an undo did, as the socket carries it.
+String sessionRewound({
+  required int seq,
+  required Map<String, Object?> payload,
+  String sessionId = 'session-1',
+}) =>
+    frame(kind: 'event', type: 'session.rewound', sessionId: sessionId, seq: seq, payload: payload);

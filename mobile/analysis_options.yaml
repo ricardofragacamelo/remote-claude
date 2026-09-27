@@ -88,6 +88,23 @@ import_lint:
       from: "package:remote_claude/features/session/**"
       except: []
 
+    # The history is two features: `transcript` lists the conversations of a workspace, and
+    # `session` reads one and resumes it. Each reaches the other only through its barrel, and the
+    # session never reaches the transcript at all — it is the one the transcript would import, so
+    # an import back is the cycle this rule refuses.
+    no_cross_feature_internals_session_from_transcript:
+      target: "package:remote_claude/features/transcript/**"
+      from: "package:remote_claude/features/session/**"
+      except: ["package:remote_claude/features/session/session.dart"]
+    no_cross_feature_internals_transcript:
+      target: "package:remote_claude/features/workspace/**"
+      from: "package:remote_claude/features/transcript/**"
+      except: ["package:remote_claude/features/transcript/transcript.dart"]
+    session_never_imports_transcript:
+      target: "package:remote_claude/features/session/**"
+      from: "package:remote_claude/features/transcript/**"
+      except: []
+
     # The arrow points at `core/`, always. `core/` knowing a feature is a cycle waiting to be
     # written.
     core_cannot_import_features:

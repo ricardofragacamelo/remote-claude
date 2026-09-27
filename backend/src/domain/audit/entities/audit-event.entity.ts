@@ -6,10 +6,16 @@ export interface AuditEventDraft {
   readonly id: string;
   readonly userId: UserId;
   readonly kind: AuditEventKind;
-  /** What the event is about — the device, or the permission rule. */
+  /** What the event is about — the device, the permission rule, or the conversation resumed. */
   readonly subjectId: string;
   /** Recognisable label of the subject, so the trail reads without a second query. */
   readonly subjectLabel: string;
+
+  /**
+   * What the event needs said beyond its subject, or absent — the paths an undo put back and the
+   * ones it left. Never the contents of a file, never a message of a conversation.
+   */
+  readonly details?: Readonly<Record<string, unknown>> | null;
   readonly at: Date;
 }
 
@@ -30,6 +36,7 @@ export class AuditEvent {
     readonly kind: AuditEventKind,
     readonly subjectId: string,
     readonly subjectLabel: string,
+    readonly details: Readonly<Record<string, unknown>> | null,
     readonly at: Date,
   ) {}
 
@@ -40,6 +47,7 @@ export class AuditEvent {
       draft.kind,
       draft.subjectId,
       draft.subjectLabel,
+      draft.details ?? null,
       draft.at,
     );
   }
@@ -56,6 +64,7 @@ export class AuditEvent {
       kind: this.kind,
       subjectId: this.subjectId,
       subjectLabel: this.subjectLabel,
+      details: this.details,
       at: this.at,
     };
   }
