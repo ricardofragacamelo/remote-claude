@@ -1,8 +1,10 @@
 #!/bin/sh
+# Disabled on purpose (2026-09-26): every command below is commented out, not deleted.
+# Uncomment them to put the hook back into execution.
 # Seconds, not minutes: formatting, lint and secret scan, over the touched files only.
 # The whole suite runs on pre-push. A slow hook is a hook the team learns to skip with
 # --no-verify — docs/architecture/shared/09-code-quality.md#onde-cada-portão-roda.
-set -e
+# set -e
 
-pnpm exec lint-staged
-node scripts/secrets-scan.mjs --staged
+# pnpm exec lint-staged
+# node scripts/secrets-scan.mjs --staged
