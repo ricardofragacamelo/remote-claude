@@ -61,22 +61,20 @@ O pacote `logging` usa `Level`; mapeie para os nomes comuns na serialização:
 | Ambiente | Nível | Destino |
 |---|---|---|
 | Debug | `debug` | console, formatado e legível |
-| Release | `info` | buffer em memória → envio em lote |
-| Release, com debug ligado pelo usuário | `debug` | idem, com amostragem |
+| Release | `info` | console do aparelho (`dart:developer`) |
+| Release, com debug ligado pelo usuário | `debug` | idem |
 
-O usuário liga `debug` numa tela de diagnóstico. Bug de permissão intermitente em celular é
-quase impossível de reproduzir sem isso — e obrigar a publicar build novo para investigar é
-inviável em app de loja.
+O usuário liga `debug` numa tela de diagnóstico (`/diagnostics`, pelo ícone da tela inicial). Bug
+de permissão intermitente em celular é quase impossível de reproduzir sem isso — e obrigar a
+publicar build novo para investigar é inviável em app de loja. **O nível volta ao do build quando
+a tela sai**: nível elevado esquecido é vazamento lento. A tela também mostra a conexão, se há
+login e a versão do build.
 
-### Envio em lote
+### Nada sai do aparelho
 
-- Acumula em memória; envia a cada **30 s** ou **50 registros**, o que vier primeiro.
-- `error` e `fatal` vão na hora.
-- **Persiste o buffer** antes de ir para background — o SO pode matar o processo, e o lote do
-  crash é justamente o que interessa.
-- Só envia em **Wi-Fi** por padrão, com opção de permitir dados móveis.
-- Falha de envio nunca quebra o app: descarta e segue.
-- O envio de log **nunca** é logado.
+O log do app fica no console do aparelho: nenhuma linha é enviada ao backend. O que liga um erro na
+tela ao log do backend é o `traceId`, que o erro mostra e que o backend grava em toda linha da
+requisição ([plano 05 · escopo reduzido](../../plans/05-hardening-operations/progress.md#escopo-reduzido-ou-adiado)).
 
 ---
 

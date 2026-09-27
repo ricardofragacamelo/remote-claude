@@ -74,6 +74,13 @@ describe('classifyRisk', () => {
       expect(classifyRisk('Bash', { command: 'ls; mkdir out' })).toBe('write');
     });
 
+    it('splits at a lone `&` too, so a backgrounded command is graded on its own — 13 · B-08', () => {
+      // Before the operator list became one, a lone `&` did not split: `ls & rm -rf x` was graded
+      // by `ls` alone, as a read.
+      expect(classifyRisk('Bash', { command: 'ls & rm -rf x' })).toBe('destructive');
+      expect(classifyRisk('Bash', { command: 'ls & pwd' })).toBe('read');
+    });
+
     it('grades a destructive command as destructive — S-62', () => {
       expect(classifyRisk('Bash', { command: 'rm -rf build/' })).toBe('destructive');
     });

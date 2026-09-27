@@ -38,6 +38,12 @@
  * Neither is ever *skipped*: asked for and unable to run, each fails loudly rather than passing
  * by being absent.
  *
+ * **The app's runs bring their own device, and take it away again.** With a device already
+ * attached, the suite uses it and leaves it as it found it. With none, this script starts the
+ * suite's emulator while the stack comes up, and takes it down in the teardown — together with the
+ * Gradle daemons the build left behind, which otherwise hold gigabytes until the next
+ * `pnpm verify:full` times out on them. See `scripts/lib/emulator.mjs`.
+ *
  * `pnpm test:e2e:live` runs `e2e/smoke-live/` against the **real** Claude on this machine. It is
  * the one suite that is not hermetic and the only one that costs money per run, so it is never a
  * gate — it exists to catch the SDK changing its contract under us, which nothing else can.
@@ -53,11 +59,22 @@
  */
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 
 import { purgeStaleProjects, resolveComposeCli } from './lib/compose.mjs';
-import { run } from './lib/exec.mjs';
+import {
+  EMULATOR_AVD,
+  EMULATOR_PORT,
+  androidSdkRoot,
+  claimDevice,
+  emulatorCommand,
+  releaseDevice,
+  waitForBoot,
+  withSdkOnPath,
+} from './lib/emulator.mjs';
+import { commandExists, run } from './lib/exec.mjs';
 import { bringUp, composeRunner, stillPending, STACK_TIMEOUT_MS } from './lib/local-stack.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { findFreePort } from './lib/ports.mjs';
@@ -132,6 +149,45 @@ const composeCli = resolveComposeCli((command, args) => run(command, args, { tim
  */
 let compose = null;
 
+/** Where the Android SDK is, for the app's runs — `adb` and `emulator` need not be on PATH. */
+const sdkRoot = androidSdkRoot(process.env, os.homedir(), process.platform);
+
+/** The Gradle wrapper Flutter writes, whose daemons outlive every build of the app. */
+const gradleWrapper = path.join(
+  repoRoot,
+  'mobile',
+  'android',
+  process.platform === 'win32' ? 'gradlew.bat' : 'gradlew',
+);
+
+/** @type {import('./lib/emulator.mjs').DeviceTools} */
+const deviceTools = {
+  adb: (args) => run(path.join(sdkRoot, 'platform-tools', 'adb'), args, { timeoutMs: 30_000 }),
+  startEmulator: () => {
+    const fenced = process.platform === 'linux' && commandExists('systemd-run');
+    const { command, args } = emulatorCommand({ avd: EMULATOR_AVD, port: EMULATOR_PORT, fenced });
+    // Ignored output: the emulator writes several lines a second for as long as it lives, and a
+    // pipe nobody drains is a pipe that fills and freezes it. When it dies, the wait says so.
+    return startProc(command, args, {
+      cwd: repoRoot,
+      env: withSdkOnPath(process.env, sdkRoot),
+      stdio: 'ignore',
+    });
+  },
+  kill: (child) => kill(child),
+};
+
+/**
+ * The device of an app run, once claimed. Out here for the same reason as `compose`: a teardown
+ * halfway through the boot still has to take the emulator down.
+ *
+ * @type {import('./lib/emulator.mjs').Device | null}
+ */
+let device = null;
+
+/** Whether the app was built at all — only then are there Gradle daemons to stop. */
+let appBuilt = false;
+
 /**
  * Reverse of the start order, and idempotent: a second Ctrl+C arrives while the first teardown is
  * still running, and the `finally` below runs on the same shutdown as the signal handler.
@@ -147,9 +203,33 @@ const teardown = cleanupOnce(async () => {
   if (compose !== null) {
     // `down --volumes`, not `stop`: nothing of an e2e run is worth keeping, and a volume kept is
     // a volume that outlives the project that owned it.
-    const down = compose(['down', '--volumes', '--remove-orphans']);
+    const down = compose(['down', '--volumes', '--remove-orphans'], { ownProcessGroup: true });
     if (down.code !== 0) {
       warn('compose down did not exit cleanly', `exit ${String(down.code)}`);
+    }
+  }
+
+  if (device !== null) {
+    const released = await releaseDevice(device, deviceTools);
+    if (released === 'kept') {
+      ok('device left as it was', `${device.serial} was attached before the run`);
+    } else {
+      ok(
+        'emulator down',
+        released === 'killed' ? 'it ignored emu kill, so it was killed' : device.serial,
+      );
+    }
+  }
+
+  if (appBuilt && fs.existsSync(gradleWrapper)) {
+    const stopped = run(gradleWrapper, ['--stop'], {
+      cwd: path.dirname(gradleWrapper),
+      timeoutMs: 60_000,
+    });
+    if (stopped.code === 0) {
+      ok('Gradle daemons stopped');
+    } else {
+      warn('gradlew --stop did not exit cleanly', `exit ${String(stopped.code)}`);
     }
   }
 
@@ -158,7 +238,10 @@ const teardown = cleanupOnce(async () => {
   fs.rmSync(dotEnvPath, { force: true });
   fs.rmSync(backendLogPath, { force: true });
 
-  ok('nothing left', 'no containers, no volumes, no e2e/.env');
+  ok(
+    'nothing left',
+    `no containers, no volumes, no e2e/.env${mobile ? ', no emulator of ours' : ''}`,
+  );
 });
 
 /**
@@ -221,7 +304,39 @@ function realPushOrExit() {
   }
 
   warn('this run really notifies', 'it reaches the push provider, outside this machine');
-  return result.env;
+
+  // The scripted backend fails the first announcement it hands the provider, so the notification
+  // that reaches the tray is the one its retry sent — plan 05, S-53. The scenario the suite already
+  // runs proves both: the retry happened, and the phone still got its question.
+  return { ...result.env, RC_E2E_PUSH_FAIL_FIRST: '1' };
+}
+
+/**
+ * Claims the device of an app run and starts waiting for it to boot.
+ *
+ * @returns {Promise<string | null> | null} what stopped the boot, or `null` once it finished —
+ *   or `null` instead of a promise when there is no device to be had at all
+ */
+function claimAndBoot() {
+  const claimed = claimDevice(deviceTools);
+
+  if ('problem' in claimed) {
+    fail(claimed.problem);
+    hint(`looked for the SDK in ${sdkRoot}`);
+    return null;
+  }
+
+  device = claimed.device;
+  if (device.child === null) {
+    ok('using the attached device', device.serial);
+  } else {
+    info(`starting the emulator ${bold(EMULATOR_AVD)} — it goes down with the stack`);
+  }
+
+  return waitForBoot(device, deviceTools).then(
+    () => null,
+    (/** @type {Error} */ error) => error.message,
+  );
 }
 
 /**
@@ -242,6 +357,13 @@ async function main() {
     fail('docker compose is not available');
     hint('install the Compose v2 plugin (docker-compose-plugin) or the docker-compose binary');
     hint('`pnpm doctor` checks this, and everything else the stack needs');
+    return STACK_FAILED;
+  }
+
+  // The device before the stack: a machine with no SDK fails in a second instead of after the
+  // containers, and an emulator boots in the minute the stack takes to come up anyway.
+  const booted = mobile ? claimAndBoot() : Promise.resolve(null);
+  if (booted === null) {
     return STACK_FAILED;
   }
 
@@ -282,7 +404,7 @@ async function main() {
   const claudeConfig = live ? { claudeConfigDir: null } : {};
 
   const env = {
-    ...process.env,
+    ...(mobile ? withSdkOnPath(process.env, sdkRoot) : process.env),
     ...ephemeralEnvironment(ports, claudeConfig),
     ...realPushOrExit(),
     COMPOSE_PROJECT_NAME: project,
@@ -345,6 +467,13 @@ async function main() {
   await waitForHttp(urls.web, { proc: webProc, timeoutMs: SERVICE_TIMEOUT_MS, intervalMs: 500 });
   ok('web', urls.web);
 
+  const bootProblem = await booted;
+  if (bootProblem !== null) {
+    fail(bootProblem);
+    hint(`run \`emulator -avd ${EMULATOR_AVD}\` by hand to see why, or attach a device first`);
+    return STACK_FAILED;
+  }
+
   fs.writeFileSync(dotEnvPath, e2eDotEnv(ports, claudeConfig), 'utf8');
 
   line();
@@ -356,6 +485,7 @@ async function main() {
   // `runAttached` would have been simpler, but the suite's own output is what a reader needs and
   // both runners write their report to stdout; piping and re-emitting keeps the output *and* the
   // exit code, which is the one thing this script must not lose.
+  appBuilt = mobile;
   const suite = mobile
     ? run(
         process.execPath,

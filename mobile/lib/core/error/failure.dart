@@ -59,6 +59,12 @@ final class NetworkFailure extends Failure {
     : super(code: 'NETWORK_UNREACHABLE', messageKey: 'common.error.offline');
 }
 
+/// A command left and nothing ever answered it — the answer was lost with a socket, or with the
+/// server. Raised by the client, so its `traceId` is the command's own id.
+final class NoAnswerFailure extends Failure {
+  const NoAnswerFailure({required super.traceId, required super.code, required super.messageKey});
+}
+
 /// The credential is missing, rejected or expired.
 final class AuthenticationFailure extends Failure {
   const AuthenticationFailure({

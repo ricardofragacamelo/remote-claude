@@ -90,6 +90,13 @@ export const E2E_POSTGRES = {
  * @property {string} LOG_LEVEL
  * @property {string} RC_WORKSPACE_ALLOWLIST_FILE
  * @property {string} RC_SESSION_MAX_CONCURRENT
+ * @property {string} RC_SESSION_MIN_CONCURRENT
+ * @property {string} RC_SESSION_MEMORY_FRACTION
+ * @property {string} RC_SESSION_MEMORY_MB
+ * @property {string} RC_SESSION_IDLE_TTL_MS
+ * @property {string} RC_WS_MAX_FRAMES_PER_SECOND
+ * @property {string} RC_WS_MAX_FRAME_BYTES
+ * @property {string} RC_WS_MAX_ATTACHED_SESSIONS
  * @property {string} RC_SESSION_MAX_TURNS
  * @property {string} RC_SESSION_MAX_BUDGET_USD
  * @property {string} RC_SESSION_DEFAULT_MODEL
@@ -157,10 +164,22 @@ export function ephemeralEnvironment(ports, options = {}) {
     RC_WORKSPACE_ALLOWLIST_FILE: ALLOWLIST_FILE,
 
     RC_SESSION_MAX_CONCURRENT: '10',
+    RC_SESSION_MIN_CONCURRENT: '1',
+    RC_SESSION_MEMORY_FRACTION: '0.5',
+    RC_SESSION_MEMORY_MB: '256',
+    RC_SESSION_IDLE_TTL_MS: '1800000',
     RC_SESSION_MAX_TURNS: '100',
     RC_SESSION_MAX_BUDGET_USD: '10',
     RC_SESSION_DEFAULT_MODEL: 'claude-sonnet-5',
     RC_SESSION_DEFAULT_PERMISSION_MODE: 'default',
+
+    // High on purpose: three scenarios overflow a 1,000-event replay buffer by sending frames, and
+    // at the product's 20 a second that alone would be most of a minute each. The client of the
+    // suite still paces itself by what `connection.ready` announces; a scenario about the rate limit
+    // itself sets its own number (plan 05, B-06).
+    RC_WS_MAX_FRAMES_PER_SECOND: '5000',
+    RC_WS_MAX_FRAME_BYTES: '65536',
+    RC_WS_MAX_ATTACHED_SESSIONS: '16',
 
     // Short, because an e2e that waits two minutes for a permission to expire is an e2e nobody
     // runs. The scenario that needs the deadline to pass says so; the others answer long before.
@@ -354,6 +373,127 @@ export function serviceUrls(ports) {
     backend: `http://localhost:${String(ports.backend)}`,
     web: `http://localhost:${String(ports.web)}`,
   };
+}
+
+/** The backend route the startup scripts poll; the only one with no authentication. */
+export const HEALTH_PATH = '/health';
+
+/** The path the backend's WebSocket gateway listens on. */
+export const WS_PATH = '/ws';
+
+/**
+ * The first IPv4 address of this machine that another device on the network can reach.
+ *
+ * The backend binds every interface, so a phone on the same network talks to it through this
+ * address — `localhost` on the phone is the phone.
+ *
+ * @param {NodeJS.Dict<import('node:os').NetworkInterfaceInfo[]>} [interfaces]
+ * @returns {string | null} null when the machine has no external IPv4 interface
+ */
+export function lanAddress(interfaces = os.networkInterfaces()) {
+  for (const entries of Object.values(interfaces)) {
+    const external = (entries ?? []).find((entry) => entry.family === 'IPv4' && !entry.internal);
+
+    if (external !== undefined) {
+      return external.address;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * @typedef {object} BoardRow
+ * @property {string} name what a human calls the service
+ * @property {number} port the port published on this machine
+ * @property {string} address where it answers
+ * @property {[string, string][]} details secondary addresses, as label and value
+ * @property {string} [workspace] the watch process it depends on, for the rows that have one
+ */
+
+/**
+ * What the URL board of `pnpm dev` shows: every service, its port, and every address worth
+ * typing into something.
+ *
+ * The database password is left out on purpose — the board is the part of the output people
+ * paste into chats and issues.
+ *
+ * @param {StackPorts} ports
+ * @param {{ env?: NodeJS.ProcessEnv, lan?: string | null }} [options] `lan` is the address a
+ *   phone reaches the backend through, or null when there is none
+ * @returns {BoardRow[]}
+ */
+export function boardRows(ports, options = {}) {
+  const env = options.env ?? {};
+  const urls = serviceUrls(ports);
+  const user = env['RC_POSTGRES_USER'] ?? E2E_POSTGRES.user;
+  const db = env['RC_POSTGRES_DB'] ?? E2E_POSTGRES.db;
+  const ws = `${urls.backend.replace(/^http/, 'ws')}${WS_PATH}`;
+
+  /** @type {[string, string][]} */
+  const backendDetails = [
+    ['health', `${urls.backend}${HEALTH_PATH}`],
+    ['WebSocket', ws],
+  ];
+
+  if (options.lan !== undefined && options.lan !== null) {
+    backendDetails.push(['network', `http://${options.lan}:${String(ports.backend)}`]);
+  }
+
+  return [
+    {
+      name: 'PostgreSQL',
+      port: ports.postgres,
+      address: `postgresql://${user}@${urls.postgres}/${db}`,
+      details: [],
+    },
+    {
+      name: 'Keycloak',
+      port: ports.keycloak,
+      address: urls.keycloak,
+      details: [
+        ['admin console', `${urls.keycloak}/admin`],
+        ['OIDC issuer', urls.realm],
+      ],
+    },
+    {
+      name: 'Backend',
+      port: ports.backend,
+      address: urls.backend,
+      details: backendDetails,
+      workspace: 'backend',
+    },
+    { name: 'Web', port: ports.web, address: urls.web, details: [], workspace: 'web' },
+  ];
+}
+
+/** File settings of the `.env` that are written relative to the repository root. */
+export const REPO_RELATIVE_PATHS = ['RC_WORKSPACE_ALLOWLIST_FILE'];
+
+/**
+ * The environment the watch processes of `pnpm dev` are started with.
+ *
+ * `.env` writes its paths relative to the repository, and the backend runs from its own folder:
+ * passed through as they are, `./infra/…` would be looked up under `backend/infra/…`. The
+ * ephemeral stack avoids the same trap by writing absolute paths; this does it for the `.env`.
+ *
+ * @param {NodeJS.ProcessEnv} env
+ * @param {string} [root]
+ * @returns {NodeJS.ProcessEnv}
+ */
+export function watchEnvironment(env, root = repoRoot) {
+  /** @type {NodeJS.ProcessEnv} */
+  const resolved = { ...env };
+
+  for (const key of REPO_RELATIVE_PATHS) {
+    const value = env[key]?.trim();
+
+    if (value !== undefined && value !== '') {
+      resolved[key] = path.resolve(root, value);
+    }
+  }
+
+  return resolved;
 }
 
 /**

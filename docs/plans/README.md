@@ -17,16 +17,33 @@ Voltar para o [índice geral](../architecture/README.md).
 |---|---|---|---|
 | 00 | [Bootstrap](00-bootstrap/README.md) | ✅ concluído | `pnpm verify:full` saiu com código 0, com um e2e atravessando todas as camadas |
 | 01 | [Sessão viva](01-live-session/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:live` saíram com código 0 |
-| 02 | [Aprovação pelo celular](02-mobile-approval/README.md) | 🔄 em andamento | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
-| 03 | [Regras e trilha](03-rules-and-audit/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
-| 04 | [Histórico e retomada](04-transcript-and-resume/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:live` saem com código 0 |
-| 05 | [Endurecimento e operação](05-hardening-operations/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:live` saem com código 0 |
-| 06 | [Distribuição](06-distribution/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm dist:verify` saem com código 0 |
+| 02 | [Aprovação pelo celular](02-mobile-approval/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saíram com código 0 |
+| 03 | [Regras e trilha](03-rules-and-audit/README.md) | ✅ concluído | `pnpm verify:full` saiu com código 0 |
+| 04 | [Histórico e retomada](04-transcript-and-resume/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:live` saíram com código 0 |
+| 05 | [Endurecimento e operação](05-hardening-operations/README.md) | 🔄 em andamento | `pnpm verify:full` **e** `pnpm test:e2e:live` saem com código 0 |
+| 06 | [Workbench](06-workbench/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 07 | [Explorer e editor](07-explorer-and-editor/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
+| 08 | [Painel do Claude](08-claude-panel/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
+| 09 | [Busca](09-search/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 10 | [Terminal integrado](10-integrated-terminal/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
+| 11 | [Configuração do Claude](11-claude-settings/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
+| 12 | [Auditoria explicada](12-audit-explained/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 13 | [Gestão de regras](13-rules-management/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 14 | [Uso e custo](14-usage-and-cost/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 15 | [Dispositivos](15-devices/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
+| 16 | [Logs e diagnóstico](16-logs-and-diagnostics/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 17 | [Distribuição](17-distribution/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm dist:verify` saem com código 0 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
 A ordem é **dependência**, não preferência: cada plano pressupõe o anterior, como as fases
-dentro de um plano. Quanto já foi feito, em todos eles, está no
+dentro de um plano. A exceção declarada são os planos **06 a 16** — o cliente no molde do VS Code,
+criados em 2026-09-26: começam depois que o **05** fechar, e não dependem da distribuição
+([06 · D-02](06-workbench/decisions.md)), e cada um diz no seu README de quais outros depende.
+A **distribuição** ([17](17-distribution/README.md)) é o último plano: empacota o produto que os
+anteriores entregam, e foi movida para o fim em 2026-09-27, por decisão do usuário — há muito a
+resolver antes de empacotar.
+Quanto já foi feito, em todos eles, está no
 [progresso geral](progress.md) — esta tabela é o índice, não o diário.
 
 ---

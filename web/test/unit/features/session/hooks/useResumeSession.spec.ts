@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
-import { useResumeSession } from '@/features/session/hooks/useResumeSession';
+import { RESUME_TIMEOUT_MS, useResumeSession } from '@/features/session/hooks/useResumeSession';
 import { aLiveSocket, hubEvent } from '../../../../support/live-socket';
 import type { LiveSocket } from '../../../../support/live-socket';
 
@@ -67,5 +67,74 @@ describe('useResumeSession', () => {
     });
 
     expect(result.current.isResuming).toBe(false);
+  });
+
+  describe('a resume nobody answers — plan 05, B-26', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('stops waiting at the deadline, says so, and lets the person try again — S-56', () => {
+      const { result } = renderHook(() => useResumeSession(target, vi.fn()));
+      socket.connect();
+      act(() => {
+        result.current.resume();
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(RESUME_TIMEOUT_MS);
+      });
+
+      expect(result.current.isResuming).toBe(false);
+      expect(result.current.error).toMatchObject({
+        code: 'RESUME_TIMEOUT',
+        messageKey: 'session.error.resumeTimeout',
+      });
+
+      act(() => {
+        result.current.resume();
+      });
+      expect(starts()).toBe(2);
+    });
+
+    it('keeps waiting until the deadline itself — S-56', () => {
+      const { result } = renderHook(() => useResumeSession(target, vi.fn()));
+      socket.connect();
+      act(() => {
+        result.current.resume();
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(RESUME_TIMEOUT_MS - 1);
+      });
+
+      expect(result.current.isResuming).toBe(true);
+      expect(result.current.error).toBeNull();
+    });
+
+    it('never fires for a resume that was answered — S-57', () => {
+      const onResumed = vi.fn();
+      const { result } = renderHook(() => useResumeSession(target, onResumed));
+      socket.connect();
+      act(() => {
+        result.current.resume();
+      });
+
+      act(() => {
+        socket.receive(
+          hubEvent(LIVE, 'session.started', 1, { sessionId: LIVE, claudeSessionId: CONVERSATION }),
+        );
+      });
+      act(() => {
+        vi.advanceTimersByTime(RESUME_TIMEOUT_MS);
+      });
+
+      expect(onResumed).toHaveBeenCalledWith(LIVE);
+      expect(result.current.error).toBeNull();
+    });
   });
 });

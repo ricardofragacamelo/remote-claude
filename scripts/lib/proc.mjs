@@ -131,29 +131,108 @@ function sendSignal(proc, signalName) {
 }
 
 /**
- * Terminates a process: SIGTERM, then SIGKILL if it is still alive after the grace period.
+ * How long, past the grace period, `kill` keeps looking for what is left of a group after the
+ * SIGKILL. Nothing survives SIGKILL; this only bounds the wait for the kernel to say so.
+ */
+const SETTLE_MS = 2_000;
+
+/** How often `kill` asks again whether anything of the group is left. */
+const SWEEP_INTERVAL_MS = 50;
+
+/**
+ * Whether anything of the process group led by `pid` is still alive.
+ *
+ * **The leader exiting is not the tree exiting.** `pnpm` answers SIGTERM at once, while the dev
+ * server under it is still closing its sockets — or ignoring the signal altogether — and a
+ * teardown that stops at the leader leaves that server behind as an orphan holding the port.
+ * Signal 0 asks whether the group exists without delivering anything.
+ *
+ * Any failure reads as "nothing left": ESRCH is exactly that, and EPERM is a group this user
+ * cannot signal, so there is nothing `kill` could do about it either. Windows has no group to
+ * ask about, and `taskkill /t` is already the whole tree there.
+ *
+ * @param {number} pid the group leader, as `startProc` started it
+ * @returns {boolean}
+ */
+export function groupAlive(pid) {
+  /* v8 ignore next 3 -- the Windows answer cannot run on a POSIX test host. */
+  if (isWindows) {
+    return false;
+  }
+
+  try {
+    process.kill(-pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sends a signal to what is left of a group whose leader has already exited.
+ *
+ * `sendSignal` refuses a finished process, and rightly — its fallback to the bare pid could hit
+ * an unrelated process that has reused it. The group id is safe to signal while `groupAlive`
+ * says so: the kernel does not hand out a pid that is still in use as a group id.
+ *
+ * @param {number} pid
+ * @param {NodeJS.Signals} signalName
+ * @returns {void}
+ */
+function signalSurvivors(pid, signalName) {
+  if (!groupAlive(pid)) {
+    return;
+  }
+
+  try {
+    process.kill(-pid, signalName);
+    /* v8 ignore next 4 -- needs the group to vanish between the check and the signal: a real
+       race, and not one a test can produce on demand. */
+  } catch {
+    // Gone in between, which is the outcome we wanted.
+  }
+}
+
+/**
+ * Terminates a process **and everything in its group**: SIGTERM, then SIGKILL for whatever is
+ * still alive after the grace period.
+ *
+ * It resolves when the group is empty, not when the leader exits — see `groupAlive`.
  *
  * @param {ChildProcess} proc
  * @param {{ graceMs?: number }} [options]
- * @returns {Promise<void>} resolves once the process has exited
+ * @returns {Promise<void>} resolves once nothing of the group is left
  */
-export function kill(proc, options = {}) {
-  if (isFinished(proc)) {
-    return Promise.resolve();
+export async function kill(proc, options = {}) {
+  const pid = proc.pid;
+
+  // Same pair of questions as in `sendSignal`: the second only narrows the type.
+  if (isFinished(proc) || pid === undefined) {
+    return;
   }
 
-  return new Promise((resolve) => {
-    const escalation = setTimeout(() => {
-      sendSignal(proc, 'SIGKILL');
-    }, options.graceMs ?? GRACE_MS);
-
-    proc.once('exit', () => {
-      clearTimeout(escalation);
-      resolve();
-    });
-
-    sendSignal(proc, 'SIGTERM');
+  const graceMs = options.graceMs ?? GRACE_MS;
+  const deadline = Date.now() + graceMs + SETTLE_MS;
+  const exited = new Promise((resolve) => {
+    proc.once('exit', resolve);
   });
+
+  const escalation = setTimeout(() => {
+    // The leader may still be alive, or only the rest of its group: each call covers one case
+    // and is a no-op in the other.
+    sendSignal(proc, 'SIGKILL');
+    signalSurvivors(pid, 'SIGKILL');
+  }, graceMs);
+
+  sendSignal(proc, 'SIGTERM');
+  await exited;
+
+  // The leader is gone; the rest of its group may not be. The escalation stays armed for them.
+  while (groupAlive(pid) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, SWEEP_INTERVAL_MS));
+  }
+
+  clearTimeout(escalation);
 }
 
 /**

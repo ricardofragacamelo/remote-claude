@@ -73,7 +73,12 @@ export interface CommandAcceptedPayload {
 
 /** What this server will accept, so the client does not have to discover it by being refused. */
 export interface ConnectionReadyPayloadLimits {
+  /** Largest frame accepted, in bytes. Over it: `error` PAYLOAD_TOO_LARGE, and the socket stays. */
   readonly maxFrameBytes: number;
+  /** Frames a client may send per second. Over it: `error` RATE_LIMITED with `params.retryAfterSeconds`; sending again inside that window closes with 4429. */
+  readonly maxFramesPerSecond: number;
+  /** Sessions one connection may watch at once. `session.attach` or `session.start` beyond it: `error` RATE_LIMITED. */
+  readonly maxAttachedSessions: number;
   readonly replayBufferSize: number;
 }
 
@@ -348,8 +353,8 @@ export interface PermissionResolvedPayload {
 /** The session ended and its subprocess is gone. The replay buffer **survives** this event — opening a closed session shows the terminal state plus whatever the ring still holds, labelled as partial. */
 export interface SessionClosedPayload {
   readonly sessionId: string;
-  /** Why it ended. `auditUnavailable` is the second consecutive audit write failure — a session that cannot be recorded does not keep running. */
-  readonly reason: 'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown';
+  /** Why it ended. `auditUnavailable` is the second consecutive audit write failure — a session that cannot be recorded does not keep running. `idleTimeout` is the installation reclaiming a session nobody used for longer than its TTL; the conversation is still in the history and can be resumed. */
+  readonly reason: 'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown' | 'idleTimeout';
 }
 
 export interface SessionRewoundPayloadRevertedItem {
@@ -505,6 +510,8 @@ export function isConnectionReadyPayloadLimits(value: unknown): value is Connect
 
   return !(
     typeof record['maxFrameBytes'] !== 'number' ||
+    typeof record['maxFramesPerSecond'] !== 'number' ||
+    typeof record['maxAttachedSessions'] !== 'number' ||
     typeof record['replayBufferSize'] !== 'number'
   );
 }

@@ -100,6 +100,27 @@ describe('the HTTP surface', () => {
       expect(response.body.error.code).toBe('INVALID_INPUT');
     });
 
+    // The body parser refuses these before any route runs, with errors that are not Nest's own. Read
+    // as `500`, they blamed the server for what the client sent (plan 05, F1).
+    it('answers 413 PAYLOAD_TOO_LARGE for a body over the parser limit, not 500', async () => {
+      const response = await http()
+        .post('/auth/session')
+        .send({ code: 'x'.repeat(200_000) });
+
+      expect(response.status).toBe(413);
+      expect(response.body.error.code).toBe('PAYLOAD_TOO_LARGE');
+    });
+
+    it('answers 400 INVALID_INPUT for a body that is not JSON, not 500', async () => {
+      const response = await http()
+        .post('/auth/session')
+        .set('content-type', 'application/json')
+        .send('{not json');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('INVALID_INPUT');
+    });
+
     it('lists every invalid field at once, not just the first', async () => {
       const response = await http().post('/auth/session').send({ codeVerifier: 'short' });
 

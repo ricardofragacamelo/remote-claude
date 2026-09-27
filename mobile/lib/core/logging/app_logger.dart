@@ -34,6 +34,12 @@ class AppLogger {
   final Logger _logger;
   late final StreamSubscription<LogRecord> _subscription;
 
+  /// The level lines are written at right now.
+  Level get level => _logger.level;
+
+  /// Changes it — the diagnostics screen switching `debug` on in a release, and off again.
+  set level(Level next) => _logger.level = next;
+
   /// Replaces the ambient fields — a new route, a session that opened, a user who signed in.
   void updateContext(LogContext next) {
     context = next;

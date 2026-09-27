@@ -113,8 +113,8 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `FORBIDDEN` | 403 | workspace, session, auth, audit | Existe, e é de outra pessoa — ou o pedido parte de quem não pode fazê-lo (aparelho aprovando aparelho). Na trilha: filtrar pela sessão de outra pessoa |
 | `WORKSPACE_NOT_A_DIRECTORY` | 422 | workspace | Caminho existe, mas é arquivo |
 | `SESSION_NOT_FOUND` | 404 | session | Sessão inexistente |
-| `SESSION_LOCKED` | 423 | session | Em uso exclusivo, ou ocupada: um turno em execução, ou outro desfazer da mesma sessão em curso (`session.error.locked`) |
-| `SESSION_LIMIT_REACHED` | 429 | session | Máximo de sessões simultâneas |
+| `SESSION_LOCKED` | 423 | session | Em uso exclusivo, ou ocupada: um turno em execução, outro desfazer da mesma sessão em curso, ou um prompt que chega enquanto o desfazer devolve os arquivos (`session.error.locked`, `params.reason`) |
+| `SESSION_LIMIT_REACHED` | 429 | session | Máximo de sessões simultâneas — derivado da RAM da máquina; `params.limit`, `params.retryAfterSeconds` |
 | `PERMISSION_REQUEST_NOT_FOUND` | 404 | permission | `requestId` desconhecido |
 | `PERMISSION_REQUEST_EXPIRED` | 410 | permission | Timeout — foi negado automaticamente |
 | `PERMISSION_NOT_OWNED` | 403 | permission | Quem respondeu não é quem podia responder — ou a regra que se quis revogar é de outra pessoa |
@@ -123,12 +123,16 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `PERMISSION_RULE_NOT_FOUND` | 404 | permission | `ruleId` que não existe |
 | `CLAUDE_UNAVAILABLE` | 502 | session, transcript | Subprocesso do CLI falhou — ou a leitura do histórico pelo SDK, ou a lista de slash commands |
 | `CLAUDE_TIMEOUT` | 504 | session, transcript | Sem resposta no prazo — inclusive a leitura do histórico e a lista de slash commands (`session.error.claudeTimeout`) |
-| `RATE_LIMITED` | 429 | — | Limite nosso ou do plano Claude |
+| `RATE_LIMITED` | 429 | — | Limite nosso ou do plano Claude. `params: { scope, limit, retryAfterSeconds }` — no WebSocket, `scope` é `frames` ou `attachedSessions` |
 | `PAYLOAD_TOO_LARGE` | 413 | — | Corpo ou frame acima do limite anunciado |
 | `INVALID_INPUT` | 400 | —, transcript, session | Falha de validação; detalhe em `details[]`. No histórico, também o cursor cuja mensagem sumiu (`transcript.error.cursorStale`). Na sessão, o slash command que a instalação não tem (`session.error.unknownCommand`) e o ponto de desfazer que não é da sessão (`session.error.rewindTargetUnknown`) |
 | `FORBIDDEN` | 403 | — | Autenticado, e ainda assim não pode |
 | `NOT_FOUND` | 404 | —, auth, transcript | Rota ou recurso inexistente, sem dono de módulo. Device de outra pessoa responde este, igual ao que não existe: dizer que um id existe já é dizer que ele existe. Conversa do histórico que o chamador não pode ler também |
 | `INTERNAL_ERROR` | 500 | —, session | Não previsto. No desfazer, o caminho que não pôde ser restaurado (`session.error.rewindIncomplete`, depois do `session.rewound` que o lista) |
+
+**Códigos que só o cliente gera.** Não vêm do backend, e por isso não têm status: `NETWORK_UNREACHABLE`
+(`common.error.offline`) e `RESUME_TIMEOUT` (`session.error.resumeTimeout`) — a retomada que ninguém
+respondeu no prazo do cliente ([plano 05 · B-26](../../plans/05-hardening-operations/F0-limits.md)).
 
 **`SESSION_ALREADY_RUNNING` não existe mais.** Um segundo prompt durante um turno é
 **enfileirado**, não rejeitado — [R-02, decidido](../../plans/00-bootstrap/progress.md#decisões-tomadas-durante-a-execução).
@@ -162,7 +166,12 @@ falha de autenticação no handshake (`4401`) ou violação de protocolo (`4400`
 - Timeout é erro: toda chamada externa (Agent SDK, banco, push) tem prazo explícito.
 - Erro de validação lista **todos** os campos inválidos de uma vez, em `details[]` — não
   devolva o primeiro e pare.
-- `Retry-After` é obrigatório em `429` e `503`. Sem ele, o cliente vai martelar.
+- `Retry-After` é obrigatório em `429` e `503`. Sem ele, o cliente vai martelar. O erro que sabe
+  quanto esperar diz em `params.retryAfterSeconds` (`SESSION_LIMIT_REACHED`: 30 s; `RATE_LIMITED`:
+  o que o balde pedir); o filtro põe esse valor no cabeçalho, e 1 s quando o erro não disse. No
+  WebSocket, que não tem cabeçalho, o cliente lê `params.retryAfterSeconds` do frame.
+- Erro do body parser sobre a **requisição** — corpo acima do limite, JSON inválido — vira o `4xx`
+  que ele traz (`413` `PAYLOAD_TOO_LARGE`, `400` `INVALID_INPUT`), nunca `500`.
 - **`401` vs `403` não é detalhe.** `401` significa "renove a credencial e repita"; `403`
   significa "não adianta insistir". Cliente que trata os dois igual entra em laço de
   renovação. Resposta de `401` nunca revela **qual** validação falhou — isso vai no log.

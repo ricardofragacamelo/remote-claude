@@ -19,8 +19,10 @@ import { waitForHttp, waitUntil } from './wait.mjs';
 export const STACK_TIMEOUT_MS = 180_000;
 
 /**
- * @typedef {(args: readonly string[], options?: { attached?: boolean }) =>
- *   import('./exec.mjs').RunResult} Compose one compose call against one project
+ * @typedef {(args: readonly string[],
+ *   options?: { attached?: boolean, ownProcessGroup?: boolean }) =>
+ *   import('./exec.mjs').RunResult} Compose one compose call against one project;
+ *   `ownProcessGroup` is for the teardown calls, see `RunOptions` in exec.mjs
  */
 
 /**
@@ -48,6 +50,7 @@ export function composeRunner(cli, project, options) {
     return invoke(argv.command, argv.args, {
       cwd: options.cwd,
       timeoutMs,
+      ...(callOptions.ownProcessGroup === true ? { ownProcessGroup: true } : {}),
       ...(options.env === undefined ? {} : { env: options.env }),
     });
   };

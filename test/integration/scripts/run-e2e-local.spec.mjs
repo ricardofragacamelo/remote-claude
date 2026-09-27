@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import net from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -93,7 +94,12 @@ describe('run-e2e-local.mjs, against real docker', () => {
     // S-56: the fixed ports of `pnpm dev` are all taken, as they would be with a development stack
     // running in another terminal. An ephemeral run must not want a single one of them.
     for (const { fallback: port } of PORT_VARIABLES) {
-      const server = net.createServer();
+      // Holding the port, not serving it: whatever connects — a `pnpm dev` of another suite probing
+      // its health, say — is dropped at once. A connection left open here is one `close()` below
+      // waits on for ever, and the suite then dies of its own teardown (plan 05, cycles 6 and 8).
+      const server = net.createServer((socket) => {
+        socket.destroy();
+      });
       await new Promise((resolve) => {
         // A port already held by something else on this machine is the same situation, so a
         // failure to bind is not an error here — the point is that these ports are unavailable.
@@ -172,5 +178,44 @@ describe('run-e2e-local.mjs, against real docker', () => {
   it('S-59 — purges the orphan volume of a project no `compose ls` can see', () => {
     expect(result.stdout).toMatch(/purged \d+ stale project\(s\) and \d+ orphan volume\(s\)/);
     expect(dockerLines(['volume', 'ls', '--format', '{{.Name}}'])).not.toContain(staleVolume);
+  });
+});
+
+describe('run-e2e-local.mjs --mobile, on a machine with no Android SDK', () => {
+  /** @type {import('../../../scripts/lib/exec.mjs').RunResult} */
+  let result;
+  /** @type {string} */
+  let emptySdk;
+
+  beforeAll(async () => {
+    emptySdk = fs.mkdtempSync(path.join(os.tmpdir(), 'rc-no-sdk-'));
+
+    result = await runAsync(
+      process.execPath,
+      [path.join(repoRoot, 'scripts/run-e2e-local.mjs'), '--mobile'],
+      {
+        cwd: repoRoot,
+        timeoutMs: 120_000,
+        env: { ...process.env, NO_COLOR: '1', ANDROID_HOME: emptySdk },
+      },
+    );
+  });
+
+  afterAll(() => {
+    fs.rmSync(emptySdk, { recursive: true, force: true });
+  });
+
+  it('fails before a single container exists, saying where it looked', () => {
+    expect(result.code, result.stdout).not.toBe(0);
+    expect(result.stdout).toContain('adb is not installed — set ANDROID_HOME to the Android SDK');
+    expect(result.stdout).toContain(`looked for the SDK in ${emptySdk}`);
+    expect(result.stdout).not.toContain('project: ');
+  });
+
+  it('starts no emulator, and stops no Gradle it never started', () => {
+    expect(result.stdout).not.toContain('starting the emulator');
+    expect(result.stdout).not.toContain('emulator down');
+    expect(result.stdout).not.toContain('Gradle daemons stopped');
+    expect(fs.existsSync(path.join(repoRoot, 'e2e/.env'))).toBe(false);
   });
 });

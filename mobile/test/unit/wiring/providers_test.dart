@@ -235,6 +235,7 @@ void main() {
       sessionRoute,
       signInRoute,
       workspacesRoute,
+      diagnosticsRoute,
       rulesRoute,
       historyRoute,
       '/sessions/:sessionId',

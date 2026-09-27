@@ -15,6 +15,7 @@ import {
   CONVERSATION_ID,
   RecordingHandle,
   SESSION_ID,
+  aClock,
 } from '../../../support/builders/session.builder';
 
 const owner = UserId.create('auth|owner');
@@ -29,7 +30,7 @@ function build(limit = 10): {
     conversation?: ReturnType<typeof aConversation>,
   ) => void;
 } {
-  const registry = new SessionRegistry(limit);
+  const registry = new SessionRegistry(limit, aClock());
 
   return {
     registry,

@@ -374,16 +374,27 @@ class CommandAcceptedPayload {
 class ConnectionReadyPayloadLimits {
   const ConnectionReadyPayloadLimits({
     required this.maxFrameBytes,
+    required this.maxFramesPerSecond,
+    required this.maxAttachedSessions,
     required this.replayBufferSize,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory ConnectionReadyPayloadLimits.fromJson(Map<String, Object?> json) => ConnectionReadyPayloadLimits(
         maxFrameBytes: json['maxFrameBytes']! as int,
+        maxFramesPerSecond: json['maxFramesPerSecond']! as int,
+        maxAttachedSessions: json['maxAttachedSessions']! as int,
         replayBufferSize: json['replayBufferSize']! as int,
       );
 
+  /// Largest frame accepted, in bytes. Over it: `error` PAYLOAD_TOO_LARGE, and the socket stays.
   final int maxFrameBytes;
+
+  /// Frames a client may send per second. Over it: `error` RATE_LIMITED with `params.retryAfterSeconds`; sending again inside that window closes with 4429.
+  final int maxFramesPerSecond;
+
+  /// Sessions one connection may watch at once. `session.attach` or `session.start` beyond it: `error` RATE_LIMITED.
+  final int maxAttachedSessions;
 
   final int replayBufferSize;
 
@@ -391,6 +402,8 @@ class ConnectionReadyPayloadLimits {
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'maxFrameBytes': maxFrameBytes,
+      'maxFramesPerSecond': maxFramesPerSecond,
+      'maxAttachedSessions': maxAttachedSessions,
       'replayBufferSize': replayBufferSize,
     };
 
@@ -1527,7 +1540,7 @@ class SessionClosedPayload {
 
   final String sessionId;
 
-  /// Why it ended. `auditUnavailable` is the second consecutive audit write failure — a session that cannot be recorded does not keep running.
+  /// Why it ended. `auditUnavailable` is the second consecutive audit write failure — a session that cannot be recorded does not keep running. `idleTimeout` is the installation reclaiming a session nobody used for longer than its TTL; the conversation is still in the history and can be resumed.
   final String reason;
 
   /// A JSON map with the absent optional fields left out.

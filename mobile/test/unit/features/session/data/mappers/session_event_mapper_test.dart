@@ -149,6 +149,7 @@ void main() {
       'failed': SessionCloseReason.failed,
       'auditUnavailable': SessionCloseReason.auditUnavailable,
       'shutdown': SessionCloseReason.shutdown,
+      'idleTimeout': SessionCloseReason.idleTimeout,
     };
 
     known.forEach((String raw, SessionCloseReason expected) {

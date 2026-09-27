@@ -289,6 +289,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionClosedShutdown => 'Encerrada porque o backend parou.';
 
   @override
+  String get sessionClosedIdleTimeout =>
+      'Encerrada depois de ficar ociosa por tempo demais. Retome-a pelo histórico.';
+
+  @override
   String get permissionPageTitle => 'Permissão';
 
   @override
@@ -728,6 +732,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'O Claude demorou demais para responder nesta máquina. Tente de novo.';
 
   @override
+  String get sessionErrorResumeTimeout =>
+      'O backend não respondeu à retomada. Confira a conexão e tente de novo.';
+
+  @override
   String get sessionErrorLocked =>
       'A sessão está ocupada: um turno está em execução ou outro desfazer está em andamento. Tente de novo quando ela estiver ociosa.';
 
@@ -892,4 +900,32 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get sessionUndoFailed => 'Não puderam ser restaurados';
+
+  @override
+  String get diagnosticsTitle => 'Diagnóstico';
+
+  @override
+  String get diagnosticsConnectionLabel => 'Conexão';
+
+  @override
+  String get diagnosticsCredentialLabel => 'Login';
+
+  @override
+  String get diagnosticsCredentialPresent => 'Conectado à conta';
+
+  @override
+  String get diagnosticsCredentialAbsent => 'Sem login';
+
+  @override
+  String get diagnosticsVersionLabel => 'Versão';
+
+  @override
+  String get diagnosticsDebugLabel => 'Log detalhado';
+
+  @override
+  String get diagnosticsDebugDescription =>
+      'Registra toda troca com o servidor enquanto esta tela estiver aberta. Desliga sozinho quando você sai.';
+
+  @override
+  String get diagnosticsDebugAlwaysOn => 'Sempre ligado em um build de desenvolvimento.';
 }

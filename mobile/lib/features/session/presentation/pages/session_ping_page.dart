@@ -31,7 +31,7 @@ class SessionPingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AppScreen(
     title: AppLocalizations.of(context).sessionPingTitle,
-    actions: const <Widget>[_WorkspacesAction(), _SignOutAction()],
+    actions: const <Widget>[_WorkspacesAction(), _DiagnosticsAction(), _SignOutAction()],
     body: const SingleChildScrollView(child: _RoundTrip()),
   );
 }
@@ -46,6 +46,19 @@ class _WorkspacesAction extends StatelessWidget {
     // An icon with no text needs a translated label, or it announces nothing.
     tooltip: AppLocalizations.of(context).workspaceListTitle,
     onPressed: () => context.go(workspacesRoute),
+  );
+}
+
+/// Opens what a person looks at when something is not working.
+class _DiagnosticsAction extends StatelessWidget {
+  const _DiagnosticsAction();
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    icon: const Icon(Icons.bug_report_outlined),
+    // An icon with no text needs a translated label, or it announces nothing.
+    tooltip: AppLocalizations.of(context).diagnosticsTitle,
+    onPressed: () => context.push<void>(diagnosticsRoute).ignore(),
   );
 }
 

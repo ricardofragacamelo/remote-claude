@@ -15,11 +15,19 @@ const input = (overrides: Partial<SdkOptionsInput> = {}): SdkOptionsInput => ({
   conversation: { claudeSessionId: NEW, resumedFrom: null },
   limits: { maxBudgetUsd: 10, maxTurns: 100 },
   abortController: new AbortController(),
+  environment: { PATH: '/usr/bin', REMOTE_CLAUDE_OWNER: 'remote-claude-backend' },
   onStderr: () => undefined,
   ...overrides,
 });
 
 describe('buildSdkOptions', () => {
+  it('starts the subprocess with the environment it was given, mark included — B-03', () => {
+    expect(buildSdkOptions(input()).env).toEqual({
+      PATH: '/usr/bin',
+      REMOTE_CLAUDE_OWNER: 'remote-claude-backend',
+    });
+  });
+
   it('runs in the workspace, which is what `cwd` means here', () => {
     expect(buildSdkOptions(input()).cwd).toBe('/srv/projects/app');
   });

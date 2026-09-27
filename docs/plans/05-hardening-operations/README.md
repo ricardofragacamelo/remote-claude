@@ -1,7 +1,7 @@
 # Plano 05 — Endurecimento e operação
 
 **Objetivo:** o sistema aguenta ficar ligado — com limites que a máquina sustenta, credencial
-de provedor real, logs do cliente chegando, e os portões que o bootstrap deixou anotados.
+de provedor real, `debug` ligável em release, e os portões que o bootstrap deixou anotados.
 
 **Critério de conclusão — é um comando, não uma opinião:**
 
@@ -46,7 +46,7 @@ pontas, tela de diagnóstico, `osv-scanner`, Sonar e o job de e2e mobile no CI
 | Limite derivado da RAM, TTL de ociosa, sessão órfã, shutdown ordeiro | F0 |
 | Nova tentativa do push quando o provedor falha | F0 |
 | Rate limit e limites anunciados por connection | F0 |
-| Ingestão dos logs do web e do app, e a tela de diagnóstico | F1 |
+| Tela de diagnóstico: `debug` em release sem recompilar | F1 |
 | Provedor de identidade real como **configuração**, rotação e revogação | F2 |
 | `osv-scanner`, quality gate do Sonar, e2e mobile no CI, nightly do smoke-live | F3 |
 | E2E dos limites e da expiração de credencial | F4 |
@@ -54,7 +54,9 @@ pontas, tela de diagnóstico, `osv-scanner`, Sonar e o job de e2e mobile no CI
 ### Não entra
 
 - **Empacotar, instalar e expor** o sistema na máquina do usuário —
-  [plano 06](../06-distribution/README.md).
+  [plano 17](../17-distribution/README.md).
+- **Enviar o log do web e do app ao backend.** Saiu em 2026-09-27: o log do cliente fica no
+  cliente, e o `traceId` é o que liga os dois lados.
 - **Métrica e painel** (Prometheus, dashboards). Log estruturado já responde às perguntas que
   temos hoje; painel sem pergunta é enfeite.
 - **Multi-máquina.** Um backend, uma máquina, um Claude. Mudar isso é ADR, não task.
@@ -69,11 +71,11 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Limites](F0-limits.md) | RAM, TTL, órfã, shutdown, rate limit, nova tentativa do push | B-01…B-07, B-25 | 🔲 |
-| F1 | [Logs do cliente](F1-client-logs.md) | ingestão dos dois shippers e diagnóstico | B-08…B-11 | 🔲 |
+| F0 | [Limites](F0-limits.md) | RAM, TTL, órfã, shutdown, rate limit, nova tentativa do push, e o que o plano 04 deixou | B-01…B-07, B-25…B-27 | 🔄 |
+| F1 | [Diagnóstico](F1-diagnostics.md) | `debug` em release, e de volta ao sair | B-11 | 🔄 |
 | F2 | [Identidade](F2-identity.md) | provedor real por configuração, rotação, revogação | B-12…B-15 | 🔲 |
 | F3 | [Portões](F3-gates.md) | osv-scanner, Sonar, CI do mobile, nightly | B-16…B-20 | 🔲 |
-| F4 | [E2E](F4-e2e.md) | limites e credencial pela porta do usuário | B-21…B-24 | 🔲 |
+| F4 | [E2E](F4-e2e.md) | limites e credencial pela porta do usuário | B-21…B-23 | 🔲 |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 
@@ -92,7 +94,9 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Subprocesso não sobrevive ao backend | B-03, B-04 | [backend/06-realtime](../../architecture/backend/06-realtime.md#shutdown) | S-06…S-09, S-14 |
 | Cliente que martela é contido, com `Retry-After` | B-05, B-06, B-07 | [backend/06-realtime](../../architecture/backend/06-realtime.md#heartbeat-e-limites) | S-10…S-12 |
 | Uma falha pontual do provedor não perde a notificação | B-25 | [plano 02 · D-05](../02-mobile-approval/decisions.md#d-05--quando-o-push-não-sai) | S-47…S-53 |
-| Log do cliente tem para onde ir, sem virar vazamento | B-08…B-10 | [03-logging](../../architecture/shared/03-logging.md) | S-15…S-20, S-22 |
+| Retomada sem resposta não deixa a tela esperando para sempre | B-26 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#retomada) | S-56, S-57 |
+| Prompt não entra enquanto um desfazer devolve os arquivos | B-27 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#desfazer-arquivos) | S-54, S-55, S-58 |
+| Anexar e heartbeat sob carga dentro dos limites | B-05, B-07 | [backend/06-realtime](../../architecture/backend/06-realtime.md#heartbeat-e-limites) | S-59, S-60 |
 | `debug` em release é ligável sem recompilar | B-11 | [mobile/05-logging](../../architecture/mobile/05-logging.md) | S-21 |
 | Trocar de provedor é trocar configuração | B-12 | [08-authentication](../../architecture/shared/08-authentication.md#configuração) | S-23, S-24, S-32 |
 | Validação de token não confia no token | B-12 | [08-authentication](../../architecture/shared/08-authentication.md#validação-no-backend) | S-25, S-26 |
@@ -103,7 +107,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Quality gate e portões caros existem onde cabem | B-17, B-18 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md#portões-de-ci) | S-35, S-36, S-40 |
 | Quebra do SDK vira aviso automático | B-19 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md#portões-de-ci) | S-37, S-38 |
 | Pré-requisito novo é detectado pelo `doctor` | B-20 | [11-validation-protocol](../../architecture/shared/11-validation-protocol.md#automação-script-não-orquestração-pelo-agente) | S-39 |
-| Os limites provados pela porta do usuário | B-21…B-24 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-41…S-46 |
+| Os limites provados pela porta do usuário | B-21…B-23 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-41…S-45 |
 
 Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 
@@ -113,14 +117,15 @@ Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 
 ```
 backend/src/
-├── application/session/           session-reaper (TTL) · capacity (RAM)
-├── application/notification/      nova tentativa do push, com recuo
-├── adapter/inbound/http/logs/     ingestão dos lotes do cliente
-├── infrastructure/websocket/      rate limit por connection, limites anunciados
-└── infrastructure/lifecycle/      boot: varredura de órfã · shutdown ordeiro
+├── domain/session/services/       session-capacity (a regra da RAM)
+├── application/session/           reaper (TTL) · session-ender · shutdown-sessions
+├── application/notification/      push-dispatcher: nova tentativa, com recuo
+├── infrastructure/websocket/      rate limit por connection, limites anunciados (WsSettings)
+├── infrastructure/jobs/           session-reaper.job
+└── infrastructure/lifecycle/      boot: capacidade · varredura de órfã · shutdown ordeiro
 
-web/src/shared/logging/            shipper apontando para o endpoint
-mobile/lib/core/logging/           idem · tela de diagnóstico
+mobile/lib/core/logging/           log_level
+mobile/lib/features/diagnostics/   tela de diagnóstico
 
 .github/workflows/                 osv-scanner · sonar · e2e mobile · nightly smoke-live
 scripts/doctor.mjs                 pré-requisitos novos
@@ -132,10 +137,10 @@ scripts/doctor.mjs                 pré-requisitos novos
 
 | # | Assunto | Estado |
 |---|---|---|
-| R-01 | **Qual provedor OIDC de verdade** (tenant, audience, escopos) e quem administra | **decisão em aberto, bloqueia a F2.** Nenhum teste automatizado fala com tenant real — o Keycloak continua sendo o dono do teste ([08-authentication](../../architecture/shared/08-authentication.md#testes)) |
+| R-01 | **Qual provedor OIDC de verdade** (tenant, audience, escopos) e quem administra | **decidido em 2026-09-26** ([D-05](decisions.md)): Keycloak próprio, administrado por quem opera a instalação; nenhum teste automatizado fala com a instância real |
 | R-02 | Derivar o limite da RAM pode ficar otimista em máquina compartilhada | o limite tem piso e teto configuráveis; a fórmula é regra pura e testada (S-01) |
 | R-03 | Matar "sessão órfã" no boot pode matar processo que não é nosso | a varredura casa por marca própria do processo, e S-07 existe para provar que ela não passa disso |
-| R-04 | Ingestão de log é uma porta que aceita texto do cliente | limite de tamanho, rate limit próprio e redação antes de gravar (S-17…S-19) |
+| R-04 | Ingestão de log é uma porta que aceita texto do cliente | **descartado em 2026-09-27**: a ingestão saiu do escopo |
 | R-05 | Sonar e o runner de e2e mobile exigem infraestrutura que ninguém levantou | é parte da F3, e enquanto não existir o job fica **declarado como ausente**, não fingido como verde |
 
 ---

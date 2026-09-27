@@ -2,7 +2,7 @@
 
 Plano: [05 — Endurecimento e operação](README.md) · Cenários: [scenarios.md](scenarios.md) · Progresso: [progress.md](progress.md)
 
-**Depende de:** [F1](F1-client-logs.md).
+**Depende de:** [F1](F1-diagnostics.md).
 **Entrega:** o sistema autentica contra um provedor OIDC real **por configuração**, com rotação
 de refresh e revogação que alcança socket aberto.
 

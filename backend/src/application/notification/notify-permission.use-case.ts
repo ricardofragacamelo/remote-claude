@@ -3,8 +3,8 @@ import type { PermissionReference, PushTarget } from '@domain/notification';
 import type { Device, UserId } from '@domain/auth';
 import type { NotificationRegistry } from './notification-registry';
 import type { PushAudience } from './ports/push-audience.port';
-import type { PushSender } from './ports/push.port';
 import type { PushTokenRegistry } from './ports/push-token-registry.port';
+import type { PushDispatcher } from './push-dispatcher';
 
 /** What announcing one question needs to know. Nothing about the tool's input is in here. */
 export interface NotifyPermissionCommand {
@@ -40,11 +40,14 @@ export type NotifyOutcome =
  * Nothing here can fail loudly. The provider is a best effort beside a deadline that is not: a
  * push that did not go out costs a person the chance to answer from away, and the price is
  * recorded in [D-05](../../../../docs/plans/02-mobile-approval/decisions.md#d-05--quando-o-push-não-sai).
+ * What changed with plan 05 is that a failure that may pass is **tried again** — a bounded number
+ * of times, never past the request's deadline, and never holding it (B-25, D-09). The withdrawal
+ * waits for an announcement still on the wire, so it can never be overtaken by it (S-51).
  */
 export class NotifyPermissionUseCase {
   constructor(
     private readonly audience: PushAudience,
-    private readonly sender: PushSender,
+    private readonly dispatcher: PushDispatcher,
     private readonly tokens: PushTokenRegistry,
     private readonly registry: NotificationRegistry,
     private readonly render: (target: PushTarget, command: NotifyPermissionCommand) => PushMessage,
@@ -69,13 +72,16 @@ export class NotifyPermissionUseCase {
     this.registry.remember(command.requestId, targets);
 
     await Promise.all(
-      targets.map(async (target) => {
-        const delivery = await this.sender.send(this.render(target, command));
-
-        if (delivery === 'tokenRejected') {
-          await this.forget(command.userId, target);
-        }
-      }),
+      targets.map((target) =>
+        this.dispatcher.dispatch({
+          key: announcementOf(command.requestId),
+          requestId: command.requestId,
+          message: this.render(target, command),
+          // A retry that would land after the question is over is not made.
+          deadline: command.expiresAt,
+          onTokenRejected: () => this.forget(command.userId, target),
+        }),
+      ),
     );
 
     return 'announced';
@@ -93,14 +99,23 @@ export class NotifyPermissionUseCase {
   async cancel(userId: UserId, reference: PermissionReference): Promise<number> {
     const targets = this.registry.take(reference.requestId);
 
-    await Promise.all(
-      targets.map(async (target) => {
-        const delivery = await this.sender.send(PushMessage.permissionResolved(target, reference));
+    // First the announcement stops: a retry still waiting is cancelled, and one already on the
+    // wire is waited for. Only then does the withdrawal go — sent before, it could be overtaken by
+    // the very notification it withdraws (S-50, S-51).
+    await this.dispatcher.stop(announcementOf(reference.requestId));
 
-        if (delivery === 'tokenRejected') {
-          await this.forget(userId, target);
-        }
-      }),
+    await Promise.all(
+      targets.map((target) =>
+        this.dispatcher.dispatch({
+          key: withdrawalOf(reference.requestId),
+          requestId: reference.requestId,
+          message: PushMessage.permissionResolved(target, reference),
+          // The withdrawal has no deadline of its own: the question is already over, and a card
+          // left standing is exactly what it exists to take down. The attempts bound it.
+          deadline: null,
+          onTokenRejected: () => this.forget(userId, target),
+        }),
+      ),
     );
 
     return targets.length;
@@ -122,6 +137,16 @@ export class NotifyPermissionUseCase {
       await this.tokens.forget(device);
     }
   }
+}
+
+/** The dispatch group of a request's announcement — what its withdrawal stops. */
+function announcementOf(requestId: string): string {
+  return `${requestId}:announce`;
+}
+
+/** The dispatch group of a request's withdrawal. Never stopped: it is the last word. */
+function withdrawalOf(requestId: string): string {
+  return `${requestId}:withdraw`;
 }
 
 /** The approved devices that can actually be reached. A device with no token is not one. */

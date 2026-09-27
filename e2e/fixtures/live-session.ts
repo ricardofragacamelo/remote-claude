@@ -176,6 +176,11 @@ export async function attachFrom(
  * A batch at a time, because one at a time is a round trip per event and minutes of wall clock,
  * and all of them at once is a thousand queries queued on a ten-connection pool.
  *
+ * **Within the rate the server announced** (plan 05, B-06): a batch is never larger than
+ * `maxFramesPerSecond`, and a batch that spent the whole second's budget waits for the second to
+ * close before the next one. A client that knows the limit does not find it by being closed with
+ * `4429` — and neither does the suite.
+ *
  * Overflowing the ring is the only honest way to produce a gap: the buffer is what decides, and
  * its size is a property of the server rather than a number a test may assume.
  */
@@ -185,14 +190,31 @@ export async function pushPastSeq(
   send: () => void,
   batchSize = 50,
 ): Promise<void> {
+  const rate = maxFramesPerSecond(socket);
+  const batch = Math.min(batchSize, rate);
+
   while (lastSeqOf(socket) < target) {
-    for (let index = 0; index < batchSize; index += 1) {
+    const startedAt = Date.now();
+
+    for (let index = 0; index < batch; index += 1) {
       send();
     }
 
-    const reached = lastSeqOf(socket) + batchSize;
+    const reached = lastSeqOf(socket) + batch;
     await socket.waitFor((frame) => (frame.seq ?? 0) >= reached, 60_000);
+
+    const elapsed = Date.now() - startedAt;
+    if (batch === rate && elapsed < 1_000) {
+      await new Promise((resolve) => setTimeout(resolve, 1_000 - elapsed));
+    }
   }
+}
+
+/** How many frames a second the server said it takes from one client, in the handshake. */
+export function maxFramesPerSecond(socket: E2eSocket): number {
+  const ready = socket.frames.find((frame) => frame.type === 'connection.ready');
+
+  return (ready?.payload as { limits: { maxFramesPerSecond: number } }).limits.maxFramesPerSecond;
 }
 
 /**

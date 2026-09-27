@@ -1,6 +1,7 @@
 /// Continuing a conversation of the history, and learning which session continues it.
 library;
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -171,5 +172,72 @@ void main() {
     controller().acknowledge();
 
     expect(state(), const ResumeState());
+  });
+
+  group('a resume nobody answers — plan 05, B-26', () {
+    test('S-56 · stops waiting at the deadline, says so, and lets the person try again', () {
+      fakeAsync((FakeAsync async) {
+        controller().resume('/p');
+
+        async.elapse(resumeTimeout);
+
+        expect(state().isPending, isFalse);
+        expect(state().failure?.code, 'RESUME_TIMEOUT');
+        expect(state().failure?.messageKey, 'session.error.resumeTimeout');
+        expect(state().failure, isA<NoAnswerFailure>());
+
+        controller().resume('/p');
+        expect(repository.commands, hasLength(2));
+      });
+    });
+
+    test('S-56 · keeps waiting until the deadline itself', () {
+      fakeAsync((FakeAsync async) {
+        controller().resume('/p');
+
+        async.elapse(resumeTimeout - const Duration(milliseconds: 1));
+
+        expect(state().isPending, isTrue);
+      });
+    });
+
+    test('S-57 · never fires for a resume that was answered', () {
+      fakeAsync((FakeAsync async) {
+        controller().resume('/p');
+        repository.emit(const SessionJoined(sessionId: 'session-3', claudeSessionId: 'conv-1'));
+        async.flushMicrotasks();
+
+        async.elapse(resumeTimeout);
+
+        expect(state(), const ResumeState(sessionId: 'session-3'));
+      });
+    });
+
+    test('S-57 · never fires for a resume that was refused', () {
+      fakeAsync((FakeAsync async) {
+        controller().resume('/p');
+        repository.emit(const CommandRefused(commandId: 'command-1', failure: notFound));
+        async.flushMicrotasks();
+
+        async.elapse(resumeTimeout);
+
+        expect(state(), const ResumeState(failure: notFound));
+      });
+    });
+
+    test('the deadline of an earlier resume does not end a later one', () {
+      fakeAsync((FakeAsync async) {
+        controller().resume('/p');
+        repository.emit(const SessionJoined(sessionId: 'session-3', claudeSessionId: 'conv-1'));
+        async.flushMicrotasks();
+        controller().acknowledge();
+
+        async.elapse(resumeTimeout ~/ 2);
+        controller().resume('/p');
+        async.elapse(resumeTimeout ~/ 2);
+
+        expect(state().isPending, isTrue);
+      });
+    });
   });
 }

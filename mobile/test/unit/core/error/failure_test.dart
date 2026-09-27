@@ -49,12 +49,29 @@ void main() {
       AuthenticationFailure() => 'auth',
       ServerFailure() => 'server',
       UnexpectedFailure() => 'unexpected',
+      NoAnswerFailure() => 'no answer',
     };
 
     expect(name(const NetworkFailure(traceId: 't')), 'network');
     expect(name(const AuthenticationFailure(traceId: 't')), 'auth');
     expect(name(const UnexpectedFailure(traceId: 't')), 'unexpected');
     expect(name(const ServerFailure(code: 'X', messageKey: 'y', traceId: 't')), 'server');
+    expect(
+      name(const NoAnswerFailure(code: 'RESUME_TIMEOUT', messageKey: 'k', traceId: 't')),
+      'no answer',
+    );
+  });
+
+  test('a command nobody answered carries the code and key the client chose — plan 05, B-26', () {
+    const Failure failure = NoAnswerFailure(
+      traceId: 'cmd-1',
+      code: 'RESUME_TIMEOUT',
+      messageKey: 'session.error.resumeTimeout',
+    );
+
+    expect(failure.code, 'RESUME_TIMEOUT');
+    expect(failure.messageKey, 'session.error.resumeTimeout');
+    expect(failure.traceId, 'cmd-1');
   });
 
   test('two failures of the same kind and contents are equal', () {

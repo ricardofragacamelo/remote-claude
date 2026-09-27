@@ -13,9 +13,25 @@
     "limits": {
       "type": "object",
       "description": "What this server will accept, so the client does not have to discover it by being refused.",
-      "required": ["maxFrameBytes", "replayBufferSize"],
+      "required": [
+        "maxFrameBytes",
+        "maxFramesPerSecond",
+        "maxAttachedSessions",
+        "replayBufferSize"
+      ],
       "properties": {
-        "maxFrameBytes": { "type": "integer" },
+        "maxFrameBytes": {
+          "type": "integer",
+          "description": "Largest frame accepted, in bytes. Over it: `error` PAYLOAD_TOO_LARGE, and the socket stays."
+        },
+        "maxFramesPerSecond": {
+          "type": "integer",
+          "description": "Frames a client may send per second. Over it: `error` RATE_LIMITED with `params.retryAfterSeconds`; sending again inside that window closes with 4429."
+        },
+        "maxAttachedSessions": {
+          "type": "integer",
+          "description": "Sessions one connection may watch at once. `session.attach` or `session.start` beyond it: `error` RATE_LIMITED."
+        },
         "replayBufferSize": { "type": "integer" }
       }
     }

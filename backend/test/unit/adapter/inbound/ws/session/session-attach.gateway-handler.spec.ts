@@ -18,6 +18,7 @@ import {
   aSession,
   CONVERSATION_ID,
   RecordingHandle,
+  aClock,
 } from '../../../../../support/builders/session.builder';
 import { RegistrySessionOwnership } from '@adapter/outbound/session/registry-session.ownership';
 import { aWsContext } from '../../../../../support/builders/ws-context.builder';
@@ -104,7 +105,7 @@ describe('SessionAttachHandler', () => {
   });
 
   it('names the conversation it continues, when it is a resume — plan 04, B-11', async () => {
-    const registry = new SessionRegistry(10);
+    const registry = new SessionRegistry(10, aClock());
     registry.add({
       session: aSession(),
       handle: new RecordingHandle(),

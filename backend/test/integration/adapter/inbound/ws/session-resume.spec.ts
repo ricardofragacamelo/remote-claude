@@ -155,8 +155,25 @@ describe('resuming a conversation', () => {
     throw new Error(`none of ${types.join(', ')} in 200 frames`);
   }
 
-  function resume(socket: TestSocket, resumeSessionId: string, workspacePath = root): void {
-    socket.send(commandFrame('session.start', { workspacePath, resumeSessionId }));
+  /** Sends the resume, and answers the id of the command — what its own answer names. */
+  function resume(socket: TestSocket, resumeSessionId: string, workspacePath = root): string {
+    const command = commandFrame('session.start', { workspacePath, resumeSessionId });
+    socket.send(command);
+
+    return String(command['id']);
+  }
+
+  /** The answer to one command: its ack, or its refusal — never a frame some other command caused. */
+  async function answerTo(socket: TestSocket, commandId: string): Promise<Envelope> {
+    for (let taken = 0; taken < 200; taken += 1) {
+      const frame = await socket.next();
+
+      if ((frame.kind === 'ack' || frame.kind === 'error') && frame.correlationId === commandId) {
+        return frame;
+      }
+    }
+
+    throw new Error(`no answer to ${commandId} in 200 frames`);
   }
 
   async function close(socket: TestSocket, sessionId: string): Promise<void> {
@@ -295,23 +312,31 @@ describe('resuming a conversation', () => {
     const first = await connect();
     const second = await connect();
 
-    resume(first, EDITOR);
-    resume(second, EDITOR);
+    const firstCommand = resume(first, EDITOR);
+    const secondCommand = resume(second, EDITOR);
 
+    // Each command's **own** answer, by correlation. The one that joins is attached before its ack
+    // leaves, so the `session.started` of the one that opened may legitimately reach it first —
+    // the ordering the protocol promises is about what a command caused, not about its neighbour's.
     const answers = await Promise.all([
-      untilAny(first, ['session.attached', 'session.started']),
-      untilAny(second, ['session.attached', 'session.started']),
+      answerTo(first, firstCommand),
+      answerTo(second, secondCommand),
     ]);
 
     expect(spawned).toHaveLength(1);
     expect(answers.map((frame) => frame.type).sort()).toEqual([
+      'command.accepted',
       'session.attached',
-      'session.started',
     ]);
-    const ids = answers.map((frame) => frame.payload?.['sessionId']);
-    expect(ids[0]).toBe(ids[1]);
 
-    await close(first, String(ids[0]));
+    const opener = answers[0]?.type === 'command.accepted' ? first : second;
+    const joiner = opener === first ? second : first;
+    const started = await until(opener, 'session.started');
+    const attached = answers.find((frame) => frame.type === 'session.attached');
+    expect(attached?.payload?.['sessionId']).toBe(started.payload?.['sessionId']);
+    expect(joiner).not.toBe(opener);
+
+    await close(opener, String(started.payload?.['sessionId']));
   });
 
   it('refuses a conversation that does not exist — S-22', async () => {

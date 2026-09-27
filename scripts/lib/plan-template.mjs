@@ -475,9 +475,16 @@ export function withPlanIndexed(indexContent, spec) {
 export function withPlanInOverallProgress(progressContent, spec) {
   const row =
     `| [${spec.number} — ${titleize(spec.slug)}](${spec.number}-${spec.slug}/README.md) ` +
-    `| 0/0 | 0/0 | 0/0 | 🔲 |`;
+    `| 0/0 | 0/0 | 0/0 | 0/0 | 🔲 |`;
 
-  return withRowAppended(progressContent, /^\|\s*\[\d{2}\s*—/u, row, 'docs/plans/progress.md');
+  // Only a row of the panel — a link followed by a counter. The same document links to every
+  // plan from prose tables too, and appending after one of those leaves the plan off the panel.
+  return withRowAppended(
+    progressContent,
+    /^\|\s*\[\d{2}\s*—[^\]]*\]\([^)]*\)\s*\|\s*\d+\/\d+\s*\|/u,
+    row,
+    'docs/plans/progress.md',
+  );
 }
 
 /**

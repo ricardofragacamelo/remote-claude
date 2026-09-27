@@ -10,6 +10,7 @@ import { configureApp, listen } from '../../../src/bootstrap';
 import { AUDIENCE } from '../identity/fake-oidc';
 import type { IdentityServer } from '../identity/identity-server';
 import { LOGGER } from '@shared/logging/logger';
+import { MACHINE_MEMORY } from '@infra/lifecycle/session-capacity';
 import { RecordingLogger } from '../fakes/recording-logger';
 
 /** What a test needs handed back after the app is up. */
@@ -60,6 +61,13 @@ export interface TestAllowlist {
   readonly root: string;
 }
 
+/**
+ * The RAM a suite's installation believes it has: roomy, so the capacity is whatever the suite's
+ * ceiling says and never whatever the machine running it happens to have. A suite about the
+ * capacity itself replaces it (plan 05, D-01).
+ */
+export const ROOMY_MACHINE = 64 * 1024 ** 3;
+
 /** The subject the fake identity provider mints tokens for. */
 export const SUBJECT = 'auth|42';
 
@@ -83,6 +91,13 @@ export function testEnvironment(
   process.env['OIDC_SCOPES'] = 'openid profile email offline_access';
   process.env['RC_WORKSPACE_ALLOWLIST_FILE'] = allowlistFile;
   process.env['RC_SESSION_MAX_CONCURRENT'] = '10';
+  process.env['RC_SESSION_MIN_CONCURRENT'] = '1';
+  process.env['RC_SESSION_MEMORY_FRACTION'] = '0.5';
+  process.env['RC_SESSION_MEMORY_MB'] = '256';
+  process.env['RC_SESSION_IDLE_TTL_MS'] = '1800000';
+  process.env['RC_WS_MAX_FRAMES_PER_SECOND'] = '20';
+  process.env['RC_WS_MAX_FRAME_BYTES'] = '65536';
+  process.env['RC_WS_MAX_ATTACHED_SESSIONS'] = '16';
   process.env['RC_SESSION_MAX_TURNS'] = '100';
   process.env['RC_SESSION_MAX_BUDGET_USD'] = '10';
   process.env['RC_SESSION_DEFAULT_MODEL'] = 'claude-sonnet-5';
@@ -144,7 +159,9 @@ export async function startTestApp(
   const moduleRef = await customise(
     Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(LOGGER)
-      .useValue(log.logger),
+      .useValue(log.logger)
+      .overrideProvider(MACHINE_MEMORY)
+      .useValue(ROOMY_MACHINE),
   ).compile();
 
   const app = moduleRef.createNestApplication();

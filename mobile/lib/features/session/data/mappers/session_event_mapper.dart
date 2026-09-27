@@ -215,6 +215,7 @@ SessionEvent _closed(int seq, Map<String, Object?> payload, String at) {
     'failed' => SessionCloseReason.failed,
     'auditUnavailable' => SessionCloseReason.auditUnavailable,
     'shutdown' => SessionCloseReason.shutdown,
+    'idleTimeout' => SessionCloseReason.idleTimeout,
     _ => null,
   };
 

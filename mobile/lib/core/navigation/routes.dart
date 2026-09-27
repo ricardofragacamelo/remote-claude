@@ -19,6 +19,9 @@ const String workspacesRoute = '/workspaces';
 /// web ([D-04](../../../../docs/plans/03-rules-and-audit/decisions.md#d-04--onde-a-revogação-mora)).
 const String rulesRoute = '/rules';
 
+/// What a person looks at, and switches `debug` on from, when something is not working.
+const String diagnosticsRoute = '/diagnostics';
+
 /// The address of one session.
 ///
 /// Built rather than written out at each call site: it is the target of a deep link, and a link

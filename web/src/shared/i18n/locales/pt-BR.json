@@ -54,6 +54,7 @@
       "limitReached": "Esta máquina já está rodando {{limit}} sessões, o máximo que ela permite. Encerre uma e tente de novo.",
       "unknownCommand": "Esta instalação não tem o comando /{{command}}. Veja na lista de comandos os que ela oferece.",
       "claudeTimeout": "O Claude demorou demais para responder. Tente de novo.",
+      "resumeTimeout": "O backend não respondeu à retomada. Confira a conexão e tente de novo.",
       "locked": "Um turno está em execução, ou outro desfazer desta sessão está em andamento. Espere terminar e tente de novo.",
       "rewindTargetUnknown": "Esse não é um ponto para o qual esta sessão pode voltar. Recarregue a lista e escolha de novo.",
       "rewindIncomplete": "O desfazer parou antes do fim: {{failed}} arquivo(s) não puderam voltar, e cada um ficou exatamente como estava."
@@ -91,7 +92,8 @@
       "completed": "ela terminou",
       "failed": "o Claude parou de responder",
       "auditUnavailable": "não foi possível gravar a trilha de auditoria",
-      "shutdown": "o backend foi desligado"
+      "shutdown": "o backend foi desligado",
+      "idleTimeout": "ficou ociosa por tempo demais — retome-a pelo histórico"
     },
     "starter": {
       "title": "Abrir uma sessão",

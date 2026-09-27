@@ -11,13 +11,16 @@ import {
   realPushEnvironment,
   PORT_VARIABLES,
   PROJECT_NAME,
+  boardRows,
   e2eDotEnv,
   e2eProjectName,
   ephemeralEnvironment,
+  lanAddress,
   loadDotEnv,
   projectName,
   resolvePorts,
   serviceUrls,
+  watchEnvironment,
   workspaceStatus,
 } from '../../../scripts/lib/stack.mjs';
 
@@ -90,6 +93,129 @@ describe('serviceUrls', () => {
 
     expect(urls.keycloak).toBe('http://localhost:9999');
     expect(urls.discovery).toContain('http://localhost:9999/realms/');
+  });
+});
+
+describe('lanAddress', () => {
+  /**
+   * @param {string} address
+   * @param {Partial<import('node:os').NetworkInterfaceInfo>} [extra]
+   * @returns {import('node:os').NetworkInterfaceInfo}
+   */
+  const entry = (address, extra = {}) =>
+    /** @type {import('node:os').NetworkInterfaceInfo} */ ({
+      address,
+      family: 'IPv4',
+      internal: false,
+      netmask: '255.255.255.0',
+      mac: '00:00:00:00:00:00',
+      cidr: null,
+      ...extra,
+    });
+
+  it('picks the first external IPv4 address, past loopback and IPv6', () => {
+    const address = lanAddress({
+      lo: [entry('127.0.0.1', { internal: true })],
+      eth0: [entry('fe80::1', { family: 'IPv6' }), entry('192.168.0.10')],
+      wlan0: [entry('10.0.0.5')],
+    });
+
+    expect(address).toBe('192.168.0.10');
+  });
+
+  it('answers null when the machine has only loopback', () => {
+    expect(lanAddress({ lo: [entry('127.0.0.1', { internal: true })], empty: undefined })).toBe(
+      null,
+    );
+  });
+
+  it('reads the real interfaces when none are given', () => {
+    const address = lanAddress();
+
+    expect(address === null || /^\d+\.\d+\.\d+\.\d+$/.test(address)).toBe(true);
+  });
+});
+
+describe('boardRows', () => {
+  const ports = { postgres: 5432, keycloak: 8180, backend: 3000, web: 5173 };
+
+  it('lists the four services, in start order, each with its port', () => {
+    const rows = boardRows(ports);
+
+    expect(rows.map((row) => [row.name, row.port])).toEqual([
+      ['PostgreSQL', 5432],
+      ['Keycloak', 8180],
+      ['Backend', 3000],
+      ['Web', 5173],
+    ]);
+  });
+
+  it('ties only the backend and web rows to a watch process', () => {
+    const rows = boardRows(ports);
+
+    expect(rows.map((row) => row.workspace)).toEqual([undefined, undefined, 'backend', 'web']);
+  });
+
+  it('gives every address a client needs, and follows a moved port into each one', () => {
+    const rows = boardRows({ postgres: 1, keycloak: 2, backend: 3, web: 4 });
+    const [postgres, keycloak, backend, web] = rows;
+
+    expect(postgres?.address).toBe('postgresql://remote_claude@localhost:1/remote_claude');
+    expect(keycloak?.address).toBe('http://localhost:2');
+    expect(keycloak?.details).toEqual([
+      ['admin console', 'http://localhost:2/admin'],
+      ['OIDC issuer', 'http://localhost:2/realms/remote-claude'],
+    ]);
+    expect(backend?.address).toBe('http://localhost:3');
+    expect(backend?.details).toEqual([
+      ['health', 'http://localhost:3/health'],
+      ['WebSocket', 'ws://localhost:3/ws'],
+    ]);
+    expect(web?.address).toBe('http://localhost:4');
+  });
+
+  it('names the database and user the environment sets, and never the password', () => {
+    const [postgres] = boardRows(ports, {
+      env: { RC_POSTGRES_USER: 'alice', RC_POSTGRES_DB: 'rc', RC_POSTGRES_PASSWORD: 's3cret' },
+    });
+
+    expect(postgres?.address).toBe('postgresql://alice@localhost:5432/rc');
+    expect(
+      JSON.stringify(boardRows(ports, { env: { RC_POSTGRES_PASSWORD: 's3cret' } })),
+    ).not.toContain('s3cret');
+  });
+
+  it('adds the network address of the backend when the machine has one', () => {
+    const backend = boardRows(ports, { lan: '192.168.0.10' })[2];
+
+    expect(backend?.details).toContainEqual(['network', 'http://192.168.0.10:3000']);
+  });
+
+  it('leaves the network address out when there is none', () => {
+    for (const backend of [boardRows(ports, { lan: null })[2], boardRows(ports)[2]]) {
+      expect(backend?.details.map(([label]) => label)).toEqual(['health', 'WebSocket']);
+    }
+  });
+});
+
+describe('watchEnvironment', () => {
+  it('resolves a relative allowlist path against the repository, not the backend folder', () => {
+    const env = watchEnvironment({ RC_WORKSPACE_ALLOWLIST_FILE: './infra/a.yaml' }, '/repo');
+
+    expect(env['RC_WORKSPACE_ALLOWLIST_FILE']).toBe(path.resolve('/repo', 'infra/a.yaml'));
+  });
+
+  it('keeps an absolute path, and every other variable, as they are', () => {
+    const env = watchEnvironment({ RC_WORKSPACE_ALLOWLIST_FILE: '/etc/a.yaml', OTHER: './x' });
+
+    expect(env).toEqual({ RC_WORKSPACE_ALLOWLIST_FILE: '/etc/a.yaml', OTHER: './x' });
+  });
+
+  it('leaves an unset or blank path alone, for the backend to report', () => {
+    expect(watchEnvironment({}, '/repo')).toEqual({});
+    expect(watchEnvironment({ RC_WORKSPACE_ALLOWLIST_FILE: ' ' }, '/repo')).toEqual({
+      RC_WORKSPACE_ALLOWLIST_FILE: ' ',
+    });
   });
 });
 

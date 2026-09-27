@@ -22,6 +22,13 @@ const complete: RawEnvironment = {
   OIDC_SCOPES: 'openid profile email offline_access',
   RC_WORKSPACE_ALLOWLIST_FILE: '/etc/remote-claude/workspaces.yaml',
   RC_SESSION_MAX_CONCURRENT: '10',
+  RC_SESSION_MIN_CONCURRENT: '1',
+  RC_SESSION_MEMORY_FRACTION: '0.5',
+  RC_SESSION_MEMORY_MB: '256',
+  RC_SESSION_IDLE_TTL_MS: '1800000',
+  RC_WS_MAX_FRAMES_PER_SECOND: '20',
+  RC_WS_MAX_FRAME_BYTES: '65536',
+  RC_WS_MAX_ATTACHED_SESSIONS: '16',
   RC_SESSION_MAX_TURNS: '100',
   RC_SESSION_MAX_BUDGET_USD: '10',
   RC_SESSION_DEFAULT_MODEL: 'claude-sonnet-5',
@@ -59,10 +66,12 @@ describe('loadConfig', () => {
       databaseUrl: 'postgresql://u:p@localhost:5432/db',
       workspaceAllowlistFile: '/etc/remote-claude/workspaces.yaml',
       session: {
-        maxConcurrent: 10,
+        capacity: { floor: 1, ceiling: 10, memoryFraction: 0.5, perSessionBytes: 268_435_456 },
+        idleTtlMs: 1_800_000,
         limits: { maxBudgetUsd: 10, maxTurns: 100 },
         defaults: { model: 'claude-sonnet-5', permissionMode: 'default' },
       },
+      websocket: { maxFramesPerSecond: 20, maxFrameBytes: 65_536, maxAttachedSessions: 16 },
       permission: {
         timeoutMs: 120_000,
         extensionMs: 120_000,
@@ -105,6 +114,13 @@ describe('loadConfig', () => {
     'OIDC_SCOPES',
     'RC_WORKSPACE_ALLOWLIST_FILE',
     'RC_SESSION_MAX_CONCURRENT',
+    'RC_SESSION_MIN_CONCURRENT',
+    'RC_SESSION_MEMORY_FRACTION',
+    'RC_SESSION_MEMORY_MB',
+    'RC_SESSION_IDLE_TTL_MS',
+    'RC_WS_MAX_FRAMES_PER_SECOND',
+    'RC_WS_MAX_FRAME_BYTES',
+    'RC_WS_MAX_ATTACHED_SESSIONS',
     'RC_SESSION_MAX_TURNS',
     'RC_SESSION_MAX_BUDGET_USD',
     'RC_SESSION_DEFAULT_MODEL',
@@ -133,6 +149,14 @@ describe('loadConfig', () => {
     // configuration's clothes.
     ['RC_SESSION_MAX_CONCURRENT', '0'],
     ['RC_SESSION_MAX_CONCURRENT', 'many'],
+    ['RC_SESSION_MIN_CONCURRENT', '0'],
+    ['RC_SESSION_MEMORY_FRACTION', '0'],
+    ['RC_SESSION_MEMORY_FRACTION', '1.5'],
+    ['RC_SESSION_MEMORY_MB', '63'],
+    ['RC_SESSION_IDLE_TTL_MS', '999'],
+    ['RC_WS_MAX_FRAMES_PER_SECOND', '0'],
+    ['RC_WS_MAX_FRAME_BYTES', '1023'],
+    ['RC_WS_MAX_ATTACHED_SESSIONS', '0'],
     ['RC_SESSION_MAX_TURNS', '0'],
     ['RC_SESSION_MAX_BUDGET_USD', '0'],
     ['RC_SESSION_DEFAULT_PERMISSION_MODE', 'yolo'],
@@ -142,6 +166,38 @@ describe('loadConfig', () => {
     ['RC_PERMISSION_RULE_MAX_LIFETIME_MS', '0'],
   ] as const)('refuses %s set to %s', (variable, value) => {
     expect(() => loadConfig(withChange({ [variable]: value }))).toThrow(ConfigurationError);
+  });
+
+  describe('the capacity of the machine — D-01', () => {
+    it('refuses a floor above the ceiling, and names the floor', () => {
+      expect.assertions(2);
+
+      try {
+        loadConfig(
+          withChange({ RC_SESSION_MIN_CONCURRENT: '11', RC_SESSION_MAX_CONCURRENT: '10' }),
+        );
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConfigurationError);
+        expect((error as ConfigurationError).problems[0]).toContain('RC_SESSION_MIN_CONCURRENT');
+      }
+    });
+
+    it('accepts a floor equal to the ceiling — a fixed number, on purpose', () => {
+      const { capacity } = loadConfig(
+        withChange({ RC_SESSION_MIN_CONCURRENT: '4', RC_SESSION_MAX_CONCURRENT: '4' }),
+      ).session;
+
+      expect(capacity).toMatchObject({ floor: 4, ceiling: 4 });
+    });
+
+    it('accepts the whole of the RAM, and the shortest idle TTL there is', () => {
+      const { session } = loadConfig(
+        withChange({ RC_SESSION_MEMORY_FRACTION: '1', RC_SESSION_IDLE_TTL_MS: '1000' }),
+      );
+
+      expect(session.capacity.memoryFraction).toBe(1);
+      expect(session.idleTtlMs).toBe(1_000);
+    });
   });
 
   describe('the lifetime of a persisted rule — S-60', () => {

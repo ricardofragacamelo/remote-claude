@@ -113,6 +113,9 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   - Raiz que **existe e não é do usuário** responde `FORBIDDEN` (403): o requisitante é quem diz
     ser, e ainda assim não pode. `404` fica para o caminho que **não existe**
     ([01 · D-17](../../plans/01-live-session/decisions.md#d-17--usar-o-código-http-que-cada-coisa-é)).
+- **O seletor "Abrir pasta" navega só dentro das raízes**
+  ([06 · D-03](../../plans/06-workbench/decisions.md), decisão do usuário de 2026-09-26). Liberar "a
+  máquina toda" é declarar o `$HOME` como raiz no arquivo — nunca um seletor que sobe acima dela.
 - **Erros:** `WORKSPACE_NOT_ALLOWED`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`,
   `FORBIDDEN`
 - **Nota:** esta é a primeira linha de defesa do sistema. A regra é pura, sem I/O, e tem
@@ -348,9 +351,16 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
 - **Uma notificação por pedido**, não uma agrupada: é o que preserva o deep link por `requestId`
   e faz o toque abrir no card certo. O agrupamento nativo do SO cuida da aparência, e o
   cancelamento continua sendo por `requestId`.
-- **Falha do provedor é `warn`, sem segundo canal.** O pedido continua válido no web e o timeout
-  continua decidindo no silêncio. O preço está dito: push que falha com ninguém no navegador
-  deixa a permissão esperar o prazo inteiro sem ninguém saber.
+- **Falha do provedor é tentada de novo, e depois é `warn` — sem segundo canal.** Falha que pode
+  passar (rede, `401`, `408`, `429`, `5xx`) ganha até 3 tentativas, 1 s → 4 s com jitter, com o
+  `Retry-After` do provedor mandando no recuo e **nunca** depois do `expiresAt` do pedido; recusa
+  definitiva (`rejected`, os demais `4xx`) não. Só a primeira tentativa é aguardada: a nova
+  tentativa nunca segura o pedido. A retirada **para** o aviso antes de sair — cancela o que está
+  agendado e espera o que está no fio —, então nenhum aviso chega depois da retirada. Esgotou → um
+  `warn` só, com o número de tentativas ([05 · D-09](../../plans/05-hardening-operations/decisions.md)).
+  O pedido continua válido no web e o timeout continua decidindo no silêncio. O preço está dito:
+  push que falha com ninguém no navegador deixa a permissão esperar o prazo inteiro sem ninguém
+  saber.
 - **Token recusado pelo provedor é apagado, e o device continua aprovado** — ele volta a receber
   quando o app abrir. Revogar o device cobraria nova aprovação pelo web a cada rotação de token
   do SO. O app reenvia o token a cada renovação, e reenviar o mesmo token não duplica linha.

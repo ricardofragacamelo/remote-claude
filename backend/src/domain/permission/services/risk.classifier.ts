@@ -1,4 +1,5 @@
 import type { RiskHint } from '../value-objects/risk-hint.value-object';
+import { SHELL_OPAQUE, SHELL_SEPARATORS, SHELL_TOOLS } from './shell-syntax';
 
 /**
  * Tools whose worst case is reading something.
@@ -20,9 +21,6 @@ const READ_ONLY_TOOLS = new Set([
 
 /** Tools that change files, and nothing worse. */
 const WRITING_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
-
-/** The tools whose risk is not in the name but in the input. */
-const COMMAND_TOOLS = new Set(['Bash', 'BashTool']);
 
 /**
  * Shell commands whose worst case is printing something.
@@ -93,17 +91,6 @@ const READ_ONLY_SUBCOMMANDS: Readonly<Record<string, ReadonlySet<string>>> = {
   ]),
 };
 
-/** What splits one command from the next in a single shell line. */
-const SEPARATORS = /&&|\|\||[;|\n]/;
-
-/**
- * Shell syntax this classifier cannot see through.
- *
- * A substitution, a redirection or a heredoc can turn any line into any other line, and a reader
- * that ignored them would grade `echo $(rm -rf /)` by its first word.
- */
-const OPAQUE = /[><`]|\$\(|<<|\\\n/;
-
 /** `FOO=bar cmd` — the assignments are stripped so the command is graded, not the variable. */
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 
@@ -128,7 +115,7 @@ export function classifyRisk(toolName: string, input: Readonly<Record<string, un
     return 'write';
   }
 
-  if (!COMMAND_TOOLS.has(toolName)) {
+  if (!SHELL_TOOLS.has(toolName)) {
     return 'destructive';
   }
 
@@ -143,12 +130,14 @@ export function classifyRisk(toolName: string, input: Readonly<Record<string, un
  * different commands, and grading it by the first word would authorise the second.
  */
 function classifyCommand(command: string): RiskHint {
-  if (OPAQUE.test(command)) {
+  // A substitution, a redirection or a heredoc can turn any line into any other line, and a reader
+  // that ignored them would grade `echo $(rm -rf /)` by its first word.
+  if (SHELL_OPAQUE.test(command)) {
     return 'destructive';
   }
 
   const segments = command
-    .split(SEPARATORS)
+    .split(SHELL_SEPARATORS)
     .map((segment) => segment.trim())
     .filter((segment) => segment.length > 0);
 

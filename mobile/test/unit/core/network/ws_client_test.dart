@@ -619,6 +619,113 @@ void main() {
     });
   });
 
+  group('after being rate limited — plan 05, B-05', () {
+    late DateTime now;
+    late WsClient limited;
+
+    setUp(() {
+      now = DateTime.utc(2026, 9, 26, 12);
+      limited = WsClient(
+        url: Uri.parse('ws://localhost:3000/ws'),
+        credentials: credentials,
+        logger: logger,
+        appVersion: '0.0.1',
+        connect: (Uri url) {
+          final FakeFrameSocket socket = FakeFrameSocket();
+          opened.add(socket);
+          return socket;
+        },
+        schedule: scheduler.schedule,
+        // The lowest draw: the backoff is its floor, so what the server asked is what shows.
+        random: _LowestRandom(),
+        now: () => now,
+      );
+    });
+
+    tearDown(() => limited.dispose());
+
+    Future<void> ready() async {
+      limited.connect();
+      await settle();
+      socket().deliver(connectionReady());
+      await settle();
+    }
+
+    String rateLimited(Object? seconds) => commandError(
+      correlationId: 'cmd-1',
+      code: 'RATE_LIMITED',
+      messageKey: 'common.error.rateLimited',
+      params: <String, Object?>{'retryAfterSeconds': seconds},
+    );
+
+    test('comes back no sooner than the server asked, after a 4429', () async {
+      await ready();
+      socket().deliver(rateLimited(12));
+      await settle();
+
+      await socket().drop(closeRateLimited);
+      await settle();
+
+      expect(scheduler.delays, <Duration>[const Duration(seconds: 12)]);
+    });
+
+    test('counts the wait from when it was asked', () async {
+      await ready();
+      socket().deliver(rateLimited(12));
+      await settle();
+      now = now.add(const Duration(seconds: 10));
+
+      await socket().drop(closeRateLimited);
+      await settle();
+
+      expect(scheduler.delays, <Duration>[const Duration(seconds: 2)]);
+    });
+
+    test('keeps the longer of two waits it was asked for', () async {
+      await ready();
+      socket().deliver(rateLimited(12));
+      socket().deliver(rateLimited(3));
+      await settle();
+
+      await socket().drop(closeRateLimited);
+      await settle();
+
+      expect(scheduler.delays, <Duration>[const Duration(seconds: 12)]);
+    });
+
+    test('never comes back at once after a 4429, even with nothing to go by', () async {
+      await ready();
+
+      await socket().drop(closeRateLimited);
+      await settle();
+
+      expect(scheduler.delays.single, greaterThanOrEqualTo(backoffMin));
+    });
+
+    test('ignores a refusal that is not a rate limit, or a wait it cannot read', () async {
+      await ready();
+      socket().deliver(commandError(correlationId: 'cmd-1'));
+      socket().deliver(rateLimited('soon'));
+      await settle();
+
+      await socket().drop(closeRateLimited);
+      await settle();
+
+      expect(scheduler.delays, <Duration>[backoffMin]);
+    });
+
+    test('keeps the ordinary backoff for any other close', () async {
+      await ready();
+      socket().deliver(rateLimited(12));
+      await settle();
+
+      await socket().drop(4408);
+      await settle();
+
+      expect(scheduler.delays, <Duration>[backoffMin]);
+    });
+  });
+
   group('reconnection', () {
     test('an abnormal close schedules a retry', () async {
       await connectAndHandshake();
@@ -753,4 +860,16 @@ class _StubInstallId implements InstallIdSource {
 
   @override
   String? installId;
+}
+
+/// A draw that is always the lowest there is, so the jitter lands on the floor of the backoff.
+class _LowestRandom implements Random {
+  @override
+  bool nextBool() => false;
+
+  @override
+  double nextDouble() => 0;
+
+  @override
+  int nextInt(int max) => 0;
 }

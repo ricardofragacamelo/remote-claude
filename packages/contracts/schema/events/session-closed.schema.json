@@ -11,8 +11,15 @@
     "sessionId": { "type": "string" },
     "reason": {
       "type": "string",
-      "enum": ["closedByUser", "completed", "failed", "auditUnavailable", "shutdown"],
-      "description": "Why it ended. `auditUnavailable` is the second consecutive audit write failure — a session that cannot be recorded does not keep running."
+      "enum": [
+        "closedByUser",
+        "completed",
+        "failed",
+        "auditUnavailable",
+        "shutdown",
+        "idleTimeout"
+      ],
+      "description": "Why it ended. `auditUnavailable` is the second consecutive audit write failure — a session that cannot be recorded does not keep running. `idleTimeout` is the installation reclaiming a session nobody used for longer than its TTL; the conversation is still in the history and can be resumed."
     }
   }
 }

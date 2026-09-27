@@ -1,4 +1,5 @@
 import type { UserId } from '@domain/auth';
+import type { Clock } from '@domain/shared';
 import {
   Session,
   SessionForbiddenError,
@@ -26,10 +27,14 @@ export interface LiveSession {
  * docs/architecture/backend/06-realtime.md.
  *
  * It owns the concurrency limit because it is the only thing that knows how many there are. The
- * limit is a configured number with a default of **10** (~222 MB and exactly one subprocess per
- * session, both measured), so the refusal is an ordinary path rather than a remote edge case, and
- * it happens **before** anything is spawned — that is what leaves no orphan behind
+ * limit is derived from the machine's RAM at boot (~222 MB and exactly one subprocess per session,
+ * both measured — [D-01 of plan 05](../../../../docs/plans/05-hardening-operations/decisions.md)),
+ * so the refusal is an ordinary path rather than a remote edge case, and it happens **before**
+ * anything is spawned — that is what leaves no orphan behind
  * ([D-05](../../../../docs/plans/01-live-session/decisions.md)).
+ *
+ * It is also where a human acting on a session is noticed: every command goes through
+ * {@link require}, so that is where the idle clock of the session is reset (D-02).
  */
 export class SessionRegistry implements SessionConversations {
   private readonly live = new Map<string, LiveSession>();
@@ -37,7 +42,15 @@ export class SessionRegistry implements SessionConversations {
   /** Reservations taken before a subprocess exists, so two starts cannot both pass the limit. */
   private reserved = 0;
 
-  constructor(private readonly limit: number) {}
+  constructor(
+    private readonly limit: number,
+    private readonly clock: Clock,
+  ) {}
+
+  /** How many sessions this installation holds at most. */
+  get capacity(): number {
+    return this.limit;
+  }
 
   /** How many sessions count against the limit right now, including the ones still starting. */
   get size(): number {
@@ -106,7 +119,7 @@ export class SessionRegistry implements SessionConversations {
   }
 
   /**
-   * The session, if this user may act on it.
+   * The session, if this user may act on it — and a human acting on it is activity.
    *
    * **Two questions, two answers.** A session that is not running is `404`; one that is running
    * and belongs to somebody else is `403`. The earlier design collapsed both into `404` so that a
@@ -128,6 +141,7 @@ export class SessionRegistry implements SessionConversations {
       throw new SessionForbiddenError(id.value);
     }
 
+    entry.session.recordActivity(this.clock.now());
     return entry;
   }
 

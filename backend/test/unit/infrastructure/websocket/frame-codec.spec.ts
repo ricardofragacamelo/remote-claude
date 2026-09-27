@@ -5,6 +5,9 @@ import { InputValidationError } from '@shared/errors/input-validation.error';
 import { PayloadTooLargeError } from '@shared/errors/payload-too-large.error';
 import { UnsupportedProtocolVersionError } from '@shared/errors/unsupported-protocol-version.error';
 
+/** The limit a default installation announces. */
+const LIMIT = 65_536;
+
 const valid = {
   v: 1,
   id: '01J0ABCDEFGHJKMNPQRSTVWXYZ',
@@ -16,17 +19,17 @@ const valid = {
 
 describe('decodeFrame', () => {
   it('accepts a well-formed frame', () => {
-    expect(decodeFrame(JSON.stringify(valid))).toMatchObject({ type: 'diag.ping' });
+    expect(decodeFrame(JSON.stringify(valid), LIMIT)).toMatchObject({ type: 'diag.ping' });
   });
 
   it('accepts a frame carrying a field this build does not know', () => {
-    const frame = decodeFrame(JSON.stringify({ ...valid, somethingNew: true }));
+    const frame = decodeFrame(JSON.stringify({ ...valid, somethingNew: true }), LIMIT);
 
     expect(frame.type).toBe('diag.ping');
   });
 
   it('refuses text that is not JSON', () => {
-    expect(() => decodeFrame('{not json')).toThrow(InputValidationError);
+    expect(() => decodeFrame('{not json', LIMIT)).toThrow(InputValidationError);
   });
 
   it.each([
@@ -36,7 +39,7 @@ describe('decodeFrame', () => {
     ['no ts', { ...valid, ts: undefined }],
     ['a numeric type', { ...valid, type: 7 }],
   ])('refuses a frame with %s', (_case, frame) => {
-    expect(() => decodeFrame(JSON.stringify(frame))).toThrow(InputValidationError);
+    expect(() => decodeFrame(JSON.stringify(frame), LIMIT)).toThrow(InputValidationError);
   });
 
   it.each([
@@ -44,7 +47,7 @@ describe('decodeFrame', () => {
     ['a missing version', undefined],
     ['a version that is a string', '1'],
   ])('refuses %s, so the client can be told to update', (_case, version) => {
-    expect(() => decodeFrame(JSON.stringify({ ...valid, v: version }))).toThrow(
+    expect(() => decodeFrame(JSON.stringify({ ...valid, v: version }), LIMIT)).toThrow(
       UnsupportedProtocolVersionError,
     );
   });
@@ -53,7 +56,7 @@ describe('decodeFrame', () => {
     expect.assertions(1);
 
     try {
-      decodeFrame(JSON.stringify({ ...valid, v: 99 }));
+      decodeFrame(JSON.stringify({ ...valid, v: 99 }), LIMIT);
     } catch (error) {
       expect((error as UnsupportedProtocolVersionError).supportedVersions).toEqual([1]);
     }
@@ -72,17 +75,19 @@ describe('decodeFrame', () => {
   });
 
   it('refuses a frame that is not an object', () => {
-    expect(() => decodeFrame('"a string"')).toThrow(UnsupportedProtocolVersionError);
+    expect(() => decodeFrame('"a string"', LIMIT)).toThrow(UnsupportedProtocolVersionError);
   });
 
   it('refuses null', () => {
-    expect(() => decodeFrame('null')).toThrow(UnsupportedProtocolVersionError);
+    expect(() => decodeFrame('null', LIMIT)).toThrow(UnsupportedProtocolVersionError);
   });
 });
 
 describe('encodeFrame', () => {
   it('round-trips a frame', () => {
-    expect(decodeFrame(encodeFrame(decodeFrame(JSON.stringify(valid))))).toMatchObject({
+    expect(
+      decodeFrame(encodeFrame(decodeFrame(JSON.stringify(valid), LIMIT)), LIMIT),
+    ).toMatchObject({
       id: valid.id,
     });
   });

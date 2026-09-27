@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/features/device/device.dart';
@@ -138,6 +140,37 @@ void main() {
 
     expect(find.text(l10n.sessionPingEmpty), findsOneWidget);
     expect(find.text(l10n.sessionPingSequence(1)), findsNothing);
+  });
+
+  testWidgets('opens the diagnostics screen from its own labelled control — plan 05, B-11', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpRouted(
+      <RouteBase>[
+        GoRoute(
+          path: sessionRoute,
+          builder: (BuildContext context, GoRouterState state) => const SessionPingPage(),
+        ),
+        GoRoute(
+          path: diagnosticsRoute,
+          builder: (BuildContext context, GoRouterState state) => const Text('diagnostics'),
+        ),
+      ],
+      overrides: <Override>[
+        ...permissionOverrides(),
+        sessionRepositoryProvider.overrideWithValue(repository),
+        connectionStatusProvider.overrideWith(
+          (Ref ref) => Stream<ConnectionStatus>.value(ConnectionStatus.ready),
+        ),
+        deviceControllerAnswering(AsyncData<RegisteredDevice?>(aRegisteredDevice())),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip(l10n.diagnosticsTitle));
+    await tester.pumpAndSettle();
+
+    expect(find.text('diagnostics'), findsOneWidget);
   });
 
   testWidgets('the sign-out control carries a translated label', (WidgetTester tester) async {

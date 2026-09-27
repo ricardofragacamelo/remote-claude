@@ -8,26 +8,15 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/misc.dart';
-import 'package:logging/logging.dart';
 import 'package:remote_claude/core/config/app_config.dart';
 import 'package:remote_claude/core/config/app_config_provider.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_context.dart';
+import 'package:remote_claude/core/logging/log_level.dart';
 import 'package:remote_claude/core/logging/log_operations.dart';
 import 'package:remote_claude/core/logging/logger_provider.dart';
 
-/// The level this build logs at.
-///
-/// `debug` while developing — every I/O edge, with payloads. `info` in a release, where the user
-/// can turn `debug` back on from a diagnostics screen: reproducing an intermittent permission bug
-/// on a phone needs it, and having to publish a new build to investigate is not workable.
-Level levelFor({required bool isRelease, required bool debugRequested}) {
-  if (debugRequested || !isRelease) {
-    return Level.FINE;
-  }
-
-  return Level.INFO;
-}
+export 'package:remote_claude/core/logging/log_level.dart' show levelFor;
 
 /// Writes a formatted line to the platform's developer console.
 ///

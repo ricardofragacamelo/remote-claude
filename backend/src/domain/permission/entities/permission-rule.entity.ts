@@ -205,7 +205,7 @@ export class PermissionRule {
       this.userId.equals(subject.userId) &&
       this.isActiveAt(now) &&
       this.reaches(subject) &&
-      ruleMatches(this.pattern, toolName, input)
+      ruleMatches(this.pattern, toolName, input, this.decision)
     );
   }
 

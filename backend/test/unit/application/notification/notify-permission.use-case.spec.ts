@@ -1,11 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { NotificationRegistry, NotifyPermissionUseCase } from '@application/notification';
-import type { NotifyPermissionCommand } from '@application/notification';
+import {
+  NotificationRegistry,
+  NotifyPermissionUseCase,
+  PushDispatcher,
+} from '@application/notification';
+import type { NotifyPermissionCommand, PushExhaustion } from '@application/notification';
 import { PushMessage } from '@domain/notification';
 import type { PushTarget } from '@domain/notification';
 import type { Device } from '@domain/auth';
 import { anApprovedDevice, deviceOwner } from '../../../support/builders/device.builder';
+import { FixedClock } from '../../../support/fakes/fixed-clock';
+import { ManualScheduler } from '../../../support/fakes/manual-scheduler';
 import {
   RecordingPushSender,
   RecordingPushTokens,
@@ -37,21 +43,48 @@ const render = (target: PushTarget, asked: NotifyPermissionCommand): PushMessage
 let sender: RecordingPushSender;
 let tokens: RecordingPushTokens;
 let registry: NotificationRegistry;
+let scheduler: ManualScheduler;
+let clock: FixedClock;
+let dispatcher: PushDispatcher;
+let exhausted: PushExhaustion[];
 
 beforeEach(() => {
   sender = new RecordingPushSender();
   tokens = new RecordingPushTokens();
   registry = new NotificationRegistry();
+  scheduler = new ManualScheduler();
+  // Two minutes before the request expires: room for every retry of the policy.
+  clock = new FixedClock(new Date('2026-09-18T10:00:00.000Z'));
+  exhausted = [];
+  dispatcher = new PushDispatcher(
+    sender,
+    scheduler,
+    clock,
+    {
+      exhausted: (exhaustion) => exhausted.push(exhaustion),
+      failed: (error) => {
+        throw error;
+      },
+    },
+    undefined,
+    () => 0.5,
+  );
 });
 
 function notify(devices: readonly Device[], watching = false): NotifyPermissionUseCase {
   return new NotifyPermissionUseCase(
     new StubPushAudience(devices, watching),
-    sender,
+    dispatcher,
     tokens,
     registry,
     render,
   );
+}
+
+/** Lets the attempts armed on the scheduler run, and whatever they chain on finish. */
+async function retry(): Promise<void> {
+  scheduler.fire();
+  await new Promise((resolve) => setImmediate(resolve));
 }
 
 const phone = anApprovedDevice({ pushToken: 'token-one' });
@@ -215,7 +248,7 @@ describe('withdrawing it', () => {
 
     const forgetful = new NotifyPermissionUseCase(
       new StubPushAudience([], false),
-      sender,
+      dispatcher,
       tokens,
       registry,
       render,
@@ -223,6 +256,146 @@ describe('withdrawing it', () => {
 
     await expect(forgetful.cancel(deviceOwner, reference)).resolves.toBe(1);
     expect(tokens.forgotten).toEqual([]);
+  });
+});
+
+describe('trying again when the provider fails — plan 05, B-25', () => {
+  const retracted = { sessionId: 'ses-1', requestId: 'req-1', expiresAt: expiresAt.toISOString() };
+
+  it('delivers on the second attempt, and the phone gets one notification — S-47', async () => {
+    sender.answer = (_message, attempt) => (attempt === 1 ? 'failed' : 'delivered');
+
+    await notify([phone]).execute(command);
+    await retry();
+
+    expect(sender.kinds).toEqual(['permissionRequested', 'permissionRequested']);
+    expect(scheduler.armed).toBe(0);
+    expect(exhausted).toEqual([]);
+  });
+
+  it('never holds the question for a retry: the first answer is what execute waits for', async () => {
+    sender.answer = () => 'failed';
+
+    await expect(notify([phone]).execute(command)).resolves.toBe('announced');
+    expect(sender.sent).toHaveLength(1);
+    expect(scheduler.armed).toBe(1);
+  });
+
+  it('gives up at the limit, and says so once, with the number of attempts — S-48', async () => {
+    sender.answer = () => 'failed';
+
+    await notify([phone]).execute(command);
+    await retry();
+    await retry();
+    await retry();
+
+    expect(sender.sent).toHaveLength(3);
+    expect(exhausted).toEqual([
+      {
+        requestId: 'req-1',
+        deviceId: 'dev_1',
+        kind: 'permissionRequested',
+        attempts: 3,
+        reason: 'attempts',
+      },
+    ]);
+  });
+
+  it('does not try a refused token again, and erases it — S-49', async () => {
+    sender.answer = () => 'tokenRejected';
+
+    await notify([phone]).execute(command);
+    await retry();
+
+    expect(sender.sent).toHaveLength(1);
+    expect(tokens.forgotten.map((device) => device.id)).toEqual(['dev_1']);
+    // The approval is the audience's, and the use case never touched it.
+    expect(phone.status).toBe('approved');
+  });
+
+  it('does not try again what the provider refused for good', async () => {
+    sender.answer = () => 'rejected';
+
+    await notify([phone]).execute(command);
+    await retry();
+
+    expect(sender.sent).toHaveLength(1);
+    expect(exhausted).toEqual([]);
+  });
+
+  it('cancels the retry waiting when the question is answered — S-50', async () => {
+    sender.answer = (_message, attempt) => (attempt === 1 ? 'failed' : 'delivered');
+    const use = notify([phone]);
+
+    await use.execute(command);
+    await use.cancel(deviceOwner, retracted);
+    await retry();
+
+    // The announcement once, the withdrawal once — and nothing after the withdrawal.
+    expect(sender.kinds).toEqual(['permissionRequested', 'permissionResolved']);
+  });
+
+  it('withdraws only after an announcement still on the wire has landed — S-51', async () => {
+    sender.answer = (_message, attempt) => (attempt === 1 ? 'failed' : 'delivered');
+    const use = notify([phone]);
+    await use.execute(command);
+
+    let land = (): void => undefined;
+    sender.held = new Promise((resolve) => {
+      land = resolve;
+    });
+    scheduler.fire();
+    const cancelling = use.cancel(deviceOwner, retracted);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    // The retry is on the wire and has not landed: the withdrawal has not been sent yet.
+    expect(sender.kinds).toEqual(['permissionRequested', 'permissionRequested']);
+
+    sender.held = null;
+    land();
+    await cancelling;
+
+    expect(sender.kinds).toEqual([
+      'permissionRequested',
+      'permissionRequested',
+      'permissionResolved',
+    ]);
+  });
+
+  it('sends the very same message again, tag included — S-52', async () => {
+    sender.answer = (_message, attempt) => (attempt === 1 ? 'failed' : 'delivered');
+
+    await notify([phone]).execute(command);
+    await retry();
+
+    const [first, second] = sender.sent;
+    expect(second).toBe(first);
+    expect(second?.tag).toBe(first?.tag);
+  });
+
+  it('tries a failed withdrawal again too', async () => {
+    const use = notify([phone]);
+    await use.execute(command);
+    sender.answer = (_message, attempt) => (attempt === 2 ? 'failed' : 'delivered');
+
+    await use.cancel(deviceOwner, retracted);
+    await retry();
+
+    expect(sender.kinds).toEqual([
+      'permissionRequested',
+      'permissionResolved',
+      'permissionResolved',
+    ]);
+  });
+
+  it('makes no retry that would land after the question is over', async () => {
+    sender.answer = () => 'failed';
+    clock.set(new Date(expiresAt.getTime() - 500));
+
+    await notify([phone]).execute(command);
+
+    expect(scheduler.armed).toBe(0);
+    expect(exhausted).toEqual([expect.objectContaining({ attempts: 1, reason: 'deadline' })]);
   });
 });
 

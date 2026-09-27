@@ -2,14 +2,20 @@ import type { UserId } from '@domain/auth';
 import type { WorkspacePath } from '@domain/workspace';
 import { InvalidSessionTransitionError } from '../errors/invalid-session-transition.error';
 import { SessionClosedError } from '../errors/session-closed.error';
+import { SessionLockedError } from '../errors/session-locked.error';
 import type { PermissionMode } from '../value-objects/permission-mode.value-object';
 import type { SessionId } from '../value-objects/session-id.value-object';
 import { canTransition } from '../value-objects/session-status.value-object';
 import type { SessionStatus } from '../value-objects/session-status.value-object';
 
-/** Why a session ended. The contract carries the same five. */
+/**
+ * Why a session ended. The contract carries the same six.
+ *
+ * `idleTimeout` is the installation reclaiming a subprocess nobody used for longer than the TTL —
+ * said on its own, so a client can tell "it went quiet and was put away" from "it failed" (D-02).
+ */
 export type SessionCloseReason =
-  'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown';
+  'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown' | 'idleTimeout';
 
 /** What opening a session needs to know. */
 export interface SessionOpening {
@@ -34,6 +40,9 @@ export interface SessionOpening {
  * docs/architecture/backend/06-realtime.md.
  */
 export class Session {
+  /** Whether an undo is putting files back right now. */
+  private rewinding = false;
+
   private constructor(
     readonly id: SessionId,
     readonly ownerId: UserId,
@@ -43,6 +52,7 @@ export class Session {
     private currentMode: PermissionMode,
     private currentStatus: SessionStatus,
     private reason: SessionCloseReason | null,
+    private lastActivity: Date,
   ) {}
 
   /** A session that has been asked for and whose subprocess is not up yet. */
@@ -56,6 +66,7 @@ export class Session {
       opening.permissionMode,
       'starting',
       null,
+      opening.openedAt,
     );
   }
 
@@ -78,6 +89,35 @@ export class Session {
 
   get isClosed(): boolean {
     return this.currentStatus === 'closed';
+  }
+
+  /** The last time Claude said something or a human did something here. */
+  get lastActivityAt(): Date {
+    return this.lastActivity;
+  }
+
+  /**
+   * Something happened: an event of Claude, or an action of a human.
+   *
+   * Only ever moves forward. Two events handled out of order must not make a session look older
+   * than it is, because an older session is one closer to being reclaimed.
+   */
+  recordActivity(at: Date): void {
+    if (at.getTime() > this.lastActivity.getTime()) {
+      this.lastActivity = at;
+    }
+  }
+
+  /**
+   * Whether this session has sat with nothing happening for at least `ttlMs`.
+   *
+   * **Only `idle` can be idle.** A running turn is not, however long the tool takes, and neither is
+   * a session waiting for permission: that wait is the product working, and closing it would kill
+   * exactly the flow the product exists for (S-05). `starting` is not either — it has not yet had
+   * the chance to be used — and `closed` is past the question.
+   */
+  isIdleFor(ttlMs: number, now: Date): boolean {
+    return this.currentStatus === 'idle' && now.getTime() - this.lastActivity.getTime() >= ttlMs;
   }
 
   /** Whether this session belongs to `userId`. */
@@ -147,6 +187,51 @@ export class Session {
 
     this.currentStatus = 'closed';
     this.reason = reason;
+  }
+
+  /** Whether an undo is putting this session's files back right now. */
+  get isRewinding(): boolean {
+    return this.rewinding;
+  }
+
+  /**
+   * Takes the lock an undo holds while files go back.
+   *
+   * Refused while a turn runs — files put back underneath a model that is reading and writing them
+   * leave the turn carrying on from a disk it never saw — and refused while another undo holds it
+   * (S-43 of plan 04).
+   *
+   * @throws {SessionLockedError} a turn is running, or another undo is
+   */
+  beginRewind(): void {
+    if (this.currentStatus !== 'idle') {
+      throw new SessionLockedError(this.id.value, 'turnRunning');
+    }
+    if (this.rewinding) {
+      throw new SessionLockedError(this.id.value, 'rewindRunning');
+    }
+
+    this.rewinding = true;
+  }
+
+  /** Gives the lock back. Giving back one nobody holds is not an error: it runs in a `finally`. */
+  endRewind(): void {
+    this.rewinding = false;
+  }
+
+  /**
+   * Refuses a prompt while an undo holds the lock.
+   *
+   * The other half of the lock, and the half plan 04 left open: the undo refused to start during
+   * a turn, but a prompt could still start a turn while the files were going back — the model
+   * then reading a disk halfway between two states (B-27).
+   *
+   * @throws {SessionLockedError} an undo is running
+   */
+  refusePromptWhileRewinding(): void {
+    if (this.rewinding) {
+      throw new SessionLockedError(this.id.value, 'rewindRunning');
+    }
   }
 
   /** @throws {SessionClosedError} when the session is over */

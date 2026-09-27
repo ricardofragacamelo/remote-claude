@@ -10,11 +10,12 @@ const nothing: AsyncIterable<never> = {
   }),
 };
 
-/** Options that are safe to open a session with: all three protections present. */
+/** Options that are safe to open a session with: all four protections present. */
 const safe: Options = {
   settingSources: ['project'],
   hooks: { PreToolUse: [{ hooks: [() => Promise.resolve({ continue: true })] }] },
   canUseTool: () => Promise.resolve({ behavior: 'deny', message: 'no' }),
+  env: { PATH: '/usr/bin', HOME: '/home/me', CLAUDE_CONFIG_DIR: '/home/me/.claude' },
 };
 
 /**
@@ -31,7 +32,7 @@ describe('realQueryFactory', () => {
     query.close();
   });
 
-  it.each(['settingSources', 'hooks', 'canUseTool'] as const)(
+  it.each(['settingSources', 'hooks', 'canUseTool', 'env'] as const)(
     'refuses to open a session when %s is absent altogether',
     (field) => {
       // Built by omission rather than by setting the field to `undefined`: with
@@ -77,6 +78,35 @@ describe('realQueryFactory', () => {
         options: { ...safe, canUseTool: 'yes' as never },
       }),
     ).toThrow(UnsafeSdkOptionsError);
+  });
+
+  it.each([
+    ['the connection string', { DATABASE_URL: 'postgres://user:secret@localhost/db' }],
+    ['a compose password', { RC_POSTGRES_PASSWORD: 'secret' }],
+    ['the identity provider configuration', { OIDC_ISSUER: 'http://localhost/realms/x' }],
+    ['a libpq variable', { PGPASSWORD: 'secret' }],
+  ])('refuses an env that carries %s — 10 · B-13', (_case, leak) => {
+    // An env that carries the backend's configuration gives every `Bash` Claude runs the database
+    // password. Nothing in the SDK complains.
+    expect(() =>
+      realQueryFactory({ prompt: nothing, options: { ...safe, env: { ...safe.env, ...leak } } }),
+    ).toThrow(UnsafeSdkOptionsError);
+  });
+
+  it('names the leaked variables, and never their values', () => {
+    expect.assertions(3);
+
+    try {
+      realQueryFactory({
+        prompt: nothing,
+        options: { ...safe, env: { ...safe.env, RC_POSTGRES_PASSWORD: 'the-real-password' } },
+      });
+    } catch (error) {
+      const message = (error as Error).message;
+      expect(message).toContain('env');
+      expect(message).toContain('RC_POSTGRES_PASSWORD');
+      expect(message).not.toContain('the-real-password');
+    }
   });
 
   it('says which of the three is missing, because they fail for different reasons', () => {

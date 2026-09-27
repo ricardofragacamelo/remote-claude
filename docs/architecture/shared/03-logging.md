@@ -16,8 +16,13 @@ idênticos, correlacionar isso é arqueologia manual.
 | Ponta | Biblioteca | Saída |
 |---|---|---|
 | Backend | `pino` | JSON em stdout (`pino-pretty` só em dev) |
-| Web | `pino` (build de browser) | console em dev; batch HTTP para o backend em prod |
-| Mobile | `logging` (Dart oficial) + formatter JSON próprio | console em dev; batch HTTP em prod |
+| Web | `pino` (build de browser) | console do navegador |
+| Mobile | `logging` (Dart oficial) + formatter JSON próprio | console do aparelho (`dart:developer`) |
+
+**O log do cliente fica no cliente.** Nem o web nem o app enviam as próprias linhas ao backend: o
+que junta um clique ao que o backend fez é o `traceId`, que viaja em toda requisição e em todo frame
+e aparece nas linhas do backend. Decidido em 2026-09-27, quando o envio foi removido
+([plano 05 · escopo reduzido](../../plans/05-hardening-operations/progress.md#escopo-reduzido-ou-adiado)).
 
 Ver [ADR-009](00-decisions.md#adr-009--logging-estruturado-com-paridade-entre-as-três-pontas).
 
@@ -114,6 +119,7 @@ configurada no logger, não deixada a critério de quem escreve o log:
 
 Substitua por `"[REDACTED]"`. Payload grande é truncado em **8 KB** com
 `"truncated": true` — nunca omitido em silêncio.
+
 
 ---
 

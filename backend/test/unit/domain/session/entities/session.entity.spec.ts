@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { UserId } from '@domain/auth';
-import { InvalidSessionTransitionError, SessionClosedError } from '@domain/session';
+import {
+  InvalidSessionTransitionError,
+  SessionClosedError,
+  SessionLockedError,
+} from '@domain/session';
 import { aSession } from '../../../../support/builders/session.builder';
 
 const owner = UserId.create('auth|owner');
@@ -146,6 +150,131 @@ describe('Session', () => {
         // A distinct code would be the only way to learn that a session id was once real.
         expect((error as SessionClosedError).code).toBe('SESSION_NOT_FOUND');
       }
+    });
+  });
+
+  describe('idleness — plan 05, D-02', () => {
+    const openedAt = new Date('2026-09-18T12:00:00.000Z');
+    const later = (ms: number): Date => new Date(openedAt.getTime() + ms);
+
+    it('starts counting from the moment it opened', () => {
+      expect(aSession({ openedAt }).lastActivityAt).toEqual(openedAt);
+    });
+
+    it('is idle once the TTL has passed with nothing happening — S-04', () => {
+      const session = aSession({ openedAt });
+      session.moveTo('idle');
+
+      expect(session.isIdleFor(1_000, later(999))).toBe(false);
+      expect(session.isIdleFor(1_000, later(1_000))).toBe(true);
+    });
+
+    it('starts counting again from the last activity', () => {
+      const session = aSession({ openedAt });
+      session.moveTo('idle');
+      session.recordActivity(later(800));
+
+      expect(session.isIdleFor(1_000, later(1_500))).toBe(false);
+      expect(session.isIdleFor(1_000, later(1_800))).toBe(true);
+    });
+
+    it('never moves its activity back in time', () => {
+      const session = aSession({ openedAt });
+      session.recordActivity(later(800));
+      session.recordActivity(later(100));
+
+      expect(session.lastActivityAt).toEqual(later(800));
+    });
+
+    it('is never idle while waiting for permission, however long — S-05', () => {
+      const session = aSession({ openedAt });
+      session.moveTo('idle');
+      session.moveTo('thinking');
+      session.moveTo('waitingPermission');
+
+      expect(session.isIdleFor(1_000, later(3_600_000))).toBe(false);
+    });
+
+    it.each(['thinking', 'running'] as const)('is never idle while %s', (status) => {
+      const session = aSession({ openedAt });
+      session.moveTo('idle');
+      session.moveTo('thinking');
+      session.moveTo(status);
+
+      expect(session.isIdleFor(1_000, later(3_600_000))).toBe(false);
+    });
+
+    it('is not idle before it has started, nor once it is over', () => {
+      const starting = aSession({ openedAt });
+      const closed = aSession({ openedAt });
+      closed.close('closedByUser');
+
+      expect(starting.isIdleFor(1_000, later(3_600_000))).toBe(false);
+      expect(closed.isIdleFor(1_000, later(3_600_000))).toBe(false);
+    });
+
+    it('can be closed for idleness, and says so', () => {
+      const session = aSession();
+      session.close('idleTimeout');
+
+      expect(session.closeReason).toBe('idleTimeout');
+    });
+  });
+
+  describe('the lock of an undo — plan 05, B-27', () => {
+    it('takes the lock when idle, and gives it back', () => {
+      const session = aSession();
+      session.moveTo('idle');
+
+      session.beginRewind();
+      expect(session.isRewinding).toBe(true);
+
+      session.endRewind();
+      expect(session.isRewinding).toBe(false);
+    });
+
+    it('refuses the lock while a turn runs', () => {
+      const session = aSession();
+      session.moveTo('idle');
+      session.moveTo('thinking');
+
+      expect(() => {
+        session.beginRewind();
+      }).toThrow(SessionLockedError);
+    });
+
+    it('refuses a second undo while the first holds it — S-43 of plan 04', () => {
+      const session = aSession();
+      session.moveTo('idle');
+      session.beginRewind();
+
+      expect(() => {
+        session.beginRewind();
+      }).toThrow(expect.objectContaining({ params: { reason: 'rewindRunning' } }));
+    });
+
+    it('refuses a prompt while the undo holds it, and lets it through after — S-54', () => {
+      const session = aSession();
+      session.moveTo('idle');
+      session.beginRewind();
+
+      expect(() => {
+        session.refusePromptWhileRewinding();
+      }).toThrow(SessionLockedError);
+
+      session.endRewind();
+      expect(() => {
+        session.refusePromptWhileRewinding();
+      }).not.toThrow();
+    });
+
+    it('treats giving back a lock nobody holds as nothing at all', () => {
+      const session = aSession();
+
+      expect(() => {
+        session.endRewind();
+      }).not.toThrow();
+      expect(session.isRewinding).toBe(false);
     });
   });
 });

@@ -7,6 +7,8 @@
 /// attach, never a second subprocess (S-24). This watches for either, and for the refusal.
 library;
 
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
@@ -16,6 +18,14 @@ import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'resume_controller.g.dart';
+
+/// How long a resume waits for its answer before the screen gives up on it.
+///
+/// The backend always answers — a session, a join or a refusal — so silence means the answer was
+/// lost: the socket dropped after the command left, or the server went down with it. Half a minute
+/// is longer than any resume takes and short enough that the button does not stay disabled for
+/// ever (plan 05, B-26).
+const Duration resumeTimeout = Duration(seconds: 30);
 
 /// Where a resume stands.
 class ResumeState extends Equatable {
@@ -49,9 +59,13 @@ class ResumeController extends _$ResumeController {
   /// The id the command left with, which is what a refusal of it names.
   String? _commandId;
 
+  /// The deadline of the resume in flight: armed when it leaves, cancelled by its answer.
+  Timer? _deadline;
+
   @override
   ResumeState build(String conversationId) {
     listenToUpdates(ref, _apply);
+    ref.onDispose(() => _deadline?.cancel());
     return const ResumeState();
   }
 
@@ -67,6 +81,26 @@ class ResumeController extends _$ResumeController {
     state = commandId == null
         ? const ResumeState(wasNotSent: true)
         : const ResumeState(isPending: true);
+
+    if (commandId != null) {
+      _deadline?.cancel();
+      _deadline = Timer(resumeTimeout, () => _expire(commandId));
+    }
+  }
+
+  /// Nothing answered the resume in time: the screen stops waiting and says so.
+  void _expire(String commandId) {
+    if (!state.isPending || _commandId != commandId) {
+      return;
+    }
+
+    state = ResumeState(
+      failure: NoAnswerFailure(
+        traceId: commandId,
+        code: 'RESUME_TIMEOUT',
+        messageKey: 'session.error.resumeTimeout',
+      ),
+    );
   }
 
   /// Forgets where the resume landed, once the screen has moved there.
@@ -98,6 +132,7 @@ class ResumeController extends _$ResumeController {
     };
 
     if (landed != null) {
+      _deadline?.cancel();
       state = ResumeState(sessionId: landed);
       return;
     }
@@ -106,6 +141,7 @@ class ResumeController extends _$ResumeController {
       :final String commandId,
       :final Failure failure,
     ) when commandId == _commandId) {
+      _deadline?.cancel();
       state = ResumeState(failure: failure);
     }
   }

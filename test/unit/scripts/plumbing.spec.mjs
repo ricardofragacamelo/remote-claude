@@ -124,6 +124,19 @@ describe('exec', () => {
     expect(commandExists(process.execPath, ['-e', ''])).toBe(true);
   });
 
+  it('runs in a process group of its own only when asked — out of reach of the terminal Ctrl+C', () => {
+    // `$$` is the shell's pid and the second number its group: equal only for a group leader.
+    const probe = ['-c', 'echo "$$ $(ps -o pgid= -p $$)"'];
+    /** @param {string} out @returns {boolean} */
+    const leads = (out) => {
+      const [pid, pgid] = out.trim().split(/\s+/u);
+      return pid === pgid;
+    };
+
+    expect(leads(run('sh', probe, { ownProcessGroup: true }).stdout)).toBe(true);
+    expect(leads(run('sh', probe).stdout)).toBe(false);
+  });
+
   it('answers a failure when a command outlives its deadline', () => {
     // A process killed by a signal has no exit status; the result still has to be non-zero, or
     // a timed-out gate would read as a pass.

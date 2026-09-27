@@ -28,6 +28,7 @@ const HTTP_STATUS_BY_CODE: Readonly<Record<string, number>> = {
   CLAUDE_UNAVAILABLE: 502,
   CLAUDE_TIMEOUT: 504,
   RATE_LIMITED: 429,
+  SERVICE_UNAVAILABLE: 503,
   PAYLOAD_TOO_LARGE: 413,
   INVALID_INPUT: 400,
   FORBIDDEN: 403,
@@ -50,6 +51,33 @@ export const INTERNAL_ERROR = {
 export function httpStatusFor(code: string): number {
   return HTTP_STATUS_BY_CODE[code] ?? 500;
 }
+
+/** Statuses that promise the caller a time to come back at. */
+const RETRYABLE_STATUSES = new Set([429, 503]);
+
+/**
+ * The `Retry-After` a response carries, in seconds, when its status is one that must carry it.
+ *
+ * `429` and `503` **always** answer one — without it the client hammers (S-12). The error says how
+ * long when it knows (`params.retryAfterSeconds`); a refusal raised by the framework, which knows
+ * nothing, gets a second, which is short and still not "at once".
+ *
+ * @returns the seconds, or `null` for a status that carries no such promise
+ */
+export function retryAfterFor(status: number, envelope: ErrorEnvelope): number | null {
+  if (!RETRYABLE_STATUSES.has(status)) {
+    return null;
+  }
+
+  const declared = envelope.error.params?.['retryAfterSeconds'];
+
+  return typeof declared === 'number' && declared > 0
+    ? Math.ceil(declared)
+    : DEFAULT_RETRY_AFTER_SECONDS;
+}
+
+/** What a `429` or a `503` says when the error that caused it did not know better. */
+export const DEFAULT_RETRY_AFTER_SECONDS = 1;
 
 /** One invalid field. Validation reports every one of them, not only the first. */
 export interface ErrorDetail {

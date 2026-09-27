@@ -27,20 +27,18 @@ logger.debug({ op: 'http.request', method, url, traceId }, 'http request')
 | Ambiente | Nível | Saída |
 |---|---|---|
 | Desenvolvimento | `debug` | console, formatado e legível |
-| Produção | `info` | buffer em memória → envio em lote para o backend |
-| Produção, com debug ligado | `debug` | idem, com amostragem |
+| Produção | `info` | console do navegador |
+| Produção, com debug ligado | `debug` | idem |
 
 O usuário consegue ligar `debug` em produção por uma flag na UI — reproduzir um bug de
 permissão intermitente exige isso, e obrigar a publicar um build novo para investigar é
 inaceitável.
 
-### Envio em lote
+### Nada sai do navegador
 
-- Acumula em memória, envia a cada **10 s** ou **50 registros**, o que vier primeiro.
-- `error` e `fatal` vão na hora, sem esperar o lote.
-- Usa `navigator.sendBeacon` no `pagehide` — senão o último lote, justamente o do crash, se perde.
-- Falha de envio **nunca** quebra a aplicação: descarta e segue.
-- O envio de log **nunca** é logado (laço infinito).
+O log do web fica no console do navegador: nenhuma linha é enviada ao backend. O que liga um erro na
+tela ao log do backend é o `traceId`, que o erro mostra e que o backend grava em toda linha da
+requisição ([plano 05 · escopo reduzido](../../plans/05-hardening-operations/progress.md#escopo-reduzido-ou-adiado)).
 
 ---
 

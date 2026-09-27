@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/navigation/deep_link_controller.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/features/auth/auth.dart';
+import 'package:remote_claude/features/diagnostics/diagnostics.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/features/transcript/transcript.dart';
@@ -59,6 +60,11 @@ GoRouter buildRouter(Ref ref) {
         path: workspacesRoute,
         name: 'workspaces',
         builder: (BuildContext context, GoRouterState state) => const WorkspaceListPage(),
+      ),
+      GoRoute(
+        path: diagnosticsRoute,
+        name: 'diagnostics',
+        builder: (BuildContext context, GoRouterState state) => const DiagnosticsPage(),
       ),
       GoRoute(
         path: rulesRoute,

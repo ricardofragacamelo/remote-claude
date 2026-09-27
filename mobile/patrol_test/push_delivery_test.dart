@@ -1,5 +1,7 @@
 /// Plan 02, D-26 — a notification that really arrives, on a phone that really is in someone's
-/// pocket: S-67 and S-54.
+/// pocket: S-67 and S-54. And plan 05, S-53: the backend of this run fails the first announcement
+/// it hands the provider (`RC_E2E_PUSH_FAIL_FIRST`), so the notification that reaches the tray is
+/// the one its retry sent.
 ///
 /// The one suite that is not hermetic, and deliberately so: the stack takes its push settings from
 /// the `.env` (`pnpm test:e2e:mobile:push`), the provider delivers to the emulator's Play Services,

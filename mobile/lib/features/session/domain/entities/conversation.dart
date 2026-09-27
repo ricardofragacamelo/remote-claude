@@ -33,8 +33,8 @@ enum SessionStatus {
   closed,
 }
 
-/// Why a session ended. The contract carries these five.
-enum SessionCloseReason { closedByUser, completed, failed, auditUnavailable, shutdown }
+/// Why a session ended. The contract carries these six.
+enum SessionCloseReason { closedByUser, completed, failed, auditUnavailable, shutdown, idleTimeout }
 
 /// How a tool invocation ended, when it has.
 enum ToolStatus { running, succeeded, failed, denied }

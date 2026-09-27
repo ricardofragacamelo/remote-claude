@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { resumeAnswer, resumeSession } from '../services/live-session.service';
-import type { AppError } from '@/shared/api/errors';
+import { AppError } from '@/shared/api/errors';
 import { wsClient } from '@/shared/api/ws';
 import type { ConnectionStatus } from '@/shared/api/ws-client';
+
+/**
+ * How long a resume waits for its answer before the screen gives up on it.
+ *
+ * The backend always answers — a session, a join or a refusal — so silence means the answer was
+ * lost: the socket dropped after the command left, or the server went down with it. Half a minute
+ * is longer than any resume takes and short enough that the button does not stay disabled for ever
+ * (plan 05, B-26).
+ */
+export const RESUME_TIMEOUT_MS = 30_000;
 
 /** What the history screen gets to continue a conversation. */
 export interface ResumeControl {
@@ -73,6 +83,27 @@ export function useResumeSession(
       onResumed(answer.sessionId);
     });
   }, [conversationId, onResumed]);
+
+  // The deadline of the resume in flight: armed when it leaves, cleared by its answer.
+  useEffect(() => {
+    if (pending === null) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (inFlight.current !== pending) {
+        return;
+      }
+
+      inFlight.current = null;
+      setPending(null);
+      setError(new AppError('RESUME_TIMEOUT', 'session.error.resumeTimeout', pending));
+    }, RESUME_TIMEOUT_MS);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [pending]);
 
   const resume = useCallback(() => {
     // A second click while the first is in flight sends nothing: the button is disabled while

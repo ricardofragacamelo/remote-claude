@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { HttpPushSender, deliveryOf } from '@adapter/outbound/push/http-push.adapter';
+import { HttpPushSender, deliveryOf, retryAfterOf } from '@adapter/outbound/push/http-push.adapter';
 import { PushAccessTokenCache } from '@adapter/outbound/push/push-access-token.cache';
 import { DeviceLocale } from '@domain/auth';
 import { PushMessage } from '@domain/notification';
@@ -59,6 +59,7 @@ beforeAll(() => {
 class ScriptedProvider {
   readonly calls: { url: string; headers: Headers; body: Record<string, unknown> }[] = [];
   status = 200;
+  headers: Record<string, string> = {};
   throws: Error | null = null;
 
   readonly fetch: typeof fetch = (input, init) => {
@@ -72,7 +73,7 @@ class ScriptedProvider {
       body: JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>,
     });
 
-    return Promise.resolve(new Response('{}', { status: this.status }));
+    return Promise.resolve(new Response('{}', { status: this.status, headers: this.headers }));
   };
 
   /** The `message` of the single call, which is the only thing these tests assert on. */
@@ -122,8 +123,13 @@ describe('what a status means', () => {
     expect(deliveryOf(status)).toBe('tokenRejected');
   });
 
-  it.each([400, 401, 429, 500, 503])('%d is a failure, and nothing more', (status) => {
+  // D-09: what may pass is tried again; what the provider refused for good is not.
+  it.each([401, 408, 429, 500, 502, 503])('%d is a failure worth another try', (status) => {
     expect(deliveryOf(status)).toBe('failed');
+  });
+
+  it.each([400, 403, 413, 499])('%d is refused for good', (status) => {
+    expect(deliveryOf(status)).toBe('rejected');
   });
 });
 
@@ -167,7 +173,7 @@ describe('sending a question', () => {
   });
 
   it('answers delivered', async () => {
-    expect(await sender().send(question())).toBe('delivered');
+    expect(await sender().send(question())).toEqual({ delivery: 'delivered', retryAfterMs: null });
   });
 });
 
@@ -198,20 +204,33 @@ describe('when it does not work', () => {
   it('answers tokenRejected without throwing — the caller erases the token', async () => {
     provider.status = 410;
 
-    expect(await sender().send(question())).toBe('tokenRejected');
+    expect((await sender().send(question())).delivery).toBe('tokenRejected');
   });
 
-  it('answers failed for anything else', async () => {
+  it('answers failed for what may pass', async () => {
     provider.status = 503;
 
-    expect(await sender().send(question())).toBe('failed');
+    expect((await sender().send(question())).delivery).toBe('failed');
+  });
+
+  it('answers rejected for a message the provider refused for good', async () => {
+    provider.status = 400;
+
+    expect((await sender().send(question())).delivery).toBe('rejected');
+  });
+
+  it("carries the provider's Retry-After, in milliseconds — B-25", async () => {
+    provider.status = 429;
+    provider.headers = { 'retry-after': '7' };
+
+    expect(await sender().send(question())).toEqual({ delivery: 'failed', retryAfterMs: 7_000 });
   });
 
   // A provider that could throw would be a provider that can hold a permission open.
   it('answers failed when the provider cannot be reached at all', async () => {
     provider.throws = new Error('the network is not there');
 
-    expect(await sender().send(question())).toBe('failed');
+    expect(await sender().send(question())).toEqual({ delivery: 'failed', retryAfterMs: null });
   });
 
   it('drops the held token on a 401, so the next message mints a fresh one', async () => {
@@ -244,12 +263,19 @@ describe('what it says in the log', () => {
     expect(JSON.stringify(logger.lines)).not.toContain('a-very-long-push-token');
   });
 
-  it('logs a delivery at debug and a failure at warn', async () => {
+  it('logs a delivery and a failed attempt at debug, and a refusal at warn — S-48', async () => {
+    // A failed attempt is tried again; the one warn is the dispatcher's, when it gives up.
     await sender().send(question());
     provider.status = 503;
     await sender().send(question());
+    provider.status = 400;
+    await sender().send(question());
 
-    expect(logger.withOp('push.send').map((line) => line.level)).toEqual(['debug', 'warn']);
+    expect(logger.withOp('push.send').map((line) => line.level)).toEqual([
+      'debug',
+      'debug',
+      'warn',
+    ]);
   });
 
   it('says which request and which device, and how long it took', async () => {
@@ -261,5 +287,25 @@ describe('what it says in the log', () => {
       delivery: 'delivered',
     });
     expect(logger.withOp('push.send')[0]?.['durationMs']).toBeTypeOf('number');
+  });
+});
+
+describe("the provider's Retry-After", () => {
+  const now = Date.parse('2026-09-18T10:00:00.000Z');
+
+  it('reads a number of seconds', () => {
+    expect(retryAfterOf('30', now)).toBe(30_000);
+  });
+
+  it('reads an HTTP date, as the time left until it', () => {
+    expect(retryAfterOf('Fri, 18 Sep 2026 10:00:05 GMT', now)).toBe(5_000);
+  });
+
+  it('reads a date already past as no wait at all', () => {
+    expect(retryAfterOf('Fri, 18 Sep 2026 09:59:00 GMT', now)).toBe(0);
+  });
+
+  it.each([null, '', '   ', 'soon'])('ignores %j rather than guessing', (header) => {
+    expect(retryAfterOf(header, now)).toBeNull();
   });
 });

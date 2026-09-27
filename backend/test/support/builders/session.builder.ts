@@ -5,6 +5,7 @@ import { Session, SessionId } from '@domain/session';
 import type { PermissionMode, SlashCommand } from '@domain/session';
 import { ClaudeSessionId } from '@domain/transcript';
 import { WorkspacePath } from '@domain/workspace';
+import { FixedClock } from '../fakes/fixed-clock';
 
 /** The id most session tests use. A real ULID, because the value object insists on one. */
 export const SESSION_ID = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
@@ -40,7 +41,7 @@ export function aSession(
     workspace: WorkspacePath.create(overrides.workspace ?? '/srv/projects/app'),
     model: overrides.model ?? 'claude-sonnet-5',
     permissionMode: overrides.permissionMode ?? 'default',
-    openedAt: overrides.openedAt ?? new Date('2026-09-18T12:00:00.000Z'),
+    openedAt: overrides.openedAt ?? OPENED_AT,
   });
 }
 
@@ -108,12 +109,21 @@ export class RecordingHandle implements ClaudeSessionHandle {
   }
 }
 
+/** The instant sessions open at by default, and the clock a registry starts on. */
+export const OPENED_AT = new Date('2026-09-18T12:00:00.000Z');
+
+/** A clock standing at {@link OPENED_AT}, for a registry that has to notice activity. */
+export function aClock(): FixedClock {
+  return new FixedClock(OPENED_AT);
+}
+
 /** A registry holding the given sessions, each with a recording handle. */
 export function aRegistry(
   sessions: readonly Session[] = [aSession()],
   limit = 10,
+  clock: FixedClock = aClock(),
 ): { registry: SessionRegistry; handles: Map<string, RecordingHandle> } {
-  const registry = new SessionRegistry(limit);
+  const registry = new SessionRegistry(limit, clock);
   const handles = new Map<string, RecordingHandle>();
 
   for (const session of sessions) {

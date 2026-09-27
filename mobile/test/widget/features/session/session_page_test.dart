@@ -166,6 +166,18 @@ void main() {
     expect(find.text(l10n.sessionClosedByUser), findsOneWidget);
   });
 
+  testWidgets('says a session was put away for sitting idle — plan 05, D-02', (
+    WidgetTester tester,
+  ) async {
+    await pumpSession(tester);
+
+    sessions.emit(arrivalOf(messageDelta(messageId: 'm1', delta: 'x', seq: 1)));
+    sessions.emit(arrivalOf(sessionClosed(seq: 2, reason: 'idleTimeout')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.sessionClosedIdleTimeout), findsOneWidget);
+  });
+
   group('the composer', () {
     testWidgets('sends a prompt and clears itself', (WidgetTester tester) async {
       await pumpSession(tester);

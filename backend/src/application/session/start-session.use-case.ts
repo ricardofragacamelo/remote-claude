@@ -273,6 +273,9 @@ export class StartSessionUseCase {
    * to `waitingPermission`, which is the transition it cannot afford to miss.
    */
   private onEvent(session: Session, event: SessionEvent): void {
+    // Claude saying anything is activity: the idle clock counts from the last of it (D-02).
+    session.recordActivity(this.clock.now());
+
     const moved = observedStatus(session, event.type);
 
     this.broadcaster.publish(session.id, event);

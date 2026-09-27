@@ -2,7 +2,7 @@ import type { UserId } from '@domain/auth';
 import { commandIn, menuOf, offers, SessionId, UnknownCommandError } from '@domain/session';
 import type { MenuCommand, PermissionMode, SlashCommand } from '@domain/session';
 import type { CommandCatalog } from './command-catalog';
-import type { SessionBroadcaster } from './ports/session-broadcaster.port';
+import type { SessionEnder } from './session-ender';
 import type { LiveSession, SessionRegistry } from './session-registry';
 
 /**
@@ -64,6 +64,7 @@ export class PromptSessionUseCase extends SessionCommandUseCase {
   /**
    * @returns the send, to run once the prompt was acknowledged
    * @throws {UnknownCommandError} the prompt invokes a command the installation does not have
+   * @throws {import('@domain/session').SessionLockedError} an undo is putting files back (B-27)
    */
   async execute(rawSessionId: string, text: string, userId: UserId): Promise<() => void> {
     const live = this.require(rawSessionId, userId);
@@ -92,11 +93,17 @@ export class PromptSessionUseCase extends SessionCommandUseCase {
   }
 
   private async check(live: LiveSession, text: string): Promise<void> {
+    // Before the catalogue, and again after it: the undo may have taken the lock while the list was
+    // being asked for, and a prompt let through then would start a turn on a disk halfway back.
+    live.session.refusePromptWhileRewinding();
+
     const command = commandIn(text);
 
     if (command !== null && !(await this.isOffered(live, command))) {
       throw new UnknownCommandError(command);
     }
+
+    live.session.refusePromptWhileRewinding();
   }
 
   /** Whether the installation runs `command` — or `true` when the list cannot be had. */
@@ -183,30 +190,18 @@ export class SetSessionPermissionModeUseCase extends SessionCommandUseCase {
  *
  * Unlike every other command of a session, only the owner may send it — and the ownership check
  * of the base is exactly that, because a session is only ever watched by its owner's connections
- * in this plan. What is specific here is the `finally`: whatever the subprocess does on the way
+ * in this plan. What it does is the {@link SessionEnder}'s: whatever the subprocess does on the way
  * out, the entry goes and the event is published. A leaked subprocess does not die on its own.
  */
 export class CloseSessionUseCase extends SessionCommandUseCase {
   constructor(
     registry: SessionRegistry,
-    private readonly broadcaster: SessionBroadcaster,
+    private readonly ender: SessionEnder,
   ) {
     super(registry);
   }
 
   async execute(rawSessionId: string, userId: UserId): Promise<void> {
-    const { session, handle } = this.require(rawSessionId, userId);
-
-    session.close('closedByUser');
-
-    try {
-      await handle.close();
-    } finally {
-      this.registry.remove(session.id);
-      this.broadcaster.publish(session.id, {
-        type: 'session.closed',
-        payload: { sessionId: session.id.value, reason: 'closedByUser' },
-      });
-    }
+    await this.ender.end(this.require(rawSessionId, userId), 'closedByUser');
   }
 }

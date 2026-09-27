@@ -65,7 +65,7 @@ final class CommandMenuControllerProvider
   }
 }
 
-String _$commandMenuControllerHash() => r'57f5533bf76063559d555fe8c5a5c5bd303d301b';
+String _$commandMenuControllerHash() => r'b00058a5178f4a474122c0de6b587de23a7a804a';
 
 /// The menu, keyed by the session whose installation it describes.
 ///

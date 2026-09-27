@@ -279,6 +279,8 @@
 
   "sessionClosedShutdown": "Ended because the backend stopped.",
   "@sessionClosedShutdown": { "description": "Why the session closed" },
+  "sessionClosedIdleTimeout": "Ended after sitting idle too long. Resume it from the history.",
+  "@sessionClosedIdleTimeout": { "description": "Why the session closed: the installation reclaimed an idle session" },
 
   "permissionPageTitle": "Permission",
   "@permissionPageTitle": { "description": "Title of the screen a notification opens" },
@@ -754,6 +756,8 @@
 
   "sessionErrorClaudeTimeout": "Claude took too long to answer on this machine. Try again.",
   "@sessionErrorClaudeTimeout": { "description": "The server answered CLAUDE_TIMEOUT for a session" },
+  "sessionErrorResumeTimeout": "The backend did not answer the resume. Check the connection and try again.",
+  "@sessionErrorResumeTimeout": { "description": "A resume got no answer before the client's deadline" },
 
   "sessionErrorLocked": "The session is busy: a turn is running or another undo is in progress. Try again once it is idle.",
   "@sessionErrorLocked": { "description": "The server answered SESSION_LOCKED to an undo" },
@@ -906,5 +910,23 @@
   "@sessionUndoDeleted": { "description": "A file the undo removed" },
 
   "sessionUndoFailed": "Could not be put back",
-  "@sessionUndoFailed": { "description": "Heading of the files the undo could not restore" }
+  "@sessionUndoFailed": { "description": "Heading of the files the undo could not restore" },
+  "diagnosticsTitle": "Diagnostics",
+  "@diagnosticsTitle": {"description": "Title of the diagnostics screen"},
+  "diagnosticsConnectionLabel": "Connection",
+  "@diagnosticsConnectionLabel": {"description": "Label of the connection state"},
+  "diagnosticsCredentialLabel": "Sign-in",
+  "@diagnosticsCredentialLabel": {"description": "Label of the credential state"},
+  "diagnosticsCredentialPresent": "Signed in",
+  "@diagnosticsCredentialPresent": {"description": "This installation holds a credential"},
+  "diagnosticsCredentialAbsent": "Not signed in",
+  "@diagnosticsCredentialAbsent": {"description": "This installation holds no credential"},
+  "diagnosticsVersionLabel": "Version",
+  "@diagnosticsVersionLabel": {"description": "Label of the app version"},
+  "diagnosticsDebugLabel": "Detailed logging",
+  "@diagnosticsDebugLabel": {"description": "Switch that turns debug logging on"},
+  "diagnosticsDebugDescription": "Records every exchange with the server while this screen is open. It switches itself off when you leave.",
+  "@diagnosticsDebugDescription": {"description": "What the debug switch does"},
+  "diagnosticsDebugAlwaysOn": "Always on in a development build.",
+  "@diagnosticsDebugAlwaysOn": {"description": "The debug switch does nothing in a debug build"}
 }

@@ -603,6 +603,12 @@ abstract class AppLocalizations {
   /// **'Ended because the backend stopped.'**
   String get sessionClosedShutdown;
 
+  /// Why the session closed: the installation reclaimed an idle session
+  ///
+  /// In en, this message translates to:
+  /// **'Ended after sitting idle too long. Resume it from the history.'**
+  String get sessionClosedIdleTimeout;
+
   /// Title of the screen a notification opens
   ///
   /// In en, this message translates to:
@@ -1347,6 +1353,12 @@ abstract class AppLocalizations {
   /// **'Claude took too long to answer on this machine. Try again.'**
   String get sessionErrorClaudeTimeout;
 
+  /// A resume got no answer before the client's deadline
+  ///
+  /// In en, this message translates to:
+  /// **'The backend did not answer the resume. Check the connection and try again.'**
+  String get sessionErrorResumeTimeout;
+
   /// The server answered SESSION_LOCKED to an undo
   ///
   /// In en, this message translates to:
@@ -1622,6 +1634,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not be put back'**
   String get sessionUndoFailed;
+
+  /// Title of the diagnostics screen
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics'**
+  String get diagnosticsTitle;
+
+  /// Label of the connection state
+  ///
+  /// In en, this message translates to:
+  /// **'Connection'**
+  String get diagnosticsConnectionLabel;
+
+  /// Label of the credential state
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in'**
+  String get diagnosticsCredentialLabel;
+
+  /// This installation holds a credential
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in'**
+  String get diagnosticsCredentialPresent;
+
+  /// This installation holds no credential
+  ///
+  /// In en, this message translates to:
+  /// **'Not signed in'**
+  String get diagnosticsCredentialAbsent;
+
+  /// Label of the app version
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get diagnosticsVersionLabel;
+
+  /// Switch that turns debug logging on
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed logging'**
+  String get diagnosticsDebugLabel;
+
+  /// What the debug switch does
+  ///
+  /// In en, this message translates to:
+  /// **'Records every exchange with the server while this screen is open. It switches itself off when you leave.'**
+  String get diagnosticsDebugDescription;
+
+  /// The debug switch does nothing in a debug build
+  ///
+  /// In en, this message translates to:
+  /// **'Always on in a development build.'**
+  String get diagnosticsDebugAlwaysOn;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

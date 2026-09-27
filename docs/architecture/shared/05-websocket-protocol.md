@@ -62,6 +62,10 @@ Cliente conecta em  wss://<host>/ws?v=1
   ← recebe ack      connection.ready         { connectionId, serverVersion, limits }
 ```
 
+`limits` diz o que o servidor aceita, para o cliente não descobrir apanhando:
+`{ maxFrameBytes, maxFramesPerSecond, maxAttachedSessions, replayBufferSize }` — os três primeiros
+vêm da configuração da instalação (`RC_WS_MAX_*`). Ver [Limites por connection](#limites-por-connection).
+
 Regras:
 
 - `token` é o **access token OIDC**, no corpo do frame. **Nunca** em query string — query
@@ -94,7 +98,7 @@ Regras:
 | `4401` | Falha de autenticação | renovar token e reconectar |
 | `4408` | Idle timeout | reconectar |
 | `4426` | Versão não suportada | avisar o usuário para atualizar o app |
-| `4429` | Rate limit de conexão | reconectar após `Retry-After` |
+| `4429` | Rate limit de conexão | reconectar, **não antes** do `retryAfterSeconds` do último `RATE_LIMITED` |
 
 ---
 
@@ -146,7 +150,7 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `permission.requested` | ver abaixo | `canUseTool` |
 | `permission.resolved` | `{ requestId, decision, auto, resolvedBy?, resolvedFrom? }` | derivado |
 | `turn.completed` | `{ turnId, usage, costUsd, durationMs, promptedBy? }` | `result` |
-| `session.closed` | `{ sessionId, reason }` — `closedByUser`·`completed`·`failed`·`auditUnavailable`·`shutdown` | fim do generator |
+| `session.closed` | `{ sessionId, reason }` — `closedByUser`·`completed`·`failed`·`auditUnavailable`·`shutdown`·`idleTimeout` | fim do generator · TTL de ociosa (`idleTimeout`) · shutdown |
 | `diag.pong` | `{ sessionId, pingedAt, pingCount, nonce }` | resposta do `diag.ping` |
 | `permission.extended` | `{ requestId, expiresAt, remainingExtensions }` | derivado do `permission.extend` |
 | `session.rewound` | `{ promptId, reverted[], preserved[], unchanged[], failed[] }` | derivado do `session.rewindFiles` |
@@ -302,12 +306,17 @@ da conversa — ela é procurada **dentro** desse workspace, e é por ele que o 
 | workspace fora da allowlist | `error` `WORKSPACE_NOT_ALLOWED` (`403`) |
 | conversa inexistente, de outro workspace, sem `cwd`, ou aberta aqui por outra pessoa | `error` `SESSION_NOT_FOUND` (`404`) — a mesma resposta, de propósito |
 | id que não é UUID | `error` `INVALID_INPUT` (`transcript.error.invalidSessionId`) |
-| instalação no limite | `error` `SESSION_LIMIT_REACHED` |
+| instalação no limite | `error` `SESSION_LIMIT_REACHED` (`params.limit`, `params.retryAfterSeconds`) |
 
 O cliente reconhece a resposta à **sua** retomada por um de três frames: `session.started` ou
 `session.attached` cujo `claudeSessionId` ou `resumedFrom` é a conversa pedida, ou `error` cujo
 `correlationId` é o `id` do comando. O histórico anterior à retomada vem do transcript (HTTP), nunca
 do ring buffer — que só guarda o que esta sessão disse.
+
+**O cliente tem prazo para a resposta: 30 s.** O backend sempre responde — sessão, junção ou
+recusa —, então silêncio é resposta perdida com o socket. Passado o prazo, a tela para de esperar,
+mostra `RESUME_TIMEOUT` (chave `session.error.resumeTimeout`, gerada no cliente) e deixa tentar de
+novo; resposta antes do prazo o cancela ([plano 05 · B-26](../../plans/05-hardening-operations/F0-limits.md)).
 
 ---
 
@@ -370,10 +379,14 @@ ao snapshot do primeiro desses turnos que o tocou.
 |---|---|
 | desfez | `command.accepted` e depois `session.rewound` para todos que observam, com `reverted`, `preserved` (com motivo), `unchanged` e `failed` |
 | algum arquivo não pôde ser restaurado | o mesmo `session.rewound`, com o caminho em `failed`, seguido de `error` `INTERNAL_ERROR` (`session.error.rewindIncomplete`, `params.failed`) — nenhum arquivo fica pela metade |
-| um turno está em execução, ou outro desfazer da mesma sessão está em curso | `error` `SESSION_LOCKED` (`session.error.locked`) |
+| um turno está em execução, ou outro desfazer da mesma sessão está em curso | `error` `SESSION_LOCKED` (`session.error.locked`, `params.reason`: `turnRunning`·`rewindRunning`) |
 | sessão encerrada ou inexistente | `error` `SESSION_NOT_FOUND` |
 | `promptId` que não é ponto de desfazer desta sessão | `error` `INVALID_INPUT` (`session.error.rewindTargetUnknown`) |
 | trilha indisponível | `error` `INTERNAL_ERROR` — **nada** foi tocado: desfazer sem rastro não acontece |
+
+**A trava vale nos dois sentidos.** Enquanto um desfazer devolve os arquivos, `session.prompt` é
+recusado com `SESSION_LOCKED` (`reason: rewindRunning`) — um turno que começasse ali leria um disco
+pela metade ([plano 05 · B-27](../../plans/05-hardening-operations/F0-limits.md)).
 
 Motivos de `preserved`: `modifiedOutside` (alguém alterou depois da sessão), `notRestorable`
 (grande demais ou ilegível para snapshot), `unsafePath` (virou link, deixou de ser arquivo regular,
@@ -422,6 +435,21 @@ Cliente reconecta
 - Servidor envia `ping` a cada **30 s**; sem `pong` em **10 s**, fecha com `4408`.
 - O cliente **não** implementa ping próprio — usa o do protocolo WebSocket.
 - Mobile em background: o socket cai, e é esperado. É por isso que existe push notification.
+- O heartbeat se mantém com o cliente mandando frames sem parar — heartbeat que atrasa sob carga
+  derruba conexão saudável ([plano 05 · S-60](../../plans/05-hardening-operations/scenarios.md)).
+
+## Limites por connection
+
+Anunciados no `connection.ready.limits`; configurados por instalação.
+
+| Limite | Estourou | Reincidiu |
+|---|---|---|
+| `maxFramesPerSecond` — frames que o cliente manda por segundo, contados antes de decodificar | `error` `RATE_LIMITED`, `params: { scope: 'frames', limit, retryAfterSeconds }`; o socket fica | outro frame dentro de `retryAfterSeconds` → fecha com `4429` |
+| `maxFrameBytes` — tamanho do frame | `error` `PAYLOAD_TOO_LARGE`; o socket fica | — |
+| `maxAttachedSessions` — sessões que a connection observa | `session.attach`/`session.start` recusado com `error` `RATE_LIMITED` (`scope: 'attachedSessions'`) **antes** de qualquer subprocesso; reanexar uma sessão já anexada passa | — |
+
+`retryAfterSeconds` viaja nos `params` porque frame WebSocket não tem cabeçalho — é o `Retry-After`
+do WebSocket. Os clientes o guardam e, fechados com `4429`, não voltam antes dele.
 
 ---
 

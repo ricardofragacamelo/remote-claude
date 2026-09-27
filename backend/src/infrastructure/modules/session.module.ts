@@ -13,6 +13,9 @@ import {
   UNDO_JOURNAL,
   UndoPlanner,
   PromptSessionUseCase,
+  ReapIdleSessionsUseCase,
+  SessionEnder,
+  ShutdownSessionsUseCase,
   SESSION_BROADCASTER,
   SESSION_FILE_JOURNAL,
   SESSION_ORIGIN_REPOSITORY,
@@ -42,6 +45,12 @@ import { SessionRewindHandler } from '@adapter/inbound/ws/session/session-rewind
 import { NodeUndoDisk } from '@adapter/outbound/checkpoint/node-undo.disk';
 import { JournalUndoStore } from '@adapter/outbound/session/journal-undo.store';
 import { SnapshotPurgeJob } from '../jobs/snapshot-purge.job';
+import { SessionReaperJob } from '../jobs/session-reaper.job';
+import {
+  MACHINE_MEMORY,
+  machineMemoryBytes,
+  sessionRegistryFor,
+} from '../lifecycle/session-capacity';
 import { PermissionBridge } from '@adapter/outbound/claude/permission-bridge';
 import {
   RecordDecisionOnResolved,
@@ -172,10 +181,37 @@ import { WorkspaceModule } from './workspace.module';
     { provide: SESSION_BROADCASTER, useClass: HubSessionBroadcaster },
     { provide: WORKSPACE_RESOLVER, useClass: WorkspaceModuleResolver },
     RegistrySessionOwnership,
+    // Read once, at boot: the capacity is derived from it (D-01), and a suite that needs a small
+    // machine replaces this one number rather than the whole registry.
+    { provide: MACHINE_MEMORY, useFactory: () => machineMemoryBytes() },
     {
       provide: SessionRegistry,
-      inject: [APP_CONFIG],
-      useFactory: (config: AppConfig) => new SessionRegistry(config.session.maxConcurrent),
+      inject: [APP_CONFIG, MACHINE_MEMORY, CLOCK, LOGGER],
+      useFactory: (config: AppConfig, memoryBytes: number, clock: Clock, logger: Logger) =>
+        sessionRegistryFor(config, memoryBytes, clock, logger),
+    },
+    {
+      provide: SessionEnder,
+      inject: [SessionRegistry, SESSION_BROADCASTER],
+      useFactory: (registry: SessionRegistry, broadcaster: SessionBroadcaster) =>
+        new SessionEnder(registry, broadcaster),
+    },
+    {
+      provide: ReapIdleSessionsUseCase,
+      inject: [SessionRegistry, SessionEnder, CLOCK, APP_CONFIG],
+      useFactory: (
+        registry: SessionRegistry,
+        ender: SessionEnder,
+        clock: Clock,
+        config: AppConfig,
+      ) => new ReapIdleSessionsUseCase(registry, ender, clock, config.session.idleTtlMs),
+    },
+    SessionReaperJob,
+    {
+      provide: ShutdownSessionsUseCase,
+      inject: [SessionRegistry, SessionEnder],
+      useFactory: (registry: SessionRegistry, ender: SessionEnder) =>
+        new ShutdownSessionsUseCase(registry, ender),
     },
     {
       provide: StartSessionUseCase,
@@ -250,9 +286,9 @@ import { WorkspaceModule } from './workspace.module';
     },
     {
       provide: CloseSessionUseCase,
-      inject: [SessionRegistry, SESSION_BROADCASTER],
-      useFactory: (registry: SessionRegistry, broadcaster: SessionBroadcaster) =>
-        new CloseSessionUseCase(registry, broadcaster),
+      inject: [SessionRegistry, SessionEnder],
+      useFactory: (registry: SessionRegistry, ender: SessionEnder) =>
+        new CloseSessionUseCase(registry, ender),
     },
     { provide: SESSION_HANDLERS.start, useClass: SessionStartHandler },
     { provide: SESSION_HANDLERS.rewind, useClass: SessionRewindHandler },
@@ -332,6 +368,12 @@ import { WorkspaceModule } from './workspace.module';
       ),
     },
   ],
-  exports: [...Object.values(SESSION_HANDLERS), RegistrySessionOwnership, SessionRegistry],
+  exports: [
+    ...Object.values(SESSION_HANDLERS),
+    RegistrySessionOwnership,
+    SessionRegistry,
+    ShutdownSessionsUseCase,
+    SessionReaperJob,
+  ],
 })
 export class SessionModule {}

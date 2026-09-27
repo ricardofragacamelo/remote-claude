@@ -1,6 +1,6 @@
 import type { Envelope } from '@remote-claude/contracts';
 
-import { WS_LIMITS } from './limits';
+import { REPLAY_BUFFER_SIZE } from './limits';
 
 /** What a client gets back when it asks to resume from a sequence. */
 export interface Replay {
@@ -19,7 +19,7 @@ export interface Replay {
 export class EventBuffer {
   private readonly bySession = new Map<string, Envelope[]>();
 
-  constructor(private readonly capacity: number = WS_LIMITS.replayBufferSize) {}
+  constructor(private readonly capacity: number = REPLAY_BUFFER_SIZE) {}
 
   /** Keeps an event, dropping the oldest once the ring is full. */
   append(sessionId: string, event: Envelope): void {

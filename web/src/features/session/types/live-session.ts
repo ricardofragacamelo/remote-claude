@@ -2,9 +2,9 @@
 export type SessionStatus =
   'starting' | 'idle' | 'thinking' | 'running' | 'waitingPermission' | 'closed';
 
-/** Why a session ended. The contract carries the same five. */
+/** Why a session ended. The contract carries the same six. */
 export type SessionCloseReason =
-  'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown';
+  'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown' | 'idleTimeout';
 
 /**
  * One message of the conversation.

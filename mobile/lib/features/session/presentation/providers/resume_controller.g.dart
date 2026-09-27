@@ -60,7 +60,7 @@ final class ResumeControllerProvider extends $NotifierProvider<ResumeController,
   }
 }
 
-String _$resumeControllerHash() => r'0be6db18de3e06a581f3c588eb4c41280284ca08';
+String _$resumeControllerHash() => r'e71e85aa5b5bd3e862492f92cfab0ef4be41b522';
 
 /// The resume of one conversation, keyed by it.
 

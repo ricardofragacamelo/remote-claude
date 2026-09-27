@@ -47,6 +47,14 @@ const purgeInterval = z.union([
   z.coerce.number().int().min(AUDIT_PURGE_MIN_INTERVAL_MS),
 ]);
 
+/**
+ * The shortest idle TTL a session may be given.
+ *
+ * A second, and only so a suite can watch one expire: the number the product runs with is thirty
+ * minutes (D-02). Zero would close every session between two turns.
+ */
+export const SESSION_IDLE_TTL_FLOOR_MS = 1_000;
+
 export const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']),
@@ -60,6 +68,13 @@ export const environmentSchema = z.object({
   OIDC_SCOPES: z.string().min(1),
   RC_WORKSPACE_ALLOWLIST_FILE: z.string().min(1),
   RC_SESSION_MAX_CONCURRENT: z.coerce.number().int().min(1).max(100),
+  RC_SESSION_MIN_CONCURRENT: z.coerce.number().int().min(1).max(100),
+  RC_SESSION_MEMORY_FRACTION: z.coerce.number().positive().max(1),
+  RC_SESSION_MEMORY_MB: z.coerce.number().int().min(64),
+  RC_SESSION_IDLE_TTL_MS: z.coerce.number().int().min(SESSION_IDLE_TTL_FLOOR_MS),
+  RC_WS_MAX_FRAMES_PER_SECOND: z.coerce.number().int().min(1),
+  RC_WS_MAX_FRAME_BYTES: z.coerce.number().int().min(1_024),
+  RC_WS_MAX_ATTACHED_SESSIONS: z.coerce.number().int().min(1),
   RC_SESSION_MAX_TURNS: z.coerce.number().int().min(1),
   RC_SESSION_MAX_BUDGET_USD: z.coerce.number().positive(),
   RC_SESSION_DEFAULT_MODEL: z.string().min(1),
@@ -88,13 +103,20 @@ export const environmentSchema = z.object({
  * A default above the ceiling would make every rule granted from an approval card a rule the
  * installation refuses — the product would be configured to reject its own default.
  */
-const consistentEnvironment = environmentSchema.refine(
-  (env) => env.RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS <= env.RC_PERMISSION_RULE_MAX_LIFETIME_MS,
-  {
-    path: ['RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS'],
-    message: 'must not be greater than RC_PERMISSION_RULE_MAX_LIFETIME_MS',
-  },
-);
+const consistentEnvironment = environmentSchema
+  .refine(
+    (env) => env.RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS <= env.RC_PERMISSION_RULE_MAX_LIFETIME_MS,
+    {
+      path: ['RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS'],
+      message: 'must not be greater than RC_PERMISSION_RULE_MAX_LIFETIME_MS',
+    },
+  )
+  // A floor above the ceiling is a capacity nobody can compute: refused at boot, not resolved in
+  // favour of one of the two in silence.
+  .refine((env) => env.RC_SESSION_MIN_CONCURRENT <= env.RC_SESSION_MAX_CONCURRENT, {
+    path: ['RC_SESSION_MIN_CONCURRENT'],
+    message: 'must not be greater than RC_SESSION_MAX_CONCURRENT',
+  });
 
 /** The shape the schema accepts, before validation. */
 export type RawEnvironment = Record<keyof z.infer<typeof environmentSchema>, string | undefined>;
@@ -112,16 +134,36 @@ export interface AppConfig {
   /** What a session may cost this installation, and what it opens with. */
   readonly session: {
     /**
-     * How many sessions may run at once.
+     * What the number of concurrent sessions is derived from.
      *
-     * A concrete number and not a guess: ~222 MB of RSS and exactly one subprocess per session
-     * were measured, so ten is about 2.2 GB. Deriving it from the machine's RAM is a later plan;
-     * until then it is explicit, and the refusal beyond it is an ordinary path
-     * (docs/plans/01-live-session/decisions.md#d-05).
+     * Not the number itself: that comes out of the machine's RAM at boot, held between the floor
+     * and the ceiling — ~222 MB of RSS and exactly one subprocess per session were measured, and a
+     * fixed ten is 2.2 GB on a laptop with 4 GB as much as on one with 64
+     * ([D-01](../../../../docs/plans/05-hardening-operations/decisions.md)).
      */
-    readonly maxConcurrent: number;
+    readonly capacity: {
+      readonly floor: number;
+      readonly ceiling: number;
+      readonly memoryFraction: number;
+      readonly perSessionBytes: number;
+    };
+
+    /** How long a session may sit with nothing happening before it is closed (D-02). */
+    readonly idleTtlMs: number;
     readonly limits: { readonly maxBudgetUsd: number; readonly maxTurns: number };
     readonly defaults: { readonly model: string; readonly permissionMode: PermissionMode };
+  };
+
+  /**
+   * What one WebSocket connection may send, announced in `connection.ready`.
+   *
+   * From configuration because a client that knows the limit does not have to find it by being
+   * refused, and because the limit that fits a laptop is not the one that fits a shared box.
+   */
+  readonly websocket: {
+    readonly maxFramesPerSecond: number;
+    readonly maxFrameBytes: number;
+    readonly maxAttachedSessions: number;
   };
 
   /**
@@ -208,7 +250,13 @@ export function loadConfig(source: RawEnvironment): AppConfig {
     databaseUrl: env.DATABASE_URL,
     workspaceAllowlistFile: resolve(env.RC_WORKSPACE_ALLOWLIST_FILE),
     session: {
-      maxConcurrent: env.RC_SESSION_MAX_CONCURRENT,
+      capacity: {
+        floor: env.RC_SESSION_MIN_CONCURRENT,
+        ceiling: env.RC_SESSION_MAX_CONCURRENT,
+        memoryFraction: env.RC_SESSION_MEMORY_FRACTION,
+        perSessionBytes: env.RC_SESSION_MEMORY_MB * 1024 * 1024,
+      },
+      idleTtlMs: env.RC_SESSION_IDLE_TTL_MS,
       limits: {
         maxBudgetUsd: env.RC_SESSION_MAX_BUDGET_USD,
         maxTurns: env.RC_SESSION_MAX_TURNS,
@@ -217,6 +265,11 @@ export function loadConfig(source: RawEnvironment): AppConfig {
         model: env.RC_SESSION_DEFAULT_MODEL,
         permissionMode: env.RC_SESSION_DEFAULT_PERMISSION_MODE,
       },
+    },
+    websocket: {
+      maxFramesPerSecond: env.RC_WS_MAX_FRAMES_PER_SECOND,
+      maxFrameBytes: env.RC_WS_MAX_FRAME_BYTES,
+      maxAttachedSessions: env.RC_WS_MAX_ATTACHED_SESSIONS,
     },
     permission: {
       timeoutMs: env.RC_PERMISSION_TIMEOUT_MS,

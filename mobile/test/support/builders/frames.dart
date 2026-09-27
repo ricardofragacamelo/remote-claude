@@ -35,7 +35,12 @@ String connectionReady({String connectionId = 'conn-1'}) => frame(
   payload: <String, Object?>{
     'connectionId': connectionId,
     'serverVersion': '0.0.1',
-    'limits': <String, Object?>{'maxFrameBytes': 65536, 'replayBufferSize': 200},
+    'limits': <String, Object?>{
+      'maxFrameBytes': 65536,
+      'maxFramesPerSecond': 20,
+      'maxAttachedSessions': 16,
+      'replayBufferSize': 200,
+    },
   },
 );
 

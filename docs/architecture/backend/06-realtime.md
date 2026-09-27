@@ -149,9 +149,17 @@ mostrar "aprovado no celular há 2 min" — e para a auditoria.
 
 ## Heartbeat e limites
 
-- Servidor pinga a cada **30 s**; sem pong em **10 s**, fecha com `4408`.
-- Limites por connection, configuráveis: frames/segundo, tamanho de frame, sessões anexadas.
-  Estourou → `error` com `RATE_LIMITED`; reincidência → `4429`.
+- Servidor pinga a cada **30 s**; sem pong em **10 s**, fecha com `4408`. Os tempos e os limites
+  vivem num objeto só, `WsSettings` (`infrastructure/websocket/limits.ts`), injetado no gateway — é
+  o que deixa a suíte encurtar o heartbeat em vez de esperar trinta segundos.
+- Limites por connection, configuráveis (`RC_WS_MAX_FRAMES_PER_SECOND`, `RC_WS_MAX_FRAME_BYTES`,
+  `RC_WS_MAX_ATTACHED_SESSIONS`) e anunciados no `connection.ready`:
+  - **frames/segundo** — balde de fichas por connection, contado **antes** de decodificar: enxurrada
+    de lixo custa ao servidor o mesmo que enxurrada de comandos. Estourou → `error` `RATE_LIMITED`
+    com `retryAfterSeconds: 1`; outro frame dentro dessa janela → `4429`;
+  - **tamanho de frame** → `PAYLOAD_TOO_LARGE`, e o socket fica;
+  - **sessões anexadas** — checado **antes** do handler de `session.attach`/`session.start`, porque o
+    segundo gera subprocesso e limite achado depois do spawn deixaria sessão rodando para ninguém.
 - Mobile em background perde o socket. **Isso é esperado** — é a razão de existir o push.
 
 ---
@@ -161,12 +169,22 @@ mostrar "aprovado no celular há 2 min" — e para a auditoria.
 `onModuleDestroy` precisa ser ordeiro, porque cada sessão é um subprocesso real:
 
 1. Para de aceitar conexão nova.
-2. Emite `session.closed { reason: 'serverShutdown' }` para todas as sessões.
+2. Emite `session.closed { reason: 'shutdown' }` para todas as sessões.
 3. Fecha os sockets com `1001` (cliente reconecta com backoff).
 4. `query.close()` em **toda** sessão viva.
 5. Drena o pool do banco.
 
 Pular o passo 4 deixa processo do CLI órfão na máquina do usuário.
+
+**Quem garante a ordem é `GracefulShutdown`** (`infrastructure/lifecycle/`), porque ela atravessa
+módulos: o gateway é dono dos sockets (`stopAccepting`, `closeAll`) e o módulo `session` dos
+subprocessos (`ShutdownSessionsUseCase.announce` e `.release`). O gateway **não** fecha os próprios
+sockets no seu hook — se fechasse, ninguém saberia dizer se foi antes ou depois do aviso. O passo 5
+é o `onApplicationShutdown` do banco, que o Nest roda depois de todo `onModuleDestroy`. Chamado duas
+vezes, devolve a promessa da primeira.
+
+O subprocesso que escapar mesmo assim — backend morto com `kill -9` — é encontrado no boot seguinte
+pela marca no ambiente ([backend/04](04-claude-integration.md#ciclo-de-vida-e-recursos)).
 
 ---
 
@@ -179,6 +197,7 @@ Todo frame, nos dois sentidos, em `debug` — ver [logging](../shared/03-logging
 | `ws.inbound` | `connectionId`, `kind`, `type`, `traceId`, payload truncado |
 | `ws.outbound` | idem + `seq` quando for `event` |
 | `ws.connection` | `connectionId`, `userId`, `deviceId`, `closeCode` |
+| `ws.rateLimit` | `connectionId`, `err` (o `RATE_LIMITED`, com o limite) |
 
 Nunca logue o token do handshake. Ver a lista de redação em
 [logging](../shared/03-logging.md#redação-o-que-nunca-vai-para-o-log).

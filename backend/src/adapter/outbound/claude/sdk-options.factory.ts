@@ -28,6 +28,12 @@ export interface SdkOptionsInput {
   readonly limits: SessionLimits;
   readonly abortController: AbortController;
 
+  /**
+   * The subprocess's environment — the backend's own plus the mark that lets the next boot find it
+   * if this backend dies without closing it (B-03). See `process-marker.ts`.
+   */
+  readonly environment: Readonly<Record<string, string | undefined>>;
+
   /** Where the CLI's `stderr` goes. It is read, not discarded — see below. */
   onStderr: (data: string) => void;
 }
@@ -79,6 +85,7 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
     maxBudgetUsd: input.limits.maxBudgetUsd,
     maxTurns: input.limits.maxTurns,
     abortController: input.abortController,
+    env: { ...input.environment },
 
     // Read rather than dropped: it is the only channel on which the SDK reports that one of our
     // own options shadowed the permission callback.

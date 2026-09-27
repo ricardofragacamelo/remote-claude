@@ -5,6 +5,8 @@ import request from 'supertest';
 import { sql } from 'drizzle-orm';
 import type { Envelope } from '@remote-claude/contracts';
 
+import { SessionRegistry } from '@application/session';
+import { SessionId } from '@domain/session';
 import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
 import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
 import { TRANSCRIPT_SDK } from '@adapter/outbound/claude/transcript-sdk';
@@ -340,6 +342,45 @@ describe('undoing what a session wrote', () => {
 
     socket.send(commandFrame('session.interrupt', { sessionId }));
     await until(socket, 'turn.completed');
+  });
+
+  it('refuses a prompt that arrives while the files go back, and runs no turn — plan 05, S-58', async () => {
+    const socket = await connect();
+    const { sessionId } = await started(socket);
+    await turn(socket, sessionId);
+    const [point] = await checkpoints(sessionId);
+
+    // Back to back: the undo takes the lock before its first await, and the prompt is checked
+    // while the undo is still reading the journal and writing the trail.
+    const undo = commandFrame('session.rewindFiles', {
+      sessionId,
+      promptId: String(point?.promptId),
+    });
+    const prompt = commandFrame('session.prompt', { sessionId, text: 'carry on' });
+    socket.send(undo);
+    socket.send(prompt);
+
+    let refusal: Envelope | null = null;
+    let rewound: Envelope | null = null;
+    for (let taken = 0; taken < 50 && (refusal === null || rewound === null); taken += 1) {
+      const frame = await socket.next();
+      if (frame.kind === 'error' && frame.correlationId === prompt['id']) {
+        refusal = frame;
+      }
+      if (frame.type === 'session.rewound') {
+        rewound = frame;
+      }
+    }
+
+    expect(refusal?.payload).toMatchObject({
+      code: 'SESSION_LOCKED',
+      params: { reason: 'rewindRunning' },
+    });
+    expect(rewound).not.toBeNull();
+    // The refused prompt never reached the CLI: the session is idle, not thinking.
+    expect(harness.app.get(SessionRegistry).find(SessionId.create(sessionId))?.session.status).toBe(
+      'idle',
+    );
   });
 
   it('refuses a point that is not one of the session — S-61', async () => {

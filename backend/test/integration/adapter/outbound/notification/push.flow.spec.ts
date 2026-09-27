@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { PUSH_SENDER } from '@application/notification';
+import { PUSH_SENDER, PushDispatcher } from '@application/notification';
 import type { PushMessage } from '@domain/notification';
 import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
@@ -91,6 +91,7 @@ describe('a question reaching a phone', () => {
 
     provider.sent.length = 0;
     provider.answer = () => 'delivered';
+    provider.held = null;
     await context().db.execute('DELETE FROM devices');
     await context().db.execute('DELETE FROM permission_requests');
   });
@@ -381,5 +382,99 @@ describe('a question reaching a phone', () => {
 
     const rows = await context().db.execute(`SELECT status FROM devices WHERE id = '${deviceId}'`);
     expect(rows.rows[0]?.['status']).toBe('approved');
+  });
+
+  describe('trying again — plan 05, B-25', () => {
+    /** The provider fails the first announcement it is handed, and delivers everything else. */
+    function failTheFirstAnnouncement(): void {
+      let announcements = 0;
+      provider.answer = (message) => {
+        if (message.kind !== 'permissionRequested') {
+          return 'delivered';
+        }
+        announcements += 1;
+        return announcements === 1 ? 'failed' : 'delivered';
+      };
+    }
+
+    it('delivers on the next attempt when the provider failed the first — S-47', async () => {
+      await approvedDevice('install-1', 'token-one');
+      failTheFirstAnnouncement();
+
+      const asked = await askedWithNobodyWatching();
+
+      const sent = await waitFor(
+        'the retry to reach the device',
+        () => Promise.resolve(sentFor(asked.sessionId)),
+        (messages) => messages.length >= 2,
+        5_000,
+      );
+      expect(sent.map((message) => message.tag)).toEqual([asked.requestId, asked.requestId]);
+    });
+
+    it('cancels the retry waiting when somebody answers first — S-50', async () => {
+      await approvedDevice('install-1', 'token-one');
+      failTheFirstAnnouncement();
+      const asked = await askedWithNobodyWatching();
+      await watchAgain(asked);
+
+      asked.socket.send({
+        ...commandFrame('permission.resolve', { requestId: asked.requestId, decision: 'allow' }),
+        kind: 'response',
+      });
+
+      await waitFor(
+        'the notification to be withdrawn',
+        () => Promise.resolve(sentFor(asked.sessionId).map((message) => message.kind)),
+        (kinds) => kinds.includes('permissionResolved'),
+      );
+
+      // Nothing is left armed: no announcement can land after the withdrawal.
+      expect(harness.app.get(PushDispatcher).pending).toBe(0);
+      expect(sentFor(asked.sessionId).map((message) => message.kind)).toEqual([
+        'permissionRequested',
+        'permissionResolved',
+      ]);
+    });
+
+    it('withdraws only after the retry on the wire has landed — S-51', async () => {
+      await approvedDevice('install-1', 'token-one');
+      failTheFirstAnnouncement();
+      const asked = await askedWithNobodyWatching();
+
+      let land = (): void => undefined;
+      provider.held = new Promise((resolve) => {
+        land = resolve;
+      });
+      await waitFor(
+        'the retry to be on the wire',
+        () => Promise.resolve(sentFor(asked.sessionId).length),
+        (count) => count === 2,
+        5_000,
+      );
+
+      await watchAgain(asked);
+      asked.socket.send({
+        ...commandFrame('permission.resolve', { requestId: asked.requestId, decision: 'allow' }),
+        kind: 'response',
+      });
+      await until(asked.socket, 'permission.resolved');
+
+      // Answered, and the withdrawal is waiting for the announcement still in flight.
+      expect(sentFor(asked.sessionId).map((message) => message.kind)).toEqual([
+        'permissionRequested',
+        'permissionRequested',
+      ]);
+
+      provider.held = null;
+      land();
+
+      const kinds = await waitFor(
+        'the withdrawal, after the announcement',
+        () => Promise.resolve(sentFor(asked.sessionId).map((message) => message.kind)),
+        (seen) => seen.includes('permissionResolved'),
+      );
+      expect(kinds).toEqual(['permissionRequested', 'permissionRequested', 'permissionResolved']);
+    });
   });
 });

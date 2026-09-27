@@ -287,6 +287,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionClosedShutdown => 'Ended because the backend stopped.';
 
   @override
+  String get sessionClosedIdleTimeout =>
+      'Ended after sitting idle too long. Resume it from the history.';
+
+  @override
   String get permissionPageTitle => 'Permission';
 
   @override
@@ -725,6 +729,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Claude took too long to answer on this machine. Try again.';
 
   @override
+  String get sessionErrorResumeTimeout =>
+      'The backend did not answer the resume. Check the connection and try again.';
+
+  @override
   String get sessionErrorLocked =>
       'The session is busy: a turn is running or another undo is in progress. Try again once it is idle.';
 
@@ -888,4 +896,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionUndoFailed => 'Could not be put back';
+
+  @override
+  String get diagnosticsTitle => 'Diagnostics';
+
+  @override
+  String get diagnosticsConnectionLabel => 'Connection';
+
+  @override
+  String get diagnosticsCredentialLabel => 'Sign-in';
+
+  @override
+  String get diagnosticsCredentialPresent => 'Signed in';
+
+  @override
+  String get diagnosticsCredentialAbsent => 'Not signed in';
+
+  @override
+  String get diagnosticsVersionLabel => 'Version';
+
+  @override
+  String get diagnosticsDebugLabel => 'Detailed logging';
+
+  @override
+  String get diagnosticsDebugDescription =>
+      'Records every exchange with the server while this screen is open. It switches itself off when you leave.';
+
+  @override
+  String get diagnosticsDebugAlwaysOn => 'Always on in a development build.';
 }

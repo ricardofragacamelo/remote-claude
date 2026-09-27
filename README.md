@@ -177,7 +177,7 @@ Isso não é entregar; é esconder.
 | `pnpm test:unit` | unit das três pontas **e dos scripts de `scripts/`** — rápido, sem I/O |
 | `pnpm test:integration` | **exige Docker**: Postgres real via testcontainers, nunca SQLite, nunca mock; e o contrato de saída dos scripts de `scripts/` |
 | `pnpm test:e2e` | sobe stack **efêmera em portas aleatórias**, roda Playwright, derruba tudo |
-| `pnpm test:e2e:mobile` | a mesma stack, com o `integration_test` do Flutter — **exige emulador na imagem API 35** (`emulator -avd remote_claude_api35`), e não é portão |
+| `pnpm test:e2e:mobile` | a mesma stack, com o `integration_test` do Flutter — **roda na imagem API 35**: usa o aparelho já conectado ou, sem nenhum, sobe a AVD `remote_claude_api35` sem janela e a desliga no fim; não é portão |
 | `pnpm test:e2e:mobile:push` | a mesma suíte do app com **push de verdade**: lê do `.env` só as três `RC_PUSH_*`, roda pelo `patrol` (`dart pub global activate patrol_cli 4.8.0`), responde o diálogo de notificação do SO, manda o app para o fundo e toca a notificação — sai da máquina, e não é portão |
 | `pnpm test:e2e:live` | a mesma stack contra o **Claude de verdade** — exige o Claude logado, custa dinheiro, e não é portão |
 | `pnpm test:coverage` | mínimo **90 % em statements, branches, functions e lines — por arquivo** |
@@ -201,6 +201,14 @@ biometria e deep link, que é o que a suíte exercita, e o resultado deixaria de
 duas máquinas ([D-09](docs/plans/02-mobile-approval/decisions.md#d-09--o-emulador-reprodutível)).
 O Gradle roda com teto de 3 GB de heap (`mobile/android/gradle.properties`), para caber ao lado do
 emulador e da stack.
+
+**Quem liga, desliga.** Com um aparelho já conectado, a suíte o usa e o deixa como estava. Sem
+nenhum, o `scripts/run-e2e-local.mjs` sobe o emulador em paralelo com a stack — sem janela, 2 GB,
+quatro núcleos e, com `systemd-run`, dentro de um cgroup de 7 GB — e o derruba no teardown, com
+sucesso, falha ou Ctrl+C: primeiro `adb emu kill`, depois o grupo de processos se ele não sair em
+um minuto. Os daemons do Gradle param junto (`gradlew --stop`): deixados de pé, seguram gigabytes
+e fazem o `pnpm verify:full` seguinte estourar tempo. O SDK é achado por `ANDROID_HOME` (ou o
+local padrão do instalador), e `adb` e `emulator` não precisam estar no PATH.
 
 A AVD da suíte é **dedicada**, `remote_claude_api35`: imagem `android-35;google_apis_playstore;x86_64`
 (o push de verdade precisa do Play Services) e partição de dados de 16 GB — com os 6 GB do perfil

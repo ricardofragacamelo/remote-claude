@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import type { PushDelivery, PushSender } from '@application/notification';
+import type { PushDelivery, PushOutcome, PushSender } from '@application/notification';
 import type { PushMessage } from '@domain/notification';
 import { APP_CONFIG } from '@infra/config/environment';
 import type { AppConfig } from '@infra/config/environment';
@@ -13,6 +13,13 @@ import type { PushTranslator } from '@shared/i18n/push-translator';
 
 /** Statuses that mean the token is gone for good, not that the call went badly. */
 const TOKEN_IS_GONE = new Set([404, 410]);
+
+/**
+ * `4xx` statuses that may pass, and are worth asking again: a timeout, the provider's own rate
+ * limit, and a `401` on an access token that is dropped and minted afresh for the next attempt.
+ * Every other `4xx` is the provider refusing the message itself (D-09).
+ */
+const TRANSIENT_CLIENT_ERRORS = new Set([401, 408, 429]);
 
 /** How many trailing characters of a token may be logged. Enough to tell two apart, no more. */
 const TOKEN_TAIL = 6;
@@ -42,25 +49,26 @@ export class HttpPushSender implements PushSender {
     private readonly http: typeof fetch = fetch,
   ) {}
 
-  async send(message: PushMessage): Promise<PushDelivery> {
+  async send(message: PushMessage): Promise<PushOutcome> {
     const startedAt = Date.now();
 
     try {
       const response = await this.post(message);
       const delivery = deliveryOf(response.status);
+      const retryAfterMs = retryAfterOf(response.headers.get('retry-after'), Date.now());
 
-      this.report(message, delivery, { httpStatus: response.status, startedAt });
+      this.report(message, delivery, { httpStatus: response.status, retryAfterMs, startedAt });
 
-      if (delivery === 'failed' && response.status === 401) {
-        // The held token was refused. Dropping it means the next message mints a fresh one rather
+      if (response.status === 401) {
+        // The held token was refused. Dropping it means the next attempt mints a fresh one rather
         // than repeating a call that cannot work.
         this.tokens.forget();
       }
 
-      return delivery;
+      return { delivery, retryAfterMs };
     } catch (error) {
       this.report(message, 'failed', { err: error, startedAt });
-      return 'failed';
+      return { delivery: 'failed', retryAfterMs: null };
     }
   }
 
@@ -128,8 +136,10 @@ export class HttpPushSender implements PushSender {
    * One line per attempt, at the level the outcome deserves.
    *
    * A refused token is `warn` and not `error`: it is the ordinary consequence of an operating
-   * system rotating a token, and the caller already erases it. The token itself never appears —
-   * only its last six characters, which tell two registrations apart and reach nobody's phone.
+   * system rotating a token, and the caller already erases it. A `failed` attempt is `debug`: it is
+   * tried again, and the one `warn` is the dispatcher's, when it gives up, with the number of
+   * attempts (S-48). The token itself never appears — only its last six characters, which tell two
+   * registrations apart and reach nobody's phone.
    */
   private report(
     message: PushMessage,
@@ -153,17 +163,45 @@ export class HttpPushSender implements PushSender {
 
     if (delivery === 'delivered') {
       this.logger.debug(line, 'push sent');
+    } else if (delivery === 'failed') {
+      this.logger.debug(line, 'push attempt failed');
     } else {
       this.logger.warn(line, 'push not delivered');
     }
   }
 }
 
-/** What a status means for the token, which is the only distinction the caller acts on. */
+/** What a status means: delivered, the token gone, refused for good, or worth another try. */
 export function deliveryOf(status: number): PushDelivery {
   if (status >= 200 && status < 300) {
     return 'delivered';
   }
 
-  return TOKEN_IS_GONE.has(status) ? 'tokenRejected' : 'failed';
+  if (TOKEN_IS_GONE.has(status)) {
+    return 'tokenRejected';
+  }
+
+  const refusedForGood = status >= 400 && status < 500 && !TRANSIENT_CLIENT_ERRORS.has(status);
+  return refusedForGood ? 'rejected' : 'failed';
+}
+
+/**
+ * The provider's `Retry-After`, in milliseconds, or `null` when it did not say.
+ *
+ * Both forms of the header: a number of seconds, or an HTTP date. A date already past is zero; a
+ * header that is neither is ignored rather than guessed at.
+ */
+export function retryAfterOf(header: string | null, nowMs: number): number | null {
+  if (header === null || header.trim() === '') {
+    return null;
+  }
+
+  const trimmed = header.trim();
+
+  if (/^\d+$/.test(trimmed)) {
+    return Number(trimmed) * 1_000;
+  }
+
+  const at = Date.parse(trimmed);
+  return Number.isNaN(at) ? null : Math.max(0, at - nowMs);
 }

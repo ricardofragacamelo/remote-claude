@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { BACKOFF_MAX_MS, BACKOFF_MIN_MS, WsClient } from '@/shared/api/ws-client';
+import {
+  BACKOFF_MAX_MS,
+  BACKOFF_MIN_MS,
+  CLOSE_RATE_LIMITED,
+  WsClient,
+} from '@/shared/api/ws-client';
 import { FakeSocket, ManualScheduler, SocketFactory } from '../../../support/fake-socket';
 
 /** A frame as the server would send it. */
@@ -27,6 +32,7 @@ describe('WsClient', () => {
   let scheduler: ManualScheduler;
   let token: string | null;
   let client: WsClient;
+  let now: number;
 
   /** Opens the socket and completes the handshake. */
   function connectAndReady(): FakeSocket {
@@ -40,6 +46,7 @@ describe('WsClient', () => {
     sockets = new SocketFactory();
     scheduler = new ManualScheduler();
     token = 'token-1';
+    now = 1_000_000;
     client = new WsClient({
       url: 'ws://backend.test/ws',
       accessToken: () => token,
@@ -49,6 +56,7 @@ describe('WsClient', () => {
       schedule: scheduler.schedule,
       // A fixed draw makes the jitter deterministic without removing it from the code.
       random: () => 0.5,
+      now: () => now,
     });
   });
 
@@ -160,6 +168,62 @@ describe('WsClient', () => {
       client.close();
 
       expect(scheduler.delays).toEqual([]);
+    });
+
+    describe('after being rate limited — plan 05, B-05', () => {
+      const rateLimited = (retryAfterSeconds: unknown): Record<string, unknown> =>
+        serverFrame({
+          kind: 'error',
+          type: 'error',
+          payload: {
+            code: 'RATE_LIMITED',
+            messageKey: 'common.error.rateLimited',
+            params: { retryAfterSeconds },
+          },
+        });
+
+      it('comes back no sooner than the server asked, after a 4429', () => {
+        const socket = connectAndReady();
+        socket.receive(rateLimited(12));
+
+        socket.close(CLOSE_RATE_LIMITED);
+
+        expect(scheduler.delays).toEqual([12_000]);
+      });
+
+      it('counts the wait from when it was asked, not from when the socket closed', () => {
+        const socket = connectAndReady();
+        socket.receive(rateLimited(12));
+        now += 10_000;
+
+        socket.close(CLOSE_RATE_LIMITED);
+
+        expect(scheduler.delays).toEqual([BACKOFF_MIN_MS * 2]);
+      });
+
+      it('never comes back at once after a 4429, even with nothing to go by', () => {
+        connectAndReady().close(CLOSE_RATE_LIMITED);
+
+        expect(scheduler.delays[0]).toBeGreaterThanOrEqual(BACKOFF_MIN_MS);
+      });
+
+      it('ignores a Retry-After it cannot read', () => {
+        const socket = connectAndReady();
+        socket.receive(rateLimited('soon'));
+
+        socket.close(CLOSE_RATE_LIMITED);
+
+        expect(scheduler.delays).toEqual([BACKOFF_MIN_MS]);
+      });
+
+      it('keeps the ordinary backoff for any other close', () => {
+        const socket = connectAndReady();
+        socket.receive(rateLimited(12));
+
+        socket.close(4408);
+
+        expect(scheduler.delays).toEqual([BACKOFF_MIN_MS]);
+      });
     });
 
     it('starts the backoff over once it is ready again', () => {

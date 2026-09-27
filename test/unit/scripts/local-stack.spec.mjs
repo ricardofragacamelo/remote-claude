@@ -94,6 +94,13 @@ describe('composeRunner', () => {
     expect(invoked.map((call) => call.mode)).toEqual(['attached', 'captured']);
   });
 
+  it('keeps a teardown call out of the terminal process group when asked', () => {
+    // A second Ctrl+C reaches the whole foreground group: `compose stop` has to be outside it.
+    composeRunner(cli, 'p', { cwd: '/repo' })(['stop'], { ownProcessGroup: true });
+
+    expect(invoked[0]?.ownProcessGroup).toBe(true);
+  });
+
   it('hands the ephemeral environment to compose, so the ports are the allocated ones', () => {
     composeRunner(cli, 'p', { cwd: '/repo', env: { RC_WEB_PORT: '51004' } })(['up']);
 

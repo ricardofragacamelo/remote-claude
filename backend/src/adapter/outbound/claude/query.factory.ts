@@ -1,6 +1,8 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { Options, Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 
+import { isBackendVariable } from './claude-environment';
+
 /**
  * How a `Query` comes into being.
  *
@@ -43,6 +45,12 @@ export class UnsafeSdkOptionsError extends Error {
  * reads them. This is the other half: the composition point *sets* them, and this *refuses* to proceed
  * without them, so no future caller of the port can reach the SDK past them. `pnpm scan:security`
  * reads this call, which is the only bare `query(` in the backend.
+ *
+ * A fourth check, of the same kind: **the environment**. An absent `env` makes the SDK hand the CLI
+ * the backend's whole `process.env`, and an `env` that carries the backend's configuration gives
+ * every `Bash` Claude runs the database password — both in silence
+ * ([10 · D-10](../../../../../docs/plans/10-integrated-terminal/decisions.md)). The error names the
+ * variables and never their values.
  */
 export const realQueryFactory: QueryFactory = ({ prompt, options }) => {
   const hooks = options.hooks?.PreToolUse ?? [];
@@ -57,6 +65,17 @@ export const realQueryFactory: QueryFactory = ({ prompt, options }) => {
 
   if (typeof options.canUseTool !== 'function') {
     throw new UnsafeSdkOptionsError('canUseTool must be the permission bridge');
+  }
+
+  if (options.env === undefined) {
+    throw new UnsafeSdkOptionsError('env must be set, or the CLI inherits the whole backend');
+  }
+
+  const leaked = Object.keys(options.env).filter(isBackendVariable);
+  if (leaked.length > 0) {
+    throw new UnsafeSdkOptionsError(
+      `env must not carry the backend configuration (${leaked.join(', ')})`,
+    );
   }
 
   return query({

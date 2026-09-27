@@ -6,7 +6,7 @@ import { DomainError } from '@domain/shared';
 import { LOGGER } from '../logging/logger';
 import type { Logger } from '../logging/logger';
 import { currentTraceId } from '../logging/trace-context';
-import { httpStatusFor, toErrorEnvelope } from './error-catalogue';
+import { httpStatusFor, retryAfterFor, toErrorEnvelope } from './error-catalogue';
 import { FrameworkHttpError } from './framework-http.error';
 
 /**
@@ -43,6 +43,11 @@ export class DomainExceptionFilter implements ExceptionFilter {
       this.logger.warn(context, 'request refused');
     }
 
+    const retryAfter = retryAfterFor(status, envelope);
+    if (retryAfter !== null) {
+      response.setHeader('Retry-After', String(retryAfter));
+    }
+
     response.status(status).json(envelope);
   }
 }
@@ -57,5 +62,30 @@ export function normaliseException(exception: unknown): unknown {
     return new FrameworkHttpError(exception.getStatus());
   }
 
+  const clientStatus = exposedClientStatus(exception);
+  if (clientStatus !== null) {
+    return new FrameworkHttpError(clientStatus);
+  }
+
   return exception;
+}
+
+/**
+ * The status of an `http-errors` error the body parser raised about the **request** — a body over
+ * its limit (`413`), one that is not JSON (`400`) — or `null` for anything else.
+ *
+ * Those arrive as plain errors, not as Nest's `HttpException`, and read as `500` otherwise: a
+ * client blamed on the server for sending too much (found in plan 05, F1). Only a `4xx` the
+ * error itself marks as safe to expose is trusted; anything else stays ours to explain.
+ */
+function exposedClientStatus(exception: unknown): number | null {
+  if (typeof exception !== 'object' || exception === null) {
+    return null;
+  }
+
+  const { status, expose } = exception as { status?: unknown; expose?: unknown };
+
+  return typeof status === 'number' && status >= 400 && status < 500 && expose === true
+    ? status
+    : null;
 }

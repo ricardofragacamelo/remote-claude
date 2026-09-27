@@ -22,8 +22,19 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 02-mobile-approval       ████████████████████ 100%   ✅ concluído
 03-rules-and-audit       ████████████████████ 100%   ✅ concluído
 04-transcript-and-resume ████████████████████ 100%   ✅ concluído
-05-hardening-operations  ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
-06-distribution          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+05-hardening-operations  ██████████░░░░░░░░░░  48%   🔄 em andamento
+06-workbench             ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+07-explorer-and-editor   ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+08-claude-panel          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+09-search                ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+10-integrated-terminal   ░░░░░░░░░░░░░░░░░░░░   0%   🔄 em andamento
+11-claude-settings       ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+12-audit-explained       ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+13-rules-management      ░░░░░░░░░░░░░░░░░░░░   0%   🔄 em andamento
+14-usage-and-cost        ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+15-devices               ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+16-logs-and-diagnostics  ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+17-distribution          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 ```
 
 ---
@@ -39,9 +50,20 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [02 — Aprovação pelo celular](02-mobile-approval/README.md) | 5/5 | 34/34 | 89/89 | 25/26 | ✅ |
 | [03 — Regras e trilha](03-rules-and-audit/README.md) | 5/5 | 23/23 | 92/92 | 22/22 | ✅ |
 | [04 — Histórico e retomada](04-transcript-and-resume/README.md) | 6/6 | 25/25 | 88/88 | 7/7 | ✅ |
-| [05 — Endurecimento e operação](05-hardening-operations/README.md) | 0/5 | 0/25 | 0/53 | 0/9 | 🔲 |
-| [06 — Distribuição](06-distribution/README.md) | 0/4 | 0/19 | 0/38 | 0/7 | 🔲 |
-| **Total** | **31/40** | **181/225** | **494/587** | **76/94** | 🔄 |
+| [05 — Endurecimento e operação](05-hardening-operations/README.md) | 2/5 | 11/23 | 29/52 | 6/9 | 🔄 |
+| [06 — Workbench](06-workbench/README.md) | 0/7 | 0/39 | 0/166 | 3/17 | 🔲 |
+| [07 — Explorer e editor](07-explorer-and-editor/README.md) | 0/9 | 0/61 | 0/360 | 0/20 | 🔲 |
+| [08 — Painel do Claude](08-claude-panel/README.md) | 0/7 | 0/58 | 0/272 | 0/23 | 🔲 |
+| [09 — Busca](09-search/README.md) | 0/4 | 0/24 | 0/162 | 0/8 | 🔲 |
+| [10 — Terminal integrado](10-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 2/13 | 🔄 |
+| [11 — Configuração do Claude](11-claude-settings/README.md) | 0/5 | 0/46 | 0/199 | 1/22 | 🔲 |
+| [12 — Auditoria explicada](12-audit-explained/README.md) | 0/5 | 0/38 | 0/151 | 0/14 | 🔲 |
+| [13 — Gestão de regras](13-rules-management/README.md) | 0/5 | 0/36 | 8/223 | 1/19 | 🔄 |
+| [14 — Uso e custo](14-usage-and-cost/README.md) | 0/5 | 0/33 | 0/123 | 0/15 | 🔲 |
+| [15 — Dispositivos](15-devices/README.md) | 0/4 | 0/28 | 0/118 | 0/12 | 🔲 |
+| [16 — Logs e diagnóstico](16-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 2/16 | 🔲 |
+| [17 — Distribuição](17-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/7 | 🔲 |
+| **Total** | **33/100** | **192/646** | **533/2651** | **94/273** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -162,6 +184,28 @@ vazio no `.env`, como o exemplo manda, deixava o CLI **sem login** e limpava a m
 no arquivo errado. Os dois estão corrigidos, com teste. O próximo é o
 [plano 05](05-hardening-operations/README.md).
 
+Em 2026-09-26, com o produto de pé pela primeira vez, **o usuário rejeitou a web como estava**: uma
+coluna de cartões, a sessão aberta numa pasta de rascunho em vez do projeto, e as telas de trilha e de
+regras sem detalhe, sem ajuda e sem explicar o que aconteceu. O pedido foi um **cliente do Claude no
+molde do VS Code**, com o foco em abrir, criar, operar e editar arquivos; cada pasta numa aba com o
+explorer, o editor e o chat lado a lado; e **uma tela para cada assunto**, completa e com ajuda. Daí
+nasceram os planos **06 a 16** — sem inteligência de linguagem, sem depuração e sem git, por decisão
+do usuário. Eles começam depois que o 05 fechar, e não dependem do 17
+([06 · D-02](06-workbench/decisions.md)).
+
+Planejá-los leu o código com atenção nova e achou **cinco defeitos no que já está entregue**, todos
+registrados como task. Os dois mais graves foram **corrigidos em 2026-09-26**, antes dos planos, a
+pedido do usuário — validados pelos portões 1–6 e pela cobertura do backend; os portões 8–11 e o
+`smoke-live` não rodaram, também por decisão dele:
+
+| Defeito | Onde | Quem corrige |
+|---|---|---|
+| o subprocesso do Claude herda o `process.env` inteiro do backend — um `Bash` com `env` mostra a senha do banco e a do admin do Keycloak | `adapter/outbound/claude/process-marker.ts` | **corrigido** — [10 · B-13](10-integrated-terminal/F1-pty.md) antecipada (🔄: falta o `smoke-live`) |
+| a regra por prefixo casa comando encadeado: `allow Bash(git status:*)` libera `git status && curl … \| sh` | `domain/permission/services/rule-pattern.ts` | **corrigido** — casamento da [13 · B-08](13-rules-management/F1-rules-backend.md) antecipado; junto, o classificador de risco passou a separar no `&` simples |
+| `POST /permission-rules` aceita `projectPath` fora da allowlist e de outro dono | `adapter/inbound/http/permission-rules` | [14 · F1](13-rules-management/F1-rules-backend.md) |
+| o upsert do repositório de dispositivos regrava `status`, e uma revogação concorrente pode ser desfeita | `DrizzleDeviceRepository.save()` | [15 · B-05](15-devices/F1-devices-backend.md) |
+| `turn.completed.costUsd` publica o acumulado da sessão, não o custo do turno | `sdk-message.mapper.ts` | [14 · B-07](14-usage-and-cost/F1-usage-backend.md) |
+
 O parágrafo abaixo descreve o ponto de partida, e continua valendo para o que ainda não foi feito.
 
 ---
@@ -176,8 +220,9 @@ O que **não** existe ainda: nenhuma chamada a `query()` do Agent SDK, nenhum fl
 nenhum push. Isso é escopo declarado, não omissão — ver o
 [escopo do bootstrap](00-bootstrap/README.md#escopo).
 
-Os planos 01 a 06 constroem o produto sobre esse trilho, nesta ordem, e cada um depende do
-anterior:
+Os planos 01 a 05 constroem o produto sobre esse trilho, nesta ordem, e cada um depende do
+anterior; os 06 a 16 são o cliente no molde do VS Code, e dizem de quais outros dependem; o 17
+empacota o que todos eles entregam, e por isso é o último:
 
 | Plano | Entrega a capacidade de… | Depende de |
 |---|---|---|
@@ -186,7 +231,18 @@ anterior:
 | [03 — Regras e trilha](03-rules-and-audit/README.md) | não repetir a mesma aprovação, e consultar o que foi executado | 01, 02 |
 | [04 — Histórico e retomada](04-transcript-and-resume/README.md) | continuar o que começou antes, inclusive no VSCode | 01 |
 | [05 — Endurecimento e operação](05-hardening-operations/README.md) | ficar ligado sem vazar recurso nem credencial | 01…04 |
-| [06 — Distribuição](06-distribution/README.md) | instalar e atualizar na máquina de quem usa | 05 |
+| [06 — Workbench](06-workbench/README.md) | abrir uma pasta da máquina numa aba de workbench, várias ao mesmo tempo, e chegar a cada tela pela navegação global | 05 |
+| [07 — Explorer e editor](07-explorer-and-editor/README.md) | navegar, criar, operar e editar arquivos sem perder trabalho quando o Claude escreve junto | 06 |
+| [08 — Painel do Claude](08-claude-panel/README.md) | conversar com o Claude ao lado do editor, com as sessões da pasta, diffs e o contexto escolhido por `@`, arrasto e `/` | 07 |
+| [09 — Busca](09-search/README.md) | achar e substituir em qualquer arquivo da pasta | 07 |
+| [10 — Terminal integrado](10-integrated-terminal/README.md) | um terminal na pasta aberta, desligado por padrão | 06 |
+| [11 — Configuração do Claude](11-claude-settings/README.md) | ver e mudar modelos, padrões, MCPs, skills e a configuração de projeto numa tela própria | 06, 07, 08 |
+| [12 — Auditoria explicada](12-audit-explained/README.md) | ler cada invocação inteira — pedido, decisão, desfecho — com ajuda | 06 |
+| [13 — Gestão de regras](13-rules-management/README.md) | criar, testar, simular, ajustar e revogar regras numa tela própria | 06 |
+| [14 — Uso e custo](14-usage-and-cost/README.md) | saber quanto se gasta, onde e com o quê, com orçamento | 06 |
+| [15 — Dispositivos](15-devices/README.md) | gerir os aparelhos que respondem permissão | 06 |
+| [16 — Logs e diagnóstico](16-logs-and-diagnostics/README.md) | ler os logs por `traceId` e ver a saúde da instalação | 06 |
+| [17 — Distribuição](17-distribution/README.md) | instalar e atualizar na máquina de quem usa | 05…16 |
 
 ---
 
@@ -195,13 +251,13 @@ anterior:
 Decisão em aberto não impede planejar; impede **começar a fase** que depende dela. Cada uma
 está registrada no risco do seu plano.
 
-| Decisão | Bloqueia | Onde |
-|---|---|---|
-| Qual provedor OIDC real, e quem administra | 05 · F2 | [05 · D-05](05-hardening-operations/decisions.md) |
-| Como o backend é alcançado de fora | 06 · F1 | [06 · D-04](06-distribution/decisions.md) |
-| Quais sistemas operacionais entram no escopo inicial | 06 · F0 | [06 · D-01](06-distribution/decisions.md) |
+**Nenhuma decisão trava plano hoje.** As cinco que travavam foram decididas pelo usuário em
+2026-09-26: o provedor OIDC (Keycloak próprio — 05 · D-05), a exposição e o certificado (da
+infraestrutura — 17 · D-04, D-05), os sistemas operacionais (os três, teste só em Linux — 17 · D-01),
+o workbench em React (06 · D-01) e o terminal com as travas (10 · D-01). O que trava os planos 06 a
+16 agora não é decisão, é ordem: eles esperam o 05 fechar ([06 · D-02](06-workbench/decisions.md)).
 
-A tabela acima é o recorte do que **trava** trabalho. A lista inteira, por fase e com o gap de
+Este é o recorte do que **trava** trabalho. A lista inteira, por fase e com o gap de
 cada uma, vive no `decisions.md` de cada plano — e o contador de decisões do painel sai de lá.
 
 O plano 01 saiu desta tabela em 2026-09-19: a [D-11](01-live-session/decisions.md#d-11--o-furo-que-invalidaria-o-produto)
@@ -249,6 +305,8 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-09-26 | **Decisões bloqueantes resolvidas pelo usuário** | Keycloak próprio (05 · D-05, emenda na ADR-010); exposição e certificado são da infraestrutura (17 · D-04, D-05); Linux, macOS e Windows, teste só em Linux (17 · D-01); workbench em React (06 · D-01, ADR-014); seletor só dentro das raízes (06 · D-03); terminal com as travas (10 · D-01, ADR-017); e os planos 06–16 esperam o 05 fechar (06 · D-02). A arquitetura ganhou a seção "Onde o produto roda, e como é alcançado" |
+| 2026-09-26 | **Planos 06 a 16 criados** | o cliente no molde do VS Code, a partir da recusa da web pelo usuário: workbench por aba de pasta, arquivos, painel do Claude, busca, terminal, e uma tela por assunto (configuração do Claude, trilha, regras, uso e custo, dispositivos, logs). Inteligência de linguagem e depuração chegaram a ser planejadas e saíram no mesmo dia, antes de publicadas — por isso a numeração foi refeita sem buraco; git fora. O planejamento achou cinco defeitos no que está entregue (ver "Onde o projeto está"). `pnpm plan new` corrigido: punha a linha do plano novo na tabela errada do progresso geral |
 | 2026-09-26 | **Plano 04 concluído — F5** | o ciclo pela porta do usuário: S-46…S-51 e S-53 no Playwright (e2e 45/45), S-48 também no `integration_test` do app, e S-52 no `smoke-live` contra o Claude real (`pnpm test:e2e:live` 2/2). O backend roteirizado grava o que reproduz e escreve os `Write` no `cwd`. Corrigidos no caminho: o primeiro `session.attach` dos dois clientes passou a mandar `resumeFromSeq: 0` (S-88), e `CLAUDE_CONFIG_DIR` vazio deixou de chegar ao CLI. `pnpm verify:full` 0; `pnpm test:e2e:mobile` 9/9 |
 | 2026-09-26 | **Plano 04, F3 e F4 concluídas; escopo movido para o plano 05** | F3: menu vindo de `supportedCommands()` por `GET /sessions/:id/commands`, filtro por metadado no backend, cache por versão do CLI e workspace, comando inexistente recusado com `INVALID_INPUT`, `/init` pelo fluxo normal. Fechou também a dívida S-89/S-90 do plano 01. F4: desfazer nosso — prévia por `GET /sessions/:id/checkpoints`, `session.rewindFiles`/`session.rewound` nas três pontas, alteração manual preservada, sem link, atômico, auditado antes do disco, alcance pela conversa (migration `0013`) e purga em job. `pnpm verify:full` 0. Movidos para o [plano 05](05-hardening-operations/progress.md#dívida-herdada-do-plano-04): prompt durante um desfazer, e o prazo no cliente para uma retomada sem resposta |
 | 2026-09-25 | **Plano 04, F1 e F2 concluídas** | histórico nas duas pontas e a recarga do `gap`; retomada in-place (nossa), por fork (externa) e por `attach` (viva), auditada antes do subprocesso (migration `0012`). `pnpm verify:full` 0 |
@@ -267,9 +325,9 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 | 2026-09-19 | **Plano 01, F4 concluída** | o produto pede permissão: `canUseTool` bloqueia o loop, o prazo nega em silêncio, a decisão é auditada e o pedido pendente sobrevive a uma reconexão sem `reinitialize()`. `pnpm verify` saiu 0 |
 | 2026-09-19 | **Plano 01, F1 a F3 concluídas** | o produto fala com o Claude: workspace com allowlist em arquivo, sessão viva sobre o Agent SDK, e trilha de auditoria append-only garantida por trigger. `pnpm verify:full` saiu 0 |
 | 2026-09-14 | **Plano 00 concluído** | `pnpm verify:full` e `pnpm test:e2e:mobile` saíram 0; onze portões verdes |
-| 2026-09-15 | Planos 01…06 criados | o roteiro do produto, do Agent SDK à distribuição |
+| 2026-09-15 | Planos 01…05 e 17 criados | o roteiro do produto, do Agent SDK à distribuição |
 | 2026-09-15 | `decisions.md` entrou no formato | decisão em aberto e gap passaram a ser rastreados por plano, com contador |
-| 2026-09-15 | **Plano 02 sem decisão em aberto** | 16 decisões fechadas, incluindo o provedor de push (FCM direto) e o escopo em Android; só D-17 segue travada pelo plano 06 |
+| 2026-09-15 | **Plano 02 sem decisão em aberto** | 16 decisões fechadas, incluindo o provedor de push (FCM direto) e o escopo em Android; só D-17 segue travada pelo plano 17 |
 
 ---
 

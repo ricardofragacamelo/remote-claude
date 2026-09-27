@@ -1,4 +1,6 @@
+import type { PermissionDecision } from '../entities/permission-request.entity';
 import { PermissionRulePatternInvalidError } from '../errors/permission-rule-pattern-invalid.error';
+import { hasShellOperator, SHELL_TOOLS, shellSegments } from './shell-syntax';
 
 /** What a pattern covers: the whole tool, one exact input, or everything under a prefix. */
 export type RulePatternKind = 'tool' | 'exact' | 'prefix';
@@ -92,7 +94,7 @@ export function matchedInput(input: Readonly<Record<string, unknown>>): string |
 }
 
 /**
- * Whether a pattern covers an invocation.
+ * Whether a pattern covers an invocation, for a rule that allows or refuses.
  *
  * A pure rule and no I/O, which is what lets it be tested by boundary — and it is also where the
  * UI gets the sentence it shows about a rule's reach.
@@ -100,11 +102,24 @@ export function matchedInput(input: Readonly<Record<string, unknown>>): string |
  * **The prefix respects token boundaries.** `Bash(git status:*)` covers `git status --short` and
  * does **not** cover `git statusx`. Written with a bare `startsWith` it would cover both, and that
  * is the hole nobody notices until something is named just so.
+ *
+ * **On a shell line, the decision changes the reading — on purpose, and in the safe direction
+ * both times** ([13 · D-07](../../../../../docs/plans/13-rules-management/decisions.md)):
+ *
+ * - an `allow` **prefix** covers only a line that is one command. `Bash(git status:*)` does not
+ *   answer `git status && curl … | sh`, nor anything with a substitution or a redirection — even
+ *   inside quotes, because there is no parser here, and without one the only safe mistake is
+ *   asking once more. An `allow` **exact** still covers the identical line: that string is what
+ *   somebody approved;
+ * - a `deny` covers the line if it covers **any command inside it**, so `Bash(rm:*)` refuses
+ *   `ls && rm -rf build` and `echo $(rm -rf x)`. It is a speed bump, not a sandbox: an alias, a
+ *   script or `xargs` still gets past it, and the screen says so.
  */
 export function ruleMatches(
   pattern: RulePattern,
   toolName: string,
   input: Readonly<Record<string, unknown>>,
+  decision: PermissionDecision,
 ): boolean {
   if (pattern.toolName !== toolName) {
     return false;
@@ -119,11 +134,23 @@ export function ruleMatches(
     return false;
   }
 
-  if (pattern.kind === 'exact') {
-    return value === pattern.content;
+  const covers = (command: string): boolean =>
+    pattern.kind === 'exact' ? command === pattern.content : coversPrefix(command, pattern.content);
+
+  if (!SHELL_TOOLS.has(toolName)) {
+    return covers(value);
   }
 
-  return value === pattern.content || value.startsWith(`${pattern.content} `);
+  if (decision === 'deny') {
+    return covers(value) || shellSegments(value).some(covers);
+  }
+
+  return pattern.kind === 'exact' ? covers(value) : !hasShellOperator(value) && covers(value);
+}
+
+/** `value` is the prefix, or continues it at a token boundary. */
+function coversPrefix(value: string, prefix: string): boolean {
+  return value === prefix || value.startsWith(`${prefix} `);
 }
 
 /**

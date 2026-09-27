@@ -13,7 +13,7 @@ import { SessionLimitReachedError, SessionNotFoundError } from '@domain/session'
 import type { Session } from '@domain/session';
 import { ClaudeSessionId, InvalidClaudeSessionIdError } from '@domain/transcript';
 import { WorkspaceNotAllowedError, WorkspacePath } from '@domain/workspace';
-import { RecordingHandle } from '../../../support/builders/session.builder';
+import { RecordingHandle, aClock } from '../../../support/builders/session.builder';
 import { RecordingBroadcaster } from '../../../support/fakes/recording-broadcaster';
 import { FixedClock } from '../../../support/fakes/fixed-clock';
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
@@ -68,9 +68,12 @@ describe('StartSessionUseCase', () => {
     },
   };
 
+  let clock: FixedClock;
+
   beforeEach(() => {
+    clock = new FixedClock(now);
     claude = new StubClaude();
-    registry = new SessionRegistry(2);
+    registry = new SessionRegistry(2, aClock());
     broadcaster = new RecordingBroadcaster();
     resolved = [];
     ids = new SequentialIds();
@@ -85,7 +88,7 @@ describe('StartSessionUseCase', () => {
       registry,
       claude,
       broadcaster,
-      new FixedClock(now),
+      clock,
       ids,
       defaults,
       { ids: new SequentialUuids(), origins },
@@ -419,6 +422,15 @@ describe('StartSessionUseCase', () => {
   });
 
   describe('the stream', () => {
+    it('counts every event of Claude as activity, for the idle clock — plan 05, D-02', async () => {
+      const session = await start();
+      clock.advance(90_000);
+
+      claude.emit({ type: 'message.delta', payload: { messageId: 'm1', delta: 'hi' } });
+
+      expect(session.lastActivityAt).toEqual(clock.now());
+    });
+
     it('publishes every event to whoever is watching', async () => {
       await start();
       claude.emit({ type: 'message.delta', payload: { messageId: 'm1', delta: 'hi' } });

@@ -6,6 +6,7 @@ import {
   InterruptSessionUseCase,
   ListSessionCommandsUseCase,
   PromptSessionUseCase,
+  SessionEnder,
   SessionRegistry,
   SetSessionModelUseCase,
   SetSessionPermissionModeUseCase,
@@ -15,11 +16,14 @@ import {
   ClaudeUnavailableError,
   InvalidSessionIdError,
   SessionForbiddenError,
+  SessionLockedError,
   SessionNotFoundError,
   UnknownCommandError,
 } from '@domain/session';
 import type { Session } from '@domain/session';
+import { FixedClock } from '../../../support/fakes/fixed-clock';
 import {
+  aClock,
   aCommand,
   aRegistry,
   aSession,
@@ -36,10 +40,12 @@ describe('the commands that drive a running session', () => {
   let handle: RecordingHandle;
   let session: Session;
   let broadcaster: RecordingBroadcaster;
+  let clock: FixedClock;
 
   beforeEach(() => {
     session = aSession();
-    const built = aRegistry([session]);
+    clock = aClock();
+    const built = aRegistry([session], 10, clock);
     registry = built.registry;
     handle = built.handles.get(SESSION_ID) as RecordingHandle;
     broadcaster = new RecordingBroadcaster();
@@ -62,6 +68,55 @@ describe('the commands that drive a running session', () => {
       await sent(prompter(), 'hello');
 
       expect(handle.prompts).toEqual(['hello']);
+    });
+
+    describe('while an undo is putting files back — plan 05, B-27', () => {
+      beforeEach(() => {
+        session.moveTo('idle');
+      });
+
+      it('refuses the prompt as locked, and sends nothing — S-54', async () => {
+        session.beginRewind();
+
+        await expect(sent(prompter(), 'carry on')).rejects.toThrow(SessionLockedError);
+        expect(handle.prompts).toEqual([]);
+      });
+
+      it('says the lock is the undo, not a turn — S-54', async () => {
+        session.beginRewind();
+
+        await expect(prompter().execute(SESSION_ID, 'carry on', owner)).rejects.toMatchObject({
+          params: { reason: 'rewindRunning' },
+        });
+      });
+
+      it('refuses a slash command whose menu was being read when the undo began — S-55', async () => {
+        // The menu is read from the CLI, and the undo can take the lock in that gap. Checked only
+        // before the read, the command would go through onto a disk halfway back.
+        handle.commands = [aCommand('init')];
+        let release = (): void => undefined;
+        handle.commandsHeld = new Promise((resolve) => {
+          release = resolve;
+        });
+
+        const prompt = prompter().execute(SESSION_ID, '/init', owner);
+        while (handle.commandCalls === 0) {
+          await Promise.resolve();
+        }
+        session.beginRewind();
+        release();
+
+        await expect(prompt).rejects.toThrow(SessionLockedError);
+      });
+
+      it('takes the prompt again once the undo is over — S-54', async () => {
+        session.beginRewind();
+        session.endRewind();
+
+        await sent(prompter(), 'carry on');
+
+        expect(handle.prompts).toEqual(['carry on']);
+      });
     });
 
     it('queues a second prompt rather than refusing it — S-22', async () => {
@@ -277,9 +332,32 @@ describe('the commands that drive a running session', () => {
     });
   });
 
+  describe('activity — plan 05, D-02', () => {
+    it('counts any command of the owner as activity, resetting the idle clock — S-04', async () => {
+      clock.advance(60_000);
+
+      await new InterruptSessionUseCase(registry).execute(SESSION_ID, owner);
+
+      expect(session.lastActivityAt).toEqual(clock.now());
+    });
+
+    it("does not count somebody else's refused command — S-04", async () => {
+      const before = session.lastActivityAt;
+      clock.advance(60_000);
+
+      await expect(
+        new InterruptSessionUseCase(registry).execute(SESSION_ID, stranger),
+      ).rejects.toThrow(SessionForbiddenError);
+      expect(session.lastActivityAt).toEqual(before);
+    });
+  });
+
   describe('close', () => {
     it('ends the session, forgets it and announces it', async () => {
-      await new CloseSessionUseCase(registry, broadcaster).execute(SESSION_ID, owner);
+      await new CloseSessionUseCase(registry, new SessionEnder(registry, broadcaster)).execute(
+        SESSION_ID,
+        owner,
+      );
 
       expect(handle.closes).toBe(1);
       expect(session.closeReason).toBe('closedByUser');
@@ -297,7 +375,10 @@ describe('the commands that drive a running session', () => {
       handle.failWith = new Error('already gone');
 
       await expect(
-        new CloseSessionUseCase(registry, broadcaster).execute(SESSION_ID, owner),
+        new CloseSessionUseCase(registry, new SessionEnder(registry, broadcaster)).execute(
+          SESSION_ID,
+          owner,
+        ),
       ).rejects.toThrow('already gone');
 
       expect(registry.find(session.id)).toBeNull();
@@ -308,7 +389,10 @@ describe('the commands that drive a running session', () => {
       // Only the owner may end a session. `403` is what that is: the credential is good, and the
       // caller still may not ([D-17](../../../../docs/plans/01-live-session/decisions.md)).
       await expect(
-        new CloseSessionUseCase(registry, broadcaster).execute(SESSION_ID, stranger),
+        new CloseSessionUseCase(registry, new SessionEnder(registry, broadcaster)).execute(
+          SESSION_ID,
+          stranger,
+        ),
       ).rejects.toThrow(SessionForbiddenError);
       expect(handle.closes).toBe(0);
     });

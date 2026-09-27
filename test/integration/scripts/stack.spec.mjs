@@ -138,16 +138,36 @@ describe('start-local.mjs, against real docker', () => {
     expect(output).toMatch(/web\s+(watch|— not created yet)/);
   });
 
-  it('leaves no container running after Ctrl+C, and keeps the volumes', async () => {
+  it('leaves no container running after Ctrl+C — pressed again and again — and keeps the volumes', async () => {
     const before = volumes();
     expect(before.length).toBeGreaterThan(0);
 
-    dev.kill('SIGINT');
+    // What a terminal does: Ctrl+C goes to the whole foreground **group**, not to one process,
+    // and an impatient hand presses it again while the teardown runs. A `compose stop` inside
+    // that group died of the second one and left the containers up.
+    const pgid = -(/** @type {number} */ (dev.pid));
+    process.kill(pgid, 'SIGINT');
+    await waitUntil({
+      target: 'start-local to start stopping',
+      timeoutMs: 30_000,
+      intervalMs: 100,
+      probe: () => Promise.resolve(output.includes('stopping')),
+    });
     await waitUntil({
       target: 'start-local to exit',
       timeoutMs: 120_000,
-      intervalMs: 500,
-      probe: () => Promise.resolve(dev.exitCode !== null || dev.signalCode !== null),
+      intervalMs: 300,
+      probe: () => {
+        const exited = dev.exitCode !== null || dev.signalCode !== null;
+        if (!exited) {
+          try {
+            process.kill(pgid, 'SIGINT');
+          } catch {
+            // The group ended between the check and the signal: the exit is what is awaited.
+          }
+        }
+        return Promise.resolve(exited);
+      },
     });
 
     expect(output).toContain('stopped');

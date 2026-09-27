@@ -4,7 +4,7 @@ import type { Envelope } from '@remote-claude/contracts';
 import { InputValidationError } from '@shared/errors/input-validation.error';
 import { PayloadTooLargeError } from '@shared/errors/payload-too-large.error';
 import { UnsupportedProtocolVersionError } from '@shared/errors/unsupported-protocol-version.error';
-import { SUPPORTED_VERSIONS, WS_LIMITS } from './limits';
+import { SUPPORTED_VERSIONS } from './limits';
 
 /**
  * Bytes in, envelope out.
@@ -13,7 +13,7 @@ import { SUPPORTED_VERSIONS, WS_LIMITS } from './limits';
  * `packages/contracts/` — the same source the Dart client is generated from. Validating against a
  * hand-written shape here is how the three ends drift apart.
  */
-export function decodeFrame(raw: string, maxBytes: number = WS_LIMITS.maxFrameBytes): Envelope {
+export function decodeFrame(raw: string, maxBytes: number): Envelope {
   const bytes = Buffer.byteLength(raw, 'utf8');
   if (bytes > maxBytes) {
     throw new PayloadTooLargeError(bytes, maxBytes);

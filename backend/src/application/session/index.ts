@@ -35,6 +35,9 @@ export type { RestoredFile, UndoDisk, UndoJournal, UndoReach } from './ports/und
 export { UNDO_DISK, UNDO_JOURNAL } from './ports/undo.ports';
 export type { JournalScope } from './ports/session-file-journal.port';
 export { SessionRegistry } from './session-registry';
+export { SessionEnder } from './session-ender';
+export { ReapIdleSessionsUseCase } from './reap-idle-sessions.use-case';
+export { ShutdownSessionsUseCase } from './shutdown-sessions.use-case';
 export { observedStatus } from './session-status';
 export type { LiveSession } from './session-registry';
 export type {

@@ -188,6 +188,14 @@ bem suportado nos SDKs de web e mobile. Nada nele é usado que não seja OIDC pa
   não usamos role vinda do provedor, para não acoplar o modelo de acesso ao fornecedor.
 - Testes usam provedor OIDC **fake** em container. Nunca o Auth0 real.
 
+**Emenda · 2026-09-26 — o alvo passa a ser um Keycloak próprio.** Decisão do usuário
+([05 · D-05](../../plans/05-hardening-operations/decisions.md)): o provedor real é um **Keycloak
+hospedado junto da instalação e administrado por quem a opera**; o Auth0 deixa de ser o alvo. Nada no
+código muda — é a troca de `OIDC_ISSUER` que o "agnóstico" acima promete —, e o teste automatizado
+continua no Keycloak local do desenvolvimento, nunca na instância real. O que muda é de quem é a
+operação: MFA, política de senha, rotação de chave e recuperação de acesso passam a ser
+responsabilidade de quem administra o Keycloak, não de um fornecedor.
+
 Detalhes: [08-authentication.md](08-authentication.md).
 
 ---
@@ -252,6 +260,23 @@ arquivo** nem comando auto-aprovado.
 **Consequência:** o hook registra e deixa passar; não decide. Num sistema com acesso ao
 filesystem do usuário, auditoria parcial é pior que ausência de auditoria, porque dá falsa
 confiança.
+
+### Emenda · 2026-09-26 — skills de usuário e de sistema entram sem ampliar `settingSources`
+
+Decisão do usuário ([11 · D-20](../../plans/11-claude-settings/decisions.md)): as sessões carregam
+skills do **projeto**, do **usuário** e do **sistema**. `settingSources` **continua** `['project']`:
+a fonte `user` traria junto as regras `allow` e os hooks de `~/.claude/settings.json`, que furam o
+`canUseTool` e a trilha — o mesmo furo medido na D-11 do plano 01.
+
+O caminho é a opção `plugins: [{ type: 'local', path, skipMcpDiscovery: true }]` do SDK: o backend
+monta, por usuário, um plugin local sintético que expõe **só** as skills de `~/.claude/skills` e as
+de sistema (as dos plugins instalados e as gerenciadas da instalação) — sem hooks, sem MCP. As skills
+do projeto (`.claude/skills`) já chegam pela fonte `project`. Quais ficam ligadas é a opção `skills`
+do `query()`.
+
+Fica em aberto, e bloqueia ligar as skills de usuário e de sistema: se o shell embutido de uma skill
+(os blocos `!`) passa pelo `canUseTool` e pelo `PreToolUse`. Se não passar, ele é desligado por
+`managedSettings` para essas origens ([11 · D-21](../../plans/11-claude-settings/decisions.md)).
 
 ---
 
@@ -322,3 +347,74 @@ passou de limitação a **política**.
 
 Ver [descoberta §9.5](../../discovery/01-descoberta-claude-agent-sdk.md#95--rewindfiles-sobrescreve-alteração-manual-o-dryrun-não-avisa-e-não-há-filtro-por-arquivo)
 e [D-06 do plano 04](../../plans/04-transcript-and-resume/decisions.md#d-06--desfazer-sem-destruir).
+
+---
+
+> **Numeração.** As ADRs 014 a 019 foram reservadas em 2026-09-26 pelos planos que as abrem, na
+> ordem dos planos: 014 no [06](../../plans/06-workbench/README.md), 015 no
+> [07](../../plans/07-explorer-and-editor/README.md), 016 no [09](../../plans/09-search/README.md),
+> 017 no [10](../../plans/10-integrated-terminal/README.md), 018 no
+> [11](../../plans/11-claude-settings/README.md) e 019 no [12](../../plans/12-audit-explained/README.md).
+> Por isso a 014 e a 017, cujas decisões já foram tomadas, aparecem aqui antes das outras.
+
+## ADR-014 — O web vira um workbench, construído em React
+
+**Status:** aceita · 2026-09-26 · decisão do usuário ([06 · D-01](../../plans/06-workbench/decisions.md))
+
+A primeira versão rodando foi recusada pelo usuário como "muito pobre": uma coluna de cartões, a
+sessão aberta numa pasta de rascunho, e telas de trilha e regras sem detalhe nem ajuda. O pedido foi
+um **cliente do Claude no molde do VS Code**.
+
+**A decisão:**
+
+- **construir o workbench em React, sobre a stack fechada — e não embutir openvscode-server ou
+  code-server.** O argumento que decide é de segurança, não de esforço: o VS Code embutido traz
+  terminal e extensões que executam na máquina **fora** do `canUseTool` e do hook `PreToolUse`, e
+  furariam a trilha e a permissão ([ADR-011](#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse));
+- **cada pasta aberta é uma aba com um workbench completo** — explorer, editor e o chat do Claude
+  lado a lado, na mesma aba —, várias abertas ao mesmo tempo. Não é multi-root workspace;
+- **uma tela por assunto**: auditoria, regras, dispositivos, uso e custo, logs e diagnóstico,
+  configuração do Claude e configurações do app têm tela e rota próprias, e nunca dividem uma;
+- **a paridade com o VS Code é a de arquivos** — abrir, criar, funções de arquivo e editar.
+  Inteligência de linguagem, depuração e controle de versão ficam fora, por decisão do usuário;
+- o seletor de pasta navega **só dentro das raízes da allowlist**
+  ([06 · D-03](../../plans/06-workbench/decisions.md)) — a allowlist continua sendo a primeira linha
+  de defesa, e "a máquina toda" é declarar o `$HOME` como raiz no arquivo.
+
+**Consequências:** a coluna única deixa de ser o layout do produto a partir de `md`; abaixo disso,
+uma view por vez dentro da mesma aba. O detalhe de layout, estado por aba e rotas é do
+[plano 06](../../plans/06-workbench/README.md), que completa esta ADR com as decisões de
+apresentação (D-08, D-10) e atualiza `web/02`, `web/03` e `web/04`.
+
+## ADR-017 — Existe um terminal, fora do modelo de permissão, com travas
+
+**Status:** aceita · 2026-09-26 · decisão do usuário ([10 · D-01](../../plans/10-integrated-terminal/decisions.md)),
+que aceitou a exceção abaixo por escrito
+
+**O que esta decisão aceita, sem eufemismo:** o terminal está **fora** do `canUseTool`, da allowlist
+e da trilha por comando. O shell faz `cd` para qualquer lugar e lê o que a conta do sistema lê —
+`~/.ssh`, `~/.claude/.credentials.json`, o `.env` do backend. **Ligar o terminal para um `sub` é
+entregar a essa pessoa a conta do sistema que roda o backend**, inclusive as raízes que a allowlist
+nunca liberou para ela.
+
+**O que não piora:** quem tem um access token válido do web já executa comando arbitrário — abre uma
+sessão, pede um `Bash` e aprova o próprio pedido. O modelo de permissão protege contra o **Claude**
+fazer o que ninguém pediu, não contra o humano autenticado. O que o terminal tira é o **rastro por
+comando** e a propriedade "um humano leu isto antes".
+
+**As travas**, para o terminal não ser o caminho mais fácil de quem não deveria chegar nele:
+
+| Trava | Protege contra |
+|---|---|
+| desligado por padrão; ligado **por usuário** no arquivo de configuração | ninguém ganhar um shell por omissão |
+| reautenticação recente (step-up) para abrir e para reanexar | token velho ou roubado |
+| só pelo navegador, nunca pelo app | quem achou um celular desbloqueado |
+| ambiente do shell **sem os segredos do backend** | leitura de variável de ambiente |
+| trilha de abrir, reanexar e fechar — **nunca as teclas** | senha digitada indo para a trilha |
+| limites, TTL de ociosidade e nenhum shell sem dono | processo esquecido rodando para sempre |
+
+Cada trava tem o seu limite dito no [plano 10](../../plans/10-integrated-terminal/README.md) — a
+"só do web" não barra quem tem as credenciais do usuário. Job desacoplado pelo próprio usuário
+(`nohup`, `setsid`) sobrevive ao fechamento, como em qualquer terminal; um PTY não sobrevive ao
+restart do backend.
+

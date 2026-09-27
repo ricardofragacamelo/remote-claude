@@ -68,6 +68,9 @@ abstract interface class SessionSubscriber {
 /// The close code of a refused credential or device (docs/architecture/shared/05-websocket-protocol.md).
 const int closeAuthenticationFailed = 4401;
 
+/// The close code of a client that kept sending after being told to wait.
+const int closeRateLimited = 4429;
+
 /// Backoff bounds. Never a tight loop, and never longer than half a minute.
 const Duration backoffMin = Duration(seconds: 1);
 
@@ -94,10 +97,12 @@ class WsClient {
     Scheduler? schedule,
     Random? random,
     TraceIds? traceIds,
+    DateTime Function()? now,
   }) : _connect = connect ?? ChannelFrameSocket.connect,
        _schedule = schedule ?? _defaultSchedule,
        _random = random ?? Random(),
-       _traceIds = traceIds ?? TraceIds();
+       _traceIds = traceIds ?? TraceIds(),
+       _now = now ?? DateTime.now;
 
   final Uri _url;
   final CredentialSource _credentials;
@@ -108,6 +113,10 @@ class WsClient {
   final Scheduler _schedule;
   final Random _random;
   final TraceIds _traceIds;
+  final DateTime Function() _now;
+
+  /// Until when the server asked this client to hold off, from its last `RATE_LIMITED`.
+  DateTime? _holdUntil;
 
   final Map<String, Set<SessionSubscriber>> _subscribers = <String, Set<SessionSubscriber>>{};
   final Set<void Function(Envelope)> _observers = <void Function(Envelope)>{};
@@ -411,9 +420,29 @@ class WsClient {
     // An `event` is a fact of the conversation; a `request` is the server asking a question and
     // holding the agent loop open until somebody answers — `permission.requested` is one, and a
     // client that dropped it would never show the card. An `error` answers a command.
+    if (frame.kind == 'error') {
+      _remember(frame);
+    }
+
     if (frame.kind == 'event' || frame.kind == 'request' || frame.kind == 'error') {
       _deliver(frame);
     }
+  }
+
+  /// Keeps the `retryAfterSeconds` of a `RATE_LIMITED`, which is the whole point of that refusal:
+  /// a socket closed with `4429` afterwards comes back no sooner than the server asked (B-05).
+  void _remember(Envelope frame) {
+    final Map<String, Object?>? payload = frame.payload;
+    final Object? params = payload?['params'];
+    final Object? seconds = params is Map ? params['retryAfterSeconds'] : null;
+
+    if (payload?['code'] != 'RATE_LIMITED' || seconds is! num || seconds <= 0) {
+      return;
+    }
+
+    final DateTime until = _now().add(Duration(milliseconds: (seconds * 1000).round()));
+    final DateTime? current = _holdUntil;
+    _holdUntil = current == null || until.isAfter(current) ? until : current;
   }
 
   void _ready(Envelope frame) {
@@ -513,7 +542,7 @@ class WsClient {
     }
 
     _attempt += 1;
-    final Duration delay = backoffFor(_attempt);
+    final Duration delay = _delayAfter(code);
     _move(ConnectionStatus.reconnecting);
 
     _logger.warn(
@@ -530,6 +559,20 @@ class WsClient {
       _cancelRetry = null;
       connect();
     }, delay);
+  }
+
+  /// The backoff — and, after a `4429`, never less than what the server asked for. Coming straight
+  /// back after being closed for hammering is hammering.
+  Duration _delayAfter(int code) {
+    final Duration backoff = backoffFor(_attempt);
+    final DateTime? holdUntil = _holdUntil;
+
+    if (code != closeRateLimited) {
+      return backoff;
+    }
+
+    final Duration held = holdUntil == null ? Duration.zero : holdUntil.difference(_now());
+    return <Duration>[backoff, held, backoffMin].reduce((Duration a, Duration b) => a > b ? a : b);
   }
 
   Future<void> _teardown(int code, String reason) async {

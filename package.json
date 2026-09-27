@@ -11,7 +11,7 @@
   "scripts": {
     "prepare": "husky",
     "doctor": "node scripts/doctor.mjs",
-    "dev": "node scripts/start-local.mjs",
+    "dev": "exec node scripts/start-local.mjs",
     "clean": "node scripts/clean.mjs",
     "db": "node scripts/db.mjs",
     "docs:check": "node scripts/docs-check.mjs",

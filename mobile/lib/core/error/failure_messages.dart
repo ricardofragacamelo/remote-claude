@@ -54,6 +54,8 @@ String translateFailure(AppLocalizations l10n, Failure failure) {
       return l10n.sessionErrorClaudeUnavailable;
     case 'session.error.claudeTimeout':
       return l10n.sessionErrorClaudeTimeout;
+    case 'session.error.resumeTimeout':
+      return l10n.sessionErrorResumeTimeout;
     case 'session.error.unknownCommand':
       return l10n.sessionErrorUnknownCommand(failure.params['command'] ?? '');
     case 'session.error.locked':

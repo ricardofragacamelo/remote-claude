@@ -25,6 +25,10 @@ import { spawn, spawnSync } from 'node:child_process';
  * @property {string} [cwd]
  * @property {number} [timeoutMs]
  * @property {NodeJS.ProcessEnv} [env]
+ * @property {boolean} [ownProcessGroup] runs the command in a process group of its own, out of
+ *   reach of the Ctrl+C typed at this terminal. For a teardown: the terminal delivers Ctrl+C to
+ *   its whole foreground group, so a second Ctrl+C while `compose stop` runs would interrupt the
+ *   very command that is stopping the containers, and leave them up
  */
 
 /**
@@ -61,6 +65,8 @@ function invoke(command, args, options, mode) {
       : mode.attached === 'stderr'
         ? { stdio: ['inherit', 'pipe', 'inherit'], encoding: 'utf8' }
         : { encoding: 'utf8' }),
+    // Honoured by spawnSync although only `spawn` documents it.
+    ...(options.ownProcessGroup === true ? { detached: true } : {}),
     ...spawnLocation(options),
   };
 

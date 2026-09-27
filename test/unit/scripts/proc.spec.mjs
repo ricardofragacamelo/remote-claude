@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   TERMINATION_SIGNALS,
   cleanupOnce,
+  groupAlive,
   isFinished,
   kill,
   onTermination,
@@ -109,6 +110,100 @@ describe('kill', () => {
     // The grandchild shares the group, so it received the same signal. Nothing is left holding a
     // port — the failure this whole module exists to prevent.
     expect(proc.signalCode).not.toBeNull();
+  });
+});
+
+/**
+ * Whether a pid is still alive, without signalling it.
+ *
+ * @param {number} pid
+ * @returns {boolean}
+ */
+function alive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A leader that dies on SIGTERM at once, over a grandchild that does not — `pnpm` over the dev
+ * server, which is the tree `pnpm dev` really starts.
+ *
+ * @param {string} onTerm what the grandchild does on SIGTERM
+ * @returns {Promise<{ proc: import('node:child_process').ChildProcess, grandchild: number }>}
+ */
+async function leaderOver(onTerm) {
+  const grandchildSource = [
+    `process.on("SIGTERM", () => { ${onTerm} });`,
+    'process.stdout.write(String(process.pid));',
+    'setInterval(() => {}, 1000);',
+  ].join('');
+  const proc = startProc(
+    process.execPath,
+    [
+      '-e',
+      [
+        'const { spawn } = require("node:child_process");',
+        `const g = spawn(process.execPath, ["-e", ${JSON.stringify(grandchildSource)}],`,
+        '  { stdio: ["ignore", "pipe", "ignore"] });',
+        'g.stdout.once("data", (pid) => process.stdout.write(String(pid)));',
+        'setInterval(() => {}, 1000);',
+      ].join(''),
+    ],
+    { stdio: ['ignore', 'pipe', 'inherit'] },
+  );
+  spawned.push(proc);
+
+  const grandchild = await new Promise((resolve) => {
+    proc.stdout?.once('data', (pid) => {
+      resolve(Number(String(pid)));
+    });
+  });
+
+  return { proc, grandchild };
+}
+
+describe('kill — the rest of the group', () => {
+  it('does not stop at the leader: a grandchild that ignores SIGTERM is killed too', async () => {
+    // The orphan `pnpm dev` used to leave behind: pnpm exits on SIGTERM, the server under it
+    // does not, and a teardown that waits for the leader alone returns with the port still held.
+    const { proc, grandchild } = await leaderOver('');
+
+    await kill(proc, { graceMs: 300 });
+
+    expect(proc.signalCode).toBe('SIGTERM');
+    expect(alive(grandchild)).toBe(false);
+  });
+
+  it('waits for a grandchild that is still shutting down, instead of killing it', async () => {
+    const { proc, grandchild } = await leaderOver('setTimeout(() => process.exit(0), 300);');
+
+    await kill(proc, { graceMs: 5_000 });
+
+    expect(alive(grandchild)).toBe(false);
+  });
+});
+
+describe('groupAlive', () => {
+  it('sees a group that is running, and no longer sees it once it is killed', async () => {
+    const proc = await child('process.stdout.write("up"); setInterval(() => {}, 1000);');
+    const pid = /** @type {number} */ (proc.pid);
+
+    expect(groupAlive(pid)).toBe(true);
+    await kill(proc, { graceMs: 300 });
+    expect(groupAlive(pid)).toBe(false);
+  });
+
+  it('answers false for a process that leads no group of its own', () => {
+    const proc = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+      stdio: 'ignore',
+    });
+    spawned.push(proc);
+
+    expect(groupAlive(/** @type {number} */ (proc.pid))).toBe(false);
   });
 });
 

@@ -27,6 +27,8 @@ import { withinDeadline } from './deadline';
 import { pathsWrittenBy } from './file-tools';
 import { SessionInputQueue } from './input-queue';
 import type { QueryFactory } from './query.factory';
+import { claudeEnvironment } from './claude-environment';
+import { markedEnvironment } from './process-marker';
 import { buildSdkOptions } from './sdk-options.factory';
 import type { SessionLimits } from './sdk-options.factory';
 import { SdkMessageMapper } from './sdk-message.mapper';
@@ -153,6 +155,8 @@ export class SessionRunner implements ClaudeSessionHandle {
       },
       limits: this.deps.limits,
       abortController: this.abort,
+      // The machine's environment without the backend's configuration, and the mark on top.
+      environment: markedEnvironment(claudeEnvironment(process.env), process.pid),
       onStderr: (data) => {
         this.onStderr(sessionId, data);
       },

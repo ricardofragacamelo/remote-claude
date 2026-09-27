@@ -54,6 +54,7 @@
       "limitReached": "This machine is already running {{limit}} sessions, which is as many as it allows. End one and try again.",
       "unknownCommand": "This installation has no /{{command}} command. Check the list of commands for the ones it offers.",
       "claudeTimeout": "Claude took too long to answer. Try again.",
+      "resumeTimeout": "The backend did not answer the resume. Check the connection and try again.",
       "locked": "A turn is running, or another undo of this session is in progress. Wait for it to finish and try again.",
       "rewindTargetUnknown": "That is not a point this session can go back to. Reload the list and choose again.",
       "rewindIncomplete": "The undo stopped short: {{failed}} file(s) could not be put back, and each of them was left exactly as it was."
@@ -91,7 +92,8 @@
       "completed": "it finished",
       "failed": "Claude stopped responding",
       "auditUnavailable": "the audit trail could not be written",
-      "shutdown": "the backend shut down"
+      "shutdown": "the backend shut down",
+      "idleTimeout": "it sat idle too long — resume it from the history"
     },
     "starter": {
       "title": "Start a session",

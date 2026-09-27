@@ -137,6 +137,7 @@
   "sessionClosedAuditUnavailable": "Encerrada porque a trilha de auditoria não pôde ser gravada.",
 
   "sessionClosedShutdown": "Encerrada porque o backend parou.",
+  "sessionClosedIdleTimeout": "Encerrada depois de ficar ociosa por tempo demais. Retome-a pelo histórico.",
 
   "permissionPageTitle": "Permissão",
 
@@ -385,6 +386,7 @@
   "sessionErrorUnknownCommand": "{command} não é um comando que o Claude oferece nesta máquina.",
 
   "sessionErrorClaudeTimeout": "O Claude demorou demais para responder nesta máquina. Tente de novo.",
+  "sessionErrorResumeTimeout": "O backend não respondeu à retomada. Confira a conexão e tente de novo.",
 
   "sessionErrorLocked": "A sessão está ocupada: um turno está em execução ou outro desfazer está em andamento. Tente de novo quando ela estiver ociosa.",
 
@@ -476,5 +478,14 @@
 
   "sessionUndoDeleted": "Apagado: o turno o tinha criado",
 
-  "sessionUndoFailed": "Não puderam ser restaurados"
+  "sessionUndoFailed": "Não puderam ser restaurados",
+  "diagnosticsTitle": "Diagnóstico",
+  "diagnosticsConnectionLabel": "Conexão",
+  "diagnosticsCredentialLabel": "Login",
+  "diagnosticsCredentialPresent": "Conectado à conta",
+  "diagnosticsCredentialAbsent": "Sem login",
+  "diagnosticsVersionLabel": "Versão",
+  "diagnosticsDebugLabel": "Log detalhado",
+  "diagnosticsDebugDescription": "Registra toda troca com o servidor enquanto esta tela estiver aberta. Desliga sozinho quando você sai.",
+  "diagnosticsDebugAlwaysOn": "Sempre ligado em um build de desenvolvimento."
 }

@@ -234,6 +234,7 @@ class _Ending extends StatelessWidget {
       SessionCloseReason.failed => l10n.sessionClosedFailed,
       SessionCloseReason.auditUnavailable => l10n.sessionClosedAuditUnavailable,
       SessionCloseReason.shutdown => l10n.sessionClosedShutdown,
+      SessionCloseReason.idleTimeout => l10n.sessionClosedIdleTimeout,
     };
 
     return Padding(

@@ -100,6 +100,11 @@ export class TestSocket {
     this.socket.close();
   }
 
+  /** Called on every ping of the server's heartbeat. The pong is sent by `ws` on its own. */
+  onPing(listener: () => void): void {
+    this.socket.on('ping', listener);
+  }
+
   private accept(frame: Envelope): void {
     const waiter = this.waiters.shift();
     if (waiter === undefined) {

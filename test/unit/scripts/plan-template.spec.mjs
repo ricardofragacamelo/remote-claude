@@ -120,19 +120,34 @@ describe('slug handling', () => {
 
 describe('withPlanInOverallProgress', () => {
   const overall = [
-    '| Plano | Fases | Tarefas | Cenários | Estado |',
-    '|---|---|---|---|---|',
-    '| [00 — Bootstrap](00-bootstrap/README.md) | 8/8 | 52/52 | 118/119 | ✅ |',
-    '| **Total** | **8/8** | **52/52** | **118/119** | ✅ |',
+    '| Plano | Fases | Tarefas | Cenários | Decisões | Estado |',
+    '|---|---|---|---|---|---|',
+    '| [00 — Bootstrap](00-bootstrap/README.md) | 8/8 | 52/52 | 118/119 | 5/6 | ✅ |',
+    '| **Total** | **8/8** | **52/52** | **118/119** | **5/6** | ✅ |',
   ].join('\n');
 
-  it('adds the new plan right after the last one, above the total', () => {
+  it('adds the new plan right after the last one, above the total, with every counter', () => {
     const lines = withPlanInOverallProgress(overall, spec).split('\n');
 
     expect(lines[3]).toBe(
-      '| [01 — Claude integration](01-claude-integration/README.md) | 0/0 | 0/0 | 0/0 | 🔲 |',
+      '| [01 — Claude integration](01-claude-integration/README.md) | 0/0 | 0/0 | 0/0 | 0/0 | 🔲 |',
     );
     expect(lines[4]).toContain('**Total**');
+  });
+
+  it('ignores prose tables that also link to plans, wherever they sit', () => {
+    const withProse = [
+      overall,
+      '',
+      '| Plano | Entrega a capacidade de… | Depende de |',
+      '|---|---|---|',
+      '| [00 — Bootstrap](00-bootstrap/README.md) | o trilho | — |',
+    ].join('\n');
+
+    const lines = withPlanInOverallProgress(withProse, spec).split('\n');
+
+    expect(lines[3]).toContain('[01 — Claude integration]');
+    expect(lines.at(-1)).toBe('| [00 — Bootstrap](00-bootstrap/README.md) | o trilho | — |');
   });
 
   it('refuses a document with no plan table — a plan outside the map is a plan nobody follows', () => {

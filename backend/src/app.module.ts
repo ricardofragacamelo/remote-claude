@@ -12,6 +12,7 @@ import { AuditQueryModule } from '@infra/modules/audit-query.module';
 import { DatabaseModule } from '@infra/modules/database.module';
 import { GatewayModule } from '@infra/modules/gateway.module';
 import { HealthModule } from '@infra/modules/health.module';
+import { LifecycleModule } from '@infra/modules/lifecycle.module';
 import { NotificationModule } from '@infra/modules/notification.module';
 import { PlatformModule } from '@infra/modules/platform.module';
 import { DiagModule } from '@infra/modules/diag.module';
@@ -45,6 +46,7 @@ import { WorkspaceModule } from '@infra/modules/workspace.module';
     SessionModule,
     TranscriptModule,
     GatewayModule,
+    LifecycleModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: DomainExceptionFilter },

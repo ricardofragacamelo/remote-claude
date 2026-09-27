@@ -205,10 +205,33 @@ describe('isConnectionReadyFrame', () => {
         payload: {
           connectionId: 'conn_1',
           serverVersion: '0.1.0',
-          limits: { maxFrameBytes: 1_048_576, replayBufferSize: 1_000 },
+          limits: {
+            maxFrameBytes: 1_048_576,
+            maxFramesPerSecond: 20,
+            maxAttachedSessions: 16,
+            replayBufferSize: 1_000,
+          },
         },
       }),
     ).toBe(true);
+  });
+
+  it('rejects a handshake answer that does not announce every limit — plan 05, B-06', () => {
+    expect(
+      isConnectionReadyFrame({
+        v: 1,
+        id: '01J',
+        kind: 'ack',
+        type: 'connection.ready',
+        ts: 'now',
+        correlationId: '01I',
+        payload: {
+          connectionId: 'conn_1',
+          serverVersion: '0.1.0',
+          limits: { maxFrameBytes: 1_048_576, replayBufferSize: 1_000 },
+        },
+      }),
+    ).toBe(false);
   });
 
   it('rejects it when the nested limits are missing', () => {

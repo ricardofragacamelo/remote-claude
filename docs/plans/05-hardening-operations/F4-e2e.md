@@ -28,16 +28,11 @@ hora.
 O token expira no meio de um turno: o socket não cai, a sessão continua, e o usuário não vê
 nada. Esse "não ver nada" é o resultado esperado — e é o mais fácil de quebrar sem perceber.
 
-### B-24 — O log do cliente chega 🔲
-
-Um erro provocado no front aparece no backend com o **mesmo** `traceId` — é o que torna possível
-alguém reportar um problema e outra pessoa achá-lo.
-
 ---
 
 ## Cenários cobertos
 
-S-41…S-46.
+S-41…S-45.
 
 ---
 

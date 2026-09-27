@@ -6,7 +6,6 @@ import {
   planFor,
   SessionFileState,
   SessionId,
-  SessionLockedError,
   undoPointNamed,
   undoPointsOf,
 } from '@domain/session';
@@ -103,9 +102,6 @@ export class ListUndoPointsUseCase {
  *   a path that fails is reported as failed, and the others still go back.
  */
 export class RewindFilesUseCase {
-  /** Sessions with an undo in progress, so a second one waits for nothing and is refused. */
-  private readonly rewinding = new Set<string>();
-
   constructor(
     private readonly registry: SessionRegistry,
     private readonly planner: UndoPlanner,
@@ -116,27 +112,22 @@ export class RewindFilesUseCase {
   /**
    * @throws {import('@domain/session').SessionNotFoundError} unknown or closed (S-39)
    * @throws {import('@domain/session').SessionForbiddenError} somebody else's
-   * @throws {SessionLockedError} a turn is running, or another undo of this session is (S-43)
+   * @throws {import('@domain/session').SessionLockedError} a turn is running, or another undo of
+   *   this session is (S-43)
    * @throws {import('@domain/session').RewindTargetUnknownError} not a point of this session (S-61)
    * @throws whatever the trail threw — and then nothing on disk was touched
    */
   async execute(command: RewindFilesCommand): Promise<RewindOutcome> {
     const live = this.registry.require(SessionId.create(command.sessionId), command.userId);
-    const key = live.session.id.value;
 
-    if (live.session.status !== 'idle') {
-      throw new SessionLockedError(key, 'turnRunning');
-    }
-    if (this.rewinding.has(key)) {
-      throw new SessionLockedError(key, 'rewindRunning');
-    }
-
-    this.rewinding.add(key);
+    // The lock lives on the session, not here: a prompt arriving while the files go back has to be
+    // able to see it too (B-27).
+    live.session.beginRewind();
 
     try {
       return await this.rewind(live, command);
     } finally {
-      this.rewinding.delete(key);
+      live.session.endRewind();
     }
   }
 

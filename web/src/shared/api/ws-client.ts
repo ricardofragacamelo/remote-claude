@@ -46,6 +46,9 @@ export interface SessionSubscriber {
 export const BACKOFF_MIN_MS = 1_000;
 export const BACKOFF_MAX_MS = 30_000;
 
+/** The close code of a client that kept sending after being told to wait. */
+export const CLOSE_RATE_LIMITED = 4_429;
+
 /** How a delay is scheduled. Injected so a test drives time instead of waiting for it. */
 export type Scheduler = (body: () => void, delayMs: number) => () => void;
 
@@ -58,6 +61,8 @@ export interface WsClientOptions {
   readonly connect?: (url: string) => SocketLike;
   readonly schedule?: Scheduler;
   readonly random?: () => number;
+  /** The wall clock, in milliseconds. Injected for the same reason as the scheduler. */
+  readonly now?: () => number;
 }
 
 const defaultSchedule: Scheduler = (body, delayMs) => {
@@ -86,11 +91,16 @@ export class WsClient {
   private readonly watchers = new Set<(status: ConnectionStatus) => void>();
   private readonly schedule: Scheduler;
   private readonly random: () => number;
+  private readonly now: () => number;
   private readonly open: (url: string) => SocketLike;
+
+  /** Until when the server asked this client to hold off, from its last `RATE_LIMITED`. */
+  private holdUntilMs = 0;
 
   constructor(private readonly options: WsClientOptions) {
     this.schedule = options.schedule ?? defaultSchedule;
     this.random = options.random ?? Math.random;
+    this.now = options.now ?? Date.now;
     this.open = options.connect ?? ((url) => new WebSocket(url) as unknown as SocketLike);
   }
 
@@ -327,7 +337,21 @@ export class WsClient {
     // A refusal belongs to the command that caused it, not to a session; whoever sent that command
     // recognises it by `correlationId`.
     if (parsed.kind === 'error') {
+      this.remember(parsed);
       this.notify(parsed);
+    }
+  }
+
+  /**
+   * Keeps the `retryAfterSeconds` of a `RATE_LIMITED`, which is the whole point of that refusal: a
+   * socket closed with `4429` afterwards comes back no sooner than the server asked (B-05).
+   */
+  private remember(frame: Envelope): void {
+    const payload = frame.payload as { code?: unknown; params?: { retryAfterSeconds?: unknown } };
+    const seconds = payload.params?.retryAfterSeconds;
+
+    if (payload.code === 'RATE_LIMITED' && typeof seconds === 'number' && seconds > 0) {
+      this.holdUntilMs = Math.max(this.holdUntilMs, this.now() + seconds * 1_000);
     }
   }
 
@@ -418,7 +442,7 @@ export class WsClient {
     }
 
     this.attempt += 1;
-    const delayMs = this.backoffFor(this.attempt);
+    const delayMs = this.delayAfter(code);
     this.move('reconnecting');
 
     logger.warn(
@@ -430,6 +454,18 @@ export class WsClient {
       this.cancelRetry = null;
       this.connect();
     }, delayMs);
+  }
+
+  /**
+   * How long to wait before the next attempt: the backoff — and, after a `4429`, never less than
+   * what the server asked for. Coming straight back after being closed for hammering is hammering.
+   */
+  private delayAfter(code: number): number {
+    const backoff = this.backoffFor(this.attempt);
+
+    return code === CLOSE_RATE_LIMITED
+      ? Math.max(backoff, this.holdUntilMs - this.now(), BACKOFF_MIN_MS)
+      : backoff;
   }
 
   private move(status: ConnectionStatus): void {

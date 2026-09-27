@@ -2,9 +2,12 @@ import { Module } from '@nestjs/common';
 
 import { CLOCK, ID_GENERATOR } from '@application/shared';
 import type { Clock, IdGenerator } from '@domain/shared';
+import { APP_CONFIG } from '../config/environment';
+import type { AppConfig } from '../config/environment';
 import { ConnectionRegistry } from '../websocket/connection-registry';
 import { EventBuffer } from '../websocket/event-buffer';
 import { FrameBuilder } from '../websocket/frame-builder';
+import { WS_SETTINGS, wsSettingsFrom } from '../websocket/limits';
 import { SessionHub } from '../websocket/session-hub';
 
 /**
@@ -24,7 +27,12 @@ import { SessionHub } from '../websocket/session-hub';
       useFactory: (clock: Clock, ids: IdGenerator) => new FrameBuilder(clock, ids),
     },
     SessionHub,
+    {
+      provide: WS_SETTINGS,
+      inject: [APP_CONFIG],
+      useFactory: (config: AppConfig) => wsSettingsFrom(config),
+    },
   ],
-  exports: [ConnectionRegistry, EventBuffer, FrameBuilder, SessionHub],
+  exports: [ConnectionRegistry, EventBuffer, FrameBuilder, SessionHub, WS_SETTINGS],
 })
 export class WebsocketModule {}

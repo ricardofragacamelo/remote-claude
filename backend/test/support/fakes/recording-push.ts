@@ -1,6 +1,7 @@
 import type {
   PushAudience,
   PushDelivery,
+  PushOutcome,
   PushSender,
   PushTokenRegistry,
 } from '@application/notification';
@@ -11,12 +12,23 @@ import type { Device } from '@domain/auth';
 export class RecordingPushSender implements PushSender {
   readonly sent: PushMessage[] = [];
 
-  /** What `send` answers. A function so a test can answer differently per device. */
-  answer: (message: PushMessage) => PushDelivery = () => 'delivered';
+  /**
+   * What `send` answers. A function so a test can answer differently per device, or per attempt —
+   * a bare delivery, or an outcome carrying the provider's `Retry-After`.
+   */
+  answer: (message: PushMessage, attempt: number) => PushDelivery | PushOutcome = () => 'delivered';
 
-  send(message: PushMessage): Promise<PushDelivery> {
+  /** When set, `send` waits on it before answering — a request still on the wire. */
+  held: Promise<void> | null = null;
+
+  async send(message: PushMessage): Promise<PushOutcome> {
     this.sent.push(message);
-    return Promise.resolve(this.answer(message));
+    const attempt = this.sent.length;
+
+    await this.held;
+
+    const answer = this.answer(message, attempt);
+    return typeof answer === 'string' ? { delivery: answer, retryAfterMs: null } : answer;
   }
 
   /** The devices that were reached, in order. The assertion most specs actually want. */

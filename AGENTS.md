@@ -13,7 +13,7 @@ instalado na máquina local**. O backend fala com o Claude via Claude Agent SDK,
 stream de eventos e o distribui para os dois canais (web e mobile), que também aprovam
 permissões de tool e disparam prompts.
 
-Stack fechada: NestJS · React + shadcn/ui + Tailwind · Flutter · PostgreSQL 18 · OIDC (Auth0) · pnpm workspaces.
+Stack fechada: NestJS · React + shadcn/ui + Tailwind · Flutter · PostgreSQL 18 · OIDC (Keycloak próprio — [ADR-010](docs/architecture/shared/00-decisions.md#adr-010--openid-connect-agnóstico-de-provedor-auth0-como-alvo-inicial)) · pnpm workspaces.
 
 ---
 

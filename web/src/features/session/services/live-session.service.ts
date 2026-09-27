@@ -455,13 +455,14 @@ function applyTurn(state: Conversation, payload: Readonly<Record<string, unknown
   return { ...state, lastTurn: { turnId, costUsd, durationMs } };
 }
 
-/** The five reasons the contract carries. */
+/** The six reasons the contract carries. */
 const CLOSE_REASONS = new Set<string>([
   'closedByUser',
   'completed',
   'failed',
   'auditUnavailable',
   'shutdown',
+  'idleTimeout',
 ]);
 
 function applyClosed(

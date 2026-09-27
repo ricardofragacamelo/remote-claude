@@ -24,9 +24,23 @@ Três fatos que explicam quase todas as decisões:
    (`~/.claude/.credentials.json`). Não há API key no sistema.
 2. **Quem alcança o backend pode executar comando arbitrário na máquina** (tool `Bash`).
    Por isso permissão, auditoria e autenticação não são acessórios — são o núcleo. A
-   autenticação é delegada a um provedor **OIDC** (Auth0 como alvo inicial), nunca caseira.
+   autenticação é delegada a um provedor **OIDC** (um Keycloak próprio —
+   [ADR-010](shared/00-decisions.md#adr-010--openid-connect-agnóstico-de-provedor-auth0-como-alvo-inicial)), nunca caseira.
 3. **A comunicação é interativa e bidirecional.** O Claude pergunta "posso rodar isso?" e
    espera resposta humana. Isso é WebSocket, não request/response.
+
+### Onde o produto roda, e como é alcançado
+
+- **Sistemas operacionais:** Linux, macOS e Windows são suportados; **o teste é só em Linux**
+  ([17 · D-01](../plans/17-distribution/decisions.md), decisão do usuário de 2026-09-26). macOS e
+  Windows seguem sem verificação automatizada — é risco declarado, não garantia.
+- **Exposição é da infraestrutura, não do produto**
+  ([17 · D-04](../plans/17-distribution/decisions.md)). Um endereço externo, que a web e o celular
+  alcançam, é provido por quem opera a instalação — túnel, VPN ou proxy com TLS é escolha dela, e
+  o certificado também. O produto aceita ser servido atrás desse endereço (URL externa
+  configurável) e **o default continua loopback**: sair dele é configuração explícita.
+- Quem alcança esse endereço chega a um backend que executa comando na máquina — por isso a
+  autenticação (fato 2) vale em qualquer rede, inclusive na local.
 
 ---
 

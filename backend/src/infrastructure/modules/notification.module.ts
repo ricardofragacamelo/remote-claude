@@ -6,9 +6,11 @@ import {
   PUSH_AUDIENCE,
   PUSH_SENDER,
   PUSH_TOKEN_REGISTRY,
+  PushDispatcher,
 } from '@application/notification';
 import type { PushAudience, PushSender, PushTokenRegistry } from '@application/notification';
-import { CLOCK } from '@application/shared';
+import { CLOCK, SCHEDULER } from '@application/shared';
+import type { Scheduler } from '@application/shared';
 import { PushMessage } from '@domain/notification';
 import type { PushTarget } from '@domain/notification';
 import type { Clock } from '@domain/shared';
@@ -21,7 +23,9 @@ import { RepositoryPushTokenRegistry } from '@adapter/outbound/notification/repo
 import { HttpPushSender } from '@adapter/outbound/push/http-push.adapter';
 import { PushAccessTokenCache } from '@adapter/outbound/push/push-access-token.cache';
 import { PUSH_ACCESS_TOKENS, PUSH_TEXT } from '@adapter/outbound/push/push.tokens';
+import { loggingRetryReporter } from '@adapter/outbound/push/push-retry.reporter';
 import { PushTranslator } from '@shared/i18n/push-translator';
+import { LOGGER, type Logger } from '@shared/logging/logger';
 import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
 import { AuthModule } from './auth.module';
@@ -56,15 +60,23 @@ import { WebsocketModule } from './websocket.module';
     { provide: PUSH_SENDER, useClass: HttpPushSender },
     { provide: NotificationRegistry, useFactory: () => new NotificationRegistry() },
     {
+      // One per process, like the registry: `stop` has to find the retries of a request whoever
+      // armed them.
+      provide: PushDispatcher,
+      inject: [PUSH_SENDER, SCHEDULER, CLOCK, LOGGER],
+      useFactory: (sender: PushSender, scheduler: Scheduler, clock: Clock, logger: Logger) =>
+        new PushDispatcher(sender, scheduler, clock, loggingRetryReporter(logger)),
+    },
+    {
       provide: NotifyPermissionUseCase,
-      inject: [PUSH_AUDIENCE, PUSH_SENDER, PUSH_TOKEN_REGISTRY, NotificationRegistry],
+      inject: [PUSH_AUDIENCE, PushDispatcher, PUSH_TOKEN_REGISTRY, NotificationRegistry],
       useFactory: (
         audience: PushAudience,
-        sender: PushSender,
+        dispatcher: PushDispatcher,
         tokens: PushTokenRegistry,
         registry: NotificationRegistry,
       ) =>
-        new NotifyPermissionUseCase(audience, sender, tokens, registry, (target, command) =>
+        new NotifyPermissionUseCase(audience, dispatcher, tokens, registry, (target, command) =>
           // Composed here, where both halves are in scope: the domain owns what a message may
           // carry, and the adapter owns the words. The use case owns neither, which is what
           // keeps the tool's **input** out of the payload by construction.

@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { OnModuleDestroy } from '@nestjs/common';
 import { WebSocketGateway } from '@nestjs/websockets';
 import type { OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
 import { z } from 'zod';
@@ -12,6 +11,7 @@ import { ID_GENERATOR } from '@application/shared';
 import { WS_COMMAND_HANDLERS } from '@adapter/inbound/ws/ws-command';
 import type { WsCommandHandler } from '@adapter/inbound/ws/ws-command';
 import { InputValidationError } from '@shared/errors/input-validation.error';
+import { RateLimitedError } from '@shared/errors/rate-limited.error';
 import { UnsupportedProtocolVersionError } from '@shared/errors/unsupported-protocol-version.error';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { forLog } from '@shared/logging/redact';
@@ -20,15 +20,15 @@ import { ConnectionRegistry } from './connection-registry';
 import type { Connection, Sendable } from './connection-registry';
 import { decodeFrame } from './frame-codec';
 import { FrameBuilder } from './frame-builder';
+import { FrameRateLimiter } from './frame-rate-limiter';
 import {
+  announcedLimits,
   CLOSE,
-  HANDSHAKE_TIMEOUT_MS,
-  HEARTBEAT_INTERVAL_MS,
-  HEARTBEAT_TIMEOUT_MS,
-  REAUTH_GRACE_MS,
+  RATE_LIMIT_RETRY_AFTER_SECONDS,
   SUPPORTED_VERSIONS,
-  WS_LIMITS,
+  WS_SETTINGS,
 } from './limits';
+import type { WsSettings } from './limits';
 import { SessionHub } from './session-hub';
 
 const authenticateSchema = z.object({
@@ -47,6 +47,9 @@ const reauthenticateSchema = z.object({ token: z.string().min(1) });
 
 /** Kinds a client may send. Anything else on this socket is a protocol violation, not an error. */
 const CLIENT_KINDS = new Set(['command', 'response']);
+
+/** Commands that leave the connection attached to one more session. */
+const ATTACHING = new Set(['session.attach', 'session.start']);
 
 /** A raw socket, as `ws` hands it over. */
 interface RawSocket extends Sendable {
@@ -70,15 +73,23 @@ interface Timers {
  * calls it. There is no business branch here by construction — see
  * docs/architecture/backend/06-realtime.md.
  *
- * Only two things close a socket: a failed handshake (`4401`) and a protocol violation (`4400`,
- * and `4426` for a version this build cannot speak). A bad command is answered with an `error`
- * frame and the connection carries on; dropping it would make one typo cost a reconnect.
+ * A bad command is answered with an `error` frame and the connection carries on; dropping it
+ * would make one typo cost a reconnect. What closes a socket is a failed handshake (`4401`), a
+ * protocol violation (`4400`, and `4426` for a version this build cannot speak), a heartbeat that
+ * went unanswered (`4408`), a client that kept sending after being told to wait (`4429`) and the
+ * shutdown (`1001`).
+ *
+ * It does not close itself on the way down: the order of the shutdown — sessions told, **then**
+ * sockets closed, **then** subprocesses gone — is the lifecycle's to keep, and it calls
+ * {@link stopAccepting} and {@link closeAll} at its step (B-04).
  */
 @Injectable()
 @WebSocketGateway({ path: '/ws' })
-export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy {
+export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly timers = new Map<string, Timers>();
   private readonly sockets = new Map<string, RawSocket>();
+  private readonly limiters = new Map<string, FrameRateLimiter>();
+  private accepting = true;
 
   constructor(
     @Inject(ConnectionRegistry) private readonly registry: ConnectionRegistry,
@@ -88,23 +99,39 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnM
     @Inject(ResolveDeviceUseCase) private readonly devices: ResolveDeviceUseCase,
     @Inject(ID_GENERATOR) private readonly ids: IdGenerator,
     @Inject(WS_COMMAND_HANDLERS) private readonly handlers: readonly WsCommandHandler[],
+    @Inject(WS_SETTINGS) private readonly settings: WsSettings,
     @Inject(LOGGER) private readonly logger: Logger,
   ) {}
 
   handleConnection(socket: RawSocket): void {
+    if (!this.accepting) {
+      // Step 1 of the shutdown: a socket that arrives now would only be closed a moment later,
+      // after having been handed state that is about to go.
+      socket.close(CLOSE.shutdown, 'server shutting down');
+      return;
+    }
+
     const connection = this.registry.register(this.ids.next(), socket);
     this.sockets.set(connection.id, socket);
+    this.limiters.set(
+      connection.id,
+      new FrameRateLimiter(
+        this.settings.maxFramesPerSecond,
+        RATE_LIMIT_RETRY_AFTER_SECONDS * 1_000,
+        Date.now(),
+      ),
+    );
 
     this.timers.set(connection.id, {
       // No `connection.authenticate` inside the window and the socket goes. An unauthenticated
       // socket kept alive "just in case" is an unauthenticated socket.
       handshake: setTimeout(() => {
         this.close(connection, CLOSE.authenticationFailed, 'handshake timed out');
-      }, HANDSHAKE_TIMEOUT_MS),
+      }, this.settings.handshakeTimeoutMs),
       credential: null,
       heartbeat: setInterval(() => {
         this.beat(connection, socket);
-      }, HEARTBEAT_INTERVAL_MS),
+      }, this.settings.heartbeatIntervalMs),
       pong: null,
     });
 
@@ -130,19 +157,38 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnM
     this.forget(id);
   }
 
-  onModuleDestroy(): void {
-    for (const [id, socket] of this.sockets) {
+  /** Step 1 of the shutdown: from now on, a new socket is closed as soon as it opens. */
+  stopAccepting(): void {
+    this.accepting = false;
+  }
+
+  /**
+   * Step 3 of the shutdown: every socket closes with `1001`, which a client answers by reconnecting
+   * with backoff. Idempotent — a second call finds nothing left to close.
+   *
+   * @returns how many sockets were closed
+   */
+  closeAll(): number {
+    const open = [...this.sockets.entries()];
+
+    for (const [id, socket] of open) {
       socket.close(CLOSE.shutdown, 'server shutting down');
       this.forget(id);
     }
+
+    return open.length;
   }
 
   /** One inbound frame, from bytes to answer. */
   private async onMessage(connection: Connection, raw: string): Promise<void> {
+    if (!this.admit(connection)) {
+      return;
+    }
+
     let frame: Envelope;
 
     try {
-      frame = decodeFrame(raw, WS_LIMITS.maxFrameBytes);
+      frame = decodeFrame(raw, this.settings.maxFrameBytes);
     } catch (error) {
       this.refuseUndecodable(connection, error);
       return;
@@ -209,6 +255,8 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnM
     if (handler === undefined) {
       throw new InputValidationError([{ field: 'type', rule: 'unknownCommand' }]);
     }
+
+    this.refuseOverAttached(connection, frame);
 
     const outcome = await handler.handle({
       connectionId: connection.id,
@@ -303,10 +351,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnM
       {
         connectionId: connection.id,
         serverVersion: String(SUPPORTED_VERSIONS[0]),
-        limits: {
-          maxFrameBytes: WS_LIMITS.maxFrameBytes,
-          replayBufferSize: WS_LIMITS.replayBufferSize,
-        },
+        limits: announcedLimits(this.settings),
       },
       traceId,
       frame.id,
@@ -355,7 +400,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnM
   private scheduleCredentialExpiry(connection: Connection, expiresAt: Date): void {
     this.clearTimer(connection.id, 'credential');
 
-    const delay = Math.max(0, expiresAt.getTime() - Date.now() + REAUTH_GRACE_MS);
+    const delay = Math.max(0, expiresAt.getTime() - Date.now() + this.settings.reauthGraceMs);
     const timers = this.timers.get(connection.id);
     if (timers === undefined) {
       return;
@@ -374,9 +419,74 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnM
 
     timers.pong = setTimeout(() => {
       this.close(connection, CLOSE.idleTimeout, 'no pong within the heartbeat window');
-    }, HEARTBEAT_TIMEOUT_MS);
+    }, this.settings.heartbeatTimeoutMs);
 
     socket.ping();
+  }
+
+  /**
+   * Whether this frame is within the connection's rate — counted before it is even decoded, so a
+   * flood of garbage costs the server as little as a flood of commands.
+   *
+   * Over the rate: an `error` `RATE_LIMITED` carrying `retryAfterSeconds`. Again inside that window:
+   * the client did not listen, and the socket closes with `4429` (S-10).
+   */
+  private admit(connection: Connection): boolean {
+    const verdict = this.limiters.get(connection.id)?.take(Date.now()) ?? 'accepted';
+
+    if (verdict === 'accepted') {
+      return true;
+    }
+
+    if (verdict === 'repeated') {
+      this.close(connection, CLOSE.rateLimited, 'kept sending after being rate limited');
+      return false;
+    }
+
+    const refusal = new RateLimitedError(
+      'frames',
+      this.settings.maxFramesPerSecond,
+      RATE_LIMIT_RETRY_AFTER_SECONDS,
+    );
+    this.logger.warn(
+      { op: 'ws.rateLimit', layer: 'infrastructure', connectionId: connection.id, err: refusal },
+      'ws frame refused over the rate',
+    );
+    this.hub.deliver(connection, this.frames.error(refusal, this.ids.next()));
+    return false;
+  }
+
+  /**
+   * Refuses a command that would attach this connection to one session more than it may watch.
+   *
+   * Checked **before** the handler runs, because `session.start` spawns a subprocess and a limit
+   * found after the spawn would leave a session running that nobody is watching. Attaching again
+   * to a session already watched adds nothing, and is let through.
+   *
+   * @throws {RateLimitedError} the connection is at its limit
+   */
+  private refuseOverAttached(connection: Connection, frame: Envelope): void {
+    if (
+      !ATTACHING.has(frame.type) ||
+      connection.attached.size < this.settings.maxAttachedSessions
+    ) {
+      return;
+    }
+
+    const sessionId = frame.payload?.['sessionId'];
+    if (
+      frame.type === 'session.attach' &&
+      typeof sessionId === 'string' &&
+      connection.attached.has(sessionId)
+    ) {
+      return;
+    }
+
+    throw new RateLimitedError(
+      'attachedSessions',
+      this.settings.maxAttachedSessions,
+      RATE_LIMIT_RETRY_AFTER_SECONDS,
+    );
   }
 
   /** A frame that could not even be decoded. Version mismatch closes; everything else answers. */
@@ -443,6 +553,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnM
 
     this.timers.delete(connectionId);
     this.sockets.delete(connectionId);
+    this.limiters.delete(connectionId);
     this.registry.remove(connectionId);
   }
 }

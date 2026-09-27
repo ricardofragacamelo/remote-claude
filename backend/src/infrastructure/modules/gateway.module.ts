@@ -52,5 +52,7 @@ const HANDLERS = [
     },
     AppGateway,
   ],
+  // The lifecycle closes the sockets at its own step of the shutdown, so it needs the gateway.
+  exports: [AppGateway],
 })
 export class GatewayModule {}

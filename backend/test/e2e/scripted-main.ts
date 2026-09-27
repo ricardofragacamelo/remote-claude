@@ -4,10 +4,19 @@ import { Test } from '@nestjs/testing';
 
 import { AppModule } from '../../src/app.module';
 import { ALL_INTERFACES, configureApp, listen, loadDotEnv } from '../../src/bootstrap';
+import { PUSH_SENDER } from '@application/notification';
 import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
 import { TRANSCRIPT_SDK } from '@adapter/outbound/claude/transcript-sdk';
+import { HttpPushSender } from '@adapter/outbound/push/http-push.adapter';
+import { PushAccessTokenCache } from '@adapter/outbound/push/push-access-token.cache';
+import { PUSH_ACCESS_TOKENS, PUSH_TEXT } from '@adapter/outbound/push/push.tokens';
+import { APP_CONFIG } from '@infra/config/environment';
+import type { AppConfig } from '@infra/config/environment';
+import type { PushTranslator } from '@shared/i18n/push-translator';
+import { LOGGER, type Logger } from '@shared/logging/logger';
 import { scriptedSdk } from '../fakes/agent-sdk/scripted-query';
 import { ScriptedTranscripts } from '../fakes/agent-sdk/scripted-transcripts';
+import { FailFirstPushSender } from '../fakes/fail-first-push';
 
 /**
  * The product, with a scripted Agent SDK behind it.
@@ -38,12 +47,27 @@ async function bootstrap(): Promise<void> {
   const transcripts = new ScriptedTranscripts();
   const scripted = scriptedSdk({ fixture, transcripts, performWritesIn: 'cwd' });
 
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+  let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(QUERY_FACTORY)
     .useValue(scripted.createQuery)
     .overrideProvider(TRANSCRIPT_SDK)
-    .useValue(transcripts)
-    .compile();
+    .useValue(transcripts);
+
+  // The real provider, failing its first announcement — only in the real-push run, which sets
+  // this (plan 05, S-53). Every other run talks to a provider under `.invalid` anyway.
+  if (process.env['RC_E2E_PUSH_FAIL_FIRST'] === '1') {
+    builder = builder.overrideProvider(PUSH_SENDER).useFactory({
+      inject: [APP_CONFIG, PUSH_ACCESS_TOKENS, PUSH_TEXT, LOGGER],
+      factory: (
+        config: AppConfig,
+        tokens: PushAccessTokenCache,
+        text: PushTranslator,
+        logger: Logger,
+      ) => new FailFirstPushSender(new HttpPushSender(config, tokens, text, logger)),
+    });
+  }
+
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication({ bufferLogs: true });
 

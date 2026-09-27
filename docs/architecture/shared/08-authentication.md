@@ -1,6 +1,7 @@
 # Autenticação — OpenID Connect
 
-**OIDC, agnóstico de provedor. Auth0 é o alvo inicial, não a dependência.**
+**OIDC, agnóstico de provedor. O alvo é um Keycloak próprio, administrado por quem opera a instalação
+— configuração, não dependência** ([emenda da ADR-010](00-decisions.md#adr-010--openid-connect-agnóstico-de-provedor-auth0-como-alvo-inicial), 2026-09-26; o Auth0 era o alvo inicial).
 
 Atravessa as três pontas: web e mobile fazem o login, o backend valida o token. Por isso
 está aqui, e não em uma pasta de ponta.
