@@ -26,7 +26,12 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 ([web/01](../../architecture/web/01-architecture.md)): `search.service.ts` com as quatro chamadas;
 `useFileFinder`, `useTextSearch`, `useReplacePreview`, `useApplyReplace`. Chaves de query
 hierárquicas por pasta ([web/04](../../architecture/web/04-state-and-data.md)); toda consulta passa o
-`AbortSignal` do TanStack Query, então consulta superada é **cancelada**, não só ignorada. O
+`AbortSignal` do TanStack Query, então consulta superada é **cancelada**, não só ignorada. A
+busca em texto e a prévia leem o fluxo NDJSON da D-02 pelo `api.ts`, que ganha um leitor de fluxo
+(`ReadableStream`, uma linha por vez, com o mesmo log de I/O). Os hooks inserem cada arquivo na
+posição ordenada (caminho, depois posição), então a lista na tela não depende da ordem de chegada. A
+linha `error`, o fluxo sem linha final e a linha malformada viram o mesmo estado de erro traduzido,
+com o que já chegou mantido e marcado como parcial. O
 `useFileFinder` é exportado pela superfície da feature para o `@` do composer do
 [plano 08](../08-claude-panel/README.md) — um hook, dois consumidores. Log de I/O em `debug` pelo
 `pino` do web, sem o padrão.
@@ -109,7 +114,7 @@ completos, axe sem violação, e nenhum literal apresentável fora do i18n.
 
 ## Cenários cobertos
 
-S-102…S-147.
+S-102…S-147, S-169…S-171.
 
 ---
 

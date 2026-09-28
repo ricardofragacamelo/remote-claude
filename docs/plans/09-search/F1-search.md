@@ -79,7 +79,8 @@ latência do contrato (p95 < 150 ms em cache) é medido num teste de integraçã
 
 ### B-10 — A busca em texto 🔲
 
-`rg --json` com o que o B-08 validou, lido **em fluxo** e agrupado por arquivo: linha, coluna em
+`rg --json` com o que o B-08 validou, lido **em fluxo** e repassado em fluxo (D-02): cada arquivo vira
+uma linha NDJSON **assim que o `rg` o fecha**, sem esperar o fim da busca, com linha, coluna em
 UTF-16, trecho de prévia numa janela em torno do casamento (linha minificada de 5 MB não vira
 resposta de 5 MB), intervalos de destaque e, quando pedido, linhas de contexto (o editor de
 resultados do B-17 usa). Binário e arquivo acima do teto são pulados e contados em `skipped`; erro de
@@ -88,14 +89,18 @@ leitura de um arquivo (apagado pelo Claude durante a busca) também — a busca 
 Tetos e prazo da D-06: ao atingir o teto de casamentos, o processo é encerrado e a resposta diz
 `truncated.reason: 'limit'`; prazo estourado devolve o que achou com `'timeout'`. O abort da
 requisição mata o processo. No máximo duas buscas simultâneas por usuário; a terceira recebe `429`
-`RATE_LIMITED` (`scope: 'search'`) com `Retry-After`. Sem truncamento, a ordem é determinística (por
-caminho, depois por posição) — a mesma busca devolve o mesmo resultado.
+`RATE_LIMITED` (`scope: 'search'`) com `Retry-After`. O fluxo fecha **sempre** com uma linha final:
+`end` com `truncated` e `skipped`, ou `error` com o `code` quando o `rg` cai depois do primeiro byte.
+O que já saiu não é desfeito. O servidor não ordena, porque o `rg` roda em paralelo: sem
+truncamento, o **conjunto** de arquivos e casamentos é determinístico, e a ordem é montada pelo
+cliente (B-13).
 
 ### B-11 — O substituir: prévia e aplicação 🔲
 
 **Prévia** (`POST /search/replace/preview`): a busca do B-10 com `--replace` pelo motor da D-04, e
 por arquivo o **ETag** (sha256, o mesmo do 07) do conteúdo que foi lido — é o que o cliente devolve
-ao aplicar.
+ao aplicar. Em fluxo como a busca (D-02): uma linha por arquivo, com o ETag nela, e a mesma linha
+final.
 
 **Aplicar** (`POST /search/replace`): para cada arquivo pedido, lê de novo pelo `files` do 07; ETag
 diferente → **preservado** e relatado `changed`; sumiu → `missing`; virou binário ou grande →
@@ -119,7 +124,7 @@ batem com a tabela documentada no B-03, verificados pelo `http-contract.spec.ts`
 
 ## Cenários cobertos
 
-S-06…S-101.
+S-06…S-101, S-163…S-168.
 
 ---
 

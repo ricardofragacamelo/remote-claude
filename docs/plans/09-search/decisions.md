@@ -25,9 +25,9 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-01 | De onde vem o binário do ripgrep: `@vscode/ripgrep`, o do sistema, ou o que o SDK carrega | se o *postinstall* do `@vscode/ripgrep` funciona sob o `onlyBuiltDependencies` do pnpm 10 e sem rede no CI; como o plano 17 empacota | B-01, B-07 | — | 🔲 |
-| D-02 | Transporte do resultado de busca: HTTP com teto, HTTP em fluxo (NDJSON) ou evento WS | tempo até o primeiro resultado e até o fim numa pasta grande — não medido | B-03, B-10 | — | 🔲 |
-| D-03 | Exclusões padrão da busca e do Quick Open: o que se pula sem o usuário pedir | as exclusões que o plano 07 fixar para a árvore (D-10 dele) | B-03, B-09, B-10 | — | 🔲 |
+| D-01 | De onde vem o binário do ripgrep: `@vscode/ripgrep`, o do sistema, ou o que o SDK carrega | se o *postinstall* do `@vscode/ripgrep` funciona sob o `onlyBuiltDependencies` do pnpm 10 e sem rede no CI; como o plano 17 empacota | B-01, B-07 | 2026-09-28 · **`@vscode/ripgrep`, versão fixada**, no `onlyBuiltDependencies` com a justificativa no ADR-016 (B-01) e verificação de integridade do binário baixado; `RC_RIPGREP_PATH` como sobreposição validada no boot (existe, executa, versão mínima), com caminho inválido derrubando o boot; nunca o `claude` do SDK. Baixar ou empacotar fica para o plano 17, que ganhou a D-08. Decisão do usuário com a recomendação | ✅ |
+| D-02 | Transporte do resultado de busca: HTTP com teto, HTTP em fluxo (NDJSON) ou evento WS | tempo até o primeiro resultado e até o fim numa pasta grande — não medido | B-03, B-10 | 2026-09-28 · **HTTP em fluxo (NDJSON)** desde o início, não a resposta única da recomendação. Decisão do usuário. Em fluxo: `POST /search/text` e `/search/replace/preview`, com uma linha por arquivo; resposta única: `GET /search/files` e `POST /search/replace`. Erro detectável antes do primeiro byte sai com o status próprio; depois dele, o fluxo **sempre** fecha com `{type:'end'}` ou `{type:'error'}`, e fluxo sem linha final é tratado como `SEARCH_ENGINE_FAILED`. A ordem é montada no cliente, ao inserir. Muda B-03, B-04, B-10, B-11, B-13 e os cenários S-71, S-75, S-77 e os novos S-163…S-171 | ✅ |
+| D-03 | Exclusões padrão da busca e do Quick Open: o que se pula sem o usuário pedir | as exclusões que o plano 07 fixar para a árvore (D-10 dele) | B-03, B-09, B-10 | 2026-09-28 · **as exclusões da D-10 do 07 + o `search.exclude` padrão do VS Code + `.gitignore`/`.ignore`/`.rgignore`**, com o botão "usar exclusões e arquivos de ignore"; `.git/` pulado sempre; ocultos aparecem; listas na seção "Busca" das configurações do 06, classificadas pela D-13 de lá. O gap fechou quando o 07 decidiu a D-10. Decisão do usuário com a recomendação | ✅ |
 
 ### D-01 — de onde vem o ripgrep
 
@@ -59,6 +59,19 @@ Nunca (c). Se o binário é baixado na instalação ou empacotado no artefato é
 até o fim numa pasta típica. (c) só se o plano 07 já tiver um stream por pasta que sirva — e aí a
 mudança de contrato vira task explícita aqui, com o comando mobile no critério.
 
+**Resultado (2026-09-28):** o usuário escolheu **(b), desde o início**. A escolha abriu três gaps,
+fechados no mesmo dia, todos com a recomendação:
+
+| Gap | Resposta |
+|---|---|
+| quais endpoints transmitem em fluxo | `POST /search/text` e `POST /search/replace/preview`, uma linha por arquivo (casamentos e, na prévia, o ETag). `GET /search/files` fica em resposta única, porque ordena por pontuação com teto e tem orçamento de p95 < 150 ms. `POST /search/replace` também fica em resposta única, porque devolve o relatório do lote |
+| fim e falha depois do `200` | erro detectável **antes** do primeiro byte (`400`, `403`, `404`, `413`, `422`, `429`) sai com o status próprio, como hoje. Depois do primeiro byte o fluxo **sempre** fecha com exatamente uma linha final: `{type:'end', truncated, skipped}` ou `{type:'error', code, messageKey, params}`. Fluxo sem linha final (conexão caída) ou com linha malformada o cliente trata como `SEARCH_ENGINE_FAILED`. É uma exceção explícita à regra "nunca `200` com erro no corpo", registrada no [doc 04](../../architecture/shared/04-errors-and-http.md) pela B-03: o status já saiu, e o erro é tipado, nunca uma lista vazia com `200` |
+| ordem determinística do B-10 | o `rg` roda em paralelo e as linhas chegam em qualquer ordem. O hook insere cada arquivo na posição ordenada (caminho, depois posição), então a lista final é determinística. Com truncamento, o **conjunto** pode variar, e o contrato diz isso |
+
+Cabeçalhos da resposta em fluxo: `Content-Type: application/x-ndjson`, `Cache-Control: no-transform`
+e `X-Accel-Buffering: no`, contra o proxy que bufferiza. O contrato WebSocket não muda, e o
+`pnpm test:e2e:mobile` continua fora do critério.
+
 ### D-03 — o que se pula sem pedir
 
 O VS Code separa duas listas: `files.exclude` (some da árvore **e** da busca) e `search.exclude`
@@ -73,7 +86,7 @@ respeita `.gitignore`, `.ignore` e `.rgignore`, com um botão para desligar tudo
 **Recomendação:** (b). `.git/` é pulado **sempre**, inclusive com o botão desligado; arquivos
 ocultos aparecem (como no VS Code) a menos que excluídos. As listas são preferência do usuário na
 seção "Busca" das configurações do [06](../06-workbench/README.md) (B-19), classificadas pela D-13
-de lá. Depende da D-10 do [07](../07-explorer-and-editor/README.md).
+de lá. Depende da D-10 do [07](../07-explorer-and-editor/README.md), decidida em 2026-09-28.
 
 ---
 
@@ -81,10 +94,10 @@ de lá. Depende da D-10 do [07](../07-explorer-and-editor/README.md).
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-04 | Qual motor aplica o substituir: o próprio ripgrep (`--replace` + `--json`) ou `RegExp` do JavaScript | se o JSON do ripgrep fixado traz o texto substituído por casamento, com offsets — **exige spike** | B-11 | — | 🔲 |
-| D-05 | Semântica do aplicar em lote com precondição por arquivo | — (é escolha de contrato; o precedente é o ADR-013) | B-11, B-16 | — | 🔲 |
-| D-06 | Tetos e prazos iniciais da busca e da listagem | tempo e memória de `rg --files` e `rg --json` em pasta grande — **medir** | B-09, B-10 | — | 🔲 |
-| D-07 | Lista de caminhos do localizador (Quick Open e `@` do 08): recalcular a cada consulta, cache com TTL, ou cache invalidado pelo watcher do 07 | quanto custa `rg --files` numa pasta grande (D-06) e se o watcher do 07 é observável de dentro do backend | B-09 | — | 🔲 |
+| D-04 | Qual motor aplica o substituir: o próprio ripgrep (`--replace` + `--json`) ou `RegExp` do JavaScript | se o JSON do ripgrep fixado traz o texto substituído por casamento, com offsets — **exige spike** | B-11 | 2026-09-28 · **o ripgrep com `--replace` e `--json`**, um motor só; o Node só costura os bytes nos offsets; "preservar caixa" é pós-processamento. **Provisório até o spike da B-11**: se o JSON trouxer só a linha substituída, a substituição é reconstruída por linha, ainda pelo ripgrep. Decisão do usuário com a recomendação | ✅ |
+| D-05 | Semântica do aplicar em lote com precondição por arquivo | — (é escolha de contrato; o precedente é o ADR-013) | B-11, B-16 | 2026-09-28 · **por arquivo, como o desfazer do ADR-013**: aplica o que bate, preserva e relata o divergente, `200` com o relatório; falha de escrita no meio é `500` `INTERNAL_ERROR` com `params.applied`; pedido sem ETag em algum arquivo é `428` e nada é escrito. Decisão do usuário com a recomendação | ✅ |
+| D-06 | Tetos e prazos iniciais da busca e da listagem | tempo e memória de `rg --files` e `rg --json` em pasta grande — **medir** | B-09, B-10 | 2026-09-28 · **a tabela inicial, configurável por `RC_SEARCH_*`, medida antes de fechar a F1** (este repositório com e sem `node_modules`, o kernel Linux, com e sem `-U`); a medição ajusta a tabela. Com a D-02 em fluxo, a medição deixa de decidir o transporte e passa a registrar o tempo até o primeiro arquivo. Decisão do usuário com a recomendação | ✅ |
+| D-07 | Lista de caminhos do localizador (Quick Open e `@` do 08): recalcular a cada consulta, cache com TTL, ou cache invalidado pelo watcher do 07 | quanto custa `rg --files` numa pasta grande (D-06) e se o watcher do 07 é observável de dentro do backend | B-09 | 2026-09-28 · **cache por realpath com TTL de 10 s e *single-flight***, consultado depois da allowlist; invalidação pelo watcher do 07 quando ele publicar a mudança como evento interno (`EventEmitter2`). Decisão do usuário com a recomendação | ✅ |
 
 ### D-04 — um motor só para prévia e aplicação
 
@@ -165,7 +178,7 @@ que saiu da allowlist não é respondida pelo cache.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-08 | Editor de resultados de busca: só em memória, ou salvável como `.code-search` compatível com o VS Code | — (escolha de produto) | B-17 | — | 🔲 |
+| D-08 | Editor de resultados de busca: só em memória, ou salvável como `.code-search` compatível com o VS Code | — (escolha de produto) | B-17 | 2026-09-28 · **salvável como `.code-search`** no formato do VS Code, pela escrita do 07 (trilha e conflito dele); `**/*.code-search` fora da própria busca; histórico de buscas em `localStorage` com `try/catch`. Decisão do usuário com a recomendação | ✅ |
 
 ### D-08 — o editor de resultados
 

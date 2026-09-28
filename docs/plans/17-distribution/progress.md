@@ -11,7 +11,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-27
+**Última atualização:** 2026-09-28
 **Bloqueios:** nenhum por decisão — D-01, D-04 e D-05 decididas em 2026-09-26 pelo usuário: Linux,
 macOS e Windows suportados com teste só em Linux; a exposição e o certificado são da infraestrutura
 ([arquitetura](../../architecture/README.md#onde-o-produto-roda-e-como-é-alcançado)). A F1 precisa
@@ -55,7 +55,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 7 | 4 | 0 | 3 | 0 |
+| [Decisões](decisions.md) | 8 | 5 | 0 | 3 | 0 |
 
 ---
 

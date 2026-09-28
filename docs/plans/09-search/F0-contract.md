@@ -91,7 +91,18 @@ de 150 ms com a lista em cache (D-07), que é o que um menu que abre a cada tecl
 cancela a consulta anterior a cada tecla e descarta resposta velha; o servidor mata o que ainda
 estiver rodando para a consulta abortada.
 
-A forma da resposta segue a D-02; as exclusões padrão, a D-03. A busca é por **aba de pasta** do 07:
+**Forma da resposta (D-02):** `POST /search/text` e `POST /search/replace/preview` respondem em
+**fluxo NDJSON** (`Content-Type: application/x-ndjson`, `Cache-Control: no-transform`,
+`X-Accel-Buffering: no`): uma linha `{type:'file', …}` por arquivo, com os casamentos e, na prévia,
+o ETag. O fluxo **sempre** fecha com exatamente uma linha final, `{type:'end', truncated, skipped}` ou
+`{type:'error', code, messageKey, params}`. `GET /search/files` e `POST /search/replace` respondem com
+um corpo JSON único. Todo erro detectável antes do primeiro byte (validação, allowlist, taxa, corpo
+grande, padrão que não compila) sai com o status da tabela, **sem abrir o fluxo**. Depois do primeiro
+byte, o status já saiu: a falha do motor é a linha `error`, e fluxo sem linha final é conexão
+caída, que o cliente trata como `SEARCH_ENGINE_FAILED`. A B-03 registra essa exceção à regra "nunca
+`200` com erro no corpo" no [doc 04](../../architecture/shared/04-errors-and-http.md), com o
+motivo. A ordem das linhas **não** é garantida, porque o `rg` roda em paralelo; quem ordena é o
+cliente, e com truncamento o conjunto devolvido pode variar. As exclusões padrão seguem a D-03. A busca é por **aba de pasta** do 07:
 o `folder` é o da aba, e nada do estado de uma aba vaza para outra. Os limites de taxa por usuário do
 [plano 05](../05-hardening-operations/README.md) se somam ao teto de concorrência deste plano.
 
@@ -108,7 +119,9 @@ Entram no [catálogo](../../architecture/shared/04-errors-and-http.md#catálogo-
 E os usos novos de códigos existentes, cada um com sua `messageKey`: `RATE_LIMITED` com
 `params.scope: 'search'`; `PAYLOAD_TOO_LARGE` com `params.measure: 'files'` no aplicar;
 `INVALID_INPUT` com `search.error.globOutsideFolder` e `search.error.pathOutsideFolder`. Prazo
-estourado **não** é erro: é `200` com `truncated.reason: 'timeout'` — o que se achou vale.
+estourado **não** é erro: é a linha `end` com `truncated.reason: 'timeout'` — o que se achou vale.
+`SEARCH_ENGINE_FAILED` tem duas formas: `502` quando o `rg` falha antes do primeiro byte, e a linha
+`error` do fluxo quando falha depois (D-02). É o mesmo `code` com a mesma `messageKey`.
 
 ### B-05 — Regras estáticas: `child_process` confinado, shell proibido 🔲
 

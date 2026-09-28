@@ -18,6 +18,7 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 | D-01 | Quais sistemas operacionais entram no escopo inicial | onde as pessoas que vão usar isto trabalham | B-02 | 2026-09-26 · **Linux, macOS e Windows suportados, teste só em Linux** — decisão do usuário: macOS e Windows ficam sem verificação automatizada, risco declarado no R-03 | ✅ |
 | D-02 | O web é servido pelo próprio backend, ou por um processo separado | se alguém vai querer servir o front de outro lugar | B-01 | — | 🔲 |
 | D-03 | O Postgres da instalação é container Docker ou serviço nativo | se exigir Docker na máquina do usuário é aceitável | B-01, B-03 | — | 🔲 |
+| D-08 | O binário do ripgrep (`@vscode/ripgrep`, 09 · D-01) é baixado na instalação ou empacotado no artefato | se a instalação do usuário tem rede; se o *postinstall* roda sob o `onlyBuiltDependencies` do artefato; o binário por sistema operacional da D-01 | B-01 | — | 🔲 |
 
 ### D-01 — três mecanismos diferentes
 
@@ -33,6 +34,14 @@ O desenvolvimento já exige Docker ([R-05 do bootstrap](../00-bootstrap/README.m
 mas exigir Docker de quem só quer **usar** o produto é outra conversa: é um pré-requisito
 pesado numa máquina de trabalho. Postgres nativo tira o peso e acrescenta um caminho de
 instalação por sistema operacional.
+
+### D-08 — o binário do ripgrep
+
+Aberta em 2026-09-28 pela [D-01 do plano 09](../09-search/decisions.md#d-01--de-onde-vem-o-ripgrep):
+a busca usa o `@vscode/ripgrep` com versão fixada, que baixa o binário da plataforma no
+*postinstall*. No desenvolvimento, isso é uma entrada no `onlyBuiltDependencies`. Na instalação do
+usuário, sobram duas saídas: o artefato leva o binário de cada sistema operacional, ou a instalação
+precisa de rede. O `RC_RIPGREP_PATH` cobre quem já tem o `rg` instalado.
 
 ---
 

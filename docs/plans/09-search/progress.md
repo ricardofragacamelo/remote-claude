@@ -11,8 +11,8 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-27
-**Bloqueios:** nenhum para planejar; para **começar**, a F0 espera as decisões D-01…D-03 e a F0 dos planos 06 e 07 ([decisões](decisions.md))
+**Última atualização:** 2026-09-28
+**Bloqueios:** nenhuma decisão aberta; para **começar**, a F0 dos planos 06 e 07. Os spikes (o JSON do `--replace` da D-04) e as medidas (D-06) são tarefas da F1, com o desvio já decidido — ver [decisions.md](decisions.md)
 
 ```
 F0 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
@@ -41,7 +41,7 @@ F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 162 | 162 | 0 | 0 | 0 |
+| [Matriz](scenarios.md) | 171 | 171 | 0 | 0 | 0 |
 
 ---
 
@@ -52,7 +52,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 8 | 8 | 0 | 0 | 0 |
+| [Decisões](decisions.md) | 8 | 0 | 0 | 8 | 0 |
 
 ---
 

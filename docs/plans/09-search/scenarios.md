@@ -120,16 +120,21 @@ arquivo-sentinela não existe no fim).
 | S-68 | linhas de contexto vêm antes e depois, sem duplicar linha entre casamentos próximos | eq | integração | — | B-10 | ⬜ |
 | S-69 | `onlyPaths` restringe a busca aos arquivos dados | eq | integração | — | B-10 | ⬜ |
 | S-70 | teto de casamentos → `truncated: { reason: 'limit' }`, e o processo é encerrado ao atingi-lo | fron | integração | — | B-10 | ⬜ |
-| S-71 | prazo estourado → `200` com o que achou e `reason: 'timeout'` | fron | integração | — | B-10 | ⬜ |
+| S-71 | prazo estourado → o fluxo traz o que achou e fecha com `end` e `reason: 'timeout'` | fron | integração | — | B-10 | ⬜ |
 | S-72 | a requisição abortada mata o processo: zero `rg` órfão na tabela de processos | est | integração | — | B-10 | ⬜ |
 | S-73 | terceira busca simultânea do mesmo usuário → `429` com `scope: 'search'` e `Retry-After` | conc | integração | `RATE_LIMITED` | B-10 | ⬜ |
 | S-74 | buscas de usuários diferentes não disputam a vaga um do outro | conc | unit | — | B-10 | ⬜ |
-| S-75 | nenhum casamento → `200` com `files: []`, não `404` | fron | integração | — | B-10 | ⬜ |
+| S-75 | nenhum casamento → `200` com só a linha `end`, não `404` | fron | integração | — | B-10 | ⬜ |
 | S-76 | arquivo apagado pelo Claude durante a busca vira `skipped`, e a busca continua | conc | integração | — | B-10 | ⬜ |
-| S-77 | a mesma busca, sem truncamento, devolve o mesmo resultado na mesma ordem | idem | integração | — | B-10 | ⬜ |
+| S-77 | a mesma busca, sem truncamento, devolve o mesmo conjunto de arquivos e casamentos, em qualquer ordem de linhas | idem | integração | — | B-10 | ⬜ |
 | S-78 | corpo acima do limite → `413` | fron | integração | `PAYLOAD_TOO_LARGE` | B-10 | ⬜ |
 | S-79 | multilinha num arquivo acima do teto menor do modo multilinha → pulado e contado | fron | integração | — | B-10 | ⬜ |
 | S-80 | pasta apagada entre a resolução e a execução → `404`, não `502` | err | integração | `WORKSPACE_NOT_FOUND` | B-10 | ⬜ |
+| S-163 | o primeiro arquivo chega ao cliente antes de o `rg` terminar: o fluxo é progressivo, não um corpo guardado até o fim | eq | integração | — | B-10 | ⬜ |
+| S-164 | todo fluxo fecha com exatamente uma linha final (`end` ou `error`), e nada vem depois dela | eq | integração | — | B-10 | ⬜ |
+| S-165 | o `rg` cai depois do primeiro byte → linha `error` com `SEARCH_ENGINE_FAILED`, e o fluxo fecha | err | integração | `SEARCH_ENGINE_FAILED` | B-10 | ⬜ |
+| S-166 | erro detectável antes do primeiro byte (padrão que não compila, pasta fora da allowlist, taxa) sai com o status próprio, sem abrir o fluxo | err | integração | `SEARCH_PATTERN_INVALID` | B-10 | ⬜ |
+| S-167 | a resposta em fluxo tem `Content-Type: application/x-ndjson`, `Cache-Control: no-transform` e `X-Accel-Buffering: no` | eq | integração | — | B-10 | ⬜ |
 
 ## Substituir — B-11
 
@@ -153,6 +158,7 @@ arquivo-sentinela não existe no fim).
 | S-96 | texto de substituição com `-` no início, `$(…)` ou `;` é escrito literalmente (só as referências de grupo são interpretadas) | eq | integração | — | B-11 | ⬜ |
 | S-97 | "preservar caixa" no disco é igual ao da prévia | eq | integração | — | B-11 | ⬜ |
 | S-98 | dois aplicar simultâneos sobre o mesmo arquivo: um aplica, o outro vê `changed` | conc | integração | — | B-11 | ⬜ |
+| S-168 | a prévia em fluxo traz o ETag em cada linha de arquivo, e a linha final `end` | eq | integração | — | B-11 | ⬜ |
 
 ## Controllers — B-12
 
@@ -169,6 +175,9 @@ arquivo-sentinela não existe no fim).
 | S-102 | consulta superada é cancelada pelo `AbortSignal`, e só a última resposta chega à tela | conc | integração | — | B-13 | ⬜ |
 | S-103 | o hook do localizador é exportado pela feature e serve o `@` do 08 com `kinds=file,dir` e `prefer` | eq | integração | — | B-13 | ⬜ |
 | S-104 | o log `debug` do service não carrega o padrão de busca | eq | integração | — | B-13 | ⬜ |
+| S-169 | arquivos que chegam fora de ordem são inseridos na posição ordenada: a lista final é a mesma para qualquer ordem de chegada | conc | unit | — | B-13 | ⬜ |
+| S-170 | fluxo cortado sem linha final → estado de erro traduzido de `SEARCH_ENGINE_FAILED`, com o que chegou mantido e marcado como parcial | err | integração | `SEARCH_ENGINE_FAILED` | B-13 | ⬜ |
+| S-171 | linha NDJSON malformada → o mesmo estado de erro do fluxo cortado, e a leitura para | err | unit | `SEARCH_ENGINE_FAILED` | B-13 | ⬜ |
 | S-105 | Quick Open vazio mostra recentes e abertos da aba de pasta; digitando, eles sobem na lista | eq | integração | — | B-14 | ⬜ |
 | S-106 | teclado completo: setas, Enter, Ctrl/Cmd+Enter abre ao lado, Esc fecha; padrão *combobox*; axe sem violação | eq | integração | — | B-14 | ⬜ |
 | S-107 | `arquivo.ts:42` abre na linha 42; `:42` sozinho aciona o "ir para linha" do 07 | eq | integração | — | B-14 | ⬜ |

@@ -10,8 +10,8 @@ nunca sobrescrever o que mudou depois da prévia.
 pnpm verify:full     # portões 1-11, sai com código 0
 ```
 
-Nenhuma fase muda o contrato WebSocket (D-02 recomenda HTTP). Se a D-02 escolher evento WS, a
-mudança vira task nas três pontas e `pnpm test:e2e:mobile` entra neste critério.
+Nenhuma fase muda o contrato WebSocket: a D-02 decidiu por HTTP em fluxo (NDJSON), e o
+`pnpm test:e2e:mobile` fica fora deste critério.
 
 **Depende de:** [07 — Explorer e editor](../07-explorer-and-editor/README.md) (módulo `files`,
 escrita humana auditada com ETag, editor e diff editor, códigos `FILE_*`) e
@@ -109,6 +109,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | O localizador serve o Quick Open e o `@` do 09: arquivos e pastas, `prefer`, teto, ignore, latência | B-03, B-09 | [backend/03](../../architecture/backend/03-modules.md) | S-45…S-63, S-103, S-153, S-162 |
 | A allowlist e o realpath decidem antes de qualquer processo, e o cache nunca responde por uma pasta que saiu | B-09, B-11, B-12 | [backend/03](../../architecture/backend/03-modules.md#workspace) | S-52…S-55, S-58, S-91, S-92, S-154 |
 | Busca em texto com tetos, prazo parcial, cancelamento e concorrência limitada | B-10 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#tabela-de-status-http) | S-64…S-80 |
+| Resultado em fluxo NDJSON: progressivo, sempre com linha final, erro tipado depois do primeiro byte, ordem montada no cliente (D-02) | B-03, B-10, B-11, B-13 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md), exceção registrada pela B-03 | S-163…S-171 |
 | Substituir: um motor só, ETag por arquivo, divergente preservado, trilha antes do disco, desfazer respeitado | B-11 | [ADR-013](../../architecture/shared/00-decisions.md#adr-013--o-desfazer-não-usa-rewindfiles-o-store-de-checkpoint-é-nosso), [backend/03](../../architecture/backend/03-modules.md#audit) | S-81…S-98, S-156, S-160 |
 | Status HTTP com significado, e o abort da requisição chega ao processo | B-12 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#tabela-de-status-http) | S-99…S-101, S-151, S-152 |
 | Quick Open e view Busca por aba de pasta, com a busca na URL | B-13…B-15 | [web/04](../../architecture/web/04-state-and-data.md#a-url-é-estado) | S-102…S-123, S-155, S-158, S-161 |
