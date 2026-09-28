@@ -11,8 +11,8 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-27
-**Bloqueios:** a [D-01](decisions.md#d-01--o-terminal-existe) — o terminal existe? — bloqueia todas as fases e pode encerrar o plano
+**Última atualização:** 2026-09-28
+**Bloqueios:** nenhuma decisão em aberto (as 13 decididas em 2026-09-26 e 2026-09-28); o plano espera o 05 fechar ([06 · D-02](../06-workbench/decisions.md))
 
 ```
 F0 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
@@ -52,7 +52,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 13 | 11 | 0 | 2 | 0 |
+| [Decisões](decisions.md) | 13 | 0 | 0 | 13 | 0 |
 
 ---
 
@@ -101,7 +101,7 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 | R-05 | Tecla na trilha ou no log | 🔲 aberto | redação na B-05, antes do primeiro byte; S-105 |
 | R-06 | `node-pty` quebra instalação e distribuição | 🔲 aberto | D-04; nota ao plano 17 |
 | R-07 | Provedor sem `auth_time` no access token | 🔲 aberto | D-02; falha fechada |
-| R-08 | Enxurrada de saída derruba a connection da sessão | 🔲 aberto | D-05; medir antes de decidir |
+| R-08 | Enxurrada de saída derruba a connection da sessão | 🔲 aberto | D-05 decidida: texto UTF-8 e fluxo no servidor; `bufferedAmount` medido na B-08 |
 | R-09 | "Só do web" não é barreira contra quem tem as credenciais | 🔲 aberto | aceito e dito na D-09 |
 | R-10 | Exposição fora do loopback torna o terminal alcançável pela internet | 🔲 aberto | nota ao plano 17 junto com a B-01 |
 
