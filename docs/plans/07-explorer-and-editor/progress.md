@@ -11,8 +11,8 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-27
-**Bloqueios:** nenhum para planejar; para **começar**, o plano 06 concluído e as decisões abertas de F0 (D-01, D-02, D-03, D-07, D-11) — ver [decisions.md](decisions.md)
+**Última atualização:** 2026-09-28
+**Bloqueios:** nenhum para planejar; para **começar**, o plano 06 concluído. As decisões de F0 estão tomadas; a D-08 (watcher) fecha com o spike B-19, que é a primeira tarefa da F3 — ver [decisions.md](decisions.md)
 
 ```
 F0 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
@@ -62,7 +62,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 20 | 20 | 0 | 0 | 0 |
+| [Decisões](decisions.md) | 20 | 0 | 1 | 19 | 0 |
 
 ---
 
@@ -86,6 +86,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 | 2026-09-26 | O plano ganhou as fases F7 (prévias e transferência) e F8 (histórico local), depois da F6 do núcleo | o usuário pediu paridade com o VS Code **nas funções de arquivo**; os arquivos de fase F0…F6 já existiam e não são renomeados, então as fases novas vêm depois do e2e do núcleo, cada uma com o seu próprio e2e | README, decisions (D-16…D-18), scenarios |
 | 2026-09-26 | Inteligência de linguagem e depuração saíram do alcance, e o git saiu do plano 09 | decisão do usuário: "não vai ter debug, nem inteligência de linguagem"; o plano 09 ficou só com busca | README (Não entra), D-09, F8 (a Linha do tempo é só histórico local) |
 | 2026-09-26 | A árvore e as abas viraram fonte de arraste para o chat do Claude (B-42) | pedido do usuário; o alvo é do plano 08 | F5, D-20 |
+| 2026-09-28 | As 20 decisões em aberto respondidas pelo usuário, uma a uma; todas seguem a recomendação. 19 decididas; a D-08 tem o método (spike B-19) e espera a medida | as fases dependiam delas para começar | [decisions.md](decisions.md) D-01…D-20; nenhuma tarefa ou cenário mudou. Números de D-04, D-16 e o hard link da D-05 são provisórios até a medida |
 
 ---
 

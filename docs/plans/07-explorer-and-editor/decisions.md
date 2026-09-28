@@ -10,9 +10,11 @@ Plano: [README.md](README.md) · Cenários: [scenarios.md](scenarios.md) · Prog
 
 Decisão em aberto **não** impede planejar; impede **começar a fase** que depende dela.
 
-> Nenhuma das vinte está decidida. Cada uma traz a recomendação de quem escreveu o plano, e é só
-> isso: recomendação. As que dependem de medida (D-04, D-05, D-08, D-09, D-12, D-16) dizem o que
-> medir antes, e a medida vai para esta página quando for feita — não para a memória de quem a fez.
+> As vinte foram respondidas pelo usuário em **2026-09-28**, uma a uma, e todas seguem a
+> recomendação. Dezenove estão decididas; a D-08 tem o método decidido e a escolha pendente do spike
+> B-19. As que dependem de medida (D-04, D-05, D-08, D-09, D-12, D-16) seguem dizendo o que medir, e
+> a medida vai para esta página quando for feita — não para a memória de quem a fez. Onde ela pode
+> mudar um número, o **Resultado** diz que o número é provisório.
 
 ---
 
@@ -20,11 +22,11 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-01 | O explorer e o editor são um módulo novo (`files`) ou uma extensão do `workspace` | se `workspace` tem de ganhar escrita e conteúdo, ou se isso é linguagem de outro domínio | B-02 | — | 🔲 |
-| D-02 | A escrita humana pela web vai para a trilha: o quê, quando, e o que acontece se a trilha cai | se leitura humana também é auditada; o que fazer quando o disco falha **depois** do registro | B-01, B-16 | — | 🔲 |
-| D-03 | A semântica de concorrência entre o humano e o Claude no mesmo arquivo | se o validador é hash ou mtime; se `If-Match` é obrigatório em todo verbo; o que um reenvio depois de resposta perdida recebe | B-03, B-11 | — | 🔲 |
-| D-07 | Como a mudança no disco chega à web (WS com assinatura vs polling), e qual `seq` o stream carrega | o envelope exige `seq` monotônico **por sessão**, e este stream não é de sessão | B-04, B-23 | — | 🔲 |
-| D-11 | A raiz do explorer é a pasta aberta, e a API recebe a pasta junto com o caminho | se a fronteira da escrita é a raiz da allowlist ou a pasta da aba | B-02, B-07 | — | 🔲 |
+| D-01 | O explorer e o editor são um módulo novo (`files`) ou uma extensão do `workspace` | se `workspace` tem de ganhar escrita e conteúdo, ou se isso é linguagem de outro domínio | B-02 | 2026-09-28 · **módulo novo `files`**, decisão do usuário com a recomendação: `files → workspace` por porta (`FolderResolver`), `files → audit` escrevendo, nenhuma dependência de `session` — a origem `claude` chega por evento de domínio | ✅ |
+| D-02 | A escrita humana pela web vai para a trilha: o quê, quando, e o que acontece se a trilha cai | se leitura humana também é auditada; o que fazer quando o disco falha **depois** do registro | B-01, B-16 | 2026-09-28 · **kinds `file.*` em `audit_events`, gravados antes do disco**, sem conteúdo; trilha fora → `503` `SERVICE_UNAVAILABLE` com `Retry-After` e nada no disco; falha do disco depois → `file.failed` apontando o primeiro; leitura fora da trilha (log `debug`), download dentro (`file.downloaded`). Decisão do usuário com a recomendação; ADR-015 (B-01) e doc 04 (B-03) registram | ✅ |
+| D-03 | A semântica de concorrência entre o humano e o Claude no mesmo arquivo | se o validador é hash ou mtime; se `If-Match` é obrigatório em todo verbo; o que um reenvio depois de resposta perdida recebe | B-03, B-11 | 2026-09-28 · **`ETag` forte por sha256, `If-Match` obrigatório no `PUT`**, com os sete pontos da seção (`428` sem ou com `*`, `412` inclusive para apagado, `W/` nunca casa, reenvio idêntico → `200` sem escrita, `304` no `GET`, `If-Match` opcional em mover/apagar, criar com `O_EXCL` → `409`). Decisão do usuário com a recomendação | ✅ |
+| D-07 | Como a mudança no disco chega à web (WS com assinatura vs polling), e qual `seq` o stream carrega | o envelope exige `seq` monotônico **por sessão**, e este stream não é de sessão | B-04, B-23 | 2026-09-28 · **WS com assinatura**: `workspace.watch` → `watchId`, `workspace.filesChanged` com `seq` monotônico por `watchId` a partir de 1, **sem replay** — reconexão refaz o `watch` e recarrega a árvore; o envelope passa a dizer "monotônico por stream" (B-04) e o plano 10 reusa. Decisão do usuário com a recomendação | ✅ |
+| D-11 | A raiz do explorer é a pasta aberta, e a API recebe a pasta junto com o caminho | se a fronteira da escrita é a raiz da allowlist ou a pasta da aba | B-02, B-07 | 2026-09-28 · **`folder` (absoluto) + `path` relativo POSIX** em toda rota do `files`; `folder` pela regra do `ResolveWorkspaceUseCase`; `path` acima da pasta → `403`, mesmo dentro da raiz; o WS segue com `workspacePath`. Decisão do usuário com a recomendação; backend/03 registra que subpasta aberta é fronteira mais estreita | ✅ |
 
 ### D-01 — módulo novo ou extensão do workspace
 
@@ -148,8 +150,8 @@ fronteira mais estreita que a raiz, e é isso que ela significa.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-04 | Tetos de tamanho (modo leve, edição, leitura paginada) e quais encodings se lê e se grava | quanto o editor escolhido (D-09) aguenta sem travar o celular; tamanho real dos arquivos dos repositórios do usuário — **medir** | B-09, B-11, B-38 | — | 🔲 |
-| D-05 | O que fazer com symlink (seguir? até onde?) e com hard link ao salvar | se a verificação pós-abertura (`/proc/self/fd`) é aceitável como Linux-only; o que o rename atômico faz com `nlink > 1` — **medir** | B-07, B-11 | — | 🔲 |
+| D-04 | Tetos de tamanho (modo leve, edição, leitura paginada) e quais encodings se lê e se grava | quanto o editor escolhido (D-09) aguenta sem travar o celular; tamanho real dos arquivos dos repositórios do usuário — **medir** | B-09, B-11, B-38 | 2026-09-28 · **limiar 1 MB, teto de edição 10 MB, configurados**; acima → `413` `FILE_TOO_LARGE` e leitura paginada (F7); binário por NUL nos primeiros 8 KB; encoding só por BOM e UTF-8 válido, senão `415` e "reabrir com encoding" (`iconv-lite`), save no encoding de abertura, não representável → `422`; teto lido com `teto + 1` do mesmo descritor. Decisão do usuário com a recomendação; **os números são provisórios** até a medida (p50/p99 em `~/projects`, 1/5/10 MB no celular), que vem para esta página | ✅ |
+| D-05 | O que fazer com symlink (seguir? até onde?) e com hard link ao salvar | se a verificação pós-abertura (`/proc/self/fd`) é aceitável como Linux-only; o que o rename atômico faz com `nlink > 1` — **medir** | B-07, B-11 | 2026-09-28 · **symlink seguido só com `realpath` dentro da pasta aberta**; link para fora é `outside: true` e não navegável; verificação pós-abertura por `/proc/self/fd` em toda leitura e todo temporário (macOS é gap do plano 17); apagar symlink apaga o link; **`nlink > 1` → escrita no lugar com cópia temporária**. Decisão do usuário com a recomendação; a parte do hard link fica sujeita à medida do que o VS Code faz | ✅ |
 
 ### D-04 — teto de tamanho e encoding
 
@@ -210,10 +212,10 @@ temporária, para não quebrar o link em silêncio — sujeito à medida.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-06 | Apagar é definitivo, vai para uma lixeira, ou é desfeito pelo histórico local | onde uma lixeira poderia morar sem sair da allowlist nem sujar o repositório | B-15, B-58 | — | 🔲 |
-| D-12 | Como mover sem sobrescrever o destino, se o Node não tem `RENAME_NOREPLACE` | se `link` + `unlink` serve para arquivo; o que resta para diretório — **medir** | B-13 | — | 🔲 |
-| D-13 | Onde os fatos `file.*` aparecem para o usuário — `/audit` só lê `audit_entries` hoje | se um `GET /audit-events` é deste plano ou do [plano 12](../12-audit-explained/README.md), que redesenha a trilha | B-17, B-29 | — | 🔲 |
-| D-15 | Arquivos que mudam o que o Claude pode fazer (`.claude/settings*.json`, `.mcp.json`) são editáveis pelo editor genérico | o que o [plano 11](../11-claude-settings/README.md) decide para a tela própria dele | B-11, B-34 | — | 🔲 |
+| D-06 | Apagar é definitivo, vai para uma lixeira, ou é desfeito pelo histórico local | onde uma lixeira poderia morar sem sair da allowlist nem sujar o repositório | B-15, B-58 | 2026-09-28 · **em duas etapas**: até a F8, definitivo com segundo passo (`409` `DIRECTORY_NOT_EMPTY` com contagem capada, apaga só com `expectedEntries` igual, senão `412`); com a F8, o que cabe no histórico é guardado e apagar vira aviso com **Desfazer** (B-58); o que não cabe mantém o segundo passo; falha ao guardar volta ao segundo passo. Decisão do usuário com a recomendação | ✅ |
+| D-12 | Como mover sem sobrescrever o destino, se o Node não tem `RENAME_NOREPLACE` | se `link` + `unlink` serve para arquivo; o que resta para diretório — **medir** | B-13 | 2026-09-28 · **arquivo por `link` + `unlink`; diretório por conferência + `rename` sob a trava por caminho** (B-18), janela residual declarada em R-02; `EXDEV` → `422` `FILE_OPERATION_INVALID` (`reason: crossDevice`), nunca cópia + remoção implícita. Decisão do usuário com a recomendação; a medida de uma biblioteca com `renameat2` sem módulo nativo ainda vem, e só troca o meio, não a semântica | ✅ |
+| D-13 | Onde os fatos `file.*` aparecem para o usuário — `/audit` só lê `audit_entries` hoje | se um `GET /audit-events` é deste plano ou do [plano 12](../12-audit-explained/README.md), que redesenha a trilha | B-17, B-29 | 2026-09-28 · **`GET /audit-events`** no `AuditQueryModule`, filtrado por quem pergunta, `kind` por prefixo, cursor keyset por `seq`, e uma seção "Arquivos" mínima na Auditoria; o plano 12 absorve, e se chegar antes B-17/B-29 consomem o dele. Decisão do usuário com a recomendação | ✅ |
+| D-15 | Arquivos que mudam o que o Claude pode fazer (`.claude/settings*.json`, `.mcp.json`) são editáveis pelo editor genérico | o que o [plano 11](../11-claude-settings/README.md) decide para a tela própria dele | B-11, B-34 | 2026-09-28 · **editável com segundo passo**: `PUT` sem `confirmSensitive: true` → `428` (`reason: sensitiveFile`); com ele, grava e registra `file.written` com `sensitive: true`; lista pura de domínio (`.claude/settings.json`, `.claude/settings.local.json`, `.mcp.json`) reusada pelo plano 11; criar, mover e apagar passam pelo mesmo passo. Decisão do usuário com a recomendação | ✅ |
 
 ### D-06 — apagar definitivo ou lixeira
 
@@ -297,7 +299,7 @@ reusa. Criar, mover e apagar esses caminhos passam pelo mesmo passo.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-08 | Qual watcher: `fs.watch` recursivo, `chokidar` ou `@parcel/watcher` | quantos watches de inotify cada um consome num repositório com `node_modules`, e o que acontece no limite — **medir** | B-19, B-20 | — | 🔲 |
+| D-08 | Qual watcher: `fs.watch` recursivo, `chokidar` ou `@parcel/watcher` | quantos watches de inotify cada um consome num repositório com `node_modules`, e o que acontece no limite — **medir** | B-19, B-20 | 2026-09-28 · **o método está decidido, a escolha não**: o spike B-19 mede `fs.watch` recursivo, `chokidar` v4 e `@parcel/watcher` (watches, subida, `max_user_watches` baixo) num clone com `pnpm install`; critério "diretório excluído não consome watch" e "no limite, erro explícito"; empate → a sem módulo nativo. Decisão do usuário com a recomendação; fecha com a medida, registrada aqui | 🔄 |
 
 ### D-08 — a implementação do watcher
 
@@ -323,8 +325,8 @@ duas empatarem, a sem módulo nativo.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-10 | Exclusões padrão da árvore e do watcher, e o teto de entradas por diretório | se o que é escondido também deixa de ser assistido; qual teto não trava a virtualização | B-08, B-20, B-25 | — | 🔲 |
-| D-19 | De onde vêm os modelos do "novo a partir de modelo" | se o usuário quer modelos próprios, e onde eles morariam sem inventar convenção na pasta dele | B-26 | — | 🔲 |
+| D-10 | Exclusões padrão da árvore e do watcher, e o teto de entradas por diretório | se o que é escondido também deixa de ser assistido; qual teto não trava a virtualização | B-08, B-20, B-25 | 2026-09-28 · **duas listas, constantes do domínio**: escondidos `.git`, `.svn`, `.hg`, `.DS_Store`, `Thumbs.db` (com "mostrar ocultos"); visíveis e não assistidos `node_modules`, `.git/objects`, `.git/subtree-cache`, `dist`, `build`, `.venv`, `target`; teto por nível configurado, default 5 000, com `truncated: true`. Decisão do usuário com a recomendação | ✅ |
+| D-19 | De onde vêm os modelos do "novo a partir de modelo" | se o usuário quer modelos próprios, e onde eles morariam sem inventar convenção na pasta dele | B-26 | 2026-09-28 · **conjunto embutido no web + "Novo a partir deste arquivo"**; criar de modelo é um `POST /files` com conteúdo inicial; pasta de convenção e modelos por usuário ficam como alternativa registrada, sem task. Decisão do usuário com a recomendação | ✅ |
 
 ### D-10 — exclusões padrão e teto da árvore
 
@@ -363,9 +365,9 @@ registrados aqui como alternativa, sem task.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-09 | O editor é o Monaco ou o CodeMirror 6 | tamanho do bundle, toque no celular, testabilidade em jsdom, CSP e workers — **medir** | B-31 | — | 🔲 |
-| D-14 | Rascunho não salvo sobrevive à recarga da página | se guardar conteúdo de arquivo no navegador é aceitável (`.env` aberto num computador emprestado) | B-40 | — | 🔲 |
-| D-20 | O formato do que se arrasta da árvore e das abas para o chat do Claude, e o que acontece entre abas de pasta | o que o [plano 08](../08-claude-panel/README.md) aceita como anexo (`{kind:'file', path, range?}`), e se pasta entra como anexo | B-42 | — | 🔲 |
+| D-09 | O editor é o Monaco ou o CodeMirror 6 | tamanho do bundle, toque no celular, testabilidade em jsdom, CSP e workers — **medir** | B-31 | 2026-09-28 · **Monaco**, carregado sob demanda, servido pelo nosso build (nenhum byte de CDN), atrás da porta `CodeEditor`; modo simplificado em tela pequena. Decisão do usuário com a recomendação; a medida (chunk gzip, tempo até editar no celular, cobertura do modo simplificado) não troca o editor — decide só a partir de que largura o modo simplificado assume | ✅ |
+| D-14 | Rascunho não salvo sobrevive à recarga da página | se guardar conteúdo de arquivo no navegador é aceitável (`.env` aberto num computador emprestado) | B-40 | 2026-09-28 · **não persistir conteúdo**: buffer sujo em memória, `beforeunload` ao recarregar ou fechar, confirmação listando os arquivos ao fechar aba suja; persistir cifrado no servidor fica para decisão própria. Decisão do usuário com a recomendação | ✅ |
+| D-20 | O formato do que se arrasta da árvore e das abas para o chat do Claude, e o que acontece entre abas de pasta | o que o [plano 08](../08-claude-panel/README.md) aceita como anexo (`{kind:'file', path, range?}`), e se pasta entra como anexo | B-42 | 2026-09-28 · **`application/x-remote-claude-files+json`** (`{ folder, entries, selection? }`, caminho relativo) + `text/plain`; `scopeDragPayload` pura em `web/src/shared/`, recusando com `outsideFolder`; pasta vai como `directory`, sem expandir; "Adicionar ao contexto do Claude" só com o painel do 08 registrado; a fronteira continua no `session.prompt`. Decisão do usuário com a recomendação | ✅ |
 
 ### D-09 — Monaco ou CodeMirror 6
 
@@ -443,8 +445,8 @@ não fronteira.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-16 | Como baixar arquivo e pasta sem token na URL, e os tetos de download e de upload | quanto um blob aguenta no navegador do celular; se um bilhete de uso único na URL é aceitável — **medir** | B-48, B-49, B-52 | — | 🔲 |
-| D-18 | Como servir conteúdo do usuário para prévia sem abrir XSS na origem do app | quais tipos entram na prévia; se o pdf.js local cabe no orçamento de bundle | B-48, B-50 | — | 🔲 |
+| D-16 | Como baixar arquivo e pasta sem token na URL, e os tetos de download e de upload | quanto um blob aguenta no navegador do celular; se um bilhete de uso único na URL é aceitável — **medir** | B-48, B-49, B-52 | 2026-09-28 · **`fetch` com Bearer → blob**, teto de download configurado (default 200 MB) conhecido antes (`413` no `archive` pelo estimado); `showSaveFilePicker` + stream onde existir; upload com teto por arquivo (default 100 MB), multipart em stream. Bilhete na URL fica como alternativa, só com decisão própria. Decisão do usuário com a recomendação; os tetos são provisórios até medir o blob no celular | ✅ |
+| D-18 | Como servir conteúdo do usuário para prévia sem abrir XSS na origem do app | quais tipos entram na prévia; se o pdf.js local cabe no orçamento de bundle | B-48, B-50 | 2026-09-28 · **`GET /files/raw` sempre com `nosniff` e `CSP: sandbox`**, fora da lista de prévia como `attachment`; a web nunca navega para o `raw` — imagem e SVG por `<img src=blob:>`, PDF pelo pdf.js do nosso build, markdown pelo sanitizador do plano 08; prévia de `.html` é o código-fonte. Decisão do usuário com a recomendação | ✅ |
 
 ### D-16 — download sem token na URL, e os tetos
 
@@ -483,7 +485,7 @@ código-fonte, não a página.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-17 | O que o histórico local guarda, com que teto e retenção, quem vê, e o que acontece quando ele falha | quanto espaço o usuário aceita dar; se a versão salva por uma pessoa pode ser vista por outra da mesma raiz | B-55, B-56, B-57 | — | 🔲 |
+| D-17 | O que o histórico local guarda, com que teto e retenção, quem vê, e o que acontece quando ele falha | quanto espaço o usuário aceita dar; se a versão salva por uma pessoa pode ser vista por outra da mesma raiz | B-55, B-56, B-57 | 2026-09-28 · **como na seção**: versão anterior a toda escrita humana que perde conteúdo (a do Claude não), metadado em tabela nova e blob por hash no disco do backend, nunca no Postgres; defaults configurados de **50 versões por arquivo, 512 MB, 30 dias**, purga por job; visível a quem alcança a raiz agora, com o autor; falha não impede salvar, impede apagar sem confirmação; restaurar é escrita comum (`file.restored`). Decisão do usuário com a recomendação; ADR-015 (B-55) registra | ✅ |
 
 ### D-17 — o histórico local
 

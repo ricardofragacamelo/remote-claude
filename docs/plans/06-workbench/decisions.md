@@ -24,9 +24,9 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 |---|---|---|---|---|---|
 | D-01 | Construir o workbench em React ou embutir o VS Code (openvscode-server / code-server) | se o VS Code embutido pode ter terminal, tarefas e extensões desligados de forma que não se religuem, e quanto o `iframe` custa em integração com a nossa autenticação | B-01 | 2026-09-26 · **construir em React**, decisão do usuário — o VS Code embutido traria terminal e extensões fora da aprovação e da trilha; a ADR-014 (B-01) registra | ✅ |
 | D-02 | A ordem dos planos 06–16 em relação ao que falta do 05 e ao 17 | se algum endpoint novo precisa dos limites HTTP do 05 antes de existir | B-01 | 2026-09-26 · **terminar o plano 05 antes**, decisão do usuário (contra a recomendação): os planos 06–16 começam depois que o 05 fechar; o 17 não é pré-requisito deles | ✅ |
-| D-06 | A URL do workbench: pasta na search ou no path | como o TanStack Router trata caminho absoluto com `/` num parâmetro de path, e o que acontece com `#` e `%` | B-05 | — | 🔲 |
-| D-07 | O destino da home (`/`) e das rotas antigas (`/sessions/$id`, `/history…`) | nenhum — é escolha de navegação | B-05, B-33 | — | 🔲 |
-| D-10 | Onde persiste o conjunto de abas abertas: `localStorage` por visitante ou preferência do usuário no servidor | se o usuário espera reencontrar as abas no celular ao sair do desktop; custo de uma tabela e quatro rotas | B-04, B-09, B-20 | — | 🔲 |
+| D-06 | A URL do workbench: pasta na search ou no path | como o TanStack Router trata caminho absoluto com `/` num parâmetro de path, e o que acontece com `#` e `%` | B-05 | 2026-09-28 · **pasta na search** (`/workbench?folder=`, e `&file=` do plano 07 ao lado), decisão do usuário; o gap do splat deixa de importar — o S-04 prova a ida e volta com `#`, `%`, `?` e `&` | ✅ |
+| D-07 | O destino da home (`/`) e das rotas antigas (`/sessions/$id`, `/history…`) | nenhum — é escolha de navegação | B-05, B-33 | 2026-09-28 · **`/` abre a aba ativa ou a boas-vindas; `/sessions/$sessionId`, `/history` e `/history/$conversationId` são removidas neste plano**, sem deep link de compatibilidade — decisão do usuário, contra a recomendação, sabendo que o histórico, a retomada e o desfazer de conversa antiga saem do web até o [plano 08](../08-claude-panel/README.md) (o app continua com o histórico). Os specs de e2e que entravam por elas migram para o workbench na B-33 | ✅ |
+| D-10 | Onde persiste o conjunto de abas abertas: `localStorage` por visitante ou preferência do usuário no servidor | se o usuário espera reencontrar as abas no celular ao sair do desktop; custo de uma tabela e quatro rotas | B-04, B-09, B-20 | 2026-09-28 · **servidor**, decisão do usuário: o conjunto e a ordem das abas seguem o usuário; a URL leva só a ativa; o estado de dentro de cada aba fica por visitante em `localStorage` (B-27). As rotas de `open-folders` e o `OPEN_FOLDERS_LIMIT_REACHED` existem | ✅ |
 
 ### D-01 — Construir o workbench ou embutir o VS Code
 
@@ -56,10 +56,13 @@ provedor OIDC real), F3 e F4 não iniciadas. O 06 empacota o produto.
 | 06–16 esperam o 05 e o 17 | o usuário continua com a interface que chamou de "muito pobre" enquanto um bloqueio de terceiro decide o calendário |
 | **06–16 não dependem do que falta do 05 nem do 17** | o 05 termina em paralelo e endurece a superfície **final** (rate limit HTTP, TTL, limites) em vez de uma que vai mudar; o 17 empacota o produto que existe |
 
-**Recomendação:** nenhum dos planos 06–16 depende do que falta do 05 ou do 06. Os endpoints novos
+**Recomendação:** nenhum dos planos 06–16 depende do que falta do 05 ou do 17. Os endpoints novos
 entram sob "os limites do plano 05" quando ele os estender ao HTTP — citado nas tasks, não esperado.
 O teto de entradas da listagem ([D-05](#d-05--teto-de-entradas-por-listagem)) já limita o custo por
 pedido sem depender de rate limit.
+
+**Decidido em 2026-09-26, contra a recomendação:** os planos 06–16 esperam o 05 fechar; o 17 não é
+pré-requisito deles.
 
 ### D-06 — A URL do workbench
 
@@ -86,6 +89,20 @@ lado. É como `/audit` e `/history` já fazem; o S-04 prova a ida e volta com ca
   [plano 08](../08-claude-panel/README.md) levar o histórico para a view Sessões; lá, viram deep links
   da mesma forma.
 
+**Decidido em 2026-09-28, contra a recomendação:** a home segue a recomendação, e as três rotas
+antigas — `/sessions/$sessionId`, `/history` e `/history/$conversationId` — **saem neste plano**, sem
+deep link de compatibilidade. `/audit?…`, `/rules` e `/rules/$ruleId` continuam. O que isso custa,
+dito ao usuário antes de ele decidir:
+
+- ler, continuar e desfazer uma conversa **antiga** pelo web some até o plano 08 trazer a view
+  Sessões; o app continua com o histórico. A sessão **viva** não perde nada: ela está na secondary
+  side bar da aba da pasta;
+- os specs de e2e que entravam por essas rotas (`history-and-resume`, `commands-and-undo`) migram
+  para o workbench na B-33: o que tem porta no workbench passa a entrar por ela, e o que só tinha
+  porta em `/history` sai do e2e do web — nunca `skip`. O plano 08 volta a provar esses cenários pela
+  porta do usuário;
+- link antigo colado no navegador cai no "não encontrado" traduzido.
+
 ### D-10 — Onde persiste o conjunto de abas abertas
 
 | Opção | A favor | Contra |
@@ -95,8 +112,9 @@ lado. É como `/audit` e `/history` já fazem; o S-04 prova a ida e volta com ca
 
 **Recomendação:** servidor, para o **conjunto e a ordem** das abas; a URL carrega só a ativa. O
 estado **dentro** de cada aba (layout, view, painel) fica por visitante em `localStorage` (B-27) — o
-layout do celular não é o do desktop. Se decidido `localStorage`, a B-04 perde as rotas de pastas
-abertas, a B-09 fica só com os recentes, e `OPEN_FOLDERS_LIMIT_REACHED` não existe.
+layout do celular não é o do desktop.
+
+**Decidido em 2026-09-28:** servidor, como recomendado.
 
 ---
 
@@ -105,11 +123,11 @@ abertas, a B-09 fica só com os recentes, e `OPEN_FOLDERS_LIMIT_REACHED` não ex
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-03 | Alcance do seletor: só dentro das raízes liberadas ou a máquina inteira | nenhum técnico — é a fronteira de segurança | B-06, B-10 | 2026-09-26 · **só dentro das raízes da allowlist**, decisão do usuário; "a máquina toda" é declarar o `$HOME` como raiz pelo `pnpm allowlist add` — configuração, não código | ✅ |
-| D-04 | Ocultas, pastas pesadas e symlinks no seletor | nenhum — é escolha de apresentação sobre uma regra já fixa (contenção) | B-06 | — | 🔲 |
-| D-05 | Teto de entradas por listagem, e como alcançar o que passa dele | o maior diretório real que o usuário abre (`node_modules/.pnpm` de um monorepo, `~/projects`) — **medir** | B-06, B-07 | — | 🔲 |
-| D-09 | Onde mora a cópia local da allowlist e como o boot a escolhe | como `start-local.mjs`, a stack de e2e e o `.env` escolhem o arquivo hoje; se o schema Zod do backend pode ser lido pelo `.mjs` | B-10 | — | 🔲 |
-| D-14 | Onde gravar recentes e pastas abertas | nenhum — é modelagem; depende da D-10 | B-09 | — | 🔲 |
-| D-15 | Como o backend em execução recebe a allowlist nova | se há um processo de backend identificável pelo script em `pnpm dev`, e o que o `nest --watch` faz com sinais | B-11 | — | 🔲 |
+| D-04 | Ocultas, pastas pesadas e symlinks no seletor | nenhum — é escolha de apresentação sobre uma regra já fixa (contenção) | B-06 | 2026-09-28 · **a recomendação**, decisão do usuário: ocultas fora por padrão, com "mostrar ocultas"; nenhuma lista de pastas pesadas; symlink para dentro da raiz listado e marcado, para fora, quebrado ou em ciclo omitido | ✅ |
+| D-05 | Teto de entradas por listagem, e como alcançar o que passa dele | o maior diretório real que o usuário abre (`node_modules/.pnpm` de um monorepo, `~/projects`) — **medir** | B-06, B-07 | 2026-09-28 · **teto + `truncated` + `prefix=`**, decisão do usuário, com **1000** como valor de partida; a medição do gap, feita na B-07, só pode ajustar o número, não a forma | ✅ |
+| D-09 | Onde mora a cópia local da allowlist e como o boot a escolhe | como `start-local.mjs`, a stack de e2e e o `.env` escolhem o arquivo hoje; se o schema Zod do backend pode ser lido pelo `.mjs` | B-10 | 2026-09-28 · **`infra/workspace-allowlist.local.yaml`**, decisão do usuário: ignorado pelo git, escolhido pelo `start-local.mjs` quando existe e `RC_WORKSPACE_ALLOWLIST_FILE` não foi definido à mão; e2e e teste nunca o leem; o schema muda para `packages/config`, lido pelo backend e pelo script | ✅ |
+| D-14 | Onde gravar recentes e pastas abertas | nenhum — é modelagem; depende da D-10 | B-09 | 2026-09-28 · **tabela nova por pasta**, decisão do usuário: `user_id`, `path` real, `root_path`, `last_opened_at`, `pinned` e `tab_position` (nula quando fechada), por migration versionada nova; a `workspaces` não muda | ✅ |
+| D-15 | Como o backend em execução recebe a allowlist nova | se há um processo de backend identificável pelo script em `pnpm dev`, e o que o `nest --watch` faz com sinais | B-11 | 2026-09-28 · **`SIGHUP` chama `reload()`**, decisão do usuário, sem watch do arquivo: a regra de [backend/03 · workspace](../../architecture/backend/03-modules.md#workspace) ("recarga explícita, nunca um watch silencioso") fica como está. O processo **não** reinicia — o handler só troca a lista; o sinal vai ao processo do app, não ao `nest --watch` | ✅ |
 
 ### D-03 — Alcance do seletor: dentro das raízes ou a máquina inteira
 
@@ -194,6 +212,14 @@ recentes não descarta fixado (S-38).
 `pnpm allowlist add` manda o sinal quando acha o backend do `pnpm dev`, e senão diz como recarregar.
 Nunca rota HTTP.
 
+**Decidido em 2026-09-28:** `SIGHUP`, como recomendado. Ao decidir, o usuário perguntou se o sinal
+reinicia o serviço — **não**: sem handler, o Node trata `SIGHUP` como término; com o handler
+registrado, o processo continua e só a lista em memória é trocada, com conexões e sessões vivas
+intactas (S-180). Observar o arquivo e recarregar ao salvar foi considerado e **descartado**: bate de
+frente com a regra de [backend/03 · workspace](../../architecture/backend/03-modules.md#workspace)
+("recarga explícita, nunca um watch silencioso"), e o usuário preferiu manter a regra. No `pnpm dev`,
+o `nest --watch` é o processo pai; o sinal vai ao processo do app, pelo pid que o `pnpm dev` registra.
+
 ---
 
 ## F2 — Abrir pasta (web)
@@ -208,8 +234,8 @@ Nunca rota HTTP.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-08 | O workbench em tela pequena | nenhum técnico; é a forma no celular | B-01, B-22 | — | 🔲 |
-| D-11 | O que uma aba inativa mantém vivo, e o teto de abas | memória de uma aba montada no navegador; o limite `attachedSessions` por connection do [plano 05](../05-hardening-operations/F0-limits.md) — **medir** | B-20 | — | 🔲 |
+| D-08 | O workbench em tela pequena | nenhum técnico; é a forma no celular | B-01, B-22 | 2026-09-28 · **uma view por vez** abaixo de `md`, decisão do usuário: Explorer, Editor, Claude e Painel na mesma aba de pasta, barra de views embaixo, seletor de abas no topo, um store para os dois layouts | ✅ |
+| D-11 | O que uma aba inativa mantém vivo, e o teto de abas | memória de uma aba montada no navegador; o limite `attachedSessions` por connection do [plano 05](../05-hardening-operations/F0-limits.md) — **medir** | B-20 | 2026-09-28 · **híbrido**, decisão do usuário, que resolve a divergência com os planos 08 e 10: store em memória, árvore desmontada, watcher liberado, e **sessões e terminais continuam anexados**; teto de **8** abas, ajustável pela medição. A [D-11 do plano 08](../08-claude-panel/decisions.md#d-11--o-que-a-aba-inativa-mantém) fecha junto | ✅ |
 
 ### D-08 — O workbench em tela pequena
 
@@ -249,14 +275,28 @@ inativa continue anexado, porque a carência de desconexão o mataria. As duas c
 "stream de sessão — desanexa" da tabela acima. Quem decidir esta D decide as três juntas e atualiza
 os dois planos na mesma mudança.
 
+**Decidido em 2026-09-28 — o híbrido, que resolve a divergência:**
+
+| Recurso | Aba inativa |
+|---|---|
+| store da aba (estado de UI) | **mantido** em memória (S-100) |
+| árvore de componentes | **desmontada** |
+| sessões vivas da pasta | **continuam anexadas** — o pedido de permissão e o stream chegam sem reanexar; as dez sessões que a instalação comporta cabem nos 16 de `maxAttachedSessions` (S-181) |
+| terminais (plano 10) | **continuam anexados** — suspender deixaria a carência matar o shell |
+| watcher de arquivos (plano 07) | **liberado**; ao reativar, a árvore recarrega |
+| polling de listas (plano 08) | **parado**; ao reativar, recarrega uma vez |
+
+Teto de **8** abas, ajustável pela medição do gap. A D-11 do plano 08 fecha com este resultado, e o
+plano 10 deixa de pedir a exceção: ela está dita aqui.
+
 ---
 
 ## F4 — Comandos, menu Arquivo, notificações e estado por aba
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-16 | Atalhos que o navegador reserva: quais usar para trocar e fechar aba de pasta | quais combinações Chrome, Firefox e Safari entregam à página — **medir** nos três | B-23 | — | 🔲 |
-| D-17 | O que vira notificação, e onde vive o histórico | nenhum — é escolha de produto | B-26 | — | 🔲 |
+| D-16 | Atalhos que o navegador reserva: quais usar para trocar e fechar aba de pasta | quais combinações Chrome, Firefox e Safari entregam à página — **medir** nos três | B-23 | 2026-09-28 · **a recomendação**, decisão do usuário: `Alt+1…9`, `Ctrl+Alt+PageUp/PageDown` (Mac: `Cmd+Alt+←/→`), fechar só pela paleta e pelo menu; a medição confirma a lista reservada que o registro recusa | ✅ |
+| D-17 | O que vira notificação, e onde vive o histórico | nenhum — é escolha de produto | B-26 | 2026-09-28 · **o que vira notificação é a recomendação; o histórico vive no servidor**, decisão do usuário, contra a recomendação: por usuário, **30 dias** de retenção, teto de **200**, "lida" sincronizada entre dispositivos. Nasce a B-40 (backend) | ✅ |
 
 ### D-16 — Atalhos que o navegador reserva
 
@@ -283,14 +323,30 @@ medição do gap confirma a lista nos três navegadores.
   nem para `localStorage` — notificação velha de ontem é ruído, e a trilha é o registro permanente do
   que importa.
 
+**Decidido em 2026-09-28:** o que vira notificação segue a recomendação; o **histórico vai para o
+servidor**, contra a recomendação — o usuário quer reencontrá-lo em outro dispositivo e depois de
+recarregar. As três perguntas que a escolha abriu foram respondidas na mesma conversa:
+
+| Pergunta | Resposta |
+|---|---|
+| Por quanto tempo o servidor guarda | **30 dias**; um job de limpeza apaga o que passou |
+| "Lida" é sincronizada entre dispositivos | **sim**, no servidor; marcar como lida no desktop apaga o badge no celular |
+| Teto por usuário | **200**; a mais antiga sai quando passa do teto, junto com o prazo |
+
+Consequências: nasce a [B-40](F1-directory-browse.md#b-40--histórico-de-notificações-no-servidor-)
+no backend, com tabela, migration versionada e rotas; a notificação guarda só `severity`, `messageKey`
+e `params`, **nunca** conteúdo de conversa nem comando, como o push; o "não perturbe" continua por
+visitante; a falha ao gravar não perde o toast. O contrato WebSocket não muda: as janelas convergem
+relendo o histórico ao ganhar foco e ao reconectar.
+
 ---
 
 ## F5 — Telas separadas
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-12 | O que a tela "Logs e diagnóstico" tem neste plano | nenhum — a divisão com o plano 16 | B-30 | — | 🔲 |
-| D-13 | Onde vivem as configurações do app, e quais seções entram | nenhum técnico; por item, se segue o usuário ou fica no dispositivo | B-02, B-31 | — | 🔲 |
+| D-12 | O que a tela "Logs e diagnóstico" tem neste plano | nenhum — a divisão com o plano 16 | B-30 | 2026-09-28 · **ping e estado da conexão**, decisão do usuário; o plano 16 completa a mesma tela, na mesma rota | ✅ |
+| D-13 | Onde vivem as configurações do app, e quais seções entram | nenhum técnico; por item, se segue o usuário ou fica no dispositivo | B-02, B-31 | 2026-09-28 · **a tabela da recomendação**, decisão do usuário: tema, densidade e idioma por visitante; recentes e abas no servidor; raízes só leitura; seções Aparência e Workspaces | ✅ |
 
 ### D-12 — O que a tela "Logs e diagnóstico" tem neste plano
 

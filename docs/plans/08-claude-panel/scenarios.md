@@ -89,9 +89,9 @@ conteúdo hostil neutralizado na renderização.
 | S-49 | `session.started`/`session.closed` de sessão observada invalida a lista na hora | est | integração | — | B-11 | ⬜ |
 | S-50 | duas atualizações sobrepostas não duplicam nem reordenam linha — a mais nova vence | conc | integração | — | B-11 | ⬜ |
 | S-51 | aba reativada recarrega a lista uma vez | idem | integração | — | B-11 | ⬜ |
-| S-52 | `/history?workspacePath=` abre o workbench na pasta com a view de sessões | eq | integração | — | B-12 | ⬜ |
-| S-53 | `/sessions/$sessionId` abre a aba da pasta da sessão (abrindo-a, se preciso) com a conversa no painel, ao lado do explorer e do editor; sessão inexistente mostra o erro com caminho de volta | err | integração | `SESSION_NOT_FOUND` | B-12 | ⬜ |
-| S-54 | `/history/$conversationId` continua abrindo a conversa, somente leitura | eq | integração | — | B-12 | ⬜ |
+| S-52 | `/workbench?folder=` com a view de sessões é o lugar do histórico da pasta; `/history` não existe (06 · D-07) | eq | integração | — | B-12 | ⬜ |
+| S-53 | o link de sessão (D-24) abre a aba da pasta da sessão (abrindo-a, se preciso) com a conversa no painel, ao lado do explorer e do editor; sessão inexistente mostra o erro com caminho de volta | err | integração | `SESSION_NOT_FOUND` | B-12 | ⬜ |
+| S-54 | o link de conversa (D-24) abre a conversa, somente leitura, no painel da aba da pasta dela | eq | integração | — | B-12 | ⬜ |
 | S-55 | a gaveta de ajuda da view explica os três grupos, a origem, o fork e a heurística de "ativa", em en e pt-BR | eq | integração | — | B-13 | ⬜ |
 | S-56 | todo controle de ícone da view tem tooltip e nome acessível; axe sem violação | eq | integração | — | B-13 | ⬜ |
 | S-57 | literal apresentável nas telas novas | err | unit | — | B-13 | ⬜ |
@@ -378,7 +378,7 @@ conteúdo hostil neutralizado na renderização.
 | S-263 | modo plan: aprovar o plano troca o modo e o Claude segue | est | e2e | — | B-55 | ⬜ |
 | S-264 | a view de sessões mostra viva, externa ativa e histórico; `attach`, retomar e fork a partir dela | eq | e2e | — | B-56 | ⬜ |
 | S-265 | duas abas de pasta: a permissão pedida na inativa vira badge e é respondida | conc | e2e | — | B-56 | ⬜ |
-| S-266 | `/sessions/$sessionId` abre a aba da pasta com a conversa no painel, ao lado do explorer e do editor | eq | e2e | — | B-56 | ⬜ |
+| S-266 | o link de sessão (D-24) colado no navegador abre a aba da pasta com a conversa no painel, ao lado do explorer e do editor; retomar pela view de sessões e a conversa removida voltam a ser provados pelo web (devolvidos pelo 06 · B-33) | eq | e2e | — | B-56 | ⬜ |
 | S-267 | fila: dois prompts durante um turno, um cancelado; editar e reenviar bifurca | est | e2e | — | B-56 | ⬜ |
 | S-268 | viewport de celular: painel como view única, sem scroll horizontal; axe sem violação | fron | e2e | — | B-56 | ⬜ |
 | S-269 | `test:e2e:mobile` verde com o contrato novo | eq | e2e | — | B-57 | ⬜ |

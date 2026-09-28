@@ -51,9 +51,9 @@ allowlist) aparece como toast e fica no centro de notificações.
 
 ### B-39 — Telas separadas, rotas antigas, celular e acessibilidade 🔲
 
-- as rotas antigas abrem a tela certa: a trilha filtrada (`/audit?…`), a regra (`/rules/$ruleId`),
-  o histórico (`/history…`) e a sessão (`/sessions/$sessionId` → a aba da pasta, com a sessão na
-  secondary side bar);
+- as rotas que ficam abrem a tela certa — a trilha filtrada (`/audit?…`), a regra
+  (`/rules/$ruleId`) —, e as removidas pela [D-07](decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)
+  (`/sessions/$sessionId`, `/history…`) caem no "não encontrado" traduzido;
 - viewport de celular: seletor de abas, uma view por vez, menu da navegação, sem scroll horizontal;
 - axe sem violação no workbench, na boas-vindas, no diálogo e em cada tela global, nos temas claro e
   escuro.

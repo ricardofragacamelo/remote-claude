@@ -79,11 +79,16 @@ UI:
 
 - **toasts** (`sonner`) com severidade e ação; informativo some sozinho, o que pede ação fica;
   anunciados ao leitor de tela por severidade (`role="status"`/`alert`) sem roubar o foco;
-- **centro de notificações** no sino da status bar: histórico, limpar uma, limpar todas, **não
-  perturbe** (silencia toasts, guarda o histórico);
-- rajada de notificações iguais é agrupada com contador; o histórico tem teto;
-- o que vira notificação e quanto tempo o histórico vive é a
-  [D-17](decisions.md#d-17--o-que-vira-notificação-e-onde-vive-o-histórico).
+- **centro de notificações** no sino da status bar: o histórico vem do **servidor**
+  ([B-40](F1-directory-browse.md#b-40--histórico-de-notificações-no-servidor-)) e sobrevive à recarga
+  e à troca de dispositivo; marcar como lida (sincronizado), limpar uma, limpar todas, **não
+  perturbe** (por visitante: silencia toasts, guarda o histórico);
+- rajada de notificações iguais é agrupada com contador **antes** de ir ao servidor — uma gravação,
+  não uma por repetição; o teto (200) e a retenção (30 dias) são do servidor;
+- falha ao gravar não perde o toast nem o item no centro: o reenvio usa o mesmo `clientId`;
+- o que vira notificação é a [D-17](decisions.md#d-17--o-que-vira-notificação-e-onde-vive-o-histórico):
+  erro sem lugar na tela e aviso que o usuário não pediu; erro de formulário e pedido de permissão
+  **não** viram.
 
 Texto sempre por chave de i18n; o erro do backend chega como `code` + `messageKey` e é traduzido
 aqui ([04-errors-and-http](../../architecture/shared/04-errors-and-http.md#o-envelope-de-erro)).
@@ -107,7 +112,7 @@ restauração** que esta task define, o que os planos seguintes registram (os ed
 
 ## Cenários cobertos
 
-S-119…S-135.
+S-119…S-135, S-182.
 
 ---
 

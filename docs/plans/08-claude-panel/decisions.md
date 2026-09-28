@@ -11,7 +11,7 @@ Plano: [README.md](README.md) · Cenários: [scenarios.md](scenarios.md) · Prog
 Decisão em aberto **não** impede planejar; impede **começar a fase** que depende dela.
 
 > Os IDs D-01…D-10 são os do roteiro dos planos 06–11, para que os outros planos possam citá-los;
-> D-11…D-23 nasceram ao detalhar as fases. A ordem no arquivo é a da fase que cada uma bloqueia
+> D-11…D-23 nasceram ao detalhar as fases; a D-24, de uma decisão do plano 06. A ordem no arquivo é a da fase que cada uma bloqueia
 > primeiro, por isso os números não aparecem em sequência.
 
 ---
@@ -164,6 +164,7 @@ por padrão, porque o fork não leva o histórico de undo.
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-10 | Como a lista de sessões se atualiza: polling ou evento | — (a escolha é de desenho; o "ativa em outro lugar" só é observável lendo o store) | B-11 | — | 🔲 |
+| D-24 | O link de uma sessão e de uma conversa, agora que as rotas antigas não existem | nenhum técnico — a URL do workbench já leva a pasta na search ([06 · D-06](../06-workbench/decisions.md#d-06--a-url-do-workbench)) | B-12 | — | 🔲 |
 
 ### D-10 — a lista de sessões se atualiza como
 
@@ -175,6 +176,23 @@ observa disco, por regra (`transcript-reads-through-the-sdk`).
 ou a aba de pasta inativa (a D-11 do [plano 06](../06-workbench/README.md)) — mais invalidação
 imediata pelos eventos que o cliente **já** recebe das sessões que observa (`session.started`,
 `session.closed`). Nenhum stream novo.
+
+### D-24 — o link de uma sessão e de uma conversa
+
+O plano 06 **removeu** `/sessions/$sessionId`, `/history` e `/history/$conversationId`, sem deep link
+de compatibilidade ([06 · D-07](../06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas),
+decisão do usuário de 2026-09-28). A B-12 deixou de ser "as rotas de hoje viram deep links": quando
+este plano começar, elas não existem. Mas "colar o link em outro dispositivo reproduz a tela" continua
+sendo o teste, e a conversa aberta no painel precisa de um link.
+
+| Opção | Contra |
+|---|---|
+| **na search do workbench**: `/workbench?folder=…&session=…` e `&conversation=…` | nenhum além de uma URL mais longa; é a forma da D-06 do 06 e do `&file=` do 07 |
+| rotas próprias de novo (`/workbench/sessions/$id`) | reabre o que o usuário acabou de tirar, e mistura path e search para o mesmo estado |
+| sem link | falha o teste de [web/04 · A URL é estado](../../architecture/web/04-state-and-data.md#a-url-é-estado) |
+
+**Recomendação:** na search do workbench, ao lado de `folder`. `session` e `conversation` são
+exclusivos; o que não existe ou não é do chamador mostra o erro traduzido com caminho de volta.
 
 ---
 
@@ -244,7 +262,7 @@ aba de pasta (que o plano 06 restaura ao recarregar) — nunca no servidor, nunc
 |---|---|---|---|---|---|
 | D-07 | A sessão nasce no primeiro prompt (rascunho sem subprocesso) ou ao abrir a conversa | — (custo medido: ~222 MB e 1 processo por sessão) | B-33 | — | 🔲 |
 | D-09 | Várias sessões da mesma pasta em abas, e como o teto de 10 aparece para quem tem várias abas | se mostrar a ocupação **global** do teto revela atividade de outros usuários | B-32, B-42 | — | 🔲 |
-| D-11 | O que a aba de pasta inativa mantém das sessões dela | a D-11 do plano 06 (o que uma aba inativa mantém vivo) | B-42 | — | 🔲 |
+| D-11 | O que a aba de pasta inativa mantém das sessões dela | a D-11 do plano 06 (o que uma aba inativa mantém vivo) | B-42 | 2026-09-28 · **as sessões vivas das abas inativas continuam anexadas**, pela [D-11 do plano 06](../06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas), decidida pelo usuário com esta recomendação; a aba inativa suspende o polling da lista e a renderização | ✅ |
 | D-13 | De onde vem o catálogo da instalação — comandos, skills e modelos — antes de a sessão existir | a D-06 do plano 11 (catálogo sem sessão viva); quanto custa uma query efêmera que só pergunta | B-36, B-50 | — | 🔲 |
 | D-20 | Exportar conversa: o que entra e onde é gerado | — | B-39 | — | 🔲 |
 | D-21 | Notificação do navegador: quando pedir, quando mostrar e o que dizer | — | B-42 | — | 🔲 |
@@ -272,6 +290,8 @@ nelas só aparece por push ou ao voltar — exatamente o que o usuário pediu pa
 perto do subprocesso, e as dez sessões possíveis cabem nos 16 de `maxAttachedSessions`); o que a aba
 inativa suspende é o polling da lista e o que é da tela (renderização). Alinhar com a D-11 do
 [plano 06](../06-workbench/README.md) antes da B-42.
+
+**Decidido em 2026-09-28**, junto com a D-11 do plano 06, que adotou esta recomendação.
 
 ### D-13 — o catálogo antes da sessão
 

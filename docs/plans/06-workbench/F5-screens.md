@@ -6,7 +6,7 @@ Plano: [06 — Workbench](README.md) · Cenários: [scenarios.md](scenarios.md) 
 **Entrega:** cada assunto na sua tela, dentro da moldura e com a moldura de tela: Auditoria e
 Regras com o conteúdo de hoje, Dispositivos, Logs e diagnóstico (o ping), Configurações do app e
 Sobre; a home desmontada — nada mais de cards de assuntos diferentes empilhados — e as rotas antigas
-funcionando como deep links.
+de sessão e histórico removidas.
 
 ---
 
@@ -87,10 +87,18 @@ pôde ler aparece como tal, com o motivo. Links para a documentação do reposit
   Dispositivos);
 - o store global `useWorkspaceStore.selected` **deixa de existir**: pasta é da aba (B-20). É a raiz
   do caso relatado, e sai com teste que impede a volta;
-- o `Screen` de coluna única sai. `/sessions/$sessionId` vira deep link: abre (ou foca) a aba da
-  pasta da sessão, com a sessão na secondary side bar — o chat não é mais tela própria. `/history…`
-  continua abrindo dentro da moldura até o [plano 08](../08-claude-panel/README.md) levá-lo para a
-  view Sessões ([D-07](decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)).
+- o `Screen` de coluna única sai, e com ele as rotas `/sessions/$sessionId`, `/history` e
+  `/history/$conversationId` ([D-07](decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)) — sem
+  deep link de compatibilidade. `SessionRoute`, `HistoryRoute`, `ConversationRoute` e as navegações
+  que levam a elas (`app/navigation.ts`, `App.tsx`) saem; iniciar uma sessão mantém o usuário na aba
+  da pasta, com a sessão na secondary side bar. Ler, continuar e desfazer uma conversa **antiga**
+  pelo web volta com a view Sessões do [plano 08](../08-claude-panel/README.md);
+- na **mesma mudança**, os specs de e2e que entravam por essas rotas migram — contrato quebrado numa
+  ponta só é bug. `commands-and-undo` passa a abrir a sessão pela aba da pasta; em
+  `history-and-resume`, o que tem porta no workbench passa a entrar por ela, e o que só tinha porta
+  em `/history` (retomar pela tela, conversa removida) **sai** do e2e do web — nunca `skip` —, com os
+  cenários do plano 04 que ele provava registrados como devolvidos ao plano 08. O app continua
+  provando o histórico no `integration_test`.
 
 ### B-34 — Usabilidade e ajuda das telas deste plano 🔲
 

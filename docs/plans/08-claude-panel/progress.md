@@ -11,7 +11,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-27
+**Última atualização:** 2026-09-28
 **Bloqueios:** a F0 só começa com as decisões dela fechadas (D-01, D-02, D-03, D-05, D-06, D-14, D-15,
 D-16, D-19, D-22), seis delas com spike contra o Claude real — ver [decisions.md](decisions.md#f0--contrato)
 
@@ -59,7 +59,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 23 | 23 | 0 | 0 | 0 |
+| [Decisões](decisions.md) | 24 | 23 | 0 | 1 | 0 |
 
 ---
 
@@ -80,6 +80,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
+| 2026-09-28 | D-11 fechada pela D-11 do plano 06 (sessões das abas inativas continuam anexadas); B-12 reescrita e D-24 aberta, porque o 06 removeu `/sessions/$id` e `/history…` sem deep link (06 · D-07); a B-12 e a B-56 recebem de volta os cenários de e2e de histórico e retomada que o 06 tirou do web | decisões do usuário no plano 06, em 2026-09-28 | [decisions.md](decisions.md) D-11, D-24; B-12, B-56; S-52…S-54, S-266 |
 | 2026-09-26 | O composer e o contexto viraram fase própria (F5), e o e2e passou a F6 (`F5-e2e.md` → `F6-e2e.md`) | pedido explícito do usuário: escolher o contexto do prompt como no plugin do Claude (`@`, arrastar, `/` para comando ou skill, autocomplete) — uma fase é a unidade de validação, e o composer é uma fronteira de segurança | as fases F5 e F6, as tasks B-44…B-58 e os cenários S-197…S-272 |
 | 2026-09-26 | Skills carregam de projeto, usuário e sistema; as de usuário e sistema pelo plugin local do plano 11 | decisão do usuário; mantém o `settingSources: ['project']` do ADR-011 | B-50, S-241…S-243, S-272 |
 | 2026-09-26 | O `@problemas` saiu, e nada aqui depende de inteligência de linguagem, depuração ou git | decisão do usuário: esses planos foram removidos | B-48, "Não entra" |

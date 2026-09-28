@@ -11,7 +11,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-27
+**Última atualização:** 2026-09-28
 **Bloqueios:** nenhum
 
 ```
@@ -33,13 +33,13 @@ F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 | Fase | Tarefas | Concluídas | Estado |
 |---|---|---|---|
 | [F0](F0-contract.md) | B-01…B-05 | 0/5 | 🔲 |
-| [F1](F1-directory-browse.md) | B-06…B-12 | 0/7 | 🔲 |
+| [F1](F1-directory-browse.md) | B-06…B-12, B-40 | 0/8 | 🔲 |
 | [F2](F2-open-folder.md) | B-13…B-16 | 0/4 | 🔲 |
 | [F3](F3-layout.md) | B-17…B-22 | 0/6 | 🔲 |
 | [F4](F4-commands.md) | B-23…B-27 | 0/5 | 🔲 |
 | [F5](F5-screens.md) | B-28…B-34 | 0/7 | 🔲 |
 | [F6](F6-e2e.md) | B-35…B-39 | 0/5 | 🔲 |
-| **Total** | **B-01…B-39** | **0/39** | 🔲 |
+| **Total** | **B-01…B-40** | **0/40** | 🔲 |
 
 ---
 
@@ -47,7 +47,7 @@ F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 166 | 166 | 0 | 0 | 0 |
+| [Matriz](scenarios.md) | 182 | 182 | 0 | 0 | 0 |
 
 ---
 
@@ -58,7 +58,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 17 | 14 | 0 | 3 | 0 |
+| [Decisões](decisions.md) | 17 | 0 | 0 | 17 | 0 |
 
 ---
 
@@ -82,6 +82,11 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 | 2026-09-26 | F3 (layout) dividida em três fases: F3 moldura e casca, F4 comandos e notificações, F5 telas separadas; o e2e passou a F6 | cada parte é um ciclo de validação próprio, com outra superfície de teste | fases F3…F6, `F4-e2e.md` renomeado para `F6-e2e.md` |
 | 2026-09-26 | Paridade com o VS Code restrita à de arquivos (decisão do usuário) | "não precisamos de tudo do VS Code" | saíram editor de atalhos, vários temas, zen mode, layout configurável, menu completo (fica o Arquivo), walkthrough e a confiança da pasta (servia a planos removidos) |
 | 2026-09-26 | Chat do Claude e arquivos/editor na mesma aba, lado a lado (decisão do usuário) | o chat não é tela própria | B-21, B-22, B-33, S-116, S-117, S-150 |
+| 2026-09-28 | As 14 decisões em aberto fechadas pelo usuário, em perguntas uma a uma; dez seguem a recomendação | as fases dependiam delas para começar | [decisions.md](decisions.md) D-04…D-17 |
+| 2026-09-28 | Rotas `/sessions/$id`, `/history` e `/history/$conversationId` removidas neste plano, sem deep link (D-07, contra a recomendação) | escolha de navegação do usuário, que aceitou o histórico fora do web até o plano 08 | B-05, B-33, B-39, S-06, S-150, S-163; specs `history-and-resume` e `commands-and-undo` migram na B-33; [plano 08](../08-claude-panel/decisions.md) ganhou a D-24 |
+| 2026-09-28 | Histórico de notificações no servidor: 30 dias, teto de 200, "lida" sincronizada (D-17, contra a recomendação) | o usuário quer reencontrá-lo em outro dispositivo | nova B-40 na F1, B-03, B-04, B-26, S-131, S-132, S-167…S-178, S-182 |
+| 2026-09-28 | Aba inativa: sessões e terminais continuam anexados (D-11, híbrido) | resolve a divergência com os planos 08 e 10 | B-20, S-108, S-181; D-11 do plano 08 fechada; nota do plano 10 · B-16 |
+| 2026-09-28 | Recarga da allowlist só por `SIGHUP`; o watch do arquivo foi considerado e descartado (D-15) | manter a regra "recarga explícita" de backend/03 | B-11, S-62, S-179, S-180 |
 
 ---
 
@@ -95,6 +100,7 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 | 2026-09-26 | Profundidade de Dispositivos e de Logs e diagnóstico | têm plano próprio | planos [15](../15-devices/README.md) e [16](../16-logs-and-diagnostics/README.md) |
 | 2026-09-26 | Seção "Claude" das Configurações | configuração do Claude é tela própria | plano [11](../11-claude-settings/README.md) |
 | 2026-09-26 | Editor de atalhos, vários temas, zen mode, layout configurável, menu completo, walkthrough | decisão do usuário: paridade é a de arquivos | fora do produto |
+| 2026-09-28 | Ler, continuar e desfazer conversa antiga pelo web (hoje em `/history`), e os cenários de e2e do web que só entravam por lá | decisão do usuário (D-07): as rotas antigas saem sem deep link | plano [08](../08-claude-panel/README.md), view Sessões; o app continua com o histórico |
 
 ---
 
@@ -108,9 +114,9 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 | R-02 | Cópia local da allowlist afrouxa a fronteira | 🔲 aberto | mitigação na B-10, D-09 |
 | R-03 | Estado vazando entre abas de pasta | 🔲 aberto | mitigação nas B-20, B-33 |
 | R-04 | Plano grande — sete fases | 🔲 aberto | escopo cortado pela decisão do usuário; corte extra se registra aqui |
-| R-05 | Abas inativas consomem memória e anexos | 🔲 aberto | D-11 — medir |
-| R-06 | Atalhos que o navegador não entrega | 🔲 aberto | D-16 — medir |
-| R-07 | Deep links de hoje quebrados pela moldura | 🔲 aberto | S-06, S-91, S-163 |
+| R-05 | Abas inativas consomem memória e anexos | 🔲 aberto | D-11 decidida (sessões e terminais anexados, teto 8); falta medir a memória por aba |
+| R-06 | Atalhos que o navegador não entrega | 🔲 aberto | D-16 decidida; falta medir nos três navegadores |
+| R-07 | Deep links de hoje quebrados pela moldura | 🔲 aberto | S-06, S-91, S-163; os de sessão e histórico saem por decisão (D-07) |
 | R-08 | Planos 11–13 e 14–16 dependem dos registros deste | 🔲 aberto | registros documentados na F0 |
 
 ---

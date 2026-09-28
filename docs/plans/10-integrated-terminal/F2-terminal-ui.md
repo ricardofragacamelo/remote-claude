@@ -25,8 +25,9 @@ fala os comandos `terminal.*` pelo cliente WS e o `GET /terminals` pelo `api.ts`
 
 - O estado é **da aba de pasta** (store por pasta, como o 06 exige): terminal de uma aba nunca
   aparece em outra.
-- Aba de pasta inativa **mantém** os terminais anexados. É a exceção à suspensão de recursos da
-  D-11 do plano 06, e precisa estar dita lá: suspender deixaria a carência matar o shell.
+- Aba de pasta inativa **mantém** os terminais anexados, como a
+  [D-11 do plano 06](../06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas)
+  diz desde 2026-09-28: suspender deixaria a carência matar o shell.
 - Reconexão do socket nunca reenvia `terminal.open`: lista e reanexa. Resposta atrasada da lista
   não apaga um terminal aberto depois dela.
 

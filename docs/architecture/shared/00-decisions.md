@@ -383,8 +383,18 @@ um **cliente do Claude no molde do VS Code**.
 
 **Consequências:** a coluna única deixa de ser o layout do produto a partir de `md`; abaixo disso,
 uma view por vez dentro da mesma aba. O detalhe de layout, estado por aba e rotas é do
-[plano 06](../../plans/06-workbench/README.md), que completa esta ADR com as decisões de
-apresentação (D-08, D-10) e atualiza `web/02`, `web/03` e `web/04`.
+[plano 06](../../plans/06-workbench/README.md), que completa esta ADR e atualiza `web/02`, `web/03`
+e `web/04`. As decisões de apresentação, do usuário em 2026-09-28:
+
+- abaixo de `md`, **uma view por vez** — Explorer, Editor, Claude, Painel —, barra de views embaixo e
+  seletor de abas no topo ([06 · D-08](../../plans/06-workbench/decisions.md#d-08--o-workbench-em-tela-pequena));
+- o **conjunto e a ordem das abas ficam no servidor**, a aba ativa na URL (`/workbench?folder=`), e o
+  estado de dentro de cada aba por visitante ([06 · D-10](../../plans/06-workbench/decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas),
+  [D-06](../../plans/06-workbench/decisions.md#d-06--a-url-do-workbench));
+- a aba inativa mantém as sessões e os terminais anexados e libera o resto
+  ([06 · D-11](../../plans/06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas));
+- as rotas `/sessions/$sessionId` e `/history…` saem sem deep link
+  ([06 · D-07](../../plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)).
 
 ## ADR-017 — Existe um terminal, fora do modelo de permissão, com travas
 

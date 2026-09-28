@@ -28,7 +28,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 
 A cadeia [Component → Hook → Service → `api.ts`](../../architecture/web/01-architecture.md#os-quatro-elos):
 `workspace.service` ganha `listDirectories`, `listRecent`, fixar/remover recente e as pastas
-abertas (conforme a [D-10](decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas)); os hooks
+abertas, que ficam no servidor ([D-10](decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas)); os hooks
 `useDirectories`, `useRecentFolders`, `useOpenFolders` sobre TanStack Query, com chaves hierárquicas no lugar único
 ([web/04](../../architecture/web/04-state-and-data.md#chaves-hierárquicas-em-um-lugar-só)).
 
@@ -79,7 +79,7 @@ Sobre o `Dialog` do shadcn (foco preso, `Esc` fecha):
 - fora da allowlist, inexistente ou arquivo → estado de erro traduzido
   (`WORKSPACE_NOT_ALLOWED`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`) com **caminho de
   volta**: boas-vindas e "Abrir outra pasta";
-- abrir grava o recente (e a pasta aberta, se a D-10 for servidor);
+- abrir grava o recente e a pasta aberta, no servidor (D-10);
 - até a F3, o `/workbench` é mínimo: o nome da pasta e o `SessionStarter` de hoje **preso à pasta
   da URL**. A sessão nasce com `workspacePath` = a pasta — **nunca** a primeira raiz por default. O
   `useWorkspaceStore.selected` deixa de ser a origem do `workspacePath` da sessão (e some de vez na

@@ -101,6 +101,12 @@ Em [backend/03-modules · workspace](../../architecture/backend/03-modules.md#wo
 - a rota de versões do "Sobre" (B-12), no módulo que o documento indicar — ela lê a versão do CLI
   pelo mesmo caminho que o [plano 04 · F3](../04-transcript-and-resume/F3-commands.md) já usa.
 
+Em [backend/03 · notification](../../architecture/backend/03-modules.md#notification): o módulo
+ganha o **histórico do centro de notificações** (B-40,
+[D-17](decisions.md#d-17--o-que-vira-notificação-e-onde-vive-o-histórico)) — por usuário, 30 dias,
+teto de 200, "lida" no servidor, e a mesma regra do push: `messageKey` e `params`, nunca conteúdo de
+conversa nem comando.
+
 No [catálogo de erros](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio),
 **antes** de existir no código, e em `backend/src/shared/errors/error-catalogue.ts` com
 `messageKey` em `en` e `pt-BR`:
@@ -108,7 +114,7 @@ No [catálogo de erros](../../architecture/shared/04-errors-and-http.md#catálog
 | `code` novo | HTTP | Quando |
 |---|---|---|
 | `WORKSPACE_DIRECTORY_UNREADABLE` | 422 | o diretório existe, está liberado, e o **processo do backend** não tem permissão de leitura (`EACCES`/`EPERM`). Não é 403: a autorização do usuário passou; é o sistema de arquivos que torna o pedido impossível |
-| `OPEN_FOLDERS_LIMIT_REACHED` | 409 | abrir mais uma pasta com o teto de abas já atingido (`params.limit`) — conflito com o estado atual, não validação ([D-11](decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas)). Só existe se a D-10 levar as abas para o servidor |
+| `OPEN_FOLDERS_LIMIT_REACHED` | 409 | abrir mais uma pasta com o teto de abas já atingido (`params.limit`) — conflito com o estado atual, não validação ([D-11](decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas), [D-10](decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas)) |
 
 ### B-04 — Contrato das rotas HTTP do `workspace` 🔲
 
@@ -125,14 +131,21 @@ service do web:
   `available: false` para a pasta que saiu da allowlist ou sumiu, em vez de sumir da lista;
   `PUT /workspaces/recent/pin { path, pinned }` e `DELETE /workspaces/recent?path=` (`204`, também
   quando não existia);
-- **se a D-10 decidir pelo servidor:** `GET /workspaces/open-folders` (as abas, em ordem, cada uma
+- as pastas abertas, no servidor pela [D-10](decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas): `GET /workspaces/open-folders` (as abas, em ordem, cada uma
   com `state: available | notAllowed | missing`), `POST /workspaces/open-folders
   { path }` (`201` ao abrir, `200` com a existente se já aberta — idempotente), `DELETE
   /workspaces/open-folders?path=` (`204`, também quando não estava aberta) e `PUT
   /workspaces/open-folders/order { paths }` (`409` `CONFLICT` se o conjunto não é o aberto).
   Abrir grava o recente ([D-14](decisions.md#d-14--onde-gravar-recentes-e-pastas-abertas));
 - a rota de versões do "Sobre" → `{ backend, web?, agentSdk, claudeCli, node }`, com `null` e o
-  motivo para o que não se pôde ler — nunca `500` porque o CLI não respondeu.
+  motivo para o que não se pôde ler — nunca `500` porque o CLI não respondeu;
+- o histórico de notificações (B-40, [D-17](decisions.md#d-17--o-que-vira-notificação-e-onde-vive-o-histórico)):
+  `GET /notifications?cursor=` → `{ items[{ id, severity, messageKey, params, count, createdAt,
+  readAt }], unread, nextCursor }`, mais nova primeiro; `POST /notifications { clientId, severity,
+  messageKey, params, count }` (`201` ao gravar, `200` com a existente para o mesmo `clientId` —
+  idempotente); `PUT /notifications/read { ids }` e `PUT /notifications/read-all` (`204`, também
+  para id que não existe); `DELETE /notifications/:id` e `DELETE /notifications` (`204` sempre).
+  `messageKey` fora do catálogo de chaves ou `params` fora do schema → `400` `INVALID_INPUT`.
 
 **Este plano não muda o contrato WebSocket.** O ping (`diag.ping`), a sessão e o stream seguem
 como estão; por isso `pnpm test:e2e:mobile` não entra no critério de conclusão. Endpoint novo entra
@@ -152,7 +165,7 @@ O mapa de rotas, documentado em `web/04` e testado pelo router:
 | `/settings/$section` | Configurações do app, uma seção por vez |
 | `/about` | Sobre |
 | `/claude…`, `/usage…` | **reservadas** aos planos 11 e 14; este plano não as renderiza |
-| `/sessions/$sessionId`, `/history…` | continuam funcionando dentro da moldura até o [plano 08](../08-claude-panel/README.md) levar sessão e histórico para o painel e a view Sessões |
+| `/sessions/$sessionId`, `/history`, `/history/$conversationId` | **removidas** ([D-07](decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)): caem no "não encontrado" traduzido. A sessão viva mora na secondary side bar da aba; o histórico volta ao web pela view Sessões do [plano 08](../08-claude-panel/README.md) |
 
 `folder` ausente em `/workbench` cai na boas-vindas, não num erro. O callback do login
 (`CALLBACK_PATH`) não muda — voltar ao link pedido depois do login continua valendo para todas.

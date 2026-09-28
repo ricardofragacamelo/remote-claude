@@ -113,18 +113,20 @@ Cada aba é um **workbench completo de uma pasta**, várias abertas ao mesmo tem
 - **estado isolado por aba**: store criado por fábrica e chaveado pelo caminho real, nunca um
   global compartilhado ([web/04](../../architecture/web/04-state-and-data.md#onde-cada-estado-mora)).
   O store global `useWorkspaceStore.selected` é o anti-exemplo, e sai na B-33;
-- a aba ativa está na URL (`/workbench?folder=`); o conjunto e a ordem são persistidos
-  ([D-10](decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas)); URL com uma pasta que não
-  está entre as abertas a abre como aba nova;
+- a aba ativa está na URL (`/workbench?folder=`); o conjunto e a ordem ficam **no servidor**
+  ([D-10](decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas)), e a janela os relê ao ganhar
+  foco e ao reconectar; URL com uma pasta que não está entre as abertas a abre como aba nova;
 - **arrastar para reordenar**, com a alternativa por teclado e pelo menu de contexto da aba ("mover
   para a esquerda/direita") — arrastar sozinho não é acessível;
 - menu de contexto da aba: fechar, fechar as outras, fechar à direita, copiar caminho;
 - **fechar a aba não encerra as sessões do Claude** daquela pasta — elas vivem no backend — e a
   confirmação **diz isso**; fechar a ativa ativa a vizinha, fechar a última volta à boas-vindas;
 - aba cuja pasta saiu da allowlist ou sumiu abre **em estado de erro**, sem derrubar as outras;
-- o que uma aba inativa mantém vivo, e o teto de abas, seguem a
-  [D-11](decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas); acima do teto, a
-  recusa traduzida diz qual é;
+- aba inativa, pela [D-11](decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas):
+  o store fica em memória e a árvore é desmontada; as **sessões vivas e os terminais continuam
+  anexados** — a permissão e o stream chegam sem reanexar, e a carência não mata o shell; o watcher
+  do plano 07 é liberado e o polling do plano 08 para. Teto de **8** abas; acima dele, a recusa
+  traduzida diz qual é e que fechar uma aba não encerra as sessões dela;
 - em tela pequena as abas viram um seletor com as mesmas ações.
 
 ### B-21 — A casca do workbench 🔲
@@ -161,7 +163,7 @@ store da aba serve os dois layouts — mudar a largura da janela não perde esta
 
 ## Cenários cobertos
 
-S-86…S-118.
+S-86…S-118, S-181.
 
 ---
 

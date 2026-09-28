@@ -51,9 +51,9 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [03 — Regras e trilha](03-rules-and-audit/README.md) | 5/5 | 23/23 | 92/92 | 22/22 | ✅ |
 | [04 — Histórico e retomada](04-transcript-and-resume/README.md) | 6/6 | 25/25 | 88/88 | 7/7 | ✅ |
 | [05 — Endurecimento e operação](05-hardening-operations/README.md) | 4/5 | 19/22 | 63/68 | 12/12 | 🔄 |
-| [06 — Workbench](06-workbench/README.md) | 0/7 | 0/39 | 0/166 | 3/17 | 🔲 |
-| [07 — Explorer e editor](07-explorer-and-editor/README.md) | 0/9 | 0/61 | 0/360 | 0/20 | 🔲 |
-| [08 — Painel do Claude](08-claude-panel/README.md) | 0/7 | 0/58 | 0/272 | 0/23 | 🔲 |
+| [06 — Workbench](06-workbench/README.md) | 0/7 | 0/40 | 0/182 | 17/17 | 🔲 |
+| [07 — Explorer e editor](07-explorer-and-editor/README.md) | 0/9 | 0/61 | 0/360 | 19/20 | 🔲 |
+| [08 — Painel do Claude](08-claude-panel/README.md) | 0/7 | 0/58 | 0/272 | 1/24 | 🔲 |
 | [09 — Busca](09-search/README.md) | 0/4 | 0/24 | 0/162 | 0/8 | 🔲 |
 | [10 — Terminal integrado](10-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 2/13 | 🔄 |
 | [11 — Configuração do Claude](11-claude-settings/README.md) | 0/5 | 0/46 | 0/199 | 1/22 | 🔲 |
@@ -63,7 +63,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [15 — Dispositivos](15-devices/README.md) | 0/4 | 0/28 | 0/118 | 0/12 | 🔲 |
 | [16 — Logs e diagnóstico](16-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 2/16 | 🔲 |
 | [17 — Distribuição](17-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/7 | 🔲 |
-| **Total** | **35/100** | **200/645** | **567/2667** | **100/276** | 🔄 |
+| **Total** | **35/100** | **200/646** | **567/2683** | **134/277** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -305,6 +305,8 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-09-28 | **Plano 07: as 20 decisões em aberto respondidas pelo usuário** | todas seguem a recomendação, e nenhuma muda tarefa ou cenário: módulo `files` por porta, trilha antes do disco com `503`, `ETag` sha256 com `If-Match` obrigatório, watch por WS com `seq` por `watchId` e sem replay, fronteira na pasta aberta, Monaco sob demanda. A D-08 (watcher) fica 🔄 até o spike B-19; os números de D-04 e D-16 são provisórios até a medida |
+| 2026-09-28 | **Plano 06: as 14 decisões em aberto fechadas pelo usuário** | dez seguem a recomendação. Quatro mudam o plano: as rotas `/sessions/$id` e `/history…` saem sem deep link, e ler, continuar e desfazer conversa antiga pelo web **passa ao [plano 08](08-claude-panel/README.md)** (06 · D-07; o 08 ganhou a D-24); o histórico de notificações vai para o servidor — 30 dias, teto de 200, "lida" sincronizada — com a nova B-40 (06 · D-17); a aba inativa mantém sessões e terminais anexados, o que fecha a D-11 do 08 e a exceção do 10 (06 · D-11); a allowlist recarrega só por `SIGHUP`, e a regra "nunca watch" de backend/03 fica (06 · D-15) |
 | 2026-09-26 | **Decisões bloqueantes resolvidas pelo usuário** | Keycloak próprio (05 · D-05, emenda na ADR-010); exposição e certificado são da infraestrutura (17 · D-04, D-05); Linux, macOS e Windows, teste só em Linux (17 · D-01); workbench em React (06 · D-01, ADR-014); seletor só dentro das raízes (06 · D-03); terminal com as travas (10 · D-01, ADR-017); e os planos 06–16 esperam o 05 fechar (06 · D-02). A arquitetura ganhou a seção "Onde o produto roda, e como é alcançado" |
 | 2026-09-26 | **Planos 06 a 16 criados** | o cliente no molde do VS Code, a partir da recusa da web pelo usuário: workbench por aba de pasta, arquivos, painel do Claude, busca, terminal, e uma tela por assunto (configuração do Claude, trilha, regras, uso e custo, dispositivos, logs). Inteligência de linguagem e depuração chegaram a ser planejadas e saíram no mesmo dia, antes de publicadas — por isso a numeração foi refeita sem buraco; git fora. O planejamento achou cinco defeitos no que está entregue (ver "Onde o projeto está"). `pnpm plan new` corrigido: punha a linha do plano novo na tabela errada do progresso geral |
 | 2026-09-26 | **Plano 04 concluído — F5** | o ciclo pela porta do usuário: S-46…S-51 e S-53 no Playwright (e2e 45/45), S-48 também no `integration_test` do app, e S-52 no `smoke-live` contra o Claude real (`pnpm test:e2e:live` 2/2). O backend roteirizado grava o que reproduz e escreve os `Write` no `cwd`. Corrigidos no caminho: o primeiro `session.attach` dos dois clientes passou a mandar `resumeFromSeq: 0` (S-88), e `CLAUDE_CONFIG_DIR` vazio deixou de chegar ao CLI. `pnpm verify:full` 0; `pnpm test:e2e:mobile` 9/9 |

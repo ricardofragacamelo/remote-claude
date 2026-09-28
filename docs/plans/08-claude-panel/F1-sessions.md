@@ -103,20 +103,28 @@ inativa, e invalidação imediata pelos eventos que o cliente já recebe das ses
 (`session.started`, `session.closed`). Resposta velha não sobrescreve a nova; reativar a aba recarrega
 uma vez. Nenhum stream novo no WebSocket.
 
-### B-12 — As rotas de hoje viram deep links do workbench 🔲
+### B-12 — O link de uma sessão e de uma conversa no workbench 🔲
 
 O painel do Claude **não é uma tela separada**: vive na aba de pasta, ao lado do explorer e do editor.
-Então as rotas de hoje continuam funcionando como link, e abrem o lugar certo (a D-07 do
-[plano 06](../06-workbench/README.md)):
+As rotas antigas (`/sessions/$sessionId`, `/history`, `/history/$conversationId`) **não existem mais**
+quando este plano começa: o [plano 06](../06-workbench/README.md) as removeu sem deep link
+([06 · D-07](../06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)). O link de
+uma sessão e de uma conversa é o que a [D-24](decisions.md#d-24--o-link-de-uma-sessão-e-de-uma-conversa)
+decidir; pela recomendação, na search do workbench:
 
-| Rota | Abre |
+| Link | Abre |
 |---|---|
-| `/history?workspacePath=` | a aba daquela pasta, com a view de sessões |
-| `/history/$conversationId` | a conversa, somente leitura, no painel da aba da pasta dela |
-| `/sessions/$sessionId` | a aba da pasta da sessão — aberta se preciso — com a conversa no painel; sessão inexistente ou que não é do chamador → erro traduzido com caminho de volta |
+| `/workbench?folder=` | a aba daquela pasta; a view de sessões é o lugar do histórico |
+| `/workbench?folder=…&conversation=…` | a conversa, somente leitura, no painel da aba da pasta dela |
+| `/workbench?folder=…&session=…` | a aba da pasta — aberta se preciso — com a sessão no painel; sessão inexistente ou que não é do chamador → erro traduzido com caminho de volta |
 
 "Colar o link em outro dispositivo reproduz a tela" continua sendo o teste
 ([a URL é estado](../../architecture/web/04-state-and-data.md#a-url-é-estado)).
+
+Esta task também devolve ao e2e do web os cenários de histórico e retomada do
+[plano 04](../04-transcript-and-resume/README.md) que o plano 06 tirou de lá ao remover `/history`
+(06 · B-33): retomar pela tela e a conversa removida voltam a ser provados pela porta do usuário, agora
+pela view de sessões.
 
 ### B-13 — Usabilidade e ajuda da view de sessões 🔲
 

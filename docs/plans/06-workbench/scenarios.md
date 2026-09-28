@@ -26,7 +26,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 | S-03 | `/workbench` sem `folder` cai na boas-vindas, não num erro | fron | unit | — | B-05 | ⬜ |
 | S-04 | `folder` com espaço, acento, `#`, `%`, `?` e `&` faz ida e volta pela URL sem perda | fron | unit | — | B-05 | ⬜ |
 | S-05 | `/` com abas abertas vai para a ativa; sem abas mostra a boas-vindas | est | integração | — | B-05 | ⬜ |
-| S-06 | as rotas de hoje (`/audit?…`, `/rules`, `/rules/$ruleId`, `/history?workspacePath=`, `/history/$conversationId`, `/sessions/$sessionId`, callback) continuam resolvendo, com a search preservada | eq | unit | — | B-05 | ⬜ |
+| S-06 | as rotas de hoje que ficam (`/audit?…`, `/rules`, `/rules/$ruleId`, callback) continuam resolvendo, com a search preservada; as removidas pela D-07 (`/sessions/$sessionId`, `/history`, `/history/$conversationId`) caem no "não encontrado" traduzido | eq | unit | `NOT_FOUND` | B-05 | ⬜ |
 | S-07 | rota reservada a outro plano (`/claude…`) não renderiza link nem tela vazia enquanto ninguém a registra — cai no "não encontrado" traduzido | fron | unit | `NOT_FOUND` | B-05 | ⬜ |
 | S-164 | documento normativo novo fora de todo índice, ou link para âncora que não existe → `docs:check` reprova | err | unit | — | B-02 | ⬜ |
 | S-165 | a ADR-014 existe com a alternativa descartada e as decisões D-01, D-08 e D-10 com resultado, e os documentos do web e do backend apontam para ela | eq | unit | — | B-01 | ⬜ |
@@ -99,9 +99,11 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 | S-59 | a stack de e2e e a de teste ignoram a cópia local | eq | integração | — | B-10 | ⬜ |
 | S-60 | dois `add` simultâneos não corrompem o arquivo (temporário + `rename`) e nenhum se perde | conc | integração | — | B-10 | ⬜ |
 | S-61 | `pnpm doctor` e o log de boot dizem qual arquivo de allowlist está ativo | eq | integração | — | B-10 | ⬜ |
-| S-62 | depois da recarga explícita (D-15), o backend em execução já lista e abre a raiz nova, sem reiniciar | est | integração | — | B-11 | ⬜ |
+| S-62 | depois do `SIGHUP` (D-15), o backend em execução já lista e abre a raiz nova, sem reiniciar | est | integração | — | B-11 | ⬜ |
 | S-63 | recarga com arquivo inválido mantém a lista anterior e loga o erro | err | integração | — | B-11 | ⬜ |
 | S-64 | recarga que remove uma raiz não mexe nas sessões vivas nela; a próxima abertura já recusa | est | integração | `WORKSPACE_NOT_ALLOWED` | B-11 | ⬜ |
+| S-179 | `pnpm allowlist add` sem backend do `pnpm dev` em execução grava a cópia, sai 0 e diz como recarregar; salvar o arquivo sem mandar o sinal **não** muda a lista em uso — não há watch | est | integração | — | B-11 | ⬜ |
+| S-180 | `SIGHUP` com o handler registrado não derruba o processo: a conexão WebSocket aberta e a sessão viva continuam, e o sinal chega ao processo do app, não ao `nest --watch` | est | integração | — | B-11 | ⬜ |
 
 ## Sobre — B-12
 
@@ -111,6 +113,23 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 | S-66 | CLI do Claude ausente ou sem resposta → campo `null` com o motivo, e a resposta sai `200` | fron | integração | — | B-12 | ⬜ |
 | S-67 | sem token | err | integração | `UNAUTHENTICATED` | B-12 | ⬜ |
 | S-68 | pedido repetido não sobe o CLI de novo — a versão vem do cache por versão já existente | idem | integração | — | B-12 | ⬜ |
+
+## Histórico de notificações — B-40
+
+| ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
+|---|---|---|---|---|---|---|
+| S-167 | gravar uma notificação e listar: só as do usuário, mais nova primeiro, com a contagem de não lidas | eq | integração | — | B-40 | ⬜ |
+| S-168 | notificação de outro usuário nunca aparece, nem marcá-la como lida ou apagá-la tem efeito sobre ela | eq | integração | — | B-40 | ⬜ |
+| S-169 | gravar de novo com o mesmo `clientId` devolve a existente (`200`, não `201`) e não duplica | idem | integração | — | B-40 | ⬜ |
+| S-170 | a 201ª notificação tira a mais antiga: o usuário nunca passa de 200 | fron | integração | — | B-40 | ⬜ |
+| S-171 | a limpeza apaga a de 30 dias e 1 segundo e mantém a de 30 dias menos 1 segundo | fron | integração | — | B-40 | ⬜ |
+| S-172 | marcar como lida duas vezes, marcar id que não existe e "marcar todas" repetido respondem `204` sem mudar o que já estava | idem | integração | — | B-40 | ⬜ |
+| S-173 | lida num dispositivo volta lida na listagem do outro, e a contagem de não lidas cai nos dois | est | integração | — | B-40 | ⬜ |
+| S-174 | `messageKey` fora do catálogo de chaves, `severity` desconhecida ou `params` fora do schema → recusado, nada gravado | err | integração | `INVALID_INPUT` | B-40 | ⬜ |
+| S-175 | sem token | err | integração | `UNAUTHENTICATED` | B-40 | ⬜ |
+| S-176 | gravações simultâneas com o usuário no teto não deixam 201 linhas | conc | integração | — | B-40 | ⬜ |
+| S-177 | apagar uma e "limpar todas" respondem `204`, também quando não há o que apagar | idem | integração | — | B-40 | ⬜ |
+| S-178 | o log `debug` da borda traz severidade, `messageKey` e contagem — nunca os `params` | eq | integração | — | B-40 | ⬜ |
 
 ## Abrir pasta (web) — B-13…B-16
 
@@ -164,8 +183,9 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 | S-104 | aba cuja pasta saiu da allowlist ou sumiu abre em estado de erro; as outras seguem funcionando | err | integração | `WORKSPACE_NOT_ALLOWED`, `WORKSPACE_NOT_FOUND` | B-20 | ⬜ |
 | S-105 | abrir além do teto → recusa traduzida que diz o teto | err | integração | `OPEN_FOLDERS_LIMIT_REACHED` | B-20 | ⬜ |
 | S-106 | arrastar para reordenar, e a alternativa por teclado e por menu ("mover para a esquerda/direita"); a ordem sobrevive à recarga | eq | integração | — | B-20 | ⬜ |
-| S-107 | duas janelas do navegador abrindo e fechando abas convergem para o mesmo conjunto, conforme a D-10 | conc | integração | — | B-20 | ⬜ |
-| S-108 | aba inativa libera o que a D-11 manda e, ao reativar, recarrega sem perder o estado da aba | est | integração | — | B-20 | ⬜ |
+| S-107 | duas janelas do navegador abrindo e fechando abas convergem para o mesmo conjunto guardado no servidor (D-10): a janela relê o conjunto ao ganhar foco e ao reconectar | conc | integração | — | B-20 | ⬜ |
+| S-108 | aba inativa desmonta a árvore e libera o watcher, mantendo o store; ao reativar, recarrega sem perder o estado da aba (D-11) | est | integração | — | B-20 | ⬜ |
+| S-181 | sessão viva de uma aba inativa continua anexada: o pedido de permissão e o stream chegam sem reanexar, e ao voltar não há replay | est | integração | — | B-20 | ⬜ |
 | S-109 | clique duplo em fechar fecha uma aba só | idem | integração | — | B-20 | ⬜ |
 | S-110 | em tela pequena as abas viram um seletor com as mesmas ações | fron | integração | — | B-20 | ⬜ |
 
@@ -198,8 +218,9 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 | S-128 | item cujo comando ainda não foi registrado (novo arquivo, salvar — plano 07) não aparece; aparece quando o plano o registra | fron | unit | — | B-25 | ⬜ |
 | S-129 | o menu Arquivo é navegável por teclado (padrão ARIA menubar) e, abaixo de `md`, mora no menu da navegação | fron | integração | — | B-25 | ⬜ |
 | S-130 | notificação vira toast com severidade e ação; some sozinha quando informativa, fica quando pede ação | eq | integração | — | B-26 | ⬜ |
-| S-131 | o centro de notificações guarda o histórico; limpar uma, limpar todas, "não perturbe" silencia toasts sem perder o histórico | est | integração | — | B-26 | ⬜ |
-| S-132 | rajada de notificações iguais é agrupada com contador, e o histórico tem teto | conc | unit | — | B-26 | ⬜ |
+| S-131 | o centro de notificações lê o histórico do servidor (B-40) e o reencontra depois de recarregar; limpar uma, limpar todas, marcar como lida; "não perturbe", por visitante, silencia toasts sem perder o histórico | est | integração | — | B-26 | ⬜ |
+| S-132 | rajada de notificações iguais é agrupada com contador antes de ir ao servidor — uma gravação, não uma por repetição | conc | unit | — | B-26 | ⬜ |
+| S-182 | falha ao gravar a notificação no servidor não perde o toast nem o item no centro; o reenvio usa o mesmo `clientId` e não duplica | err | integração | `NETWORK_UNREACHABLE` | B-26 | ⬜ |
 | S-133 | toast é anunciado ao leitor de tela (`role="status"`/`alert` por severidade) e não rouba o foco | eq | integração | — | B-26 | ⬜ |
 | S-134 | recarregar restaura, por aba, a view ativa, o layout e o painel; editores abertos voltam pelo gancho que o plano 07 registra | est | integração | — | B-27 | ⬜ |
 | S-135 | estado restaurado de uma pasta que não está mais aberta é descartado; estado corrompido cai no default sem erro | err | unit | — | B-27 | ⬜ |
@@ -222,7 +243,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 | S-147 | falha ao carregar as raízes em Workspaces → erro traduzido com "tentar de novo" | err | integração | `NETWORK_UNREACHABLE` | B-31 | ⬜ |
 | S-148 | Sobre mostra as versões e copia o bloco de versões para um relato de defeito | eq | integração | — | B-32 | ⬜ |
 | S-149 | a home não tem mais seletor de workspace, ping nem dispositivos; o store global de workspace selecionado não existe mais | est | unit | — | B-33 | ⬜ |
-| S-150 | `/sessions/$sessionId` abre a aba da pasta da sessão com ela na secondary side bar; `/history…` continua abrindo dentro da moldura | eq | integração | — | B-33 | ⬜ |
+| S-150 | `/sessions/$sessionId`, `/history` e `/history/$conversationId` não existem mais (D-07): nenhum link, comando ou navegação do app aponta para elas, e iniciar uma sessão mantém o usuário na aba da pasta | eq | integração | — | B-33 | ⬜ |
 | S-151 | todo controle só de ícone nas telas deste plano tem tooltip e `aria-label` traduzidos | eq | integração | — | B-34 | ⬜ |
 | S-152 | todo estado vazio das telas deste plano ensina o próximo passo com uma ação; todo erro diz o que fazer | eq | integração | — | B-34 | ⬜ |
 | S-153 | "saiba mais" de cada tela abre a ajuda na seção certa | eq | integração | — | B-34 | ⬜ |
@@ -240,7 +261,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 | S-160 | abrir pasta pelo menu Arquivo e pela paleta; a notificação de uma recusa aparece como toast e fica no centro de notificações | eq | e2e | — | B-38 | ⬜ |
 | S-161 | viewport de celular: seletor de abas, uma view por vez, menu da navegação, sem scroll horizontal | fron | e2e | — | B-39 | ⬜ |
 | S-162 | axe sem violação no workbench, na boas-vindas, no diálogo e em cada tela global, nos temas claro e escuro | eq | e2e | — | B-39 | ⬜ |
-| S-163 | as rotas antigas abrem a tela certa: trilha filtrada, regra, histórico, sessão | eq | e2e | — | B-39 | ⬜ |
+| S-163 | as rotas que ficam abrem a tela certa — trilha filtrada, regra —, e as removidas pela D-07 (sessão, histórico) caem no "não encontrado" traduzido | eq | e2e | `NOT_FOUND` | B-39 | ⬜ |
 | S-166 | a stack de e2e sobe com a árvore de fixtures e a allowlist default — a cópia local de quem roda o teste não muda o resultado | eq | e2e | — | B-35 | ⬜ |
 
 ---

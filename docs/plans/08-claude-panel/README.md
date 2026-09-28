@@ -74,7 +74,7 @@ origem e retomada; o que muda em documento normativo é contrato e padrão de UI
 | | |
 |---|---|
 | Contrato: anexos do prompt, thinking, subagents, compactação, fila, fork a partir de mensagem, esforço, rejeitar; endpoints de leitura; códigos novos; padrões de UI; fixtures gravadas | F0 |
-| Sessões da pasta: **em execução aqui**, **ativas em outro lugar**, **histórico** — e integrar com elas (`attach`, retomar, fork); as rotas de hoje como deep links do workbench | F1 |
+| Sessões da pasta: **em execução aqui**, **ativas em outro lugar**, **histórico** — e integrar com elas (`attach`, retomar, fork); o link de sessão e de conversa no workbench | F1 |
 | Renderização: markdown seguro, código, caminhos que abrem no editor, tools compactas, saída do `Bash`, thinking, lista de tarefas, subagents, aprovar plano, resumo do turno, copiar e buscar | F2 |
 | Diffs: inline, aba de diff, view "Alterações", diff no card de permissão, aceitar, rejeitar por arquivo e por trecho, desfazer a rejeição | F3 |
 | O painel na aba de pasta: conversas, sessão no primeiro prompt, fila, editar e reenviar, modelo/modo/esforço, contexto e `/compact`, MCP da sessão, exportar, atalhos, status bar, badges e notificações, ajuda | F4 |
@@ -142,7 +142,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | A view de sessões da aba de pasta, com os três grupos, busca, filtro e os quatro estados | B-09 | [web/03-ui-system](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre) | S-33…S-38 |
 | Integrar com a sessão existente: viva → `attach`, nossa → retomar, externa → fork, externa ativa → aviso | B-10 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#retomada) | S-39…S-47 |
 | A lista acompanha o mundo sem martelar o backend | B-11 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md#o-histórico-é-dado-do-servidor) | S-48…S-51 |
-| As rotas de hoje são deep links que abrem a aba de pasta com a conversa no painel | B-12 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md#a-url-é-estado) | S-52…S-54, S-266 |
+| Sessão e conversa têm link no workbench, que abre a aba de pasta com a conversa no painel (as rotas antigas saíram no 06) | B-12 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md#a-url-é-estado) | S-52…S-54, S-266 |
 | Markdown do modelo é conteúdo não confiável: sem HTML cru, sem imagem remota, sem link perigoso | B-14 | [web/03-ui-system](../../architecture/web/03-ui-system.md#stream-de-mensagens) | S-58…S-64 |
 | Código com realce, copiar e inserir no editor sem tocar o disco | B-15 | [web/03-ui-system](../../architecture/web/03-ui-system.md#stream-de-mensagens) | S-65…S-68 |
 | Caminho de arquivo no texto abre no editor, só dentro da pasta | B-16 | [web/01-architecture](../../architecture/web/01-architecture.md#os-quatro-elos) | S-69…S-71 |

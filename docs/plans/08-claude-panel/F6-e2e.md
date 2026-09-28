@@ -52,8 +52,10 @@ aprovar o plano troca o modo e o Claude segue.
 
 A view de sessões mostra uma sessão viva, uma conversa externa ativa e o histórico; `attach`, retomar e
 fork a partir dela. Duas abas de pasta: a permissão pedida na inativa vira badge na aba e é respondida.
-`/sessions/$sessionId` colado no navegador abre a aba da pasta com a conversa no painel, ao lado do
-explorer e do editor. Dois prompts durante um turno entram na fila e um é cancelado; editar e reenviar um
+O link de sessão ([D-24](decisions.md#d-24--o-link-de-uma-sessão-e-de-uma-conversa)) colado no
+navegador abre a aba da pasta com a conversa no painel, ao lado do explorer e do editor; retomar uma
+conversa pela view de sessões e abrir uma conversa removida voltam a ser provados pelo web — o plano 06
+os tirou do e2e ao remover `/history`. Dois prompts durante um turno entram na fila e um é cancelado; editar e reenviar um
 prompt bifurca a conversa. Em viewport de celular, o painel é uma view única, sem scroll horizontal, e o
 axe não acusa violação.
 
