@@ -53,7 +53,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [05 — Endurecimento e operação](05-hardening-operations/README.md) | 4/5 | 19/22 | 63/68 | 12/12 | 🔄 |
 | [06 — Workbench](06-workbench/README.md) | 0/7 | 0/40 | 0/182 | 17/17 | 🔲 |
 | [07 — Explorer e editor](07-explorer-and-editor/README.md) | 0/9 | 0/61 | 0/360 | 19/20 | 🔲 |
-| [08 — Painel do Claude](08-claude-panel/README.md) | 0/7 | 0/58 | 0/272 | 1/24 | 🔲 |
+| [08 — Painel do Claude](08-claude-panel/README.md) | 0/7 | 0/58 | 0/272 | 24/24 | 🔲 |
 | [09 — Busca](09-search/README.md) | 0/4 | 0/24 | 0/162 | 0/8 | 🔲 |
 | [10 — Terminal integrado](10-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 2/13 | 🔄 |
 | [11 — Configuração do Claude](11-claude-settings/README.md) | 0/5 | 0/46 | 0/199 | 1/22 | 🔲 |
@@ -63,7 +63,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [15 — Dispositivos](15-devices/README.md) | 0/4 | 0/28 | 0/118 | 0/12 | 🔲 |
 | [16 — Logs e diagnóstico](16-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 2/16 | 🔲 |
 | [17 — Distribuição](17-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/7 | 🔲 |
-| **Total** | **35/100** | **200/646** | **567/2683** | **134/277** | 🔄 |
+| **Total** | **35/100** | **200/646** | **567/2683** | **157/277** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -305,6 +305,7 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-09-28 | **Plano 08: as 23 decisões em aberto respondidas pelo usuário** | todas seguem a recomendação, e nenhuma muda tarefa ou cenário: menção por referência lida pelo `Read`, imagem por upload HTTP, diff do input com o snapshot, fila de prompts no backend, subagents encaminhados, `session.setEffort`, editar e reenviar sempre por fork, link na search do workbench, rejeitar por arquivo e por trecho com `revision`, sessão que nasce no primeiro prompt, catálogo com cache e query efêmera, `@` pelo localizador do plano 09. Spikes e medidas da F0 confirmam ou acionam o desvio já decidido |
 | 2026-09-28 | **Plano 07: as 20 decisões em aberto respondidas pelo usuário** | todas seguem a recomendação, e nenhuma muda tarefa ou cenário: módulo `files` por porta, trilha antes do disco com `503`, `ETag` sha256 com `If-Match` obrigatório, watch por WS com `seq` por `watchId` e sem replay, fronteira na pasta aberta, Monaco sob demanda. A D-08 (watcher) fica 🔄 até o spike B-19; os números de D-04 e D-16 são provisórios até a medida |
 | 2026-09-28 | **Plano 06: as 14 decisões em aberto fechadas pelo usuário** | dez seguem a recomendação. Quatro mudam o plano: as rotas `/sessions/$id` e `/history…` saem sem deep link, e ler, continuar e desfazer conversa antiga pelo web **passa ao [plano 08](08-claude-panel/README.md)** (06 · D-07; o 08 ganhou a D-24); o histórico de notificações vai para o servidor — 30 dias, teto de 200, "lida" sincronizada — com a nova B-40 (06 · D-17); a aba inativa mantém sessões e terminais anexados, o que fecha a D-11 do 08 e a exceção do 10 (06 · D-11); a allowlist recarrega só por `SIGHUP`, e a regra "nunca watch" de backend/03 fica (06 · D-15) |
 | 2026-09-26 | **Decisões bloqueantes resolvidas pelo usuário** | Keycloak próprio (05 · D-05, emenda na ADR-010); exposição e certificado são da infraestrutura (17 · D-04, D-05); Linux, macOS e Windows, teste só em Linux (17 · D-01); workbench em React (06 · D-01, ADR-014); seletor só dentro das raízes (06 · D-03); terminal com as travas (10 · D-01, ADR-017); e os planos 06–16 esperam o 05 fechar (06 · D-02). A arquitetura ganhou a seção "Onde o produto roda, e como é alcançado" |

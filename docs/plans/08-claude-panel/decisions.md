@@ -10,6 +10,12 @@ Plano: [README.md](README.md) · Cenários: [scenarios.md](scenarios.md) · Prog
 
 Decisão em aberto **não** impede planejar; impede **começar a fase** que depende dela.
 
+> As 23 que estavam abertas foram respondidas pelo usuário em **2026-09-28**, uma a uma, e todas
+> seguem a recomendação; com a D-11, as 24 estão decididas. As que dependem de spike (D-01, D-02,
+> D-14, D-16) ou de medida (D-04, D-06, D-15, D-23) têm o desvio já decidido: a medida vem para esta
+> página quando for feita e, onde ela pode mudar um número ou um formato, o **Resultado** diz que é
+> provisório.
+
 > Os IDs D-01…D-10 são os do roteiro dos planos 06–11, para que os outros planos possam citá-los;
 > D-11…D-23 nasceram ao detalhar as fases; a D-24, de uma decisão do plano 06. A ordem no arquivo é a da fase que cada uma bloqueia
 > primeiro, por isso os números não aparecem em sequência.
@@ -20,15 +26,15 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-01 | Como a menção de arquivo, pasta ou trecho chega ao Claude: referência que ele lê pelo `Read` (auditado) ou conteúdo colado no prompt | se o CLI expande `@caminho` vindo do streaming input em conteúdo inline — **exige spike** | B-01, B-44 | — | 🔲 |
-| D-02 | Imagem no prompt: entra? como viaja (frame WS × upload HTTP), qual teto e quais tipos | se o streaming input aceita bloco `image` no `SDKUserMessage` e o que o CLI faz com ele — **exige spike**; o frame WS tem 64 KB por padrão | B-01, B-45, B-49 | — | 🔲 |
-| D-03 | De onde vem o diff de uma tool e da sessão: input da tool + snapshot do ADR-013, ou guardar também o "depois" de cada escrita | quanto o "depois" custaria em disco, medido sobre as sessões reais; quantas escritas repetem o mesmo arquivo no mesmo turno | B-03, B-25, B-26, B-29 | — | 🔲 |
-| D-05 | O histórico da pasta casa as subpastas? | custo da varredura do store inteiro hoje (281 ms para 298 sessões, medido em 2026-09-16) e como ele cresce | B-03, B-08 | — | 🔲 |
-| D-06 | "Ativa em outro lugar": qual critério (janela de `lastModified`) e o que se permite fazer com ela | com que frequência o CLI e a extensão escrevem o transcript durante um turno longo — **medir** | B-03, B-08, B-10 | — | 🔲 |
-| D-14 | A fila de prompts: fica no SDK (como hoje, não cancelável) ou no backend (visível a todos e cancelável) | se segurar o prompt até o turno terminar muda algo no comportamento medido do SDK (§8.6 da descoberta) | B-02, B-34 | — | 🔲 |
-| D-15 | Subagents: encaminhar o texto e o thinking deles (`forwardSubagentText`) ou só as tools | quantos eventos um `Task` típico gera, contra o ring buffer de 1000 eventos por sessão — **medir** | B-02, B-21 | — | 🔲 |
-| D-16 | Esforço (effort) dentro da sessão: entra, e por qual mecanismo | se `applyFlagSettings({ effortLevel })` vale no meio de uma sessão viva e a partir de quando — **exige spike** | B-02, B-36 | — | 🔲 |
-| D-19 | Editar e reenviar: bifurcar sempre, ou truncar in-place a conversa nossa; e o que acontece com os arquivos | como traduzir o `messageId` do nosso contrato para o UUID da cadeia que `resumeSessionAt` aceita, sem parser de JSONL | B-02, B-35 | — | 🔲 |
+| D-01 | Como a menção de arquivo, pasta ou trecho chega ao Claude: referência que ele lê pelo `Read` (auditado) ou conteúdo colado no prompt | se o CLI expande `@caminho` vindo do streaming input em conteúdo inline — **exige spike** | B-01, B-44 | 2026-09-28 · **referência**, num formato delimitado que o CLI não expande (ex. `<reference path lines/>`), composto no backend para as duas pontas; o Claude lê pelo `Read` sob o `PreToolUse`; o chip avisa aba suja; `text` de provedor (`@terminal`) delimitado, rotulado e com teto. Decisão do usuário com a recomendação; **a sintaxe exata é provisória** até o spike da B-01, e o `smoke-live` vigia a premissa (S-238) | ✅ |
+| D-02 | Imagem no prompt: entra? como viaja (frame WS × upload HTTP), qual teto e quais tipos | se o streaming input aceita bloco `image` no `SDKUserMessage` e o que o CLI faz com ele — **exige spike**; o frame WS tem 64 KB por padrão | B-01, B-45, B-49 | 2026-09-28 · **upload HTTP** (`POST /sessions/:sessionId/attachments` → `attachmentId`), teto 5 MB, PNG/JPEG/GIF/WebP (`413`/`415`), fora do workspace, da trilha e do log (só tipo, tamanho e hash), descartado ao fechar a sessão ou no TTL; o frame WS fica em 64 KB. Decisão do usuário com a recomendação; se o spike mostrar que o CLI não aceita bloco `image`, a imagem sai da B-45, com nota no progresso | ✅ |
+| D-03 | De onde vem o diff de uma tool e da sessão: input da tool + snapshot do ADR-013, ou guardar também o "depois" de cada escrita | quanto o "depois" custaria em disco, medido sobre as sessões reais; quantas escritas repetem o mesmo arquivo no mesmo turno | B-03, B-25, B-26, B-29 | 2026-09-28 · **input da tool + snapshot do ADR-013**, sem store do "depois"; o caso sem snapshot intermediário devolve `before.state: 'unavailable'` com motivo; a prévia do card de permissão é o input aplicado ao disco agora, pela API do plano 07, sem mudar `permission.requested`. Decisão do usuário com a recomendação | ✅ |
+| D-05 | O histórico da pasta casa as subpastas? | custo da varredura do store inteiro hoje (281 ms para 298 sessões, medido em 2026-09-16) e como ele cresce | B-03, B-08 | 2026-09-28 · **exato por padrão**, "incluir subpastas" como filtro da view por `listSessions({})` com cache curto (chave: `lastModified` máximo) filtrado por `cwd` dentro da pasta aberta; as vivas casam subpastas sempre. Decisão do usuário com a recomendação; a B-03 atualiza a regra "nunca `listSessions({})`" de backend/03 | ✅ |
+| D-06 | "Ativa em outro lugar": qual critério (janela de `lastModified`) e o que se permite fazer com ela | com que frequência o CLI e a extensão escrevem o transcript durante um turno longo — **medir** | B-03, B-08, B-10 | 2026-09-28 · **janela configurável, padrão 120 s** de `lastModified`, calculada no backend, só para conversa externa; rótulo "escrita há *n* min"; externa retoma sempre por fork, e o fork de uma ativa pede confirmação dizendo que as continuações vão divergir. Decisão do usuário com a recomendação; **o padrão é provisório** até medir o intervalo de escrita num turno longo | ✅ |
+| D-14 | A fila de prompts: fica no SDK (como hoje, não cancelável) ou no backend (visível a todos e cancelável) | se segurar o prompt até o turno terminar muda algo no comportamento medido do SDK (§8.6 da descoberta) | B-02, B-34 | 2026-09-28 · **a fila é do backend**: o prompt fica conosco até o turno terminar, `prompt.queued`/`prompt.dequeued` para os observadores e `session.cancelQueuedPrompt` para tirar. Decisão do usuário com a recomendação; o spike da B-02 confirma que segurar o prompt não muda o fim do turno no SDK (§8.6, `resumeDropsTurn`) | ✅ |
+| D-15 | Subagents: encaminhar o texto e o thinking deles (`forwardSubagentText`) ou só as tools | quantos eventos um `Task` típico gera, contra o ring buffer de 1000 eventos por sessão — **medir** | B-02, B-21 | 2026-09-28 · **encaminhar** (`forwardSubagentText: true`), com `parentToolUseId` opcional nos eventos de mensagem e de tool. Decisão do usuário com a recomendação; se a medida de um `Task` real mostrar o ring buffer de 1000 estourando com frequência, o texto do subagent sai do stream e carrega ao expandir (`getSubagentMessages`) | ✅ |
+| D-16 | Esforço (effort) dentro da sessão: entra, e por qual mecanismo | se `applyFlagSettings({ effortLevel })` vale no meio de uma sessão viva e a partir de quando — **exige spike** | B-02, B-36 | 2026-09-28 · **entra, como `session.setEffort { sessionId, level }`** nas três pontas, sobre `applyFlagSettings({ effortLevel })`, só quando o modelo aceita (`supportsEffort`). Decisão do usuário com a recomendação; se o spike mostrar que não vale no meio da sessão, o esforço é escolhido no rascunho e vai no `session.start` | ✅ |
+| D-19 | Editar e reenviar: bifurcar sempre, ou truncar in-place a conversa nossa; e o que acontece com os arquivos | como traduzir o `messageId` do nosso contrato para o UUID da cadeia que `resumeSessionAt` aceita, sem parser de JSONL | B-02, B-35 | 2026-09-28 · **sempre bifurcar**, nunca truncar in-place: o ponto é resolvido pelo `getSessionMessages` (sem parser); recusa do CLI vira `SESSION_FORK_REJECTED`, com a retomada simples oferecida; "desfazer até antes do turno" oferecido, desligado por padrão. Decisão do usuário com a recomendação | ✅ |
 
 ### D-01 — como a menção chega ao Claude
 
@@ -163,8 +169,8 @@ por padrão, porque o fork não leva o histórico de undo.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-10 | Como a lista de sessões se atualiza: polling ou evento | — (a escolha é de desenho; o "ativa em outro lugar" só é observável lendo o store) | B-11 | — | 🔲 |
-| D-24 | O link de uma sessão e de uma conversa, agora que as rotas antigas não existem | nenhum técnico — a URL do workbench já leva a pasta na search ([06 · D-06](../06-workbench/decisions.md#d-06--a-url-do-workbench)) | B-12 | — | 🔲 |
+| D-10 | Como a lista de sessões se atualiza: polling ou evento | — (a escolha é de desenho; o "ativa em outro lugar" só é observável lendo o store) | B-11 | 2026-09-28 · **polling pelo TanStack Query**, 10 s com a view visível, parado com a view escondida ou a aba de pasta inativa, mais invalidação por `session.started`/`session.closed`; nenhum stream novo. Decisão do usuário com a recomendação | ✅ |
+| D-24 | O link de uma sessão e de uma conversa, agora que as rotas antigas não existem | nenhum técnico — a URL do workbench já leva a pasta na search ([06 · D-06](../06-workbench/decisions.md#d-06--a-url-do-workbench)) | B-12 | 2026-09-28 · **na search do workbench**: `/workbench?folder=…&session=…` ou `&conversation=…`, exclusivos; o que não existe ou não é do chamador mostra o erro traduzido com caminho de volta. Decisão do usuário com a recomendação | ✅ |
 
 ### D-10 — a lista de sessões se atualiza como
 
@@ -200,8 +206,8 @@ exclusivos; o que não existe ou não é do chamador mostra o erro traduzido com
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-04 | Biblioteca de markdown e de realce | a escolha de editor do plano 07 (Monaco × CodeMirror); bundle medido no celular | B-14, B-15 | — | 🔲 |
-| D-17 | Thinking: aberto ou recolhido, e o que dele vai para o buffer, o transcript e o log | se o modelo em uso devolve thinking resumido, omitido ou em destaques por padrão | B-19 | — | 🔲 |
+| D-04 | Biblioteca de markdown e de realce | a escolha de editor do plano 07 (Monaco × CodeMirror); bundle medido no celular | B-14, B-15 | 2026-09-28 · **`react-markdown` + `remark-gfm`, sem `rehype-raw`**; URLs só `http`, `https`, `mailto` e relativo; imagem remota vira link; realce pelo `monaco.editor.colorize`, sob demanda (o plano 07 escolheu Monaco, 07 · D-09). Decisão do usuário com a recomendação; o bundle é medido na B-14 | ✅ |
+| D-17 | Thinking: aberto ou recolhido, e o que dele vai para o buffer, o transcript e o log | se o modelo em uso devolve thinking resumido, omitido ou em destaques por padrão | B-19 | 2026-09-28 · **mostrado recolhido**, com a duração; vai no buffer e no transcript como bloco próprio; no log, só o tamanho. Decisão do usuário com a recomendação | ✅ |
 
 ### D-04 — markdown e realce
 
@@ -223,8 +229,8 @@ arquivo lido, e a regra de não logar conteúdo de `Read` vale para ele.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-08 | Rejeitar por arquivo e por trecho: qual mecanismo, e com que garantias | como calcular o trecho com três versões (antes da sessão, como a sessão deixou, disco agora) sem conteúdo do "como a sessão deixou" — só temos o hash | B-02, B-30, B-31 | — | 🔲 |
-| D-18 | O que "aceitar" uma alteração significa, e onde a marca mora | — | B-28 | — | 🔲 |
+| D-08 | Rejeitar por arquivo e por trecho: qual mecanismo, e com que garantias | como calcular o trecho com três versões (antes da sessão, como a sessão deixou, disco agora) sem conteúdo do "como a sessão deixou" — só temos o hash | B-02, B-30, B-31 | 2026-09-28 · **por arquivo**, `session.rewindFiles` com `paths?` (opcional, sem subir `v`) pelo `UndoPlanner`; **por trecho**, `session.rejectChange { sessionId, path, hunkId, revision }` entre o snapshot e o disco, só com o hash da sessão no disco (senão `modifiedOutside`, só inteiro); `revision` mudou → `409` `SESSION_CHANGE_STALE`; desfazer a rejeição por toast, confirmação só para rejeitar tudo. Decisão do usuário com a recomendação | ✅ |
+| D-18 | O que "aceitar" uma alteração significa, e onde a marca mora | — | B-28 | 2026-09-28 · **marca de revisão local**, por arquivo e por sessão, no estado da aba de pasta; nunca no servidor nem na trilha; a view "Alterações" filtra pendentes e revisados. Decisão do usuário com a recomendação | ✅ |
 
 ### D-08 — rejeitar por arquivo e por trecho
 
@@ -260,12 +266,12 @@ aba de pasta (que o plano 06 restaura ao recarregar) — nunca no servidor, nunc
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-07 | A sessão nasce no primeiro prompt (rascunho sem subprocesso) ou ao abrir a conversa | — (custo medido: ~222 MB e 1 processo por sessão) | B-33 | — | 🔲 |
-| D-09 | Várias sessões da mesma pasta em abas, e como o teto de 10 aparece para quem tem várias abas | se mostrar a ocupação **global** do teto revela atividade de outros usuários | B-32, B-42 | — | 🔲 |
+| D-07 | A sessão nasce no primeiro prompt (rascunho sem subprocesso) ou ao abrir a conversa | — (custo medido: ~222 MB e 1 processo por sessão) | B-33 | 2026-09-28 · **a sessão nasce no primeiro prompt**: "nova conversa" é rascunho do cliente; o primeiro envio faz `session.start` (modelo, modo e esforço do rascunho) e, no `session.started`, o `session.prompt`; recusa no teto mantém o rascunho. Decisão do usuário com a recomendação | ✅ |
+| D-09 | Várias sessões da mesma pasta em abas, e como o teto de 10 aparece para quem tem várias abas | se mostrar a ocupação **global** do teto revela atividade de outros usuários | B-32, B-42 | 2026-09-28 · **várias conversas por pasta, em abas do painel**; `SESSION_LIMIT_REACHED` diz que o teto é da instalação, com o tempo de espera, e lista as sessões **do usuário**; a ocupação global não aparece. Decisão do usuário com a recomendação | ✅ |
 | D-11 | O que a aba de pasta inativa mantém das sessões dela | a D-11 do plano 06 (o que uma aba inativa mantém vivo) | B-42 | 2026-09-28 · **as sessões vivas das abas inativas continuam anexadas**, pela [D-11 do plano 06](../06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas), decidida pelo usuário com esta recomendação; a aba inativa suspende o polling da lista e a renderização | ✅ |
-| D-13 | De onde vem o catálogo da instalação — comandos, skills e modelos — antes de a sessão existir | a D-06 do plano 11 (catálogo sem sessão viva); quanto custa uma query efêmera que só pergunta | B-36, B-50 | — | 🔲 |
-| D-20 | Exportar conversa: o que entra e onde é gerado | — | B-39 | — | 🔲 |
-| D-21 | Notificação do navegador: quando pedir, quando mostrar e o que dizer | — | B-42 | — | 🔲 |
+| D-13 | De onde vem o catálogo da instalação — comandos, skills e modelos — antes de a sessão existir | a D-06 do plano 11 (catálogo sem sessão viva); quanto custa uma query efêmera que só pergunta | B-36, B-50 | 2026-09-28 · **`GET /catalog?workspacePath=` com cache** por versão do CLI e pasta, e **query efêmera** sem cache (sem prompt, sem token, conta no teto enquanto dura, uma por vez por chave); as skills de usuário e de sistema entram pelo plugin do plano 11. Decisão do usuário com a recomendação; se a D-06 do plano 11 decidir outra fonte, esta passa a ser a dele | ✅ |
+| D-20 | Exportar conversa: o que entra e onde é gerado | — | B-39 | 2026-09-28 · **gerada no cliente, em Markdown**, a partir das páginas do transcript que a pessoa já lê; nenhum endpoint novo; saída de tool só com opção ligada, desligada por padrão. Decisão do usuário com a recomendação | ✅ |
+| D-21 | Notificação do navegador: quando pedir, quando mostrar e o que dizer | — | B-42 | 2026-09-28 · **permissão pedida só por ação explícita**; notifica com a página escondida, no fim de turno e no pedido de permissão; o texto diz a pasta e o tipo, nunca o comando. Decisão do usuário com a recomendação | ✅ |
 
 ### D-07 — a sessão nasce no primeiro prompt
 
@@ -332,9 +338,9 @@ aparece na tela bloqueada, como o push do plano 02.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-12 | De onde vem o autocomplete do `@` | se o plano 09 (o localizador de arquivos) chega antes desta fase | B-48 | — | 🔲 |
-| D-22 | Arquivo arrastado do desktop: anexo enviado ou gravado na pasta | — | B-01, B-45, B-49 | — | 🔲 |
-| D-23 | Como estimar o tamanho do contexto em tokens, e onde ficam o aviso e o teto | a janela de contexto do modelo em uso (do `getContextUsage()`) e o que o `Read` carrega de um arquivo grande | B-47 | — | 🔲 |
+| D-12 | De onde vem o autocomplete do `@` | se o plano 09 (o localizador de arquivos) chega antes desta fase | B-48 | 2026-09-28 · **fuzzy pelo `GET /search/files` do plano 09**, com a F5 esperando a F1 de lá; se a ordem não permitir, a completação por segmento sobre `GET /files/tree` entra como passo provisório registrado no progresso, e a troca para fuzzy vira task. Decisão do usuário com a recomendação | ✅ |
+| D-22 | Arquivo arrastado do desktop: anexo enviado ou gravado na pasta | — | B-01, B-45, B-49 | 2026-09-28 · **anexo enviado** (B-45): imagem vira bloco de imagem, texto vira conteúdo delimitado com o nome, com teto e tipo, fora do workspace, morre com a sessão; gravar na pasta é o upload do plano 07, ação separada oferecida ao lado. Decisão do usuário com a recomendação | ✅ |
+| D-23 | Como estimar o tamanho do contexto em tokens, e onde ficam o aviso e o teto | a janela de contexto do modelo em uso (do `getContextUsage()`) e o que o `Read` carrega de um arquivo grande | B-47 | 2026-09-28 · **estimativa de ≈ 4 bytes por token** pelo tamanho dos arquivos, dita como estimativa; pasta como "*n* itens"; anexo pelo tamanho real; aviso acima de 25 % da janela livre (`getContextUsage()` com sessão, padrão configurado no rascunho); teto por `maxItems` e por bytes configurado. Decisão do usuário com a recomendação; **o limiar e o padrão do rascunho são provisórios** até a medida | ✅ |
 
 ### D-12 — o autocomplete do `@`
 

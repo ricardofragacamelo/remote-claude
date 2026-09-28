@@ -12,8 +12,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 **Fase corrente:** nenhuma — plano não iniciado
 **Última atualização:** 2026-09-28
-**Bloqueios:** a F0 só começa com as decisões dela fechadas (D-01, D-02, D-03, D-05, D-06, D-14, D-15,
-D-16, D-19, D-22), seis delas com spike contra o Claude real — ver [decisions.md](decisions.md#f0--contrato)
+**Bloqueios:** nenhuma decisão aberta; para **começar**, o plano 07 concluído. Os spikes da F0 (D-01, D-02, D-14, D-16) são tarefas dela, com o desvio já decidido — ver [decisions.md](decisions.md#f0--contrato)
 
 ```
 F0 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
@@ -59,7 +58,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 24 | 23 | 0 | 1 | 0 |
+| [Decisões](decisions.md) | 24 | 0 | 0 | 24 | 0 |
 
 ---
 
@@ -80,6 +79,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
+| 2026-09-28 | As 23 decisões em aberto respondidas pelo usuário, uma a uma; todas seguem a recomendação | as fases dependiam delas para começar | [decisions.md](decisions.md) D-01…D-24; nenhuma tarefa ou cenário mudou. Provisórios até o spike ou a medida: a sintaxe da referência (D-01), a imagem entrar (D-02), a fila segurada (D-14), o esforço no meio da sessão (D-16), a janela de 120 s (D-06), o encaminhamento de subagent (D-15) e o limiar de 25 % (D-23) |
 | 2026-09-28 | D-11 fechada pela D-11 do plano 06 (sessões das abas inativas continuam anexadas); B-12 reescrita e D-24 aberta, porque o 06 removeu `/sessions/$id` e `/history…` sem deep link (06 · D-07); a B-12 e a B-56 recebem de volta os cenários de e2e de histórico e retomada que o 06 tirou do web | decisões do usuário no plano 06, em 2026-09-28 | [decisions.md](decisions.md) D-11, D-24; B-12, B-56; S-52…S-54, S-266 |
 | 2026-09-26 | O composer e o contexto viraram fase própria (F5), e o e2e passou a F6 (`F5-e2e.md` → `F6-e2e.md`) | pedido explícito do usuário: escolher o contexto do prompt como no plugin do Claude (`@`, arrastar, `/` para comando ou skill, autocomplete) — uma fase é a unidade de validação, e o composer é uma fronteira de segurança | as fases F5 e F6, as tasks B-44…B-58 e os cenários S-197…S-272 |
 | 2026-09-26 | Skills carregam de projeto, usuário e sistema; as de usuário e sistema pelo plugin local do plano 11 | decisão do usuário; mantém o `settingSources: ['project']` do ADR-011 | B-50, S-241…S-243, S-272 |
