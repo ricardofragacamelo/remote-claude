@@ -4,7 +4,7 @@ Plano: [11 — Configuração do Claude](README.md) · Cenários: [scenarios.md]
 
 **Depende de:** [F1](F1-models-and-modes.md) — o catálogo e a sonda efêmera, que o teste de servidor
 reusa.
-**Entrega:** servidores MCP e plugins locais configurados pela tela, com segundo passo, trilha e
+**Entrega:** servidores MCP e plugins — locais e de marketplace — configurados pela tela, com segundo passo, trilha e
 segredo que nunca volta; o `.mcp.json` do projeto aprovado por nós, por conteúdo; status vivo e
 ligar/desligar/reconectar dentro da sessão; e a prova de que toda tool MCP passa pela aprovação e
 pela trilha como qualquer outra.
@@ -168,7 +168,24 @@ lista, por extenso, o que ele traz — hooks (código que roda em todo evento), 
 servidores MCP. Entra na sessão por `plugins: [{ type: 'local', path, skipMcpDiscovery: true }]`: os
 servidores MCP do plugin **não** sobem sozinhos; aparecem na seção MCP como sugestão para aprovar como
 servidor nosso. Digest do manifesto: mudou, volta a pendente. Adicionar, ligar e remover gravam
-`claude.plugin*`. Instalar de marketplace não entra — ver D-15. Cenários S-123…S-130.
+`claude.plugin*`. Plugin de marketplace usa esta mesma construção, a partir do diretório que a
+B-47 baixa. Cenários S-123…S-130.
+
+### B-47 — Plugins de marketplace 🔲
+
+[D-15](decisions.md#d-15--plugins-do-claude), decidida pelo usuário contra a recomendação. Marketplaces
+**declarados no arquivo da allowlist** (seção própria, validada no boot como a do terminal do plano 10;
+ausente é desligado; fora da lista, `PLUGIN_MARKETPLACE_NOT_ALLOWED`); a tela lista os plugins de cada
+um, lidos pelo formato publicado de marketplace do Claude Code. Instalar: o backend baixa o plugin para
+um diretório **seu**, por usuário, fixado no commit resolvido — nunca `claude plugin install`, nunca
+`~/.claude` —, e daí segue a B-27: prévia por extenso, segundo passo, digest, `skipMcpDiscovery: true`,
+trilha `claude.plugin*` antes do efeito. Download é só cópia: nenhum script de instalação roda, o
+subprocesso recebe o ambiente sem os segredos do backend (B-20), fonte de tipo não suportado ou caminho
+que escapa do repositório é `PLUGIN_PATH_INVALID`, fonte inacessível é `PLUGIN_SOURCE_UNAVAILABLE`, e
+download que falha no meio não deixa diretório parcial nem registro. Atualizar é explícito: a tela avisa
+que há versão nova, a prévia mostra a **diferença** do que o plugin traz, e só o segundo passo troca o
+commit. Marketplace que sai do arquivo (recarga por `SIGHUP`) tira os plugins dele das sessões novas,
+com a razão na tela. Cenários S-200…S-211, S-213.
 
 ### B-28 — Tela: servidores MCP 🔲
 
@@ -184,17 +201,20 @@ Testar conexão com o resultado inline. Cenários S-131…S-136.
 
 ### B-29 — Tela: plugins 🔲
 
-Seção "Plugins": lista (nome, versão declarada, caminho, estado, o que traz), adicionar escolhendo o
-diretório pelo diálogo "Abrir pasta" do plano 06 (nunca caminho digitado solto), prévia do que o plugin
-traz antes do segundo passo, ligar/desligar, remover com confirmação, e o atalho para aprovar os
-servidores MCP que ele sugere. Cenário S-137.
+Seção "Plugins": lista (nome, origem local/marketplace, versão declarada, caminho ou commit, estado, o
+que traz), adicionar escolhendo o diretório pelo diálogo "Abrir pasta" do plano 06 (nunca caminho
+digitado solto) **ou** navegando os marketplaces declarados (busca, detalhe, instalar), prévia do que o
+plugin traz antes do segundo passo, "atualização disponível" com a diferença, ligar/desligar, remover
+com confirmação, e o atalho para aprovar os servidores MCP que ele sugere. Sem marketplace declarado, o
+estado vazio diz como declarar um no arquivo. Cenários S-137, S-212.
 
 ### B-30 — Usabilidade e ajuda: MCP e plugins 🔲
 
 Ajuda en/pt-BR para quem nunca viu MCP: o que é um servidor MCP, a diferença entre stdio e http, por que
 acrescentar um é tão sensível quanto uma regra `always` e o que o segundo passo protege, o que
 `needs-auth` significa e como resolver na máquina, por que o `.mcp.json` do repositório precisa de
-aprovação e volta a pendente quando muda, o que um plugin pode fazer, e o que **não** é registrado
+aprovação e volta a pendente quando muda, o que um plugin pode fazer, o que é um marketplace e por que
+só os declarados no arquivo aparecem, e o que **não** é registrado
 (valores de segredo). Estado vazio que ensina (adicionar, ou aprovar os do projeto); tooltip em todo
 botão de ícone; "Claude: adicionar servidor MCP" e "Claude: testar servidores" na palette; teclado e
 foco no assistente; axe sem violação. Cenários S-138…S-140.
@@ -203,7 +223,7 @@ foco no assistente; axe sem violação. Cenários S-138…S-140.
 
 ## Cenários cobertos
 
-S-63…S-140.
+S-63…S-140, S-200…S-213.
 
 ---
 

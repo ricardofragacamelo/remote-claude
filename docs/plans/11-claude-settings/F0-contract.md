@@ -92,7 +92,9 @@ planos: 014 no 06, 015 no 07, 016 no 09, 017 no 10, 018 aqui, 019 no 12). Regist
 - nenhuma escrita em arquivo de settings do CLI (`updateSettings` proibido); a camada de flag
   (`Options.settings`, `applyFlagSettings`) só recebe chaves de uma allowlist (`outputStyle`,
   `effortLevel`) — nunca `permissions`, `hooks`, `env`, `enabledPlugins` ou chaves de MCP;
-- plugins só locais, com `skipMcpDiscovery: true` ([D-15](decisions.md#d-15--plugins-do-claude));
+- plugins só pela opção `plugins` do SDK, como `local` e com `skipMcpDiscovery: true` — os de
+  marketplace baixados pelo backend para diretório próprio, de marketplace declarado, nunca pelo
+  `claude plugin install` nem para `~/.claude` ([D-15](decisions.md#d-15--plugins-do-claude));
 - configuração de projeto (permissões, hooks, plugins habilitados) é **mostrada**, não editada por
   esta tela ([D-17](decisions.md#d-17--permissões-hooks-e-plugins-de-projeto)).
 
@@ -170,7 +172,9 @@ No [catálogo](../../architecture/shared/04-errors-and-http.md#catálogo-de-erro
 `error-catalogue.ts`, com `messageKey` en/pt-BR (`claudeConfig.error.*`): `MCP_SERVER_NOT_FOUND` 404,
 `MCP_SERVER_NAME_TAKEN` 409, `MCP_SERVER_CONFIG_INVALID` 422 (`params.rule`), `MCP_APPROVAL_STALE`
 409 (o `.mcp.json` mudou desde que foi mostrado), `MODEL_NOT_AVAILABLE` 422, `DEFAULT_MODE_NOT_ALLOWED`
-422, `PLUGIN_NOT_FOUND` 404, `PLUGIN_PATH_INVALID` 422. Reusados: `INVALID_INPUT`, `FORBIDDEN`,
+422, `PLUGIN_NOT_FOUND` 404, `PLUGIN_PATH_INVALID` 422, `PLUGIN_MARKETPLACE_NOT_ALLOWED` 403
+(marketplace fora do arquivo da allowlist), `PLUGIN_SOURCE_UNAVAILABLE` 502 (fonte do marketplace
+inacessível). Reusados: `INVALID_INPUT`, `FORBIDDEN`,
 `WORKSPACE_*`, `SESSION_NOT_FOUND`, `SESSION_LIMIT_REACHED`, `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT`,
 `SERVICE_UNAVAILABLE` (chave de segredo ausente, `claudeConfig.error.secretStoreUnavailable`),
 `INTERNAL_ERROR`. `400` para o que não se entende (tipo errado), `422` para o que se entende e é

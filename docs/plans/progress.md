@@ -56,14 +56,14 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [08 — Painel do Claude](08-claude-panel/README.md) | 0/7 | 0/58 | 0/272 | 24/24 | 🔲 |
 | [09 — Busca](09-search/README.md) | 0/4 | 0/24 | 0/171 | 8/8 | 🔲 |
 | [10 — Terminal integrado](10-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 13/13 | 🔄 |
-| [11 — Configuração do Claude](11-claude-settings/README.md) | 0/5 | 0/46 | 0/199 | 1/22 | 🔲 |
+| [11 — Configuração do Claude](11-claude-settings/README.md) | 0/5 | 0/47 | 0/213 | 22/22 | 🔲 |
 | [12 — Auditoria explicada](12-audit-explained/README.md) | 0/5 | 0/38 | 0/151 | 0/14 | 🔲 |
 | [13 — Gestão de regras](13-rules-management/README.md) | 0/5 | 0/36 | 8/223 | 1/19 | 🔄 |
 | [14 — Uso e custo](14-usage-and-cost/README.md) | 0/5 | 0/33 | 0/123 | 0/15 | 🔲 |
 | [15 — Dispositivos](15-devices/README.md) | 0/4 | 0/28 | 0/118 | 0/12 | 🔲 |
 | [16 — Logs e diagnóstico](16-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 2/16 | 🔲 |
 | [17 — Distribuição](17-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/8 | 🔲 |
-| **Total** | **35/100** | **200/646** | **567/2692** | **176/278** | 🔄 |
+| **Total** | **35/100** | **200/647** | **567/2706** | **197/278** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -305,6 +305,7 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-09-28 | **Plano 11: as 21 decisões em aberto respondidas pelo usuário** | vinte seguem a recomendação: store de MCP nosso com `strictMcpConfig`, segredo cifrado entregue por `setMcpServers()` e nunca pelo argv, módulo `claude-config`, fixture MCP stdio própria, padrões por usuário e por pasta, catálogo por sessão viva ou sonda efêmera, conta visível a quem tem raiz, teste de conexão com dono neste plano, esta tela dona dos padrões, apertar-vale-já, `.mcp.json` aprovado por digest, regras `mcp__` revogadas quando o programa muda, annotation só sobe risco, indicador de MCP entregue aqui, configuração de projeto lida pelo formato publicado e só leitura, criação pela escrita do 07, shell inline desligado para todas as origens se escapar da aprovação e skills de sistema por leitura tolerante. **Uma muda o plano:** plugins de marketplace entram (11 · D-15), baixados pelo backend para diretório próprio, só de marketplace declarado no arquivo da allowlist, fixados e atualizados só por decisão — nasce a B-47, com S-200…S-213 |
 | 2026-09-28 | **Plano 10: as 11 decisões em aberto respondidas pelo usuário** | todas seguem a recomendação, e nenhuma muda tarefa ou cenário: step-up por `auth_time` + `max_age` (300 s, reanexar também exige, falha fechada), texto UTF-8 com fluxo no servidor, scrollback por terminal headless com uma connection por terminal, interruptor por `sub` no arquivo da allowlist, "só do web" por `azp` (o `Origin` com o 17), trilha só do ciclo de vida e nunca as teclas, `node-pty` carregado sob demanda, os limites propostos, shell integration injetada no spawn, perfis detectados + personalizados e xterm com renderizador DOM em chunk próprio. O empacotamento do `node-pty` fica como nota ao [plano 17](17-distribution/README.md) |
 | 2026-09-28 | **Plano 09: as 8 decisões em aberto respondidas pelo usuário** | sete seguem a recomendação: `@vscode/ripgrep` fixado com `RC_RIPGREP_PATH`, exclusões da árvore do 07 somadas às do VS Code, o ripgrep como único motor do substituir, aplicar por arquivo como o ADR-013, tetos medidos antes de fechar a F1, cache do localizador com TTL e editor de resultados salvável como `.code-search`. **Uma muda o plano:** a busca e a prévia respondem em fluxo NDJSON desde o início (09 · D-02), sempre com uma linha final `end` ou `error`, e a ordem é montada no cliente. Isso mudou B-03, B-04, B-10, B-11 e B-13 e trouxe os S-163…S-171. O empacotamento do ripgrep virou a D-08 do [plano 17](17-distribution/decisions.md) |
 | 2026-09-28 | **Plano 08: as 23 decisões em aberto respondidas pelo usuário** | todas seguem a recomendação, e nenhuma muda tarefa ou cenário: menção por referência lida pelo `Read`, imagem por upload HTTP, diff do input com o snapshot, fila de prompts no backend, subagents encaminhados, `session.setEffort`, editar e reenviar sempre por fork, link na search do workbench, rejeitar por arquivo e por trecho com `revision`, sessão que nasce no primeiro prompt, catálogo com cache e query efêmera, `@` pelo localizador do plano 09. Spikes e medidas da F0 confirmam ou acionam o desvio já decidido |

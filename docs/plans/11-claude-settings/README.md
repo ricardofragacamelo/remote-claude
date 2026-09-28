@@ -61,7 +61,7 @@ catálogo da instalação; a regra "a nossa é a única autoridade" do plano 03 
 |---|---|
 | Spike das medições que mandam no desenho; ADR e emenda à ADR-011; módulo `claude-config`; contrato HTTP e WS; erros; tabelas e kinds `claude.*`; regras de máquina | F0 |
 | Catálogo da instalação (sessão viva ou sonda efêmera); conta; diagnóstico da instalação; teste de conexão com o modelo; modelos da instalação; padrões por usuário e por pasta (modelo, modo, esforço, thinking, output style, modelo reserva) aplicados no `session.start`; a tela e a ajuda | F1 |
-| Servidores MCP: store com segredo cifrado e só escrita, composição strict por sessão, subprocesso sem os segredos do backend, status vivo, ligar/desligar/reconectar na sessão e o indicador no painel, apertar-vale-já, aprovação do `.mcp.json` por digest, testar conexão, tool MCP pela aprovação, regras que caem com o servidor; plugins locais; telas e ajuda | F2 |
+| Servidores MCP: store com segredo cifrado e só escrita, composição strict por sessão, subprocesso sem os segredos do backend, status vivo, ligar/desligar/reconectar na sessão e o indicador no painel, apertar-vale-já, aprovação do `.mcp.json` por digest, testar conexão, tool MCP pela aprovação, regras que caem com o servidor; plugins locais e de marketplace (baixados pelo backend, só de marketplace declarado, atualização explícita); telas e ajuda | F2 |
 | Configuração de projeto: memória (existe × carregada), slash commands, **skills** (projeto, usuário e sistema, com preferências e plugin sintético), subagents, output styles — listar, e criar/editar pelo editor do 07 a partir de modelo —; hooks, permissões e plugins do projeto só leitura e explicados; telas e ajuda | F3 |
 | E2E pela porta do usuário, `smoke-live` contra o Claude real, e o app compatível | F4 |
 
@@ -83,8 +83,9 @@ Só o que é de outro plano ou o que a arquitetura proíbe:
   o fluxo de elicitação do SDK carregado até o cliente — mostrado e explicado, não resolvido aqui.
 - **Escopo `user` do CLI nas sessões** — `~/.claude/settings.json`, MCPs e hooks pessoais: a ADR-011
   proíbe. As skills do usuário entram, pelo plugin sintético (D-20).
-- **Marketplace de plugins do Claude**: baixa código da rede para o escopo `user`, que a ADR-011 exclui
-  ([D-15](decisions.md#d-15--plugins-do-claude)); plugin local entra.
+- **`claude plugin install` e o escopo `user` dos plugins**: plugin de marketplace entra, mas baixado
+  pelo backend para diretório próprio ([D-15](decisions.md#d-15--plugins-do-claude)); o que o CLI da
+  máquina instalou só contribui skills (D-22).
 - **Editor estruturado de permissões e hooks de projeto**: fica registrado como alternativa na
   [D-17](decisions.md#d-17--permissões-hooks-e-plugins-de-projeto); o arquivo continua editável pelo
   editor do plano 07.
@@ -103,7 +104,7 @@ verde.
 |---|---|---|---|---|
 | F0 | [Contrato](F0-contract.md) | medições, ADR, módulo, contrato nas três pontas, erros, tabelas, regras de máquina | B-01…B-09 | 🔲 |
 | F1 | [Conta, modelos, padrões e diagnóstico](F1-models-and-modes.md) | catálogo da instalação, diagnóstico, padrões aplicados na sessão, a tela | B-10…B-17 | 🔲 |
-| F2 | [Servidores MCP e plugins](F2-mcp-servers.md) | MCP e plugins com segundo passo, trilha e segredo que não volta; `.mcp.json` aprovado por conteúdo | B-18…B-30 | 🔲 |
+| F2 | [Servidores MCP e plugins](F2-mcp-servers.md) | MCP e plugins (locais e de marketplace) com segundo passo, trilha e segredo que não volta; `.mcp.json` aprovado por conteúdo | B-18…B-30, B-47 | 🔲 |
 | F3 | [Configuração de projeto](F3-project-config.md) | tudo o que o `.claude/` injeta, visível e criável; skills das três origens | B-31…B-40 | 🔲 |
 | F4 | [E2E e smoke-live](F4-e2e.md) | o plano pela porta do usuário e contra o Claude real | B-41…B-46 | 🔲 |
 
@@ -136,6 +137,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Testar um servidor é executar o comando: auditado e sob a capacidade | B-25 | [backend/03 · audit](../../architecture/backend/03-modules.md#audit) | S-111…S-115 |
 | Toda tool MCP passa pelo `canUseTool` e pelo `PreToolUse`; regra não sobrevive à troca do programa | B-26 | [backend/04 · a ponte de permissão](../../architecture/backend/04-claude-integration.md#a-ponte-de-permissão) | S-116…S-122, S-02 |
 | Plugin local com o que traz à vista e sem MCP sozinho | B-27, B-29 | [ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) | S-123…S-130, S-137 |
+| Plugin de marketplace só de fonte declarada, baixado pelo backend, fixado e atualizado só por decisão | B-47, B-29 | [ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) | S-200…S-213 |
 | Telas de MCP e plugins completas, com segundo passo e segredo só escrita | B-28, B-29 | [web/03-ui-system](../../architecture/web/03-ui-system.md#padrões-de-ui-deste-produto) | S-131…S-137 |
 | A configuração de projeto é lida pelo formato publicado, nunca por superfície não pública | B-31 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#a-armadilha-do-settingsources) | S-141…S-147 |
 | Memória, comandos, subagents e estilos: visíveis, com o que vale aqui, e criáveis pelo editor | B-32, B-33, B-36, B-37 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd) | S-148…S-153, S-175…S-178 |
@@ -186,7 +188,7 @@ scripts/lib/agent-sdk-rules.mjs    strictMcpConfig · updateSettings · flag/man
 
 | # | Assunto | Estado |
 |---|---|---|
-| R-01 | Servidor MCP e plugin são **código arbitrário** rodando com as credenciais do usuário, subindo com a sessão — antes de qualquer pedido de permissão | **aberto** — mitigado por desenho: segundo passo com o comando por extenso, trilha antes do efeito, strict, apertar vale já, subprocesso sem os segredos do backend (B-19…B-27). O resíduo é o que o usuário escolhe rodar |
+| R-01 | Servidor MCP e plugin são **código arbitrário** rodando com as credenciais do usuário, subindo com a sessão — antes de qualquer pedido de permissão | **aberto** — mitigado por desenho: segundo passo com o comando por extenso, trilha antes do efeito, strict, apertar vale já, subprocesso sem os segredos do backend (B-19…B-27, B-47). Plugin de marketplace é código baixado da rede: só de fonte declarada no arquivo, fixado no commit, sem rodar nada ao baixar e sem atualizar sozinho (D-15). O resíduo é o que o usuário escolhe rodar |
 | R-02 | Segredo de MCP vazando — pelo argv (medido no código do SDK), pelo log, pela trilha, pela resposta, pela mensagem de erro do servidor | **aberto** — [D-02](decisions.md#d-02--segredo-de-servidor-mcp); S-03, S-70, S-74, S-75, S-86, S-96, S-188 |
 | R-03 | Hooks de projeto podem rodar comando nas nossas sessões sem ninguém aprovar, e subagent de projeto pode pedir modo próprio | **aberto** até a B-01 medir — [D-17](decisions.md#d-17--permissões-hooks-e-plugins-de-projeto); a tela mostra, e desligar é decisão de produto maior |
 | R-04 | Shell inline (`!`) de skill e slash command pode rodar fora da aprovação e da trilha | **aberto** até a B-01 medir — [D-21](decisions.md#d-21--shell-inline-de-skills-e-slash-commands) bloqueia a B-35 |

@@ -14,7 +14,8 @@ Os cenários marcados `smoke-live` rodam contra o Claude real (`pnpm test:e2e:li
 níveis `e2e` rodam pela suíte Playwright com o SDK roteirizado. **Códigos novos** (acrescentados ao
 catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVER_NAME_TAKEN` (409),
 `MCP_SERVER_CONFIG_INVALID` (422), `MCP_APPROVAL_STALE` (409), `MODEL_NOT_AVAILABLE` (422),
-`DEFAULT_MODE_NOT_ALLOWED` (422), `PLUGIN_NOT_FOUND` (404), `PLUGIN_PATH_INVALID` (422). `FILE_EXISTS`
+`DEFAULT_MODE_NOT_ALLOWED` (422), `PLUGIN_NOT_FOUND` (404), `PLUGIN_PATH_INVALID` (422),
+`PLUGIN_MARKETPLACE_NOT_ALLOWED` (403), `PLUGIN_SOURCE_UNAVAILABLE` (502). `FILE_EXISTS`
 é código do [plano 07](../07-explorer-and-editor/README.md), consumido aqui.
 
 ---
@@ -204,6 +205,25 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-129 | plugin inexistente, ou de outra pessoa | err | integração | `PLUGIN_NOT_FOUND`, `FORBIDDEN` | B-27 | ⬜ |
 | S-130 | adicionar o mesmo diretório duas vezes devolve o existente | idem | integração | — | B-27 | ⬜ |
 
+## Plugins de marketplace — B-47
+
+| ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
+|---|---|---|---|---|---|---|
+| S-200 | instalar plugin de marketplace declarado baixa para o diretório do backend, fixado no commit, e ele entra na sessão como `local` com `skipMcpDiscovery: true` | eq | integração | — | B-47 | ⬜ |
+| S-201 | marketplace fora do arquivo da allowlist é recusado, na listagem e na instalação | err | integração | `PLUGIN_MARKETPLACE_NOT_ALLOWED` | B-47 | ⬜ |
+| S-202 | seção de marketplaces ausente é marketplace desligado (lista vazia, explicada); seção fora do schema derruba o boot | fron | unit | — | B-47 | ⬜ |
+| S-203 | fonte inacessível, commit inexistente ou manifesto inválido: nada é gravado e nenhum diretório parcial fica | err | integração | `PLUGIN_SOURCE_UNAVAILABLE`, `PLUGIN_PATH_INVALID` | B-47 | ⬜ |
+| S-204 | fonte de tipo não suportado, ou caminho de plugin que escapa do repositório (`..`, link) | err | unit | `PLUGIN_PATH_INVALID` | B-47 | ⬜ |
+| S-205 | versão nova aparece como "atualização disponível" sem mudar o que roda; atualizar mostra a diferença do que o plugin traz e só troca o commit depois do segundo passo | est | integração | — | B-47 | ⬜ |
+| S-206 | arquivo do diretório instalado alterado fora do fluxo diverge do digest e volta a pendente | est | integração | — | B-47 | ⬜ |
+| S-207 | instalar o mesmo plugin no mesmo commit duas vezes devolve o existente | idem | integração | — | B-47 | ⬜ |
+| S-208 | duas instalações simultâneas do mesmo plugin pelo mesmo usuário deixam um diretório e um registro | conc | integração | — | B-47 | ⬜ |
+| S-209 | instalar, atualizar e remover gravam `claude.plugin*` antes do efeito; remover apaga o diretório | eq | integração | — | B-47 | ⬜ |
+| S-210 | o plugin de marketplace de um usuário nunca entra na sessão de outro, nem é lido por ele | err | integração | `FORBIDDEN` | B-47 | ⬜ |
+| S-211 | baixar não executa código do plugin, não chama `claude plugin`, não escreve em `~/.claude`, e o subprocesso não recebe os segredos do backend | err | unit | — | B-47 | ⬜ |
+| S-212 | a seção de plugins navega os marketplaces declarados (busca, detalhe, instalar com prévia) e, sem nenhum, ensina a declarar no arquivo | eq | integração | — | B-29 | ⬜ |
+| S-213 | marketplace retirado do arquivo por recarga: os plugins dele saem das sessões novas, com a razão na tela | est | integração | — | B-47 | ⬜ |
+
 ## Tela — servidores MCP e plugins — B-28…B-30
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
@@ -311,6 +331,7 @@ O protocolo exige justificar dimensão vazia, não omiti-la.
 | Testar servidor (B-25) | `est`, `idem` | o teste não grava estado do servidor — devolve o que observou; e cada teste executa o comando de novo por definição, então o que não se repete é o teste em voo (S-113) |
 | Tool MCP e permissão (B-26) | `conc`, `idem` | o casamento e a precedência são regra pura do plano 03, já provada sob corrida e repetição (plano 03 · S-46); a revogação usa a mesma rotina idempotente de lá |
 | Plugins (B-27) | `fron`, `conc` | o único limite de um plugin é a allowlist, coberto como erro (S-124); adicionar é um clique deliberado sobre um diretório, e a corrida possível — dois cliques — cai na idempotência (S-130) |
+| Plugins de marketplace (B-47) | — | todas as seis cobertas |
 | Tela MCP e plugins (B-28…B-30) | `conc`, `idem` | corrida e repetição das escritas são do backend (S-80, S-78); o lote parcial é tratado como erro por item (S-134) |
 | Projeto (B-32, B-33, B-36…B-40) | `conc`, `idem` | a leitura concorrente e o cache estão no endpoint (S-146, S-147); criar arquivo é a escrita do plano 07, com a concorrência (ETag, `409`) provada lá |
 | E2E (B-41…B-46) | `fron`, `conc`, `idem` | fronteiras, corrida e repetição são exatas e baratas em unit e integração (S-21, S-45, S-43, S-102); pela porta do usuário custariam minutos para provar o mesmo |

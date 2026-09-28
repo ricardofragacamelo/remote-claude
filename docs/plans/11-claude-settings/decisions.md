@@ -20,10 +20,10 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-01 | Onde mora um servidor MCP configurado por esta tela | se `strictMcpConfig: true` de fato isola a sessão de `.mcp.json`, plugins, frontmatter de agent e conectores claude.ai — medir (B-01 · 1) | B-02, B-21 | — | 🔲 |
-| D-02 | Como guardar e como entregar ao CLI o segredo de um servidor MCP | se `setMcpServers()` logo após o início deixa as tools prontas antes do primeiro turno, e se `${VAR}` é expandido — medir (B-01 · 3) | B-19, B-21 | — | 🔲 |
-| D-03 | Módulo novo `claude-config` ou parte do `session` | — (é de linguagem, não de medição) | B-03 | — | 🔲 |
-| D-19 | Qual servidor MCP de fixture o spike, o e2e e o `smoke-live` usam | se o `@modelcontextprotocol/sdk` que já está na árvore (1.30.0, dependência do Agent SDK) basta para um servidor stdio mínimo | B-01, B-42, B-46 | — | 🔲 |
+| D-01 | Onde mora um servidor MCP configurado por esta tela | se `strictMcpConfig: true` de fato isola a sessão de `.mcp.json`, plugins, frontmatter de agent e conectores claude.ai — medir (B-01 · 1) | B-02, B-21 | 2026-09-28 · **(a) store nosso, por usuário, em `options.mcpServers` com `strictMcpConfig: true`**; o `.mcp.json` só entra por aprovação nossa (D-11). Se a B-01 mostrar que algo escapa do strict — inclusive os conectores claude.ai —, a mitigação entra na ADR-018 antes de a F2 começar. Decisão do usuário com a recomendação | ✅ |
+| D-02 | Como guardar e como entregar ao CLI o segredo de um servidor MCP | se `setMcpServers()` logo após o início deixa as tools prontas antes do primeiro turno, e se `${VAR}` é expandido — medir (B-01 · 3) | B-19, B-21 | 2026-09-28 · **cifrado (AES-256-GCM) no Postgres**, chave em arquivo de modo `600` apontado pela configuração — sem o arquivo, servidor com segredo não é gravado e o resto funciona; API só escrita (`{ name, set: true }`); entrega por `setMcpServers()` depois do início, **nunca pelo argv**. Se a B-01 mostrar que as tools não ficam prontas antes do primeiro turno, a composição inicial usa o caminho que não for argv e a ADR registra o custo. Decisão do usuário com a recomendação | ✅ |
+| D-03 | Módulo novo `claude-config` ou parte do `session` | — (é de linguagem, não de medição) | B-03 | 2026-09-28 · **módulo novo `claude-config`**; a sessão pergunta pela porta `SessionConfigurationSource`, declarada nela; o SDK continua só em `adapter/outbound/claude/`. Decisão do usuário com a recomendação | ✅ |
+| D-19 | Qual servidor MCP de fixture o spike, o e2e e o `smoke-live` usam | se o `@modelcontextprotocol/sdk` que já está na árvore (1.30.0, dependência do Agent SDK) basta para um servidor stdio mínimo | B-01, B-42, B-46 | 2026-09-28 · **servidor stdio nosso em `e2e/fixtures/`**, sobre o `@modelcontextprotocol/sdk` como dependência de desenvolvimento explícita: tool `echo`, tool `readOnly` e uma variável de ambiente devolvida mascarada; sem rede. Decisão do usuário com a recomendação | ✅ |
 
 ### D-01 — onde mora o servidor MCP
 
@@ -101,12 +101,12 @@ mascarada — é como o e2e prova que o segredo chegou sem que ele apareça. Sem
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-04 | Padrões por usuário, por pasta, ou os dois — e quem vence | — | B-14, B-15, B-34 | — | 🔲 |
-| D-05 | Como responder modelos, conta, agents e estilos sem sessão viva | custo real de uma sonda `initializationResult()` sem prompt — medir (B-01 · 4) | B-10 | — | 🔲 |
-| D-06 | Quais itens da configuração do Claude entram como padrão | se `fallbackModel` e `effort` se comportam como documentados na instalação medida | B-14, B-15, B-37 | — | 🔲 |
-| D-07 | O que da conta do CLI aparece, e para quem | — | B-11 | — | 🔲 |
-| D-08 | O teste de conexão com o modelo: existe, onde mora, quanto custa | — | B-11, B-12 | — | 🔲 |
-| D-09 | A seção "Claude" das Configurações do app (plano 06 · D-13) e esta tela | o que os planos 06 e 08 decidirem ao executar | B-16 | — | 🔲 |
+| D-04 | Padrões por usuário, por pasta, ou os dois — e quem vence | — | B-14, B-15, B-34 | 2026-09-28 · **(c) os dois**: padrão do usuário, sobreposto pelo da pasta mais próxima (a própria ou o ancestral mais próximo com sobreposição), sobreposto pelo `session.start`; o `GET` diz a origem de cada campo; vale igual para as preferências de skills (B-34). Decisão do usuário com a recomendação | ✅ |
+| D-05 | Como responder modelos, conta, agents e estilos sem sessão viva | custo real de uma sonda `initializationResult()` sem prompt — medir (B-01 · 4) | B-10 | 2026-09-28 · **sessão viva do chamador na pasta; senão sonda efêmera** que só chama `initializationResult()`, com `strictMcpConfig: true` e `mcpServers: {}`, e fecha; cache pelo padrão do `CommandCatalog` (versão do CLI, `CLAUDE_CONFIG_DIR` e pasta para o que depende de `.claude/`), TTL curto só para a conta; a sonda conta na capacidade. O custo é medido na B-01. Decisão do usuário com a recomendação | ✅ |
+| D-06 | Quais itens da configuração do Claude entram como padrão | se `fallbackModel` e `effort` se comportam como documentados na instalação medida | B-14, B-15, B-37 | 2026-09-28 · **o conjunto proposto**: modelo, permission mode (nunca `bypassPermissions`), esforço (quando o modelo suporta, nos níveis que declara), thinking ligado/desligado, output style (camada de flag, pelo montador com allowlist da B-08) e modelo reserva; fast mode fora enquanto não houver opção em `Options`. `fallbackModel` e `effort` conferidos na instalação medida. Decisão do usuário com a recomendação | ✅ |
+| D-07 | O que da conta do CLI aparece, e para quem | — | B-11 | 2026-09-28 · **provedor, plano, organização e e-mail para todo usuário autenticado com alguma raiz na allowlist**; nunca token nem caminho de credencial; de `tokenSource` e `apiKeySource`, só o nome. Decisão do usuário com a recomendação | ✅ |
+| D-08 | O teste de conexão com o modelo: existe, onde mora, quanto custa | — | B-11, B-12 | 2026-09-28 · **existe, e este plano é dono da rota**: clique explícito com o custo dito antes; um turno, prompt mínimo fixo, sem tools, `maxTurns: 1`, teto de custo de configuração; `ok`/`notLoggedIn`/`rateLimited`/`failed` é dado da resposta, `502`/`504` só para o CLI que morreu ou não respondeu; a tela de saúde do 16 e a de diagnóstico do 06 reusam a rota. Decisão do usuário com a recomendação | ✅ |
+| D-09 | A seção "Claude" das Configurações do app (plano 06 · D-13) e esta tela | o que os planos 06 e 08 decidirem ao executar | B-16 | 2026-09-28 · **esta tela é a dona** de padrões e configuração do Claude; a seção "Claude" das Configurações do 06 vira atalho para cá; o seletor do composer do 08 lê o mesmo `GET /claude/models`. Os planos 06 e 08 são avisados por nota ao executar, não editados agora. Decisão do usuário com a recomendação | ✅ |
 
 ### D-04 — padrões por usuário e por pasta
 
@@ -180,12 +180,12 @@ Configurações do app vira um atalho para cá; o seletor do 08 lê o mesmo `GET
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-10 | Uma mudança de servidor MCP afeta as sessões vivas ou só as novas | — | B-23 | — | 🔲 |
-| D-11 | Quem aprova um servidor do `.mcp.json`, e até quando a aprovação vale | de qual diretório o CLI lê o `.mcp.json` (só o `cwd`, ou sobe até a raiz do repositório) — medir para mostrar o mesmo | B-24 | — | 🔲 |
-| D-12 | O que acontece com as regras de permissão de `mcp__<nome>` quando o servidor muda ou sai | — | B-26 | — | 🔲 |
-| D-13 | Como o `riskHint` trata tool MCP e as annotations do servidor | o que o CLI auto-aprova de tool MCP sem chamar o `canUseTool` — medir (B-01 · 2) | B-26 | — | 🔲 |
-| D-14 | Quem entrega o indicador de MCP dentro da sessão: o plano 08 ou este | — | B-22 | — | 🔲 |
-| D-15 | Plugins do Claude: entram, e como | se `skipMcpDiscovery: true` segura os servidores do plugin, e o que um plugin local traz na instalação medida | B-27, B-29 | — | 🔲 |
+| D-10 | Uma mudança de servidor MCP afeta as sessões vivas ou só as novas | — | B-23 | 2026-09-28 · **(c) apertar vale já, afrouxar na próxima sessão**: remover ou desligar desliga em toda sessão viva do usuário que tem o servidor; adicionar ou ligar vale na próxima, e a tela diz; ligar e reconectar dentro da sessão seguem pelos comandos da B-22. Decisão do usuário com a recomendação | ✅ |
+| D-11 | Quem aprova um servidor do `.mcp.json`, e até quando a aprovação vale | de qual diretório o CLI lê o `.mcp.json` (só o `cwd`, ou sobe até a raiz do repositório) — medir para mostrar o mesmo | B-24 | 2026-09-28 · **aprovação nossa, por usuário, por (pasta, nome, digest da entrada normalizada)**: entrada que muda volta a "alterado", com a diferença na tela; o `PUT` leva o digest mostrado, e arquivo que mudou no meio responde `MCP_APPROVAL_STALE`; a aprovação do CLI não conta; `${VAR}` mostrado literal e expandido no ambiente sem os segredos do backend (B-20). De qual diretório o CLI lê o `.mcp.json` é medido, para mostrar o mesmo. Decisão do usuário com a recomendação | ✅ |
+| D-12 | O que acontece com as regras de permissão de `mcp__<nome>` quando o servidor muda ou sai | — | B-26 | 2026-09-28 · **(c) revogar** as `allow` de `mcp__<nome>` do usuário quando muda o que roda (comando, args, URL, transporte) ou o servidor sai, na mesma transação e pela rotina de revogação do `permission`, com a prévia listando as que caem; `deny` fica; trocar o nome de uma variável de ambiente, ligar ou desligar não revoga. Decisão do usuário com a recomendação | ✅ |
+| D-13 | Como o `riskHint` trata tool MCP e as annotations do servidor | o que o CLI auto-aprova de tool MCP sem chamar o `canUseTool` — medir (B-01 · 2) | B-26 | 2026-09-28 · **annotation só sobe o risco** (`destructive: true`); `readOnly: true` não baixa; sem annotation, destrutiva. O que a B-01 mostrar que o CLI auto-aprova sem o `canUseTool` vira cenário fixo e aviso na ajuda, com a trilha pelo `PreToolUse` cobrindo. Decisão do usuário com a recomendação | ✅ |
+| D-14 | Quem entrega o indicador de MCP dentro da sessão: o plano 08 ou este | — | B-22 | 2026-09-28 · **este plano entrega contrato e indicador** (B-22), no painel que o 08 construiu; o 08 é avisado por nota ao executar. Decisão do usuário com a recomendação | ✅ |
+| D-15 | Plugins do Claude: entram, e como | se `skipMcpDiscovery: true` segura os servidores do plugin, e o que um plugin local traz na instalação medida | B-27, B-29 | 2026-09-28 · **plugins locais e de marketplace**, decisão do usuário, **contra a recomendação** (que deixava marketplace fora). Os dois pela mesma construção — `plugins: [{ type: 'local', path, skipMcpDiscovery: true }]`, prévia por extenso, segundo passo, trilha `claude.plugin*`, digest que volta a pendente —, carregando hooks, comandos, agents e skills; os MCPs do plugin viram sugestão na aprovação da F2. Marketplace: **o backend baixa** o plugin para diretório próprio, por usuário, fixado no commit instalado — nunca `claude plugin install`, nunca `~/.claude`, sem ampliar `settingSources`; só de marketplaces declarados no arquivo da allowlist (ausente é desligado, a tela não acrescenta fonte); atualizar é explícito, com a diferença pela mesma prévia, nunca sozinho. Nasce a [B-47](F2-mcp-servers.md#b-47--plugins-de-marketplace-), com S-200…S-213 | ✅ |
 
 ### D-10 — mudança de MCP e sessões vivas
 
@@ -256,18 +256,42 @@ manifesto (mudou, volta a pendente); sempre `skipMcpDiscovery: true`, com os ser
 entrando como sugestão no fluxo de aprovação da F2. Marketplace fica fora: é código baixado da rede
 para o escopo que a ADR-011 exclui; se vier, é plano próprio, com a mesma construção.
 
+**Decidido pelo usuário em 2026-09-28, contra a recomendação:** plugins locais **e de marketplace**.
+O que a recomendação protegia — nada entra pelo escopo `user`, nada roda sem prévia — continua valendo,
+porque o marketplace entra pela mesma porta do plugin local:
+
+- **quem instala é o backend**, não o CLI: baixa o plugin, pelo formato publicado de marketplace do
+  Claude Code, para um diretório próprio, por usuário, fixado no commit instalado, e o passa ao SDK
+  como `type: 'local'`. Nunca `claude plugin install`, nunca escrita em `~/.claude`, e `settingSources`
+  não muda — a ADR-011 fica intacta, e a ADR-018 (B-02) registra a construção;
+- **de onde**: só de marketplaces declarados no arquivo da allowlist, como o interruptor do terminal do
+  [plano 10 · D-08](../10-integrated-terminal/decisions.md); seção ausente é marketplace desligado, e a
+  tela não acrescenta fonte;
+- **atualização**: nunca sozinha. A tela avisa que há versão nova; atualizar passa pela mesma prévia,
+  agora com a diferença do que o plugin traz (hooks, comandos, agents, skills, MCPs), e pelo segundo
+  passo;
+- **o que carrega**, para local e marketplace: hooks, comandos, agents e skills, depois da prévia que
+  diz por extenso que hook roda fora do `canUseTool`; servidores MCP sempre com `skipMcpDiscovery: true`,
+  como sugestão no fluxo de aprovação da F2;
+- baixar não executa nada: nenhum script de instalação roda, e o subprocesso de download recebe o
+  ambiente sem os segredos do backend (B-20).
+
+Consequências: nasce a [B-47](F2-mcp-servers.md#b-47--plugins-de-marketplace-) (F2), com S-200…S-213
+e dois códigos novos (`PLUGIN_MARKETPLACE_NOT_ALLOWED` 403, `PLUGIN_SOURCE_UNAVAILABLE` 502); mudam a
+B-02, a B-06, a B-27, a B-29 e a B-30, o escopo do [plano](README.md#escopo) e o R-01.
+
 ---
 
 ## F3 — Configuração de projeto
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-16 | Como ler a configuração de projeto | — | B-31 | — | 🔲 |
-| D-17 | Permissões, hooks e plugins de projeto: só leitura ou editáveis nesta tela | se hooks de projeto rodam nas nossas sessões com a confiança limpa — medir (B-01 · 5) | B-38 | — | 🔲 |
-| D-18 | Por onde se criam slash commands, skills, subagents e output styles | — | B-33, B-34, B-36, B-37 | — | 🔲 |
+| D-16 | Como ler a configuração de projeto | — | B-31 | 2026-09-28 · **(a) + (b)**: arquivos de formato documentado mostrados como "declarado"; o que o CLI resolve (`supportedCommands`, `supportedAgents`, `initializationResult`, `getContextUsage`) como "em uso"; nunca control request sem método público (B-08). Decisão do usuário com a recomendação | ✅ |
+| D-17 | Permissões, hooks e plugins de projeto: só leitura ou editáveis nesta tela | se hooks de projeto rodam nas nossas sessões com a confiança limpa — medir (B-01 · 5) | B-38 | 2026-09-28 · **(a) só leitura, explicados sem eufemismo**; o arquivo continua editável pelo editor do 07, e o editor estruturado (b) fica registrado como o caminho se for pedido. Se a B-01 mostrar hooks de projeto rodando nas nossas sessões, a tela diz e o R-03 fica aberto. Decisão do usuário com a recomendação | ✅ |
+| D-18 | Por onde se criam slash commands, skills, subagents e output styles | — | B-33, B-34, B-36, B-37 | 2026-09-28 · **(b) a escrita do plano 07** (`POST /files`, `PUT` com `If-Match`), nenhuma rota de escrita nova; modelo inicial no web, em inglês, com o frontmatter de cada tipo; nome validado antes de gravar, `409` do que já existe; catálogo invalidado pelo mtime de `.claude/`. Decisão do usuário com a recomendação | ✅ |
 | D-20 | Skills do escopo `user` (e do sistema) nas sessões, dado que a ADR-011 tira esse escopo | — | B-02, B-35 | 2026-09-26 · **decidido pelo usuário: carregar skills do projeto, do usuário e do sistema** — sem ampliar `settingSources`; usuário e sistema entram por um plugin local sintético, por usuário, que expõe só `skills/` | ✅ |
-| D-21 | O shell inline (`!`) de skills e slash commands passa pela aprovação e pela trilha? Se não, como desligar | se o bloco `!` roda sem `canUseTool`/`PreToolUse`, e se `disableSkillShellExecution` distingue origem — medir (B-01 · 7) | B-35 | — | 🔲 |
-| D-22 | De onde vêm as skills de sistema | onde o CLI guarda os plugins instalados e as skills gerenciadas, e se esse formato é estável | B-35 | — | 🔲 |
+| D-21 | O shell inline (`!`) de skills e slash commands passa pela aprovação e pela trilha? Se não, como desligar | se o bloco `!` roda sem `canUseTool`/`PreToolUse`, e se `disableSkillShellExecution` distingue origem — medir (B-01 · 7) | B-35 | 2026-09-28 · **medir na B-01 e, se o bloco `!` não passar pelo `canUseTool` e pelo `PreToolUse`, desligar para todas as origens**: `managedSettings: { disableSkillShellExecution: true }` pelo montador da B-08 — projeto, usuário, sistema e plugins, os de marketplace inclusive; a ajuda e o modelo de skill dizem que o bloco vira marcador. Se passar, só a ajuda diz. As origens Usuário e Sistema da B-35 só ligam com a resposta. Decisão do usuário com a recomendação | ✅ |
+| D-22 | De onde vêm as skills de sistema | onde o CLI guarda os plugins instalados e as skills gerenciadas, e se esse formato é estável | B-35 | 2026-09-28 · **leitura tolerante** pelo `CLAUDE_CONFIG_DIR` efetivo: de cada plugin instalado no CLI, só `skills/` (nunca hooks, agents, comandos nem `.mcp.json`); gerenciadas do diretório de política, quando existir; layout desconhecido é origem vazia com `warn`; o `smoke-live` (B-46) avisa quando o layout muda. Os plugins de marketplace da D-15 não passam por aqui — entram inteiros, pelo diretório do backend. Decisão do usuário com a recomendação | ✅ |
 
 ### D-16 — como ler a configuração de projeto
 
