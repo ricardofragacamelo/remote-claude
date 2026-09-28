@@ -48,6 +48,24 @@ void main() {
     });
   });
 
+  group('renewalDelayAt', () {
+    test('waits until four fifths of the life', () {
+      expect(
+        session().renewalDelayAt(DateTime.utc(2026, 9, 14, 12, 40)),
+        const Duration(minutes: 8),
+      );
+    });
+
+    test('is due now exactly at the threshold', () {
+      expect(session().renewalDelayAt(DateTime.utc(2026, 9, 14, 12, 48)), Duration.zero);
+    });
+
+    test('never answers a negative delay past the threshold, or past the expiry', () {
+      expect(session().renewalDelayAt(DateTime.utc(2026, 9, 14, 12, 59)), Duration.zero);
+      expect(session().renewalDelayAt(DateTime.utc(2026, 9, 14, 14)), Duration.zero);
+    });
+  });
+
   test('two sessions with the same fields are equal', () {
     expect(session(), session());
   });

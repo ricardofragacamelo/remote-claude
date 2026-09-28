@@ -75,6 +75,10 @@ Regras:
 - **Expiração com o socket aberto não derruba a conexão.** O cliente renova e envia
   `connection.reauthenticate { token }`. Sem token válido até o fim do período de graça
   (60 s), fecha com `4401`.
+- **`connection.reauthenticate` renova, não troca de usuário.** Token de outro `sub` → fecha com
+  `4401`. Antes do `connection.authenticate` → `error` `UNAUTHENTICATED`, e o socket segue com a
+  janela de handshake que tinha: aceitá-lo ali seria um handshake sem device, sem `installId` e sem
+  locale.
 - **`client.installId` identifica o aparelho daquele socket.** Ausente no navegador, que não é
   device; presente no app. É o que permite à revogação fechar **aquele** socket na hora — sem ele,
   um celular revogado continuaria respondendo permissão até o token expirar, ou seja, por até

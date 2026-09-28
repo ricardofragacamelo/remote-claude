@@ -9,6 +9,7 @@
  * |--------------|------------------------------------------------------------------|
  * | secrets      | a credential that reached the history — it cannot be unpublished  |
  * | dependencies | a known vulnerability in something we did not write               |
+ * | osv          | the same, in **both** lockfiles and at every severity             |
  * | patterns     | path traversal, command injection, a JWT trusting its own `alg`   |
  * | product      | the Agent SDK holes that open **in silence**                      |
  *
@@ -25,7 +26,8 @@ import process from 'node:process';
 import { inspectAll } from './lib/agent-sdk-rules.mjs';
 import { inspectAll as inspectVendorNames } from './lib/vendor-name-rules.mjs';
 import { filesUnder } from './lib/files.mjs';
-import { commandExists, runAttached } from './lib/exec.mjs';
+import { commandExists, run, runAttached } from './lib/exec.mjs';
+import { interpretOsv, LOCKFILES, lockfilePath, osvInvocation } from './lib/osv.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { bold, dim, fail, hint, info, line, ok, title, warn } from './lib/ui.mjs';
 
@@ -77,6 +79,50 @@ function checkDependencies() {
 
   fail('pnpm audit found an advisory', 'update the dependency; never ignore the advisory id');
   return result.code;
+}
+
+/**
+ * `osv-scanner` over the npm and the Dart lockfiles (plan 05, B-16).
+ *
+ * The local binary when there is one, the pinned image otherwise — and neither is a reason to
+ * skip: a scanner that could not run, or ran without reading a lockfile, **fails** the gate
+ * (S-35). What it found is printed package by package, because "osv found something" is not
+ * something anybody can act on.
+ *
+ * @returns {number}
+ */
+function checkOsv() {
+  info('dependencies — osv-scanner, both lockfiles, every severity');
+
+  const hasBinary = commandExists('osv-scanner');
+  if (!hasBinary && !commandExists('docker')) {
+    fail('neither osv-scanner nor docker is available');
+    hint('install osv-scanner (https://google.github.io/osv-scanner), or start Docker');
+    return 1;
+  }
+
+  const invocation = osvInvocation({ hasBinary, root: repoRoot });
+  const verdict = interpretOsv(run(invocation.command, invocation.args, { timeoutMs: 600_000 }), {
+    lockfiles: LOCKFILES.map(lockfilePath),
+    toRepository: invocation.toRepository,
+  });
+
+  if (verdict.status === 'clean') {
+    ok(`no known advisory in ${LOCKFILES.join(' or ')}`);
+    return 0;
+  }
+
+  if (verdict.status === 'unverified') {
+    fail('osv-scanner did not verify the dependencies', verdict.reason);
+    hint('a scan that could not look is not a scan that found nothing — fix the scanner first');
+    return 1;
+  }
+
+  for (const finding of verdict.findings) {
+    fail(`${finding.lockfile}: ${finding.name}@${finding.version}`, finding.advisories.join(', '));
+  }
+  hint('update the dependency past the fixed version; never ignore the advisory id');
+  return 1;
 }
 
 /**
@@ -207,6 +253,7 @@ const outcomes = [];
 for (const [name, check] of /** @type {[string, () => number][]} */ ([
   ['secrets', checkSecrets],
   ['dependencies', checkDependencies],
+  ['osv', checkOsv],
   ['product rules', checkProductRules],
   ['supplier names', checkVendorNames],
   ['patterns', checkPatterns],

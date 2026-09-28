@@ -288,6 +288,21 @@ describe('the consumers of permission.resolved', () => {
     }).not.toThrow();
   });
 
+  it('is loud when writing the decision itself throws, rather than answering an outcome', async () => {
+    const log = new RecordingLogger();
+    const throwing = {
+      execute: () => Promise.reject(new Error('the use case blew up')),
+    } as unknown as RecordToolInvocationUseCase;
+
+    new RecordDecisionOnResolved(throwing, log.logger).handle(aResolvedEvent());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const line = log.lines.find(
+      (entry) => entry['msg'] === 'the permission decision could not be written to the trail',
+    );
+    expect(line?.['err']).toMatchObject({ message: 'the use case blew up' });
+  });
+
   it('is loud when the trail refuses the decision', async () => {
     const log = new RecordingLogger();
     const record = new RecordToolInvocationUseCase(

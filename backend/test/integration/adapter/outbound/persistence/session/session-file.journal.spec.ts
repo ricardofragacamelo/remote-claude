@@ -87,6 +87,10 @@ describe('the session file journal', () => {
   const write = (content: string, name = 'a.md'): Promise<void> =>
     writeFile(file(name), content, 'utf8');
 
+  it('answers no session for no conversation, without asking the database', async () => {
+    await expect(files.sessionsOfConversations([])).resolves.toEqual([]);
+  });
+
   describe('how the session left a file — B-46', () => {
     it('records path, hash and mtime after a write — S-99', async () => {
       await write('after');

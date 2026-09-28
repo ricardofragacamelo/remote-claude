@@ -22,6 +22,15 @@ export class JwksCache {
   private keys: readonly JWK[] = [];
   private fetchedAt = Number.NEGATIVE_INFINITY;
 
+  /**
+   * The reload in flight, which every miss arriving meanwhile waits on.
+   *
+   * Without it, the misses behind the first one would find the cooldown already started and be
+   * refused while the keys they need are on their way — which is what a burst of requests right
+   * after boot, or right after a rotation, looks like (S-71).
+   */
+  private reloading: Promise<void> | null = null;
+
   constructor(
     private readonly clock: Clock,
     private readonly http: typeof fetch = fetch,
@@ -33,24 +42,34 @@ export class JwksCache {
    * @throws {UnauthenticatedError} when the key set cannot be read, or has no such key
    */
   async keyFor(jwksUri: string, kid: string): Promise<CryptoKey | Uint8Array> {
-    const found = this.keys.find((key) => key.kid === kid);
+    const found = this.find(kid);
     if (found !== undefined) {
       return importJWK(found);
     }
 
-    const now = this.clock.now().getTime();
-    if (now - this.fetchedAt < RELOAD_COOLDOWN_MS) {
-      throw new UnauthenticatedError(`unknown key id, and the key set was just reloaded`);
+    if (this.reloading === null) {
+      const now = this.clock.now().getTime();
+      if (now - this.fetchedAt < RELOAD_COOLDOWN_MS) {
+        throw new UnauthenticatedError(`unknown key id, and the key set was just reloaded`);
+      }
+
+      this.reloading = this.reload(jwksUri, now).finally(() => {
+        this.reloading = null;
+      });
     }
 
-    await this.reload(jwksUri, now);
+    await this.reloading;
 
-    const reloaded = this.keys.find((key) => key.kid === kid);
+    const reloaded = this.find(kid);
     if (reloaded === undefined) {
       throw new UnauthenticatedError('unknown key id after reloading the key set');
     }
 
     return importJWK(reloaded);
+  }
+
+  private find(kid: string): JWK | undefined {
+    return this.keys.find((key) => key.kid === kid);
   }
 
   private async reload(jwksUri: string, now: number): Promise<void> {

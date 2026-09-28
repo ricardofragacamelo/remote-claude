@@ -283,6 +283,29 @@ describe('purgeStaleProjects', () => {
     expect(calls.some((call) => call.includes('volume rm'))).toBe(false);
   });
 
+  // S-40 — a run beside this one is not something earlier runs left behind.
+  it('spares a project whose owner is still running, its containers and its volumes', () => {
+    const { run, calls } = recordingRunner({
+      [psCall]: {
+        stdout: [
+          'remote-claude-e2e-1-p10-postgres-1\tremote-claude-e2e-1-p10',
+          'remote-claude-e2e-2-p20-postgres-1\tremote-claude-e2e-2-p20',
+        ].join('\n'),
+      },
+      // Volumes created and containers not yet: a run in its first seconds.
+      [volumeCall]: { stdout: 'remote-claude-e2e-3-p10_postgres-data\tremote-claude-e2e-3-p10\n' },
+    });
+
+    const report = purgeStaleProjects(run, cli, {
+      prefix: 'remote-claude-e2e-',
+      isLive: (project) => project.endsWith('-p10'),
+    });
+
+    expect(report.projects).toEqual(['remote-claude-e2e-2-p20']);
+    expect(report.volumes).toEqual([]);
+    expect(calls.some((call) => call.includes('remote-claude-e2e-1-p10 down'))).toBe(false);
+  });
+
   it('reports what it could not remove instead of claiming success', () => {
     const { run } = recordingRunner({
       [psCall]: { stdout: '' },
@@ -294,6 +317,20 @@ describe('purgeStaleProjects', () => {
 
     expect(report.volumes).toEqual([]);
     expect(report.failures).toEqual(['remote-claude-e2e-1_data: volume is in use']);
+  });
+
+  it('says the exit code when a teardown fails without a word on stderr', () => {
+    const { run } = recordingRunner({
+      [psCall]: { stdout: 'remote-claude-e2e-1-postgres-1\tremote-claude-e2e-1\n' },
+      [volumeCall]: { stdout: '' },
+      'docker compose --project-name remote-claude-e2e-1 down --volumes --remove-orphans': {
+        code: 3,
+      },
+    });
+
+    expect(purgeStaleProjects(run, cli, { prefix: 'remote-claude' }).failures).toEqual([
+      'remote-claude-e2e-1: exit 3',
+    ]);
   });
 
   it('does nothing, and reports nothing, when there is nothing stale', () => {

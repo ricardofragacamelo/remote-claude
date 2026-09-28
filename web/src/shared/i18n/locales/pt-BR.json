@@ -29,6 +29,9 @@
       "description": "O remote-claude executa o Claude Code na sua própria máquina, por isso pergunta quem é você antes.",
       "action": "Entrar"
     },
+    "signOut": {
+      "action": "Sair"
+    },
     "callback": {
       "pending": "Concluindo o login…"
     }

@@ -34,7 +34,8 @@ export function linesOutsideCode(content) {
     const fence = FENCE.exec(rawLine);
 
     if (openFence === null && fence !== null) {
-      openFence = fence[1] ?? '```';
+      // The group is not optional: a fence that matched has a marker.
+      openFence = String(fence[1]);
       result.push('');
       continue;
     }
@@ -93,7 +94,7 @@ export function anchorsOf(content) {
       continue;
     }
 
-    const slug = slugify(heading[2] ?? '');
+    const slug = slugify(String(heading[2]));
     if (slug === '') {
       continue;
     }
@@ -126,10 +127,8 @@ export function linksOf(content) {
     const line = rawLine.replace(INLINE_CODE, (match) => ' '.repeat(match.length));
 
     for (const match of line.matchAll(LINK)) {
-      const target = match[1];
-      if (target !== undefined) {
-        links.push({ target, line: index + 1 });
-      }
+      // The target group is not optional: a link that matched has one.
+      links.push({ target: String(match[1]), line: index + 1 });
     }
   });
 

@@ -14,6 +14,7 @@ import {
   boardRows,
   e2eDotEnv,
   e2eProjectName,
+  projectOwner,
   ephemeralEnvironment,
   lanAddress,
   loadDotEnv,
@@ -279,9 +280,9 @@ describe('the ephemeral stack of an e2e run', () => {
   const ports = { postgres: 51_001, keycloak: 51_002, backend: 51_003, web: 51_004 };
 
   it('names a project of its own, never the development one', () => {
-    const project = e2eProjectName(ports.backend);
+    const project = e2eProjectName(ports.backend, 4242);
 
-    expect(project).toBe(`${PROJECT_NAME}-e2e-51003`);
+    expect(project).toBe(`${PROJECT_NAME}-e2e-51003-p4242`);
     expect(project.startsWith(E2E_PROJECT_PREFIX)).toBe(true);
 
     // The purge scans that prefix. The development project must not be inside it, or `pnpm
@@ -291,6 +292,17 @@ describe('the ephemeral stack of an e2e run', () => {
 
   it('gives two runs two different projects', () => {
     expect(e2eProjectName(51_003)).not.toBe(e2eProjectName(51_004));
+  });
+
+  // S-40 — the owner in the name is what lets a purge tell a run beside it from one in the past.
+  it('names the run that owns it, this one unless told otherwise', () => {
+    expect(projectOwner(e2eProjectName(51_003))).toBe(process.pid);
+    expect(projectOwner(e2eProjectName(51_003, 77))).toBe(77);
+  });
+
+  it('reads no owner from a project created before projects carried one', () => {
+    expect(projectOwner(`${E2E_PROJECT_PREFIX}51003`)).toBeNull();
+    expect(projectOwner(`${E2E_PROJECT_PREFIX}stale-12`)).toBeNull();
   });
 
   it('points the database URL at the port compose actually published', () => {

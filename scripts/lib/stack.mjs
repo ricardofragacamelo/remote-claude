@@ -51,11 +51,30 @@ export const E2E_PROJECT_PREFIX = `${PROJECT_NAME}-e2e-`;
  * Unique per execution, which is what lets the suite run with `pnpm dev` up in another terminal,
  * and two suites run side by side in CI.
  *
+ * **It carries the pid of the run that owns it** (plan 05, S-40). Every run purges what earlier
+ * runs left behind before it starts, and a purge that went by the prefix alone would take down
+ * the stack of a run still going beside it — a live run started while `verify:full` is in its e2e
+ * gate, or two jobs on one self-hosted runner. With the owner in the name, "left
+ * behind" means exactly what it says: owned by a process that is gone.
+ *
  * @param {number | string} id something unique to this run — an allocated port, typically
+ * @param {number} [ownerPid] the run that owns it
  * @returns {string}
  */
-export function e2eProjectName(id) {
-  return `${E2E_PROJECT_PREFIX}${String(id)}`;
+export function e2eProjectName(id, ownerPid = process.pid) {
+  return `${E2E_PROJECT_PREFIX}${String(id)}-p${String(ownerPid)}`;
+}
+
+/**
+ * The pid of the run that owns an e2e project, or `null` for a project that names none — one
+ * created before projects carried their owner, which is left behind by definition.
+ *
+ * @param {string} project
+ * @returns {number | null}
+ */
+export function projectOwner(project) {
+  const match = /-p(\d+)$/.exec(project);
+  return match === null ? null : Number(match[1]);
 }
 
 /**

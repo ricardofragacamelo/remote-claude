@@ -384,12 +384,12 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 
 /**
  * @param {PlanSpec} spec
+ * @param {string} phase
  * @param {number} index
+ * @param {string | null} previous the file of the phase before, or `null` for the first
  * @returns {string}
  */
-function phaseFile(spec, index) {
-  const phase = spec.phases[index] ?? '';
-  const previous = index === 0 ? null : `F${index - 1}-${spec.phases[index - 1] ?? ''}.md`;
+function phaseFile(spec, phase, index, previous) {
   // IDs are sequential across the whole plan and never restart per phase — docs/plans/README.md.
   const firstTask = `B-${String(index + 1).padStart(2, '0')}`;
 
@@ -435,14 +435,16 @@ pnpm verify
  * @returns {GeneratedFile[]}
  */
 export function buildPlanFiles(spec) {
+  const files = spec.phases.map((phase, index) => `F${String(index)}-${phase}.md`);
+
   return [
     { name: 'README.md', content: planReadme(spec) },
     { name: 'scenarios.md', content: scenarios(spec) },
     { name: 'decisions.md', content: decisions(spec) },
     { name: 'progress.md', content: progress(spec) },
     ...spec.phases.map((phase, index) => ({
-      name: `F${index}-${phase}.md`,
-      content: phaseFile(spec, index),
+      name: `F${String(index)}-${phase}.md`,
+      content: phaseFile(spec, phase, index, files[index - 1] ?? null),
     })),
   ];
 }

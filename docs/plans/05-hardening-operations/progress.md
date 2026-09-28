@@ -10,8 +10,8 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F0 e F1 — implementadas, em validação
-**Última atualização:** 2026-09-27
+**Fase corrente:** F4 — não iniciada (F0 a F3 concluídas; F2 e F3 com `pnpm verify:full` verde em 2026-09-28)
+**Última atualização:** 2026-09-28
 **Bloqueios:** nenhum por decisão — a [D-05](decisions.md) foi decidida em 2026-09-26 pelo usuário:
 **Keycloak próprio**, administrado por quem opera a instalação ([emenda da ADR-010](../../architecture/shared/00-decisions.md#adr-010--openid-connect-agnóstico-de-provedor-auth0-como-alvo-inicial)).
 Os planos 06 a 16 esperam este plano fechar ([06 · D-02](../06-workbench/decisions.md)).
@@ -19,8 +19,8 @@ Os planos 06 a 16 esperam este plano fechar ([06 · D-02](../06-workbench/decisi
 ```
 F0 ████████████████████ 100%   ✅ concluída
 F1 ████████████████████ 100%   ✅ concluída
-F2 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
-F3 █████░░░░░░░░░░░░░░░  25%   🔄 em andamento
+F2 ████████████████████ 100%   ✅ concluída
+F3 ████████████████████ 100%   ✅ concluída
 F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 ```
 
@@ -34,10 +34,10 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 |---|---|---|---|
 | [F0](F0-limits.md) | B-01…B-07, B-25…B-27 | 10/10 | ✅ |
 | [F1](F1-diagnostics.md) | B-11 | 1/1 | ✅ |
-| [F2](F2-identity.md) | B-12…B-15 | 0/4 | 🔲 |
-| [F3](F3-gates.md) | B-16, B-19, B-20, B-28 | 1/4 | 🔄 |
+| [F2](F2-identity.md) | B-12…B-15 | 4/4 | ✅ |
+| [F3](F3-gates.md) | B-16, B-19, B-20, B-28 | 4/4 | ✅ |
 | [F4](F4-e2e.md) | B-21…B-23 | 0/3 | 🔲 |
-| **Total** | **B-01…B-07, B-11…B-16, B-19…B-23, B-25…B-28** | **12/22** | 🔄 |
+| **Total** | **B-01…B-07, B-11…B-16, B-19…B-23, B-25…B-28** | **19/22** | 🔄 |
 
 ---
 
@@ -45,7 +45,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 59 | 23 | 0 | 36 | 0 |
+| [Matriz](scenarios.md) | 68 | 5 | 0 | 63 | 0 |
 
 ---
 
@@ -56,7 +56,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 10 | 0 | 0 | 10 | 0 |
+| [Decisões](decisions.md) | 12 | 0 | 0 | 12 | 0 |
 
 ---
 
@@ -80,6 +80,16 @@ Um registro por **ciclo**, conforme o
 | 11 | 2026-09-27 | F0 | — (e2e de push real, fora do `verify:full`) | S-53 ainda 🟡: o emulador era ligado e desligado à mão, e o `gradlew --stop` também — passo esquecível, e daemon esquecido derruba o portão 7 seguinte | `run-e2e-local.mjs` passa a cuidar do aparelho das corridas do app (`scripts/lib/emulator.mjs`): usa o que já está conectado e o deixa como estava, ou sobe a AVD sem janela em paralelo com a stack e a derruba no teardown (`adb emu kill`, depois o grupo), e para os daemons do Gradle quando o app foi compilado. `pnpm test:e2e:mobile:push` saiu 0 com S-53 provado, e não deixou emulador nem daemon do projeto | reinício do portão 1 |
 | 12 | 2026-09-27 | F0, F1 | nenhum | depois do ciclo do emulador em script | — | **11 portões verdes** |
 | 13 | 2026-09-27 | F3 · B-28 (antecipada) | nenhum no `verify:full`; antes dele, 5 — duplicação | a refatoração de `RewindBoard._copy` em duas cópias nomeadas deixou os dois construtores iguais (clone de 11 linhas); e o `scripts/mobile.mjs` fora do Prettier | `_withPoints` passa por um construtor nomeado, `RewindBoard._repointed`, que copia o lado do desfazer pela lista de inicialização; Prettier no arquivo. As 27 funções acima de 10 refatoradas — nenhuma supressão; o gerador de contrato passou a emitir guards em lista (`[…].every(Boolean)`), de complexidade fixa | **11 portões verdes** |
+| 14 | 2026-09-27 | F2, F3 | 2 — lint (complexidade, Dart) | o `sessionScope` do app passou de 10: a métrica soma as closures à função, e o listener de autenticação ganhou o caso da renovação (S-72) | o listener vira a função `_authChanged`, fora do provider; nenhuma supressão | reinício do portão 1 |
+| 15 | 2026-09-27 | F2, F3 | 3 — tipagem (web) | consequência do `vitest` 4: `vi.fn()` sem assinatura deixou de ser atribuível a `(url: string) => void` em `SignInPrompt.spec.tsx` | o mock é tipado com a assinatura de `navigation.assign` | reinício do portão 1 |
+| 16 | 2026-09-27 | F2, F3 | 7 — cobertura | outra consequência do `vitest` 4, maior: o v8 dele conta ramos que o 3 não contava. Quatro arquivos de `scripts/lib/` e onze do web, nenhum tocado por esta entrega salvo `prerequisites.mjs`, caíram abaixo de 90 % em ramos; o backend e o app ficaram acima. E o S-29 falhou uma vez sob a carga da suíte inteira: o token já nascia expirado, e a janela da graça (0,5–1,5 s) era menor que o handshake sob carga | ramo inalcançável (fallback `?? ''` de grupo de captura obrigatório, de índice que sempre existe) sai do código; ramo alcançável ganha teste — `down` que falha sem stderr, pnpm abaixo do mínimo, cabeçalho sem slug, `findMarkdownFiles` (que não tinha teste), e no web os guardas de desmontagem, os lados falsos dos `map`, socket fora no ping e na resposta de permissão. O S-29 passa a expirar o token 1–2 s depois do handshake, com graça de 3 s, e renova só depois de ele expirar de fato. Nenhum limiar, exclusão ou `v8 ignore` | reinício do portão 1 |
+| 17 | 2026-09-27 | F2, F3 | 7 — cobertura (backend) | com os testes todos verdes, o vitest 4 chegou a medir o backend — no ciclo anterior um teste vermelho o impediu — e quatro arquivos que esta entrega não tocou ficaram abaixo de 90 % em funções ou ramos: o `.catch` do listener que grava a decisão na trilha, `sessionsOfConversations([])`, a credencial do push que não pôde ser lida (e é relida na próxima), e os comandos `migrate`/`seed` pelo `COMMANDS` do `pnpm db` | um teste para cada caminho; nenhum limiar, exclusão ou `v8 ignore`. Mesmo portão do ciclo 16, causa diferente: raiz, web e app já passavam | reinício do portão 1 |
+| 18 | 2026-09-27 | F2, F3 | 7 — cobertura (web, teste) | com a cobertura já acima de 90 % em todo arquivo, dois testes do web estouraram o `waitFor` — `HistoryRoute` e o axe da `SessionScreen` —, só dentro do `verify:full`: sozinha, a suíte passa 769/769, e os dois arquivos, cinco vezes seguidas. O `waitFor` do Testing Library desiste em 1 s, e ali a cobertura do backend, com containers, roda ao lado | `asyncUtilTimeout` de 5 s no setup do web, e `testTimeout` de 15 s (o backend usa 20). Nenhuma asserção muda: condição falsa segue falhando, só a verdadeira ganha tempo de ficar verdadeira | reinício do portão 1 |
+| 19 | 2026-09-27 | F2 | 7 — cobertura (backend, teste) | o S-28 respondeu `[200, 200, 200, 200, 401]` sob a carga do `verify:full`: a quinta renovação chegou depois que a rotação das outras quatro terminou, ainda com o token antigo, e o provedor fake — como o real — tratou como reuso. Não é o teste instável: é o produto, com a latência de rede no lugar da carga. Quarto ciclo no portão 7, cada um com causa diferente e com progresso; este pedia uma escolha de segurança, e foi escalado | [D-12](decisions.md), decisão do usuário: janela de graça de 10 s na rotação; S-76 em unit e integração; o S-27 passa a reapresentar o token depois da janela, com o relógio do app fixo na suíte | reinício do portão 1 |
+| 20 | 2026-09-27 | F2 | 7 — cobertura (backend, teste) | dois vermelhos. Um, determinístico e da D-12: em `http-api.spec.ts`, dois testes seguidos renovavam o **mesmo** token `r1`, e o segundo, dentro dos 10 s, recebeu a rotação do primeiro — o comportamento certo — deixando na fila do provedor fake a resposta que ele mesmo tinha enfileirado. O outro, S-51 de `push.flow.spec.ts` (`no frame arrived`), com load average 33 na máquina: uma suíte Playwright e um Keycloak de **outro projeto** rodavam ao mesmo tempo | o segundo teste ganha um token próprio. O S-51 não foi tocado: passou em todos os ciclos anteriores, e cair de novo sob carga normal é o que o faria ser investigado | reinício do portão 1 |
+| 21 | 2026-09-28 | F0, F2, F3 | 7 — cobertura (backend, teste) | com a máquina ociosa, o S-06 da varredura de órfãs (F0) contou 0 — sozinho, passa 8 vezes em 8. Não era carga: todo `startTestApp` sobe o app de verdade, e o boot dele varre os processos **reais** da máquina; o órfão que o S-06 planta era encerrado pelo boot de outra suíte, num worker ao lado, e quando a varredura do próprio S-06 olhava, sobrava um zumbi sem `environ`. O `vitest` 4 roda mais arquivos ao mesmo tempo, e a janela cresceu. Quinto vermelho no portão 7, e o primeiro a mostrar que parte dos anteriores (ciclos 16 e 20) podia ter a mesma raiz: interferência entre suítes, não o teste | os apps de teste sobem a varredura sobre uma tabela de processos vazia (`EMPTY_MACHINE`, ao lado do `ROOMY_MACHINE` que já existia pelo mesmo motivo); a tabela real continua provada na suíte dela, `orphan-sweep.spec.ts`, que é a única que planta processos | reinício do portão 1 |
+| 22 | 2026-09-28 | F2 | 7 — cobertura (app) | raiz, web e backend inteiros verdes; no app, dois achados da renovação proativa (S-72). Seis testes de `router_screens_test.dart` com `!timersPending`: o `ProviderContainer` deles é descartado por `addTearDown`, que roda depois da checagem de timers, e a sessão da fixture agendava a renovação. E o `sign_in_page_test.dart` **travava**: a sessão da fixture já nascia vencida, a renovação devolvia outra vencida, e o controller reagendava com atraso zero — um laço contra o provedor, que no produto bastaria um relógio adiantado para disparar | o laço é bug do produto e se corrige no produto: no mínimo 30 s entre duas renovações proativas (`minimumRenewalGap`), com S-77. A fixture de rotas passa a não ter refresh token — são rotas, não credencial | reinício do portão 1 |
+| 23 | 2026-09-28 | F2, F3 | nenhum | depois do intervalo mínimo entre renovações | — | **11 portões verdes** — o `osv-scanner` leu os dois lockfiles e não achou aviso |
 
 ---
 
@@ -103,6 +113,14 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 | 2026-09-26 | Os testes de integração passam a acreditar numa máquina de 64 GB (`ROOMY_MACHINE`), salvo a suíte que é sobre a capacidade | com o limite derivado da RAM, a capacidade de uma suíte dependeria da máquina que a roda | `backend/test/support/app/test-app.ts` |
 | 2026-09-27 | D-06, D-07 e D-08 decididas pelo usuário | eram as últimas em aberto | [decisions.md](decisions.md): claims mínimas sem papel (B-12 ganha S-61); Sonar adiado e e2e mobile só local (B-17, B-18 e S-36 saem; S-40 vai para B-19); [11-validation-protocol](../../architecture/shared/11-validation-protocol.md), [09-code-quality](../../architecture/shared/09-code-quality.md), [10-definition-of-done](../../architecture/shared/10-definition-of-done.md) e [08-authentication](../../architecture/shared/08-authentication.md) |
 | 2026-09-27 | **D-10: complexidade ciclomática ≤ 10 por função, no portão 2** — B-28 entra na F3 e é **antecipada** | pedido do usuário, como compensação da D-07: sem o Sonar, nenhum portão media complexidade. Limite escolhido pelo usuário com a medição na mão (27 funções acima de 10) | `eslint.config.mjs` (`complexity`), `mobile/analysis_options.yaml` e `pubspec.yaml` (`dart_code_linter`), `scripts/mobile.mjs analyze` e `scripts/lib/dart-metrics.mjs`; S-62…S-68; [09-code-quality](../../architecture/shared/09-code-quality.md), [11-validation-protocol](../../architecture/shared/11-validation-protocol.md), [10-definition-of-done](../../architecture/shared/10-definition-of-done.md) |
+| 2026-09-27 | **D-11: o `smoke-live` continua sob demanda** — a B-19 deixa de ser "nightly" e vira o relatório por issue, `pnpm test:e2e:live:report` | conflito entre a B-19 e a [D-12 do plano 01](../01-live-session/decisions.md), levado ao usuário: não há credencial do Claude no CI, e a D-12 fica | [decisions.md](decisions.md), [F3](F3-gates.md), S-37, S-38 e S-40 reescritos (S-40 passa de e2e para unit + integração: o que ele prova é o purge e os workflows, e duas stacks inteiras em paralelo custariam minutos para provar a mesma coisa), [06-testing-strategy](../../architecture/shared/06-testing-strategy.md), [README](../../../README.md#comandos) |
+| 2026-09-27 | **D-12: a rotação do refresh responde o token que substituiu por 10 s** | achado no ciclo 19, levado ao usuário: a aba cuja renovação chegou logo depois da rotação derrubava a sessão de todas | `RenewSessionUseCase` (ganha o relógio), S-76, [08-authentication](../../architecture/shared/08-authentication.md#renovação-e-expiração) |
+| 2026-09-27 | `vitest` e `@vitest/coverage-v8` de 3.2.7 para 4.1.11, nas três suítes | o `osv-scanner` da B-16, na primeira execução, achou o GHSA-82fw-gwwq-j7x9 (moderado, `fixed` 4.1.11), que o `pnpm audit --audit-level high` deixava passar. Nenhuma config precisou mudar | `package.json` da raiz, do backend e do web |
+| 2026-09-27 | `connection.reauthenticate` com token de outro `sub` fecha `4401`; antes do handshake é `UNAUTHENTICATED`, e o socket segue na janela de handshake | dois furos achados escrevendo S-69: a renovação trocava a identidade da connection, e antes do handshake a autenticava sem as checagens dele (device, `installId`, locale) | gateway, S-69, [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#handshake), [08-authentication](../../architecture/shared/08-authentication.md#token-no-websocket) |
+| 2026-09-27 | A recarga da JWKS e a leitura do discovery passam a ser compartilhadas; a revalidação do discovery que falha mantém o último documento bom | achados escrevendo S-71 e S-23: a rajada do boot recusava requisições válidas enquanto a JWKS estava em voo, e lia o discovery várias vezes | S-70, S-71, [08-authentication](../../architecture/shared/08-authentication.md#discovery) |
+| 2026-09-27 | `POST /auth/refresh` deduplica renovações do mesmo token em voo, e apaga o cookie quando o provedor recusa | as abas do navegador mandam o mesmo cookie; sem isso o produto disparava a detecção de reuso contra si mesmo (S-28) | backend, [08-authentication](../../architecture/shared/08-authentication.md#renovação-e-expiração) |
+| 2026-09-27 | A sessão do web carrega o `idToken` (o backend o devolve de `/auth/session` e `/auth/refresh`), e o web ganha o botão **Sair** | o `end_session_endpoint` precisa do `id_token_hint` para não pedir confirmação; e nenhuma tela chamava o `logout()` que existia | contrato HTTP de sessão, [web/07-auth](../../architecture/web/07-auth.md#logout) |
+| 2026-09-27 | O projeto compose de uma execução e2e leva o pid do dono (`remote-claude-e2e-<porta>-p<pid>`), e o purge poupa o de dono vivo | achado escrevendo S-40: o purge do início de uma execução derrubava a stack de outra que estava rodando | `scripts/lib/stack.mjs`, `scripts/lib/compose.mjs`, `run-e2e-local.mjs` |
 | 2026-09-27 | **O envio de log do web e do app ao backend sai do escopo** — B-08, B-09, B-10 e, na F4, B-24; S-15…S-20, S-22 e S-46; D-03 e D-04 descartadas; o `LogBuffer`/`beaconShipper` do web e o `LogBuffer` do app, herdados do bootstrap, removidos | decisão do usuário: o log do cliente fica no cliente, e o `traceId` que o erro mostra e o backend grava é o que liga os dois lados. Sai também o que só existia para isso: o guard de bearer opcional e a redação por forma de texto. Fica a correção do filtro (corpo acima do limite do parser → `413`, não `500`), que é geral e ganhou testes próprios | F1 vira "Diagnóstico" (só B-11), F4, [matriz](scenarios.md), [decisions.md](decisions.md), [plano 16](../16-logs-and-diagnostics/README.md), [03-logging](../../architecture/shared/03-logging.md) e as docs de logging de web e mobile |
 
 ---
@@ -116,6 +134,7 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 | 2026-09-26 | B-10: persistir o buffer de log do app em disco antes do background, e enviar só em Wi-Fi por padrão — **superado em 2026-09-27** pela linha abaixo | exigiam plugins nativos novos | ia para o plano 17; não vai mais |
 | 2026-09-27 | B-17 (quality gate do SonarQube) e S-36 | [D-07](decisions.md), decisão do usuário: sem infraestrutura de Sonar por ora. O portão 12 fica declarado ausente; **complexidade** fica sem portão | **a lugar nenhum por enquanto** — volta como tarefa quando alguém decidir hospedar o Sonar |
 | 2026-09-27 | B-18 (job de e2e mobile no CI) | [D-08](decisions.md), decisão do usuário: o e2e mobile segue local, por `pnpm test:e2e:mobile`, sem runner | a lugar nenhum — [06-testing-strategy](../../architecture/shared/06-testing-strategy.md#portões-de-ci) já o declara sob demanda |
+| 2026-09-27 | O agendamento do `smoke-live` (a metade "nightly" da B-19) | [D-11](decisions.md#d-11--o-smoke-live-continua-sob-demanda), decisão do usuário: sem credencial do Claude no CI | **a lugar nenhum** — fica o relatório sob demanda; agendar é decisão nova sobre onde mora a credencial |
 | 2026-09-27 | B-08, B-09, B-10 e B-24 — o envio de log do web e do app ao backend, o endpoint que o recebia e o e2e que o provava | decisão do usuário: não é necessário. O log do cliente fica no cliente; o `traceId` liga um erro na tela ao log do backend | **a lugar nenhum** — removido do código e dos planos. O [plano 16](../16-logs-and-diagnostics/README.md), que lia essas linhas, foi ajustado para mostrar só as do backend |
 
 ---
@@ -156,7 +175,7 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 
 | # | Risco | Estado | Observação |
 |---|---|---|---|
-| R-01 | Qual provedor OIDC real, e quem administra | ✅ **decidido** 2026-09-26 | bloqueia a F2; o teste continua no Keycloak local |
+| R-01 | Qual provedor OIDC real, e quem administra | ✅ **decidido** 2026-09-26 | a F2 foi feita sobre ele sem nenhum nome de provedor no código; o teste continua no provedor local, e o realm é lido por um teste (S-75) |
 | R-02 | Limite derivado da RAM pode ficar otimista | ✅ mitigado | fração da RAM **total**, piso e teto configuráveis, limite do cgroup respeitado; fórmula pura e testada (S-01), capacidade dita no boot |
 | R-03 | Varredura de órfã pode matar processo alheio | ✅ mitigado | casa por marca própria **e** por backend morto; S-07 prova em processos reais que o sem marca e o de backend vivo ficam |
 | R-04 | Ingestão de log aceita texto do cliente | ✅ descartado | a ingestão saiu do escopo em 2026-09-27 |

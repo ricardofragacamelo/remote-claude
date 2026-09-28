@@ -24,6 +24,7 @@ function probesWith(overrides = {}) {
     },
     flutter: { found: true, code: 0, stdout: 'Flutter 3.44.4 • channel stable\n', stderr: '' },
     gitleaks: { found: true, code: 0, stdout: 'v8.18.4\n', stderr: '' },
+    'osv-scanner': { found: true, code: 0, stdout: 'osv-scanner version: 2.6.0\n', stderr: '' },
     ...overrides,
   };
 
@@ -52,6 +53,17 @@ describe('inspectEnvironment', () => {
 
     expect(results.filter((result) => result.status !== 'ok')).toEqual([]);
     expect(exitCodeFor(results)).toBe(0);
+  });
+
+  it('fails on a pnpm older than the minimum, naming the version it found', async () => {
+    const probes = probesWith({
+      pnpm: { found: true, code: 0, stdout: '8.15.0\nextra\n', stderr: '' },
+    });
+
+    const pnpm = check(await inspectEnvironment(probes), 'pnpm');
+
+    expect(pnpm).toMatchObject({ status: 'fail', detail: '8.15.0 is below the required 9' });
+    expect(pnpm?.fix).toContain('corepack');
   });
 
   it('fails on a node older than the minimum, saying how to solve it', async () => {
@@ -89,6 +101,26 @@ describe('inspectEnvironment', () => {
 
     expect(docker?.status).toBe('fail');
     expect(docker?.detail).toContain('daemon does not answer');
+  });
+
+  // S-39
+  it('warns about a missing osv-scanner, and says both ways to solve it', async () => {
+    const probes = probesWith({
+      'osv-scanner': { found: false, code: 127, stdout: '', stderr: '' },
+    });
+
+    const osv = check(await inspectEnvironment(probes), 'osv-scanner');
+
+    expect(osv?.status).toBe('warn');
+    expect(osv?.detail).toContain('dependency scan falls back to docker');
+    expect(osv?.fix).toContain('https://google.github.io/osv-scanner');
+    expect(osv?.fix).toContain('docker image');
+  });
+
+  it('warns about an osv-scanner that is there and does not run', async () => {
+    const probes = probesWith({ 'osv-scanner': { found: true, code: 2, stdout: '', stderr: 'x' } });
+
+    expect(check(await inspectEnvironment(probes), 'osv-scanner')?.status).toBe('warn');
   });
 
   it('only warns about flutter and gitleaks, which block nothing by themselves', async () => {

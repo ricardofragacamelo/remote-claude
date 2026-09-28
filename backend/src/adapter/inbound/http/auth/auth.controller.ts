@@ -39,7 +39,15 @@ export class AuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<SessionDto> {
-    return this.answer(await this.renew.execute(readRefreshCookie(request)), response);
+    try {
+      return this.answer(await this.renew.execute(readRefreshCookie(request)), response);
+    } catch (error) {
+      // A refused refresh token is dead — reused, revoked with its family, or expired — and a
+      // browser that kept presenting it would only be refused again, every time it loads. The
+      // cookie goes before the error does (S-27).
+      writeRefreshCookie(response, null);
+      throw error;
+    }
   }
 
   /**
@@ -61,6 +69,7 @@ export class AuthController {
       accessToken: session.accessToken,
       expiresInSeconds: session.expiresInSeconds,
       userId: session.userId.value,
+      idToken: session.idToken,
     };
   }
 }

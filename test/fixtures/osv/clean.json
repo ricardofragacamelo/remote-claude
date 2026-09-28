@@ -1,0 +1,14 @@
+{
+  "recordedWith": "ghcr.io/google/osv-scanner:v2.6.0",
+  "exitCode": 0,
+  "stdout": {
+    "results": [],
+    "experimental_config": {
+      "licenses": {
+        "summary": false,
+        "allowlist": null
+      }
+    }
+  },
+  "stderr": "Starting filesystem walk for root: /\nScanned /src/clean.package-lock.json file and found 1 package\nEnd status: 0 dirs visited, 1 inodes visited, 1 Extract calls, 269.352µs elapsed, 269.417µs wall time\n"
+}

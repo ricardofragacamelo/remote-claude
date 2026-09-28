@@ -20,7 +20,12 @@ import { navigation } from '@/shared/lib/navigation';
 import { render, translator } from '../../support/render';
 
 const t = translator('en');
-const session = { accessToken: 'a', userId: 'auth|42', expiresAt: Date.now() + 900_000 };
+const session = {
+  accessToken: 'a',
+  userId: 'auth|42',
+  expiresAt: Date.now() + 900_000,
+  idToken: null,
+};
 
 const ruledEntry = {
   id: 'e1',

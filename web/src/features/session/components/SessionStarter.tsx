@@ -33,11 +33,15 @@ export function SessionStarter({
       <Button
         size="touch"
         disabled={workspacePath === null || isStarting || connection !== 'ready'}
-        onClick={() => {
-          if (workspacePath !== null) {
-            start(workspacePath);
-          }
-        }}
+        // No handler at all without a workspace: the button is disabled then, and a click that
+        // could never arrive needs no branch to ignore it.
+        onClick={
+          workspacePath === null
+            ? undefined
+            : () => {
+                start(workspacePath);
+              }
+        }
       >
         {isStarting ? t('session.starter.pending') : t('session.starter.action')}
       </Button>

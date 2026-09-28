@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { decodeProtectedHeader, errors, jwtVerify } from 'jose';
+import type { JWTPayload } from 'jose';
 
 import type { AccessTokenVerifier, VerifiedAccessToken } from '@application/auth';
 import { TokenExpiredError, UnauthenticatedError } from '@domain/auth';
@@ -84,6 +85,8 @@ export class OidcTokenVerifier implements AccessTokenVerifier {
       throw new UnauthenticatedError('token carries no subject or no expiry');
     }
 
+    requireVerifiedEmail(payload);
+
     return { subject: payload.sub, expiresAt: new Date(payload.exp * 1_000) };
   }
 
@@ -97,5 +100,26 @@ export class OidcTokenVerifier implements AccessTokenVerifier {
     }
 
     return new UnauthenticatedError(error instanceof Error ? error.message : 'verification failed');
+  }
+}
+
+/**
+ * The identity claims this backend requires, beyond `sub`
+ * ([D-06](../../../../../docs/plans/05-hardening-operations/decisions.md)).
+ *
+ * An address the provider has not verified is how an account gets taken over: somebody registers
+ * the victim's address at a provider that does not check it, and arrives here as them. So a token
+ * without `email`, or with `email_verified` anything but `true`, is refused like any other bad
+ * token — and nothing downstream of this line ever sees it. No role or group is read: authorization
+ * is local.
+ *
+ * @throws {UnauthenticatedError} when either claim is missing, or the address is unverified
+ */
+function requireVerifiedEmail(payload: JWTPayload): void {
+  if (typeof payload['email'] !== 'string' || payload['email'] === '') {
+    throw new UnauthenticatedError('token carries no email claim');
+  }
+  if (payload['email_verified'] !== true) {
+    throw new UnauthenticatedError('token carries an email the provider has not verified');
   }
 }

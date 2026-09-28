@@ -95,9 +95,9 @@ import { WebsocketModule } from './websocket.module';
     },
     {
       provide: RenewSessionUseCase,
-      inject: [IDENTITY_PROVIDER, AuthenticateUseCase],
-      useFactory: (provider: IdentityProvider, authenticate: AuthenticateUseCase) =>
-        new RenewSessionUseCase(provider, authenticate),
+      inject: [IDENTITY_PROVIDER, AuthenticateUseCase, CLOCK],
+      useFactory: (provider: IdentityProvider, authenticate: AuthenticateUseCase, clock: Clock) =>
+        new RenewSessionUseCase(provider, authenticate, clock),
     },
     {
       provide: RegisterDeviceUseCase,

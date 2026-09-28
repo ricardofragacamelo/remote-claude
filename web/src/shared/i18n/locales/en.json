@@ -29,6 +29,9 @@
       "description": "remote-claude runs Claude Code on your own machine, so it asks who you are first.",
       "action": "Sign in"
     },
+    "signOut": {
+      "action": "Sign out"
+    },
     "callback": {
       "pending": "Finishing sign-in…"
     }

@@ -10,6 +10,12 @@ export interface IssuedTokens {
 
   /** Lifetime of the access token, in seconds, as the provider reported it. */
   readonly expiresInSeconds: number;
+
+  /**
+   * The ID token, when the provider sent one. It describes the login and authorizes nothing — the
+   * browser keeps it in memory for one purpose: telling `end_session_endpoint` which session to end.
+   */
+  readonly idToken: string | null;
 }
 
 /** Everything the backend asks the identity provider to do on behalf of a browser. */

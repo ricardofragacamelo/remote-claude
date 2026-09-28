@@ -38,7 +38,7 @@ Rodam nesta ordem: o mais barato primeiro, para o feedback chegar rápido.
 | Arquitetura | `dependency-cruiser` | ESLint `no-restricted-imports` por escopo | `import_lint` |
 | Complexidade | ESLint `complexity` (≤ 10) | ESLint `complexity` (≤ 10) | `dart_code_linter` metrics (≤ 10), no `mobile.mjs analyze` |
 | **Linhas repetidas** | SonarQube + `jscpd` | SonarQube + `jscpd` | SonarQube + `jscpd` (tokeniza Dart) |
-| Dependência vulnerável | `pnpm audit` | idem | `dart pub outdated` |
+| Dependência vulnerável | `pnpm audit` + `osv-scanner` | idem | `osv-scanner` (`pubspec.lock`) |
 | Segredo commitado | `gitleaks` | `gitleaks` | `gitleaks` |
 | Padrão inseguro | `semgrep` | `semgrep` | `semgrep` |
 
@@ -250,6 +250,7 @@ formalidade:
 |---|---|
 | `gitleaks` | segredo commitado — roda em **pre-commit** e no CI |
 | `pnpm audit` | dependência vulnerável, `high` para cima |
+| `osv-scanner` | dependência vulnerável nos **dois** lockfiles — `pnpm-lock.yaml` e `mobile/pubspec.lock` —, **qualquer** severidade. Binário local ou a imagem fixada; o scan que não disse ter lido os dois lockfiles, ou saiu com código que não é resposta, **reprova** ([plano 05 · B-16](../../plans/05-hardening-operations/F3-gates.md)) |
 | `semgrep` | path traversal, injeção de comando, uso inseguro de `child_process`, JWT com `alg` do token, SQL concatenado |
 | Regra própria | `allowDangerouslySkipPermissions` fora de `false`; `permissionMode: 'bypassPermissions'` como default |
 | **Regra própria** | **`query()` sem `settingSources: ['project']`** — omitir carrega o escopo `user` e desliga o `canUseTool` em silêncio; `[]` desliga o `CLAUDE.md` do projeto. Ver [ADR-011](00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) |
@@ -283,7 +284,7 @@ atualização de segurança em prioridade.
 | **Pre-push** | typecheck + unit + `jscpd` | evita CI vermelho por descuido |
 | **CI, todo push** | lint, typecheck, unit, cobertura, regras de arquitetura, i18n | |
 | **CI, todo PR** | tudo acima + integração + e2e + segurança (SonarQube: ausente, [D-07](../../plans/05-hardening-operations/decisions.md)) | |
-| **Nightly** | `semgrep` completo e `smoke-live` | checagem cara, fora do caminho crítico |
+| **Nightly** | `semgrep` completo | checagem cara, fora do caminho crítico — o `smoke-live` **não** entra: roda sob demanda, sem credencial do Claude no CI ([D-12 do plano 01](../../plans/01-live-session/decisions.md), mantida na [D-11 do plano 05](../../plans/05-hardening-operations/decisions.md#d-11--o-smoke-live-continua-sob-demanda)) |
 
 Pre-commit **não** roda a suíte inteira. Hook lento é hook que o time aprende a pular com
 `--no-verify`.

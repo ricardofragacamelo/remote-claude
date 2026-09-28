@@ -111,4 +111,29 @@ describe('starting a session', () => {
       expect(started).toEqual([SESSION]);
     });
   });
+
+  it('keeps waiting through a session.started that names no session', async () => {
+    const user = userEvent.setup();
+    mount('/srv/projects/app');
+    connect();
+
+    await user.click(await screen.findByRole('button', { name: t('session.starter.action') }));
+
+    // A frame that breaks the contract is not the answer: reporting it would navigate to a
+    // session called `undefined`.
+    act(() => {
+      sockets.latest.receive({
+        v: 1,
+        id: 'evt-1',
+        kind: 'event',
+        type: 'session.started',
+        ts: AT,
+        seq: 1,
+        payload: { sessionId: 42, workspacePath: '/srv/projects/app' },
+      });
+    });
+
+    expect(screen.getByRole('button', { name: t('session.starter.pending') })).toBeDisabled();
+    expect(started).toEqual([]);
+  });
 });

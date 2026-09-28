@@ -34,6 +34,7 @@
     "test:e2e:mobile": "node scripts/run-e2e-local.mjs --mobile",
     "test:e2e:mobile:push": "node scripts/run-e2e-local.mjs --mobile --push",
     "test:e2e:live": "node scripts/run-smoke-live.mjs",
+    "test:e2e:live:report": "node scripts/report-smoke-live.mjs",
     "test:coverage": "vitest run --coverage && pnpm -r --if-present test:coverage && node scripts/mobile.mjs coverage",
     "check:contracts-i18n": "node scripts/contracts.mjs --check && node scripts/i18n-check.mjs",
     "verify": "node scripts/verify.mjs",
@@ -44,7 +45,7 @@
     "@eslint/js": "^10.0.1",
     "@types/eslint-plugin-jsx-a11y": "^6.10.1",
     "@types/node": "^22.18.0",
-    "@vitest/coverage-v8": "^3.2.7",
+    "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.5",
@@ -58,7 +59,8 @@
     "prettier": "^3.6.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.0",
-    "vitest": "^3.2.7"
+    "vitest": "^4.1.11",
+    "yaml": "^2.9.1"
   },
   "pnpm": {
     "overrides": {

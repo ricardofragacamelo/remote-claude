@@ -69,6 +69,29 @@ describe('the devices hook', () => {
     expect(result.current.devices).toEqual([]);
   });
 
+  it('replaces only the row the action changed, leaving the others as they were', async () => {
+    const other = { ...device, id: 'dev_2', name: 'iPhone 16', platform: 'ios' };
+    vi.spyOn(api, 'get').mockResolvedValue({ devices: [device, other] });
+    vi.spyOn(api, 'post').mockResolvedValue({ ...device, status: 'approved' });
+
+    const { result } = renderHook(() => useDevices());
+    await waitFor(() => {
+      expect(result.current.devices).toHaveLength(2);
+    });
+    const untouched = result.current.devices[1];
+
+    act(() => {
+      result.current.approve('dev_1');
+    });
+
+    await waitFor(() => {
+      expect(result.current.devices[0]?.status).toBe('approved');
+    });
+    // Same position, same object: the list a person is reading does not move under the click.
+    expect(result.current.devices.map((row) => row.id)).toEqual(['dev_1', 'dev_2']);
+    expect(result.current.devices[1]).toBe(untouched);
+  });
+
   it('stops saying an action is in flight once it has answered', async () => {
     vi.spyOn(api, 'get').mockResolvedValue({ devices: [device] });
     vi.spyOn(api, 'post').mockResolvedValue({ ...device, status: 'approved' });

@@ -13,6 +13,7 @@ const tokenResponseSchema = z.object({
   access_token: z.string().min(1),
   refresh_token: z.string().min(1).optional(),
   expires_in: z.number().int().positive(),
+  id_token: z.string().min(1).optional(),
 });
 
 /**
@@ -80,6 +81,7 @@ export class OidcIdentityProvider implements IdentityProvider {
       accessToken: issued.access_token,
       refreshToken: issued.refresh_token ?? null,
       expiresInSeconds: issued.expires_in,
+      idToken: issued.id_token ?? null,
     };
   }
 }

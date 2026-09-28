@@ -28,6 +28,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 
 import { runAttached } from './lib/exec.mjs';
+import { hasClaudeLogin } from './lib/smoke-report.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { fail, hint } from './lib/ui.mjs';
 
@@ -50,20 +51,25 @@ const CREDENTIAL = path.join(
  * Refuses to start without a Claude to talk to.
  *
  * A missing login would otherwise show up as a session that fails to open, minutes into the run
- * and with a message about a subprocess. Saying so here costs one `existsSync` and saves the
- * confusion — and on macOS, where the credential lives in the keychain instead, the check simply
- * finds nothing and the run goes ahead.
+ * and with a message about a subprocess. A machine signed in with `claude setup-token` has no file
+ * and a token in its environment, which the backend hands the subprocess as it is — it is the
+ * CLI's, not ours.
  *
  * @returns {boolean}
  */
 function claudeIsLoggedIn() {
-  return fs.existsSync(CREDENTIAL) || process.platform === 'darwin';
+  return hasClaudeLogin({
+    env: process.env,
+    platform: process.platform,
+    credentialFileExists: fs.existsSync(CREDENTIAL),
+  });
 }
 
 function main() {
   if (!claudeIsLoggedIn()) {
     fail('there is no Claude logged in on this machine');
     hint('run `claude` once and sign in — the backend inherits that login, by design');
+    hint('or export CLAUDE_CODE_OAUTH_TOKEN, from `claude setup-token`');
     hint('docs/discovery/01-descoberta-claude-agent-sdk.md');
     return 1;
   }

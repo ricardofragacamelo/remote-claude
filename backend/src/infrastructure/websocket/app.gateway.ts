@@ -363,6 +363,13 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     frame: Envelope,
     traceId: string,
   ): Promise<void> {
+    // A renewal of a handshake that never happened would **be** the handshake — minus every check
+    // the handshake makes: the device, its installation, the locale. It is refused like any other
+    // command that arrives first, and the socket keeps its five seconds to authenticate (S-69).
+    if (connection.userId === null) {
+      throw new UnauthenticatedError('reauthenticate arrived before the handshake');
+    }
+
     const parsed = reauthenticateSchema.safeParse(frame.payload ?? {});
     if (!parsed.success) {
       this.close(connection, CLOSE.authenticationFailed, 'reauthenticate payload is invalid');
@@ -373,11 +380,28 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       authentication = await this.authenticate.execute(parsed.data.token);
     } catch {
-      this.close(connection, CLOSE.authenticationFailed, 'renewed token rejected');
+      this.close(
+        connection,
+        CLOSE.authenticationFailed,
+        'renewed token rejected',
+        'UNAUTHENTICATED',
+      );
       return;
     }
 
-    connection.userId = authentication.userId;
+    // A renewal renews **this** user's credential. A token of somebody else is not a renewal, it
+    // is a change of identity on a socket that already holds the first user's sessions — attached
+    // streams, pending permissions — and there is no honest way to hand those over (S-69).
+    if (!connection.userId.equals(authentication.userId)) {
+      this.close(
+        connection,
+        CLOSE.authenticationFailed,
+        'renewed token belongs to another subject',
+        'UNAUTHENTICATED',
+      );
+      return;
+    }
+
     connection.expiresAt = authentication.expiresAt;
     this.scheduleCredentialExpiry(connection, authentication.expiresAt);
 
@@ -407,7 +431,12 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     timers.credential = setTimeout(() => {
-      this.close(connection, CLOSE.authenticationFailed, 'credential expired without renewal');
+      this.close(
+        connection,
+        CLOSE.authenticationFailed,
+        'credential expired without renewal',
+        'TOKEN_EXPIRED',
+      );
     }, delay);
   }
 
@@ -517,13 +546,15 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
   }
 
-  private close(connection: Connection, code: number, reason: string): void {
+  /** @param errorCode the catalogue code behind the closure, when there is one, for the log */
+  private close(connection: Connection, code: number, reason: string, errorCode?: string): void {
     this.logger.warn(
       {
         op: 'ws.connection',
         layer: 'infrastructure',
         connectionId: connection.id,
         closeCode: code,
+        ...(errorCode === undefined ? {} : { errorCode }),
       },
       reason,
     );

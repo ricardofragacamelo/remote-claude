@@ -1,6 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
-import { anchorsOf, linesOutsideCode, linksOf, slugify } from '../../../scripts/lib/markdown.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import {
+  anchorsOf,
+  findMarkdownFiles,
+  linesOutsideCode,
+  linksOf,
+  slugify,
+} from '../../../scripts/lib/markdown.mjs';
 
 describe('slugify', () => {
   it('lowercases and turns spaces into hyphens', () => {
@@ -53,6 +63,10 @@ describe('anchorsOf', () => {
     expect([...anchors]).toEqual(['título', 'uma-seção']);
   });
 
+  it('gives no anchor to a heading with nothing a slug can be made of', () => {
+    expect([...anchorsOf('# Real\n\n## !!!\n')]).toEqual(['real']);
+  });
+
   it('ignores headings inside code blocks', () => {
     const anchors = anchorsOf('# Real\n\n```sh\n# Fake\n```\n');
 
@@ -81,5 +95,33 @@ describe('linksOf', () => {
 
   it('handles a link whose text contains brackets', () => {
     expect(linksOf('[see [this]](target.md)')).toEqual([{ target: 'target.md', line: 1 }]);
+  });
+});
+
+describe('findMarkdownFiles', () => {
+  /** @type {string[]} */
+  const made = [];
+
+  afterEach(() => {
+    for (const dir of made.splice(0)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('finds every Markdown file below the root, sorted, and skips the directories it is told to', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rc-md-'));
+    made.push(root);
+    for (const file of ['b.md', 'a/c.md', 'node_modules/x.md', 'a/not-markdown.txt']) {
+      fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+      fs.writeFileSync(path.join(root, file), '# x\n');
+    }
+
+    expect(findMarkdownFiles(root).map((file) => path.relative(root, file))).toEqual([
+      path.join('a', 'c.md'),
+      'b.md',
+    ]);
+    expect(findMarkdownFiles(root, []).map((file) => path.relative(root, file))).toContain(
+      path.join('node_modules', 'x.md'),
+    );
   });
 });

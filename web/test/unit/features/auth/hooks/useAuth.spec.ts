@@ -13,6 +13,7 @@ const session: AuthSession = {
   accessToken: 'token-1',
   userId: 'auth|42',
   expiresAt: Date.now() + 900_000,
+  idToken: null,
 };
 
 describe('useAuth', () => {
@@ -132,6 +133,7 @@ describe('useAuth', () => {
 
   it('drops the cookie and the session on sign-out', async () => {
     vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    vi.spyOn(authService, 'providerLogoutUrl').mockResolvedValue(null);
     const endSession = vi.spyOn(authService, 'endSession').mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useAuth());
@@ -142,6 +144,41 @@ describe('useAuth', () => {
 
     expect(endSession).toHaveBeenCalledTimes(1);
     expect(useAuthStore.getState().status).toBe('anonymous');
+  });
+
+  it('ends the session at the provider with the ID token of the one signing out', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue({ ...session, idToken: 'id-1' });
+    vi.spyOn(authService, 'endSession').mockResolvedValue(undefined);
+    const logoutUrl = vi
+      .spyOn(authService, 'providerLogoutUrl')
+      .mockResolvedValue('https://provider.test/logout?x=1');
+    const assign = vi.spyOn(navigation, 'assign').mockImplementation(() => undefined);
+
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
+    await act(async () => {
+      await result.current.logout();
+    });
+
+    expect(logoutUrl).toHaveBeenCalledWith('id-1');
+    expect(assign).toHaveBeenCalledWith('https://provider.test/logout?x=1');
+  });
+
+  // S-73
+  it('signs out here even when the backend and the provider are both out of reach', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    vi.spyOn(authService, 'endSession').mockRejectedValue(new AppError('X', 'k', 't'));
+    vi.spyOn(authService, 'providerLogoutUrl').mockResolvedValue(null);
+    const assign = vi.spyOn(navigation, 'assign').mockImplementation(() => undefined);
+
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
+    await act(async () => {
+      await result.current.logout();
+    });
+
+    expect(useAuthStore.getState()).toMatchObject({ status: 'anonymous', session: null });
+    expect(assign).not.toHaveBeenCalled();
   });
 
   it('ignores an answer that arrives after the screen is gone', async () => {

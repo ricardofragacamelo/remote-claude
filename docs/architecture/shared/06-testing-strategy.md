@@ -168,6 +168,11 @@ do SDK real passa a ser mitigado por **disciplina**, então rodar o `smoke-live`
 do Definition of Done de qualquer mudança no adapter do Claude. Se não estiver escrito lá, não
 acontece.
 
+Rodado por `pnpm test:e2e:live:report`, a falha não morre num terminal: vira **issue** com o rótulo
+`smoke-live` (ou comentário na que já está aberta), e a execução verde não faz nada — nem fecha
+issue. Agendamento continua fora: a [D-12 do plano 01](../../plans/01-live-session/decisions.md)
+foi mantida na [D-11 do plano 05](../../plans/05-hardening-operations/decisions.md).
+
 ---
 
 ## Cenários e2e obrigatórios
@@ -307,7 +312,7 @@ Escrever teste onde não há risco só cria custo de manutenção:
 | E2E mobile | sob demanda (`pnpm test:e2e:mobile`) | **não** — ver abaixo |
 | Paridade de chaves i18n | todo push | sim |
 | Contrato WS ↔ Dart gerado | todo push | sim |
-| `smoke-live` contra o Claude real | **sob demanda** — sem nightly | não (abre issue) |
+| `smoke-live` contra o Claude real | **sob demanda** — sem nightly (`pnpm test:e2e:live:report`) | não (abre issue) |
 
 ### Por que o e2e de mobile não bloqueia
 

@@ -51,6 +51,15 @@ describe('OidcDiscovery', () => {
     expect(http.countOf(WELL_KNOWN)).toBe(1);
   });
 
+  it('makes one request for callers that arrive while the first read is on its way', async () => {
+    http.on(WELL_KNOWN, { body: provider.discoveryDocument() });
+    const discovery = new OidcDiscovery(ISSUER, clock, http.fetch);
+
+    await Promise.all([discovery.document(), discovery.document(), discovery.document()]);
+
+    expect(http.countOf(WELL_KNOWN)).toBe(1);
+  });
+
   it('fetches again once the cache has aged out', async () => {
     http.on(WELL_KNOWN, { body: provider.discoveryDocument() });
     const discovery = new OidcDiscovery(ISSUER, clock, http.fetch);
@@ -60,6 +69,32 @@ describe('OidcDiscovery', () => {
     await discovery.document();
 
     expect(http.countOf(WELL_KNOWN)).toBe(2);
+  });
+
+  it('keeps the last good document when a revalidation fails (S-70)', async () => {
+    http.on(WELL_KNOWN, { body: provider.discoveryDocument() }).on(WELL_KNOWN, { status: 503 });
+    const discovery = new OidcDiscovery(ISSUER, clock, http.fetch);
+
+    const first = await discovery.document();
+    clock.advance(3_600_001);
+
+    await expect(discovery.document()).resolves.toEqual(first);
+    expect(http.countOf(WELL_KNOWN)).toBe(2);
+  });
+
+  it('tries the provider again on the next call after a failed revalidation', async () => {
+    http
+      .on(WELL_KNOWN, { body: provider.discoveryDocument() })
+      .on(WELL_KNOWN, { status: 503 })
+      .on(WELL_KNOWN, { body: provider.discoveryDocument() });
+    const discovery = new OidcDiscovery(ISSUER, clock, http.fetch);
+
+    await discovery.document();
+    clock.advance(3_600_001);
+    await discovery.document();
+    await discovery.document();
+
+    expect(http.countOf(WELL_KNOWN)).toBe(3);
   });
 
   it('refuses when the provider is unreachable', async () => {

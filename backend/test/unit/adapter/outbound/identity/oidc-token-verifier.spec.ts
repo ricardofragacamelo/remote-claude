@@ -85,6 +85,26 @@ describe('OidcTokenVerifier', () => {
     await expect(verifier.verify(provider.unsignedToken())).rejects.toThrow(UnauthenticatedError);
   });
 
+  it('refuses an algorithm outside the allowlist, whatever the token says about itself', async () => {
+    await expect(verifier.verify(await provider.symmetricToken())).rejects.toThrow(
+      UnauthenticatedError,
+    );
+    expect(log.withOp('auth.verify')[0]?.['err']).toMatchObject({
+      message: expect.stringContaining('HS256'),
+    });
+  });
+
+  it.each([
+    ['no email claim', { email: null }],
+    ['an empty email claim', { email: '' }],
+    ['no email_verified claim', { emailVerified: null }],
+    ['email_verified: false', { emailVerified: false }],
+  ])('refuses a token with %s (S-61)', async (_label, overrides) => {
+    await expect(verifier.verify(await provider.accessToken(overrides))).rejects.toThrow(
+      UnauthenticatedError,
+    );
+  });
+
   it('refuses a token whose header names no key', async () => {
     const headerless = `${Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url')}.e30.`;
 

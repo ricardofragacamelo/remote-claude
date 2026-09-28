@@ -79,21 +79,30 @@ export function parseLabeledRows(stdout) {
  *
  * @param {readonly { name: string, project: string }[]} volumes every compose-labelled volume
  * @param {ReadonlySet<string>} liveProjects projects that still have containers
- * @param {{ prefix: string, keep?: readonly string[] }} scope only projects under `prefix` are
- *   considered, and `keep` names the ones never touched (the development stack, typically)
+ * @param {{ prefix: string, keep?: readonly string[], isLive?: (project: string) => boolean }} scope only projects under `prefix` are
+ *   considered, `keep` names the ones never touched (the development stack, typically), and
+ *   `isLive` the ones whose owner is still running — a run that has created its volumes and not
+ *   yet its containers is not leaving anything behind
  * @returns {string[]} volume names to remove
  */
 export function orphanVolumes(volumes, liveProjects, scope) {
-  const keep = new Set(scope.keep ?? []);
-
   return volumes
-    .filter(
-      (volume) =>
-        volume.project.startsWith(scope.prefix) &&
-        !keep.has(volume.project) &&
-        !liveProjects.has(volume.project),
-    )
+    .filter((volume) => isPurgeable(volume.project, scope) && !liveProjects.has(volume.project))
     .map((volume) => volume.name);
+}
+
+/**
+ * Whether a project is in the scope of a purge, and not spared by it.
+ *
+ * @param {string} project
+ * @param {{ prefix: string, keep?: readonly string[], isLive?: (project: string) => boolean }} scope
+ */
+function isPurgeable(project, scope) {
+  return (
+    project.startsWith(scope.prefix) &&
+    !(scope.keep ?? []).includes(project) &&
+    scope.isLive?.(project) !== true
+  );
 }
 
 /** `--format` template that pairs a resource name with its compose project. */
@@ -116,11 +125,10 @@ const NAME_AND_PROJECT = `{{.Name}}\\t{{.Label "${PROJECT_LABEL}"}}`;
  *
  * @param {Runner} run
  * @param {ComposeCli} cli
- * @param {{ prefix: string, keep?: readonly string[] }} scope
+ * @param {{ prefix: string, keep?: readonly string[], isLive?: (project: string) => boolean }} scope
  * @returns {PurgeReport}
  */
 export function purgeStaleProjects(run, cli, scope) {
-  const keep = new Set(scope.keep ?? []);
   /** @type {PurgeReport} */
   const report = { projects: [], volumes: [], failures: [] };
 
@@ -136,7 +144,7 @@ export function purgeStaleProjects(run, cli, scope) {
   const staleProjects = new Set(
     parseLabeledRows(containers.stdout)
       .map((row) => row.project)
-      .filter((project) => project.startsWith(scope.prefix) && !keep.has(project)),
+      .filter((project) => isPurgeable(project, scope)),
   );
 
   for (const project of [...staleProjects].sort()) {

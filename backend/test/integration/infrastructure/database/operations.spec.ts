@@ -197,6 +197,16 @@ describe('the purge, from the command line — B-18', () => {
     }
   });
 
+  it.each(['migrate', 'seed'] as const)(
+    'runs %s as a command that can only succeed, answering what it did',
+    async (command) => {
+      const outcome = await COMMANDS[command](context());
+
+      expect(outcome.succeeded).toBe(true);
+      expect(outcome.result).toBeDefined();
+    },
+  );
+
   it('fails when a trail refused a batch, and says which', async () => {
     await plantOld('old-3');
     await pool.query(

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,9 +26,13 @@ import '../../../../../support/fakes/recording_writer.dart';
 /// for everybody, for ever — which is exactly what it did.
 final DateTime _issuedAt = DateTime.now().toUtc();
 
-AuthSession session({String userId = 'user-1', String accessToken = 'token'}) => AuthSession(
+AuthSession session({
+  String userId = 'user-1',
+  String accessToken = 'token',
+  String? refreshToken = 'refresh',
+}) => AuthSession(
   accessToken: accessToken,
-  refreshToken: 'refresh',
+  refreshToken: refreshToken,
   userId: userId,
   issuedAt: _issuedAt,
   expiresAt: _issuedAt.add(const Duration(hours: 1)),
@@ -181,5 +188,99 @@ void main() {
     ]);
 
     expect(repository.renewals, 1);
+  });
+
+  // S-72 — the renewal happens ahead of the expiry, on its own, and then again for the new token.
+  group('proactive renewal', () {
+    /// Four fifths of the hour the fixtures live for, and a margin: the delay is measured from the
+    /// wall clock, which moved a little between building the session and scheduling the timer.
+    const Duration dueIn = Duration(minutes: 48, seconds: 1);
+
+    test('renews at four fifths of the life, with nobody asking', () {
+      fakeAsync((FakeAsync async) {
+        repository.stored = session();
+        repository.produced = session(accessToken: 'fresh');
+        unawaited(build());
+        async.flushMicrotasks();
+
+        async.elapse(const Duration(minutes: 47));
+        expect(repository.renewals, 0);
+
+        async.elapse(dueIn - const Duration(minutes: 47));
+        async.flushMicrotasks();
+        expect(repository.renewals, 1);
+        expect(credentials.accessToken, 'fresh');
+      });
+    });
+
+    test('schedules the next one from the renewed token', () {
+      fakeAsync((FakeAsync async) {
+        repository.stored = session();
+        repository.produced = session(accessToken: 'fresh');
+        unawaited(build());
+        async.flushMicrotasks();
+
+        async.elapse(dueIn);
+        async.flushMicrotasks();
+        expect(async.pendingTimers, hasLength(1));
+      });
+    });
+
+    // S-77
+    test('a token already due when it arrives waits the minimum gap, instead of looping', () {
+      fakeAsync((FakeAsync async) {
+        final DateTime past = DateTime.now().toUtc().subtract(const Duration(hours: 2));
+        final AuthSession spent = AuthSession(
+          accessToken: 'spent',
+          refreshToken: 'refresh',
+          userId: 'user-1',
+          issuedAt: past,
+          expiresAt: past.add(const Duration(minutes: 5)),
+        );
+        repository
+          ..stored = spent
+          ..produced = spent;
+        unawaited(build());
+        async.flushMicrotasks();
+        // The restore renews a stored session that is already spent; counted from after it.
+        final int restored = repository.renewals;
+
+        async.elapse(minimumRenewalGap - const Duration(seconds: 1));
+        expect(repository.renewals, restored);
+
+        async.elapse(const Duration(seconds: 1));
+        async.flushMicrotasks();
+        expect(repository.renewals, restored + 1);
+
+        // The renewed token is just as due, and the next renewal still waits the whole gap.
+        async.elapse(minimumRenewalGap - const Duration(seconds: 1));
+        expect(repository.renewals, restored + 1);
+      });
+    });
+
+    test('does not schedule one for a session with nothing to renew with', () {
+      fakeAsync((FakeAsync async) {
+        repository.stored = session(refreshToken: null);
+        unawaited(build());
+        async.flushMicrotasks();
+
+        async.elapse(const Duration(hours: 2));
+        expect(repository.renewals, 0);
+      });
+    });
+
+    test('stops once nobody is signed in', () {
+      fakeAsync((FakeAsync async) {
+        repository.stored = session();
+        unawaited(build());
+        async.flushMicrotasks();
+
+        unawaited(controller().signOut());
+        async.flushMicrotasks();
+
+        async.elapse(const Duration(hours: 2));
+        expect(repository.renewals, 0);
+      });
+    });
   });
 }

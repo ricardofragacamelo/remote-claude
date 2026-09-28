@@ -48,9 +48,13 @@ import '../../support/fakes/fake_permission_repository.dart';
 
 final DateTime _issuedAt = DateTime.now().toUtc();
 
+/// Signed in with nothing to renew with: these are routes, not credentials. A session with a
+/// refresh token schedules its proactive renewal (plan 05, S-72), and that timer would outlive the
+/// widget tree — the container is disposed by `addTearDown`, which runs after the check for
+/// pending timers.
 AuthSession signedIn() => AuthSession(
   accessToken: 'token',
-  refreshToken: 'refresh',
+  refreshToken: null,
   userId: 'user-1',
   issuedAt: _issuedAt,
   expiresAt: _issuedAt.add(const Duration(hours: 1)),

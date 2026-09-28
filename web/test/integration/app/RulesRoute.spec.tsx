@@ -18,7 +18,12 @@ import { api } from '@/shared/api/api';
 import { render, translator } from '../../support/render';
 
 const t = translator('en');
-const session = { accessToken: 'a', userId: 'auth|42', expiresAt: Date.now() + 900_000 };
+const session = {
+  accessToken: 'a',
+  userId: 'auth|42',
+  expiresAt: Date.now() + 900_000,
+  idToken: null,
+};
 
 /** `/rules`, reached by its link alone — which is what giving it a route is for. */
 function mountRules() {

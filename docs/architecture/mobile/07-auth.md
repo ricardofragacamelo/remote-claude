@@ -94,7 +94,15 @@ regra de segurança em bug aparente.
 ## Renovação
 
 - **Proativa**, a ~80 % da vida do token. Renovar só depois do `401` faz a expiração virar
-  falha visível — e, no mobile, frequentemente em cima de uma permissão expirando.
+  falha visível — e, no mobile, frequentemente em cima de uma permissão expirando. O
+  `AuthController` agenda a renovação ao publicar cada sessão (e a cancela ao sair); sessão sem
+  refresh token não tem com o que renovar, e espera o login. Entre duas renovações proativas há
+  **no mínimo 30 s**: token que já chega vencido — relógio adiantado, vida mais curta que o limiar
+  — seria renovado na hora, de novo e de novo, contra o provedor ([plano 05 · S-77](../../plans/05-hardening-operations/scenarios.md)).
+- **O token renovado vai para o socket aberto** por `connection.reauthenticate`, sem reconectar: o
+  `sessionScope` vê o mesmo usuário com outro token e o entrega ao `WsClient`. Reconectar custaria
+  um replay a cada stream anexado; não entregar deixaria o servidor fechar com `4401` no fim da
+  graça ([plano 05 · S-72](../../plans/05-hardening-operations/scenarios.md)).
 - Renovação concorrente **deduplicada**: uma chamada, todos aguardam. Sem isso, o provedor
   invalida a família de tokens por reuso.
 - No retorno do background, **revalide antes** de reconectar o socket: o token provavelmente

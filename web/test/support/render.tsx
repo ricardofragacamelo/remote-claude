@@ -54,12 +54,12 @@ export function providers(
  * so a test without one would be a test of a button that cannot work — and it would say so only
  * in a warning nobody reads.
  *
- * @returns the render result and a way to read where the router ended up
+ * @returns the render result and a way to read where the router ended up, and with what search
  */
 export function renderRouted(
   ui: ReactElement,
   locale: Locale = 'en',
-): RenderResult & { path(): string } {
+): RenderResult & { path(): string; search(): Readonly<Record<string, unknown>> } {
   const root = createRootRoute({ component: Outlet });
   const index = createRoute({ getParentRoute: () => root, path: '/', component: () => ui });
   const session = createRoute({
@@ -69,15 +69,24 @@ export function renderRouted(
   });
 
   const rules = createRoute({ getParentRoute: () => root, path: '/rules', component: () => null });
+  const history = createRoute({
+    getParentRoute: () => root,
+    path: '/history',
+    component: () => null,
+  });
 
   const router = createRouter({
-    routeTree: root.addChildren([index, session, rules]),
+    routeTree: root.addChildren([index, session, rules, history]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
   });
 
   const result = render(<RouterProvider router={router} />, locale);
 
-  return { ...result, path: () => router.state.location.pathname };
+  return {
+    ...result,
+    path: () => router.state.location.pathname,
+    search: () => router.state.location.search,
+  };
 }
 
 /** The same catalogue the component resolves against, for an assertion to quote a key not a word. */

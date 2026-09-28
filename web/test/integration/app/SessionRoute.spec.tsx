@@ -21,7 +21,12 @@ import type { InstalledWebSocket } from '../../support/fake-websocket';
 
 const t = translator('en');
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
-const session = { accessToken: 'a', userId: 'auth|42', expiresAt: Date.now() + 900_000 };
+const session = {
+  accessToken: 'a',
+  userId: 'auth|42',
+  expiresAt: Date.now() + 900_000,
+  idToken: null,
+};
 
 /** The route, at the path the link carries — which is the whole point of putting it there. */
 function mountAt(path: string) {

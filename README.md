@@ -98,7 +98,7 @@ pnpm doctor --strict   # aviso também reprova; é o que o CI usa
 Diz o que falta **e** como resolver. É o que evita depurar erro de ambiente como se fosse erro
 de código.
 
-Node, pnpm e Docker **reprovam**. Flutter, `gitleaks` e porta ocupada só **avisam**: nenhum
+Node, pnpm e Docker **reprovam**. Flutter, `gitleaks`, `osv-scanner` e porta ocupada só **avisam**: nenhum
 deles impede o repositório de funcionar, e cada aviso diz o que afeta — porta ocupada, por
 exemplo, diz qual variável a move.
 
@@ -179,7 +179,8 @@ Isso não é entregar; é esconder.
 | `pnpm test:e2e` | sobe stack **efêmera em portas aleatórias**, roda Playwright, derruba tudo |
 | `pnpm test:e2e:mobile` | a mesma stack, com o `integration_test` do Flutter — **roda na imagem API 35**: usa o aparelho já conectado ou, sem nenhum, sobe a AVD `remote_claude_api35` sem janela e a desliga no fim; não é portão |
 | `pnpm test:e2e:mobile:push` | a mesma suíte do app com **push de verdade**: lê do `.env` só as três `RC_PUSH_*`, roda pelo `patrol` (`dart pub global activate patrol_cli 4.8.0`), responde o diálogo de notificação do SO, manda o app para o fundo e toca a notificação — sai da máquina, e não é portão |
-| `pnpm test:e2e:live` | a mesma stack contra o **Claude de verdade** — exige o Claude logado, custa dinheiro, e não é portão |
+| `pnpm test:e2e:live` | a mesma stack contra o **Claude de verdade** — exige o Claude logado (ou `CLAUDE_CODE_OAUTH_TOKEN`, de `claude setup-token`), custa dinheiro, e não é portão |
+| `pnpm test:e2e:live:report` | o `test:e2e:live`, com a falha registrada: falhou, **abre issue** `smoke-live` (ou comenta na aberta); passou, não faz nada. Sob demanda, nunca agendado — não há credencial do Claude no CI. Exige o `gh` autenticado; sai ≠ 0 só quando a falha não pôde ser registrada |
 | `pnpm test:coverage` | mínimo **90 % em statements, branches, functions e lines — por arquivo** |
 | `cd mobile && flutter test` | unit e widget do app |
 | `pnpm fixtures:record` | grava o stream do Agent SDK **real** como fixture — sob demanda, exige o Claude logado |
@@ -251,14 +252,17 @@ e `functions` não existem para medir nesta ponta. Está registrado no
 | `pnpm typecheck` | `tsc --noEmit` strict — sem `any`, sem `dynamic` |
 | `pnpm format` / `format:check` | Prettier e `dart format` |
 | `pnpm scan:secrets` | `gitleaks` sobre o repositório; `--staged` só sobre o que está no índice |
-| `pnpm scan:security` | segredo, dependência vulnerável, padrão inseguro **e as regras do produto** |
+| `pnpm scan:security` | segredo, dependência vulnerável (`pnpm audit` **e** `osv-scanner` sobre `pnpm-lock.yaml` e `mobile/pubspec.lock`, qualquer severidade), padrão inseguro **e as regras do produto** |
+| `node scripts/record-osv-fixtures.mjs` | regrava o que o `osv-scanner` responde para os lockfiles de `test/fixtures/osv/` — depois de trocar a imagem fixada, para a suíte dizer se a leitura ainda vale |
 | `pnpm i18n:check` | paridade de chaves `en` ↔ `pt-BR`, chave órfã, params que não sobrevivem à tradução |
 | `node scripts/mobile.mjs <tarefa>` | os mesmos portões só do Flutter: `generate`, `format`, `format:check`, `analyze`, `arch`, `test:unit`, `test:widget`, `test:native`, `coverage`, `test:e2e` |
 
 `pnpm scan:secrets` é o que o hook de pre-commit roda. Se o `gitleaks` não estiver instalado,
 ele cai na imagem oficial via Docker — que já é pré-requisito do projeto. Não existindo nenhum
 dos dois, **falha**: portão que se pula sozinho não é portão. O `scan:security` usa o mesmo
-padrão para o `semgrep`.
+padrão para o `semgrep` e para o `osv-scanner` — e o `osv-scanner` que não disse ter lido os
+dois lockfiles, ou saiu com um código que não é resposta, **reprova**: scanner que não conseguiu
+olhar não é scanner que não achou nada.
 
 As **regras do produto** do `scan:security` não existem em nenhum scanner genérico: `query()`
 sem `settingSources: ['project']`, `query()` sem o hook `PreToolUse`,

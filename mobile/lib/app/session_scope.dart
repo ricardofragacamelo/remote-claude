@@ -9,6 +9,7 @@
 /// - **signed in** — the socket opens with the new credential (S-89). Without it the app would sit
 ///   with a closed socket after a sign-in, or keep the previous user's open;
 /// - **refused** — a socket closed with 4401 has the device's status asked for again (S-56);
+/// - **renewed** — the same user with a new token hands it to the open socket (S-72);
 /// - **always** — the notification side of this installation is alive, whatever screen is shown.
 library;
 
@@ -47,34 +48,59 @@ void sessionScope(Ref ref) {
   // opened the app there would go nowhere (S-54, S-67, S-68).
   ref.listen<AsyncValue<PushReach>>(pushControllerProvider, (_, _) {});
 
-  ref.listen<AsyncValue<AuthSession?>>(authControllerProvider, (
-    AsyncValue<AuthSession?>? previous,
-    AsyncValue<AuthSession?> next,
-  ) {
-    // Undecided is not a change: a sign-in in flight still holds the previous value, and acting on
-    // it would close a socket that is about to be needed.
-    if (next.isLoading) {
-      return;
-    }
+  ref.listen<AsyncValue<AuthSession?>>(
+    authControllerProvider,
+    (AsyncValue<AuthSession?>? previous, AsyncValue<AuthSession?> next) =>
+        _authChanged(ref, previous, next, connect),
+  );
+}
 
-    final String? before = previous?.value?.userId;
-    final String? after = next.value?.userId;
+/// What a change of the signed-in session means for the socket and the user-scoped state.
+void _authChanged(
+  Ref ref,
+  AsyncValue<AuthSession?>? previous,
+  AsyncValue<AuthSession?> next,
+  void Function() connect,
+) {
+  // Undecided is not a change: a sign-in in flight still holds the previous value, and acting on
+  // it would close a socket that is about to be needed.
+  if (next.isLoading) {
+    return;
+  }
 
-    if (before == after) {
-      return;
-    }
+  final String? before = previous?.value?.userId;
+  final String? after = next.value?.userId;
 
-    if (after == null) {
-      _signedOut(ref);
-    } else {
-      // A different user, without a sign-out in between, is still a change of user: the old
-      // socket was authenticated as somebody else.
-      if (before != null) {
-        _signedOut(ref);
-      }
-      connect();
-    }
-  });
+  if (before == after) {
+    _renewed(ref, previous?.value, next.value);
+    return;
+  }
+
+  if (after == null) {
+    _signedOut(ref);
+    return;
+  }
+
+  // A different user, without a sign-out in between, is still a change of user: the old socket
+  // was authenticated as somebody else.
+  if (before != null) {
+    _signedOut(ref);
+  }
+  connect();
+}
+
+/// The same user with a new token: a renewal, handed to the open socket without dropping it (S-72).
+///
+/// The server gives an expired credential a grace on an open connection and closes it with `4401`
+/// when no renewal arrives; reconnecting instead would cost every attached stream a replay.
+void _renewed(Ref ref, AuthSession? previous, AuthSession? next) {
+  final String? token = next?.accessToken;
+
+  if (previous == null || token == null || token == previous.accessToken) {
+    return;
+  }
+
+  ref.read(wsClientProvider).reauthenticate(token);
 }
 
 void _signedOut(Ref ref) {

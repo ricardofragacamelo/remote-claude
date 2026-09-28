@@ -133,12 +133,44 @@ describe('the permission queue', () => {
     expect(store().pending[0]?.expiresAt).toBe('2026-09-19T12:05:00.000Z');
   });
 
+  it('moves only the deadline of the question the extension names', () => {
+    // Two cards on screen: the one extended gets its new deadline, and the other keeps the one it
+    // had — an extension that moved every countdown would hand time to a question nobody asked about.
+    store().apply(requested());
+    store().apply(requested({ requestId: 'req-2' }));
+    const untouched = store().pending[1];
+
+    store().apply(
+      event('permission.extended', {
+        requestId: 'req-1',
+        expiresAt: '2026-09-19T12:05:00.000Z',
+        remainingExtensions: 1,
+      }),
+    );
+
+    expect(store().pending[0]?.expiresAt).toBe('2026-09-19T12:05:00.000Z');
+    expect(store().pending[1]).toBe(untouched);
+    expect(store().pending[1]?.expiresAt).toBe(EXPIRES);
+  });
+
   it('refuses a second click while an answer is in flight — S-70', () => {
     store().apply(requested());
 
     store().markAnswering('req-1');
 
     expect(store().pending[0]?.isAnswering).toBe(true);
+  });
+
+  it('disables only the card being answered, leaving the others to be answered', () => {
+    store().apply(requested());
+    store().apply(requested({ requestId: 'req-2' }));
+    const untouched = store().pending[1];
+
+    store().markAnswering('req-1');
+
+    expect(store().pending[0]?.isAnswering).toBe(true);
+    expect(store().pending[1]).toBe(untouched);
+    expect(store().pending[1]?.isAnswering).toBe(false);
   });
 
   it('gives the card back when the answer never left', () => {

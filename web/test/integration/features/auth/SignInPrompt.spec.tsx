@@ -11,12 +11,12 @@ import { render, translator } from '../../../support/render';
 const t = translator('en');
 
 describe('the sign-in screen', () => {
-  let assign: ReturnType<typeof vi.fn>;
+  let assign: ReturnType<typeof vi.fn<(url: string) => void>>;
 
   beforeEach(() => {
     // The visitor is known to be anonymous, so the hook does not try to renew on mount.
     useAuthStore.setState({ status: 'anonymous', session: null });
-    assign = vi.fn();
+    assign = vi.fn<(url: string) => void>();
     vi.spyOn(navigation, 'assign').mockImplementation(assign);
   });
 

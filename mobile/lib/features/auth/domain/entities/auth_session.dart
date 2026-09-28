@@ -55,6 +55,20 @@ class AuthSession extends Equatable {
     return elapsedMs >= lifetimeMs * renewalThreshold;
   }
 
+  /// How long from [now] until renewal is due — [Duration.zero] when it already is.
+  ///
+  /// The same instant [shouldRenewAt] answers about, as a delay a timer can wait on: renewing
+  /// before the token runs out is what keeps an open socket from ever seeing it expire.
+  Duration renewalDelayAt(DateTime now) {
+    final int lifetimeMs = expiresAt.difference(issuedAt).inMilliseconds;
+    final DateTime due = issuedAt.add(
+      Duration(milliseconds: (lifetimeMs * renewalThreshold).round()),
+    );
+    final Duration delay = due.difference(now);
+
+    return delay.isNegative ? Duration.zero : delay;
+  }
+
   @override
   List<Object?> get props => <Object?>[accessToken, refreshToken, userId, issuedAt, expiresAt];
 }

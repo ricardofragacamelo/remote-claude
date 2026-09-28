@@ -6,6 +6,7 @@ import {
   TERMINATION_SIGNALS,
   cleanupOnce,
   groupAlive,
+  processAlive,
   isFinished,
   kill,
   onTermination,
@@ -204,6 +205,23 @@ describe('groupAlive', () => {
     spawned.push(proc);
 
     expect(groupAlive(/** @type {number} */ (proc.pid))).toBe(false);
+  });
+});
+
+describe('processAlive', () => {
+  it('sees this process, and no longer sees a child once it has exited', async () => {
+    const proc = await child('process.stdout.write("up"); setInterval(() => {}, 1000);');
+    const pid = /** @type {number} */ (proc.pid);
+
+    expect(processAlive(process.pid)).toBe(true);
+    expect(processAlive(pid)).toBe(true);
+    await kill(proc, { graceMs: 300 });
+    expect(processAlive(pid)).toBe(false);
+  });
+
+  it('counts a process of another user as alive: it is there, only not ours to signal', () => {
+    // pid 1 exists on every POSIX host and belongs to root.
+    expect(processAlive(1)).toBe(true);
   });
 });
 

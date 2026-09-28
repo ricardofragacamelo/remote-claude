@@ -76,7 +76,11 @@ renovado por refresh token em cookie que o JS não alcança.
 Toda requisição HTTP e todo handshake WS validam o access token, **na ordem**:
 
 1. Assinatura, contra a JWKS do `issuer` — chaves buscadas do `jwks_uri` e **cacheadas com
-   rotação** (o provedor gira chave sem avisar; recarregue ao ver `kid` desconhecido).
+   rotação** (o provedor gira chave sem avisar; recarregue ao ver `kid` desconhecido). A recarga
+   tem um intervalo mínimo de 60 s — senão uma rajada de tokens com `kid` inventado vira uma
+   rajada de requisições ao provedor — e é **compartilhada**: quem chega enquanto ela está em voo
+   espera por ela, em vez de ser recusado pelo intervalo que ela acabou de abrir
+   ([plano 05 · S-71](../../plans/05-hardening-operations/scenarios.md)).
 2. `iss` bate com o issuer configurado.
 3. `aud` contém o identificador desta API.
 4. `exp` e `nbf`, com tolerância de relógio de no máximo 60 s.
@@ -94,8 +98,15 @@ Introspecção síncrona colocaria o provedor no caminho crítico de cada chamad
 ### Discovery
 
 A configuração é descoberta em `${issuer}/.well-known/openid-configuration`, não escrita à
-mão. Endpoints são cacheados e revalidados periodicamente. Isso é o que torna a troca de
-provedor uma mudança de variável de ambiente.
+mão. Endpoints são cacheados e revalidados periodicamente (a cada hora). Isso é o que torna a troca
+de provedor uma mudança de variável de ambiente.
+
+- **Revalidação que falha mantém o último documento bom.** Endpoint de provedor não muda de uma
+  hora para outra; provedor fora do ar por um minuto é comum. Recusar toda requisição daquele minuto
+  porque não deu para **reler** um documento que já temos transformaria um soluço do provedor numa
+  queda daqui. A primeira leitura não tem o que manter, e falha.
+- A leitura em voo é **compartilhada**, como a da JWKS: a rajada de requisições do boot lê o
+  documento uma vez.
 
 ---
 
@@ -187,7 +198,11 @@ Dois pontos que só existem por causa do WS:
 
 1. **O token expira com o socket aberto.** A conexão **não** é derrubada na hora: o cliente
    renova e envia `connection.reauthenticate` com o token novo. Falhou em renovar até o fim
-   do período de graça (60 s) → fecha com `4401`.
+   do período de graça (60 s) → fecha com `4401`, e o log diz `TOKEN_EXPIRED`.
+   **Renovar é renovar a credencial do mesmo usuário**: um token de outro `sub` fecha com `4401`
+   — trocar de identidade num socket que já tem as sessões anexadas e as permissões pendentes do
+   primeiro não tem versão honesta. E `connection.reauthenticate` antes do handshake é recusado
+   como qualquer comando: seria um handshake sem nenhuma das checagens dele.
 2. **Revogação precisa alcançar socket aberto.** Revogar device ou usuário fecha as
    connections dele na hora. Sem isso, um device revogado continuaria aprovando permissão
    até o token expirar.
@@ -203,7 +218,20 @@ Dois pontos que só existem por causa do WS:
 | ID | só no login, para ler claims | não é enviado ao backend como credencial |
 
 - **Rotação de refresh token obrigatória**, com detecção de reuso: refresh usado duas vezes
-  significa credencial vazada → revoga a família inteira de tokens.
+  significa credencial vazada → revoga a família inteira de tokens. Quem rotaciona e revoga é o
+  provedor; no realm da instalação isso é `revokeRefreshToken: true` com `refreshTokenMaxReuse: 0`,
+  e um teste lê o arquivo do realm para que uma exportação nova do console não desligue isso em
+  silêncio.
+- **Renovação concorrente é uma chamada ao provedor — também entre abas.** Cada cliente deduplica
+  as próprias; mas toda aba do navegador manda o **mesmo** cookie, e só o backend vê todas elas. Por
+  isso `POST /auth/refresh` com o mesmo refresh token em voo responde a mesma rotação a todos. Sem
+  isso, o produto dispararia a detecção de reuso contra si mesmo. E a rotação continua respondendo o
+  token que substituiu por **10 s** depois de terminar: é a janela de latência em que uma aba já
+  saiu com o cookie antigo sem ter recebido o novo. Passados os 10 s, o token antigo é reuso de
+  verdade, e vai ao provedor como tal. O preço está dito na [D-12 do plano 05](../../plans/05-hardening-operations/decisions.md):
+  uma cópia roubada do token antigo, usada nesses 10 s, recebe a sessão já emitida.
+- Refresh recusado apaga o cookie: token morto que o navegador continuasse mandando só seria
+  recusado de novo a cada carga de página.
 - ID token **não** autentica chamada de API. Ele descreve o login; o access token autoriza.
   Confundir os dois é erro comum e perigoso.
 - Renovação é **proativa** (antes de expirar), não reativa depois de um `401` — senão toda

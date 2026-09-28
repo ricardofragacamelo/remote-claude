@@ -265,7 +265,9 @@ describe('the HTTP surface', () => {
     it('clears the cookie when the provider stops issuing a refresh token', async () => {
       await queueTokens(null);
 
-      const response = await http().post('/auth/refresh').set('Cookie', 'rc_refresh=r1');
+      // A token of its own: `r1` was rotated a moment ago, and inside the grace of that rotation it
+      // would be answered from it, without the provider being asked (D-12 of plan 05).
+      const response = await http().post('/auth/refresh').set('Cookie', 'rc_refresh=r-last');
 
       expect(setCookie(response.headers as Record<string, unknown>)).toContain('rc_refresh=;');
     });

@@ -49,7 +49,12 @@ describe('OidcIdentityProvider', () => {
   it('completes the PKCE exchange at the discovered token endpoint', async () => {
     const issued = await identity.exchangeAuthorizationCode(exchange);
 
-    expect(issued).toEqual({ accessToken: 'a', refreshToken: 'r', expiresInSeconds: 900 });
+    expect(issued).toEqual({
+      accessToken: 'a',
+      refreshToken: 'r',
+      expiresInSeconds: 900,
+      idToken: null,
+    });
     expect(post.mock.calls[0]?.[0]).toBe(TOKEN_ENDPOINT);
   });
 
@@ -68,6 +73,14 @@ describe('OidcIdentityProvider', () => {
     const form = postedForm(post.mock.calls[0] as [unknown, RequestInit?]);
     expect(form.get('grant_type')).toBe('refresh_token');
     expect(form.get('refresh_token')).toBe('r1');
+  });
+
+  it('hands the ID token on when the provider sent one, for the logout to name the session', async () => {
+    post.mockResolvedValue(
+      Response.json({ access_token: 'a', refresh_token: 'r', expires_in: 900, id_token: 'id' }),
+    );
+
+    await expect(identity.refresh('r1')).resolves.toMatchObject({ idToken: 'id' });
   });
 
   it('reports no refresh token when the provider issued none', async () => {

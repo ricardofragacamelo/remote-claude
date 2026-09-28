@@ -15,7 +15,12 @@ describe('EstablishSessionUseCase', () => {
   it('exchanges the code and reports who the tokens belong to', async () => {
     const provider: IdentityProvider = {
       exchangeAuthorizationCode: () =>
-        Promise.resolve({ accessToken: 'a', refreshToken: 'r', expiresInSeconds: 900 }),
+        Promise.resolve({
+          accessToken: 'a',
+          refreshToken: 'r',
+          expiresInSeconds: 900,
+          idToken: 'i',
+        }),
       refresh: () => Promise.reject(new Error('not used')),
     };
 
@@ -28,6 +33,7 @@ describe('EstablishSessionUseCase', () => {
       accessToken: 'a',
       refreshToken: 'r',
       expiresInSeconds: 900,
+      idToken: 'i',
       userId: expect.objectContaining({ value: 'auth|42' }),
     });
   });
@@ -36,7 +42,12 @@ describe('EstablishSessionUseCase', () => {
     const verify = vi.fn().mockResolvedValue({ subject: 'auth|42', expiresAt });
     const provider: IdentityProvider = {
       exchangeAuthorizationCode: () =>
-        Promise.resolve({ accessToken: 'minted', refreshToken: null, expiresInSeconds: 900 }),
+        Promise.resolve({
+          accessToken: 'minted',
+          refreshToken: null,
+          expiresInSeconds: 900,
+          idToken: null,
+        }),
       refresh: () => Promise.reject(new Error('not used')),
     };
 

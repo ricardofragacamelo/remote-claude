@@ -65,29 +65,38 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-23 | discovery do issuer configurado é lido e cacheado | eq | integração | — | B-12 | ⬜ |
-| S-24 | `kid` desconhecido recarrega a JWKS **uma** vez | est | integração | — | B-12 | ⬜ |
-| S-25 | `alg: none` e algoritmo fora da allowlist são recusados | err | unit | `UNAUTHENTICATED` | B-12 | ⬜ |
-| S-26 | `aud` ou `iss` errados → `401` sem dizer qual passo falhou | err | integração | `UNAUTHENTICATED` | B-12 | ⬜ |
-| S-27 | refresh reusado revoga a família inteira de tokens | err | integração | `UNAUTHENTICATED` | B-13 | ⬜ |
-| S-28 | N renovações concorrentes fazem **uma** chamada ao provedor | conc | integração | — | B-13 | ⬜ |
-| S-29 | token expira com o socket aberto → `reauthenticate` mantém a conexão | est | integração | — | B-14 | ⬜ |
-| S-30 | sem token válido até o fim da graça de 60 s → fecha `4401` | fron | integração | `TOKEN_EXPIRED` | B-14 | ⬜ |
-| S-31 | logout chama o `end_session_endpoint` e limpa o estado local | est | integração | — | B-15 | ⬜ |
-| S-32 | nome de provedor fora da configuração → `scan:security` falha | err | unit | — | B-12 | ⬜ |
-| S-61 | token sem `sub`, sem `email`, ou com `email_verified: false` → `401`, e o usuário não é provisionado | err | integração | `UNAUTHENTICATED` | B-12 | ⬜ |
+| S-23 | discovery do issuer configurado é lido e cacheado | eq | integração | — | B-12 | ✅ |
+| S-24 | `kid` desconhecido recarrega a JWKS **uma** vez | est | integração | — | B-12 | ✅ |
+| S-25 | `alg: none` e algoritmo fora da allowlist são recusados | err | unit | `UNAUTHENTICATED` | B-12 | ✅ |
+| S-26 | `aud` ou `iss` errados → `401` sem dizer qual passo falhou | err | integração | `UNAUTHENTICATED` | B-12 | ✅ |
+| S-27 | refresh reusado revoga a família inteira de tokens | err | integração | `UNAUTHENTICATED` | B-13 | ✅ |
+| S-28 | N renovações concorrentes fazem **uma** chamada ao provedor | conc | integração | — | B-13 | ✅ |
+| S-29 | token expira com o socket aberto → `reauthenticate` mantém a conexão | est | integração | — | B-14 | ✅ |
+| S-30 | sem token válido até o fim da graça de 60 s → fecha `4401` | fron | integração | `TOKEN_EXPIRED` | B-14 | ✅ |
+| S-31 | logout chama o `end_session_endpoint` e limpa o estado local | est | integração | — | B-15 | ✅ |
+| S-32 | nome de provedor fora da configuração → `scan:security` falha | err | unit | — | B-12 | ✅ |
+| S-61 | token sem `sub`, sem `email`, ou com `email_verified: false` → `401`, e o usuário não é provisionado | err | integração | `UNAUTHENTICATED` | B-12 | ✅ |
+| S-69 | `connection.reauthenticate` com o token de **outro** `sub` → fecha `4401`, e a connection não troca de identidade | err | integração | `UNAUTHENTICATED` | B-14 | ✅ |
+| S-70 | discovery revalidado depois do TTL; revalidação que falha mantém o último documento bom, em vez de derrubar toda requisição | est | unit | — | B-12 | ✅ |
+| S-71 | N requisições concorrentes com um `kid` ainda não carregado → **uma** busca da JWKS, e todas aceitas | conc | integração | — | B-12 | ✅ |
+| S-72 | o app renova antes de expirar e entrega o token novo ao socket aberto por `connection.reauthenticate`, sem reconectar | est | unit | — | B-14 | ✅ |
+| S-73 | logout no web sem `end_session_endpoint` no discovery, ou com o discovery fora → sai localmente mesmo assim, e loga | err | unit | — | B-15 | ✅ |
+| S-75 | o realm que a instalação usa rotaciona o refresh e não tolera reuso (`revokeRefreshToken`, `refreshTokenMaxReuse: 0`) | eq | unit | — | B-13 | ✅ |
+| S-76 | refresh token antigo reapresentado até 10 s depois da rotação → a mesma sessão rotacionada, sem chamada ao provedor; depois disso, é reuso | fron | unit + integração | — | B-13 | ✅ |
+| S-77 | token que já chega vencido (relógio do aparelho adiantado, vida mais curta que o limiar) não entra em laço de renovação: a próxima espera no mínimo 30 s | fron | unit | — | B-14 | ✅ |
 
 ## Portões — B-16, B-19, B-20, B-28
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-33 | dependência com vulnerabilidade conhecida reprova o portão | err | unit | — | B-16 | ⬜ |
-| S-34 | versão exatamente na borda do intervalo vulnerável é reprovada | fron | unit | — | B-16 | ⬜ |
-| S-35 | scanner indisponível **falha** o portão, em vez de passar em silêncio | err | unit | — | B-16 | ⬜ |
-| S-37 | `smoke-live` falhando no nightly abre issue | est | e2e | — | B-19 | ⬜ |
-| S-38 | nightly verde não abre issue nem fecha issue alheia | idem | e2e | — | B-19 | ⬜ |
-| S-39 | `doctor` detecta o pré-requisito novo e diz como resolver | err | e2e | — | B-20 | ⬜ |
-| S-40 | dois jobs de CI simultâneos não disputam porta nem projeto compose | conc | e2e | — | B-19 | ⬜ |
+| S-33 | dependência com vulnerabilidade conhecida reprova o portão | err | unit | — | B-16 | ✅ |
+| S-34 | versão exatamente na borda do intervalo vulnerável é reprovada | fron | unit | — | B-16 | ✅ |
+| S-35 | scanner indisponível **falha** o portão, em vez de passar em silêncio | err | unit | — | B-16 | ✅ |
+| S-74 | a varredura cobre os dois lockfiles — `pnpm-lock.yaml` e `mobile/pubspec.lock` — e diz qual pacote, versão e aviso | eq | unit | — | B-16 | ✅ |
+| S-37 | `smoke-live` falhando, pelo relatório, abre issue — ou comenta na que ele já abriu | est | e2e | — | B-19 | ✅ |
+| S-38 | execução verde não abre issue nem fecha issue alguma — nem a própria, nem alheia | idem | e2e | — | B-19 | ✅ |
+| S-39 | `doctor` detecta o pré-requisito novo e diz como resolver | err | e2e | — | B-20 | ✅ |
+| S-40 | duas execuções da stack e2e na mesma máquina não disputam porta nem projeto compose — o purge do início de uma não derruba a outra, e nenhum workflow fixa porta ou projeto | conc | unit + integração | — | B-19 | ✅ |
 | S-62 | função TS/JS com complexidade 10 passa; com 11 reprova pela regra `complexity` | fron | unit | — | B-28 | ✅ |
 | S-63 | a regra vale em backend, web, `packages`, `e2e`, testes e scripts — nenhum escopo escapa | eq | unit | — | B-28 | ✅ |
 | S-64 | função Dart com complexidade 10 passa; com 11 faz `mobile.mjs analyze` sair ≠ 0, nomeando a função | fron | integração | — | B-28 | ✅ |

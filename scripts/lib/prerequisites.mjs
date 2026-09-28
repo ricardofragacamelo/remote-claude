@@ -73,12 +73,39 @@ function checkTool(probes, tool) {
     return {
       name: tool.name,
       status: 'fail',
-      detail: `${output.split('\n')[0] ?? output} is below the required ${tool.minimum}`,
+      detail: `${firstLine(output)} is below the required ${tool.minimum}`,
       fix: tool.install,
     };
   }
 
-  return { name: tool.name, status: 'ok', detail: output.split('\n')[0] ?? output };
+  return { name: tool.name, status: 'ok', detail: firstLine(output) };
+}
+
+/** @param {string} text */
+function firstLine(text) {
+  return text.replace(/\n[\s\S]*$/, '');
+}
+
+/**
+ * A scanner the security gate runs, which has a pinned docker image to fall back on.
+ *
+ * Missing is a warning, not a failure: docker is already required, so the gate still runs — only
+ * slower. Under `--strict`, as CI runs it, the warning fails like anything else.
+ *
+ * @param {Probes} probes
+ * @param {{ name: string, command: string, args?: readonly string[], install: string, without: string }} scanner
+ * @returns {CheckResult}
+ */
+function checkScanner(probes, scanner) {
+  const found = checkTool(probes, scanner);
+
+  return found.status === 'ok'
+    ? found
+    : {
+        ...found,
+        status: 'warn',
+        detail: `not installed — ${scanner.without} falls back to docker, which is slower`,
+      };
 }
 
 /**
@@ -162,19 +189,22 @@ export async function inspectEnvironment(probes) {
     flutter.status === 'ok' ? flutter : { ...flutter, status: 'warn', detail: 'not available' },
   );
 
-  const gitleaks = checkTool(probes, {
-    name: 'gitleaks',
-    command: 'gitleaks',
-    install: 'install gitleaks, or let the hook fall back to the docker image',
-  });
   results.push(
-    gitleaks.status === 'ok'
-      ? gitleaks
-      : {
-          ...gitleaks,
-          status: 'warn',
-          detail: 'not installed — the secret scan falls back to docker, which is slower',
-        },
+    checkScanner(probes, {
+      name: 'gitleaks',
+      command: 'gitleaks',
+      install: 'install gitleaks, or let the hook fall back to the docker image',
+      without: 'the secret scan',
+    }),
+    // B-20 of plan 05: the dependency scan of gate 10 reads both lockfiles with it.
+    checkScanner(probes, {
+      name: 'osv-scanner',
+      command: 'osv-scanner',
+      args: ['--version'],
+      install:
+        'install osv-scanner (https://google.github.io/osv-scanner/installation/), or let pnpm scan:security fall back to the docker image',
+      without: 'the dependency scan',
+    }),
   );
 
   for (const { port, service, variable } of FIXED_PORTS) {

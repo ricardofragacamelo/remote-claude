@@ -25,6 +25,7 @@ import 'package:remote_claude/features/device/domain/repositories/device_reposit
 import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 
+import '../../support/builders/frames.dart';
 import '../../support/fakes/fake_auth_repository.dart';
 import '../../support/fakes/fake_device_repository.dart';
 import '../../support/fakes/fake_frame_socket.dart';
@@ -207,5 +208,36 @@ void main() {
     await container.read(authControllerProvider.notifier).signIn();
 
     expect(opened, hasLength(1));
+  });
+
+  // S-72 — a renewal of the same user's token reaches the open socket, and the socket stays.
+  test('a renewed token is handed to the open socket, without opening another', () async {
+    final ProviderContainer container = build(stored: signedInAs('user-1', 'token-1'));
+    await container.read(authControllerProvider.future);
+    opened.single.deliver(connectionReady());
+    await settle();
+
+    auth.produced = signedInAs('user-1', 'token-2');
+    await container.read(credentialsProvider).renew();
+    await settle();
+
+    expect(opened, hasLength(1));
+    final Map<String, Object?> sent = jsonDecode(opened.single.sent.last)! as Map<String, Object?>;
+    expect(sent['type'], 'connection.reauthenticate');
+    expect((sent['payload']! as Map<String, Object?>)['token'], 'token-2');
+  });
+
+  test('the same token published again sends nothing to the socket', () async {
+    final ProviderContainer container = build(stored: signedInAs('user-1', 'token-1'));
+    await container.read(authControllerProvider.future);
+    opened.single.deliver(connectionReady());
+    await settle();
+    final int before = opened.single.sent.length;
+
+    auth.produced = signedInAs('user-1', 'token-1');
+    await container.read(credentialsProvider).renew();
+    await settle();
+
+    expect(opened.single.sent, hasLength(before));
   });
 }

@@ -78,12 +78,13 @@ import { commandExists, run } from './lib/exec.mjs';
 import { bringUp, composeRunner, stillPending, STACK_TIMEOUT_MS } from './lib/local-stack.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { findFreePort } from './lib/ports.mjs';
-import { cleanupOnce, kill, onTermination, startProc } from './lib/proc.mjs';
+import { cleanupOnce, kill, onTermination, processAlive, startProc } from './lib/proc.mjs';
 import {
   BACKEND_LOG_FILE,
   E2E_PROJECT_PREFIX,
   e2eDotEnv,
   e2eProjectName,
+  projectOwner,
   ephemeralEnvironment,
   realPushEnvironment,
   serviceUrls,
@@ -375,6 +376,17 @@ function runLabel() {
 }
 
 /**
+ * Whether the run that owns a project is still going — another one, beside this.
+ *
+ * @param {string} project
+ * @returns {boolean}
+ */
+function ownerIsRunning(project) {
+  const owner = projectOwner(project);
+  return owner !== null && owner !== process.pid && processAlive(owner);
+}
+
+/**
  * Step 0, before a single container of this run exists: what earlier runs left behind.
  *
  * @param {import('./lib/compose.mjs').ComposeCli} cli
@@ -383,7 +395,8 @@ function purgeLeftovers(cli) {
   const purged = purgeStaleProjects(
     (command, args) => run(command, args, { cwd: repoRoot, timeoutMs: STACK_TIMEOUT_MS }),
     cli,
-    { prefix: E2E_PROJECT_PREFIX },
+    // A project whose owner is still running belongs to a run beside this one, not to the past.
+    { prefix: E2E_PROJECT_PREFIX, isLive: ownerIsRunning },
   );
 
   if (purged.projects.length + purged.volumes.length > 0) {

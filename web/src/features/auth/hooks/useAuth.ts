@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react';
 
 import { navigation } from '@/shared/lib/navigation';
 import { logger } from '@/shared/logging/logger';
-import { beginLogin, endSession, renewSession } from '../services/auth.service';
+import { beginLogin, endSession, providerLogoutUrl, renewSession } from '../services/auth.service';
 import { renewalDelay, useAuthStore } from '../store/auth.store';
 import type { AuthSession } from '../types/session';
 
@@ -75,9 +75,28 @@ export function useAuth(): Auth {
     navigation.assign(await beginLogin(returnTo));
   }, []);
 
+  /**
+   * Signs out, in the order that leaves nothing behind (docs/architecture/web/07-auth.md#logout):
+   * the cookie and the state here first — they are what protects this machine, and they go even
+   * when the backend cannot be reached — and only then the provider's session, which is a page the
+   * browser leaves for.
+   */
   const logout = useCallback(async () => {
-    await endSession();
+    const idToken = useAuthStore.getState().session?.idToken ?? null;
+
+    try {
+      await endSession();
+    } catch (error) {
+      logger.warn({ op: 'auth.logout', err: error }, 'the refresh cookie could not be dropped');
+    }
+
     signedOut();
+    logger.info({ op: 'auth.logout' }, 'signed out');
+
+    const url = await providerLogoutUrl(idToken);
+    if (url !== null) {
+      navigation.assign(url);
+    }
   }, [signedOut]);
 
   return {

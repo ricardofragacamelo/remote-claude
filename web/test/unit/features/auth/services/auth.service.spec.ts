@@ -6,6 +6,7 @@ import {
   completeLogin,
   discover,
   endSession,
+  providerLogoutUrl,
   redirectUri,
   renewSession,
   returnRoute,
@@ -288,6 +289,39 @@ describe('endSession', () => {
 
     expect(post).toHaveBeenCalledWith('/auth/logout', undefined, { renewable: false });
     post.mockRestore();
+  });
+});
+
+describe('providerLogoutUrl', () => {
+  const ok = (body: unknown): typeof fetch =>
+    vi.fn().mockResolvedValue(Response.json(body)) as unknown as typeof fetch;
+
+  it('names the session to end, and where to come back to', async () => {
+    const url = new URL(String(await providerLogoutUrl('id-1', ok(discovery))));
+
+    expect(`${url.origin}${url.pathname}`).toBe(discovery.end_session_endpoint);
+    expect(url.searchParams.get('id_token_hint')).toBe('id-1');
+    expect(url.searchParams.get('client_id')).toEqual(expect.any(String));
+    expect(url.searchParams.get('post_logout_redirect_uri')).toBe(`${window.location.origin}/`);
+  });
+
+  it('goes without the hint when there is no ID token to give', async () => {
+    const url = new URL(String(await providerLogoutUrl(null, ok(discovery))));
+
+    expect(url.searchParams.has('id_token_hint')).toBe(false);
+  });
+
+  // S-73
+  it('answers nowhere when the provider publishes no end_session_endpoint', async () => {
+    await expect(
+      providerLogoutUrl('id-1', ok({ authorization_endpoint: 'http://a/b' })),
+    ).resolves.toBeNull();
+  });
+
+  it('answers nowhere, rather than failing, when the provider cannot be read', async () => {
+    const down = vi.fn().mockRejectedValue(new TypeError('network')) as unknown as typeof fetch;
+
+    await expect(providerLogoutUrl('id-1', down)).resolves.toBeNull();
   });
 });
 

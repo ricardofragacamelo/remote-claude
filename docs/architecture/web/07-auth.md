@@ -35,7 +35,7 @@ logo depois.
 |---|---|---|
 | Access | **memória** (módulo, não store persistido) | morre com a aba; XSS não consegue persistir roubo |
 | Refresh | **cookie `httpOnly` + `Secure` + `SameSite=Strict`** | JS não alcança |
-| ID | memória, só para ler claims | não é credencial de API |
+| ID | memória, junto do access token | não é credencial de API; serve ao logout (`id_token_hint`) |
 
 **`localStorage` é proibido para token.** Qualquer script na página o lê — um XSS vira sessão
 permanente do atacante. Regra de lint bloqueia `localStorage.setItem` com chave de token.
@@ -85,14 +85,22 @@ Após o login, volte para a rota pretendida, guardada antes do redirect.
 
 ## Logout
 
-1. Limpa o token em memória e o cookie de refresh.
+O botão **Sair** fica na moldura de toda tela (`Screen`), só para quem está autenticado.
+
+1. Limpa o token em memória e o cookie de refresh (`POST /auth/logout`). O cookie não cair — backend
+   fora do ar — é `warn`, e o resto segue: o estado local é o que protege esta máquina.
 2. Fecha o WebSocket.
 3. Limpa o cache do TanStack Query — **obrigatório**: dado do usuário anterior não pode
    aparecer para o próximo.
-4. Redireciona para o `end_session_endpoint` do provedor, para encerrar a sessão lá também.
+4. Redireciona para o `end_session_endpoint` do provedor (do discovery), com `client_id`,
+   `post_logout_redirect_uri` e o ID token como `id_token_hint`, para encerrar a sessão lá também.
 
 Pular o passo 4 deixa o usuário "deslogado" no app e ainda logado no provedor — o próximo
 clique em entrar volta sem pedir credencial, o que parece falha de segurança.
+
+Provedor que não publica `end_session_endpoint`, ou discovery fora do ar: os passos 1 a 3 já
+aconteceram, o passo 4 vira um `warn` e a tela fica no login — não se pede ao usuário que tente de
+novo algo que não tem mais nada a limpar aqui ([plano 05 · S-73](../../plans/05-hardening-operations/scenarios.md)).
 
 ---
 

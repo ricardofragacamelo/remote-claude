@@ -184,10 +184,56 @@ export async function endSession(): Promise<void> {
   await api.post<void>('/auth/logout', undefined, NOT_RENEWABLE);
 }
 
+/**
+ * Where to send the browser to end the session **at the provider**, or `null` when there is nowhere.
+ *
+ * Without this step the user is signed out here and still signed in there, and the next "sign in"
+ * comes straight back without asking for anything — which looks exactly like a security failure
+ * (docs/architecture/web/07-auth.md#logout).
+ *
+ * `null`, never an error, when the provider publishes no `end_session_endpoint` or cannot be read
+ * at all (S-73): by then the local sign-out has already happened, and it is the one that protects
+ * this machine. The failure is logged; the user is not told to retry something that has nothing
+ * left to clear here.
+ *
+ * @param idToken names the session to end; without it, the provider asks the user to confirm
+ */
+export async function providerLogoutUrl(
+  idToken: string | null,
+  http: typeof fetch = fetch,
+): Promise<string | null> {
+  let endpoint: string | null;
+  try {
+    endpoint = (await discover(config.oidc.issuer, http)).endSessionEndpoint;
+  } catch (error) {
+    logger.warn(
+      { op: 'auth.logout', err: error },
+      'the provider could not be read to end the session',
+    );
+    return null;
+  }
+
+  if (endpoint === null) {
+    logger.warn({ op: 'auth.logout' }, 'the provider publishes no end_session_endpoint');
+    return null;
+  }
+
+  const query = new URLSearchParams({
+    client_id: config.oidc.clientId,
+    post_logout_redirect_uri: `${navigation.origin()}/`,
+  });
+  if (idToken !== null) {
+    query.set('id_token_hint', idToken);
+  }
+
+  return `${endpoint}?${query.toString()}`;
+}
+
 function toSession(dto: SessionDto): AuthSession {
   return {
     accessToken: dto.accessToken,
     userId: dto.userId,
     expiresAt: Date.now() + dto.expiresInSeconds * 1_000,
+    idToken: dto.idToken ?? null,
   };
 }

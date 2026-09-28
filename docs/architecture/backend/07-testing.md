@@ -114,7 +114,7 @@ Isso permite testar de forma determinística o que mais importa e é mais difíc
 permissão concedida, negada, expirada por timeout, **reentregue após reconexão**, e resolvida
 em corrida por dois clientes.
 
-A única suíte que fala com o Claude real é `e2e/smoke-live/` — nightly, fora do PR. É ela que
+A única suíte que fala com o Claude real é `e2e/smoke-live/` — sob demanda, fora do PR e sem agendamento (`pnpm test:e2e:live:report` abre issue quando ela falha). É ela que
 avisa quando o SDK muda o contrato.
 
 ---

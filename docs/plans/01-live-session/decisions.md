@@ -337,7 +337,7 @@ herdava a formulação antiga e foi corrigida junto — trilha de outro usuário
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-11 | **Um `allow` de projeto volta a dispensar o `canUseTool` em diretório já confiado?** | só um spike responde: marcar `hasTrustDialogAccepted` no CLI interativo e repetir a medição | B-42, e toda sessão real | 2026-09-18 · **sim, volta — medido.** Em diretório confiado o `canUseTool` **não é chamado**. A mitigação passa a ser obrigatória | ✅ |
-| D-12 | Onde o `smoke-live` roda, contra qual workspace descartável, e quem paga a execução | custo por execução e a máquina que terá o Claude logado no nightly | B-41 | 2026-09-15 · **sob demanda, sem nightly** — R-02 fica mitigado por disciplina | ✅ |
+| D-12 | Onde o `smoke-live` roda, contra qual workspace descartável, e quem paga a execução | custo por execução e a máquina que terá o Claude logado no nightly | B-41 | 2026-09-15 · **sob demanda, sem nightly** — R-02 fica mitigado por disciplina. **Mantida em 2026-09-27** pelo usuário ([plano 05 · D-11](../05-hardening-operations/decisions.md#d-11--o-smoke-live-continua-sob-demanda)): a falha passa a abrir issue, por `pnpm test:e2e:live:report` | ✅ |
 
 ### D-11 — o furo que invalidaria o produto
 

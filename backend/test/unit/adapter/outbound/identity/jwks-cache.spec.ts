@@ -66,6 +66,33 @@ describe('JwksCache', () => {
     expect(http.countOf(JWKS_URI)).toBe(1);
   });
 
+  it('makes one request for a burst of tokens naming a key not loaded yet (S-71)', async () => {
+    http.on(JWKS_URI, { body: provider.jwks() });
+    const cache = new JwksCache(clock, http.fetch);
+
+    const keys = await Promise.all(
+      Array.from({ length: 5 }, () => cache.keyFor(JWKS_URI, 'kid-1')),
+    );
+
+    expect(keys).toHaveLength(5);
+    expect(http.countOf(JWKS_URI)).toBe(1);
+  });
+
+  it('refuses every waiter of a reload that failed, and lets the next one after the cooldown retry', async () => {
+    http.on(JWKS_URI, { status: 500, body: {} }).on(JWKS_URI, { body: provider.jwks() });
+    const cache = new JwksCache(clock, http.fetch);
+
+    const burst = await Promise.allSettled([
+      cache.keyFor(JWKS_URI, 'kid-1'),
+      cache.keyFor(JWKS_URI, 'kid-1'),
+    ]);
+    clock.advance(60_001);
+
+    expect(burst.map((outcome) => outcome.status)).toEqual(['rejected', 'rejected']);
+    await expect(cache.keyFor(JWKS_URI, 'kid-1')).resolves.toBeDefined();
+    expect(http.countOf(JWKS_URI)).toBe(2);
+  });
+
   it('refuses when the key endpoint is unreachable', async () => {
     http.on(JWKS_URI, { status: 500, body: {} });
 

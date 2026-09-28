@@ -22,6 +22,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: false,
     setupFiles: ['test/support/setup.ts'],
+    // Room for the five seconds `waitFor` is given in the setup, and then some.
+    testTimeout: 15_000,
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'lcov'],

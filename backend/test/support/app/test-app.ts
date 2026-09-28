@@ -9,8 +9,12 @@ import { AppModule } from '../../../src/app.module';
 import { configureApp, listen } from '../../../src/bootstrap';
 import { AUDIENCE } from '../identity/fake-oidc';
 import type { IdentityServer } from '../identity/identity-server';
-import { LOGGER } from '@shared/logging/logger';
+import { LOGGER, type Logger } from '@shared/logging/logger';
 import { MACHINE_MEMORY } from '@infra/lifecycle/session-capacity';
+import { OrphanSweep } from '@infra/lifecycle/orphan-sweep';
+import type { ProcessTable } from '@infra/lifecycle/process-table';
+import { SCHEDULER } from '@application/shared';
+import type { Scheduler } from '@application/shared';
 import { RecordingLogger } from '../fakes/recording-logger';
 
 /** What a test needs handed back after the app is up. */
@@ -67,6 +71,21 @@ export interface TestAllowlist {
  * capacity itself replaces it (plan 05, D-01).
  */
 export const ROOMY_MACHINE = 64 * 1024 ** 3;
+
+/**
+ * The process table a suite's installation sweeps at boot: a machine with no process at all.
+ *
+ * The sweep is the product's and still runs on the way up — but over the **real** table it would
+ * reach the processes of every other suite running beside this one, and the scenario that plants an
+ * orphan to prove the sweep ends it (S-06) found its orphan already ended by somebody else's boot
+ * (plan 05, cycle 21). The real table has a suite of its own:
+ * test/integration/infrastructure/lifecycle/orphan-sweep.spec.ts.
+ */
+export const EMPTY_MACHINE: ProcessTable = {
+  list: () => Promise.resolve([]),
+  isAlive: () => true,
+  signal: () => undefined,
+};
 
 /** The subject the fake identity provider mints tokens for. */
 export const SUBJECT = 'auth|42';
@@ -161,7 +180,13 @@ export async function startTestApp(
       .overrideProvider(LOGGER)
       .useValue(log.logger)
       .overrideProvider(MACHINE_MEMORY)
-      .useValue(ROOMY_MACHINE),
+      .useValue(ROOMY_MACHINE)
+      .overrideProvider(OrphanSweep)
+      .useFactory({
+        inject: [SCHEDULER, LOGGER],
+        factory: (scheduler: Scheduler, logger: Logger) =>
+          new OrphanSweep(EMPTY_MACHINE, scheduler, logger),
+      }),
   ).compile();
 
   const app = moduleRef.createNestApplication();

@@ -37,7 +37,7 @@ describe('doctor.mjs', () => {
   it('checks every required tool, whatever this machine happens to have', () => {
     const result = runScript('doctor.mjs');
 
-    for (const tool of ['node', 'pnpm', 'docker', 'docker compose', 'port 5432']) {
+    for (const tool of ['node', 'pnpm', 'docker', 'docker compose', 'osv-scanner', 'port 5432']) {
       expect(result.stdout).toContain(tool);
     }
   });
@@ -56,6 +56,14 @@ describe('doctor.mjs', () => {
     expect(result.stdout).toContain('not found on PATH');
     expect(result.stdout).toContain('corepack');
     expect(result.stdout).toContain('prerequisite(s) missing');
+  });
+
+  // S-39 — the prerequisite plan 05 brought, found missing and explained by the command itself.
+  it('says how to get osv-scanner when it is not on PATH', () => {
+    const result = runScript('doctor.mjs', [], { PATH: path.join(repoRoot, 'no-such-directory') });
+
+    expect(result.stdout).toMatch(/osv-scanner — not installed/);
+    expect(result.stdout).toContain('google.github.io/osv-scanner');
   });
 
   it('turns warnings into a failure under --strict', () => {

@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SignInPrompt, useAuth } from '@/features/auth';
+import { SignInPrompt, SignOutButton, useAuth } from '@/features/auth';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 
 /** A way to another screen, beside the heading. */
@@ -33,19 +33,24 @@ export interface ScreenProps {
  * (docs/architecture/web/03-ui-system.md#responsividade).
  */
 export function Screen({ title, links = [], children }: ScreenProps): React.JSX.Element {
+  const { isAuthenticated } = useAuth();
+
   return (
     <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 p-4 md:p-8">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">{title}</h1>
-        {links.length > 0 && (
-          <nav className="flex flex-wrap gap-4">
-            {links.map((link) => (
-              <Link key={link.to} to={link.to} className="text-sm underline underline-offset-4">
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        )}
+        <div className="flex flex-wrap items-center gap-4">
+          {links.length > 0 && (
+            <nav className="flex flex-wrap gap-4">
+              {links.map((link) => (
+                <Link key={link.to} to={link.to} className="text-sm underline underline-offset-4">
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          )}
+          {isAuthenticated && <SignOutButton />}
+        </div>
       </div>
       {children}
     </main>

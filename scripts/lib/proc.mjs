@@ -169,6 +169,24 @@ export function groupAlive(pid) {
 }
 
 /**
+ * Whether a process exists — this user's or another's.
+ *
+ * `EPERM` is a process that is there and belongs to somebody else, which is alive for every purpose
+ * of the caller: the one question it answers is whether a run that owns a stack is still going.
+ *
+ * @param {number} pid
+ * @returns {boolean}
+ */
+export function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return /** @type {NodeJS.ErrnoException} */ (error).code === 'EPERM';
+  }
+}
+
+/**
  * Sends a signal to what is left of a group whose leader has already exited.
  *
  * `sendSignal` refuses a finished process, and rightly — its fallback to the bare pid could hit

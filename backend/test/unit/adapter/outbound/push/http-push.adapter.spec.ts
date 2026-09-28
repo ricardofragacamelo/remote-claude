@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -227,6 +227,24 @@ describe('when it does not work', () => {
   });
 
   // A provider that could throw would be a provider that can hold a permission open.
+  it('answers failed when the credentials cannot be read, and reads them again next time', async () => {
+    const missing = path.join(mkdtempSync(path.join(tmpdir(), 'rc-push-')), 'credentials.json');
+    const late = new HttpPushSender(
+      { push: { ...config.push, credentialsFile: missing } } as AppConfig,
+      tokens,
+      new PushTranslator(),
+      logger.logger,
+      provider.fetch,
+    );
+
+    expect((await late.send(question())).delivery).toBe('failed');
+    expect(provider.calls).toHaveLength(0);
+
+    writeFileSync(missing, readFileSync(config.push.credentialsFile, 'utf8'), 'utf8');
+
+    expect((await late.send(question())).delivery).toBe('delivered');
+  });
+
   it('answers failed when the provider cannot be reached at all', async () => {
     provider.throws = new Error('the network is not there');
 

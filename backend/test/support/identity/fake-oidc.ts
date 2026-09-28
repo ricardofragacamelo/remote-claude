@@ -15,7 +15,16 @@ export interface TokenOverrides {
   readonly expiresAt?: Date;
   readonly notBefore?: Date;
   readonly keyId?: string;
+
+  /** `null` leaves the claim out of the token altogether. */
+  readonly email?: string | null;
+
+  /** `null` leaves the claim out of the token altogether. */
+  readonly emailVerified?: boolean | null;
 }
+
+/** The address every fixture's user has, unless a test wants another. */
+export const EMAIL = 'dev@remote-claude.local';
 
 /**
  * An identity provider, in process.
@@ -87,7 +96,7 @@ export class FakeIdentityProvider {
 
   /** A properly signed token that carries no `sub`, which no claim-reading code may accept. */
   async subjectlessToken(): Promise<string> {
-    return new SignJWT({})
+    return new SignJWT({ email: EMAIL, email_verified: true })
       .setProtectedHeader({ alg: 'RS256', kid: this.keyId })
       .setIssuer(ISSUER)
       .setAudience(AUDIENCE)
@@ -106,12 +115,26 @@ export class FakeIdentityProvider {
       iss: ISSUER,
       aud: AUDIENCE,
       exp: Math.floor(Date.now() / 1_000) + 900,
+      email: EMAIL,
+      email_verified: true,
     })}.`;
+  }
+
+  /** A token signed with a symmetric algorithm, which no allowlist of ours contains. */
+  async symmetricToken(secret: Uint8Array = new Uint8Array(32).fill(7)): Promise<string> {
+    return new SignJWT(claims({}))
+      .setProtectedHeader({ alg: 'HS256', kid: this.keyId })
+      .setSubject('auth|42')
+      .setIssuer(ISSUER)
+      .setAudience(AUDIENCE)
+      .setIssuedAt()
+      .setExpirationTime('15m')
+      .sign(secret);
   }
 
   private async sign(key: CryptoKey, overrides: TokenOverrides): Promise<string> {
     const now = Math.floor(Date.now() / 1_000);
-    const signer = new SignJWT({})
+    const signer = new SignJWT(claims(overrides))
       .setProtectedHeader({ alg: 'RS256', kid: overrides.keyId ?? this.keyId })
       .setSubject(overrides.subject ?? 'auth|42')
       .setIssuer(overrides.issuer ?? ISSUER)
@@ -129,4 +152,15 @@ export class FakeIdentityProvider {
 
     return signer.sign(key);
   }
+}
+
+/** The identity claims the backend requires ([D-06](../../../../docs/plans/05-hardening-operations/decisions.md)). */
+function claims(overrides: TokenOverrides): Record<string, unknown> {
+  const email = overrides.email === undefined ? EMAIL : overrides.email;
+  const verified = overrides.emailVerified === undefined ? true : overrides.emailVerified;
+
+  return {
+    ...(email === null ? {} : { email }),
+    ...(verified === null ? {} : { email_verified: verified }),
+  };
 }

@@ -47,7 +47,10 @@ export function Providers({ children }: { readonly children: ReactNode }): React
     setAccessToken(session?.accessToken ?? null);
 
     if (session === null) {
+      // The previous user's data must not be on screen for the next one: the socket goes, and so
+      // does every cached answer (docs/architecture/web/07-auth.md#logout).
       wsClient.close();
+      queryClient.clear();
       return;
     }
 

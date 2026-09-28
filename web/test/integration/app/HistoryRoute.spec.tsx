@@ -25,7 +25,12 @@ import type { LiveSocket } from '../../support/live-socket';
 import { render, translator } from '../../support/render';
 
 const t = translator('en');
-const session = { accessToken: 'a', userId: 'auth|42', expiresAt: Date.now() + 900_000 };
+const session = {
+  accessToken: 'a',
+  userId: 'auth|42',
+  expiresAt: Date.now() + 900_000,
+  idToken: null,
+};
 const LIVE = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
 
 /** The history, the conversation and the session, reached by their links alone. */

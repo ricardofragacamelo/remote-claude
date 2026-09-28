@@ -6,6 +6,7 @@ const session = {
   accessToken: 'token-1',
   userId: 'auth|42',
   expiresAt: Date.now() + 900_000,
+  idToken: null,
 };
 
 describe('the auth store', () => {

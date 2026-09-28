@@ -364,7 +364,7 @@ emitir o tipo cru.
 | variante desconhecida | **descarta e loga `warn`** — nunca derruba a sessão |
 
 A última linha é a regra de sobrevivência: variante nova em atualização do SDK vira log, não
-crash. O `smoke-live` do [nightly](../shared/06-testing-strategy.md) é quem avisa que
+crash. O `smoke-live`, [sob demanda](../shared/06-testing-strategy.md), é quem avisa que
 apareceu algo novo para mapear.
 
 ---

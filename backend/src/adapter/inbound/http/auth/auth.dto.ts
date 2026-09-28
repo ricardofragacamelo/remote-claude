@@ -19,4 +19,7 @@ export interface SessionDto {
   readonly accessToken: string;
   readonly expiresInSeconds: number;
   readonly userId: string;
+
+  /** For the browser to end the session at the provider on logout. Never a credential here. */
+  readonly idToken: string | null;
 }

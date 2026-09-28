@@ -68,15 +68,6 @@ jobs:
       - name: gates 1-11
         run: pnpm verify:full
 
-  # Against the real Claude Code on a real machine. Never on a pull request: it is slow, it is
-  # not hermetic, and a flake there would teach everybody to ignore a red build.
-  smoke-live:
-    name: smoke-live
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-      - name: not yet
-        run: |
-          echo "smoke-live arrives with the Agent SDK; the bootstrap does not talk to Claude."
-          echo "See docs/plans/00-bootstrap/README.md#escopo."
+  # The suite against the real Claude is not here, and not on a schedule either: there is no Claude
+  # credential in CI. It runs on demand, as `pnpm test:e2e:live:report`, which files a failure as
+  # an issue (D-12 of plan 01, kept by D-11 of plan 05).
