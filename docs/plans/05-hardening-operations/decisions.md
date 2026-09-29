@@ -114,7 +114,22 @@ enquanto não houver runner, a ausência fica **declarada**, não fingida de ver
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| — | *(nenhuma decisão em aberto — a fase depende só do que já está decidido)* | — | — | — | — |
+| D-13 | Onde os limites apertados vivem no e2e: na stack principal, numa segunda execução inteira, ou numa segunda dupla backend + web da mesma execução | os números que os cenários de limite pedem (teto de 2, TTL de segundos, 20 frames/s) são o oposto dos que as outras specs pedem | B-21…B-23 | 2026-09-28 · **segunda dupla backend + web na mesma execução**, sobre o mesmo Postgres e o mesmo Keycloak (`LIMITS_STACK`), decidida na execução. Custa um boot de backend e um build de web (~2 s); a stack principal não muda. Descartadas: apertar a principal (TTL curto encerraria sessões de specs que param; 20/s faria três cenários levarem um minuto cada) e uma segunda execução (mais um Postgres e um Keycloak por nada) | ✅ |
+| D-14 | O que a tela faz com o `Retry-After` de uma recusa por teto (`SESSION_LIMIT_REACHED`, 30 s) | a vaga pode liberar a qualquer momento — alguém encerra uma sessão — e ninguém anuncia isso a quem foi recusado | B-22 | 2026-09-28 · **mostra a recusa, traduzida, e libera o botão; não tenta de novo sozinha e não trava o botão pelos 30 s**, decidida na execução. Tentar sozinha é martelar; travar 30 s puniria justamente quem acabou de encerrar uma sessão para abrir outra (S-78). O `Retry-After` que o cliente **respeita** é o do ritmo (`4429`), que o servidor impõe | ✅ |
+
+### D-13 — uma stack para os limites
+
+Os cenários da F4 são sobre os limites **eles mesmos**, e precisam de números que o resto da suíte
+não suporta. Na mesma execução, a segunda dupla herda tudo da efêmera — portas próprias, pastas
+próprias, mesma base e mesmo provedor — e só aperta os cinco limites. A execução `--live` não a
+sobe: a suíte dela é sobre o Claude real.
+
+### D-14 — o `Retry-After` do teto não trava a tela
+
+Há dois `Retry-After` no produto, e eles não pedem a mesma coisa. O do **ritmo** (`RATE_LIMITED`,
+`4429`) é o servidor dizendo "pare": o cliente espera, e a tela diz que está esperando (S-43). O do
+**teto** é uma estimativa de quando uma vaga pode abrir: a tela diz o motivo e deixa a próxima
+tentativa com a pessoa, que é quem sabe se acabou de encerrar uma sessão.
 
 ---
 

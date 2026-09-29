@@ -3,15 +3,32 @@ import { of, throwError } from 'rxjs';
 import type { CallHandler, ExecutionContext } from '@nestjs/common';
 
 import { IoLoggingInterceptor } from '@shared/logging/io-logging.interceptor';
+import { OmitFromLog } from '@shared/logging/omit-from-log.decorator';
 import { RecordingLogger } from '../../../support/fakes/recording-logger';
 
+/** A route method, optionally marked with the fields its log leaves out. */
+function route(...omitted: readonly string[]): () => void {
+  const method = (): void => undefined;
+
+  if (omitted.length > 0) {
+    OmitFromLog(...omitted)({}, 'method', { value: method });
+  }
+
+  return method;
+}
+
 /** An execution context of a given transport, carrying a request and a response. */
-function contextOf(type: 'http' | 'ws', body: unknown = { nonce: 'n' }): ExecutionContext {
+function contextOf(
+  type: 'http' | 'ws',
+  body: unknown = { nonce: 'n' },
+  handlerMethod: () => void = route(),
+): ExecutionContext {
   const request = { method: 'POST', originalUrl: '/auth/session', body };
   const response = { statusCode: 201 };
 
   return {
     getType: () => type,
+    getHandler: () => handlerMethod,
     switchToHttp: () => ({ getRequest: () => request, getResponse: () => response }),
   } as unknown as ExecutionContext;
 }
@@ -66,6 +83,29 @@ describe('IoLoggingInterceptor', () => {
     );
 
     expect(JSON.stringify(log.lines)).not.toContain('super-secret');
+  });
+
+  it('leaves out the fields the route marked, whatever they are called — plan 06, S-178', async () => {
+    const log = new RecordingLogger();
+    const body = {
+      messageKey: 'notification.folder.notAllowed',
+      params: { folder: '/srv/secret' },
+    };
+
+    await new Promise((resolve) =>
+      new IoLoggingInterceptor(log.logger)
+        .intercept(
+          contextOf('http', body, route('params')),
+          handlerOf(() => of('done')),
+        )
+        .subscribe(resolve),
+    );
+
+    expect(JSON.stringify(log.lines)).not.toContain('/srv/secret');
+    expect(log.withOp('http.request')[0]?.['payload']).toEqual({
+      messageKey: 'notification.folder.notAllowed',
+      params: '[REDACTED]',
+    });
   });
 
   it('says so when the body was too big to write whole', async () => {

@@ -48,10 +48,10 @@ function aClient(ready = true) {
  * about when it should be called. That is the hook's decision.
  */
 describe('the session commands', () => {
-  it('opens a session on a workspace', () => {
+  it('opens a session on a workspace, and answers the id its refusal would name — S-80', () => {
     const { client, sent } = aClient();
 
-    expect(startSession(client, '/srv/projects/app')).toBe(true);
+    expect(startSession(client, '/srv/projects/app')).toBe('cmd-1');
     expect(sent).toEqual([
       { type: 'session.start', payload: { workspacePath: '/srv/projects/app' } },
     ]);

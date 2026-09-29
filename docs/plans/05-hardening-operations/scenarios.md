@@ -109,11 +109,20 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-41 | abrir sessões até o teto → erro traduzido, com o motivo | fron | e2e | `SESSION_LIMIT_REACHED` | B-22 | ⬜ |
-| S-42 | sessão ociosa expira e a UI mostra que ela foi encerrada | est | e2e | — | B-22 | ⬜ |
-| S-43 | cliente que martela recebe `Retry-After` e **espera** | err | e2e | `RATE_LIMITED` | B-22 | ⬜ |
-| S-44 | token expira no meio do turno e o usuário não percebe nada | est | e2e | — | B-23 | ⬜ |
-| S-45 | dois clientes disputando a última vaga pela porta do usuário | conc | e2e | `SESSION_LIMIT_REACHED` | B-21 | ⬜ |
+| S-41 | abrir sessões até o teto → a tela diz, traduzido, que a máquina está no teto e quantas aceita; não fica em "Iniciando…" e não tenta de novo sozinha | fron | e2e | `SESSION_LIMIT_REACHED` | B-22 | ✅ |
+| S-42 | sessão ociosa além do TTL: a tela mostra que ela foi encerrada por ociosidade, desliga o que só serve a sessão viva, e aponta o histórico | est | e2e | — | B-22 | ✅ |
+| S-43 | cliente que martela recebe `RATE_LIMITED`, é fechado com `4429`, a tela diz por quê, e só reconecta depois do `Retry-After` — e volta a acompanhar a sessão | err | e2e | `RATE_LIMITED` | B-22 | ✅ |
+| S-44 | token expira no meio do turno: renova pelo **mesmo** socket (nenhum socket novo, `connection.reauthenticate` aceito), o turno termina, e nada aparece na tela | est | e2e | — | B-23 | ✅ |
+| S-45 | dois clientes disputando a última vaga pela porta do usuário: exatamente um abre, o outro recebe a recusa traduzida — nenhum fica esperando | conc | e2e | `SESSION_LIMIT_REACHED` | B-21 | ✅ |
+| S-78 | no teto, encerrar uma sessão libera a vaga: a próxima tentativa pela tela abre, e a recusa anterior some | est | e2e | — | B-22 | ✅ |
+| S-79 | a renovação é recusada no meio do turno (sessão revogada no provedor) → a tela volta a pedir login, traduzido, em vez de travar | err | e2e | `UNAUTHENTICATED` | B-23 | ✅ |
+| S-80 | `session.start` recusado: o iniciador sai de "Iniciando…" e mostra a recusa **daquele** comando — a recusa de outro comando no mesmo socket não conta, e a próxima tentativa limpa a anterior | err | unit | `SESSION_LIMIT_REACHED` | B-22 | ✅ |
+| S-81 | fechamento `4429` põe a conexão em "segurando" até o `Retry-After`, com o motivo traduzido; qualquer outro código de fechamento segue em "reconectando" | eq | unit | — | B-22 | ✅ |
+| S-82 | a stack de limites herda tudo da efêmera e só aperta teto, TTL, ritmo e prazo de permissão; tem portas, pastas e endereços próprios, e o `.env` do e2e os anuncia | eq | unit | — | B-21 | ✅ |
+| S-83 | a execução sobe a stack de limites ao lado da principal, e a derruba junto — o bundle dela fora do repositório, e apagado; a execução `--live` não a sobe | est | unit · integração | — | B-21 | ✅ |
+| S-84 | a sessão aberta pela tela inicial — ou retomada pelo histórico — chega à tela dela como **deste** navegador: pode encerrá-la, e ela não é marcada como parcial (achado da F4: a posse era aprendida por uma tela que ainda não existia) | est | unit · integração · e2e | — | B-22 | ✅ |
+| S-85 | a primeira requisição de uma tela que monta junto com o login já leva o token — sem `401` nem renovação gasta à toa (achado da F4) | est | integração | — | B-23 | ✅ |
+| S-86 | no app, a renovação recusada deixa o estado **sem sessão** (o erro por cima de ninguém), e o roteador leva ao login — antes, o erro guardava a sessão morta como valor e a tela ficava onde estava (achado da F4 pelo S-79) | err | unit · e2e | `UNAUTHENTICATED` | B-23 | ✅ |
 
 ---
 

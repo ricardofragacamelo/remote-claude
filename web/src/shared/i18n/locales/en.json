@@ -12,6 +12,11 @@
       "payloadTooLarge": "That is larger than the server accepts.",
       "rateLimited": "Too many requests. Try again in a moment.",
       "traceLabel": "Trace {{traceId}}"
+    },
+    "notFound": {
+      "title": "Nothing lives at this address",
+      "description": "The link may be old, or it points to a screen this installation does not have.",
+      "home": "Go to the start"
     }
   },
   "auth": {
@@ -45,6 +50,7 @@
       "connecting": "Connecting…",
       "ready": "Connected",
       "reconnecting": "Reconnecting…",
+      "throttled": "Sent too fast — waiting as long as the server asked",
       "closed": "Disconnected"
     }
   },
@@ -60,7 +66,8 @@
       "resumeTimeout": "The backend did not answer the resume. Check the connection and try again.",
       "locked": "A turn is running, or another undo of this session is in progress. Wait for it to finish and try again.",
       "rewindTargetUnknown": "That is not a point this session can go back to. Reload the list and choose again.",
-      "rewindIncomplete": "The undo stopped short: {{failed}} file(s) could not be put back, and each of them was left exactly as it was."
+      "rewindIncomplete": "The undo stopped short: {{failed}} file(s) could not be put back, and each of them was left exactly as it was.",
+      "invalidTransition": "The session could not change state. This is a fault on our side; try again."
     },
     "ping": {
       "title": "Round trip",
@@ -137,7 +144,10 @@
       "notAllowed": "This installation does not allow {{path}}.",
       "notFound": "{{path}} does not exist.",
       "notADirectory": "{{path}} is a file, not a folder.",
-      "forbidden": "That folder is not yours to open."
+      "forbidden": "That folder is not yours to open.",
+      "directoryUnreadable": "{{path}} exists, but this machine does not let remote-claude read it. Check the folder's permissions.",
+      "openFoldersLimitReached": "You already have {{limit}} folders open, which is as many as a window holds. Close one first — closing a folder does not end its Claude sessions.",
+      "openFoldersOrderConflict": "Your folder tabs changed in another window. Showing them as they are now — try again."
     },
     "selector": {
       "title": "Workspace",
@@ -149,6 +159,24 @@
       "emptyDescription": "The allowlist of this machine does not mention your account yet. Whoever installed remote-claude can add a folder to it.",
       "history": "History",
       "historyOf": "Conversations in {{label}}"
+    }
+  },
+  "notification": {
+    "error": {
+      "rejected": "That notification could not be kept."
+    },
+    "command": {
+      "failed": "“{{command}}” did not complete ({{code}})."
+    },
+    "tabs": {
+      "saveFailed": "Your folder tabs could not be saved on this machine ({{code}}). They stay open in this window."
+    },
+    "connection": {
+      "lost": "The connection to this machine was lost. Reconnecting…",
+      "restored": "Connected to this machine again."
+    },
+    "folder": {
+      "notAllowed": "{{folder}} is no longer allowed on this machine. Its tab stays, but nothing opens in it."
     }
   },
   "permission": {

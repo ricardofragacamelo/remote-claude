@@ -224,6 +224,31 @@ describe('WsClient', () => {
 
         expect(scheduler.delays).toEqual([BACKOFF_MIN_MS]);
       });
+
+      it('S-81 — holds the connection as throttled until the wait is over, then reconnects', () => {
+        const statuses: string[] = [];
+        client.onStatus((status) => statuses.push(status));
+        const socket = connectAndReady();
+        socket.receive(rateLimited(12));
+
+        socket.close(CLOSE_RATE_LIMITED);
+        expect(statuses.at(-1)).toBe('throttled');
+
+        scheduler.fire();
+        expect(statuses.at(-1)).toBe('connecting');
+      });
+
+      it('S-81 — any other close is an ordinary reconnection, even after a refusal', () => {
+        const statuses: string[] = [];
+        client.onStatus((status) => statuses.push(status));
+        const socket = connectAndReady();
+        socket.receive(rateLimited(12));
+
+        socket.close(4408);
+
+        expect(statuses.at(-1)).toBe('reconnecting');
+        expect(statuses).not.toContain('throttled');
+      });
     });
 
     it('starts the backoff over once it is ready again', () => {

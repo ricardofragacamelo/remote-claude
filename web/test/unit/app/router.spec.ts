@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import {
+  createMemoryHistory,
+  createRouter,
+  defaultParseSearch,
+  defaultStringifySearch,
+} from '@tanstack/react-router';
 
 import { auditLocation, readAuditSearch } from '@/app/AuditRoute';
 import { historyLocation, readHistorySearch } from '@/app/HistoryRoute';
-import { router } from '@/app/router';
+import { routeTree, router } from '@/app/router';
+import { readWorkbenchSearch, workbenchLocation } from '@/app/workbench-location';
 import { CALLBACK_PATH } from '@/features/auth';
 
 describe('the routes', () => {
@@ -101,5 +108,103 @@ describe('the address a sign-in comes back to, from the trail', () => {
     expect(auditLocation({ sessionId: 'S1', decision: 'allowed', toolName: 'Write' })).toBe(
       '/audit?sessionId=S1&decision=allowed&toolName=Write',
     );
+  });
+});
+
+/** The real table of routes, landed on `href` — what pasting the link in the browser does. */
+async function land(href: string) {
+  const landed = createRouter({
+    routeTree,
+    history: createMemoryHistory({ initialEntries: [href] }),
+  });
+  await landed.load();
+
+  return {
+    routes: landed.state.matches.map((match) => match.routeId),
+    params: landed.state.matches.at(-1)?.params,
+    search: landed.state.location.search,
+  };
+}
+
+describe('the routes that stay, reached by their links — plan 06, S-06', () => {
+  it('lands the filtered trail with every filter it was given', async () => {
+    const landed = await land('/audit?decision=allowed&toolName=Bash&sessionId=S1');
+
+    expect(landed.routes).toEqual(['__root__', '/audit']);
+    expect(landed.search).toEqual({ decision: 'allowed', toolName: 'Bash', sessionId: 'S1' });
+  });
+
+  it('lands the rules, and one rule by its id', async () => {
+    expect((await land('/rules')).routes).toEqual(['__root__', '/rules']);
+
+    const rule = await land('/rules/01J0RULE');
+
+    expect(rule.routes).toEqual(['__root__', '/rules/$ruleId']);
+    expect(rule.params).toEqual({ ruleId: '01J0RULE' });
+  });
+
+  it('lands the sign-in callback with what the provider sent back', async () => {
+    const landed = await land(`${CALLBACK_PATH}?code=c1&state=s1`);
+
+    expect(landed.routes).toEqual(['__root__', CALLBACK_PATH]);
+    expect(landed.search).toEqual({ code: 'c1', state: 's1' });
+  });
+});
+
+describe('the addresses no plan has registered yet — plan 06, S-07', () => {
+  it.each(['/claude', '/claude/settings', '/usage', '/usage/2026-09', '/no/such/screen'])(
+    'answers %s with the root alone, which renders the not-found',
+    async (href) => {
+      expect((await land(href)).routes).toEqual(['__root__']);
+    },
+  );
+
+  it('reserves /claude and /usage by leaving them out of the table, not by an empty route', () => {
+    const reserved = Object.keys(router.routesById).filter(
+      (id) => id.startsWith('/claude') || id.startsWith('/usage'),
+    );
+
+    expect(reserved).toEqual([]);
+  });
+});
+
+describe('the folder of the workbench, read from the URL — plan 06, S-04', () => {
+  const awkward = [
+    '/home/u/my projects/remote-claude',
+    '/home/u/ação/documentos',
+    '/srv/#1',
+    '/srv/100%',
+    '/srv/what?',
+    '/srv/a&b=c',
+    '/srv/ends with a space ',
+    '/srv/+plus+',
+  ];
+
+  it.each(awkward)('takes %j through the router and back without losing a character', (folder) => {
+    expect(readWorkbenchSearch(defaultParseSearch(defaultStringifySearch({ folder })))).toEqual({
+      folder,
+    });
+  });
+
+  it.each(awkward)('writes %j into its own address the way the router reads it back', (folder) => {
+    const address = workbenchLocation({ folder });
+
+    expect(address.startsWith('/workbench?folder=')).toBe(true);
+    expect(readWorkbenchSearch(defaultParseSearch(address.slice('/workbench'.length)))).toEqual({
+      folder,
+    });
+  });
+
+  it('is the workbench alone when no folder is named', () => {
+    expect(workbenchLocation({})).toBe('/workbench');
+  });
+
+  it.each([
+    ['absent', {}],
+    ['empty', { folder: '' }],
+    ['a number the router parsed', defaultParseSearch('?folder=123')],
+    ['a list', { folder: ['/srv/a'] }],
+  ])('names no folder when it is %s', (_case, search) => {
+    expect(readWorkbenchSearch(search)).toEqual({});
   });
 });

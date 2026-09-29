@@ -1,0 +1,14 @@
+{
+  "id": "05·S-79",
+  "title": "the renewal is refused in the middle of a turn, and the screen asks to sign in again instead of freezing",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "tool-turn",
+    "toolName": "Write",
+    "tokenLifetimeSeconds": 12,
+    "signIn": "Sign in to continue"
+  }
+}

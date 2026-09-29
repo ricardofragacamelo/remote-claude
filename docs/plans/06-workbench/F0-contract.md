@@ -29,7 +29,7 @@ allowlist —, não descoberta no code review da F1.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — ADR-014: o web vira um workbench, construído em React 🔲
+### B-01 — ADR-014: o web vira um workbench, construído em React ✅
 
 A ADR-014 foi **aberta em 2026-09-26** em [00-decisions](../../architecture/shared/00-decisions.md#adr-014--o-web-vira-um-workbench-construído-em-react),
 quando o usuário decidiu a D-01 e a D-03. Esta task a **completa** — com as decisões de apresentação
@@ -59,7 +59,7 @@ que ainda faltam — e confere que ela diz:
 A ADR cita as decisões D-01, D-08 e D-10 com o resultado de cada uma; se alguma ainda estiver
 aberta quando a B-01 começar, a F0 não começa.
 
-### B-02 — `web/03`, `web/04` e `web/02`: layout, sistema visual, estado por aba 🔲
+### B-02 — `web/03`, `web/04` e `web/02`: layout, sistema visual, estado por aba ✅
 
 Atualizar os documentos normativos do web, que hoje descrevem uma coluna com cards:
 
@@ -87,7 +87,7 @@ Atualizar os documentos normativos do web, que hoje descrevem uma coluna com car
 Documentar a regra antes de escrevê-la é o que permite aos planos seguintes apontarem para cá em vez
 de reinventarem o layout cada um.
 
-### B-03 — `backend/03`, `04-errors-and-http` e o catálogo: listar pasta passa a existir 🔲
+### B-03 — `backend/03`, `04-errors-and-http` e o catálogo: listar pasta passa a existir ✅
 
 Em [backend/03-modules · workspace](../../architecture/backend/03-modules.md#workspace):
 
@@ -116,7 +116,7 @@ No [catálogo de erros](../../architecture/shared/04-errors-and-http.md#catálog
 | `WORKSPACE_DIRECTORY_UNREADABLE` | 422 | o diretório existe, está liberado, e o **processo do backend** não tem permissão de leitura (`EACCES`/`EPERM`). Não é 403: a autorização do usuário passou; é o sistema de arquivos que torna o pedido impossível |
 | `OPEN_FOLDERS_LIMIT_REACHED` | 409 | abrir mais uma pasta com o teto de abas já atingido (`params.limit`) — conflito com o estado atual, não validação ([D-11](decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas), [D-10](decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas)) |
 
-### B-04 — Contrato das rotas HTTP do `workspace` 🔲
+### B-04 — Contrato das rotas HTTP do `workspace` ✅
 
 O contrato, escrito no `backend/03` e espelhado nos DTOs Zod do controller e nos tipos do
 service do web:
@@ -151,7 +151,7 @@ service do web:
 como estão; por isso `pnpm test:e2e:mobile` não entra no critério de conclusão. Endpoint novo entra
 sob os limites do [plano 05](../05-hardening-operations/README.md) quando ele os estender ao HTTP.
 
-### B-05 — Desenho de rotas e da navegação 🔲
+### B-05 — Desenho de rotas e da navegação ✅
 
 O mapa de rotas, documentado em `web/04` e testado pelo router:
 
@@ -174,7 +174,12 @@ O mapa de rotas, documentado em `web/04` e testado pelo router:
 
 ## Cenários cobertos
 
-S-01…S-07, S-164, S-165.
+S-01, S-02, S-04, S-06, S-07, S-164, S-165.
+
+S-03, S-05 e a metade "removidas" do S-06 dependem de produto das fases seguintes — a boas-vindas, as
+abas no servidor e a remoção das rotas antigas — e foram para a [F2](F2-open-folder.md) (B-16), a
+[F3](F3-layout.md) (B-20) e a [F5](F5-screens.md) (B-33, no S-150), pela
+[D-18](decisions.md#d-18--os-cenários-de-rota-que-dependem-de-produto).
 
 ---
 

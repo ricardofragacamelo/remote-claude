@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { WsAdapter } from '@nestjs/platform-ws';
 import cookieParser from 'cookie-parser';
+import { ShutdownSignal } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 
 import { APP_CONFIG, type AppConfig } from '@infra/config/environment';
@@ -55,6 +56,17 @@ export function forgetEmptyClaudeConfigDir(env: NodeJS.ProcessEnv = process.env)
 }
 
 /**
+ * The signals that shut the application down: every one Nest knows, **except** `SIGHUP`.
+ *
+ * `SIGHUP` reloads the workspace allowlist (06 · D-15). Left in this list, Nest's hook would close
+ * the application on it and then re-raise it — the operator adding a folder would take the backend,
+ * its sockets and every live session down with it (plan 06, S-180).
+ */
+export const SHUTDOWN_SIGNALS: readonly ShutdownSignal[] = Object.values(ShutdownSignal).filter(
+  (signal) => signal !== ShutdownSignal.SIGHUP,
+);
+
+/**
  * Everything a built application needs before it listens.
  *
  * Written once because there is more than one way into this process: `main.ts` is the product, and
@@ -73,7 +85,7 @@ export function configureApp(app: INestApplication): number {
   app.useWebSocketAdapter(new WsAdapter(app));
   app.use(cookieParser());
   app.enableCors({ origin: config.webOrigin, credentials: true });
-  app.enableShutdownHooks();
+  app.enableShutdownHooks([...SHUTDOWN_SIGNALS]);
 
   return config.port;
 }

@@ -30,6 +30,9 @@ export function commandFrame(
  * It speaks the contract over a real socket against the real gateway — no stub in between, which
  * is the only way the handshake, the close codes and the replay are actually covered.
  */
+/** How long {@link TestSocket.next} waits for a frame before it says none came. */
+const NEXT_FRAME_TIMEOUT_MS = 15_000;
+
 export class TestSocket {
   private readonly received: Envelope[] = [];
   private readonly waiters: ((frame: Envelope) => void)[] = [];
@@ -60,7 +63,14 @@ export class TestSocket {
     this.socket.send(typeof frame === 'string' ? frame : JSON.stringify(frame));
   }
 
-  /** The next frame, or the first one already queued. */
+  /**
+   * The next frame, or the first one already queued.
+   *
+   * Fifteen seconds before giving up, under the suite's twenty-second `testTimeout`. Five was a bet
+   * on the speed of the machine, and `verify:full` lost it twice (plan 05, cycles 20 and 26): the
+   * backend's suites share the machine with the app's and the web's coverage, containers and all.
+   * A frame that never comes still fails; one that comes late now gets there.
+   */
   next(): Promise<Envelope> {
     const queued = this.received.shift();
     if (queued !== undefined) {
@@ -68,7 +78,7 @@ export class TestSocket {
     }
 
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('no frame arrived')), 5_000);
+      const timer = setTimeout(() => reject(new Error('no frame arrived')), NEXT_FRAME_TIMEOUT_MS);
       this.waiters.push((frame) => {
         clearTimeout(timer);
         resolve(frame);

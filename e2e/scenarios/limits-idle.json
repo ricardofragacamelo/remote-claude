@@ -1,0 +1,13 @@
+{
+  "id": "05·S-42",
+  "title": "a session left idle past the TTL is ended, and the screen says why and where to resume it",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "text-turn",
+    "idleTtlSeconds": 20,
+    "reason": "because it sat idle too long — resume it from the history."
+  }
+}

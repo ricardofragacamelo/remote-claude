@@ -1,16 +1,25 @@
 import { Module } from '@nestjs/common';
 
-import { DIAG_SESSION_REPOSITORY, PingDiagUseCase } from '@application/diag';
-import type { DiagSessionRepository } from '@application/diag';
+import {
+  DIAG_SESSION_REPOSITORY,
+  INSTALLATION_VERSION_SOURCE,
+  PingDiagUseCase,
+  ReadVersionsUseCase,
+} from '@application/diag';
+import type { DiagSessionRepository, InstallationVersionSource } from '@application/diag';
 import { CLOCK, ID_GENERATOR } from '@application/shared';
 import type { Clock, IdGenerator } from '@domain/shared';
+import { DiagController } from '@adapter/inbound/http/diag/diag.controller';
 import { ContractCommandHandler } from '@adapter/inbound/ws/contract-command.gateway-handler';
 import { DIAG_HANDLERS, diagSchemas } from '@adapter/inbound/ws/diag/diag-commands';
 import { DiagSessionOwnership } from '@adapter/outbound/diag/diag-session.ownership';
+import { InstallationVersionReader } from '@adapter/outbound/diag/installation-versions.reader';
 import { DrizzleDiagSessionRepository } from '@adapter/outbound/persistence/diag/drizzle-diag-session.repository';
+import { AuthModule } from './auth.module';
 
 /**
- * The `diag` module: the gateway round trip that needs no Claude.
+ * The `diag` module: the gateway round trip that needs no Claude, and the versions of the
+ * installation for the "About" screen (plan 06, B-12).
  *
  * It was the vertical slice of the bootstrap and it stays, because it is the cheapest smoke test
  * of the whole rail. It is a module of its own rather than part of `session` so that nothing here
@@ -18,7 +27,17 @@ import { DrizzleDiagSessionRepository } from '@adapter/outbound/persistence/diag
  * this is the rest of that move.
  */
 @Module({
+  // For `BearerAuthGuard` on the versions route: a route and a socket resolve the caller alike.
+  imports: [AuthModule],
+  controllers: [DiagController],
   providers: [
+    // One reader for the process: the versions are read once and kept (S-68).
+    { provide: INSTALLATION_VERSION_SOURCE, useFactory: () => new InstallationVersionReader() },
+    {
+      provide: ReadVersionsUseCase,
+      inject: [INSTALLATION_VERSION_SOURCE],
+      useFactory: (versions: InstallationVersionSource) => new ReadVersionsUseCase(versions),
+    },
     { provide: DIAG_SESSION_REPOSITORY, useClass: DrizzleDiagSessionRepository },
     DiagSessionOwnership,
     {

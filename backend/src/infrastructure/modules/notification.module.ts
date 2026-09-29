@@ -1,19 +1,32 @@
 import { Module } from '@nestjs/common';
 
 import {
+  DeleteNotificationsUseCase,
+  ListNotificationsUseCase,
+  MarkNotificationsReadUseCase,
+  NOTIFICATION_HISTORY_REPOSITORY,
   NotificationRegistry,
   NotifyPermissionUseCase,
+  PurgeNotificationsUseCase,
   PUSH_AUDIENCE,
   PUSH_SENDER,
   PUSH_TOKEN_REGISTRY,
   PushDispatcher,
+  RecordNotificationUseCase,
 } from '@application/notification';
-import type { PushAudience, PushSender, PushTokenRegistry } from '@application/notification';
-import { CLOCK, SCHEDULER } from '@application/shared';
+import type {
+  NotificationHistoryRepository,
+  PushAudience,
+  PushSender,
+  PushTokenRegistry,
+} from '@application/notification';
+import { CLOCK, ID_GENERATOR, SCHEDULER } from '@application/shared';
 import type { Scheduler } from '@application/shared';
 import { PushMessage } from '@domain/notification';
 import type { PushTarget } from '@domain/notification';
-import type { Clock } from '@domain/shared';
+import type { Clock, IdGenerator } from '@domain/shared';
+import { NotificationController } from '@adapter/inbound/http/notification/notification.controller';
+import { DrizzleNotificationHistoryRepository } from '@adapter/outbound/persistence/notification/drizzle-notification-history.repository';
 import {
   CancelOnPermissionResolved,
   NotifyOnPermissionRequested,
@@ -28,11 +41,13 @@ import { PushTranslator } from '@shared/i18n/push-translator';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
+import { NotificationRetentionJob } from '../jobs/notification-retention.job';
 import { AuthModule } from './auth.module';
 import { WebsocketModule } from './websocket.module';
 
 /**
- * The `notification` module: how somebody who is not at the browser finds out.
+ * The `notification` module: how somebody who is not at the browser finds out — and the history of
+ * the web's notification centre, kept on the server so it follows the user (plan 06, B-40).
  *
  * It decides **how** to notify; **whether** anything deserves notifying is `permission`'s, and it
  * says so on the internal bus rather than by calling anybody
@@ -44,10 +59,48 @@ import { WebsocketModule } from './websocket.module';
  *
  * Nothing here exports anything. Every other module reaches this one through the bus, and a
  * module that exported its use case would be inviting the direct call the bus exists to prevent.
+ * The history is reached by its own routes, by the client, and by nothing else.
  */
 @Module({
   imports: [AuthModule, WebsocketModule],
+  controllers: [NotificationController],
   providers: [
+    { provide: NOTIFICATION_HISTORY_REPOSITORY, useClass: DrizzleNotificationHistoryRepository },
+    {
+      provide: RecordNotificationUseCase,
+      inject: [NOTIFICATION_HISTORY_REPOSITORY, CLOCK, ID_GENERATOR],
+      useFactory: (history: NotificationHistoryRepository, clock: Clock, ids: IdGenerator) =>
+        new RecordNotificationUseCase(history, clock, ids),
+    },
+    {
+      provide: ListNotificationsUseCase,
+      inject: [NOTIFICATION_HISTORY_REPOSITORY],
+      useFactory: (history: NotificationHistoryRepository) => new ListNotificationsUseCase(history),
+    },
+    {
+      provide: MarkNotificationsReadUseCase,
+      inject: [NOTIFICATION_HISTORY_REPOSITORY, CLOCK],
+      useFactory: (history: NotificationHistoryRepository, clock: Clock) =>
+        new MarkNotificationsReadUseCase(history, clock),
+    },
+    {
+      provide: DeleteNotificationsUseCase,
+      inject: [NOTIFICATION_HISTORY_REPOSITORY],
+      useFactory: (history: NotificationHistoryRepository) =>
+        new DeleteNotificationsUseCase(history),
+    },
+    {
+      provide: PurgeNotificationsUseCase,
+      inject: [NOTIFICATION_HISTORY_REPOSITORY, CLOCK],
+      useFactory: (history: NotificationHistoryRepository, clock: Clock) =>
+        new PurgeNotificationsUseCase(history, clock),
+    },
+    {
+      provide: NotificationRetentionJob,
+      inject: [PurgeNotificationsUseCase, SCHEDULER, LOGGER],
+      useFactory: (purge: PurgeNotificationsUseCase, scheduler: Scheduler, logger: Logger) =>
+        new NotificationRetentionJob(purge, scheduler, logger),
+    },
     { provide: PUSH_AUDIENCE, useClass: RegistryPushAudience },
     { provide: PUSH_TOKEN_REGISTRY, useClass: RepositoryPushTokenRegistry },
     { provide: PUSH_TEXT, useFactory: () => new PushTranslator() },

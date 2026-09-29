@@ -221,6 +221,37 @@ void main() {
     expect(find.text(l10n.workspaceStartRefused), findsOneWidget);
   });
 
+  testWidgets('S-41 · a start refused for the ceiling says why, until the next attempt', (
+    WidgetTester tester,
+  ) async {
+    await pumpList(tester);
+
+    await tester.tap(find.text('project'));
+    await tester.pump();
+    sessions.emit(
+      const CommandRefused(
+        commandId: 'command-1',
+        failure: ServerFailure(
+          traceId: 'trace-limit',
+          code: 'SESSION_LIMIT_REACHED',
+          messageKey: 'session.error.limitReached',
+          params: <String, String>{'limit': '2'},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.sessionErrorLimitReached('2')), findsOneWidget);
+    // The folder is still there to tap: a slot may free at any moment.
+    expect(find.text('project'), findsOneWidget);
+
+    await tester.tap(find.text('project'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.sessionErrorLimitReached('2')), findsNothing);
+    expect(sessions.commands, hasLength(2));
+  });
+
   testWidgets('what this installation may do is above the list, not hidden behind it', (
     WidgetTester tester,
   ) async {

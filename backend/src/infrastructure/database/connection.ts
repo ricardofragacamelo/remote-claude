@@ -7,6 +7,9 @@ import * as schema from './schema';
 /** The Drizzle client, typed over the whole schema. */
 export type Database = NodePgDatabase<typeof schema>;
 
+/** A transaction, as `Database.transaction` hands it to its callback. */
+export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+
 /** An open pool and the client on top of it. */
 export interface DatabaseConnection {
   readonly pool: pg.Pool;

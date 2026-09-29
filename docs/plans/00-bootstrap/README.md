@@ -184,8 +184,9 @@ Todos em `.mjs`, executados direto pelo `node`, sem build.
 
 | Script | Task | Faz | Comando |
 |---|---|---|---|
-| `doctor.mjs` | B-48 | verifica pré-requisitos: versão do node, pnpm, docker, flutter, portas livres | `pnpm doctor` |
+| `doctor.mjs` | B-48, [06 · B-10](../06-workbench/F1-directory-browse.md#b-10--raízes-locais-de-desenvolvimento-pnpm-allowlist-) | verifica pré-requisitos: versão do node, pnpm, docker, flutter, portas livres — e qual allowlist o `pnpm dev` usa | `pnpm doctor` |
 | `start-local.mjs` | B-10 | sobe a stack de desenvolvimento, portas fixas | `pnpm dev` |
+| `allowlist.mjs` | [06 · B-10, B-11](../06-workbench/F1-directory-browse.md#b-10--raízes-locais-de-desenvolvimento-pnpm-allowlist-) | libera uma pasta na cópia local da allowlist (ignorada pelo git, validada pelo schema do boot) e manda `SIGHUP` ao backend do `pnpm dev` | `pnpm allowlist add <pasta>` · `remove` · `list` |
 | `run-e2e-local.mjs` | B-37 | sobe stack efêmera, roda e2e, derruba tudo | `pnpm test:e2e` · `:mobile` · `--live` |
 | `run-smoke-live.mjs` | [01 · B-41](../01-live-session/F6-e2e.md) | a mesma stack contra o **Claude de verdade** — exige o Claude logado, e não é portão | `pnpm test:e2e:live` |
 | `verify.mjs` | B-46 | portões 1-7 | `pnpm verify` |

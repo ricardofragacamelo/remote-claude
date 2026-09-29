@@ -1,0 +1,14 @@
+{
+  "id": "05·S-43",
+  "title": "a client that hammers is refused, closed with 4429, told why, and waits the Retry-After before it comes back",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "code": "RATE_LIMITED",
+    "closeCode": 4429,
+    "burst": 40,
+    "throttled": "Sent too fast — waiting as long as the server asked"
+  }
+}

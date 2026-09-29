@@ -359,7 +359,9 @@ e [D-06 do plano 04](../../plans/04-transcript-and-resume/decisions.md#d-06--des
 
 ## ADR-014 — O web vira um workbench, construído em React
 
-**Status:** aceita · 2026-09-26 · decisão do usuário ([06 · D-01](../../plans/06-workbench/decisions.md))
+**Status:** aceita · 2026-09-26 · decisão do usuário ([06 · D-01](../../plans/06-workbench/decisions.md#d-01--construir-o-workbench-ou-embutir-o-vs-code)) ·
+completada em 2026-09-28 pelo [plano 06 · B-01](../../plans/06-workbench/F0-contract.md#b-01--adr-014-o-web-vira-um-workbench-construído-em-react-),
+com as decisões de apresentação
 
 A primeira versão rodando foi recusada pelo usuário como "muito pobre": uma coluna de cartões, a
 sessão aberta numa pasta de rascunho, e telas de trilha e regras sem detalhe nem ajuda. O pedido foi
@@ -371,30 +373,65 @@ um **cliente do Claude no molde do VS Code**.
   code-server.** O argumento que decide é de segurança, não de esforço: o VS Code embutido traz
   terminal e extensões que executam na máquina **fora** do `canUseTool` e do hook `PreToolUse`, e
   furariam a trilha e a permissão ([ADR-011](#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse));
+- **o workbench de painéis substitui a coluna única a partir de `md`**; abaixo disso, uma view por
+  vez, dentro da mesma aba ([06 · D-08](../../plans/06-workbench/decisions.md#d-08--o-workbench-em-tela-pequena));
 - **cada pasta aberta é uma aba com um workbench completo** — explorer, editor e o chat do Claude
-  lado a lado, na mesma aba —, várias abertas ao mesmo tempo. Não é multi-root workspace;
-- **uma tela por assunto**: auditoria, regras, dispositivos, uso e custo, logs e diagnóstico,
-  configuração do Claude e configurações do app têm tela e rota próprias, e nunca dividem uma;
-- **a paridade com o VS Code é a de arquivos** — abrir, criar, funções de arquivo e editar.
-  Inteligência de linguagem, depuração e controle de versão ficam fora, por decisão do usuário;
+  lado a lado, na mesma aba, com as sessões da pasta —, várias abertas ao mesmo tempo. **Não** é
+  multi-root workspace (várias raízes numa árvore só), que continua fora. O chat nunca é tela nem
+  rota própria;
+- **uma tela por assunto**: a navegação global leva a Workbench, Auditoria, Regras, Dispositivos,
+  Uso e custo ([plano 14](../../plans/14-usage-and-cost/README.md)), Logs e diagnóstico,
+  Configuração do Claude ([plano 11](../../plans/11-claude-settings/README.md)) e Configurações do
+  app — e, pelo menu de gerenciar, Sobre. Cada uma com tela e rota próprias. **Configurações do app
+  e configuração do Claude nunca dividem uma tela**;
+- **a paridade com o VS Code é a de arquivos** — abrir, criar, funções de arquivo e editar (decisão
+  do usuário de 2026-09-26). Da casca entra o que serve a isso: abas de pasta, menu **Arquivo**,
+  command palette, centro de notificações e estado restaurado por aba. Editor de atalhos, vários
+  temas, zen mode, layout configurável, menu completo e walkthrough ficam fora; inteligência de
+  linguagem, depuração e controle de versão também, por decisão do usuário;
 - o seletor de pasta navega **só dentro das raízes da allowlist**
-  ([06 · D-03](../../plans/06-workbench/decisions.md)) — a allowlist continua sendo a primeira linha
-  de defesa, e "a máquina toda" é declarar o `$HOME` como raiz no arquivo.
+  ([06 · D-03](../../plans/06-workbench/decisions.md#d-03--alcance-do-seletor-dentro-das-raízes-ou-a-máquina-inteira)) —
+  a allowlist continua sendo a primeira linha de defesa, e "a máquina toda" é declarar o `$HOME`
+  como raiz no arquivo.
 
-**Consequências:** a coluna única deixa de ser o layout do produto a partir de `md`; abaixo disso,
-uma view por vez dentro da mesma aba. O detalhe de layout, estado por aba e rotas é do
-[plano 06](../../plans/06-workbench/README.md), que completa esta ADR e atualiza `web/02`, `web/03`
-e `web/04`. As decisões de apresentação, do usuário em 2026-09-28:
+**A alternativa descartada — embutir o VS Code** (openvscode-server ou code-server num `iframe`).
+Dá fidelidade imediata, e custa a premissa do produto: terminal, tarefas e extensões executam na
+máquina fora do `canUseTool`, do `PreToolUse` e da trilha, e "nenhuma tool sensível roda sem um
+humano dizer sim" deixaria de valer para metade da tela. Desligá-los não é garantia verificável — a
+configuração do VS Code é do usuário, e extensões se instalam por ele. Viria ainda outro servidor,
+outra autenticação e outra linguagem de UI, sem resposta no celular e fora da stack fechada. O
+mesmo motivo tira o **marketplace de extensões**: extensão executa fora da permissão e da trilha.
 
-- abaixo de `md`, **uma view por vez** — Explorer, Editor, Claude, Painel —, barra de views embaixo e
-  seletor de abas no topo ([06 · D-08](../../plans/06-workbench/decisions.md#d-08--o-workbench-em-tela-pequena));
-- o **conjunto e a ordem das abas ficam no servidor**, a aba ativa na URL (`/workbench?folder=`), e o
-  estado de dentro de cada aba por visitante ([06 · D-10](../../plans/06-workbench/decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas),
-  [D-06](../../plans/06-workbench/decisions.md#d-06--a-url-do-workbench));
-- a aba inativa mantém as sessões e os terminais anexados e libera o resto
-  ([06 · D-11](../../plans/06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas));
-- as rotas `/sessions/$sessionId` e `/history…` saem sem deep link
-  ([06 · D-07](../../plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)).
+**As decisões que a completam**, todas do usuário:
+
+| Decisão | Resultado |
+|---|---|
+| [06 · D-01](../../plans/06-workbench/decisions.md#d-01--construir-o-workbench-ou-embutir-o-vs-code) | 2026-09-26 · **construir em React**; o VS Code embutido traria terminal e extensões fora da aprovação e da trilha |
+| [06 · D-06](../../plans/06-workbench/decisions.md#d-06--a-url-do-workbench) | 2026-09-28 · a pasta da aba ativa na **search**: `/workbench?folder=` |
+| [06 · D-07](../../plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas) | 2026-09-28 · `/` abre a aba ativa ou a boas-vindas; `/sessions/$sessionId` e `/history…` **saem sem deep link**, e o histórico volta ao web com o [plano 08](../../plans/08-claude-panel/README.md) |
+| [06 · D-08](../../plans/06-workbench/decisions.md#d-08--o-workbench-em-tela-pequena) | 2026-09-28 · abaixo de `md`, **uma view por vez** — Explorer, Editor, Claude, Painel —, barra de views embaixo e seletor de abas no topo, um store para os dois layouts |
+| [06 · D-10](../../plans/06-workbench/decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas) | 2026-09-28 · o **conjunto e a ordem das abas no servidor**; a aba ativa na URL; o estado de dentro de cada aba por visitante |
+| [06 · D-11](../../plans/06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas) | 2026-09-28 · a aba inativa mantém as sessões e os terminais anexados e libera o resto; teto de **8** abas |
+
+**O que fica de fora, e para onde vai:**
+
+| Fora deste desenho | Onde mora |
+|---|---|
+| explorer, editor e funções de arquivo | [plano 07](../../plans/07-explorer-and-editor/README.md) — o 06 reserva a view e a área |
+| o painel do Claude completo, e o histórico de volta ao web | [plano 08](../../plans/08-claude-panel/README.md) |
+| busca | [plano 09](../../plans/09-search/README.md) |
+| terminal | [plano 10](../../plans/10-integrated-terminal/README.md), sob a [ADR-017](#adr-017--existe-um-terminal-fora-do-modelo-de-permissão-com-travas) |
+| configuração do Claude, uso e custo | planos [11](../../plans/11-claude-settings/README.md) e [14](../../plans/14-usage-and-cost/README.md) — o 06 só reserva a posição |
+| o redesenho da auditoria e das regras; a profundidade de dispositivos e de logs | planos [12](../../plans/12-audit-explained/README.md), [13](../../plans/13-rules-management/README.md), [15](../../plans/15-devices/README.md) e [16](../../plans/16-logs-and-diagnostics/README.md) |
+| LSP, depuração, git, multi-root, notebooks, colaboração, settings sync, editar a allowlist pela UI, as telas novas no app Flutter | fora do produto ([06 · Não entra](../../plans/06-workbench/README.md#não-entra)) |
+
+**Consequências:** a coluna única deixa de ser o layout do produto a partir de `md`. O detalhe é
+normativo em [web/03 · Workbench](../web/03-ui-system.md#workbench) (a moldura, a anatomia, os
+registros), [web/04 · Estado de aba de pasta](../web/04-state-and-data.md#estado-de-aba-de-pasta) e
+[web/04 · O mapa de rotas](../web/04-state-and-data.md#o-mapa-de-rotas), e
+[web/02](../web/02-folder-structure.md) (onde cada feature mora). No backend, a listagem de subpastas
+relativiza o "não varre disco" do módulo `workspace` — um nível, sob demanda, dentro da allowlist
+([backend/03 · workspace](../backend/03-modules.md#workspace)).
 
 ## ADR-017 — Existe um terminal, fora do modelo de permissão, com travas
 

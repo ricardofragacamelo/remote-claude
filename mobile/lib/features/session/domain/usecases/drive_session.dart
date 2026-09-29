@@ -37,8 +37,12 @@ class DriveSession {
   final SessionRepository _repository;
 
   /// Opens a session on [workspacePath].
-  bool start(String workspacePath) =>
-      _repository.send(SessionCommands.start, <String, Object?>{'workspacePath': workspacePath});
+  ///
+  /// @returns the id the command left with — what a refusal of it names: the machine already at
+  ///   its ceiling (`SESSION_LIMIT_REACHED`), a folder no longer allowed — or `null` when nothing
+  ///   left
+  String? start(String workspacePath) =>
+      _repository.issue(SessionCommands.start, <String, Object?>{'workspacePath': workspacePath});
 
   /// Continues [conversationId] — a conversation of Claude's store — in [workspacePath], which is
   /// where it ran.

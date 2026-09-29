@@ -1,4 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { Test } from '@nestjs/testing';
 
 import { AppModule } from '../../../../src/app.module';
@@ -37,7 +40,7 @@ describe('the boot', () => {
     await expect(build()).resolves.toBeUndefined();
   });
 
-  it.each(['DATABASE_URL', 'OIDC_ISSUER', 'OIDC_AUDIENCE', 'LOG_LEVEL'])(
+  it.each(['DATABASE_URL', 'OIDC_ISSUER', 'OIDC_AUDIENCE', 'LOG_LEVEL', 'RC_PID_FILE'])(
     'refuses to come up with %s missing',
     async (variable) => {
       testEnvironment(database.url, identity.issuer);
@@ -73,5 +76,23 @@ describe('the boot', () => {
     // A backend serving requests with a silently defaulted audience accepts tokens minted for
     // somebody else's API. Not starting is the safe outcome.
     await expect(build()).rejects.toThrow(ConfigurationError);
+  });
+
+  it('refuses a local copy of the allowlist edited out of the schema, naming every problem — plan 06, S-57', async () => {
+    expect.assertions(3);
+    const file = path.join(
+      mkdtempSync(path.join(tmpdir(), 'rc-local-')),
+      'workspace-allowlist.local.yaml',
+    );
+    writeFileSync(file, 'roots:\n  - path: /tmp\n    label: ""\n    users: []\n', 'utf8');
+    testEnvironment(database.url, identity.issuer, file);
+
+    try {
+      await build();
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConfigurationError);
+      expect((error as ConfigurationError).problems).toHaveLength(2);
+      expect((error as ConfigurationError).problems.join('\n')).toContain(file);
+    }
   });
 });

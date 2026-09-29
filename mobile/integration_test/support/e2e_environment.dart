@@ -293,6 +293,31 @@ class BrowserSocket {
     return (started['payload']! as Map<String, Object?>)['sessionId']! as String;
   }
 
+  /// Opens a session on [workspacePath], and answers what the server said to **that** command:
+  /// the session it opened, or the code it was refused with.
+  Future<({String? sessionId, String? refusedWith})> startOrRefusal(String workspacePath) async {
+    final int mark = frames.length;
+    final String commandId = _send('session.start', <String, Object?>{
+      'workspacePath': workspacePath,
+    });
+    final Map<String, Object?> answer = await waitFor(
+      (Map<String, Object?> frame) =>
+          frame['type'] == 'session.started' ||
+          (frame['kind'] == 'error' && frame['correlationId'] == commandId),
+      from: mark,
+    );
+
+    final Map<String, Object?> payload = answer['payload']! as Map<String, Object?>;
+    return answer['kind'] == 'error'
+        ? (sessionId: null, refusedWith: payload['code'] as String?)
+        : (sessionId: payload['sessionId'] as String?, refusedWith: null);
+  }
+
+  /// Watches [sessionId], from the start of what the server still holds — so this socket is told
+  /// what happens to a session it did not open, its closing included.
+  void attach(String sessionId) =>
+      _send('session.attach', <String, Object?>{'sessionId': sessionId, 'resumeFromSeq': 0});
+
   /// Ends [sessionId]. Closing a socket alone keeps the session — and its subprocess — alive.
   Future<void> closeSession(String sessionId) async {
     final int mark = frames.length;
@@ -332,16 +357,21 @@ class BrowserSocket {
   /// Closes the socket the way a browser does.
   Future<void> close() => _socket.close(1000);
 
-  void _send(String type, Map<String, Object?> payload) => _socket.add(
-    jsonEncode(<String, Object?>{
-      'v': 1,
-      'id': '${DateTime.now().microsecondsSinceEpoch}-$type',
-      'kind': 'command',
-      'type': type,
-      'ts': DateTime.now().toUtc().toIso8601String(),
-      'payload': payload,
-    }),
-  );
+  /// Sends one command, and answers the id it left with — what a refusal of it names.
+  String _send(String type, Map<String, Object?> payload) {
+    final String id = '${DateTime.now().microsecondsSinceEpoch}-$type';
+    _socket.add(
+      jsonEncode(<String, Object?>{
+        'v': 1,
+        'id': id,
+        'kind': 'command',
+        'type': type,
+        'ts': DateTime.now().toUtc().toIso8601String(),
+        'payload': payload,
+      }),
+    );
+    return id;
+  }
 }
 
 /// Asks [ready] until it answers `true`, or fails saying what never happened.

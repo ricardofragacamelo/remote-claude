@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Checks the prerequisites of the environment before anything else runs: node, pnpm, docker,
- * flutter, and the fixed ports of the development stack.
+ * flutter, the fixed ports of the development stack, and which workspace allowlist `pnpm dev` runs
+ * with.
  *
  * This is the first command after cloning the repository, and what keeps an environment error
  * from being debugged as if it were a code error.
@@ -9,14 +10,21 @@
  * Usage: `pnpm doctor` · `pnpm doctor --strict` (a warning also fails)
  */
 
+import fs from 'node:fs';
 import process from 'node:process';
 
+import { LOCAL_ALLOWLIST_FILE, allowlistCheck } from './lib/allowlist.mjs';
 import { run } from './lib/exec.mjs';
+import { repoRoot } from './lib/paths.mjs';
 import { isPortFree } from './lib/ports.mjs';
 import { exitCodeFor, inspectEnvironment } from './lib/prerequisites.mjs';
+import { loadDotEnv } from './lib/stack.mjs';
 import { dim, fail, hint, line, ok, title, warn } from './lib/ui.mjs';
 
 const strict = process.argv.includes('--strict');
+
+// `.env` says which allowlist the stack runs with, as it does for `pnpm dev`.
+loadDotEnv(repoRoot);
 
 /** @typedef {import('./lib/prerequisites.mjs').CheckResult} CheckResult */
 
@@ -74,6 +82,15 @@ async function main() {
     run: (command, args) => run(command, args, { timeoutMs: 20_000 }),
     isPortFree: (port) => isPortFree(port),
   });
+
+  // Plan 06, S-61: with a local copy beside the default, "which allowlist?" is a real question.
+  results.push(
+    allowlistCheck(
+      process.env,
+      { root: repoRoot, localExists: fs.existsSync(LOCAL_ALLOWLIST_FILE) },
+      (file) => fs.readFileSync(file, 'utf8'),
+    ),
+  );
 
   for (const result of results) {
     report(result);

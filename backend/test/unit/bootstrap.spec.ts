@@ -3,7 +3,12 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { forgetEmptyClaudeConfigDir, loadDotEnv, repositoryDotEnv } from '../../src/bootstrap';
+import {
+  forgetEmptyClaudeConfigDir,
+  loadDotEnv,
+  repositoryDotEnv,
+  SHUTDOWN_SIGNALS,
+} from '../../src/bootstrap';
 
 /**
  * The `.env` the product loads when nobody exported it.
@@ -81,5 +86,15 @@ describe('forgetEmptyClaudeConfigDir', () => {
     forgetEmptyClaudeConfigDir(env);
 
     expect(env).toEqual({});
+  });
+});
+
+describe('SHUTDOWN_SIGNALS — plan 06, S-180', () => {
+  it('shuts down on a termination and an interrupt', () => {
+    expect(SHUTDOWN_SIGNALS).toEqual(expect.arrayContaining(['SIGTERM', 'SIGINT']));
+  });
+
+  it('never on SIGHUP, which reloads the allowlist', () => {
+    expect(SHUTDOWN_SIGNALS).not.toContain('SIGHUP');
   });
 });

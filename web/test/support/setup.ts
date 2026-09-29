@@ -4,6 +4,8 @@ import * as matchers from '@testing-library/jest-dom/matchers';
 import { cleanup, configure } from '@testing-library/react';
 import { toHaveNoViolations } from 'jest-axe';
 
+import { useOwnedSessionsStore } from '@/features/session/store/owned-sessions.store';
+
 expect.extend(matchers);
 // Accessibility is checked on every main screen, and a violation breaks the build: this product
 // has a screen where somebody authorises a shell command — docs/architecture/web/06-testing.md.
@@ -23,4 +25,8 @@ configure({ asyncUtilTimeout: 5_000 });
 
 afterEach(() => {
   cleanup();
+
+  // The sessions this browser opened outlive a screen by design, and so they would outlive a test:
+  // one that opened a session would leave the next one owning it.
+  useOwnedSessionsStore.setState({ owned: [] });
 });

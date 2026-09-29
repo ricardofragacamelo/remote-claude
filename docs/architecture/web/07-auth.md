@@ -64,7 +64,10 @@ Componente → useAuth (hook) → authService → api.ts / wsClient
 ```
 
 - **`api.ts`** anexa o `Authorization: Bearer` no interceptor, e no `401` dispara a renovação
-  e repete a requisição **uma** vez.
+  e repete a requisição **uma** vez. O token chega ao transporte num **layout effect** do
+  `Providers`: os efeitos de um filho rodam antes dos do pai, e num efeito comum a primeira
+  requisição da tela que monta junto com o login saía sem ele — `401` e uma renovação à toa a cada
+  carga ([plano 05 · S-85](../../plans/05-hardening-operations/scenarios.md)).
 - **`wsClient`** manda o token no `connection.authenticate` e, quando expira com o socket
   aberto, envia `connection.reauthenticate` — sem derrubar a conexão. Ver
   [contrato](../shared/05-websocket-protocol.md#handshake).

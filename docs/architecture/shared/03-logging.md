@@ -116,6 +116,13 @@ configurada no logger, não deixada a critério de quem escreve o log:
 - Push tokens (registre só os 6 últimos caracteres)
 - **Conteúdo de arquivo lido pela tool `Read`** — logue `path` e `bytes`, nunca o conteúdo
 - **Corpo do prompt do usuário em `info`** — pode conter segredo; em `debug`, truncado em 2 KB
+- **Nomes listados de um diretório** — a listagem do seletor loga caminho, contagem, `truncated` e
+  duração, nunca os nomes: uma listagem no log é um mapa da máquina no log
+  ([06 · B-07](../../plans/06-workbench/F1-directory-browse.md#b-07--port-workspacedirectorylister-e-o-adapter-fsopendir-))
+- **O que não é segredo pelo nome e ainda assim não fica** — a rota marca o campo com
+  `@OmitFromLog(...)` e o interceptor de I/O o substitui: os `params` de uma notificação, que podem
+  levar um caminho, ficam fora do log como ficam fora do push
+  ([06 · S-178](../../plans/06-workbench/scenarios.md))
 
 Substitua por `"[REDACTED]"`. Payload grande é truncado em **8 KB** com
 `"truncated": true` — nunca omitido em silêncio.

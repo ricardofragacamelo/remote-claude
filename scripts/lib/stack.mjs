@@ -96,6 +96,8 @@ export const E2E_POSTGRES = {
  * @property {string} RC_KEYCLOAK_PORT
  * @property {string} RC_BACKEND_PORT
  * @property {string} RC_WEB_PORT
+ * @property {string} RC_KEYCLOAK_ADMIN
+ * @property {string} RC_KEYCLOAK_ADMIN_PASSWORD
  * @property {string} RC_POSTGRES_USER
  * @property {string} RC_POSTGRES_PASSWORD
  * @property {string} RC_POSTGRES_DB
@@ -108,6 +110,7 @@ export const E2E_POSTGRES = {
  * @property {string} NODE_ENV
  * @property {string} LOG_LEVEL
  * @property {string} RC_WORKSPACE_ALLOWLIST_FILE
+ * @property {string} RC_PID_FILE
  * @property {string} RC_SESSION_MAX_CONCURRENT
  * @property {string} RC_SESSION_MIN_CONCURRENT
  * @property {string} RC_SESSION_MEMORY_FRACTION
@@ -164,6 +167,9 @@ export function ephemeralEnvironment(ports, options = {}) {
     RC_BACKEND_PORT: String(ports.backend),
     RC_WEB_PORT: String(ports.web),
 
+    RC_KEYCLOAK_ADMIN: E2E_KEYCLOAK_ADMIN.username,
+    RC_KEYCLOAK_ADMIN_PASSWORD: E2E_KEYCLOAK_ADMIN.password,
+
     RC_POSTGRES_USER: E2E_POSTGRES.user,
     RC_POSTGRES_PASSWORD: E2E_POSTGRES.password,
     RC_POSTGRES_DB: E2E_POSTGRES.db,
@@ -181,6 +187,10 @@ export function ephemeralEnvironment(ports, options = {}) {
     // Absolute, because the backend is started with its own package as the working directory and
     // a relative path would resolve against that instead of against the repository.
     RC_WORKSPACE_ALLOWLIST_FILE: ALLOWLIST_FILE,
+    // Off: `pnpm allowlist` signals the backend of `pnpm dev` by its pid file, and a test stack
+    // never writes one it could find — what a developer frees on their machine never reaches a
+    // run (plan 06, S-59).
+    RC_PID_FILE: 'off',
 
     RC_SESSION_MAX_CONCURRENT: '10',
     RC_SESSION_MIN_CONCURRENT: '1',
@@ -251,6 +261,71 @@ export function ephemeralEnvironment(ports, options = {}) {
 }
 
 /**
+ * The numbers of the **limits stack** — plan 05, F4.
+ *
+ * The scenarios of the limits are about the limits themselves, and the numbers the rest of the
+ * suite needs are the opposite of theirs: a thirty-minute TTL no test waits out, a rate of five
+ * thousand frames a second no client reaches, ten sessions nobody fills. So they get a backend of
+ * their own, beside the main one, with these five settings tightened and everything else — the
+ * database, the realm, the allowlist — shared:
+ *
+ * - **two sessions**, floor and ceiling both, so the ceiling is two on any machine and a test fills
+ *   it in two steps rather than by finding out how much RAM the runner has;
+ * - **twenty seconds idle**, so a session is reaped within a scenario (the reaper looks every
+ *   quarter of it), and long enough that one being filled is not reaped under the test's feet;
+ * - **twenty frames a second**, the product's own number, so the rate a client is refused at is the
+ *   one a real installation refuses at;
+ * - **a minute to answer a permission**, so a turn can stay open across the expiry of a credential.
+ *
+ * Never used by the other specs: a TTL of twenty seconds on the main stack would reap sessions from
+ * under any spec that paused, and a rate of twenty would make the three that overflow the replay
+ * buffer take a minute each.
+ */
+export const LIMITS_STACK = {
+  RC_SESSION_MAX_CONCURRENT: '2',
+  RC_SESSION_MIN_CONCURRENT: '2',
+  RC_SESSION_IDLE_TTL_MS: '20000',
+  RC_WS_MAX_FRAMES_PER_SECOND: '20',
+  RC_PERMISSION_TIMEOUT_MS: '60000',
+};
+
+/**
+ * The two ports of the limits stack — its backend and its web. PostgreSQL and Keycloak are the
+ * main stack's.
+ *
+ * @typedef {{ backend: number, web: number }} LimitsPorts
+ */
+
+/**
+ * The environment of the limits stack: the ephemeral one, on its own two ports, with the limits
+ * tightened.
+ *
+ * Its own ports move everything keyed on them — the CLI's configuration, the checkpoints, the push
+ * credential path, the web origin the backend accepts — so the two backends share a database and a
+ * realm and nothing else.
+ *
+ * @param {StackPorts} ports the main stack's
+ * @param {LimitsPorts} limitsPorts
+ * @returns {EphemeralEnvironment}
+ */
+export function limitsEnvironment(ports, limitsPorts) {
+  return {
+    ...ephemeralEnvironment({ ...ports, backend: limitsPorts.backend, web: limitsPorts.web }),
+    ...LIMITS_STACK,
+  };
+}
+
+/**
+ * The administrator of the ephemeral Keycloak.
+ *
+ * Pinned, like the database's, rather than left to compose's default: the limits scenarios shorten
+ * a client's token lifetime for the length of one test (S-44) and end a user's sessions at the
+ * provider (S-79), and a suite that learnt the password from whichever `.env` was on the machine
+ * would pass on one and fail on the next.
+ */
+export const E2E_KEYCLOAK_ADMIN = { username: 'admin', password: 'admin' };
+
+/**
  * The `.env` the Playwright process reads, as text.
  *
  * Written by `run-e2e-local` and deleted by it, so the suite never has to be told where the stack
@@ -258,13 +333,14 @@ export function ephemeralEnvironment(ports, options = {}) {
  * is why the cleanup removes it even when the run failed.
  *
  * @param {StackPorts} ports
- * @param {{ claudeConfigDir?: string | null }} [options] the same choice the environment was
- *   built with
+ * @param {{ claudeConfigDir?: string | null, limits?: LimitsPorts | null }} [options] the same
+ *   choice the environment was built with, and the ports of the limits stack when this run has one
  * @returns {string}
  */
 export function e2eDotEnv(ports, options = {}) {
   const urls = serviceUrls(ports);
   const environment = ephemeralEnvironment(ports, options);
+  const limits = options.limits ?? null;
 
   /** @type {Record<string, string>} */
   const values = {
@@ -292,6 +368,15 @@ export function e2eDotEnv(ports, options = {}) {
     // old cannot come through any door of the product — every writer stamps the present — so the
     // spec plants them, and then purges them through the one door that exists for that.
     RC_DATABASE_URL: environment.DATABASE_URL,
+
+    // The provider's administrator, for the two limits scenarios that change what the provider
+    // does — a shorter token (S-44), a session ended there (S-79). Nothing else reads it.
+    RC_KEYCLOAK_ADMIN: environment.RC_KEYCLOAK_ADMIN,
+    RC_KEYCLOAK_ADMIN_PASSWORD: environment.RC_KEYCLOAK_ADMIN_PASSWORD,
+
+    // The limits stack, when the run has one. The live run does not: its suite is about the real
+    // Claude, and a second backend would only be something more to start and nothing more to prove.
+    ...(limits === null ? {} : limitsDotEnv(ports, limits)),
   };
 
   const body = Object.entries(values)
@@ -299,6 +384,23 @@ export function e2eDotEnv(ports, options = {}) {
     .join('\n');
 
   return `# Written by scripts/run-e2e-local.mjs, and deleted when the run ends. Never commit it.\n${body}\n`;
+}
+
+/**
+ * The addresses of the limits stack, as the suite reads them.
+ *
+ * @param {StackPorts} ports
+ * @param {LimitsPorts} limits
+ * @returns {Record<string, string>}
+ */
+function limitsDotEnv(ports, limits) {
+  const urls = serviceUrls({ ...ports, backend: limits.backend, web: limits.web });
+
+  return {
+    RC_LIMITS_WEB_URL: urls.web,
+    RC_LIMITS_BACKEND_URL: urls.backend,
+    RC_LIMITS_WS_URL: `${urls.backend.replace(/^http/, 'ws')}/ws`,
+  };
 }
 
 /**
@@ -487,7 +589,7 @@ export function boardRows(ports, options = {}) {
 }
 
 /** File settings of the `.env` that are written relative to the repository root. */
-export const REPO_RELATIVE_PATHS = ['RC_WORKSPACE_ALLOWLIST_FILE'];
+export const REPO_RELATIVE_PATHS = ['RC_WORKSPACE_ALLOWLIST_FILE', 'RC_PID_FILE'];
 
 /**
  * The environment the watch processes of `pnpm dev` are started with.
@@ -618,6 +720,26 @@ export function realPushEnvironment(dotEnvText, options = {}) {
 }
 
 /**
+ * The defines the app is compiled with that come straight from `e2e/.env`, and the variable each
+ * is read from. A value missing there is compiled in empty — never as the text "undefined".
+ *
+ * The last five are for the limits scenarios: the limits stack, and the provider's administrator.
+ * Compiled in like everything else, because on a device there is no `e2e/.env` to read them from.
+ */
+const DART_DEFINES_FROM_DOT_ENV = {
+  RC_API_URL: 'RC_BACKEND_URL',
+  RC_WS_URL: 'RC_WS_URL',
+  RC_OIDC_ISSUER: 'RC_OIDC_ISSUER',
+  RC_OIDC_CLIENT_ID: 'RC_OIDC_CLIENT_ID_MOBILE',
+  RC_OIDC_SCOPES: 'RC_OIDC_SCOPES',
+  RC_LIMITS_API_URL: 'RC_LIMITS_BACKEND_URL',
+  RC_LIMITS_WS_URL: 'RC_LIMITS_WS_URL',
+  RC_KEYCLOAK_URL: 'RC_KEYCLOAK_URL',
+  RC_KEYCLOAK_ADMIN: 'RC_KEYCLOAK_ADMIN',
+  RC_KEYCLOAK_ADMIN_PASSWORD: 'RC_KEYCLOAK_ADMIN_PASSWORD',
+};
+
+/**
  * The `--dart-define` arguments the Flutter end-to-end run is compiled with.
  *
  * Flutter has no `.env` at runtime: a value that is not compiled in does not exist on the device.
@@ -632,11 +754,9 @@ export function realPushEnvironment(dotEnvText, options = {}) {
 export function dartDefines(env, scenario, appVersion) {
   /** @type {Record<string, string>} */
   const defines = {
-    RC_API_URL: env['RC_BACKEND_URL'] ?? '',
-    RC_WS_URL: env['RC_WS_URL'] ?? '',
-    RC_OIDC_ISSUER: env['RC_OIDC_ISSUER'] ?? '',
-    RC_OIDC_CLIENT_ID: env['RC_OIDC_CLIENT_ID_MOBILE'] ?? '',
-    RC_OIDC_SCOPES: env['RC_OIDC_SCOPES'] ?? '',
+    ...Object.fromEntries(
+      Object.entries(DART_DEFINES_FROM_DOT_ENV).map(([define, key]) => [define, env[key] ?? '']),
+    ),
     RC_OIDC_REDIRECT_URL: MOBILE_REDIRECT_URL,
     RC_APP_VERSION: appVersion,
     RC_SCENARIO: scenario,

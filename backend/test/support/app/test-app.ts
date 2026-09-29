@@ -109,6 +109,8 @@ export function testEnvironment(
   process.env['OIDC_CLIENT_ID_MOBILE'] = 'remote-claude-mobile';
   process.env['OIDC_SCOPES'] = 'openid profile email offline_access';
   process.env['RC_WORKSPACE_ALLOWLIST_FILE'] = allowlistFile;
+  // Off: a suite never writes a pid where `pnpm allowlist` would find it and signal the suite.
+  process.env['RC_PID_FILE'] = 'off';
   process.env['RC_SESSION_MAX_CONCURRENT'] = '10';
   process.env['RC_SESSION_MIN_CONCURRENT'] = '1';
   process.env['RC_SESSION_MEMORY_FRACTION'] = '0.5';

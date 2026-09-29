@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
 import { render as rtlRender } from '@testing-library/react';
 import { useTranslation } from 'react-i18next';
 
@@ -75,6 +76,35 @@ describe('the providers', () => {
       expect(credentials.accessToken()).toBe('token-1');
     });
     expect(sockets.created).toHaveLength(1);
+  });
+
+  it('S-85 — the first request of a screen that mounts with the sign-in already carries the token', () => {
+    const seen: (string | null)[] = [];
+
+    /** A screen that asks for data as it mounts, as every list does. */
+    function AsksOnMount(): null {
+      useEffect(() => {
+        seen.push(credentials.accessToken());
+      }, []);
+      return null;
+    }
+
+    /** Mounts the screen in the same commit the sign-in lands in. */
+    function SignedInOnly(): React.JSX.Element | null {
+      return useAuthStore((state) => state.session) === null ? null : <AsksOnMount />;
+    }
+
+    rtlRender(
+      <Providers>
+        <SignedInOnly />
+      </Providers>,
+    );
+
+    act(() => {
+      useAuthStore.getState().signedIn(session);
+    });
+
+    expect(seen).toEqual(['token-1']);
   });
 
   it('renews through the transport, so a 401 becomes one refresh and a repeat', async () => {

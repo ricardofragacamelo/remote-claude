@@ -1,0 +1,13 @@
+{
+  "id": "05·S-45",
+  "title": "two clients race for the last slot: exactly one opens, the other is told why",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "ceiling": 2,
+    "code": "SESSION_LIMIT_REACHED",
+    "refusal": "This machine is already running 2 sessions, which is as many as it allows. End one and try again."
+  }
+}

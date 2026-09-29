@@ -20,6 +20,7 @@ export function processEnvironment(): RawEnvironment {
     OIDC_CLIENT_ID_MOBILE: process.env['OIDC_CLIENT_ID_MOBILE'],
     OIDC_SCOPES: process.env['OIDC_SCOPES'],
     RC_WORKSPACE_ALLOWLIST_FILE: process.env['RC_WORKSPACE_ALLOWLIST_FILE'],
+    RC_PID_FILE: process.env['RC_PID_FILE'],
     RC_SESSION_MAX_CONCURRENT: process.env['RC_SESSION_MAX_CONCURRENT'],
     RC_SESSION_MIN_CONCURRENT: process.env['RC_SESSION_MIN_CONCURRENT'],
     RC_SESSION_MEMORY_FRACTION: process.env['RC_SESSION_MEMORY_FRACTION'],

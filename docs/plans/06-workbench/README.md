@@ -120,8 +120,8 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Contrato](F0-contract.md) | ADR-014, documentos normativos, contrato HTTP, códigos de erro, rotas | B-01…B-05 | 🔲 |
-| F1 | [Navegar pelas pastas](F1-directory-browse.md) | listagem de subpastas, recentes e abas no servidor, `pnpm allowlist`, recarga, versões, histórico de notificações | B-06…B-12, B-40 | 🔲 |
+| F0 | [Contrato](F0-contract.md) | ADR-014, documentos normativos, contrato HTTP, códigos de erro, rotas | B-01…B-05 | ✅ |
+| F1 | [Navegar pelas pastas](F1-directory-browse.md) | listagem de subpastas, recentes e abas no servidor, `pnpm allowlist`, recarga, versões, histórico de notificações | B-06…B-12, B-40 | ✅ |
 | F2 | [Abrir pasta](F2-open-folder.md) | boas-vindas, diálogo, pasta na URL, sessão na pasta escolhida | B-13…B-16 | 🔲 |
 | F3 | [Moldura e casca](F3-layout.md) | sistema visual, navegação global, moldura de tela, abas de pasta, casca responsiva | B-17…B-22 | 🔲 |
 | F4 | [Comandos e notificações](F4-commands.md) | registro, paleta, menu Arquivo, notificações, estado por aba | B-23…B-27 | 🔲 |
@@ -142,7 +142,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 |---|---|---|---|
 | O workbench substitui a coluna única, decidido e documentado antes do código | B-01, B-02 | [00-decisions](../../architecture/shared/00-decisions.md), [web/03](../../architecture/web/03-ui-system.md) | S-89, S-116, S-117, S-164, S-165 |
 | Listar pasta passa a existir, com os códigos novos no catálogo e traduzidos | B-03, B-04 | [backend/03 · workspace](../../architecture/backend/03-modules.md#workspace), [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio) | S-01, S-02, S-25, S-43 |
-| A URL reproduz a tela; as rotas de auditoria e regras continuam, as de sessão e histórico saem | B-05, B-33 | [web/04 · A URL é estado](../../architecture/web/04-state-and-data.md#a-url-é-estado) | S-03…S-07, S-150, S-163 |
+| A URL reproduz a tela; as rotas de auditoria e regras continuam, as de sessão e histórico saem | B-05, B-16, B-20, B-33 | [web/04 · O mapa de rotas](../../architecture/web/04-state-and-data.md#o-mapa-de-rotas) | S-03…S-07, S-150, S-163 |
 | Listagem de um nível, só diretórios, com teto, sem sair da allowlist nem por symlink | B-06…B-08 | [backend/03 · workspace](../../architecture/backend/03-modules.md#workspace) | S-08…S-33 |
 | Recentes e pastas abertas por usuário, idempotentes e revalidados | B-09 | [backend/05 · Migrations](../../architecture/backend/05-persistence.md#migrations) | S-34…S-49 |
 | **O caso relatado**: liberar o projeto com um comando, sem YAML à mão e sem afrouxar a fronteira | B-10, B-11 | [07-repository-layout · Configuração](../../architecture/shared/07-repository-layout.md#configuração-e-segredo) | S-50…S-64, S-179, S-180 |

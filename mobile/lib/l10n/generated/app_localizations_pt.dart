@@ -82,6 +82,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get connectionStatusReconnecting => 'Reconectando…';
 
   @override
+  String get connectionStatusThrottled =>
+      'Enviado rápido demais — aguardando o tempo que o servidor pediu';
+
+  @override
   String get connectionStatusClosed => 'Desconectado';
 
   @override

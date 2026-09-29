@@ -6,6 +6,7 @@ import { AuditRoute, readAuditSearch } from './AuditRoute';
 import { Callback } from './Callback';
 import { ConversationRoute } from './ConversationRoute';
 import { HistoryRoute, readHistorySearch } from './HistoryRoute';
+import { NotFoundRoute } from './NotFoundRoute';
 import { RuleRoute } from './RuleRoute';
 import { RulesRoute } from './RulesRoute';
 import { SessionRoute } from './SessionRoute';
@@ -16,7 +17,7 @@ import { SessionRoute } from './SessionRoute';
  * What is navigable lives in the URL, not in state — the test is whether pasting the link on
  * another device reproduces the screen. See docs/architecture/web/04-state-and-data.md.
  */
-const rootRoute = createRootRoute({ component: Outlet });
+const rootRoute = createRootRoute({ component: Outlet, notFoundComponent: NotFoundRoute });
 
 const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: App });
 
@@ -75,18 +76,25 @@ const conversationRoute = createRoute({
   component: ConversationRoute,
 });
 
-export const router = createRouter({
-  routeTree: rootRoute.addChildren([
-    indexRoute,
-    callbackRoute,
-    sessionRoute,
-    rulesRoute,
-    ruleRoute,
-    auditRoute,
-    historyRoute,
-    conversationRoute,
-  ]),
-});
+/**
+ * Every route, as one tree — exported so a test can mount the real table on a memory history.
+ *
+ * The map this tree is heading to is in docs/architecture/web/04-state-and-data.md#o-mapa-de-rotas.
+ * `/claude…` and `/usage…` are **reserved** to plans 11 and 14 and are deliberately absent: an
+ * address nobody registered answers the translated not-found, never an empty screen.
+ */
+export const routeTree = rootRoute.addChildren([
+  indexRoute,
+  callbackRoute,
+  sessionRoute,
+  rulesRoute,
+  ruleRoute,
+  auditRoute,
+  historyRoute,
+  conversationRoute,
+]);
+
+export const router = createRouter({ routeTree });
 
 declare module '@tanstack/react-router' {
   interface Register {

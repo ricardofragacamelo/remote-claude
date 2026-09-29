@@ -161,6 +161,18 @@ histórico, a retomada, a recarga do `gap` e o desfazer são provados sobre o qu
 produto** produziu na execução, nunca sobre um transcript ou um arquivo plantado pelo teste
 ([plano 04, F5](../../plans/04-transcript-and-resume/F5-e2e.md)).
 
+**Os limites têm uma stack própria, ao lado da principal.** Cada execução de `pnpm test:e2e` sobe,
+sobre o mesmo Postgres e o mesmo Keycloak, um **segundo backend e um segundo web** com os limites
+apertados — teto de **2** sessões, **20 s** de ociosidade, **20** frames por segundo (o número do
+produto) e um minuto para responder permissão (`LIMITS_STACK` em `scripts/lib/stack.mjs`). Os
+números de que o resto da suíte precisa são o oposto desses: um TTL de segundos na stack principal
+encerraria sessões de qualquer spec que parasse para esperar, e um ritmo de vinte faria os cenários
+que estouram o ring buffer levarem um minuto cada. A suíte lê os endereços dela em `e2e/.env`
+(`RC_LIMITS_*`), o app os recebe por `--dart-define`, e a execução `--live` não a sobe
+([plano 05, F4](../../plans/05-hardening-operations/F4-e2e.md)). Dois cenários dela mudam o que o
+**provedor de teste** faz — encurtar o token de um client, encerrar as sessões de um usuário —, pela
+administração do Keycloak local, e desfazem o que mudaram; o produto nunca fala com ela.
+
 Existe **uma** suíte separada, `e2e/smoke-live/`, que roda contra o Claude real. Não roda em PR
 e **não roda em nightly**: roda **sob demanda**, porque não há credencial do Claude no CI nem
 máquina ligada à noite. A consequência está dita e não é confortável — o risco de o fake divergir
@@ -191,6 +203,9 @@ Estes cobrem os caminhos que, se quebrarem, tornam o produto inútil:
 8. **Interrupt:** tool longa em execução → `session.interrupt` → para e a sessão volta a `idle`.
 9. **Workspace negado:** tentar abrir caminho fora da allowlist → `403 WORKSPACE_NOT_ALLOWED`.
 10. **Multi-cliente:** web e mobile na mesma sessão → ambos veem o mesmo stream, na mesma ordem.
+11. **Limites:** máquina no teto, sessão ociosa encerrada, cliente que martela, token que expira no
+    meio do turno → a tela diz **o que aconteceu**, traduzido, e nada fica esperando uma resposta
+    que não vem ([plano 05 · S-41…S-45, S-78, S-79](../../plans/05-hardening-operations/scenarios.md)).
 
 ---
 

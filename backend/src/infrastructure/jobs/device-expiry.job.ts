@@ -4,8 +4,7 @@ import { ExpirePendingDevicesUseCase } from '@application/auth';
 import { SCHEDULER } from '@application/shared';
 import type { Scheduler } from '@application/shared';
 import { LOGGER, type Logger } from '@shared/logging/logger';
-import { PeriodicJob } from './periodic-job';
-import type { JobCadence } from './periodic-job';
+import { SweepJob } from './sweep-job';
 
 /**
  * How often the forgotten registrations are swept.
@@ -23,40 +22,22 @@ export const DEVICE_SWEEP_INTERVAL_MS = 60 * 60 * 1000;
  * deadline by an hour, because approving it is refused either way.
  */
 @Injectable()
-export class DeviceExpiryJob extends PeriodicJob {
+export class DeviceExpiryJob extends SweepJob {
   constructor(
     @Inject(ExpirePendingDevicesUseCase) private readonly expire: ExpirePendingDevicesUseCase,
     @Inject(SCHEDULER) scheduler: Scheduler,
-    @Inject(LOGGER) private readonly logger: Logger,
-    private readonly intervalMs: number = DEVICE_SWEEP_INTERVAL_MS,
+    @Inject(LOGGER) logger: Logger,
+    intervalMs: number = DEVICE_SWEEP_INTERVAL_MS,
   ) {
-    super(scheduler);
+    super(scheduler, logger, intervalMs, {
+      op: 'device.expire',
+      module: 'auth',
+      removed: 'removed pending device registrations past the deadline',
+      failed: 'the sweep of pending devices failed',
+    });
   }
 
-  /** One pass, exposed so a test can run it at the instant it chooses. */
-  async sweep(): Promise<void> {
-    try {
-      const removed = await this.expire.execute();
-
-      if (removed > 0) {
-        this.logger.info(
-          { op: 'device.expire', layer: 'infrastructure', module: 'auth', removed },
-          'removed pending device registrations past the deadline',
-        );
-      }
-    } catch (error) {
-      this.logger.error(
-        { op: 'device.expire', layer: 'infrastructure', module: 'auth', err: error },
-        'the sweep of pending devices failed',
-      );
-    }
-  }
-
-  protected cadence(): JobCadence {
-    return { firstDelayMs: this.intervalMs, intervalMs: this.intervalMs };
-  }
-
-  protected run(): Promise<void> {
-    return this.sweep();
+  protected removeDue(): Promise<number> {
+    return this.expire.execute();
   }
 }

@@ -1,36 +1,15 @@
 import { isAbsolute } from 'node:path';
-import { z } from 'zod';
 
-import { ConfigurationError } from '@remote-claude/config';
+import { ConfigurationError, workspaceAllowlistSchema } from '@remote-claude/config';
 import { Workspace, WorkspacePath } from '@domain/workspace';
 
-/**
- * The allowlist file, as a schema.
- *
- * It is the one piece of configuration that does **not** live in an environment variable, and the
- * exception is declared: this list is the first line of defence of the product, it grows with a
- * comment per root and with the owner of each root, and changing it has to mean touching the disk
- * of the machine. See docs/plans/01-live-session/decisions.md#d-02 and
- * docs/architecture/shared/07-repository-layout.md#configuração-e-segredo.
+/*
+ * The schema of the file lives in `@remote-claude/config`, where `pnpm allowlist` reads it too: one
+ * schema for the boot and for the script that writes the local copy (plan 06, D-09, S-58).
  *
  * YAML rather than JSON for exactly one reason: a security boundary that cannot carry a comment
  * saying *why* a root is on it stops being reviewable the week it has six entries.
  */
-const rootSchema = z.object({
-  /** Absolute path of the root. Relative is refused here, not normalised into something absolute. */
-  path: z.string().min(1),
-  /** What the UI calls it. */
-  label: z.string().min(1),
-  /** OIDC subjects allowed to reach it. A root nobody may use is a typo, not a configuration. */
-  users: z.array(z.string().min(1)).min(1),
-});
-
-export const workspaceAllowlistSchema = z.object({
-  roots: z.array(rootSchema).min(1),
-});
-
-/** The file, as it is written. */
-export type RawWorkspaceAllowlist = z.infer<typeof workspaceAllowlistSchema>;
 
 /** The two questions the loader asks of the world, so a unit test can answer them itself. */
 export interface AllowlistFileSystem {

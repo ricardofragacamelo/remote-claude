@@ -97,7 +97,7 @@ export const BRACE = /\{\s*([A-Za-z0-9_]+)\s*\}/g;
 
 /**
  * @typedef {object} Problem
- * @property {'missing' | 'extra' | 'params' | 'orphan'} kind
+ * @property {'missing' | 'extra' | 'params' | 'orphan' | 'untranslated'} kind
  * @property {string} key
  * @property {string} detail
  */
@@ -257,4 +257,43 @@ export function usageInLiterals(source) {
     keys: new Set([...source.matchAll(LITERAL_KEY)].map((match) => String(match[1]))),
     prefixes: new Set(),
   };
+}
+
+/** `messageKey = 'a.b'` and `messageKey: 'a.b'` — the two ways the backend names what it sends. */
+const MESSAGE_KEY = /\bmessageKey\s*[:=]\s*['"]([a-z][A-Za-z0-9]*(?:\.[a-z][A-Za-z0-9]*)+)['"]/g;
+
+/**
+ * The `messageKey`s a source hands to a client.
+ *
+ * A domain error declares its key as a field, and the framework's own refusals as a table entry;
+ * both reach a screen as the `messageKey` of an error envelope, with no `t()` anywhere near them.
+ *
+ * @param {string} source
+ * @returns {Set<string>}
+ */
+export function emittedMessageKeys(source) {
+  return new Set([...source.matchAll(MESSAGE_KEY)].map((match) => String(match[1])));
+}
+
+/**
+ * Keys a client is sent and cannot translate.
+ *
+ * The orphan check reads the backend as *usage* of the catalogue, so it proves every key is
+ * wanted — and says nothing of a key the backend sends that the catalogue never declared. That one
+ * reaches the screen as its raw dotted name. Checked against the source language only: parity
+ * already carries a key from `en` to every other one (plan 06, S-01).
+ *
+ * @param {ReadonlyMap<string, string>} declared the source catalogue
+ * @param {Iterable<string>} emitted
+ * @returns {Problem[]}
+ */
+export function findUntranslated(declared, emitted) {
+  return [...new Set(emitted)]
+    .filter((key) => !declared.has(key))
+    .sort()
+    .map((key) => ({
+      kind: /** @type {const} */ ('untranslated'),
+      key,
+      detail: 'the backend sends it as a messageKey, and no catalogue translates it',
+    }));
 }

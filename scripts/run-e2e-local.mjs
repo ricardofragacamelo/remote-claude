@@ -44,6 +44,12 @@
  * Gradle daemons the build left behind, which otherwise hold gigabytes until the next
  * `pnpm verify:full` times out on them. See `scripts/lib/emulator.mjs`.
  *
+ * **A second backend, with its web, runs beside the first** — the limits stack (plan 05, F4). The
+ * scenarios of the limits need a ceiling of two, a TTL of seconds and the product's own rate, and
+ * every other spec needs the opposite; one backend cannot be both. It shares PostgreSQL and
+ * Keycloak with the main one, and has its own two ports (`LIMITS_STACK` in `scripts/lib/stack.mjs`).
+ * The live run does not start it: its suite is about the real Claude, not about the limits.
+ *
  * `pnpm test:e2e:live` runs `e2e/smoke-live/` against the **real** Claude on this machine. It is
  * the one suite that is not hermetic and the only one that costs money per run, so it is never a
  * gate — it exists to catch the SDK changing its contract under us, which nothing else can.
@@ -86,6 +92,7 @@ import {
   e2eProjectName,
   projectOwner,
   ephemeralEnvironment,
+  limitsEnvironment,
   realPushEnvironment,
   serviceUrls,
 } from './lib/stack.mjs';
@@ -190,6 +197,15 @@ let device = null;
 let appBuilt = false;
 
 /**
+ * Where the web bundle of the limits stack is built, once it is. Outside the repository: a second
+ * `web/dist` would be one more folder for the formatter and the linters to trip over, and this one
+ * is gone when the run ends.
+ *
+ * @type {string | null}
+ */
+let limitsWebDir = null;
+
+/**
  * Takes this run's compose project down, if it got as far as having one.
  */
 function takeStackDown() {
@@ -264,6 +280,9 @@ const teardown = cleanupOnce(async () => {
   // `pnpm exec playwright test` into a confusing timeout instead of a clear "run the script".
   fs.rmSync(dotEnvPath, { force: true });
   fs.rmSync(backendLogPath, { force: true });
+  if (limitsWebDir !== null) {
+    fs.rmSync(limitsWebDir, { recursive: true, force: true });
+  }
 
   ok(
     'nothing left',
@@ -411,6 +430,21 @@ function purgeLeftovers(cli) {
 }
 
 /**
+ * Starts a backend process of this run and waits for it to answer.
+ *
+ * @param {string} label
+ * @param {readonly string[]} args arguments to `pnpm`
+ * @param {string} url where it answers
+ * @param {NodeJS.ProcessEnv} env
+ * @param {string} [logFile]
+ */
+async function startAndWait(label, args, url, env, logFile) {
+  const proc = startService(label, args, env, logFile);
+  await waitForHttp(`${url}/health`, { proc, timeoutMs: SERVICE_TIMEOUT_MS, intervalMs: 500 });
+  ok(label, url);
+}
+
+/**
  * Starts the backend and waits for it to answer.
  *
  * The backend applies its migrations on the way up, so there is no separate migrate step: an
@@ -425,20 +459,15 @@ function purgeLeftovers(cli) {
 async function startBackend(urls, env) {
   fs.rmSync(backendLogPath, { force: true });
 
-  const backendProc = startService(
+  await startAndWait(
     'backend',
     ['--filter', './backend', live ? 'start' : 'start:scripted'],
+    urls.backend,
     env,
     // Only the live suite reads it. Keeping a log of every run would be a file that grows and
     // that nothing ever looks at.
     live ? backendLogPath : undefined,
   );
-  await waitForHttp(`${urls.backend}/health`, {
-    proc: backendProc,
-    timeoutMs: SERVICE_TIMEOUT_MS,
-    intervalMs: 500,
-  });
-  ok('backend', urls.backend);
 }
 
 /**
@@ -454,27 +483,59 @@ async function startBackend(urls, env) {
  *
  * @param {{ web: string }} urls
  * @param {NodeJS.ProcessEnv} env
+ * @param {{ label?: string, outDir?: string }} [target] where the bundle goes, for the second web
+ *   of the run — `web/dist` when left out
  * @returns {Promise<number | null>} the exit code of a build that failed, or `null` once it serves
  */
-async function startWeb(urls, env) {
+async function startWeb(urls, env, target = {}) {
+  const label = target.label ?? 'web';
   const webEnv = { ...env, NODE_ENV: 'production' };
+  const outDir = target.outDir === undefined ? [] : ['--outDir', target.outDir, '--emptyOutDir'];
 
-  const build = run('pnpm', ['--filter', './web', 'build'], {
+  const build = run('pnpm', ['--filter', './web', 'build', ...outDir], {
     cwd: repoRoot,
     env: webEnv,
     timeoutMs: SERVICE_TIMEOUT_MS,
   });
   if (build.code !== 0) {
-    fail(`the web build failed with exit ${String(build.code)}`);
+    fail(`the ${label} build failed with exit ${String(build.code)}`);
     line(build.stdout.trim());
     line(build.stderr.trim());
     return build.code;
   }
 
-  const webProc = startService('web', ['--filter', './web', 'preview'], webEnv, undefined);
+  const preview = ['--filter', './web', 'preview', ...outDir.slice(0, 2)];
+  const webProc = startService(label, preview, webEnv, undefined);
   await waitForHttp(urls.web, { proc: webProc, timeoutMs: SERVICE_TIMEOUT_MS, intervalMs: 500 });
-  ok('web', urls.web);
+  ok(label, urls.web);
   return null;
+}
+
+/**
+ * Brings the limits stack up — its backend, then its web — once the main backend has applied the
+ * migrations both of them read.
+ *
+ * After the main one, not beside it: two backends applying the same migrations to one database at
+ * the same instant is a race this run has no reason to host.
+ *
+ * @param {import('./lib/stack.mjs').StackPorts} ports
+ * @param {import('./lib/stack.mjs').LimitsPorts} limits
+ * @param {NodeJS.ProcessEnv} env the main stack's
+ * @returns {Promise<number | null>} the exit code of a build that failed, or `null` once it serves
+ */
+async function startLimitsStack(ports, limits, env) {
+  const limitsEnv = { ...env, ...limitsEnvironment(ports, limits) };
+  const urls = serviceUrls({ ...ports, ...limits });
+
+  await startAndWait(
+    'limits backend',
+    ['--filter', './backend', 'start:scripted'],
+    urls.backend,
+    limitsEnv,
+  );
+
+  limitsWebDir = fs.mkdtempSync(path.join(os.tmpdir(), 'remote-claude-web-limits-'));
+  return startWeb(urls, limitsEnv, { label: 'limits web', outDir: limitsWebDir });
 }
 
 /**
@@ -514,6 +575,49 @@ function runSuite(env) {
 }
 
 /**
+ * Starts the processes of this run once the containers are up: the backend, the web, and the
+ * limits stack when the run has one.
+ *
+ * @param {import('./lib/stack.mjs').StackPorts} ports
+ * @param {import('./lib/stack.mjs').LimitsPorts | null} limits
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {Promise<number | null>} the exit code of a build that failed, or `null` once all serve
+ */
+async function startServices(ports, limits, env) {
+  const urls = serviceUrls(ports);
+  await startBackend(urls, env);
+
+  const buildFailure = await startWeb(urls, env);
+  if (buildFailure !== null || limits === null) {
+    return buildFailure;
+  }
+
+  return startLimitsStack(ports, limits, env);
+}
+
+/**
+ * Prints where everything of this run answers.
+ *
+ * @param {import('./lib/stack.mjs').StackPorts} ports
+ * @param {import('./lib/stack.mjs').LimitsPorts | null} limits
+ */
+function printBoard(ports, limits) {
+  const urls = serviceUrls(ports);
+
+  line();
+  line(`  ${bold('Backend')}  ${cyan(urls.backend)}   ${bold('Web')}  ${cyan(urls.web)}`);
+  if (limits !== null) {
+    const limitsUrls = serviceUrls({ ...ports, ...limits });
+    line(
+      `  ${bold('Limits')}   ${cyan(limitsUrls.backend)}   ${bold('Web')}  ${cyan(limitsUrls.web)}`,
+    );
+  }
+  line(`  ${bold('Keycloak')} ${cyan(urls.realm)}`);
+  line(dim('the suite reads e2e/.env; everything here is torn down when it ends'));
+  line();
+}
+
+/**
  * Brings the stack up and runs the suite.
  *
  * @returns {Promise<number>} the exit code of the suite, or of whatever stopped it from running
@@ -541,7 +645,9 @@ async function main() {
 
   purgeLeftovers(composeCli);
 
-  const [postgres, keycloak, backend, web] = await Promise.all([
+  const [postgres, keycloak, backend, web, limitsBackend, limitsWeb] = await Promise.all([
+    findFreePort(),
+    findFreePort(),
     findFreePort(),
     findFreePort(),
     findFreePort(),
@@ -549,6 +655,7 @@ async function main() {
   ]);
 
   const ports = { postgres, keycloak, backend, web };
+  const limits = live ? null : { backend: limitsBackend, web: limitsWeb };
   const urls = serviceUrls(ports);
   const project = e2eProjectName(ports.backend);
 
@@ -577,11 +684,9 @@ async function main() {
 
   await bringUp(compose, urls);
 
-  await startBackend(urls, env);
-
-  const buildFailure = await startWeb(urls, env);
-  if (buildFailure !== null) {
-    return buildFailure;
+  const serviceFailure = await startServices(ports, limits, env);
+  if (serviceFailure !== null) {
+    return serviceFailure;
   }
 
   const bootProblem = await booted;
@@ -591,13 +696,9 @@ async function main() {
     return STACK_FAILED;
   }
 
-  fs.writeFileSync(dotEnvPath, e2eDotEnv(ports, claudeConfig), 'utf8');
+  fs.writeFileSync(dotEnvPath, e2eDotEnv(ports, { ...claudeConfig, limits }), 'utf8');
 
-  line();
-  line(`  ${bold('Backend')}  ${cyan(urls.backend)}   ${bold('Web')}  ${cyan(urls.web)}`);
-  line(`  ${bold('Keycloak')} ${cyan(urls.realm)}`);
-  line(dim('the suite reads e2e/.env; everything here is torn down when it ends'));
-  line();
+  printBoard(ports, limits);
 
   return runSuite(env);
 }

@@ -24,6 +24,7 @@
   "connectionStatusConnecting": "Conectando…",
   "connectionStatusReady": "Conectado",
   "connectionStatusReconnecting": "Reconectando…",
+  "connectionStatusThrottled": "Enviado rápido demais — aguardando o tempo que o servidor pediu",
   "connectionStatusClosed": "Desconectado",
   "sessionPingTitle": "Ida e volta",
   "sessionPingDescription": "Um comando por todas as camadas: o gateway, o caso de uso, a regra, o banco e a volta como evento.",

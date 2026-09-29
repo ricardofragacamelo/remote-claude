@@ -94,6 +94,20 @@ void main() {
     expect(find.text('rm -rf build/'), findsOneWidget);
   });
 
+  testWidgets('S-81 · a connection held back by the server says why, even on a narrow phone', (
+    WidgetTester tester,
+  ) async {
+    // The width of the emulator the end-to-end run found the header overflowing on.
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await pumpSession(tester, connection: ConnectionStatus.throttled, settle: false);
+
+    expect(find.text(l10n.connectionStatusThrottled), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('attaches to the session the route named', (WidgetTester tester) async {
     await pumpSession(tester);
 

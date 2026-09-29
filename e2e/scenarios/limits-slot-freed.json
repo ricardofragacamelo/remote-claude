@@ -1,0 +1,12 @@
+{
+  "id": "05·S-78",
+  "title": "ending one session frees the slot: the next start from the screen opens, and the refusal goes",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "ceiling": 2,
+    "refusal": "This machine is already running 2 sessions, which is as many as it allows. End one and try again."
+  }
+}

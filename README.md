@@ -85,7 +85,7 @@ A documentação é fragmentada de propósito, com índices que roteiam por situ
 
 | | |
 |---|---|
-| Node | ≥ 22 |
+| Node | ≥ 22.18 — o `pnpm allowlist` importa o schema em `.ts` direto, e o Node só tira os tipos sem flag daí em diante |
 | pnpm | ≥ 9 |
 | Docker | rodando, com Compose v2 — serve tanto o plugin `docker compose` quanto o binário `docker-compose` |
 | Flutter | 3.44+ — o módulo `mobile/` faz parte dos portões, não é opcional |
@@ -120,6 +120,7 @@ silencioso.
 | Comando | Faz |
 |---|---|
 | `pnpm dev` | sobe a stack de desenvolvimento em **portas fixas** |
+| `pnpm allowlist add <pasta>` | libera uma pasta da máquina para o Claude sem editar YAML: grava na cópia local `infra/workspace-allowlist.local.yaml` (ignorada pelo git, validada pelo schema do boot), recusa `/`, pergunta antes do `$HOME` e manda `SIGHUP` ao backend do `pnpm dev`, que recarrega sem reiniciar. `remove <pasta>` tira; `list` diz qual arquivo está ativo e as raízes dele |
 | `pnpm db reset` | derruba, recria, migra e popula — a sequência que ninguém lembra na ordem certa |
 | `pnpm db seed` | só popula; rodar duas vezes não muda nada |
 | `pnpm db purge` | apaga da trilha de auditoria o que passou da janela de retenção (`RC_AUDIT_RETENTION_DAYS`, mínimo 90 dias) e registra o que apagou. É o mesmo job que o backend roda sozinho, sob o mesmo lock; sai ≠ 0 e diz o que ficou quando algo foi recusado, e rodar de novo retoma de onde parou |

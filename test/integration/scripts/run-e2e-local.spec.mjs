@@ -82,9 +82,18 @@ function e2eContainers() {
   ]).filter((name) => name.startsWith(E2E_PROJECT_PREFIX));
 }
 
+/** The bundles of limits webs on this machine — each run builds one in the temporary folder. */
+function limitsBundles() {
+  return fs
+    .readdirSync(os.tmpdir())
+    .filter((entry) => entry.startsWith('remote-claude-web-limits-'));
+}
+
 describe('run-e2e-local.mjs, against real docker', () => {
   /** @type {import('../../../scripts/lib/exec.mjs').RunResult} */
   let result;
+  /** Whatever other runs on this machine left, which is not this run's to answer for. */
+  const bundlesBefore = limitsBundles();
   /** @type {net.Server[]} */
   const squatters = [];
 
@@ -145,6 +154,14 @@ describe('run-e2e-local.mjs, against real docker', () => {
     expect(result.stdout, result.stdout).toContain('✓ keycloak');
     expect(result.stdout, result.stdout).toContain('✓ backend');
     expect(result.stdout, result.stdout).toContain('✓ web');
+  });
+
+  it('S-83 — brings the limits stack up beside the main one, and takes it down with it', () => {
+    expect(result.stdout, result.stdout).toContain('✓ limits backend');
+    expect(result.stdout, result.stdout).toContain('✓ limits web');
+
+    // Its bundle is built outside the repository, and gone when the run is.
+    expect(limitsBundles().filter((dir) => !bundlesBefore.includes(dir))).toEqual([]);
   });
 
   it('S-57 — exits with the code of the suite, not with a fixed 0', () => {

@@ -127,7 +127,19 @@ continua sendo verificada pelo `typecheck`, sem transpilação no caminho.
   variável. Ela é a primeira linha de defesa do produto e cresce com comentário e com o dono de
   cada raiz — ver [workspace](../backend/03-modules.md#workspace). Vale o mesmo regime: arquivo
   ausente, ilegível ou fora do schema derruba o boot, e a **recarga é explícita**, nunca um watch
-  silencioso.
+  silencioso: `SIGHUP` ([06 · D-15](../../plans/06-workbench/decisions.md#d-15--como-o-backend-em-execução-recebe-a-allowlist-nova)).
+  O default versionado (`infra/workspace-allowlist.yaml`) só declara a raiz de rascunho; a pasta
+  real de quem desenvolve vai para a **cópia local** `infra/workspace-allowlist.local.yaml`,
+  ignorada pelo git e escrita por `pnpm allowlist add`, que valida pelo **mesmo schema** do boot —
+  ele mora em `packages/config`, lido pelo backend e pelo script
+  ([06 · D-09](../../plans/06-workbench/decisions.md#d-09--onde-mora-a-cópia-local-da-allowlist-e-como-o-boot-a-escolhe)).
+  O `pnpm dev` a usa quando ela existe e `RC_WORKSPACE_ALLOWLIST_FILE` ficou no default; as stacks
+  de e2e e de teste nunca a leem.
+- **O pid do backend de desenvolvimento** vai para `RC_PID_FILE` (`off` desliga, como o
+  `RC_AUDIT_PURGE_INTERVAL_MS`): é por ele que o `pnpm allowlist` acha o processo do app — não o
+  do watcher que o reinicia — para mandar o `SIGHUP`. O arquivo é gravado pelo próprio app, e o
+  script só sinaliza um processo cuja linha de comando roda o `main.ts`: pid reaproveitado pelo
+  sistema nunca recebe o sinal.
 - `.env.example` versionado, com **toda** variável e um comentário do que faz.
 - `.env` real **nunca** versionado.
 - O backend **não** precisa de credencial do Claude: herda o login do usuário em

@@ -6,6 +6,7 @@ import {
   SessionLimitReachedError,
   SessionNotFoundError,
 } from '@domain/session';
+import { OpenFoldersLimitReachedError, WorkspaceDirectoryUnreadableError } from '@domain/workspace';
 import {
   DEFAULT_RETRY_AFTER_SECONDS,
   hasDetails,
@@ -27,6 +28,9 @@ describe('httpStatusFor', () => {
     ['PERMISSION_REQUEST_EXPIRED', 410],
     ['PAYLOAD_TOO_LARGE', 413],
     ['WORKSPACE_NOT_A_DIRECTORY', 422],
+    ['WORKSPACE_DIRECTORY_UNREADABLE', 422],
+    ['OPEN_FOLDERS_LIMIT_REACHED', 409],
+    ['CONFLICT', 409],
     ['SESSION_LOCKED', 423],
     ['RATE_LIMITED', 429],
     ['SESSION_LIMIT_REACHED', 429],
@@ -155,5 +159,31 @@ describe('RateLimitedError', () => {
     expect(error.code).toBe('RATE_LIMITED');
     expect(error.messageKey).toBe('common.error.rateLimited');
     expect(error.params).toEqual({ scope: 'attachedSessions', limit: 16, retryAfterSeconds: 1 });
+  });
+});
+
+describe('the codes the workbench adds — plan 06, B-03', () => {
+  it('answers a directory the process may not read as impossible, not as unauthorised', () => {
+    // The allowlist already said yes: it is the filesystem that refuses, and another token would
+    // not change that. `403` would send the client looking for a permission it already has.
+    expect(
+      toErrorEnvelope(new WorkspaceDirectoryUnreadableError('/srv/p/locked'), 't').error,
+    ).toEqual({
+      code: 'WORKSPACE_DIRECTORY_UNREADABLE',
+      messageKey: 'workspace.error.directoryUnreadable',
+      params: { path: '/srv/p/locked' },
+      traceId: 't',
+      httpEquivalent: 422,
+    });
+  });
+
+  it('answers one folder tab too many as a conflict, and says the ceiling', () => {
+    expect(toErrorEnvelope(new OpenFoldersLimitReachedError(8), 't').error).toEqual({
+      code: 'OPEN_FOLDERS_LIMIT_REACHED',
+      messageKey: 'workspace.error.openFoldersLimitReached',
+      params: { limit: 8 },
+      traceId: 't',
+      httpEquivalent: 409,
+    });
   });
 });

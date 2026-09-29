@@ -724,6 +724,31 @@ void main() {
 
       expect(scheduler.delays, <Duration>[backoffMin]);
     });
+
+    test('S-81 · holds the connection as throttled until the wait is over', () async {
+      await ready();
+      socket().deliver(rateLimited(12));
+      await settle();
+
+      await socket().drop(closeRateLimited);
+      await settle();
+      expect(limited.status, ConnectionStatus.throttled);
+
+      scheduler.fire();
+      await settle();
+      expect(limited.status, ConnectionStatus.connecting);
+    });
+
+    test('S-81 · any other close is an ordinary reconnection, even after a refusal', () async {
+      await ready();
+      socket().deliver(rateLimited(12));
+      await settle();
+
+      await socket().drop(4408);
+      await settle();
+
+      expect(limited.status, ConnectionStatus.reconnecting);
+    });
   });
 
   group('reconnection', () {

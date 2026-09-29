@@ -5,7 +5,9 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  E2E_KEYCLOAK_ADMIN,
   E2E_PROJECT_PREFIX,
+  LIMITS_STACK,
   MOBILE_REDIRECT_URL,
   dartDefines,
   realPushEnvironment,
@@ -17,6 +19,7 @@ import {
   projectOwner,
   ephemeralEnvironment,
   lanAddress,
+  limitsEnvironment,
   loadDotEnv,
   projectName,
   resolvePorts,
@@ -24,6 +27,7 @@ import {
   watchEnvironment,
   workspaceStatus,
 } from '../../../scripts/lib/stack.mjs';
+import { ALLOWLIST_FILE } from '../../../scripts/lib/workspaces.mjs';
 
 /** @type {string[]} */
 const temporary = [];
@@ -212,6 +216,12 @@ describe('watchEnvironment', () => {
     expect(env).toEqual({ RC_WORKSPACE_ALLOWLIST_FILE: '/etc/a.yaml', OTHER: './x' });
   });
 
+  it('resolves the pid file against the repository too — plan 06, B-11', () => {
+    const env = watchEnvironment({ RC_PID_FILE: './.run/backend.pid' }, '/repo');
+
+    expect(env['RC_PID_FILE']).toBe(path.resolve('/repo', '.run/backend.pid'));
+  });
+
   it('leaves an unset or blank path alone, for the backend to report', () => {
     expect(watchEnvironment({}, '/repo')).toEqual({});
     expect(watchEnvironment({ RC_WORKSPACE_ALLOWLIST_FILE: ' ' }, '/repo')).toEqual({
@@ -327,6 +337,16 @@ describe('the ephemeral stack of an e2e run', () => {
     );
   });
 
+  it('runs on the shipped allowlist and writes no pid file, whatever this machine freed — plan 06, S-59', () => {
+    const env = ephemeralEnvironment(ports);
+
+    // A run never reads the local copy `pnpm allowlist` writes, and never leaves a pid for it to
+    // signal: what a developer freed on their machine cannot change a test.
+    expect(env.RC_WORKSPACE_ALLOWLIST_FILE).toBe(ALLOWLIST_FILE);
+    expect(env.RC_WORKSPACE_ALLOWLIST_FILE).not.toContain('.local.');
+    expect(env.RC_PID_FILE).toBe('off');
+  });
+
   it('declares every variable the backend refuses to start without', () => {
     const declared = Object.keys(ephemeralEnvironment(ports));
 
@@ -364,6 +384,90 @@ describe('the ephemeral stack of an e2e run', () => {
 
   it('says in the file itself that it is generated, so nobody commits one', () => {
     expect(e2eDotEnv(ports).split('\n')[0]).toMatch(/^#.*deleted when the run ends/);
+  });
+
+  it('pins the provider administrator, for compose and for the two scenarios that need it', () => {
+    const env = ephemeralEnvironment(ports);
+
+    expect(env.RC_KEYCLOAK_ADMIN).toBe(E2E_KEYCLOAK_ADMIN.username);
+    expect(env.RC_KEYCLOAK_ADMIN_PASSWORD).toBe(E2E_KEYCLOAK_ADMIN.password);
+    expect(dotEnvValues(e2eDotEnv(ports))['RC_KEYCLOAK_ADMIN']).toBe(E2E_KEYCLOAK_ADMIN.username);
+  });
+});
+
+/**
+ * The `KEY=value` rows of a generated `.env`, as a map.
+ *
+ * @param {string} text
+ * @returns {Record<string, string>}
+ */
+function dotEnvValues(text) {
+  return Object.fromEntries(
+    text
+      .split('\n')
+      .filter((row) => row.trim() !== '' && !row.startsWith('#'))
+      .map((row) => row.split('=', 2)),
+  );
+}
+
+describe('the limits stack of an e2e run — plan 05, S-82', () => {
+  const ports = { postgres: 51_001, keycloak: 51_002, backend: 51_003, web: 51_004 };
+  const limits = { backend: 51_005, web: 51_006 };
+
+  it('tightens exactly the five limits, to the numbers the scenarios are written against', () => {
+    const env = limitsEnvironment(ports, limits);
+
+    expect(LIMITS_STACK).toEqual({
+      RC_SESSION_MAX_CONCURRENT: '2',
+      RC_SESSION_MIN_CONCURRENT: '2',
+      RC_SESSION_IDLE_TTL_MS: '20000',
+      RC_WS_MAX_FRAMES_PER_SECOND: '20',
+      RC_PERMISSION_TIMEOUT_MS: '60000',
+    });
+    expect(env).toMatchObject(LIMITS_STACK);
+  });
+
+  it('shares the database and the provider with the main stack, and inherits everything else', () => {
+    const main = ephemeralEnvironment(ports);
+    const env = limitsEnvironment(ports, limits);
+
+    expect(env.DATABASE_URL).toBe(main.DATABASE_URL);
+    expect(env.OIDC_ISSUER).toBe(main.OIDC_ISSUER);
+    expect(env.OIDC_AUDIENCE).toBe(main.OIDC_AUDIENCE);
+    expect(env.RC_WORKSPACE_ALLOWLIST_FILE).toBe(main.RC_WORKSPACE_ALLOWLIST_FILE);
+    expect(env.RC_PERMISSION_EXTENSION_MS).toBe(main.RC_PERMISSION_EXTENSION_MS);
+    expect(Object.keys(env).sort()).toEqual(Object.keys(main).sort());
+  });
+
+  it('runs on its own two ports, with the folders and the origin that follow from them', () => {
+    const main = ephemeralEnvironment(ports);
+    const env = limitsEnvironment(ports, limits);
+
+    expect(env.RC_BACKEND_PORT).toBe('51005');
+    expect(env.RC_WEB_PORT).toBe('51006');
+    // Keyed on the backend port, so the two backends never write each other's CLI configuration,
+    // checkpoints or push credential.
+    expect(env.CLAUDE_CONFIG_DIR).not.toBe(main.CLAUDE_CONFIG_DIR);
+    expect(env.RC_CHECKPOINT_DIR).not.toBe(main.RC_CHECKPOINT_DIR);
+    expect(env.RC_PUSH_CREDENTIALS_FILE).not.toBe(main.RC_PUSH_CREDENTIALS_FILE);
+  });
+
+  it('is announced in e2e/.env when the run has one', () => {
+    const values = dotEnvValues(e2eDotEnv(ports, { limits }));
+
+    expect(values['RC_LIMITS_WEB_URL']).toBe('http://localhost:51006');
+    expect(values['RC_LIMITS_BACKEND_URL']).toBe('http://localhost:51005');
+    expect(values['RC_LIMITS_WS_URL']).toBe('ws://localhost:51005/ws');
+    // The main stack's addresses are still the main stack's.
+    expect(values['RC_BACKEND_URL']).toBe('http://localhost:51003');
+  });
+
+  it('is left out of e2e/.env entirely when the run has none — the live run', () => {
+    for (const written of [e2eDotEnv(ports), e2eDotEnv(ports, { limits: null })]) {
+      expect(
+        Object.keys(dotEnvValues(written)).filter((name) => name.startsWith('RC_LIMITS_')),
+      ).toEqual([]);
+    }
   });
 });
 
@@ -426,6 +530,20 @@ describe('dartDefines', () => {
 
   it('reports the version it was given', () => {
     expect(definesOf('{}', '9.9.9').values['RC_APP_VERSION']).toBe('9.9.9');
+  });
+
+  it('carries the limits stack and the provider administrator, for the limits scenarios', () => {
+    const argv = dartDefines(
+      dotEnvValues(e2eDotEnv(ports, { limits: { backend: 51_005, web: 51_006 } })),
+      '{}',
+      '1.0.0',
+    );
+
+    expect(argv).toContain('RC_LIMITS_API_URL=http://localhost:51005');
+    expect(argv).toContain('RC_LIMITS_WS_URL=ws://localhost:51005/ws');
+    expect(argv).toContain('RC_KEYCLOAK_URL=http://localhost:51002');
+    expect(argv).toContain(`RC_KEYCLOAK_ADMIN=${E2E_KEYCLOAK_ADMIN.username}`);
+    expect(argv).toContain(`RC_KEYCLOAK_ADMIN_PASSWORD=${E2E_KEYCLOAK_ADMIN.password}`);
   });
 
   it('answers an empty value rather than `undefined` when the .env is missing one', () => {

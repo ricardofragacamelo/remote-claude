@@ -231,6 +231,12 @@ abstract class AppLocalizations {
   /// **'Reconnecting…'**
   String get connectionStatusReconnecting;
 
+  /// Connection state: the server closed the socket for sending too fast, and the app waits as long as it asked
+  ///
+  /// In en, this message translates to:
+  /// **'Sent too fast — waiting as long as the server asked'**
+  String get connectionStatusThrottled;
+
   /// Connection state: closed and not retrying
   ///
   /// In en, this message translates to:

@@ -5,7 +5,13 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import { callApi } from '../fixtures/api';
-import { scratchFolders, send, sessionScreen, startConversation } from '../fixtures/history';
+import {
+  cardFor,
+  scratchFolders,
+  send,
+  sessionScreen,
+  startConversation,
+} from '../fixtures/history';
 import { closeSession, connected, workspaceFor } from '../fixtures/live-session';
 import type { E2eSocket } from '../fixtures/ws';
 import { scenario } from '../scenarios';
@@ -38,11 +44,6 @@ async function onScreen(
   await sessionScreen(page, init.user, sessionId);
 
   return { socket, sessionId };
-}
-
-/** The question on screen about one tool. */
-function cardFor(page: Page, toolName: string): ReturnType<Page['getByRole']> {
-  return page.getByRole('listitem', { name: `Permission for ${toolName}` });
 }
 
 /** The status the screen shows for a session with nothing running. */

@@ -12,6 +12,12 @@ build/
 .env.*
 !.env.example
 
+# The local copy of the workspace allowlist `pnpm allowlist` writes: the roots of one developer's
+# machine, which never belong in the repository (plan 06, D-09). And the pid file the backend of
+# `pnpm dev` writes for it (D-15).
+/infra/workspace-allowlist.local.yaml
+/.run/
+
 # cobertura e testes
 coverage/
 *.lcov

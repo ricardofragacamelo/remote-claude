@@ -76,7 +76,7 @@ verde.
 | F1 | [Diagnóstico](F1-diagnostics.md) | `debug` em release, e de volta ao sair | B-11 | ✅ |
 | F2 | [Identidade](F2-identity.md) | provedor real por configuração, rotação, revogação | B-12…B-15 | ✅ |
 | F3 | [Portões](F3-gates.md) | osv-scanner, relatório do smoke-live, complexidade | B-16, B-19, B-20, B-28 | ✅ |
-| F4 | [E2E](F4-e2e.md) | limites e credencial pela porta do usuário | B-21…B-23 | 🔲 |
+| F4 | [E2E](F4-e2e.md) | limites e credencial pela porta do usuário | B-21…B-23 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 

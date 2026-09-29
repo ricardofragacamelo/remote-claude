@@ -14,6 +14,7 @@ import {
   startSession,
 } from '../services/live-session.service';
 import { useLiveSessionStore } from '../store/live-session.store';
+import { useOwnedSessionsStore } from '../store/owned-sessions.store';
 import type { Conversation } from '../types/live-session';
 import { useCommandRefusal } from './useCommandRefusal';
 
@@ -76,8 +77,9 @@ export function useLiveSession(sessionId: string | null): LiveSession {
 
   // A session this browser opened is one it may close. Anything else it may only watch, and the
   // control says so rather than disappearing — hiding an authorisation rule makes it look like a
-  // bug the first time somebody hits it.
-  const [owned, setOwned] = useState<readonly string[]>([]);
+  // bug the first time somebody hits it. Kept in a store, because the screen that opened it is
+  // usually not this one.
+  const owned = useOwnedSessionsStore((store) => store.owned);
 
   useEffect(() => wsClient.onStatus(setConnection), []);
 
@@ -94,7 +96,7 @@ export function useLiveSession(sessionId: string | null): LiveSession {
         const opened = frame.type === 'session.started' || frame.type === 'session.attached';
 
         if (opened && typeof started === 'string') {
-          setOwned((previous) => [...previous, started]);
+          useOwnedSessionsStore.getState().claim(started);
         }
       }),
     [],

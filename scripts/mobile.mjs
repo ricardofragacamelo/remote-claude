@@ -278,8 +278,9 @@ function coverage() {
  * The scenarios this end proves, by file name, and the version this build reports.
  *
  * Every scenario the app runs is compiled in as **one** JSON object keyed by the file name — the
- * walking skeleton's and every `mobile-*.json` of plans 02 and 03 — because a device has no repository to
- * read them from, and one define per scenario would grow the command line with every scenario.
+ * walking skeleton's, every `mobile-*.json` of plans 02 and 03, and the `limits-*.json` both ends of
+ * plan 05 prove — because a device has no repository to read them from, and one define per scenario
+ * would grow the command line with every scenario.
  *
  * @returns {{ scenario: string, appVersion: string }}
  */
@@ -291,7 +292,10 @@ function sharedScenario() {
   const names = fs
     .readdirSync(directory)
     .map((entry) => entry.replace(/\.json$/, ''))
-    .filter((name) => name === 'vertical-ping' || name.startsWith('mobile-'))
+    .filter(
+      (name) =>
+        name === 'vertical-ping' || name.startsWith('mobile-') || name.startsWith('limits-'),
+    )
     .sort();
 
   // Compacted: the JSON travels as one `--dart-define`, and a newline inside it would be a second
@@ -363,7 +367,7 @@ function deviceImageProblem() {
  * @returns {number[]}
  */
 function stackPorts(env) {
-  return ['RC_BACKEND_URL', 'RC_OIDC_ISSUER', 'RC_KEYCLOAK_URL']
+  return ['RC_BACKEND_URL', 'RC_LIMITS_BACKEND_URL', 'RC_OIDC_ISSUER', 'RC_KEYCLOAK_URL']
     .map((name) => Number(new URL(env[name] ?? 'http://localhost').port))
     .filter((port) => Number.isInteger(port) && port > 0);
 }

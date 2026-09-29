@@ -8,15 +8,15 @@ part of 'session_starter_controller.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// The session this app opened most recently, or `null` before it opened one.
+/// The last start from this app: the session it opened, or the reason it was refused.
 
 @ProviderFor(SessionStarterController)
 final sessionStarterControllerProvider = SessionStarterControllerProvider._();
 
-/// The session this app opened most recently, or `null` before it opened one.
+/// The last start from this app: the session it opened, or the reason it was refused.
 final class SessionStarterControllerProvider
-    extends $NotifierProvider<SessionStarterController, String?> {
-  /// The session this app opened most recently, or `null` before it opened one.
+    extends $NotifierProvider<SessionStarterController, SessionStart> {
+  /// The last start from this app: the session it opened, or the reason it was refused.
   SessionStarterControllerProvider._()
     : super(
         from: null,
@@ -36,24 +36,32 @@ final class SessionStarterControllerProvider
   SessionStarterController create() => SessionStarterController();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(String? value) {
-    return $ProviderOverride(origin: this, providerOverride: $SyncValueProvider<String?>(value));
+  Override overrideWithValue(SessionStart value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SessionStart>(value),
+    );
   }
 }
 
-String _$sessionStarterControllerHash() => r'266f1d688f8d5750218bfa8a74eb9f4d0035cf89';
+String _$sessionStarterControllerHash() => r'a9ee34711db96d8919c4fc8d36ca97a2fd251f69';
 
-/// The session this app opened most recently, or `null` before it opened one.
+/// The last start from this app: the session it opened, or the reason it was refused.
 
-abstract class _$SessionStarterController extends $Notifier<String?> {
-  String? build();
+abstract class _$SessionStarterController extends $Notifier<SessionStart> {
+  SessionStart build();
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
-    final ref = this.ref as $Ref<String?, String?>;
+    final ref = this.ref as $Ref<SessionStart, SessionStart>;
     final element =
         ref.element
-            as $ClassProviderElement<AnyNotifier<String?, String?>, String?, Object?, Object?>;
+            as $ClassProviderElement<
+              AnyNotifier<SessionStart, SessionStart>,
+              SessionStart,
+              Object?,
+              Object?
+            >;
     return element.handleCreate(ref, build);
   }
 }

@@ -77,3 +77,27 @@ describe('ReloadableWorkspaceAllowlist', () => {
     expect(allowlist.current().for(owner)).toHaveLength(1);
   });
 });
+
+describe('ReloadableWorkspaceAllowlist, as plan 06 reloads it', () => {
+  it('answers the roots it holds, in the order of the file', () => {
+    expect(new ReloadableWorkspaceAllowlist(FILE, mutableFs(two).fs, parseYaml).roots()).toEqual([
+      '/srv/projects',
+      '/srv/other',
+    ]);
+  });
+
+  it('says what a reload changed — S-62', () => {
+    const file = mutableFs(one);
+    const allowlist = new ReloadableWorkspaceAllowlist(FILE, file.fs, parseYaml);
+
+    file.set(two);
+    expect(allowlist.reload()).toEqual({ added: ['/srv/other'], removed: [] });
+
+    file.set(one);
+    expect(allowlist.reload()).toEqual({ added: [], removed: ['/srv/other'] });
+  });
+
+  it('keeps the file it reads, for the log to name', () => {
+    expect(new ReloadableWorkspaceAllowlist(FILE, mutableFs(one).fs, parseYaml).file).toBe(FILE);
+  });
+});

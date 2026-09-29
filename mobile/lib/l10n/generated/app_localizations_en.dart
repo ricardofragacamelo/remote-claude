@@ -82,6 +82,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionStatusReconnecting => 'Reconnecting…';
 
   @override
+  String get connectionStatusThrottled => 'Sent too fast — waiting as long as the server asked';
+
+  @override
   String get connectionStatusClosed => 'Disconnected';
 
   @override

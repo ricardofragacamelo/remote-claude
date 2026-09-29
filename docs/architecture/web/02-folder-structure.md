@@ -26,9 +26,10 @@ web/
 ├── src/
 │   ├── main.tsx
 │   ├── app/
-│   │   ├── App.tsx
-│   │   ├── Screen.tsx              moldura das rotas: coluna, título, link, portão de login
-│   │   ├── RulesRoute.tsx          /rules — o que foi autorizado antes, e onde se retira
+│   │   ├── AppFrame.tsx            a moldura: navegação global, menu Arquivo, portão de login
+│   │   ├── *Route.tsx              uma por tela: /workbench, /audit, /rules, /devices, /diagnostics,
+│   │   │                           /settings/$section, /about — e o "não encontrado" (NotFoundRoute)
+│   │   ├── workbench-location.ts   a search do workbench (`?folder=`), lida e escrita num par só
 │   │   ├── router.tsx              rotas
 │   │   └── providers.tsx           QueryClient, i18n, tema, error boundary
 │   │
@@ -41,7 +42,15 @@ web/
 │   │   │   ├── store/              zustand, só se a feature precisar
 │   │   │   └── index.ts            superfície pública da feature
 │   │   │
-│   │   ├── workspace/
+│   │   ├── workbench/              abas de pasta, a casca (activity bar, side bar, painéis,
+│   │   │                           status bar), o store por pasta e os registros de views
+│   │   ├── workspace/              boas-vindas, diálogo "Abrir pasta", recentes
+│   │   ├── commands/               registro de comandos e atalhos, paleta, menu Arquivo
+│   │   ├── notifications/          toasts e centro de notificações
+│   │   ├── diagnostics/            Logs e diagnóstico
+│   │   ├── settings/               Configurações do app e o registro de seções
+│   │   ├── about/                  Sobre
+│   │   ├── devices/                aparelhos aprovados
 │   │   ├── permission/             pedido, escolha de escopo e as regras persistidas
 │   │   ├── audit/                  consulta da trilha
 │   │   ├── transcript/
@@ -54,6 +63,7 @@ web/
 │   │   │   └── errors.ts           normalização → AppError
 │   │   ├── components/
 │   │   │   ├── ui/                 ← shadcn/ui (gerado). Não edite à mão.
+│   │   │   ├── ScreenFrame.tsx     moldura de tela: título, propósito, painel de ajuda
 │   │   │   └── …                   compostos nossos: ErrorState, EmptyState
 │   │   ├── hooks/                  genéricos: useDebounce, useMediaQuery
 │   │   ├── i18n/                   config + locales/{en,pt-BR}.json
@@ -69,6 +79,27 @@ web/
     ├── integration/
     └── support/                    handlers MSW, builders, render helper
 ```
+
+### O workbench e a moldura — o que muda no `app/`
+
+A árvore acima é o destino do [plano 06](../../plans/06-workbench/README.md)
+([ADR-014](../shared/00-decisions.md#adr-014--o-web-vira-um-workbench-construído-em-react)); cada
+fase dele move uma parte, e esta seção diz o que sai:
+
+- o **`Screen`** de coluna única (`app/Screen.tsx`) dá lugar à **moldura do app** (`AppFrame`) e, nas
+  telas fora do workbench, à **moldura de tela** (`ScreenFrame`, em `shared/components/`, porque
+  telas de várias features a usam — [web/03](03-ui-system.md#moldura-de-tela));
+- a home (`App.tsx`) deixa de empilhar seletor de workspace, sessão, ping e dispositivos: cada um
+  vai para a sua feature e a sua tela;
+- `SessionRoute`, `HistoryRoute`, `ConversationRoute` e as navegações para eles
+  (`app/navigation.ts`) saem com as rotas ([06 · D-07](../../plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas));
+- o store global de workspace selecionado (`features/workspace/store/`) sai: a pasta é da aba
+  ([web/04](04-state-and-data.md#estado-de-aba-de-pasta)).
+
+Os registros da casca ([web/03](03-ui-system.md#os-registros--onde-os-planos-seguintes-encaixam))
+moram na feature que os usa — views em `workbench/`, comandos em `commands/`, seções em
+`settings/` —, e um plano seguinte registra a sua entrada pelo barril dessa feature, nunca por
+caminho profundo.
 
 ---
 

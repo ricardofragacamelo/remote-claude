@@ -14,7 +14,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 
 ## Panorama
 
-**Última atualização:** 2026-09-28
+**Última atualização:** 2026-09-29
 
 ```
 00-bootstrap             ████████████████████ 100%   ✅ concluído
@@ -22,8 +22,8 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 02-mobile-approval       ████████████████████ 100%   ✅ concluído
 03-rules-and-audit       ████████████████████ 100%   ✅ concluído
 04-transcript-and-resume ████████████████████ 100%   ✅ concluído
-05-hardening-operations  █████████████████░░░  86%   🔄 em andamento
-06-workbench             ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+05-hardening-operations  ████████████████████ 100%   ✅ concluído
+06-workbench             ███████░░░░░░░░░░░░░  33%   🔄 em andamento
 07-explorer-and-editor   ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 08-claude-panel          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 09-search                ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
@@ -50,8 +50,8 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [02 — Aprovação pelo celular](02-mobile-approval/README.md) | 5/5 | 34/34 | 89/89 | 25/26 | ✅ |
 | [03 — Regras e trilha](03-rules-and-audit/README.md) | 5/5 | 23/23 | 92/92 | 22/22 | ✅ |
 | [04 — Histórico e retomada](04-transcript-and-resume/README.md) | 6/6 | 25/25 | 88/88 | 7/7 | ✅ |
-| [05 — Endurecimento e operação](05-hardening-operations/README.md) | 4/5 | 19/22 | 63/68 | 12/12 | 🔄 |
-| [06 — Workbench](06-workbench/README.md) | 0/7 | 0/40 | 0/182 | 17/17 | 🔲 |
+| [05 — Endurecimento e operação](05-hardening-operations/README.md) | 5/5 | 22/22 | 77/77 | 14/14 | ✅ |
+| [06 — Workbench](06-workbench/README.md) | 2/7 | 13/40 | 82/182 | 21/21 | 🔄 |
 | [07 — Explorer e editor](07-explorer-and-editor/README.md) | 0/9 | 0/61 | 0/360 | 19/20 | 🔲 |
 | [08 — Painel do Claude](08-claude-panel/README.md) | 0/7 | 0/58 | 0/272 | 24/24 | 🔲 |
 | [09 — Busca](09-search/README.md) | 0/4 | 0/24 | 0/171 | 8/8 | 🔲 |
@@ -63,7 +63,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [15 — Dispositivos](15-devices/README.md) | 0/4 | 0/28 | 0/118 | 0/12 | 🔲 |
 | [16 — Logs e diagnóstico](16-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 2/16 | 🔲 |
 | [17 — Distribuição](17-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/8 | 🔲 |
-| **Total** | **35/100** | **200/647** | **567/2706** | **197/278** | 🔄 |
+| **Total** | **38/100** | **216/647** | **663/2715** | **203/284** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -183,6 +183,12 @@ andamento **sem pedir replay** — o celular via só o que viesse depois —, e 
 vazio no `.env`, como o exemplo manda, deixava o CLI **sem login** e limpava a marca de confiança
 no arquivo errado. Os dois estão corrigidos, com teste. O próximo é o
 [plano 05](05-hardening-operations/README.md).
+
+Em 2026-09-28 o [plano 05](05-hardening-operations/README.md) **fechou**: o sistema aguenta ficar
+ligado — limite derivado da RAM, sessão ociosa encerrada, sem subprocesso órfão, rate limit
+anunciado, Keycloak próprio como configuração, `osv-scanner` e complexidade nos portões — e a F4
+provou tudo isso pela porta do usuário, nas duas pontas. Com ele fechado, os planos 06 a 16 podem
+começar.
 
 Em 2026-09-26, com o produto de pé pela primeira vez, **o usuário rejeitou a web como estava**: uma
 coluna de cartões, a sessão aberta numa pasta de rascunho em vez do projeto, e as telas de trilha e de
@@ -305,6 +311,7 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-09-28 | **Plano 05 concluído (F4)** | os limites pela porta do usuário, nas duas pontas, sobre uma **stack de limites** própria da execução (05 · D-13): teto, ociosidade, ritmo, token que expira no meio do turno e renovação recusada. Os cenários acharam o produto travando sob limite — o iniciador do web preso em "Starting…" e o toque na pasta do app sem efeito no teto, a sessão aberta pela tela inicial tratada como de outro navegador, a primeira requisição de cada carga do web sem token, e o app que continuava "logado" com a renovação recusada — todos corrigidos com teste. O `4429` virou o estado `throttled`, com o motivo na tela. `pnpm verify:full` 0, `pnpm test:e2e:mobile` 15/15, `pnpm test:e2e:live` 2/2. Os planos 06–16 podem começar ([06 · D-02](06-workbench/decisions.md)) |
 | 2026-09-28 | **Plano 11: as 21 decisões em aberto respondidas pelo usuário** | vinte seguem a recomendação: store de MCP nosso com `strictMcpConfig`, segredo cifrado entregue por `setMcpServers()` e nunca pelo argv, módulo `claude-config`, fixture MCP stdio própria, padrões por usuário e por pasta, catálogo por sessão viva ou sonda efêmera, conta visível a quem tem raiz, teste de conexão com dono neste plano, esta tela dona dos padrões, apertar-vale-já, `.mcp.json` aprovado por digest, regras `mcp__` revogadas quando o programa muda, annotation só sobe risco, indicador de MCP entregue aqui, configuração de projeto lida pelo formato publicado e só leitura, criação pela escrita do 07, shell inline desligado para todas as origens se escapar da aprovação e skills de sistema por leitura tolerante. **Uma muda o plano:** plugins de marketplace entram (11 · D-15), baixados pelo backend para diretório próprio, só de marketplace declarado no arquivo da allowlist, fixados e atualizados só por decisão — nasce a B-47, com S-200…S-213 |
 | 2026-09-28 | **Plano 10: as 11 decisões em aberto respondidas pelo usuário** | todas seguem a recomendação, e nenhuma muda tarefa ou cenário: step-up por `auth_time` + `max_age` (300 s, reanexar também exige, falha fechada), texto UTF-8 com fluxo no servidor, scrollback por terminal headless com uma connection por terminal, interruptor por `sub` no arquivo da allowlist, "só do web" por `azp` (o `Origin` com o 17), trilha só do ciclo de vida e nunca as teclas, `node-pty` carregado sob demanda, os limites propostos, shell integration injetada no spawn, perfis detectados + personalizados e xterm com renderizador DOM em chunk próprio. O empacotamento do `node-pty` fica como nota ao [plano 17](17-distribution/README.md) |
 | 2026-09-28 | **Plano 09: as 8 decisões em aberto respondidas pelo usuário** | sete seguem a recomendação: `@vscode/ripgrep` fixado com `RC_RIPGREP_PATH`, exclusões da árvore do 07 somadas às do VS Code, o ripgrep como único motor do substituir, aplicar por arquivo como o ADR-013, tetos medidos antes de fechar a F1, cache do localizador com TTL e editor de resultados salvável como `.code-search`. **Uma muda o plano:** a busca e a prévia respondem em fluxo NDJSON desde o início (09 · D-02), sempre com uma linha final `end` ou `error`, e a ordem é montada no cliente. Isso mudou B-03, B-04, B-10, B-11 e B-13 e trouxe os S-163…S-171. O empacotamento do ripgrep virou a D-08 do [plano 17](17-distribution/decisions.md) |

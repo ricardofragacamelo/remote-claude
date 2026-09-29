@@ -26,6 +26,7 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 | D-02 | A ordem dos planos 06–16 em relação ao que falta do 05 e ao 17 | se algum endpoint novo precisa dos limites HTTP do 05 antes de existir | B-01 | 2026-09-26 · **terminar o plano 05 antes**, decisão do usuário (contra a recomendação): os planos 06–16 começam depois que o 05 fechar; o 17 não é pré-requisito deles | ✅ |
 | D-06 | A URL do workbench: pasta na search ou no path | como o TanStack Router trata caminho absoluto com `/` num parâmetro de path, e o que acontece com `#` e `%` | B-05 | 2026-09-28 · **pasta na search** (`/workbench?folder=`, e `&file=` do plano 07 ao lado), decisão do usuário; o gap do splat deixa de importar — o S-04 prova a ida e volta com `#`, `%`, `?` e `&` | ✅ |
 | D-07 | O destino da home (`/`) e das rotas antigas (`/sessions/$id`, `/history…`) | nenhum — é escolha de navegação | B-05, B-33 | 2026-09-28 · **`/` abre a aba ativa ou a boas-vindas; `/sessions/$sessionId`, `/history` e `/history/$conversationId` são removidas neste plano**, sem deep link de compatibilidade — decisão do usuário, contra a recomendação, sabendo que o histórico, a retomada e o desfazer de conversa antiga saem do web até o [plano 08](../08-claude-panel/README.md) (o app continua com o histórico). Os specs de e2e que entravam por elas migram para o workbench na B-33 | ✅ |
+| D-18 | Os cenários de rota da F0 que dependem de produto de fases seguintes (S-03, S-05 e a metade "removidas" do S-06) | se remover `/sessions` e `/history` já na F0 quebra o e2e que entra por elas (sim: `history-and-resume` e `commands-and-undo`, que só migram na B-33) | B-05 | 2026-09-28 · **parte na F0, resto move**, decisão do usuário, a recomendada: a F0 fixa o mapa e entrega o que não depende de produto — o par que lê e escreve `?folder=` (S-04), o "não encontrado" traduzido para rota reservada (S-07) e as rotas que ficam (S-06); o S-03 vai para a B-16, o S-05 para a B-20, e as removidas para o S-150 da B-33 | ✅ |
 | D-10 | Onde persiste o conjunto de abas abertas: `localStorage` por visitante ou preferência do usuário no servidor | se o usuário espera reencontrar as abas no celular ao sair do desktop; custo de uma tabela e quatro rotas | B-04, B-09, B-20 | 2026-09-28 · **servidor**, decisão do usuário: o conjunto e a ordem das abas seguem o usuário; a URL leva só a ativa; o estado de dentro de cada aba fica por visitante em `localStorage` (B-27). As rotas de `open-folders` e o `OPEN_FOLDERS_LIMIT_REACHED` existem | ✅ |
 
 ### D-01 — Construir o workbench ou embutir o VS Code
@@ -103,6 +104,27 @@ dito ao usuário antes de ele decidir:
   porta do usuário;
 - link antigo colado no navegador cai no "não encontrado" traduzido.
 
+### D-18 — Os cenários de rota que dependem de produto
+
+Descoberta ao começar a F0. A fase lista S-01…S-07 como cobertos, mas três deles pedem o que só as
+fases seguintes constroem:
+
+| Cenário | Precisa de | Que nasce em |
+|---|---|---|
+| S-03 — `/workbench` sem `folder` cai na boas-vindas | a boas-vindas e a rota do workbench | F2 · B-13, B-16 |
+| S-05 — `/` vai para a aba ativa | o conjunto de abas do servidor | F1 · B-09, F3 · B-20 |
+| S-06, metade "removidas" | remover `/sessions/$sessionId` e `/history…` | F5 · B-33, na **mesma mudança** que migra os specs de e2e que entram por elas |
+
+| Opção | Contra |
+|---|---|
+| **parte na F0, resto move** | três cenários mudam de fase |
+| só documentar na F0 | S-04, S-06 e S-07 não dependem de produto, e adiá-los deixaria o contrato de rotas sem teste até a F2 |
+| tudo na F0, removendo as rotas já | o web fica sem tela de sessão e de histórico até a F3, e a B-33 perde a mudança única "rota sai e spec migra" — contrato quebrado numa ponta só |
+
+**Decidido em 2026-09-28, como recomendado:** a F0 entrega `readWorkbenchSearch`/`workbenchLocation`
+(S-04), o `NotFoundRoute` traduzido no root (S-07) e o teste das rotas que ficam (S-06); o S-03 passa
+à B-16, o S-05 à B-20, e as rotas removidas caindo no "não encontrado" passam ao S-150 (B-33).
+
 ### D-10 — Onde persiste o conjunto de abas abertas
 
 | Opção | A favor | Contra |
@@ -124,10 +146,13 @@ layout do celular não é o do desktop.
 |---|---|---|---|---|---|
 | D-03 | Alcance do seletor: só dentro das raízes liberadas ou a máquina inteira | nenhum técnico — é a fronteira de segurança | B-06, B-10 | 2026-09-26 · **só dentro das raízes da allowlist**, decisão do usuário; "a máquina toda" é declarar o `$HOME` como raiz pelo `pnpm allowlist add` — configuração, não código | ✅ |
 | D-04 | Ocultas, pastas pesadas e symlinks no seletor | nenhum — é escolha de apresentação sobre uma regra já fixa (contenção) | B-06 | 2026-09-28 · **a recomendação**, decisão do usuário: ocultas fora por padrão, com "mostrar ocultas"; nenhuma lista de pastas pesadas; symlink para dentro da raiz listado e marcado, para fora, quebrado ou em ciclo omitido | ✅ |
-| D-05 | Teto de entradas por listagem, e como alcançar o que passa dele | o maior diretório real que o usuário abre (`node_modules/.pnpm` de um monorepo, `~/projects`) — **medir** | B-06, B-07 | 2026-09-28 · **teto + `truncated` + `prefix=`**, decisão do usuário, com **1000** como valor de partida; a medição do gap, feita na B-07, só pode ajustar o número, não a forma | ✅ |
+| D-05 | Teto de entradas por listagem, e como alcançar o que passa dele | o maior diretório real que o usuário abre (`node_modules/.pnpm` de um monorepo, `~/projects`) — **medir** | B-06, B-07 | 2026-09-28 · **teto + `truncated` + `prefix=`**, decisão do usuário, com **1000** como valor de partida; a medição do gap, feita na B-07, só pode ajustar o número, não a forma. **Medido em 2026-09-29:** o maior diretório real, o `node_modules/.pnpm` deste monorepo, tem **977** subpastas (lido inteiro em 7,6 ms; parando em 1001, 3,3 ms); `~/projects` tem 10 — o **1000 fica** | ✅ |
 | D-09 | Onde mora a cópia local da allowlist e como o boot a escolhe | como `start-local.mjs`, a stack de e2e e o `.env` escolhem o arquivo hoje; se o schema Zod do backend pode ser lido pelo `.mjs` | B-10 | 2026-09-28 · **`infra/workspace-allowlist.local.yaml`**, decisão do usuário: ignorado pelo git, escolhido pelo `start-local.mjs` quando existe e `RC_WORKSPACE_ALLOWLIST_FILE` não foi definido à mão; e2e e teste nunca o leem; o schema muda para `packages/config`, lido pelo backend e pelo script | ✅ |
 | D-14 | Onde gravar recentes e pastas abertas | nenhum — é modelagem; depende da D-10 | B-09 | 2026-09-28 · **tabela nova por pasta**, decisão do usuário: `user_id`, `path` real, `root_path`, `last_opened_at`, `pinned` e `tab_position` (nula quando fechada), por migration versionada nova; a `workspaces` não muda | ✅ |
 | D-15 | Como o backend em execução recebe a allowlist nova | se há um processo de backend identificável pelo script em `pnpm dev`, e o que o `nest --watch` faz com sinais | B-11 | 2026-09-28 · **`SIGHUP` chama `reload()`**, decisão do usuário, sem watch do arquivo: a regra de [backend/03 · workspace](../../architecture/backend/03-modules.md#workspace) ("recarga explícita, nunca um watch silencioso") fica como está. O processo **não** reinicia — o handler só troca a lista; o sinal vai ao processo do app, não ao `nest --watch` | ✅ |
+| D-19 | O "catálogo de chaves" contra o qual o histórico de notificações valida a `messageKey` | nenhum documento dizia qual catálogo — o do web não é legível pelo backend | B-40 | 2026-09-29 · **lista fechada no domínio `notification`, com os parâmetros de cada chave** — tomada pelo agente na execução, **a confirmar pelo usuário**: as chaves que a D-17 já nomeia; a B-26 acrescenta as suas na mesma mudança que as traduz | ✅ |
+| D-20 | Como o `pnpm allowlist` acha o processo do app para mandar o `SIGHUP` | descoberto na execução: o `pnpm dev` roda o backend sob `tsx watch`, e o pid que o script dispara é o do watcher — o `SIGHUP` ali o mataria | B-11 | 2026-09-29 · **o próprio app grava o seu pid em `RC_PID_FILE`** (variável nova, `off` desliga) e o script só sinaliza processo cuja linha de comando roda o `main.ts` — tomada pelo agente na execução | ✅ |
+| D-21 | O teto de recentes, e tirar dos recentes a pasta cuja aba está aberta | a B-09 fala em "teto que nunca descarta uma fixada" sem dizer o número; `recente` e `aba` são a mesma linha (D-14) | B-09 | 2026-09-29 · **20 recentes não fixados**, podados ao abrir; tirar dos recentes uma pasta aberta mantém a aba e a tira da lista — tomada pelo agente na execução | ✅ |
 
 ### D-03 — Alcance do seletor: dentro das raízes ou a máquina inteira
 
@@ -219,6 +244,54 @@ intactas (S-180). Observar o arquivo e recarregar ao salvar foi considerado e **
 frente com a regra de [backend/03 · workspace](../../architecture/backend/03-modules.md#workspace)
 ("recarga explícita, nunca um watch silencioso"), e o usuário preferiu manter a regra. No `pnpm dev`,
 o `nest --watch` é o processo pai; o sinal vai ao processo do app, pelo pid que o `pnpm dev` registra.
+
+### D-19 — O catálogo de chaves das notificações
+
+A B-40 manda validar a `messageKey` "contra o catálogo de chaves", e nenhum documento dizia qual.
+O catálogo de tradução do web é quem de fato renderiza a notificação — mas é um arquivo de outro
+módulo, que o backend não lê. E a razão da regra é de segurança: o histórico guarda `messageKey` e
+`params` e **nada mais**, e o que impede que ele vire um depósito de texto arbitrário — um comando,
+um trecho de conversa — é a chave ser uma que conhecemos, com os parâmetros que ela leva.
+
+| Opção | Contra |
+|---|---|
+| **lista fechada no domínio `notification`, chave → parâmetros** | cada notificação nova de um plano seguinte entra na lista, na mesma mudança que a traduz |
+| só o formato (`a.b.c`, sem espaço) | não é catálogo; um parâmetro livre ainda carregaria conteúdo |
+| ler o `en.json` do web no backend | acopla o backend a um arquivo de outro módulo, sem garantia de que as duas pontas concordem |
+
+**Tomada na execução, pelo agente — a confirmar pelo usuário:** a lista fechada, com as chaves que a
+[D-17](#d-17--o-que-vira-notificação-e-onde-vive-o-histórico) já nomeia — comando que falhou,
+gravação de abas recusada, conexão perdida e recuperada, pasta aberta que saiu da allowlist. Os
+parâmetros de cada chave são exatamente os dela: a mais ou a menos é recusado com cada problema em
+`details[]`. Toda chave da lista é escrita como `messageKey`, então o `pnpm i18n:check` prova que o
+web a traduz ([S-01](scenarios.md)); as traduções entraram no web nesta fase.
+
+### D-20 — Como o `pnpm allowlist` acha o processo do app
+
+A D-15 decidiu que o sinal vai ao processo do app, "pelo pid que o `pnpm dev` registra". Descoberto
+ao implementar: o backend de desenvolvimento roda sob `tsx watch` (o documento dizia `nest --watch`),
+que reinicia o filho a cada mudança — o pid que o `start-local.mjs` dispara é o do watcher, e o do
+filho muda a cada reinício. Medido também que o `enableShutdownHooks()` do Nest, sem lista, escuta
+`SIGHUP` e fecharia a aplicação.
+
+**Tomada na execução, pelo agente:** o **próprio app** grava o seu pid no arquivo que
+`RC_PID_FILE` aponta (variável nova, obrigatória como todas; `off` desliga, como o
+`RC_AUDIT_PURGE_INTERVAL_MS`), e o remove ao sair se ainda for o dele. O `.env.example` a liga para
+o `pnpm dev`; as stacks de e2e e de teste a desligam. O script só manda o sinal a um processo cuja
+linha de comando roda o `main.ts` — pid reaproveitado pelo sistema depois de uma queda nunca recebe
+`SIGHUP`. E o Nest passa a escutar todo sinal de término **menos** `SIGHUP` (`SHUTDOWN_SIGNALS`).
+
+### D-21 — O teto de recentes e o recente de uma aba aberta
+
+A B-09 fala em "teto que **nunca** descarta uma fixada", sem o número. E como recente e aba são a
+mesma linha (D-14), "remover um recente" de uma pasta com a aba aberta tinha duas leituras: fechar a
+aba junto, ou mantê-la.
+
+**Tomada na execução, pelo agente:** **20** recentes não fixados, podados ao abrir uma pasta;
+fixada e aberta nunca saem pelo teto nem contam para ele. Tirar dos recentes uma pasta aberta
+**mantém a aba** e a tira da lista (`last_opened_at` nulo, desafixada); fechar depois a aba de uma
+pasta que já saiu da lista a esquece de vez. E o `rootLabel` do recente passa a `string | null`,
+como o da aba: nulo quando a pasta não vive mais sob raiz nenhuma do usuário.
 
 ---
 

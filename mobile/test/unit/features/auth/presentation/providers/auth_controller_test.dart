@@ -174,6 +174,10 @@ void main() {
     expect(await credentials.renew(), isNull);
     expect(container.read(authControllerProvider).hasError, isTrue);
     expect(credentials.accessToken, isNull);
+
+    // S-86: nobody is signed in any more — not the error with the old session still inside it,
+    // which the router reads as somebody signed in and keeps on a screen nobody can act on.
+    expect(container.read(authControllerProvider).value, isNull);
   });
 
   test('renewal is deduplicated — N callers, one exchange', () async {

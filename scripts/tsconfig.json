@@ -15,6 +15,10 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
+    // `pnpm allowlist` validates by the schema the backend boots with, and imports it straight
+    // from `packages/config/src/*.ts`: Node strips the types at run time, so there is still no
+    // build step (plan 06, D-09).
+    "allowImportingTsExtensions": true,
     "types": ["node"]
   },
   "include": ["**/*.mjs", "../test/**/*.mjs", "../*.config.mjs"]

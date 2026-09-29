@@ -35,7 +35,7 @@ final class AuthControllerProvider extends $AsyncNotifierProvider<AuthController
   AuthController create() => AuthController();
 }
 
-String _$authControllerHash() => r'68985c4099adcaf28ae067ffd5097c31279089b3';
+String _$authControllerHash() => r'06c78912d7965020e8a01f6c910c1b94002b24b1';
 
 /// The signed-in session, or `null`.
 

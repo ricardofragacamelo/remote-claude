@@ -21,6 +21,15 @@ export const FIXED_PORTS = [
 ];
 
 /**
+ * The oldest Node the repository runs on.
+ *
+ * 22.18 and not 22: `pnpm allowlist` validates by the schema the backend boots with, importing it
+ * straight from `packages/config/src/*.ts`, and Node strips the types of a `.ts` file without a
+ * flag only from 22.18 on (plan 06, D-09).
+ */
+export const NODE_MINIMUM = '22.18';
+
+/**
  * @typedef {'ok' | 'warn' | 'fail'} CheckStatus
  */
 
@@ -119,13 +128,13 @@ export async function inspectEnvironment(probes) {
   const results = [];
 
   results.push(
-    meetsMinimum(probes.nodeVersion, '22')
+    meetsMinimum(probes.nodeVersion, NODE_MINIMUM)
       ? { name: 'node', status: 'ok', detail: probes.nodeVersion }
       : {
           name: 'node',
           status: 'fail',
-          detail: `${probes.nodeVersion} is below the required 22`,
-          fix: 'install Node 22 or newer (nvm install 22)',
+          detail: `${probes.nodeVersion} is below the required ${NODE_MINIMUM}`,
+          fix: `install Node ${NODE_MINIMUM} or newer (nvm install 22)`,
         },
   );
 

@@ -163,7 +163,7 @@ store da aba serve os dois layouts — mudar a largura da janela não perde esta
 
 ## Cenários cobertos
 
-S-86…S-118, S-181.
+S-05, S-86…S-118, S-181.
 
 ---
 

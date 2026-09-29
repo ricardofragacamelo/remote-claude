@@ -80,6 +80,17 @@ void main() {
     expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
   });
 
+  testWidgets('S-81 · says the server is holding it back, rather than that the network went', (
+    WidgetTester tester,
+  ) async {
+    await pumpPage(tester, status: ConnectionStatus.throttled);
+    await tester.pump();
+
+    expect(find.text(l10n.connectionStatusThrottled), findsOneWidget);
+    expect(find.text(l10n.connectionStatusReconnecting), findsNothing);
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
+  });
+
   testWidgets('shows the loading state while a round trip is in flight', (
     WidgetTester tester,
   ) async {

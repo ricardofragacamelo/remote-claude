@@ -144,9 +144,14 @@ class _Header extends StatelessWidget {
             child: Text(_label(l10n, status), style: Theme.of(context).textTheme.bodySmall),
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.only(right: Tokens.spaceMd),
-          child: ConnectionLine(),
+        // Flexible, and one line: the header has the height of one, and a connection held back
+        // by the server says why in more words than a phone's header is wide (plan 05, found by
+        // S-43). What does not fit ends in an ellipsis rather than overflowing the bar.
+        const Flexible(
+          child: Padding(
+            padding: EdgeInsets.only(left: Tokens.spaceMd, right: Tokens.spaceMd),
+            child: ConnectionLine(textAlign: TextAlign.end, singleLine: true),
+          ),
         ),
       ],
     );
@@ -186,8 +191,11 @@ class _Body extends StatelessWidget {
       // Nothing has arrived. Which of the reasons it is decides what the person reads: a socket
       // still opening is a wait, history being read is a wait too, and a socket that is gone is
       // not.
-      final bool waiting =
-          connection == ConnectionStatus.connecting || connection == ConnectionStatus.reconnecting;
+      final bool waiting = const <ConnectionStatus>{
+        ConnectionStatus.connecting,
+        ConnectionStatus.reconnecting,
+        ConnectionStatus.throttled,
+      }.contains(connection);
 
       return Column(
         children: <Widget>[

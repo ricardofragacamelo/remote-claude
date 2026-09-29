@@ -1,0 +1,13 @@
+{
+  "id": "05·S-41",
+  "title": "a machine at its ceiling says so on the screen, translated, and the screen does not freeze waiting",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "ceiling": 2,
+    "code": "SESSION_LIMIT_REACHED",
+    "refusal": "This machine is already running 2 sessions, which is as many as it allows. End one and try again."
+  }
+}

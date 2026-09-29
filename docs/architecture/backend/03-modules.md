@@ -19,6 +19,7 @@ Voltar para o [índice do backend](README.md).
 | `permission` | Requests de permissão, regras persistidas, resolução, timeout | Executar a tool · registrar a trilha (é `audit`) |
 | `transcript` | Histórico: listar sessões, carregar mensagens, retomar | Sessão viva |
 | `notification` | Push para device quando ninguém está online | Decidir se algo merece notificação (quem decide é `permission`) |
+| `diag` | O ping de ponta a ponta (`diag.ping`) e as versões da instalação para a tela "Sobre" | Saúde para o balanceador (é `GET /health`, sem autenticação) |
 | `audit` | Trilha imutável de **toda** invocação de tool, via hook `PreToolUse`, e dos fatos de conta do mesmo peso (registro, aprovação e revogação de device) | Autorizar |
 
 ### Por que `permission` é módulo separado de `session`
@@ -114,12 +115,85 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
     ser, e ainda assim não pode. `404` fica para o caminho que **não existe**
     ([01 · D-17](../../plans/01-live-session/decisions.md#d-17--usar-o-código-http-que-cada-coisa-é)).
 - **O seletor "Abrir pasta" navega só dentro das raízes**
-  ([06 · D-03](../../plans/06-workbench/decisions.md), decisão do usuário de 2026-09-26). Liberar "a
-  máquina toda" é declarar o `$HOME` como raiz no arquivo — nunca um seletor que sobe acima dela.
+  ([06 · D-03](../../plans/06-workbench/decisions.md#d-03--alcance-do-seletor-dentro-das-raízes-ou-a-máquina-inteira),
+  decisão do usuário de 2026-09-26). Liberar "a máquina toda" é declarar o `$HOME` como raiz no
+  arquivo — nunca um seletor que sobe acima dela.
+- **Listar subpastas é ler o disco — e só nestes termos.** `GET /workspaces` lê a allowlist e não
+  toca o disco; `resolve` toca um caminho só. A listagem do seletor
+  ([ADR-014](../shared/00-decisions.md#adr-014--o-web-vira-um-workbench-construído-em-react)) é a
+  primeira rota que lê um diretório, e a regra "não varre disco" passa a valer **com esta exceção,
+  e só com ela**:
+  - **um nível**, **sob demanda** — um pedido, um diretório. Nunca recursivo, nunca a árvore;
+  - **só diretórios** — arquivo, socket, fifo e dispositivo ficam fora;
+  - **dentro da allowlist**, na mesma ordem do `ResolveWorkspaceUseCase`: regra pura → existência →
+    contenção **de novo no realpath** → é diretório → lista. A allowlist é lida a cada uso;
+  - **symlink** para diretório dentro da **mesma raiz** é listado e marcado; para fora, quebrado ou em
+    ciclo é **omitido** — marcar o que escapa já diria o que existe fora da fronteira
+    ([06 · D-04](../../plans/06-workbench/decisions.md#d-04--ocultas-pastas-pesadas-e-symlinks-no-seletor));
+  - **ocultas** (nome começado por `.`) só com `hidden=true`; nenhuma lista mágica de pastas
+    "pesadas" — o teto é o que protege o custo;
+  - **teto de 1000 entradas** por pedido, com `truncated` e o filtro `prefix=` para alcançar o que
+    o teto cortou ([06 · D-05](../../plans/06-workbench/decisions.md#d-05--teto-de-entradas-por-listagem));
+    o adapter **para de ler em teto + 1**, e o custo não cresce com o tamanho do diretório;
+  - o log de I/O diz caminho, contagem, `truncated` e duração — **nunca** os nomes listados.
+- **Raízes locais de desenvolvimento.** O default versionado (`infra/workspace-allowlist.yaml`)
+  continua **sem caminho da máquina de ninguém** — só a raiz de rascunho. Liberar uma pasta de
+  verdade é `pnpm allowlist add <caminho>`, que escreve numa cópia **ignorada pelo git**
+  (`infra/workspace-allowlist.local.yaml`), validada **pelo mesmo schema** do boot (que passa a morar
+  em `packages/config`), recusando `/` e pedindo confirmação para o `$HOME`. O `pnpm dev` usa a
+  cópia quando ela existe e `RC_WORKSPACE_ALLOWLIST_FILE` não foi definido à mão; e2e e teste nunca
+  a leem ([06 · D-09](../../plans/06-workbench/decisions.md#d-09--onde-mora-a-cópia-local-da-allowlist-e-como-o-boot-a-escolhe)).
+  A recarga explícita ganha o gatilho que faltava: **`SIGHUP` chama `reload()`**, sem reiniciar o
+  processo e sem watch do arquivo; recarga que falha mantém a lista anterior
+  ([06 · D-15](../../plans/06-workbench/decisions.md#d-15--como-o-backend-em-execução-recebe-a-allowlist-nova)).
+  O handler (`AllowlistReloadSignal`) vive na infraestrutura e loga em `info` o arquivo e as raízes
+  que entraram e saíram; o `enableShutdownHooks` do Nest **não** escuta `SIGHUP` (`SHUTDOWN_SIGNALS`
+  em `bootstrap.ts`), ou o sinal fecharia a aplicação. O boot loga qual arquivo carregou
+  (`allowlist.loaded`). O `pnpm allowlist` acha o processo pelo pid que o **próprio app** grava em
+  `RC_PID_FILE` — sob o `pnpm dev` o backend roda debaixo de um watcher, e o pid que o script
+  disparou é o do watcher ([06 · D-20](../../plans/06-workbench/decisions.md#d-20--como-o-pnpm-allowlist-acha-o-processo-do-app)).
+- **Pastas recentes e pastas abertas** são uma tabela **por pasta** (não por raiz — a `workspaces`
+  não muda): `user_id`, `path` real, `root_path`, `last_opened_at`, `pinned` e `tab_position`, nula
+  quando a aba está fechada ([06 · D-14](../../plans/06-workbench/decisions.md#d-14--onde-gravar-recentes-e-pastas-abertas)).
+  O conjunto e a ordem das abas seguem o usuário, no servidor
+  ([06 · D-10](../../plans/06-workbench/decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas)).
+  Fechar uma pasta **não** encerra sessão: este módulo nem a conhece. O teto de abas é **8**
+  (`OPEN_FOLDERS_LIMIT`) e o de recentes **não fixados** é **20** (`RECENT_FOLDERS_LIMIT`), podados
+  ao abrir; fixada e aberta nunca saem pelo teto
+  ([06 · D-21](../../plans/06-workbench/decisions.md#d-21--o-teto-de-recentes-e-o-recente-de-uma-aba-aberta)).
+  Tirar dos recentes uma pasta com a aba aberta mantém a aba e a tira da lista; fechar a aba de uma
+  pasta que já saiu da lista a esquece de vez.
 - **Erros:** `WORKSPACE_NOT_ALLOWED`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`,
-  `FORBIDDEN`
+  `WORKSPACE_DIRECTORY_UNREADABLE`, `OPEN_FOLDERS_LIMIT_REACHED`, `FORBIDDEN`, `CONFLICT`
 - **Nota:** esta é a primeira linha de defesa do sistema. A regra é pura, sem I/O, e tem
   cobertura mínima de 90 %. Ver [01-clean-architecture.md](01-clean-architecture.md).
+
+#### As rotas HTTP do `workspace`
+
+O contrato, espelhado nos DTOs Zod do controller (`adapter/inbound/http/workspace/workspace.dto.ts`)
+e nos tipos do web (`features/workspace/types/`). Todo caminho viaja como **search ou corpo, nunca
+como segmento de path** — um proxy que normaliza `%2F` mudaria o valor que a allowlist vai checar —
+e é recusado com `400` `INVALID_INPUT` **antes** do caso de uso quando ausente, vazio, relativo, com
+NUL ou com um segmento `..`: o seletor sobe pelo `parent` que a listagem devolve, nunca editando o
+caminho.
+
+| Rota | Resposta | Recusas |
+|---|---|---|
+| `GET /workspaces` | `{ workspaces[{ path, label, lastUsedAt }] }` — as raízes do chamador | `401` |
+| `GET /workspaces/resolve?path=` | `{ path, root }` | `400`, `401`, `403` `WORKSPACE_NOT_ALLOWED`/`FORBIDDEN`, `404` `WORKSPACE_NOT_FOUND`, `422` `WORKSPACE_NOT_A_DIRECTORY` |
+| `GET /workspaces/directories?path=&hidden=&prefix=` | `{ path, root, parent, entries[{ name, path, hidden, symlink }], truncated }` — `parent` é `null` na raiz; `entries[].path` é o caminho **listado** (do link, num symlink); `hidden` é `true`/`false` literal, e `prefix` é um nome, nunca um caminho | as de `resolve`, mais `422` `WORKSPACE_DIRECTORY_UNREADABLE` |
+| `GET /workspaces/recent` | `{ folders[{ path, rootLabel, lastOpenedAt, pinned, available }] }` — fixadas primeiro, depois por `lastOpenedAt` desc; `available: false` para a que saiu da allowlist ou sumiu, **em vez de sumir** da lista; `rootLabel` é `null` quando ela não vive mais sob raiz nenhuma do usuário, como na aba | `401` |
+| `PUT /workspaces/recent/pin` `{ path, pinned }` | `204`; fixar o que já está fixado não muda nada | `400`, `401` |
+| `DELETE /workspaces/recent?path=` | `204`, **também** quando não existia | `400`, `401` |
+| `GET /workspaces/open-folders` | `{ folders[{ path, rootLabel, state }] }`, em ordem; `state` é `available`, `notAllowed` ou `missing`, revalidado na leitura | `401` |
+| `POST /workspaces/open-folders` `{ path }` | `201` com a aba ao abrir; `200` com a existente se já aberta — idempotente. Abrir **grava o recente** | as de `resolve` (e então **nada** é gravado), `409` `OPEN_FOLDERS_LIMIT_REACHED` (`params.limit`) |
+| `DELETE /workspaces/open-folders?path=` | `204`, também quando não estava aberta | `400`, `401` |
+| `PUT /workspaces/open-folders/order` `{ paths }` | `204` | `400`, `401`, `409` `CONFLICT` se o conjunto não é o aberto |
+
+`WORKSPACE_DIRECTORY_UNREADABLE` é `422` e não `403`: a autorização do usuário passou, e é o sistema
+de arquivos que torna o pedido impossível. `OPEN_FOLDERS_LIMIT_REACHED` é `409`: conflito com o
+estado atual, que fechar uma aba resolve. Os endpoints novos entram sob os limites HTTP do
+[plano 05](../../plans/05-hardening-operations/README.md) quando ele os estender ao HTTP.
 
 ### `session`
 
@@ -341,6 +415,30 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
 
 ### `notification`
 
+- **O histórico do centro de notificações** do web mora aqui
+  ([06 · D-17](../../plans/06-workbench/decisions.md#d-17--o-que-vira-notificação-e-onde-vive-o-histórico)):
+  por usuário, **30 dias** de retenção por um job de limpeza, **teto de 200** aplicado na mesma
+  transação da gravação, e "lida" **no servidor** — marcar no desktop apaga o badge no celular. A
+  mesma regra do push: guarda só `severity`, `messageKey` e `params`, validados contra o catálogo de
+  chaves e o schema, **nunca** conteúdo de conversa nem comando. O log de I/O diz severidade, chave e
+  contagem, nunca os `params`. O contrato WebSocket não muda: as janelas convergem relendo o
+  histórico ao ganhar foco e ao reconectar.
+
+  | Rota | Resposta |
+  |---|---|
+  | `GET /notifications?cursor=` | `{ items[{ id, severity, messageKey, params, count, createdAt, readAt }], unread, nextCursor }`, a mais nova primeiro |
+  | `POST /notifications` `{ clientId, severity, messageKey, params, count }` | `201` ao gravar; `200` com a existente para o mesmo `clientId` — o reenvio não duplica |
+  | `PUT /notifications/read` `{ ids }` · `PUT /notifications/read-all` | `204`, também para id que não existe |
+  | `DELETE /notifications/:id` · `DELETE /notifications` | `204` sempre |
+
+  `messageKey` fora do catálogo de chaves ou `params` fora do schema → `400` `INVALID_INPUT`.
+  O **catálogo de chaves** é uma lista fechada no domínio (`NOTIFICATION_CATALOGUE`), com os
+  parâmetros que cada chave interpola: chave desconhecida, parâmetro a mais (onde conteúdo se
+  esconderia) ou a menos são recusados, com cada problema em `details[]` (`notification.error.rejected`).
+  Toda chave do catálogo é uma que o web tem de traduzir — e o `pnpm i18n:check` prova que traduz.
+  Notificação nova de um plano seguinte entra no catálogo na mesma mudança que a traduz
+  ([06 · D-19](../../plans/06-workbench/decisions.md#d-19--o-catálogo-de-chaves-das-notificações)).
+  Os `params` ficam fora do log de I/O também na borda HTTP: a rota os marca com `@OmitFromLog`.
 - **Regras:** só notifica quando **nenhuma** connection do usuário está observando a sessão;
   push de permissão traz `expiresAt` e é cancelado quando a permissão resolve; payload já
   vai **traduzido**, no `Device.locale` — é a única exceção da regra de i18n
@@ -374,6 +472,18 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   ela quebrada é pior que fora do ar; push é melhor esforço ao lado de um prazo que não é, e um
   backend que não subisse porque ninguém configurou notificação trocaria o produto por uma das
   suas conveniências ([02 · D-20](../../plans/02-mobile-approval/decisions.md#d-20--onde-vive-o-segredo-e-o-que-ele-não-pode-derrubar)).
+
+### `diag`
+
+- **O ping** (`diag.ping`, pelo WebSocket) prova o caminho de ponta a ponta; ver
+  [05-websocket-protocol](../shared/05-websocket-protocol.md).
+- **As versões** para a tela "Sobre" ([06 · B-12](../../plans/06-workbench/F1-directory-browse.md#b-12--versões-para-a-tela-sobre-)):
+  `GET /diag/versions`, autenticada, → `{ backend, web?, agentSdk, claudeCli, node }`, cada campo
+  `{ version, reason }`, com `version: null` e o motivo para o que não se pôde ler — **nunca** `500`
+  porque o CLI não respondeu: a tela existe justamente para quando algo está errado. A versão do CLI
+  vem do mesmo `cli-version` do [plano 04 · F3](../../plans/04-transcript-and-resume/F3-commands.md),
+  com o cache por versão — pedir o "Sobre" não sobe um subprocesso. `web` é opcional: a tela mostra a
+  versão do próprio bundle, e o campo só vem quando o backend a conhece.
 
 ### `audit`
 

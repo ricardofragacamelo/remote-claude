@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { resumeAnswer, resumeSession } from '../services/live-session.service';
+import { useOwnedSessionsStore } from '../store/owned-sessions.store';
 import { AppError } from '@/shared/api/errors';
 import { wsClient } from '@/shared/api/ws';
 import type { ConnectionStatus } from '@/shared/api/ws-client';
@@ -80,6 +81,9 @@ export function useResumeSession(
         return;
       }
 
+      // A resume lands on the caller's own session — a new one, or the one already live — so it
+      // is this browser's to close, and the screen it moves to has to know that already.
+      useOwnedSessionsStore.getState().claim(answer.sessionId);
       onResumed(answer.sessionId);
     });
   }, [conversationId, onResumed]);

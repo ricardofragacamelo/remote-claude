@@ -59,6 +59,24 @@ export function redact(value: unknown, depth = 0): unknown {
   );
 }
 
+/**
+ * A copy of `value` with the named top-level fields replaced — for a route that keeps fields out of
+ * the log that no name-based rule would catch. Anything that is not a plain object is returned as
+ * it is.
+ */
+export function omitting(value: unknown, fields: readonly string[]): unknown {
+  if (fields.length === 0 || typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return value;
+  }
+
+  const copy: Record<string, unknown> = { ...value };
+  for (const field of fields.filter((name) => name in copy)) {
+    copy[field] = REDACTED;
+  }
+
+  return copy;
+}
+
 /** A payload and whether it had to be cut down to fit the cap. */
 export interface LoggedPayload {
   readonly payload: unknown;

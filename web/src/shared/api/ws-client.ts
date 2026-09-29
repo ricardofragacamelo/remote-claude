@@ -14,8 +14,16 @@ export interface SocketLike {
   close(code?: number, reason?: string): void;
 }
 
-/** Where a connection stands, for the UI to show and for a test to assert on. */
-export type ConnectionStatus = 'idle' | 'connecting' | 'ready' | 'reconnecting' | 'closed';
+/**
+ * Where a connection stands, for the UI to show and for a test to assert on.
+ *
+ * `throttled` is a reconnection the **server** is holding back: the socket was closed with `4429`
+ * for sending past the rate, and the client waits out the `Retry-After` before it tries again. It
+ * is its own state, not `reconnecting`, because the person looking at the screen deserves to know
+ * the difference between "the network went" and "this was sent too fast" (plan 05, S-43).
+ */
+export type ConnectionStatus =
+  'idle' | 'connecting' | 'ready' | 'reconnecting' | 'throttled' | 'closed';
 
 /** What a feature needs from the stream of one session. */
 export interface SessionSubscriber {
@@ -443,7 +451,7 @@ export class WsClient {
 
     this.attempt += 1;
     const delayMs = this.delayAfter(code);
-    this.move('reconnecting');
+    this.move(code === CLOSE_RATE_LIMITED ? 'throttled' : 'reconnecting');
 
     logger.warn(
       { op: 'ws.connection', closeCode: code, attempt: this.attempt, delayMs },

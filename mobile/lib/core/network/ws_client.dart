@@ -40,6 +40,12 @@ enum ConnectionStatus {
   /// The socket went and the backoff is being waited out.
   reconnecting,
 
+  /// The server closed the socket with `4429` for sending past the rate, and the client is waiting
+  /// out the `Retry-After` before it tries again. Its own state, not [reconnecting]: "the network
+  /// went" and "this was sent too fast" are different things to the person holding the phone
+  /// (plan 05, S-43).
+  throttled,
+
   /// Closed, and not being retried.
   closed,
 }
@@ -543,7 +549,7 @@ class WsClient {
 
     _attempt += 1;
     final Duration delay = _delayAfter(code);
-    _move(ConnectionStatus.reconnecting);
+    _move(code == closeRateLimited ? ConnectionStatus.throttled : ConnectionStatus.reconnecting);
 
     _logger.warn(
       'ws reconnecting',

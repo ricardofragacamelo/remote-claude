@@ -21,8 +21,8 @@ Leia os transversais que valem aqui: [idioma](../shared/01-language-and-naming.m
 |---|---|---|
 | 01 | [Arquitetura em camadas](01-architecture.md) | **Sempre**, antes do primeiro arquivo. Define a cadeia Component → Hook → Service → api e o que cada elo pode fazer. |
 | 02 | [Estrutura de pastas](02-folder-structure.md) | Vai criar arquivo. Vai procurar onde algo deveria estar. |
-| 03 | [Design system](03-ui-system.md) | Vai escrever JSX, estilizar, adicionar componente do shadcn ou mexer em tema. |
-| 04 | [Estado e dados](04-state-and-data.md) | Vai buscar dado do servidor, consumir o WebSocket ou decidir onde um estado mora. |
+| 03 | [Design system](03-ui-system.md) | Vai escrever JSX, estilizar, adicionar componente do shadcn ou mexer em tema. Vai pôr algo no **workbench** — view, painel, comando, seção de configurações, item da navegação: a seção [Workbench](03-ui-system.md#workbench) diz em que registro entra. |
+| 04 | [Estado e dados](04-state-and-data.md) | Vai buscar dado do servidor, consumir o WebSocket ou decidir onde um estado mora — inclusive o [de uma aba de pasta](04-state-and-data.md#estado-de-aba-de-pasta). Vai criar ou mudar uma rota: [o mapa de rotas](04-state-and-data.md#o-mapa-de-rotas). |
 | 05 | [Logging no browser](05-logging.md) | Vai adicionar log, ou criar um service. |
 | 06 | [Testes](06-testing.md) | Vai escrever teste do web. Leia junto com [a estratégia geral](../shared/06-testing-strategy.md). |
 | 07 | [Autenticação](07-auth.md) | Vai mexer em login, token, rota protegida ou registro de device. Leia junto com [OIDC](../shared/08-authentication.md). |

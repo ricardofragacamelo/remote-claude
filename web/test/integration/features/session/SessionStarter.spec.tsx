@@ -3,6 +3,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { SessionStarter } from '@/features/session';
+import { useOwnedSessionsStore } from '@/features/session/store/owned-sessions.store';
 import { setAccessToken } from '@/shared/api/credentials';
 import { wsClient } from '@/shared/api/ws';
 import { renderRouted, translator } from '../../../support/render';
@@ -110,6 +111,9 @@ describe('starting a session', () => {
     await waitFor(() => {
       expect(started).toEqual([SESSION]);
     });
+
+    // S-84: claimed before the screen that shows it exists — it is this browser's to close.
+    expect(useOwnedSessionsStore.getState().owned).toEqual([SESSION]);
   });
 
   it('keeps waiting through a session.started that names no session', async () => {
@@ -135,5 +139,85 @@ describe('starting a session', () => {
 
     expect(screen.getByRole('button', { name: t('session.starter.pending') })).toBeDisabled();
     expect(started).toEqual([]);
+  });
+
+  /** The `session.start` the screen sent last. */
+  function lastStart(): Record<string, unknown> {
+    const starts = sockets.latest.frames().filter((sent) => sent['type'] === 'session.start');
+    const last = starts.at(-1);
+    if (last === undefined) {
+      throw new Error('no session.start was sent');
+    }
+    return last;
+  }
+
+  /** The server refusing a command for the ceiling, the way the gateway answers it. */
+  function refuseForTheCeiling(correlationId: unknown): void {
+    act(() => {
+      sockets.latest.receive({
+        v: 1,
+        id: 'err-1',
+        kind: 'error',
+        type: 'error',
+        ts: AT,
+        correlationId,
+        traceId: 'trace-limit',
+        payload: {
+          code: 'SESSION_LIMIT_REACHED',
+          messageKey: 'session.error.limitReached',
+          params: { limit: 2, retryAfterSeconds: 30 },
+        },
+      });
+    });
+  }
+
+  it('S-80 — a start refused for the ceiling stops waiting and says why, translated', async () => {
+    const user = userEvent.setup();
+    mount('/srv/projects/app');
+    connect();
+
+    await user.click(await screen.findByRole('button', { name: t('session.starter.action') }));
+    refuseForTheCeiling(lastStart()['id']);
+
+    expect(
+      await screen.findByText(t('session.error.limitReached', { limit: 2 })),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(t('common.error.traceLabel', { traceId: 'trace-limit' })),
+    ).toBeVisible();
+
+    // The button is free again — for when a slot is — and nothing was retried on its own.
+    expect(screen.getByRole('button', { name: t('session.starter.action') })).toBeEnabled();
+    expect(sockets.latest.frames().filter((sent) => sent['type'] === 'session.start')).toHaveLength(
+      1,
+    );
+    expect(started).toEqual([]);
+  });
+
+  it('S-80 — the refusal of some other command on the same socket is not this one', async () => {
+    const user = userEvent.setup();
+    mount('/srv/projects/app');
+    connect();
+
+    await user.click(await screen.findByRole('button', { name: t('session.starter.action') }));
+    refuseForTheCeiling('some-other-command');
+
+    expect(screen.getByRole('button', { name: t('session.starter.pending') })).toBeDisabled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('S-80 — the next attempt clears the refusal before it is answered', async () => {
+    const user = userEvent.setup();
+    mount('/srv/projects/app');
+    connect();
+
+    await user.click(await screen.findByRole('button', { name: t('session.starter.action') }));
+    refuseForTheCeiling(lastStart()['id']);
+    await screen.findByRole('alert');
+
+    await user.click(screen.getByRole('button', { name: t('session.starter.action') }));
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('session.starter.pending') })).toBeDisabled();
   });
 });

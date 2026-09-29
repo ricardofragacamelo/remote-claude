@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useMemo } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import type { ReactNode } from 'react';
@@ -43,9 +43,15 @@ export function Providers({ children }: { readonly children: ReactNode }): React
     return () => setRenewer(null);
   }, [locale, signedIn]);
 
-  useEffect(() => {
+  // The token is in place before anything below asks for data. A child's effects run before its
+  // parent's, so set in an ordinary effect here, the first request of a screen that mounts with the
+  // sign-in left without it — refused with `401`, and a renewal spent on nothing, on every load
+  // (plan 05, S-85). A layout effect runs before every ordinary one.
+  useLayoutEffect(() => {
     setAccessToken(session?.accessToken ?? null);
+  }, [session]);
 
+  useEffect(() => {
     if (session === null) {
       // The previous user's data must not be on screen for the next one: the socket goes, and so
       // does every cached answer (docs/architecture/web/07-auth.md#logout).

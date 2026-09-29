@@ -10,7 +10,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F4 — não iniciada (F0 a F3 concluídas; F2 e F3 com `pnpm verify:full` verde em 2026-09-28)
+**Fase corrente:** F4 — concluída em 2026-09-28 (`pnpm verify:full` verde no ciclo 27; `pnpm test:e2e:mobile` 15/15)
 **Última atualização:** 2026-09-28
 **Bloqueios:** nenhum por decisão — a [D-05](decisions.md) foi decidida em 2026-09-26 pelo usuário:
 **Keycloak próprio**, administrado por quem opera a instalação ([emenda da ADR-010](../../architecture/shared/00-decisions.md#adr-010--openid-connect-agnóstico-de-provedor-auth0-como-alvo-inicial)).
@@ -21,7 +21,7 @@ F0 ████████████████████ 100%   ✅ concl
 F1 ████████████████████ 100%   ✅ concluída
 F2 ████████████████████ 100%   ✅ concluída
 F3 ████████████████████ 100%   ✅ concluída
-F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
+F4 ████████████████████ 100%   ✅ concluída
 ```
 
 ---
@@ -36,8 +36,8 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 | [F1](F1-diagnostics.md) | B-11 | 1/1 | ✅ |
 | [F2](F2-identity.md) | B-12…B-15 | 4/4 | ✅ |
 | [F3](F3-gates.md) | B-16, B-19, B-20, B-28 | 4/4 | ✅ |
-| [F4](F4-e2e.md) | B-21…B-23 | 0/3 | 🔲 |
-| **Total** | **B-01…B-07, B-11…B-16, B-19…B-23, B-25…B-28** | **19/22** | 🔄 |
+| [F4](F4-e2e.md) | B-21…B-23 | 3/3 | ✅ |
+| **Total** | **B-01…B-07, B-11…B-16, B-19…B-23, B-25…B-28** | **22/22** | ✅ |
 
 ---
 
@@ -45,7 +45,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 68 | 5 | 0 | 63 | 0 |
+| [Matriz](scenarios.md) | 77 | 0 | 0 | 77 | 0 |
 
 ---
 
@@ -56,7 +56,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 12 | 0 | 0 | 12 | 0 |
+| [Decisões](decisions.md) | 14 | 0 | 0 | 14 | 0 |
 
 ---
 
@@ -90,6 +90,10 @@ Um registro por **ciclo**, conforme o
 | 21 | 2026-09-28 | F0, F2, F3 | 7 — cobertura (backend, teste) | com a máquina ociosa, o S-06 da varredura de órfãs (F0) contou 0 — sozinho, passa 8 vezes em 8. Não era carga: todo `startTestApp` sobe o app de verdade, e o boot dele varre os processos **reais** da máquina; o órfão que o S-06 planta era encerrado pelo boot de outra suíte, num worker ao lado, e quando a varredura do próprio S-06 olhava, sobrava um zumbi sem `environ`. O `vitest` 4 roda mais arquivos ao mesmo tempo, e a janela cresceu. Quinto vermelho no portão 7, e o primeiro a mostrar que parte dos anteriores (ciclos 16 e 20) podia ter a mesma raiz: interferência entre suítes, não o teste | os apps de teste sobem a varredura sobre uma tabela de processos vazia (`EMPTY_MACHINE`, ao lado do `ROOMY_MACHINE` que já existia pelo mesmo motivo); a tabela real continua provada na suíte dela, `orphan-sweep.spec.ts`, que é a única que planta processos | reinício do portão 1 |
 | 22 | 2026-09-28 | F2 | 7 — cobertura (app) | raiz, web e backend inteiros verdes; no app, dois achados da renovação proativa (S-72). Seis testes de `router_screens_test.dart` com `!timersPending`: o `ProviderContainer` deles é descartado por `addTearDown`, que roda depois da checagem de timers, e a sessão da fixture agendava a renovação. E o `sign_in_page_test.dart` **travava**: a sessão da fixture já nascia vencida, a renovação devolvia outra vencida, e o controller reagendava com atraso zero — um laço contra o provedor, que no produto bastaria um relógio adiantado para disparar | o laço é bug do produto e se corrige no produto: no mínimo 30 s entre duas renovações proativas (`minimumRenewalGap`), com S-77. A fixture de rotas passa a não ter refresh token — são rotas, não credencial | reinício do portão 1 |
 | 23 | 2026-09-28 | F2, F3 | nenhum | depois do intervalo mínimo entre renovações | — | **11 portões verdes** — o `osv-scanner` leu os dois lockfiles e não achou aviso |
+| 24 | 2026-09-28 | F4 | — (e2e de limites rodado à parte, antes dos portões) | a primeira rodada da `limits.spec.ts` e da `limits_test.dart` foi o que a F4 existe para ser: achou o produto travando sob limite. **Web:** o iniciador ficava em "Starting…" com o teto atingido; a sessão aberta pela tela inicial chegava como de outro navegador ("só quem abriu pode encerrar") e marcada como parcial; e a primeira requisição da tela que monta com o login saía sem token (`401` e uma renovação à toa por carga). **App:** o toque na pasta não fazia nada com o teto atingido; a frase do `throttled` estourava o cabeçalho; e a renovação recusada deixava o estado com a sessão morta dentro, e ninguém era levado ao login. Da suíte: o martelo mandava frames sem `v` (fechados com `4426` antes de o ritmo contar), a contagem de sockets incluía a recarga do login, o app pendente não podia responder a pergunta, e o logout administrativo não revogava o refresh token **offline** | cada defeito do produto corrigido no produto, com teste de unidade ou integração que falha sem a correção (S-80, S-81, S-84, S-85, S-86); a suíte manda envelopes válidos, conta sockets a partir do turno, aprova o aparelho, e revoga também as concessões. Web 6/6 e app 15/15 | — |
+| 25 | 2026-09-28 | F4 | 5 — duplicação | nove clones desta entrega: os imports da lista de pastas do app ficaram iguais aos do histórico ao ganhar a linha da recusa; os cabeçalhos de `useSessionStarter`/`SessionStarter` iguais aos de `useLiveSession`/`SessionScreen`; e os passos repetidos de S-43, S-44 e S-79 nas duas suítes, mais o `cardFor` copiado de `commands-and-undo` | a linha da recusa vira `SessionStartRefusal`, na feature de sessão, onde mora o estado do início; o hook tipa o erro por `CommandRefusal['error']`; `cardFor` vai para `fixtures/history.ts`; `onScreen`, `heldTurn` e `withShortTokens` (web) e `openedOnScreen`, `heldTurn` (app) | reinício do portão 1 |
+| 26 | 2026-09-28 | F4 | 8 — integração (backend, teste) | o S-51 de `push.flow.spec.ts` (`no frame arrived`) de novo, com load average 29 — a segunda vez, depois do ciclo 20; isolado, 3 em 3. O `next()` do socket de teste desistia em 5 s por frame: a mesma aposta na velocidade da máquina que o ciclo 18 tirou do web | o `next()` espera até 15 s, abaixo do `testTimeout` de 20 s do backend; nenhum teste dependia do limite para provar ausência de frame. Nenhuma asserção muda | reinício do portão 1 |
+| 27 | 2026-09-28 | F4 | nenhum | depois do timeout do socket de teste | — | **11 portões verdes**; `pnpm test:e2e:mobile` 15/15 à parte |
 
 ---
 
@@ -122,6 +126,11 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 | 2026-09-27 | A sessão do web carrega o `idToken` (o backend o devolve de `/auth/session` e `/auth/refresh`), e o web ganha o botão **Sair** | o `end_session_endpoint` precisa do `id_token_hint` para não pedir confirmação; e nenhuma tela chamava o `logout()` que existia | contrato HTTP de sessão, [web/07-auth](../../architecture/web/07-auth.md#logout) |
 | 2026-09-27 | O projeto compose de uma execução e2e leva o pid do dono (`remote-claude-e2e-<porta>-p<pid>`), e o purge poupa o de dono vivo | achado escrevendo S-40: o purge do início de uma execução derrubava a stack de outra que estava rodando | `scripts/lib/stack.mjs`, `scripts/lib/compose.mjs`, `run-e2e-local.mjs` |
 | 2026-09-27 | **O envio de log do web e do app ao backend sai do escopo** — B-08, B-09, B-10 e, na F4, B-24; S-15…S-20, S-22 e S-46; D-03 e D-04 descartadas; o `LogBuffer`/`beaconShipper` do web e o `LogBuffer` do app, herdados do bootstrap, removidos | decisão do usuário: o log do cliente fica no cliente, e o `traceId` que o erro mostra e o backend grava é o que liga os dois lados. Sai também o que só existia para isso: o guard de bearer opcional e a redação por forma de texto. Fica a correção do filtro (corpo acima do limite do parser → `413`, não `500`), que é geral e ganhou testes próprios | F1 vira "Diagnóstico" (só B-11), F4, [matriz](scenarios.md), [decisions.md](decisions.md), [plano 16](../16-logs-and-diagnostics/README.md), [03-logging](../../architecture/shared/03-logging.md) e as docs de logging de web e mobile |
+| 2026-09-28 | **D-13: os limites apertados vivem numa segunda dupla backend + web da mesma execução** (a stack de limites) | os cenários da F4 pedem teto de 2, TTL de segundos e 20 frames/s, o oposto do que as outras specs pedem | `scripts/lib/stack.mjs` (`LIMITS_STACK`, `limitsEnvironment`, `e2eDotEnv`, `dartDefines`), `scripts/run-e2e-local.mjs`, `scripts/mobile.mjs`, `e2e/fixtures/environment.ts`, [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) |
+| 2026-09-28 | **D-14: a recusa por teto é dita na tela e libera o botão; nada tenta de novo sozinho, e o botão não fica travado pelo `Retry-After` de 30 s** | a vaga pode abrir a qualquer momento (S-78); o `Retry-After` que o cliente respeita é o do ritmo | iniciador do web (`useSessionStarter`, `SessionStarter`) e do app (`SessionStarterController`, lista de pastas) |
+| 2026-09-28 | O `4429` vira um estado da conexão, **`throttled`**, nas duas pontas, com texto próprio (`connection.status.throttled` / `connectionStatusThrottled`) | "Reconectando…" não dizia que o problema era o ritmo (S-43, S-81) | `ws-client.ts`, `ws_client.dart`, `connection_line.dart`, i18n das duas pontas, [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#limites-por-connection) |
+| 2026-09-28 | A posse das sessões (quem pode encerrar) passa da tela da sessão para um store da feature, gravado por quem mandou o comando | achado pelo S-43: a sessão aberta pela tela inicial chegava como de outro navegador, e marcada como parcial — a posse era aprendida por uma tela que ainda não existia (S-84) | `owned-sessions.store.ts`, `useSessionStarter`, `useResumeSession`, `useLiveSession`, [web/04-state-and-data](../../architecture/web/04-state-and-data.md) |
+| 2026-09-28 | O `Providers` do web instala o token num layout effect | achado pelo S-44: a primeira requisição da tela que monta junto com o login saía sem token, voltava `401` e gastava uma renovação a cada carga (S-85) | `web/src/app/providers.tsx`, [web/07-auth](../../architecture/web/07-auth.md) |
 
 ---
 

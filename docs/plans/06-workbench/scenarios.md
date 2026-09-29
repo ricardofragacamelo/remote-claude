@@ -21,115 +21,115 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-01 | código novo sem `messageKey` em `en` **e** `pt-BR` → `i18n:check` reprova | err | unit | — | B-03 | ⬜ |
-| S-02 | DTO de `GET /workspaces/directories`: `path` ausente, vazio, relativo, com `..` ou NUL → recusado antes do caso de uso | err | unit | `INVALID_INPUT` | B-04 | ⬜ |
-| S-03 | `/workbench` sem `folder` cai na boas-vindas, não num erro | fron | unit | — | B-05 | ⬜ |
-| S-04 | `folder` com espaço, acento, `#`, `%`, `?` e `&` faz ida e volta pela URL sem perda | fron | unit | — | B-05 | ⬜ |
-| S-05 | `/` com abas abertas vai para a ativa; sem abas mostra a boas-vindas | est | integração | — | B-05 | ⬜ |
-| S-06 | as rotas de hoje que ficam (`/audit?…`, `/rules`, `/rules/$ruleId`, callback) continuam resolvendo, com a search preservada; as removidas pela D-07 (`/sessions/$sessionId`, `/history`, `/history/$conversationId`) caem no "não encontrado" traduzido | eq | unit | `NOT_FOUND` | B-05 | ⬜ |
-| S-07 | rota reservada a outro plano (`/claude…`) não renderiza link nem tela vazia enquanto ninguém a registra — cai no "não encontrado" traduzido | fron | unit | `NOT_FOUND` | B-05 | ⬜ |
-| S-164 | documento normativo novo fora de todo índice, ou link para âncora que não existe → `docs:check` reprova | err | unit | — | B-02 | ⬜ |
-| S-165 | a ADR-014 existe com a alternativa descartada e as decisões D-01, D-08 e D-10 com resultado, e os documentos do web e do backend apontam para ela | eq | unit | — | B-01 | ⬜ |
+| S-01 | código novo sem `messageKey` em `en` **e** `pt-BR` → `i18n:check` reprova | err | unit | — | B-03 | ✅ |
+| S-02 | DTO de `GET /workspaces/directories`: `path` ausente, vazio, relativo, com `..` ou NUL → recusado antes do caso de uso | err | unit | `INVALID_INPUT` | B-04 | ✅ |
+| S-03 | `/workbench` sem `folder` cai na boas-vindas, não num erro — movido da F0 ([D-18](decisions.md#d-18--os-cenários-de-rota-que-dependem-de-produto)): a rota nasce com a pasta na URL | fron | unit | — | B-16 | ⬜ |
+| S-04 | `folder` com espaço, acento, `#`, `%`, `?` e `&` faz ida e volta pela URL sem perda | fron | unit | — | B-05 | ✅ |
+| S-05 | `/` com abas abertas vai para a ativa; sem abas mostra a boas-vindas — movido da F0 ([D-18](decisions.md#d-18--os-cenários-de-rota-que-dependem-de-produto)): as abas nascem na B-20 | est | integração | — | B-20 | ⬜ |
+| S-06 | as rotas de hoje que ficam (`/audit?…`, `/rules`, `/rules/$ruleId`, callback) continuam resolvendo, com a search preservada. A metade das removidas pela D-07 foi para o S-150, com a remoção ([D-18](decisions.md#d-18--os-cenários-de-rota-que-dependem-de-produto)) | eq | unit | — | B-05 | ✅ |
+| S-07 | rota reservada a outro plano (`/claude…`) não renderiza link nem tela vazia enquanto ninguém a registra — cai no "não encontrado" traduzido | fron | unit | `NOT_FOUND` | B-05 | ✅ |
+| S-164 | documento normativo novo fora de todo índice, ou link para âncora que não existe → `docs:check` reprova | err | unit | — | B-02 | ✅ |
+| S-165 | a ADR-014 existe com a alternativa descartada e as decisões D-01, D-08 e D-10 com resultado, e os documentos do web e do backend apontam para ela | eq | unit | — | B-01 | ✅ |
 
 ## Listagem de subpastas — B-06…B-08
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-08 | lista só diretórios, um nível, em ordem estável, sem distinção de caixa e com números em ordem natural (`dir2` antes de `dir10`) | eq | unit | — | B-06 | ⬜ |
-| S-09 | arquivo, socket, fifo e dispositivo ficam fora da lista | eq | unit | — | B-06 | ⬜ |
-| S-10 | pasta sem subpastas → `entries: []`, `truncated: false` | fron | integração | — | B-08 | ⬜ |
-| S-11 | exatamente o teto → `truncated: false`; teto + 1 → teto entradas e `truncated: true` | fron | unit | — | B-06 | ⬜ |
-| S-12 | o adapter para de ler em teto + 1 — um diretório com dezenas de milhares de entradas custa o mesmo que um com teto + 1 | fron | integração | — | B-07 | ⬜ |
-| S-13 | o filtro por prefixo alcança a entrada que o teto cortou | fron | integração | — | B-06 | ⬜ |
-| S-14 | nome começado por `.` vem com `hidden: true` e só aparece quando `hidden=true` é pedido | eq | unit | — | B-06 | ⬜ |
-| S-15 | symlink para diretório dentro da mesma raiz é listado com `symlink: true` e é navegável | eq | integração | — | B-07 | ⬜ |
-| S-16 | symlink cujo alvo está fora da raiz é **omitido** — listá-lo diria o que existe fora da fronteira | fron | integração | — | B-06 | ⬜ |
-| S-17 | symlink quebrado e symlink em ciclo (`a → b → a`) são omitidos, sem travar | fron | integração | — | B-07 | ⬜ |
-| S-18 | na própria raiz, `parent` é `null` — nunca se lista acima dela | fron | integração | — | B-08 | ⬜ |
-| S-19 | nome com espaço, acento, emoji e quebra de linha volta intacto e é navegável | fron | integração | — | B-07 | ⬜ |
-| S-20 | `path` fora de toda raiz | err | integração | `WORKSPACE_NOT_ALLOWED` | B-08 | ⬜ |
-| S-21 | `path` dentro de uma raiz que existe e é de outra pessoa | err | integração | `FORBIDDEN` | B-08 | ⬜ |
-| S-22 | `path` inexistente | err | integração | `WORKSPACE_NOT_FOUND` | B-08 | ⬜ |
-| S-23 | `path` que é arquivo | err | integração | `WORKSPACE_NOT_A_DIRECTORY` | B-08 | ⬜ |
-| S-24 | `path` que é um symlink para fora da raiz é recusado pela contenção no realpath | err | integração | `WORKSPACE_NOT_ALLOWED` | B-08 | ⬜ |
-| S-25 | diretório que o processo do backend não pode ler | err | integração | `WORKSPACE_DIRECTORY_UNREADABLE` (novo, B-03) | B-07 | ⬜ |
-| S-26 | subpasta ilegível dentro de pasta legível **aparece** na lista; a recusa vem ao entrar nela (S-25) | eq | integração | — | B-07 | ⬜ |
-| S-27 | sem token | err | integração | `UNAUTHENTICATED` | B-08 | ⬜ |
-| S-28 | entrada que some entre a leitura e o `realpath` é omitida, e a resposta sai `200` | conc | integração | — | B-07 | ⬜ |
-| S-29 | subpastas criadas e removidas durante a listagem não a derrubam nem duplicam entrada | conc | integração | — | B-07 | ⬜ |
-| S-30 | a mesma listagem duas vezes, sem mudança no disco, devolve o mesmo conteúdo na mesma ordem | idem | integração | — | B-08 | ⬜ |
-| S-31 | o log `debug` da borda traz caminho, contagem, `truncated` e duração — e nenhum nome de entrada | eq | integração | — | B-07 | ⬜ |
-| S-32 | allowlist recarregada sem a raiz: a listagem seguinte já recusa — a lista é lida a cada uso | est | integração | `WORKSPACE_NOT_ALLOWED` | B-08 | ⬜ |
-| S-33 | o comentário do controller que dizia "neither walks the disk" foi corrigido — revisão de doc; `docs:check` verde | eq | unit | — | B-08 | ⬜ |
+| S-08 | lista só diretórios, um nível, em ordem estável, sem distinção de caixa e com números em ordem natural (`dir2` antes de `dir10`) | eq | unit | — | B-06 |✅ |
+| S-09 | arquivo, socket, fifo e dispositivo ficam fora da lista | eq | unit | — | B-06 |✅ |
+| S-10 | pasta sem subpastas → `entries: []`, `truncated: false` | fron | integração | — | B-08 |✅ |
+| S-11 | exatamente o teto → `truncated: false`; teto + 1 → teto entradas e `truncated: true` | fron | unit | — | B-06 |✅ |
+| S-12 | o adapter para de ler em teto + 1 — um diretório com dezenas de milhares de entradas custa o mesmo que um com teto + 1 | fron | integração | — | B-07 |✅ |
+| S-13 | o filtro por prefixo alcança a entrada que o teto cortou | fron | integração | — | B-06 |✅ |
+| S-14 | nome começado por `.` vem com `hidden: true` e só aparece quando `hidden=true` é pedido | eq | unit | — | B-06 |✅ |
+| S-15 | symlink para diretório dentro da mesma raiz é listado com `symlink: true` e é navegável | eq | integração | — | B-07 |✅ |
+| S-16 | symlink cujo alvo está fora da raiz é **omitido** — listá-lo diria o que existe fora da fronteira | fron | integração | — | B-06 |✅ |
+| S-17 | symlink quebrado e symlink em ciclo (`a → b → a`) são omitidos, sem travar | fron | integração | — | B-07 |✅ |
+| S-18 | na própria raiz, `parent` é `null` — nunca se lista acima dela | fron | integração | — | B-08 |✅ |
+| S-19 | nome com espaço, acento, emoji e quebra de linha volta intacto e é navegável | fron | integração | — | B-07 |✅ |
+| S-20 | `path` fora de toda raiz | err | integração | `WORKSPACE_NOT_ALLOWED` | B-08 |✅ |
+| S-21 | `path` dentro de uma raiz que existe e é de outra pessoa | err | integração | `FORBIDDEN` | B-08 |✅ |
+| S-22 | `path` inexistente | err | integração | `WORKSPACE_NOT_FOUND` | B-08 |✅ |
+| S-23 | `path` que é arquivo | err | integração | `WORKSPACE_NOT_A_DIRECTORY` | B-08 |✅ |
+| S-24 | `path` que é um symlink para fora da raiz é recusado pela contenção no realpath | err | integração | `WORKSPACE_NOT_ALLOWED` | B-08 |✅ |
+| S-25 | diretório que o processo do backend não pode ler | err | integração | `WORKSPACE_DIRECTORY_UNREADABLE` (novo, B-03) | B-07 |✅ |
+| S-26 | subpasta ilegível dentro de pasta legível **aparece** na lista; a recusa vem ao entrar nela (S-25) | eq | integração | — | B-07 |✅ |
+| S-27 | sem token | err | integração | `UNAUTHENTICATED` | B-08 |✅ |
+| S-28 | entrada que some entre a leitura e o `realpath` é omitida, e a resposta sai `200` | conc | integração | — | B-07 |✅ |
+| S-29 | subpastas criadas e removidas durante a listagem não a derrubam nem duplicam entrada | conc | integração | — | B-07 |✅ |
+| S-30 | a mesma listagem duas vezes, sem mudança no disco, devolve o mesmo conteúdo na mesma ordem | idem | integração | — | B-08 |✅ |
+| S-31 | o log `debug` da borda traz caminho, contagem, `truncated` e duração — e nenhum nome de entrada | eq | integração | — | B-07 |✅ |
+| S-32 | allowlist recarregada sem a raiz: a listagem seguinte já recusa — a lista é lida a cada uso | est | integração | `WORKSPACE_NOT_ALLOWED` | B-08 |✅ |
+| S-33 | o comentário do controller que dizia "neither walks the disk" foi corrigido — revisão de doc; `docs:check` verde | eq | unit | — | B-08 |✅ |
 
 ## Recentes e pastas abertas — B-09
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-34 | abrir uma pasta grava o recente; a lista vem por `last_opened_at` desc, só do usuário | eq | integração | — | B-09 | ⬜ |
-| S-35 | abrir a mesma pasta de novo atualiza a data sem duplicar | idem | integração | — | B-09 | ⬜ |
-| S-36 | recente de outro usuário nunca aparece | eq | integração | — | B-09 | ⬜ |
-| S-37 | recente cuja pasta saiu da allowlist ou sumiu vem `available: false`, sem quebrar a lista | est | integração | — | B-09 | ⬜ |
-| S-38 | acima do teto de recentes, o mais antigo **não fixado** sai; fixado nunca sai pelo teto | fron | integração | — | B-09 | ⬜ |
-| S-39 | fixar e desafixar um recente; fixar o que já está fixado não muda nada | idem | integração | — | B-09 | ⬜ |
-| S-40 | remover um recente o tira da lista; remover o que não existe responde `204` | idem | integração | — | B-09 | ⬜ |
-| S-41 | abrir uma pasta já aberta devolve a existente (`200`, não `201`) e não duplica | idem | integração | — | B-09 | ⬜ |
-| S-42 | fechar uma pasta que não está aberta responde `204` | idem | integração | — | B-09 | ⬜ |
-| S-43 | abrir acima do teto de abas | err | integração | `OPEN_FOLDERS_LIMIT_REACHED` (novo, B-03) | B-09 | ⬜ |
-| S-44 | reordenar com um conjunto diferente do aberto | err | integração | `CONFLICT` | B-09 | ⬜ |
-| S-45 | abrir pasta fora da allowlist → recusado, e **nada** é gravado (nem recente, nem aba) | err | integração | `WORKSPACE_NOT_ALLOWED` | B-09 | ⬜ |
-| S-46 | duas aberturas simultâneas da mesma pasta resultam numa linha só | conc | integração | — | B-09 | ⬜ |
-| S-47 | aba aberta cuja pasta saiu da allowlist volta em `GET /workspaces/open-folders` com `state: notAllowed`, e a que sumiu com `missing` — as outras seguem `available` | est | integração | — | B-09 | ⬜ |
-| S-48 | falha do banco ao gravar a abertura → a abertura não finge sucesso | err | integração | `INTERNAL_ERROR` | B-09 | ⬜ |
-| S-49 | fechar a pasta não encerra sessão viva do Claude nela — o módulo `workspace` nem conhece sessão | est | integração | — | B-09 | ⬜ |
+| S-34 | abrir uma pasta grava o recente; a lista vem por `last_opened_at` desc, só do usuário | eq | integração | — | B-09 |✅ |
+| S-35 | abrir a mesma pasta de novo atualiza a data sem duplicar | idem | integração | — | B-09 |✅ |
+| S-36 | recente de outro usuário nunca aparece | eq | integração | — | B-09 |✅ |
+| S-37 | recente cuja pasta saiu da allowlist ou sumiu vem `available: false`, sem quebrar a lista | est | integração | — | B-09 |✅ |
+| S-38 | acima do teto de recentes, o mais antigo **não fixado** sai; fixado nunca sai pelo teto | fron | integração | — | B-09 |✅ |
+| S-39 | fixar e desafixar um recente; fixar o que já está fixado não muda nada | idem | integração | — | B-09 |✅ |
+| S-40 | remover um recente o tira da lista; remover o que não existe responde `204` | idem | integração | — | B-09 |✅ |
+| S-41 | abrir uma pasta já aberta devolve a existente (`200`, não `201`) e não duplica | idem | integração | — | B-09 |✅ |
+| S-42 | fechar uma pasta que não está aberta responde `204` | idem | integração | — | B-09 |✅ |
+| S-43 | abrir acima do teto de abas | err | integração | `OPEN_FOLDERS_LIMIT_REACHED` (novo, B-03) | B-09 |✅ |
+| S-44 | reordenar com um conjunto diferente do aberto | err | integração | `CONFLICT` | B-09 |✅ |
+| S-45 | abrir pasta fora da allowlist → recusado, e **nada** é gravado (nem recente, nem aba) | err | integração | `WORKSPACE_NOT_ALLOWED` | B-09 |✅ |
+| S-46 | duas aberturas simultâneas da mesma pasta resultam numa linha só | conc | integração | — | B-09 |✅ |
+| S-47 | aba aberta cuja pasta saiu da allowlist volta em `GET /workspaces/open-folders` com `state: notAllowed`, e a que sumiu com `missing` — as outras seguem `available` | est | integração | — | B-09 |✅ |
+| S-48 | falha do banco ao gravar a abertura → a abertura não finge sucesso | err | integração | `INTERNAL_ERROR` | B-09 |✅ |
+| S-49 | fechar a pasta não encerra sessão viva do Claude nela — o módulo `workspace` nem conhece sessão | est | integração | — | B-09 |✅ |
 
 ## Raízes locais de desenvolvimento — B-10, B-11
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-50 | `pnpm allowlist add <path>` cria a cópia local a partir do default (a Scratch continua) e acrescenta a raiz com os usuários do realm de dev | eq | integração | — | B-10 | ⬜ |
-| S-51 | `add` do mesmo caminho duas vezes não duplica a raiz | idem | integração | — | B-10 | ⬜ |
-| S-52 | `~` é expandido, relativo é resolvido contra o diretório corrente, e o caminho absoluto gravado é mostrado | eq | unit | — | B-10 | ⬜ |
-| S-53 | caminho inexistente, arquivo ou `/` → recusa com mensagem, saída ≠ 0, cópia intocada | err | integração | — | B-10 | ⬜ |
-| S-54 | `$HOME` pede confirmação dizendo o alcance por extenso; sem confirmar, nada muda | fron | integração | — | B-10 | ⬜ |
-| S-55 | `remove` de raiz que não está na cópia sai 0 sem mudar nada | idem | integração | — | B-10 | ⬜ |
-| S-56 | a cópia local está no `.gitignore`: `git status` continua limpo depois de `add` | eq | integração | — | B-10 | ⬜ |
-| S-57 | cópia local editada à mão fora do schema → o boot cai listando cada problema, como o default | err | integração | — | B-10 | ⬜ |
-| S-58 | o script e o boot validam pelo **mesmo** schema — um caso inválido para um é inválido para o outro | eq | unit | — | B-10 | ⬜ |
-| S-59 | a stack de e2e e a de teste ignoram a cópia local | eq | integração | — | B-10 | ⬜ |
-| S-60 | dois `add` simultâneos não corrompem o arquivo (temporário + `rename`) e nenhum se perde | conc | integração | — | B-10 | ⬜ |
-| S-61 | `pnpm doctor` e o log de boot dizem qual arquivo de allowlist está ativo | eq | integração | — | B-10 | ⬜ |
-| S-62 | depois do `SIGHUP` (D-15), o backend em execução já lista e abre a raiz nova, sem reiniciar | est | integração | — | B-11 | ⬜ |
-| S-63 | recarga com arquivo inválido mantém a lista anterior e loga o erro | err | integração | — | B-11 | ⬜ |
-| S-64 | recarga que remove uma raiz não mexe nas sessões vivas nela; a próxima abertura já recusa | est | integração | `WORKSPACE_NOT_ALLOWED` | B-11 | ⬜ |
-| S-179 | `pnpm allowlist add` sem backend do `pnpm dev` em execução grava a cópia, sai 0 e diz como recarregar; salvar o arquivo sem mandar o sinal **não** muda a lista em uso — não há watch | est | integração | — | B-11 | ⬜ |
-| S-180 | `SIGHUP` com o handler registrado não derruba o processo: a conexão WebSocket aberta e a sessão viva continuam, e o sinal chega ao processo do app, não ao `nest --watch` | est | integração | — | B-11 | ⬜ |
+| S-50 | `pnpm allowlist add <path>` cria a cópia local a partir do default (a Scratch continua) e acrescenta a raiz com os usuários do realm de dev | eq | integração | — | B-10 |✅ |
+| S-51 | `add` do mesmo caminho duas vezes não duplica a raiz | idem | integração | — | B-10 |✅ |
+| S-52 | `~` é expandido, relativo é resolvido contra o diretório corrente, e o caminho absoluto gravado é mostrado | eq | unit | — | B-10 |✅ |
+| S-53 | caminho inexistente, arquivo ou `/` → recusa com mensagem, saída ≠ 0, cópia intocada | err | integração | — | B-10 |✅ |
+| S-54 | `$HOME` pede confirmação dizendo o alcance por extenso; sem confirmar, nada muda | fron | integração | — | B-10 |✅ |
+| S-55 | `remove` de raiz que não está na cópia sai 0 sem mudar nada | idem | integração | — | B-10 |✅ |
+| S-56 | a cópia local está no `.gitignore`: `git status` continua limpo depois de `add` | eq | integração | — | B-10 |✅ |
+| S-57 | cópia local editada à mão fora do schema → o boot cai listando cada problema, como o default | err | integração | — | B-10 |✅ |
+| S-58 | o script e o boot validam pelo **mesmo** schema — um caso inválido para um é inválido para o outro | eq | unit | — | B-10 |✅ |
+| S-59 | a stack de e2e e a de teste ignoram a cópia local | eq | integração | — | B-10 |✅ |
+| S-60 | dois `add` simultâneos não corrompem o arquivo (temporário + `rename`) e nenhum se perde | conc | integração | — | B-10 |✅ |
+| S-61 | `pnpm doctor` e o log de boot dizem qual arquivo de allowlist está ativo | eq | integração | — | B-10 |✅ |
+| S-62 | depois do `SIGHUP` (D-15), o backend em execução já lista e abre a raiz nova, sem reiniciar | est | integração | — | B-11 |✅ |
+| S-63 | recarga com arquivo inválido mantém a lista anterior e loga o erro | err | integração | — | B-11 |✅ |
+| S-64 | recarga que remove uma raiz não mexe nas sessões vivas nela; a próxima abertura já recusa | est | integração | `WORKSPACE_NOT_ALLOWED` | B-11 |✅ |
+| S-179 | `pnpm allowlist add` sem backend do `pnpm dev` em execução grava a cópia, sai 0 e diz como recarregar; salvar o arquivo sem mandar o sinal **não** muda a lista em uso — não há watch | est | integração | — | B-11 |✅ |
+| S-180 | `SIGHUP` com o handler registrado não derruba o processo: a conexão WebSocket aberta e a sessão viva continuam, e o sinal chega ao processo do app, não ao `nest --watch` | est | integração | — | B-11 |✅ |
 
 ## Sobre — B-12
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-65 | `GET` das versões devolve backend, SDK do Claude, CLI do Claude e Node | eq | integração | — | B-12 | ⬜ |
-| S-66 | CLI do Claude ausente ou sem resposta → campo `null` com o motivo, e a resposta sai `200` | fron | integração | — | B-12 | ⬜ |
-| S-67 | sem token | err | integração | `UNAUTHENTICATED` | B-12 | ⬜ |
-| S-68 | pedido repetido não sobe o CLI de novo — a versão vem do cache por versão já existente | idem | integração | — | B-12 | ⬜ |
+| S-65 | `GET` das versões devolve backend, SDK do Claude, CLI do Claude e Node | eq | integração | — | B-12 |✅ |
+| S-66 | CLI do Claude ausente ou sem resposta → campo `null` com o motivo, e a resposta sai `200` | fron | integração | — | B-12 |✅ |
+| S-67 | sem token | err | integração | `UNAUTHENTICATED` | B-12 |✅ |
+| S-68 | pedido repetido não sobe o CLI de novo — a versão vem do cache por versão já existente | idem | integração | — | B-12 |✅ |
 
 ## Histórico de notificações — B-40
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-167 | gravar uma notificação e listar: só as do usuário, mais nova primeiro, com a contagem de não lidas | eq | integração | — | B-40 | ⬜ |
-| S-168 | notificação de outro usuário nunca aparece, nem marcá-la como lida ou apagá-la tem efeito sobre ela | eq | integração | — | B-40 | ⬜ |
-| S-169 | gravar de novo com o mesmo `clientId` devolve a existente (`200`, não `201`) e não duplica | idem | integração | — | B-40 | ⬜ |
-| S-170 | a 201ª notificação tira a mais antiga: o usuário nunca passa de 200 | fron | integração | — | B-40 | ⬜ |
-| S-171 | a limpeza apaga a de 30 dias e 1 segundo e mantém a de 30 dias menos 1 segundo | fron | integração | — | B-40 | ⬜ |
-| S-172 | marcar como lida duas vezes, marcar id que não existe e "marcar todas" repetido respondem `204` sem mudar o que já estava | idem | integração | — | B-40 | ⬜ |
-| S-173 | lida num dispositivo volta lida na listagem do outro, e a contagem de não lidas cai nos dois | est | integração | — | B-40 | ⬜ |
-| S-174 | `messageKey` fora do catálogo de chaves, `severity` desconhecida ou `params` fora do schema → recusado, nada gravado | err | integração | `INVALID_INPUT` | B-40 | ⬜ |
-| S-175 | sem token | err | integração | `UNAUTHENTICATED` | B-40 | ⬜ |
-| S-176 | gravações simultâneas com o usuário no teto não deixam 201 linhas | conc | integração | — | B-40 | ⬜ |
-| S-177 | apagar uma e "limpar todas" respondem `204`, também quando não há o que apagar | idem | integração | — | B-40 | ⬜ |
-| S-178 | o log `debug` da borda traz severidade, `messageKey` e contagem — nunca os `params` | eq | integração | — | B-40 | ⬜ |
+| S-167 | gravar uma notificação e listar: só as do usuário, mais nova primeiro, com a contagem de não lidas | eq | integração | — | B-40 |✅ |
+| S-168 | notificação de outro usuário nunca aparece, nem marcá-la como lida ou apagá-la tem efeito sobre ela | eq | integração | — | B-40 |✅ |
+| S-169 | gravar de novo com o mesmo `clientId` devolve a existente (`200`, não `201`) e não duplica | idem | integração | — | B-40 |✅ |
+| S-170 | a 201ª notificação tira a mais antiga: o usuário nunca passa de 200 | fron | integração | — | B-40 |✅ |
+| S-171 | a limpeza apaga a de 30 dias e 1 segundo e mantém a de 30 dias menos 1 segundo | fron | integração | — | B-40 |✅ |
+| S-172 | marcar como lida duas vezes, marcar id que não existe e "marcar todas" repetido respondem `204` sem mudar o que já estava | idem | integração | — | B-40 |✅ |
+| S-173 | lida num dispositivo volta lida na listagem do outro, e a contagem de não lidas cai nos dois | est | integração | — | B-40 |✅ |
+| S-174 | `messageKey` fora do catálogo de chaves, `severity` desconhecida ou `params` fora do schema → recusado, nada gravado | err | integração | `INVALID_INPUT` | B-40 |✅ |
+| S-175 | sem token | err | integração | `UNAUTHENTICATED` | B-40 |✅ |
+| S-176 | gravações simultâneas com o usuário no teto não deixam 201 linhas | conc | integração | — | B-40 |✅ |
+| S-177 | apagar uma e "limpar todas" respondem `204`, também quando não há o que apagar | idem | integração | — | B-40 |✅ |
+| S-178 | o log `debug` da borda traz severidade, `messageKey` e contagem — nunca os `params` | eq | integração | — | B-40 |✅ |
 
 ## Abrir pasta (web) — B-13…B-16
 
@@ -243,7 +243,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 | S-147 | falha ao carregar as raízes em Workspaces → erro traduzido com "tentar de novo" | err | integração | `NETWORK_UNREACHABLE` | B-31 | ⬜ |
 | S-148 | Sobre mostra as versões e copia o bloco de versões para um relato de defeito | eq | integração | — | B-32 | ⬜ |
 | S-149 | a home não tem mais seletor de workspace, ping nem dispositivos; o store global de workspace selecionado não existe mais | est | unit | — | B-33 | ⬜ |
-| S-150 | `/sessions/$sessionId`, `/history` e `/history/$conversationId` não existem mais (D-07): nenhum link, comando ou navegação do app aponta para elas, e iniciar uma sessão mantém o usuário na aba da pasta | eq | integração | — | B-33 | ⬜ |
+| S-150 | `/sessions/$sessionId`, `/history` e `/history/$conversationId` não existem mais (D-07): nenhum link, comando ou navegação do app aponta para elas, colar o link antigo cai no "não encontrado" traduzido (a metade do S-06 que veio da F0 — [D-18](decisions.md#d-18--os-cenários-de-rota-que-dependem-de-produto)), e iniciar uma sessão mantém o usuário na aba da pasta | eq | integração | `NOT_FOUND` | B-33 | ⬜ |
 | S-151 | todo controle só de ícone nas telas deste plano tem tooltip e `aria-label` traduzidos | eq | integração | — | B-34 | ⬜ |
 | S-152 | todo estado vazio das telas deste plano ensina o próximo passo com uma ação; todo erro diz o que fazer | eq | integração | — | B-34 | ⬜ |
 | S-153 | "saiba mais" de cada tela abre a ajuda na seção certa | eq | integração | — | B-34 | ⬜ |

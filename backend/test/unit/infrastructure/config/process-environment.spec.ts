@@ -43,6 +43,7 @@ describe('processEnvironment', () => {
       'RC_PERMISSION_RULE_LIFETIME_MS',
       'RC_PERMISSION_RULE_MAX_LIFETIME_MS',
       'RC_PERMISSION_TIMEOUT_MS',
+      'RC_PID_FILE',
       'RC_PUSH_CREDENTIALS_FILE',
       'RC_PUSH_ENDPOINT',
       'RC_PUSH_SCOPE',

@@ -20,8 +20,10 @@
  * `ELIFECYCLE Command failed` for a stop that went well.
  */
 
+import fs from 'node:fs';
 import process from 'node:process';
 
+import { LOCAL_ALLOWLIST_FILE, activeAllowlist, withActiveAllowlist } from './lib/allowlist.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { resolveComposeCli } from './lib/compose.mjs';
 import { run } from './lib/exec.mjs';
@@ -199,6 +201,13 @@ async function main() {
 
   await bringUp(compose, urls);
 
+  // The local copy `pnpm allowlist` writes, when there is one and `.env` left the variable at the
+  // default (plan 06, D-09). Said out loud: "which allowlist is this?" is the first question.
+  const where = { root: repoRoot, localExists: fs.existsSync(LOCAL_ALLOWLIST_FILE) };
+  const allowlist = activeAllowlist(process.env, where);
+  const environment = withActiveAllowlist(watchEnvironment(process.env), where);
+  info(`allowlist: ${allowlist.file} (${allowlist.source})`);
+
   /** @type {Map<string, import('node:child_process').ChildProcess>} */
   const running = new Map();
 
@@ -214,7 +223,7 @@ async function main() {
     // `Command failed with signal "SIGTERM"` per workspace, for a stop this script asked for.
     const proc = startProc('pnpm', ['--silent', '--filter', `./${workspace}`, 'dev'], {
       cwd: repoRoot,
-      env: watchEnvironment(process.env),
+      env: environment,
     });
     children.push(proc);
     running.set(workspace, proc);

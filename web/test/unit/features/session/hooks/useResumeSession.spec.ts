@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
 import { RESUME_TIMEOUT_MS, useResumeSession } from '@/features/session/hooks/useResumeSession';
+import { useOwnedSessionsStore } from '@/features/session/store/owned-sessions.store';
 import { aLiveSocket, hubEvent } from '../../../../support/live-socket';
 import type { LiveSocket } from '../../../../support/live-socket';
 
@@ -136,5 +137,23 @@ describe('useResumeSession', () => {
       expect(onResumed).toHaveBeenCalledWith(LIVE);
       expect(result.current.error).toBeNull();
     });
+  });
+
+  it('S-84 — claims the session it landed on before moving to it, so that screen may close it', () => {
+    const owned: (readonly string[])[] = [];
+    const onResumed = vi.fn(() => owned.push(useOwnedSessionsStore.getState().owned));
+    const { result } = renderHook(() => useResumeSession(target, onResumed));
+    socket.connect();
+    act(() => {
+      result.current.resume();
+    });
+
+    act(() => {
+      socket.receive(
+        hubEvent(LIVE, 'session.started', 1, { sessionId: LIVE, claudeSessionId: CONVERSATION }),
+      );
+    });
+
+    expect(owned).toEqual([[LIVE]]);
   });
 });

@@ -55,6 +55,15 @@ const purgeInterval = z.union([
  */
 export const SESSION_IDLE_TTL_FLOOR_MS = 1_000;
 
+/**
+ * `off`, or where the process writes its pid.
+ *
+ * The development stack turns it on so `pnpm allowlist` can find the running backend and send it
+ * `SIGHUP` (06 · D-15). Off is the literal word, like the purge job's: a missing variable still
+ * stops the boot.
+ */
+const pidFile = z.union([z.literal('off'), z.string().min(1)]);
+
 export const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']),
@@ -67,6 +76,7 @@ export const environmentSchema = z.object({
   OIDC_CLIENT_ID_MOBILE: z.string().min(1),
   OIDC_SCOPES: z.string().min(1),
   RC_WORKSPACE_ALLOWLIST_FILE: z.string().min(1),
+  RC_PID_FILE: pidFile,
   RC_SESSION_MAX_CONCURRENT: z.coerce.number().int().min(1).max(100),
   RC_SESSION_MIN_CONCURRENT: z.coerce.number().int().min(1).max(100),
   RC_SESSION_MEMORY_FRACTION: z.coerce.number().positive().max(1),
@@ -131,6 +141,8 @@ export interface AppConfig {
   /** Absolute path of the workspace allowlist file — the one piece of config that is not a
    *  variable, because it is the security boundary of the product (D-02). */
   readonly workspaceAllowlistFile: string;
+  /** Absolute path the process writes its pid to, or `null` when it writes none. */
+  readonly pidFile: string | null;
   /** What a session may cost this installation, and what it opens with. */
   readonly session: {
     /**
@@ -249,6 +261,7 @@ export function loadConfig(source: RawEnvironment): AppConfig {
     webOrigin: `http://localhost:${String(env.RC_WEB_PORT)}`,
     databaseUrl: env.DATABASE_URL,
     workspaceAllowlistFile: resolve(env.RC_WORKSPACE_ALLOWLIST_FILE),
+    pidFile: env.RC_PID_FILE === 'off' ? null : resolve(env.RC_PID_FILE),
     session: {
       capacity: {
         floor: env.RC_SESSION_MIN_CONCURRENT,

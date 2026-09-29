@@ -87,6 +87,11 @@ class AuthController extends _$AuthController {
       return renewed.accessToken;
     } on Object catch (error, stackTrace) {
       // Refresh failed: the credential goes, and so does the session. No silent recovery.
+      //
+      // Nobody first, and the error on top of that: an error set straight over the signed-in
+      // state keeps that session as its value, and the router — which asks whether there is a
+      // value — kept the person on a screen whose credential was already dead (plan 05, S-86).
+      state = const AsyncValue<AuthSession?>.data(null);
       state = AsyncValue<AuthSession?>.error(error, stackTrace);
       _publish(null);
       return null;

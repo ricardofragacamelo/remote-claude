@@ -5,12 +5,13 @@
   "type": "module",
   "packageManager": "pnpm@10.18.0",
   "engines": {
-    "node": ">=22",
+    "node": ">=22.18",
     "pnpm": ">=9"
   },
   "scripts": {
     "prepare": "husky",
     "doctor": "node scripts/doctor.mjs",
+    "allowlist": "node scripts/allowlist.mjs",
     "dev": "exec node scripts/start-local.mjs",
     "clean": "node scripts/clean.mjs",
     "db": "node scripts/db.mjs",
@@ -64,7 +65,7 @@
   },
   "pnpm": {
     "overrides": {
-      "multer": ">=2.3.0"
+      "multer": ">=2.4.0"
     }
   }
 }

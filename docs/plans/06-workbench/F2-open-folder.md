@@ -89,7 +89,7 @@ Sobre o `Dialog` do shadcn (foco preso, `Esc` fecha):
 
 ## Cenários cobertos
 
-S-69…S-85.
+S-03, S-69…S-85.
 
 ---
 

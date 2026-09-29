@@ -72,6 +72,8 @@
 
   "connectionStatusReconnecting": "Reconnecting…",
   "@connectionStatusReconnecting": { "description": "Connection state: waiting out the backoff" },
+  "connectionStatusThrottled": "Sent too fast — waiting as long as the server asked",
+  "@connectionStatusThrottled": { "description": "Connection state: the server closed the socket for sending too fast, and the app waits as long as it asked" },
 
   "connectionStatusClosed": "Disconnected",
   "@connectionStatusClosed": { "description": "Connection state: closed and not retrying" },

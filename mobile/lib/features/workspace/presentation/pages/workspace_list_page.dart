@@ -57,7 +57,11 @@ class _Allowlist extends ConsumerWidget {
 
     // A session opened from here answers later, on `session.started`. Listening rather than
     // awaiting is what it takes: the id arrives on the socket, not from the command (S-75).
-    ref.listen<String?>(sessionStarterControllerProvider, (String? _, String? sessionId) {
+    ref.listen<SessionStart>(sessionStarterControllerProvider, (
+      SessionStart? _,
+      SessionStart start,
+    ) {
+      final String? sessionId = start.sessionId;
       if (sessionId != null) {
         ref.read(sessionStarterControllerProvider.notifier).acknowledge();
         context.go(sessionRouteFor(sessionId));
@@ -100,7 +104,12 @@ class _Workspaces extends ConsumerWidget {
             padding: EdgeInsets.all(Tokens.spaceMd),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[DeviceStatusBanner(), PushReachBanner(), _Description()],
+              children: <Widget>[
+                DeviceStatusBanner(),
+                PushReachBanner(),
+                _Description(),
+                SessionStartRefusal(),
+              ],
             ),
           );
         }

@@ -1,0 +1,13 @@
+{
+  "id": "05·S-44",
+  "title": "the access token expires in the middle of a turn, and the person notices nothing",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "tool-turn",
+    "toolName": "Write",
+    "tokenLifetimeSeconds": 12
+  }
+}

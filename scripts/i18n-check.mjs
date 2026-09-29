@@ -18,7 +18,9 @@ import {
   BRACE,
   MUSTACHE,
   compareCatalogues,
+  emittedMessageKeys,
   findOrphans,
+  findUntranslated,
   flatten,
   fromArb,
   mergeUsage,
@@ -39,6 +41,8 @@ import { bold, dim, fail, hint, line, ok, title } from './lib/ui.mjs';
  * @property {readonly { locale: string, file: string, arb?: boolean }[]} catalogues
  * @property {readonly { dir: string, extensions: readonly string[] }[]} [emitters] modules that
  *   name a key as a plain string rather than translating it
+ * @property {readonly { dir: string, extensions: readonly string[] }[]} [senders] modules whose
+ *   every `messageKey` this family has to translate
  */
 
 /**
@@ -67,6 +71,9 @@ export const FAMILIES = [
     // whatever arrives. A key the catalogue of errors can emit is therefore in use, even
     // though no `t()` call in the front end spells it out.
     emitters: [{ dir: 'backend/src', extensions: ['.ts'] }],
+    // And the other way round: every `messageKey` the backend sends is one the web must carry,
+    // or the screen shows the dotted name (plan 06, S-01).
+    senders: [{ dir: 'backend/src', extensions: ['.ts'] }],
   },
   {
     name: 'backend',
@@ -136,9 +143,17 @@ export function checkFamily(family) {
 
   const source = catalogues[0];
 
+  const sent = (family.senders ?? []).flatMap((sender) =>
+    filesUnder(path.join(repoRoot, sender.dir), sender.extensions, isGenerated).flatMap((file) => [
+      ...emittedMessageKeys(fs.readFileSync(file, 'utf8')),
+    ]),
+  );
+
   return [
     ...compareCatalogues(catalogues, family.placeholders),
-    ...(source === undefined ? [] : findOrphans(source.entries.keys(), usage)),
+    ...(source === undefined
+      ? []
+      : [...findOrphans(source.entries.keys(), usage), ...findUntranslated(source.entries, sent)]),
   ];
 }
 

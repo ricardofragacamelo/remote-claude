@@ -193,6 +193,11 @@ export function messagesOn(page: Page): ReturnType<Page['getByRole']> {
   return page.getByRole('list', { name: 'Conversation' }).getByRole('listitem');
 }
 
+/** The question on screen about one tool — its card in the permission queue. */
+export function cardFor(page: Page, toolName: string): ReturnType<Page['getByRole']> {
+  return page.getByRole('listitem', { name: `Permission for ${toolName}` });
+}
+
 /** Writes a prompt into the screen's box and sends it, the way a person does. */
 export async function send(page: Page, text: string): Promise<void> {
   await page.getByLabel('Prompt').fill(text);

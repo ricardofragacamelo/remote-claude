@@ -453,7 +453,10 @@ Anunciados no `connection.ready.limits`; configurados por instalação.
 | `maxAttachedSessions` — sessões que a connection observa | `session.attach`/`session.start` recusado com `error` `RATE_LIMITED` (`scope: 'attachedSessions'`) **antes** de qualquer subprocesso; reanexar uma sessão já anexada passa | — |
 
 `retryAfterSeconds` viaja nos `params` porque frame WebSocket não tem cabeçalho — é o `Retry-After`
-do WebSocket. Os clientes o guardam e, fechados com `4429`, não voltam antes dele.
+do WebSocket. Os clientes o guardam e, fechados com `4429`, não voltam antes dele — e, enquanto
+esperam, a conexão fica num estado próprio, **`throttled`**, com o motivo dito na tela: "a rede
+caiu" e "isto foi mandado rápido demais" são coisas diferentes para quem olha
+([plano 05 · S-43, S-81](../../plans/05-hardening-operations/scenarios.md)).
 
 ---
 

@@ -12,6 +12,11 @@
       "payloadTooLarge": "Isso é maior do que o servidor aceita.",
       "rateLimited": "Requisições demais. Tente de novo em instantes.",
       "traceLabel": "Rastreio {{traceId}}"
+    },
+    "notFound": {
+      "title": "Não há nada neste endereço",
+      "description": "O link pode ser antigo, ou aponta para uma tela que esta instalação não tem.",
+      "home": "Ir para o início"
     }
   },
   "auth": {
@@ -45,6 +50,7 @@
       "connecting": "Conectando…",
       "ready": "Conectado",
       "reconnecting": "Reconectando…",
+      "throttled": "Enviado rápido demais — aguardando o tempo que o servidor pediu",
       "closed": "Desconectado"
     }
   },
@@ -60,7 +66,8 @@
       "resumeTimeout": "O backend não respondeu à retomada. Confira a conexão e tente de novo.",
       "locked": "Um turno está em execução, ou outro desfazer desta sessão está em andamento. Espere terminar e tente de novo.",
       "rewindTargetUnknown": "Esse não é um ponto para o qual esta sessão pode voltar. Recarregue a lista e escolha de novo.",
-      "rewindIncomplete": "O desfazer parou antes do fim: {{failed}} arquivo(s) não puderam voltar, e cada um ficou exatamente como estava."
+      "rewindIncomplete": "O desfazer parou antes do fim: {{failed}} arquivo(s) não puderam voltar, e cada um ficou exatamente como estava.",
+      "invalidTransition": "A sessão não conseguiu mudar de estado. É uma falha do nosso lado; tente de novo."
     },
     "ping": {
       "title": "Ida e volta",
@@ -137,7 +144,10 @@
       "notAllowed": "Esta instalação não permite {{path}}.",
       "notFound": "{{path}} não existe.",
       "notADirectory": "{{path}} é um arquivo, não uma pasta.",
-      "forbidden": "Essa pasta não é sua para abrir."
+      "forbidden": "Essa pasta não é sua para abrir.",
+      "directoryUnreadable": "{{path}} existe, mas esta máquina não deixa o remote-claude lê-la. Confira as permissões da pasta.",
+      "openFoldersLimitReached": "Você já tem {{limit}} pastas abertas, que é o máximo de uma janela. Feche uma antes — fechar uma pasta não encerra as sessões do Claude dela.",
+      "openFoldersOrderConflict": "Suas abas de pasta mudaram em outra janela. Elas aparecem como estão agora — tente de novo."
     },
     "selector": {
       "title": "Workspace",
@@ -149,6 +159,24 @@
       "emptyDescription": "A allowlist desta máquina ainda não menciona a sua conta. Quem instalou o remote-claude pode acrescentar uma pasta.",
       "history": "Histórico",
       "historyOf": "Conversas em {{label}}"
+    }
+  },
+  "notification": {
+    "error": {
+      "rejected": "Não foi possível guardar essa notificação."
+    },
+    "command": {
+      "failed": "“{{command}}” não foi concluído ({{code}})."
+    },
+    "tabs": {
+      "saveFailed": "Não foi possível salvar suas abas de pasta nesta máquina ({{code}}). Elas continuam abertas nesta janela."
+    },
+    "connection": {
+      "lost": "A conexão com esta máquina caiu. Reconectando…",
+      "restored": "Conectado a esta máquina de novo."
+    },
+    "folder": {
+      "notAllowed": "{{folder}} não está mais liberada nesta máquina. A aba continua, mas nada abre nela."
     }
   },
   "permission": {

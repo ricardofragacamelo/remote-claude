@@ -56,13 +56,19 @@ export async function submitCredentials(page: Page, user: ScenarioUser): Promise
  * brought back to that same address — a deep link that did not survive the round trip fails here.
  *
  * @param path the route with its search, as a person would paste it
+ * @param webUrl the web to open it on — the main one, unless a scenario needs the limits stack's
  */
-export async function openSignedIn(page: Page, user: ScenarioUser, path: string): Promise<void> {
-  await page.goto(path);
+export async function openSignedIn(
+  page: Page,
+  user: ScenarioUser,
+  path: string,
+  webUrl: string = environment.webUrl,
+): Promise<void> {
+  await page.goto(`${webUrl}${path}`);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForURL(`${environment.keycloakUrl}/**`);
   await submitCredentials(page, user);
-  await page.waitForURL(`${environment.webUrl}${path}`);
+  await page.waitForURL(`${webUrl}${path}`);
 }
 
 /** What a completed sign-in gives the caller. */

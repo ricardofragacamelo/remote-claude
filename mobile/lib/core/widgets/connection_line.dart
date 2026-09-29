@@ -17,6 +17,7 @@ String connectionLabel(AppLocalizations l10n, ConnectionStatus status) => switch
   ConnectionStatus.connecting => l10n.connectionStatusConnecting,
   ConnectionStatus.ready => l10n.connectionStatusReady,
   ConnectionStatus.reconnecting => l10n.connectionStatusReconnecting,
+  ConnectionStatus.throttled => l10n.connectionStatusThrottled,
   ConnectionStatus.closed => l10n.connectionStatusClosed,
 };
 
@@ -30,10 +31,16 @@ ConnectionStatus connectionOf(AsyncValue<ConnectionStatus> status) =>
 
 /// One line saying where the connection is.
 class ConnectionLine extends ConsumerWidget {
-  const ConnectionLine({super.key, this.style});
+  const ConnectionLine({super.key, this.style, this.textAlign, this.singleLine = false});
 
   /// How to draw it. The caller decides, because the line sits in headers and in bodies.
   final TextStyle? style;
+
+  /// Where a line that wraps sits — the end, in a header whose other half is on the left.
+  final TextAlign? textAlign;
+
+  /// Kept to one line, ending in an ellipsis — for a bar that has the height of one.
+  final bool singleLine;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -45,6 +52,9 @@ class ConnectionLine extends ConsumerWidget {
       child: Text(
         connectionLabel(l10n, status),
         style: style ?? Theme.of(context).textTheme.bodySmall,
+        textAlign: textAlign,
+        maxLines: singleLine ? 1 : null,
+        overflow: singleLine ? TextOverflow.ellipsis : null,
       ),
     );
   }

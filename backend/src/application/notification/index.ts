@@ -15,3 +15,18 @@ export type {
 export { PUSH_SENDER } from './ports/push.port';
 export type { PushTokenRegistry } from './ports/push-token-registry.port';
 export { PUSH_TOKEN_REGISTRY } from './ports/push-token-registry.port';
+export {
+  DeleteNotificationsUseCase,
+  ListNotificationsUseCase,
+  MarkNotificationsReadUseCase,
+  NOTIFICATION_PAGE_SIZE,
+  PurgeNotificationsUseCase,
+  RecordNotificationUseCase,
+} from './notification-history.use-cases';
+export type { RecordNotificationCommand } from './notification-history.use-cases';
+export type {
+  NotificationHistoryRepository,
+  NotificationPage,
+  RecordedNotification,
+} from './ports/notification-history.repository';
+export { NOTIFICATION_HISTORY_REPOSITORY } from './ports/notification-history.repository';

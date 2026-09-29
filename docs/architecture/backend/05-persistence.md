@@ -214,6 +214,44 @@ regra de `session` fica em memória e morre com o subprocesso, que é o que ela 
 Ver [a F0 do plano 03](../../plans/03-rules-and-audit/F0-rules.md) e a
 [D-10](../../plans/03-rules-and-audit/decisions.md#d-10--dois-caminhos-para-nascer-uma-rotina).
 
+### As pastas que o usuário abriu
+
+`workspace_folders` (migration `0014`) é uma linha **por pasta**, e ela é duas coisas ao mesmo tempo:
+um recente e — enquanto a aba está aberta — uma aba de pasta
+([06 · D-14](../../plans/06-workbench/decisions.md#d-14--onde-gravar-recentes-e-pastas-abertas)). Duas
+tabelas seriam duas linhas para o mesmo fato "esta pessoa abriu esta pasta". A `workspaces`, que diz
+qual **raiz** foi usada, não muda.
+
+- A chave é `(user_id, path)`, como a de `workspaces`: abrir a mesma pasta duas vezes, ou de duas
+  janelas ao mesmo tempo, atualiza a linha em vez de somar outra. É também o índice que toda
+  consulta lê — toda consulta é "as pastas de um usuário".
+- `last_opened_at` é nulo para a pasta tirada dos recentes com a aba aberta, e `tab_position` é nulo
+  com a aba fechada; três `CHECK` repetem no banco o que o domínio garante: linha que não é recente
+  nem aberta não fica, fixada é recente, posição não é negativa.
+- As escritas que decidem contra as outras pastas do usuário — abrir contra o teto de abas,
+  reordenar contra o conjunto aberto, podar os recentes além do teto — rodam numa transação atrás
+  de um **advisory lock de transação sobre o usuário**. Sem ele, duas janelas abrindo duas pastas
+  ao mesmo tempo leriam sete abas e abririam a oitava cada uma. As decisões são do domínio
+  (`decideOpening`, `reorderTabs`, `recentBeyondLimit`); o repositório só as torna atômicas.
+
+### O histórico de notificações
+
+`notifications` (migration `0015`) guarda o centro de notificações do web por usuário
+([06 · D-17](../../plans/06-workbench/decisions.md#d-17--o-que-vira-notificação-e-onde-vive-o-histórico)):
+uma chave e os parâmetros dela, **nunca** conteúdo de conversa nem comando — a chave vem de um
+catálogo fechado que o domínio confere antes de gravar
+([06 · D-19](../../plans/06-workbench/decisions.md#d-19--o-catálogo-de-chaves-das-notificações)).
+
+- O `id` é um ULID cunhado pelo domínio, como o das trilhas; `seq` é por onde a página é cortada,
+  pela mesma razão de lá — duas entradas caem no mesmo milissegundo.
+- `(user_id, client_id)` é único: o cliente que não recebeu a resposta manda de novo, e fica uma.
+- `created_at` **não tem default**: é carimbado pelo relógio da aplicação, e a retenção conta dele.
+- O teto de **200** é aplicado na transação que grava, atrás de um advisory lock sobre o usuário —
+  duas gravações simultâneas com o usuário no teto não deixam 201. A retenção de **30 dias** (720
+  horas, pelo mesmo motivo do piso da trilha) é um job de hora em hora.
+- Índices, cada um com a consulta que o justifica: `(user_id, seq DESC)` para as páginas,
+  `created_at` para a purga, e o par único para a gravação idempotente.
+
 ### A trilha de auditoria
 
 A tabela de auditoria foge de duas convenções acima, e foge de propósito.

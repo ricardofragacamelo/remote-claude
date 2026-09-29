@@ -25,9 +25,17 @@ export const SESSION_COMMANDS = {
   rewindFiles: 'session.rewindFiles',
 } as const;
 
-/** Opens a session on a workspace. @returns whether the command left */
-export function startSession(client: WsClient, workspacePath: string): boolean {
-  return client.command(SESSION_COMMANDS.start, { workspacePath });
+/**
+ * Opens a session on a workspace.
+ *
+ * The id is kept because a start can be refused — the machine at its ceiling
+ * (`SESSION_LIMIT_REACHED`), a folder no longer allowed — and the refusal names the command it
+ * refuses by that id, in `correlationId`. A screen that could not tell would wait for ever.
+ *
+ * @returns the id of the command frame, or `null` when the socket was not ready and nothing left
+ */
+export function startSession(client: WsClient, workspacePath: string): string | null {
+  return client.issue(SESSION_COMMANDS.start, { workspacePath });
 }
 
 /**

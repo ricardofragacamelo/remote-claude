@@ -1,12 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CallHandler, ExecutionContext, NestInterceptor } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import type { Request, Response } from 'express';
 import { tap } from 'rxjs';
 import type { Observable } from 'rxjs';
 
 import { LOGGER } from './logger';
 import type { Logger } from './logger';
-import { forLog } from './redact';
+import { OMITTED_FROM_LOG } from './omit-from-log.decorator';
+import { forLog, omitting } from './redact';
 
 /**
  * Logs both sides of every HTTP edge, at `debug`.
@@ -19,7 +21,10 @@ import { forLog } from './redact';
  */
 @Injectable()
 export class IoLoggingInterceptor implements NestInterceptor {
-  constructor(@Inject(LOGGER) private readonly logger: Logger) {}
+  constructor(
+    @Inject(LOGGER) private readonly logger: Logger,
+    @Inject(Reflector) private readonly reflector: Reflector = new Reflector(),
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     if (context.getType() !== 'http') {
@@ -30,7 +35,10 @@ export class IoLoggingInterceptor implements NestInterceptor {
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
     const startedAt = Date.now();
-    const body = forLog(request.body);
+    const omitted =
+      this.reflector.get<readonly string[] | undefined>(OMITTED_FROM_LOG, context.getHandler()) ??
+      [];
+    const body = forLog(omitting(request.body, omitted));
 
     this.logger.debug(
       {

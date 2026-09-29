@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { forLog, isSensitive, MAX_PAYLOAD_BYTES, redact, REDACTED } from '@shared/logging/redact';
+import {
+  forLog,
+  isSensitive,
+  MAX_PAYLOAD_BYTES,
+  omitting,
+  redact,
+  REDACTED,
+} from '@shared/logging/redact';
 
 describe('isSensitive', () => {
   it.each([
@@ -84,5 +91,29 @@ describe('forLog', () => {
 
   it('handles a value JSON cannot serialise', () => {
     expect(forLog(undefined)).toEqual({ payload: undefined, truncated: false });
+  });
+});
+
+describe('omitting — plan 06, S-178', () => {
+  it('replaces the named fields of a body, and only them', () => {
+    expect(omitting({ params: { folder: '/x' }, messageKey: 'k.k.k' }, ['params'])).toEqual({
+      params: REDACTED,
+      messageKey: 'k.k.k',
+    });
+  });
+
+  it('leaves a body alone when nothing is named', () => {
+    const body = { params: 1 };
+
+    expect(omitting(body, [])).toBe(body);
+  });
+
+  it.each([
+    ['nothing', undefined],
+    ['null', null],
+    ['a string', 'text'],
+    ['a list', ['params']],
+  ])('leaves %s as it is', (_case, value) => {
+    expect(omitting(value, ['params'])).toBe(value);
   });
 });

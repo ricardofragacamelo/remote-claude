@@ -21,6 +21,7 @@ const complete: RawEnvironment = {
   OIDC_CLIENT_ID_MOBILE: 'remote-claude-mobile',
   OIDC_SCOPES: 'openid profile email offline_access',
   RC_WORKSPACE_ALLOWLIST_FILE: '/etc/remote-claude/workspaces.yaml',
+  RC_PID_FILE: 'off',
   RC_SESSION_MAX_CONCURRENT: '10',
   RC_SESSION_MIN_CONCURRENT: '1',
   RC_SESSION_MEMORY_FRACTION: '0.5',
@@ -65,6 +66,7 @@ describe('loadConfig', () => {
       webOrigin: 'http://localhost:5173',
       databaseUrl: 'postgresql://u:p@localhost:5432/db',
       workspaceAllowlistFile: '/etc/remote-claude/workspaces.yaml',
+      pidFile: null,
       session: {
         capacity: { floor: 1, ceiling: 10, memoryFraction: 0.5, perSessionBytes: 268_435_456 },
         idleTtlMs: 1_800_000,
@@ -113,6 +115,7 @@ describe('loadConfig', () => {
     'OIDC_CLIENT_ID_MOBILE',
     'OIDC_SCOPES',
     'RC_WORKSPACE_ALLOWLIST_FILE',
+    'RC_PID_FILE',
     'RC_SESSION_MAX_CONCURRENT',
     'RC_SESSION_MIN_CONCURRENT',
     'RC_SESSION_MEMORY_FRACTION',
@@ -362,5 +365,22 @@ describe('loadConfig', () => {
     } catch (error) {
       expect((error as ConfigurationError).problems).toHaveLength(2);
     }
+  });
+});
+
+describe('the pid file — plan 06, B-11', () => {
+  it('writes none when it is off', () => {
+    expect(loadConfig(withChange({ RC_PID_FILE: 'off' })).pidFile).toBeNull();
+  });
+
+  it('makes the path absolute, whatever the working directory', () => {
+    const config = loadConfig(withChange({ RC_PID_FILE: '.run/backend.pid' }));
+
+    expect(config.pidFile?.startsWith('/')).toBe(true);
+    expect(config.pidFile?.endsWith('/.run/backend.pid')).toBe(true);
+  });
+
+  it('refuses an empty value — off is the word, never a blank', () => {
+    expect(() => loadConfig(withChange({ RC_PID_FILE: '' }))).toThrow(ConfigurationError);
   });
 });

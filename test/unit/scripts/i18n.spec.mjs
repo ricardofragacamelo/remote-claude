@@ -4,7 +4,9 @@ import {
   BRACE,
   MUSTACHE,
   compareCatalogues,
+  emittedMessageKeys,
   findOrphans,
+  findUntranslated,
   flatten,
   fromArb,
   mergeUsage,
@@ -170,5 +172,65 @@ describe('reading what a source names', () => {
 
     expect([...merged.keys].sort()).toEqual(['a', 'b']);
     expect([...merged.prefixes]).toEqual(['p.']);
+  });
+});
+
+describe('the keys the backend sends — plan 06, S-01', () => {
+  const domainError = [
+    'export class WorkspaceDirectoryUnreadableError extends DomainError {',
+    "  readonly code = 'WORKSPACE_DIRECTORY_UNREADABLE';",
+    "  readonly messageKey = 'workspace.error.directoryUnreadable';",
+    '}',
+  ].join('\n');
+
+  it('reads the key a domain error declares, and the one a table of refusals names', () => {
+    const table =
+      'const BY_STATUS = { 400: { code: \'INVALID_INPUT\', messageKey: "common.error.invalidInput" } };';
+
+    expect([...emittedMessageKeys(domainError)]).toEqual(['workspace.error.directoryUnreadable']);
+    expect([...emittedMessageKeys(table)]).toEqual(['common.error.invalidInput']);
+  });
+
+  it('does not take a code, a comment about keys, or a key built at runtime for a key', () => {
+    const source = [
+      "readonly code = 'WORKSPACE_NOT_FOUND';",
+      '// the messageKey is what the client translates',
+      'const messageKey = known ? error.messageKey : INTERNAL.messageKey;',
+      'return { messageKey, traceId };',
+    ].join('\n');
+
+    expect([...emittedMessageKeys(source)]).toEqual([]);
+  });
+
+  it('fails a code whose key the source catalogue lacks', () => {
+    const en = catalogue('en', { 'workspace.error.notFound': '{{path}} does not exist.' });
+
+    expect(findUntranslated(en.entries, emittedMessageKeys(domainError))).toEqual([
+      {
+        kind: 'untranslated',
+        key: 'workspace.error.directoryUnreadable',
+        detail: 'the backend sends it as a messageKey, and no catalogue translates it',
+      },
+    ]);
+  });
+
+  it('passes it once `en` carries it, and leaves the other language to the parity check', () => {
+    const en = catalogue('en', { 'workspace.error.directoryUnreadable': '{{path}} is locked.' });
+    const pt = catalogue('pt-BR', {});
+
+    expect(findUntranslated(en.entries, emittedMessageKeys(domainError))).toEqual([]);
+    // In `en` and not in `pt-BR` is still a failure — the one parity reports.
+    expect(compareCatalogues([en, pt], MUSTACHE).map((problem) => problem.kind)).toEqual([
+      'missing',
+    ]);
+  });
+
+  it('reports a key sent from many places once, in a stable order', () => {
+    const en = catalogue('en', {});
+
+    expect(findUntranslated(en.entries, ['b.c.d', 'a.b.c', 'b.c.d']).map((p) => p.key)).toEqual([
+      'a.b.c',
+      'b.c.d',
+    ]);
   });
 });

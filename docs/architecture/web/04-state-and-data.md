@@ -12,10 +12,14 @@ A pergunta que resolve 90 % dos casos: **quem é o dono deste dado?**
 |---|---|---|---|
 | Dado do servidor | servidor | **TanStack Query** | lista de sessões, workspaces |
 | Stream ao vivo | servidor, via socket | **Zustand** (store da feature) | eventos da sessão |
+| O que **este navegador** abriu | a aba | **Zustand** (store da feature) | as sessões que ele pode encerrar — aprendidas por quem mandou o comando, não pela tela que as mostra ([plano 05 · S-84](../../plans/05-hardening-operations/scenarios.md)) |
 | UI local | o componente | `useState` | menu aberto |
-| UI compartilhada | app | **Zustand** (store global) | tema, sidebar |
+| UI compartilhada | app | **Zustand** (store global) | tema, navegação recolhida |
+| UI de uma aba de pasta | **a aba** | **Zustand**, um store **por pasta**, criado por fábrica | view ativa, painel aberto — [abaixo](#estado-de-aba-de-pasta) |
+| Conveniência por visitante | este navegador | `localStorage`, **sempre** com `try/catch` | tamanhos de painel, tema, estado restaurável de cada aba |
+| Preferência do usuário | servidor | **TanStack Query** | abas abertas e a ordem delas, recentes, histórico de notificações |
 | Formulário | o formulário | **React Hook Form + Zod** | novo prompt |
-| Navegação | **a URL** | TanStack Router | sessão ativa, filtro, aba |
+| Navegação | **a URL** | TanStack Router | a pasta da aba ativa, filtro, seção de configurações |
 
 **Erro mais comum:** copiar dado do servidor para dentro de um `useState`. Isso cria uma
 segunda fonte de verdade que envelhece sozinha. Dado do servidor fica no cache do Query, e a
@@ -146,6 +150,11 @@ sessão que não está mais na tela.
 
 ### O histórico é dado do servidor
 
+> As rotas de histórico **saem do web** no [plano 06 · B-33](../../plans/06-workbench/F5-screens.md#b-33--a-home-desmontada-e-as-rotas-antigas-)
+> ([D-07](../../plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)) e o
+> histórico volta com a view Sessões do [plano 08](../../plans/08-claude-panel/README.md). A regra
+> abaixo — leitura paginada no Query, não num store — vale para ela também.
+
 As telas de histórico (`/history?workspacePath=` e `/history/:conversationId`) são leitura paginada
 por cursor, e vivem no **TanStack Query** (`usePagedQuery`, em `shared/hooks/`), não num store:
 abrir a mesma conversa de novo dentro da janela de `staleTime` lê o cache e não refaz a chamada.
@@ -186,14 +195,75 @@ Ver [o fluxo](../shared/05-websocket-protocol.md#o-fluxo-de-permissão).
 
 ---
 
+## Estado de aba de pasta
+
+Cada aba de pasta é um workbench completo ([web/03 · Abas de pasta](03-ui-system.md#abas-de-pasta),
+[ADR-014](../shared/00-decisions.md#adr-014--o-web-vira-um-workbench-construído-em-react)), e o
+estado dela é **dela**:
+
+- **um store por pasta**, criado por **fábrica** e chaveado pelo **caminho real** que o backend
+  resolveu — nunca um global compartilhado. Um store global de "workspace selecionado" foi o que
+  levou uma sessão a nascer na primeira raiz em vez da pasta escolhida; é o anti-exemplo, e sai no
+  [plano 06 · B-33](../../plans/06-workbench/F5-screens.md#b-33--a-home-desmontada-e-as-rotas-antigas-);
+- o store de uma aba **inativa** fica em memória, e a árvore dela é desmontada: A → B → A não perde
+  nada ([06 · D-11](../../plans/06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas));
+- o mesmo store serve o layout de `md+` e o de uma view por vez: mudar a largura não perde estado.
+
+Onde mora cada parte:
+
+| O quê | Onde | Por quê |
+|---|---|---|
+| a aba **ativa** | a URL (`/workbench?folder=`) | o link reproduz a tela ([D-06](../../plans/06-workbench/decisions.md#d-06--a-url-do-workbench)) |
+| o **conjunto e a ordem** das abas | o servidor (`/workspaces/open-folders`) | segue o usuário para outro dispositivo e sobrevive a limpar o navegador ([D-10](../../plans/06-workbench/decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas)); a janela relê ao ganhar foco e ao reconectar |
+| os recentes | o servidor (`/workspaces/recent`) | idem ([D-13](../../plans/06-workbench/decisions.md#d-13--onde-vivem-as-configurações-do-app-e-quais-seções-entram)) |
+| **dentro** da aba: view ativa, tamanhos de painel, painel inferior aberto, e o que os planos seguintes registram (editores abertos, conversa aberta) | `localStorage`, chaveado pela pasta real | o layout do celular não é o do desktop; é conveniência, não dado |
+| tema, densidade, idioma | `localStorage` | por visitante (D-13) |
+| a allowlist | o arquivo no disco da máquina | só leitura na UI: mudá-la exige acesso ao disco ([backend/03](../backend/03-modules.md#workspace)) |
+
+**Todo acesso a `localStorage` é envolvido em `try/catch`.** Navegador privado, cota cheia ou
+armazenamento bloqueado lançam — e a resposta é o default, nunca uma tela quebrada. Estado
+corrompido ou de versão antiga também cai no default, sem erro. A URL vence o que estava salvo.
+
+---
+
 ## A URL é estado
 
-Sessão ativa, aba e filtro ficam na URL. O teste é simples: **colar o link em outro
-dispositivo reproduz a tela?** Se não, o estado está no lugar errado.
+A pasta da aba ativa, o filtro e a seção de configurações ficam na URL. O teste é simples: **colar o
+link em outro dispositivo reproduz a tela?** Se não, o estado está no lugar errado.
 
 ```
-/sessions/:sessionId?tab=transcript
+/workbench?folder=%2Fhome%2Fu%2Fprojects%2Fremote-claude
+/audit?decision=allowed&toolName=Bash
 ```
+
+Caminho absoluto vai na **search**, nunca num segmento de path: um splat cheio de `/` é ambíguo com
+rotas filhas, e `#` e `%` pedem cuidado dobrado. O valor faz ida e volta sem perda — espaço, acento,
+`#`, `%`, `?`, `&` e espaço no fim — e **não é aparado**: uma pasta cujo nome termina em espaço é
+outra pasta. Quem lê e escreve essa search é um par só (`readWorkbenchSearch`, `workbenchLocation`
+em `app/workbench-location.ts`), para que todo link para uma pasta seja escrito igual.
+
+### O mapa de rotas
+
+O [plano 06](../../plans/06-workbench/F0-contract.md#b-05--desenho-de-rotas-e-da-navegação-) fixa o
+mapa; as fases dele o constroem, e o router o testa.
+
+| Rota | Tela |
+|---|---|
+| `/` | a boas-vindas — ou a aba ativa, se há abas abertas ([D-07](../../plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)) |
+| `/workbench?folder=<path>` | o workbench, com a pasta ativa na search; `folder` ausente cai na boas-vindas, não num erro |
+| `/audit?…`, `/rules`, `/rules/$ruleId` | Auditoria e Regras, com os deep links de hoje intactos |
+| `/devices` | Dispositivos |
+| `/diagnostics` | Logs e diagnóstico |
+| `/settings/$section` | Configurações do app, uma seção por vez; seção desconhecida cai na primeira |
+| `/about` | Sobre |
+| `/claude…`, `/usage…` | **reservadas** aos planos [11](../../plans/11-claude-settings/README.md) e [14](../../plans/14-usage-and-cost/README.md): ninguém as registra ainda, e caem no "não encontrado" |
+| `/sessions/$sessionId`, `/history`, `/history/$conversationId` | **removidas** na [B-33](../../plans/06-workbench/F5-screens.md#b-33--a-home-desmontada-e-as-rotas-antigas-), sem deep link de compatibilidade: a sessão viva mora na secondary side bar da aba, e o histórico volta com o plano 08 |
+| o callback do login (`CALLBACK_PATH`) | não muda — voltar ao link pedido depois do login vale para todas |
+
+Endereço que nenhuma rota responde — nunca válido, removido ou reservado — renderiza o **"não
+encontrado" traduzido** do root (`NotFoundRoute`), com o caminho de volta ao início; nunca uma tela
+vazia. Ele fica fora do portão de login: a tabela de rotas vai no bundle, e dizer que uma não existe
+não conta nada a ninguém.
 
 ---
 

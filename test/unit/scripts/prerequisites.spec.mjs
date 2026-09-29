@@ -29,7 +29,7 @@ function probesWith(overrides = {}) {
   };
 
   return {
-    nodeVersion: 'v22.16.0',
+    nodeVersion: 'v24.16.0',
     run: (command, args) => {
       const key =
         command === 'docker' ? `docker ${args[0] === 'info' ? 'info' : 'compose'}` : command;
@@ -72,12 +72,18 @@ describe('inspectEnvironment', () => {
     const node = check(await inspectEnvironment(probes), 'node');
 
     expect(node?.status).toBe('fail');
-    expect(node?.detail).toContain('below the required 22');
+    expect(node?.detail).toContain('below the required 22.18');
     expect(node?.fix).toContain('nvm install 22');
   });
 
+  it('fails on a node 22 too old to strip the types of a .ts file — plan 06, D-09', async () => {
+    const probes = { ...probesWith(), nodeVersion: 'v22.17.9' };
+
+    expect(check(await inspectEnvironment(probes), 'node')?.status).toBe('fail');
+  });
+
   it('accepts the exact minimum version', async () => {
-    const probes = { ...probesWith(), nodeVersion: 'v22.0.0' };
+    const probes = { ...probesWith(), nodeVersion: 'v22.18.0' };
 
     expect(check(await inspectEnvironment(probes), 'node')?.status).toBe('ok');
   });

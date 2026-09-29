@@ -98,9 +98,27 @@ pelos mesmos nomes:
 
 Regras:
 
-- **Nunca** defina uma cor apenas dentro de `.dark`. Toda variável existe nos dois temas.
-- Tema escuro não é opcional: esta é uma ferramenta de desenvolvedor.
-- A preferência do usuário persiste em `localStorage`, com `prefers-color-scheme` como default.
+- **Nunca** defina uma cor apenas dentro de `.dark`. Toda variável existe nos dois temas —
+  verificado por teste.
+- Tema escuro não é opcional: esta é uma ferramenta de desenvolvedor. **Dois temas, claro e escuro,
+  e só eles**; escuro é o default quando `prefers-color-scheme: dark`.
+- A preferência do usuário persiste em `localStorage`, por visitante, com `prefers-color-scheme`
+  como default — e `localStorage` inacessível cai no default, sem quebrar.
+
+### O sistema visual
+
+O que torna a ferramenta "profissional e organizada" é consistência, e consistência só existe se for
+verificada:
+
+- **densidade no molde do VS Code**: linhas de lista e itens de árvore compactos, cabeçalhos de
+  painel baixos — **sem** abrir mão do alvo de toque de 44×44 px abaixo de `md`
+  ([Responsividade](#responsividade));
+- **escala por token** em `globals.css` — tamanhos de texto da UI e do código, pesos, espaçamentos,
+  raios. Componente usa o token, nunca o valor;
+- **ícones só do `lucide-react`**; ícone sem texto tem `aria-label` traduzido **e** tooltip;
+- contraste AA nos dois temas, verificado pelo axe;
+- cor literal em classe (`bg-[#…]`, `text-red-500`) em componente de feature, e ícone de outra
+  biblioteca, são recusados pelo lint — a regra que não é verificada por máquina não existe.
 
 ---
 
@@ -203,6 +221,141 @@ Responde a uma pergunta só: **"o que foi executado na minha máquina sem me per
 
 ---
 
+## Workbench
+
+O web é um **workbench no molde do VS Code**, construído em React
+([ADR-014](../shared/00-decisions.md#adr-014--o-web-vira-um-workbench-construído-em-react)): uma
+moldura com navegação global e, dentro dela, um workbench de painéis **por pasta**. A coluna única
+`max-w-3xl` com cartões deixa de ser o layout do produto a partir de `md`. Esta seção diz onde cada
+coisa mora; o [plano 06](../../plans/06-workbench/README.md) constrói a casca, e os planos seguintes a
+preenchem pelos **registros** do fim da seção — nenhum deles reinventa o layout.
+
+### A moldura do app
+
+Toda rota vive dentro dela.
+
+- **Navegação global** à esquerda, fora das abas de pasta, na ordem: **Workbench** · **Auditoria** ·
+  **Regras** · **Dispositivos** · **Uso e custo** · **Logs e diagnóstico** · **Configuração do
+  Claude** · **Configurações**. Cada entrada é uma tela com rota própria — **uma tela por assunto**.
+  Configurações do app e configuração do Claude **nunca** dividem uma tela.
+- A navegação é um **registro** (rota, ícone, rótulo, posição, badge opcional). Posição reservada a
+  um plano que ainda não registrou a entrada — "Uso e custo", "Configuração do Claude" — **não
+  renderiza link**: link sem destino é pior que link nenhum.
+- No rodapé, o menu de **gerenciar** (paleta de comandos, Configurações, Sobre) e o de **conta**
+  (quem está logado, sair).
+- O **menu Arquivo** fica no topo, em `md+`; abaixo, dentro do menu da navegação. É o único menu —
+  a paridade com o VS Code é a de arquivos.
+- O item ativo segue a rota, inclusive por deep link. O portão de login (`returnTo`) é da moldura, e
+  o deep link aberto deslogado volta **com** a search.
+
+### Anatomia do workbench
+
+Dentro de cada aba de pasta, em `md+`, tudo ao mesmo tempo:
+
+```
+┌──┬────────────┬──────────────────────────┬──────────────┐
+│A │ side bar   │ área de editor           │ secondary    │
+│c │ (a view    │                          │ side bar —   │
+│t │  ativa)    ├──────────────────────────┤ o chat do    │
+│. │            │ painel inferior          │ Claude       │
+├──┴────────────┴──────────────────────────┴──────────────┤
+│ status bar                                               │
+└──────────────────────────────────────────────────────────┘
+```
+
+| Parte | O que é | Quem preenche |
+|---|---|---|
+| **activity bar** | as views da pasta: **Explorer**, **Busca**, **Sessões do Claude**; clicar na ativa recolhe a side bar | planos [07](../../plans/07-explorer-and-editor/README.md), [09](../../plans/09-search/README.md), [08](../../plans/08-claude-panel/README.md) |
+| **side bar** | a view ativa | quem registrou a view |
+| **área de editor** | os arquivos abertos | [plano 07](../../plans/07-explorer-and-editor/README.md) |
+| **secondary side bar** | **o chat do Claude, ao lado do editor** — nunca uma tela nem uma rota própria | [plano 08](../../plans/08-claude-panel/README.md); até lá, os componentes de sessão de hoje, presos à pasta da aba |
+| **painel inferior** | abas registráveis | planos [08](../../plans/08-claude-panel/README.md) e [10](../../plans/10-integrated-terminal/README.md) |
+| **status bar** | itens da pasta à esquerda, do app à direita: conexão, pasta, idioma, tema, sino de notificações | registro |
+
+- Redimensionável (`resizable`), com mínimos e máximos; os tamanhos são conveniência por visitante
+  ([web/04](04-state-and-data.md#estado-de-aba-de-pasta)).
+- Área ainda sem dono é **placeholder com estado vazio traduzido** que diz o que vai morar ali —
+  nunca um branco sem motivo.
+
+### Abas de pasta
+
+Cada aba é um **workbench completo de uma pasta**; várias abertas ao mesmo tempo. Não é multi-root.
+
+- Abrir uma pasta cria a aba e a ativa; abrir uma **já aberta foca a existente**, pelo caminho real
+  (pasta e subpasta são abas distintas).
+- O **estado é da aba**, nunca de um store global ([web/04](04-state-and-data.md#estado-de-aba-de-pasta)).
+- **Fechar a aba não encerra as sessões do Claude** da pasta — elas vivem no backend —, e a
+  confirmação diz isso. Fechar a ativa ativa a vizinha; fechar a última volta à boas-vindas.
+- Aba cuja pasta saiu da allowlist ou sumiu abre **em estado de erro**, sem derrubar as outras.
+- Aba inativa: store em memória, árvore desmontada, **sessões e terminais continuam anexados**,
+  watcher e polling liberados ([06 · D-11](../../plans/06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas)).
+  Teto de **8** abas; acima dele, `OPEN_FOLDERS_LIMIT_REACHED` traduzido, dizendo o teto e que fechar
+  uma aba não encerra as sessões dela.
+- Reordenar arrastando **e** pelo teclado e pelo menu de contexto — arrastar sozinho não é acessível.
+
+### Moldura de tela
+
+Toda tela **fora** do workbench (Auditoria, Regras, Dispositivos, Logs e diagnóstico, Configurações,
+Sobre, e as dos planos 11–16) usa o mesmo componente de `shared/components/`:
+
+- **cabeçalho** com o título, o **propósito numa linha** e as ações da tela;
+- **painel de ajuda** (drawer em `md+`, `sheet` abaixo), aberto pelo ícone, pelo atalho e pela
+  paleta, com quatro partes fixas: **o que é esta tela**, **o que cada estado significa**, **o que ela
+  NÃO mostra ou NÃO registra**, e **os atalhos da tela** — lidos do registro de comandos, nunca
+  repetidos à mão. Seções com âncora, para o "saiba mais" de um controle abrir a certa;
+- o corpo, com os [quatro estados](#estados-de-tela--os-quatro-sempre) por conta de quem o preenche.
+
+### Comandos, atalhos e a paleta
+
+Um comando registrado **uma vez** aparece na paleta, no menu Arquivo e na ajuda da tela, com o mesmo
+rótulo e o mesmo atalho. Três listas à mão divergiriam na primeira semana.
+
+- **Comando:** id, rótulo por chave de i18n, categoria, ícone opcional, condição de disponibilidade
+  (`when`) e ação. **Atalho:** tecla → comando, num contexto.
+- Id duplicado, atalho em conflito no mesmo contexto e atalho padrão numa **tecla que o navegador
+  reserva** (`Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+W`, `Ctrl+T`, `Ctrl+N`, `Ctrl+PageUp/PageDown`) são
+  recusados no registro. Trocar de aba é `Alt+1…9` e `Ctrl+Alt+PageUp/PageDown` (Mac:
+  `Cmd+Alt+←/→`); fechar aba, só pela paleta e pelo menu ([06 · D-16](../../plans/06-workbench/decisions.md#d-16--atalhos-que-o-navegador-reserva)).
+- Dentro de campo de texto, atalho da casca não dispara — exceto a paleta.
+- **Paleta:** `Ctrl/Cmd+Shift+P`, sobre o registro; comando indisponível não aparece; modos por
+  **prefixo** registráveis (`>` comandos; o Quick Open do [plano 09](../../plans/09-search/README.md)
+  registra o seu). `Esc` fecha e devolve o foco a quem o tinha.
+- **Menu Arquivo:** sai do registro, nos grupos do VS Code (Novo, Abrir, Salvar, Fechar). Item cujo
+  comando ninguém registrou **não aparece** — nada de item desabilitado para sempre.
+
+### Centro de notificações
+
+`notify({ severity, messageKey, params, actions })`, no `shared/`, com a sua UI: toasts (`sonner`) e
+o centro no sino da status bar. O histórico vive **no servidor**
+([backend/03 · notification](../backend/03-modules.md#notification)) e segue o usuário entre
+dispositivos; "não perturbe" é por visitante.
+
+- **Vira notificação:** erro de ação sem lugar na tela (comando da paleta que falhou, gravação de aba
+  recusada) e aviso que o usuário não pediu mas precisa saber (conexão perdida e recuperada, pasta
+  aberta que saiu da allowlist).
+- **Não vira:** erro que já tem lugar na tela (formulário, estado de erro de lista) e **pedido de
+  permissão**, que tem o fluxo próprio e mais forte ([Permissão](#permissão--a-tela-mais-importante)).
+- Texto sempre por chave; a notificação guarda `severity`, `messageKey` e `params`, **nunca**
+  conteúdo de conversa nem comando.
+
+### Os registros — onde os planos seguintes encaixam
+
+A casca é o contrato de onde cada plano põe o que é dele. Registrar é declarar; a casca decide onde
+e como aparece. Entrada não registrada **não aparece** — nem link, nem item, nem aba vazia.
+
+| Registro | O que cada entrada declara | Quem registra |
+|---|---|---|
+| navegação global | rota, ícone, rótulo, posição, badge | 06; 11 e 14 nas posições reservadas |
+| views da activity bar | id, ícone, rótulo, posição, badge, componente | 07 (Explorer), 08 (Sessões), 09 (Busca) |
+| abas do painel inferior | id, rótulo, componente | 08, 10 |
+| itens da status bar | lado, prioridade, componente | 06, e quem precisar |
+| comandos e atalhos | ver [acima](#comandos-atalhos-e-a-paleta) | todos |
+| modos da paleta | prefixo, fonte | 06 (`>`), 09 |
+| seções de Configurações | id, rótulo, posição, componente — **nunca** do Claude | 06 (Aparência, Workspaces), 07 (Editor), 10 (Terminal) |
+| restauração da aba | chave, versão, ler e gravar o estado | 06 (layout), 07 (editores), 08 (conversa) |
+
+---
+
 ## Responsividade
 
 Mobile-first. O web roda no celular também — e o app Flutter não substitui isso.
@@ -213,3 +366,16 @@ Mobile-first. O web roda no celular também — e o app Flutter não substitui i
 
 Breakpoints padrão do Tailwind. Nenhuma tela pode ter scroll horizontal; alvo de toque mínimo
 de 44×44 px.
+
+### O workbench abaixo de `md`
+
+A casca inteira não cabe em 360 px, e encolhê-la criaria o scroll horizontal proibido acima. Abaixo
+de `md`, **uma view por vez** ([06 · D-08](../../plans/06-workbench/decisions.md#d-08--o-workbench-em-tela-pequena)):
+
+- Explorer, Editor, Claude e Painel alternados **dentro da mesma aba de pasta**, por uma barra de
+  views embaixo — o chat e os arquivos continuam na mesma aba, só não cabem lado a lado;
+- as abas de pasta viram um **seletor no topo**, com as mesmas ações;
+- a navegação global e o menu Arquivo vão para um menu (`sheet`), com foco preso e `Esc` fechando;
+- **o mesmo store** serve os dois layouts: mudar a largura da janela não perde estado.
+
+Uma tela "mobile" separada foi descartada: duas UIs para manter, e o web já é mobile-first.

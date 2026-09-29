@@ -73,10 +73,10 @@ novo sem esses três campos não compila.
 | `401` | `UNAUTHENTICATED` | Sem credencial, ou token inválido/expirado |
 | `403` | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN` | Autenticado, mas não pode. **Workspace fora da allowlist e recurso de outra pessoa moram aqui.** |
 | `404` | `SESSION_NOT_FOUND` | O recurso **não existe** |
-| `409` | `CONFLICT` | Conflito com o estado atual |
+| `409` | `CONFLICT`, `OPEN_FOLDERS_LIMIT_REACHED` | Conflito com o estado atual — inclusive o teto de abas de pasta, que fechar uma resolve |
 | `410` | `PERMISSION_REQUEST_EXPIRED` | Existiu, não existe mais, e não volta |
 | `413` | `PAYLOAD_TOO_LARGE` | Prompt ou upload acima do limite |
-| `422` | `WORKSPACE_NOT_A_DIRECTORY` | Sintaxe válida, semântica impossível |
+| `422` | `WORKSPACE_NOT_A_DIRECTORY`, `WORKSPACE_DIRECTORY_UNREADABLE` | Sintaxe válida, semântica impossível — inclusive a pasta liberada que o processo do backend não pode ler: a autorização passou, é o disco que recusa |
 | `423` | `SESSION_LOCKED` | Sessão em uso exclusivo por outra connection, **ou com um turno em execução** — é o que recusa o desfazer no meio de um turno |
 | `429` | `RATE_LIMITED` | Limite nosso **ou** do plano Claude. Inclua `Retry-After`. |
 
@@ -112,6 +112,9 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `WORKSPACE_NOT_FOUND` | 404 | workspace | Caminho não existe |
 | `FORBIDDEN` | 403 | workspace, session, auth, audit | Existe, e é de outra pessoa — ou o pedido parte de quem não pode fazê-lo (aparelho aprovando aparelho). Na trilha: filtrar pela sessão de outra pessoa |
 | `WORKSPACE_NOT_A_DIRECTORY` | 422 | workspace | Caminho existe, mas é arquivo |
+| `WORKSPACE_DIRECTORY_UNREADABLE` | 422 | workspace | O diretório existe, está liberado, e o **processo do backend** não tem permissão de leitura (`EACCES`/`EPERM`) — `workspace.error.directoryUnreadable`, `params.path`. Não é `403`: a autorização do usuário passou; é o sistema de arquivos que torna o pedido impossível ([06 · B-03](../../plans/06-workbench/F0-contract.md#b-03--backend03-04-errors-and-http-e-o-catálogo-listar-pasta-passa-a-existir-)) |
+| `OPEN_FOLDERS_LIMIT_REACHED` | 409 | workspace | Abrir mais uma pasta com o teto de abas já atingido — `workspace.error.openFoldersLimitReached`, `params.limit`. Conflito com o estado atual, não validação ([06 · D-11](../../plans/06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas)) |
+| `CONFLICT` | 409 | workspace | Reordenar as abas com um conjunto diferente do aberto — `workspace.error.openFoldersOrderConflict`: outra janela abriu ou fechou uma aba no meio; reler as abertas e reordenar essas resolve |
 | `SESSION_NOT_FOUND` | 404 | session | Sessão inexistente |
 | `SESSION_LOCKED` | 423 | session | Em uso exclusivo, ou ocupada: um turno em execução, outro desfazer da mesma sessão em curso, ou um prompt que chega enquanto o desfazer devolve os arquivos (`session.error.locked`, `params.reason`) |
 | `SESSION_LIMIT_REACHED` | 429 | session | Máximo de sessões simultâneas — derivado da RAM da máquina; `params.limit`, `params.retryAfterSeconds` |
@@ -125,7 +128,7 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `CLAUDE_TIMEOUT` | 504 | session, transcript | Sem resposta no prazo — inclusive a leitura do histórico e a lista de slash commands (`session.error.claudeTimeout`) |
 | `RATE_LIMITED` | 429 | — | Limite nosso ou do plano Claude. `params: { scope, limit, retryAfterSeconds }` — no WebSocket, `scope` é `frames` ou `attachedSessions` |
 | `PAYLOAD_TOO_LARGE` | 413 | — | Corpo ou frame acima do limite anunciado |
-| `INVALID_INPUT` | 400 | —, transcript, session | Falha de validação; detalhe em `details[]`. No histórico, também o cursor cuja mensagem sumiu (`transcript.error.cursorStale`). Na sessão, o slash command que a instalação não tem (`session.error.unknownCommand`) e o ponto de desfazer que não é da sessão (`session.error.rewindTargetUnknown`) |
+| `INVALID_INPUT` | 400 | —, transcript, session | Falha de validação; detalhe em `details[]`. No histórico, também o cursor cuja mensagem sumiu (`transcript.error.cursorStale`). Na sessão, o slash command que a instalação não tem (`session.error.unknownCommand`) e o ponto de desfazer que não é da sessão (`session.error.rewindTargetUnknown`). No centro de notificações, a chave fora do catálogo ou os parâmetros que não são os dela (`notification.error.rejected`, com cada problema em `details[]` — [06 · D-19](../../plans/06-workbench/decisions.md#d-19--o-catálogo-de-chaves-das-notificações)) |
 | `FORBIDDEN` | 403 | — | Autenticado, e ainda assim não pode |
 | `NOT_FOUND` | 404 | —, auth, transcript | Rota ou recurso inexistente, sem dono de módulo. Device de outra pessoa responde este, igual ao que não existe: dizer que um id existe já é dizer que ele existe. Conversa do histórico que o chamador não pode ler também |
 | `INTERNAL_ERROR` | 500 | —, session | Não previsto. No desfazer, o caminho que não pôde ser restaurado (`session.error.rewindIncomplete`, depois do `session.rewound` que o lista) |

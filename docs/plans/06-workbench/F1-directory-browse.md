@@ -34,7 +34,7 @@ nova, e tem a mesma exigência de cobertura que a
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-06 — Regra de listagem dos filhos de um `WorkspacePath` 🔲
+### B-06 — Regra de listagem dos filhos de um `WorkspacePath` ✅
 
 Serviço de domínio, sem I/O: recebe as entradas que o port leu (nome, tipo, e, para symlink, o
 realpath do alvo) e devolve a listagem.
@@ -55,7 +55,7 @@ realpath do alvo) e devolve a listagem.
 Unit cobre cada partição; a contenção reusa a do `Workspace` (`contains`) — nenhuma comparação de
 string nova.
 
-### B-07 — Port `WorkspaceDirectoryLister` e o adapter `fs.opendir` 🔲
+### B-07 — Port `WorkspaceDirectoryLister` e o adapter `fs.opendir` ✅
 
 Port em `application/workspace/ports/`, adapter em `adapter/outbound/filesystem/`, ao lado do
 `node-workspace-directory.probe`:
@@ -71,7 +71,7 @@ Port em `application/workspace/ports/`, adapter em `adapter/outbound/filesystem/
 Integração contra diretórios reais montados no teste (tmpdir com symlinks, pasta sem permissão,
 nomes com espaço, acento, emoji e quebra de linha).
 
-### B-08 — Caso de uso e rota `GET /workspaces/directories` 🔲
+### B-08 — Caso de uso e rota `GET /workspaces/directories` ✅
 
 `ListDirectoriesUseCase` na ordem do `ResolveWorkspaceUseCase`: regra pura da allowlist →
 existência → contenção **no realpath** → é diretório → lista. A allowlist é lida **a cada uso**
@@ -83,7 +83,7 @@ Cada recusa com o status que ela é ([04-errors-and-http](../../architecture/sha
 `422` arquivo ou ilegível. O comentário do controller que diz "neither walks the disk" é corrigido
 junto — ele passaria a mentir.
 
-### B-09 — Pastas recentes e pastas abertas 🔲
+### B-09 — Pastas recentes e pastas abertas ✅
 
 Pela [D-10](decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas) as abas ficam no servidor,
 e pela [D-14](decisions.md#d-14--onde-gravar-recentes-e-pastas-abertas) recentes e abas são a mesma
@@ -104,7 +104,7 @@ linha de uma tabela nova por pasta.
 Fechar uma pasta **não** encerra sessão do Claude: sessão é do módulo `session`, e este módulo nem
 a conhece.
 
-### B-10 — Raízes locais de desenvolvimento: `pnpm allowlist` 🔲
+### B-10 — Raízes locais de desenvolvimento: `pnpm allowlist` ✅
 
 Script em `scripts/allowlist.mjs`, registrado no `package.json` e no catálogo de
 [Comandos](../../../README.md#comandos) do README — a
@@ -138,7 +138,7 @@ pnpm allowlist remove ~/projects/remote-claude
 
 Testes do script em `test/unit/scripts` e `test/integration/scripts`, como os demais `scripts/`.
 
-### B-11 — O backend em execução passa a ver a raiz nova 🔲
+### B-11 — O backend em execução passa a ver a raiz nova ✅
 
 `ReloadableWorkspaceAllowlist.reload()` existe, está testado e **ninguém o chama**: a "recarga
 explícita" do documento não tem gatilho. Sem ele, `pnpm allowlist add` exige reiniciar o backend —
@@ -156,14 +156,14 @@ depois.
   (S-179);
 - toda recarga é logada em `info` com o arquivo e as raízes que entraram e saíram.
 
-### B-12 — Versões para a tela "Sobre" 🔲
+### B-12 — Versões para a tela "Sobre" ✅
 
 Rota autenticada que devolve as versões do backend, do Agent SDK, do CLI do Claude e do Node —
 o que alguém cola num relato de defeito. A do CLI vem do `cli-version` que o plano 04 já usa, com o
 cache por versão: pedir o "Sobre" não sobe um subprocesso. O que não se pôde ler volta `null` com o
 motivo, e a resposta continua `200`: a tela existe justamente para quando algo está errado.
 
-### B-40 — Histórico de notificações no servidor 🔲
+### B-40 — Histórico de notificações no servidor ✅
 
 Pela [D-17](decisions.md#d-17--o-que-vira-notificação-e-onde-vive-o-histórico): o centro de
 notificações do web (B-26) guarda o histórico no servidor, para reencontrá-lo em outro dispositivo e

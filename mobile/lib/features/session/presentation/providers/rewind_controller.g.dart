@@ -61,7 +61,7 @@ final class RewindControllerProvider extends $AsyncNotifierProvider<RewindContro
   }
 }
 
-String _$rewindControllerHash() => r'0e0de27512bdf09738a2619cbbea3fc97b7fcc1a';
+String _$rewindControllerHash() => r'59bf75a03e7a9b7f24c697c4bc13103e0186f855';
 
 /// The undo of one session, keyed by it.
 ///
