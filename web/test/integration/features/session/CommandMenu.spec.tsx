@@ -3,7 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
-import { SessionScreen, useLiveSessionStore } from '@/features/session';
+import { forgetLiveSessions, SessionScreen } from '@/features/session';
 import { render, translator } from '../../../support/render';
 import { aLiveSocket, hubEvent } from '../../../support/live-socket';
 import type { LiveSocket } from '../../../support/live-socket';
@@ -36,7 +36,7 @@ describe('the command menu', () => {
   let live: LiveSocket;
 
   beforeEach(() => {
-    useLiveSessionStore.getState().reset();
+    forgetLiveSessions();
     live = aLiveSocket();
   });
 

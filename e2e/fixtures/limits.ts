@@ -8,6 +8,7 @@ import type { Page, WebSocket as PageSocket, WebSocketRoute } from '@playwright/
 import { limitsStack } from './environment';
 import { openSignedIn } from './auth';
 import { attachFrom, closeSession } from './live-session';
+import { startButton, workbenchAddress } from './workbench';
 import { E2eSocket } from './ws';
 import type { AuthenticatedUser } from './auth';
 import type { ScenarioUser } from '../scenarios';
@@ -93,33 +94,21 @@ export async function endOnLimits(
   }
 }
 
-/** The web of the limits stack, signed in, on its start screen with `workspace` chosen. */
+/**
+ * The web of the limits stack, signed in, on the workbench of `workspacePath` — where a session is
+ * born, in the folder the address names (plan 06, B-16).
+ */
 export async function startScreen(
   page: Page,
   user: ScenarioUser,
-  workspaceLabel: string,
+  workspacePath: string,
 ): Promise<void> {
-  await openSignedIn(page, user, '/', limitsStack().webUrl);
+  await openSignedIn(page, user, workbenchAddress(workspacePath), limitsStack().webUrl);
   await expect(page.getByText('Connected', { exact: true }).first()).toBeVisible();
-
-  await page.getByRole('button', { name: new RegExp(`^${escaped(workspaceLabel)}`) }).click();
+  await expect(startButton(page)).toBeVisible();
 }
 
-/** The button that opens a session. */
-export function startButton(page: Page): ReturnType<Page['getByRole']> {
-  return page.getByRole('button', { name: 'Start session' });
-}
-
-/** The session id of the screen the browser is on, once it is on one. */
-export async function openedSessionOf(page: Page): Promise<string> {
-  await page.waitForURL('**/sessions/*');
-  return decodeURIComponent(new URL(page.url()).pathname.split('/').at(-1) ?? '');
-}
-
-/** Escapes a label for a regular expression. */
-function escaped(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+export { openedSessionOf, sessionLabelOf, startButton } from './workbench';
 
 /**
  * Everything the page's sockets carried, both ways, recorded as it happened.

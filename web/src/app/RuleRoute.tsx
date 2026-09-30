@@ -2,7 +2,8 @@ import { useParams } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
 import { RuleDetail } from '@/features/permission';
-import { Screen, SignedIn } from './Screen';
+import { ScreenFrame } from '@/shared/components/ScreenFrame';
+import { useShellShortcuts } from './screen-shortcuts';
 
 /**
  * `/rules/:ruleId` — one rule, whatever became of it.
@@ -12,20 +13,18 @@ import { Screen, SignedIn } from './Screen';
  * ([D-18](../../../docs/plans/03-rules-and-audit/decisions.md)).
  */
 export function RuleRoute(): React.JSX.Element {
+  const shortcuts = useShellShortcuts();
   const { t } = useTranslation();
-  const { ruleId } = useParams({ from: '/rules/$ruleId' });
+  const { ruleId } = useParams({ from: '/_frame/rules/$ruleId' });
 
   return (
-    <Screen
+    <ScreenFrame
       title={t('rules.detail.screenTitle')}
-      links={[
-        { to: '/rules', label: t('rules.screen.open') },
-        { to: '/audit', label: t('audit.screen.open') },
-      ]}
+      purpose={t('rules.detail.purpose')}
+      help="rules.detailHelp"
+      shortcuts={shortcuts}
     >
-      <SignedIn returnTo={`/rules/${ruleId}`}>
-        <RuleDetail ruleId={ruleId} />
-      </SignedIn>
-    </Screen>
+      <RuleDetail ruleId={ruleId} />
+    </ScreenFrame>
   );
 }

@@ -1,55 +1,48 @@
-import { useCallback } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { Navigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
-import { useAuth } from '@/features/auth';
-import { DeviceList } from '@/features/devices';
-import { SessionPingPanel, SessionStarter } from '@/features/session';
-import { useWorkspaceStore, WorkspaceSelector } from '@/features/workspace';
-import { useOpenSession } from './navigation';
-import { Screen, SignedIn } from './Screen';
+import { useWorkbenchTarget } from '@/features/workbench';
+import { useOpenFolders, WelcomeScreen } from '@/features/workspace';
+import { ScreenFrame } from '@/shared/components/ScreenFrame';
+import { useOpenFolder } from './navigation';
+import { ScreenLoading } from './ScreenLoading';
+import { useShellShortcuts } from './screen-shortcuts';
 
 /**
- * The shell.
+ * `/` — the active folder tab, when one is open; the welcome screen otherwise
+ * ([06 · D-07](../../../docs/plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)),
+ * as the editor people know opens the last folder or its welcome page.
  *
- * While the sign-in is still unknown it renders a loading state rather than redirecting: deciding
- * too early sends a signed-in user to the login screen on every refresh.
+ * The home holds nothing else any more: the ping went to Logs and diagnostics, the devices to a
+ * screen of their own, and a session is born in the workbench, in the folder it names (plan 06,
+ * B-33). It waits for the set of tabs before deciding — a glimpse of the welcome screen on the way to
+ * a tab would be a screen that lied for a moment — and **replaces** the address, so going back does
+ * not bounce between `/` and the tab. A set of tabs that could not be read is not a reason to keep
+ * anybody out: the welcome screen opens.
  */
 export function App(): React.JSX.Element {
   const { t } = useTranslation();
-  const { isAuthenticated } = useAuth();
-  const workspacePath = useWorkspaceStore((state) => state.selected);
-  const navigate = useNavigate();
+  const { isLoading } = useOpenFolders();
+  const target = useWorkbenchTarget(true);
+  const openFolder = useOpenFolder();
+  const shortcuts = useShellShortcuts(['workspace.openFolder']);
 
-  // Stable across renders, because the starter rebuilds its subscription whenever it changes.
-  const open = useOpenSession();
+  if (isLoading) {
+    return <ScreenLoading label={t('workspace.welcome.loading')} />;
+  }
 
-  // The conversations of a workspace — the second level of the history (D-03 of plan 04).
-  const openHistory = useCallback(
-    (workspacePath: string) => {
-      void navigate({ to: '/history', search: { workspacePath } });
-    },
-    [navigate],
-  );
+  if (target !== null) {
+    return <Navigate to="/workbench" search={{ folder: target }} replace />;
+  }
 
   return (
-    <Screen
-      title={t('session.starter.title')}
-      links={
-        isAuthenticated
-          ? [
-              { to: '/rules', label: t('rules.screen.open') },
-              { to: '/audit', label: t('audit.screen.open') },
-            ]
-          : undefined
-      }
+    <ScreenFrame
+      title={t('workspace.welcome.title')}
+      purpose={t('workspace.welcome.purpose')}
+      help="workspace.welcomeHelp"
+      shortcuts={shortcuts}
     >
-      <SignedIn returnTo="/">
-        <WorkspaceSelector onOpenHistory={openHistory} />
-        <SessionStarter workspacePath={workspacePath} onStarted={open} />
-        <SessionPingPanel />
-        <DeviceList />
-      </SignedIn>
-    </Screen>
+      <WelcomeScreen onOpen={openFolder} />
+    </ScreenFrame>
   );
 }

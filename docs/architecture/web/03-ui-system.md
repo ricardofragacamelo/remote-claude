@@ -101,9 +101,13 @@ Regras:
 - **Nunca** defina uma cor apenas dentro de `.dark`. Toda variável existe nos dois temas —
   verificado por teste.
 - Tema escuro não é opcional: esta é uma ferramenta de desenvolvedor. **Dois temas, claro e escuro,
-  e só eles**; escuro é o default quando `prefers-color-scheme: dark`.
+  e só eles**; escuro é o default quando `prefers-color-scheme: dark`. A **preferência** tem três
+  valores — claro, escuro e "do sistema", o padrão —, e "do sistema" acompanha o sistema operacional
+  com a página aberta ([06 · D-32](../../plans/06-workbench/decisions.md#d-32--o-que-a-f5-decidiu-na-execução)).
 - A preferência do usuário persiste em `localStorage`, por visitante, com `prefers-color-scheme`
-  como default — e `localStorage` inacessível cai no default, sem quebrar.
+  como default — e `localStorage` inacessível cai no default, sem quebrar. Toda conveniência por
+  visitante passa por `shared/lib/visitor-storage.ts` (prefixo `rc.visitor.`, `try/catch`), nunca por
+  `localStorage` direto — e nunca uma credencial.
 
 ### O sistema visual
 
@@ -112,10 +116,14 @@ verificada:
 
 - **densidade no molde do VS Code**: linhas de lista e itens de árvore compactos, cabeçalhos de
   painel baixos — **sem** abrir mão do alvo de toque de 44×44 px abaixo de `md`
-  ([Responsividade](#responsividade));
+  ([Responsividade](#responsividade)). Duas densidades, por visitante: `compact` (o padrão) e
+  `comfortable`, que troca os tokens da escala por `data-density` no `<html>` — o componente continua
+  nomeando o token, e o alvo de toque é o mesmo nas duas;
 - **escala por token** em `globals.css` — tamanhos de texto da UI e do código, pesos, espaçamentos,
-  raios. Componente usa o token, nunca o valor;
-- **ícones só do `lucide-react`**; ícone sem texto tem `aria-label` traduzido **e** tooltip;
+  raios. Componente usa o token, nunca o valor: `text-ui`, `text-ui-sm`, `font-code`, `h-row` (22 px),
+  `h-header` (36 px), `w-rail` (48 px), `size-touch` (44 px), `font-ui-strong`;
+- **ícones só do `lucide-react`**; ícone sem texto tem `aria-label` traduzido **e** tooltip — o
+  `IconButton` de `shared/components/` exige os dois pelo tipo;
 - contraste AA nos dois temas, verificado pelo axe;
 - cor literal em classe (`bg-[#…]`, `text-red-500`) em componente de feature, e ícone de outra
   biblioteca, são recusados pelo lint — a regra que não é verificada por máquina não existe.
@@ -270,7 +278,7 @@ Dentro de cada aba de pasta, em `md+`, tudo ao mesmo tempo:
 | **área de editor** | os arquivos abertos | [plano 07](../../plans/07-explorer-and-editor/README.md) |
 | **secondary side bar** | **o chat do Claude, ao lado do editor** — nunca uma tela nem uma rota própria | [plano 08](../../plans/08-claude-panel/README.md); até lá, os componentes de sessão de hoje, presos à pasta da aba |
 | **painel inferior** | abas registráveis | planos [08](../../plans/08-claude-panel/README.md) e [10](../../plans/10-integrated-terminal/README.md) |
-| **status bar** | itens da pasta à esquerda, do app à direita: conexão, pasta, idioma, tema, sino de notificações | registro |
+| **status bar** | itens da pasta à esquerda, do app à direita: conexão, pasta (um toque copia o caminho), idioma (troca por visitante), tema, sino de notificações (B-26) | registro |
 
 - Redimensionável (`resizable`), com mínimos e máximos; os tamanhos são conveniência por visitante
   ([web/04](04-state-and-data.md#estado-de-aba-de-pasta)).
@@ -291,7 +299,10 @@ Cada aba é um **workbench completo de uma pasta**; várias abertas ao mesmo tem
   watcher e polling liberados ([06 · D-11](../../plans/06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas)).
   Teto de **8** abas; acima dele, `OPEN_FOLDERS_LIMIT_REACHED` traduzido, dizendo o teto e que fechar
   uma aba não encerra as sessões dela.
-- Reordenar arrastando **e** pelo teclado e pelo menu de contexto — arrastar sozinho não é acessível.
+- Reordenar arrastando **e** pelo teclado (`Alt+Shift+←/→` na aba) e pelo menu de contexto —
+  arrastar sozinho não é acessível.
+- Fechar pergunta sempre, e a pergunta só fecha pelos botões ou por `Esc` — o segundo clique de um
+  clique duplo cai fora dela e não pode dispensá-la.
 
 ### Moldura de tela
 
@@ -305,6 +316,16 @@ Sobre, e as dos planos 11–16) usa o mesmo componente de `shared/components/`:
   repetidos à mão. Seções com âncora, para o "saiba mais" de um controle abrir a certa;
 - o corpo, com os [quatro estados](#estados-de-tela--os-quatro-sempre) por conta de quem o preenche.
 
+O **workbench** não tem moldura de tela — cada pixel é da aba —, e a ajuda dele é um `HelpSheet`
+(`shared/components/`): as mesmas quatro partes, num sheet sobre a aba, aberto pelo botão de ajuda da
+barra de abas, por `Shift+F1` ou por um "saiba mais". Abre por **pedido** feito com ele na tela, nunca
+porque a ajuda ficou aberta em outra tela.
+
+**"Saiba mais"** (`LearnMore`, em `shared/components/`) fica ao lado do controle em que a dúvida nasce —
+a allowlist, o teto de abas, um aparelho esperando — e abre a ajuda da tela na parte que a responde;
+onde a tela não tem ajuda, não aparece. Dentro de um diálogo modal, não: a ajuda abriria atrás dele, e o
+diálogo explica o ponto no próprio texto.
+
 ### Comandos, atalhos e a paleta
 
 Um comando registrado **uma vez** aparece na paleta, no menu Arquivo e na ajuda da tela, com o mesmo
@@ -316,12 +337,22 @@ rótulo e o mesmo atalho. Três listas à mão divergiriam na primeira semana.
   reserva** (`Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+W`, `Ctrl+T`, `Ctrl+N`, `Ctrl+PageUp/PageDown`) são
   recusados no registro. Trocar de aba é `Alt+1…9` e `Ctrl+Alt+PageUp/PageDown` (Mac:
   `Cmd+Alt+←/→`); fechar aba, só pela paleta e pelo menu ([06 · D-16](../../plans/06-workbench/decisions.md#d-16--atalhos-que-o-navegador-reserva)).
-- Dentro de campo de texto, atalho da casca não dispara — exceto a paleta.
+- Dentro de campo de texto, atalho da casca não dispara — exceto a paleta; dentro de um diálogo,
+  nenhum dispara. Comando indisponível agora não roda pelo atalho, e a tecla fica com o navegador.
+- Os atalhos padrão da casca: paleta `Ctrl/Cmd+Shift+P` e `F1`, ajuda da tela `Shift+F1`, abrir pasta
+  `Ctrl/Cmd+O`, side bar `Ctrl/Cmd+B`, painel `Ctrl/Cmd+J` ([06 · D-29](../../plans/06-workbench/decisions.md#d-29--os-atalhos-que-a-d-16-não-fixou)).
+- **Quem registra:** o componente dono do que o comando faz, enquanto está montado (`useCommands`, do
+  barril de `features/commands`) — o diálogo "Abrir pasta", que é **um só** e mora na moldura, registra
+  os de pasta; o `Workbench`, os das abas; a moldura, os do app (ir para cada tela, tema, idioma,
+  ajuda). Comando que falha vira notificação traduzida
+  ([06 · D-28](../../plans/06-workbench/decisions.md#d-28--um-diálogo-abrir-pasta-e-comandos-registrados-por-quem-os-executa)).
 - **Paleta:** `Ctrl/Cmd+Shift+P`, sobre o registro; comando indisponível não aparece; modos por
   **prefixo** registráveis (`>` comandos; o Quick Open do [plano 09](../../plans/09-search/README.md)
-  registra o seu). `Esc` fecha e devolve o foco a quem o tinha.
-- **Menu Arquivo:** sai do registro, nos grupos do VS Code (Novo, Abrir, Salvar, Fechar). Item cujo
-  comando ninguém registrou **não aparece** — nada de item desabilitado para sempre.
+  registra o seu, em `paletteModes`) ou entrados pelo nome (os recentes de "Abrir recente"). `Esc`
+  fecha e devolve o foco a quem o tinha; o comando escolhido roda depois de a paleta fechar.
+- **Menu Arquivo:** sai do registro, nos grupos do VS Code (Novo, Abrir, Salvar, Fechar) — o comando
+  declara `fileMenu: { group, order }`. Item cujo comando ninguém registrou **não aparece** — nada de
+  item desabilitado para sempre; o que não pode rodar agora aparece desabilitado.
 
 ### Centro de notificações
 
@@ -337,6 +368,12 @@ dispositivos; "não perturbe" é por visitante.
   permissão**, que tem o fluxo próprio e mais forte ([Permissão](#permissão--a-tela-mais-importante)).
 - Texto sempre por chave; a notificação guarda `severity`, `messageKey` e `params`, **nunca**
   conteúdo de conversa nem comando.
+- Rajada da mesma notificação é **uma** entrada com contador — um toast, uma gravação. O que não
+  chegou ao servidor fica no centro, marcado, e é reenviado com o mesmo `clientId`; o que o servidor
+  recusa fica só nesta janela. Toast de erro é `alert`, o resto `status`, e nenhum toma o foco; o que
+  tem ação fica até a ação ([06 · D-30](../../plans/06-workbench/decisions.md#d-30--o-que-emite-notificação-nesta-fase)).
+- `notify()` é um barramento em `shared/lib/notify.ts`; a feature `notifications` o escuta enquanto
+  alguém está logado. O sino é um item da status bar que a moldura registra.
 
 ### Os registros — onde os planos seguintes encaixam
 
@@ -351,7 +388,7 @@ e como aparece. Entrada não registrada **não aparece** — nem link, nem item,
 | itens da status bar | lado, prioridade, componente | 06, e quem precisar |
 | comandos e atalhos | ver [acima](#comandos-atalhos-e-a-paleta) | todos |
 | modos da paleta | prefixo, fonte | 06 (`>`), 09 |
-| seções de Configurações | id, rótulo, posição, componente — **nunca** do Claude | 06 (Aparência, Workspaces), 07 (Editor), 10 (Terminal) |
+| seções de Configurações | id, rótulo, ícone, posição, componente e as **opções** que a busca acha — **nunca** do Claude: o registro recusa seção cujo id, rótulo ou opção fale de Claude, modelo, permission mode ou MCP | 06 (Aparência, Workspaces), 07 (Editor), 10 (Terminal) |
 | restauração da aba | chave, versão, ler e gravar o estado | 06 (layout), 07 (editores), 08 (conversa) |
 
 ---

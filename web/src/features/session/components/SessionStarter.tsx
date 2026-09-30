@@ -6,21 +6,23 @@ import { Panel } from '@/shared/components/Panel';
 import { useSessionStarter } from '../hooks/useSessionStarter';
 
 export interface SessionStarterProps {
-  /** The workspace chosen above, or `null` while none is. */
-  readonly workspacePath: string | null;
+  /**
+   * The folder the session is born in — the workbench's, as the server resolved it. There is no
+   * "none yet": the starter is shown only once a folder is, so a session can never fall back to the
+   * first root (plan 06, B-16).
+   */
+  readonly workspacePath: string;
 
   /** Called with the id the **server** minted, once it has. */
   onStarted(sessionId: string): void;
 }
 
 /**
- * Opening a session on the chosen workspace.
+ * Opening a session on the folder of the workbench.
  *
- * It cannot open one without a workspace, and it says so rather than failing at the backend: the
- * allowlist is the first line of defence of the product, and a screen that lets somebody try
- * without choosing makes a refusal look like a bug. A refusal the backend **does** give — the
- * machine already running as many sessions as it allows — is shown here, translated, with the
- * trace, and the button is free again for when a slot is (plan 05, S-41).
+ * A refusal the backend gives — the machine already running as many sessions as it allows — is
+ * shown here, translated, with the trace, and the button is free again for when a slot is
+ * (plan 05, S-41).
  */
 export function SessionStarter({
   workspacePath,
@@ -35,23 +37,13 @@ export function SessionStarter({
 
       <Button
         size="touch"
-        disabled={workspacePath === null || isStarting || connection !== 'ready'}
-        // No handler at all without a workspace: the button is disabled then, and a click that
-        // could never arrive needs no branch to ignore it.
-        onClick={
-          workspacePath === null
-            ? undefined
-            : () => {
-                start(workspacePath);
-              }
-        }
+        disabled={isStarting || connection !== 'ready'}
+        onClick={() => {
+          start(workspacePath);
+        }}
       >
         {isStarting ? t('session.starter.pending') : t('session.starter.action')}
       </Button>
-
-      {workspacePath === null && (
-        <p className="text-xs opacity-70">{t('session.starter.chooseWorkspace')}</p>
-      )}
 
       {error !== null && <ErrorState error={error} />}
     </Panel>

@@ -4,7 +4,8 @@ export { RuleList } from './components/RuleList';
 export { RuleDetail } from './components/RuleDetail';
 export { usePermissionRules } from './hooks/usePermissionRules';
 export { usePermissionQueue } from './hooks/usePermissionQueue';
-export { usePermissionQueueStore } from './store/permission.store';
+export { KeepPermissionsAttached } from './components/KeepPermissionsAttached';
+export { forgetPermissionQueues, permissionQueueOf } from './store/permission.store';
 export type {
   PermissionDecision,
   PermissionOutcome,

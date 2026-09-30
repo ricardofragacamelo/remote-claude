@@ -126,6 +126,11 @@ comando na própria máquina.
 o `eslint-plugin-jsx-a11y`, que é estático — ver
 [qualidade](../shared/09-code-quality.md).
 
+O jsdom não tem layout nem cor, então contraste e o que depende da folha de estilo aplicada só se
+julgam num navegador: o e2e roda o axe (`@axe-core/playwright`, WCAG 2.1 A e AA) no workbench, na
+boas-vindas, no diálogo "Abrir pasta" e em cada tela global, **nos dois temas**
+(`e2e/specs/workbench-a11y.spec.ts`, [plano 06 · S-162](../../plans/06-workbench/scenarios.md)).
+
 ---
 
 ## Cobertura

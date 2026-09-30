@@ -1,0 +1,10 @@
+{
+  "id": "06·S-155",
+  "title": "a folder opened from the welcome screen by going down from the roots lands in the address as its real path, and a reload keeps it",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "listed": ["alpha", "doomed", "gamma", "inside, symbolic link"],
+    "hidden": ".hidden",
+    "path": ["inside, symbolic link", "beta"]
+  }
+}

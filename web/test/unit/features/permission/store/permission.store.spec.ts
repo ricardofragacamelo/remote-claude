@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { usePermissionQueueStore } from '@/features/permission';
+import { forgetPermissionQueues, permissionQueueOf } from '@/features/permission';
 
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
 const EXPIRES = '2026-09-19T12:02:00.000Z';
@@ -48,11 +48,11 @@ function event(type: string, payload: Record<string, unknown>): Envelope {
   };
 }
 
-const store = () => usePermissionQueueStore.getState();
+const store = () => permissionQueueOf(SESSION).getState();
 
 describe('the permission queue', () => {
   beforeEach(() => {
-    store().reset();
+    forgetPermissionQueues();
   });
 
   it('puts a question on screen with everything a person needs to decide', () => {

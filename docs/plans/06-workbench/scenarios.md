@@ -23,9 +23,9 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 |---|---|---|---|---|---|---|
 | S-01 | código novo sem `messageKey` em `en` **e** `pt-BR` → `i18n:check` reprova | err | unit | — | B-03 | ✅ |
 | S-02 | DTO de `GET /workspaces/directories`: `path` ausente, vazio, relativo, com `..` ou NUL → recusado antes do caso de uso | err | unit | `INVALID_INPUT` | B-04 | ✅ |
-| S-03 | `/workbench` sem `folder` cai na boas-vindas, não num erro — movido da F0 ([D-18](decisions.md#d-18--os-cenários-de-rota-que-dependem-de-produto)): a rota nasce com a pasta na URL | fron | unit | — | B-16 | ⬜ |
+| S-03 | `/workbench` sem `folder` cai na boas-vindas, não num erro — movido da F0 ([D-18](decisions.md#d-18--os-cenários-de-rota-que-dependem-de-produto)): a rota nasce com a pasta na URL | fron | unit | — | B-16 | ✅ |
 | S-04 | `folder` com espaço, acento, `#`, `%`, `?` e `&` faz ida e volta pela URL sem perda | fron | unit | — | B-05 | ✅ |
-| S-05 | `/` com abas abertas vai para a ativa; sem abas mostra a boas-vindas — movido da F0 ([D-18](decisions.md#d-18--os-cenários-de-rota-que-dependem-de-produto)): as abas nascem na B-20 | est | integração | — | B-20 | ⬜ |
+| S-05 | `/` com abas abertas vai para a ativa; sem abas mostra a boas-vindas — movido da F0 ([D-18](decisions.md#d-18--os-cenários-de-rota-que-dependem-de-produto)): as abas nascem na B-20; e de novo, para a B-33 ([D-25](decisions.md#d-25--quando--passa-a-levar-à-aba-ativa)): antes dela a home ainda carrega ping e dispositivos | est | integração | — | B-33 | ✅ |
 | S-06 | as rotas de hoje que ficam (`/audit?…`, `/rules`, `/rules/$ruleId`, callback) continuam resolvendo, com a search preservada. A metade das removidas pela D-07 foi para o S-150, com a remoção ([D-18](decisions.md#d-18--os-cenários-de-rota-que-dependem-de-produto)) | eq | unit | — | B-05 | ✅ |
 | S-07 | rota reservada a outro plano (`/claude…`) não renderiza link nem tela vazia enquanto ninguém a registra — cai no "não encontrado" traduzido | fron | unit | `NOT_FOUND` | B-05 | ✅ |
 | S-164 | documento normativo novo fora de todo índice, ou link para âncora que não existe → `docs:check` reprova | err | unit | — | B-02 | ✅ |
@@ -135,134 +135,162 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-69 | a boas-vindas mostra Abrir pasta, Recentes (fixados primeiro, indisponível marcado com o motivo) e as raízes | eq | integração | — | B-14 | ⬜ |
-| S-70 | fixar, desafixar e remover recente pela boas-vindas, também pelo menu de contexto e pelo teclado | eq | integração | — | B-14 | ⬜ |
-| S-71 | sem recentes → estado vazio que ensina o próximo passo; com só a raiz de scratch, mostra o comando `pnpm allowlist add` copiável | fron | integração | — | B-14 | ⬜ |
-| S-72 | diálogo: raízes no topo; entrar numa subpasta atualiza o breadcrumb; o breadcrumb nunca sobe acima da raiz | eq | integração | — | B-15 | ⬜ |
-| S-73 | teclado no diálogo: setas, `Enter` entra, `Backspace`/`Alt+↑` sobe, digitar filtra, `Esc` fecha e devolve o foco | eq | integração | — | B-15 | ⬜ |
-| S-74 | "mostrar ocultas" refaz a listagem com `hidden=true` | eq | integração | — | B-15 | ⬜ |
-| S-75 | `truncated: true` mostra o aviso e o filtro por prefixo vai ao servidor | fron | integração | — | B-15 | ⬜ |
-| S-76 | os quatro estados do diálogo: skeleton, erro traduzido com "tentar de novo", vazio que explica, conteúdo | est | integração | `WORKSPACE_DIRECTORY_UNREADABLE` | B-15 | ⬜ |
-| S-77 | cliques seguidos em pastas diferentes: a tela mostra só a listagem do último pedido | conc | integração | — | B-13 | ⬜ |
-| S-78 | "Abrir" navega para `/workbench?folder=<caminho real>` — o link do symlink vira o caminho resolvido | eq | integração | — | B-16 | ⬜ |
-| S-79 | `folder` fora da allowlist → erro traduzido com caminho de volta (boas-vindas, Abrir outra pasta) | err | integração | `WORKSPACE_NOT_ALLOWED` | B-16 | ⬜ |
-| S-80 | `folder` inexistente | err | integração | `WORKSPACE_NOT_FOUND` | B-16 | ⬜ |
-| S-81 | `folder` que é arquivo | err | integração | `WORKSPACE_NOT_A_DIRECTORY` | B-16 | ⬜ |
-| S-82 | a sessão iniciada no workbench nasce com `workspacePath` = pasta da URL — nunca a primeira raiz por default (o caso relatado) | eq | integração | — | B-16 | ⬜ |
-| S-83 | recarregar `/workbench?folder=` reabre a mesma pasta, sem duplicar o recente | idem | integração | — | B-16 | ⬜ |
-| S-84 | literal apresentável nas telas novas → `lint` e `i18n:check` reprovam | err | unit | — | B-14 | ⬜ |
-| S-85 | axe sem violação na boas-vindas e no diálogo | eq | integração | — | B-15 | ⬜ |
+| S-69 | a boas-vindas mostra Abrir pasta, Recentes (fixados primeiro, indisponível marcado com o motivo) e as raízes | eq | integração | — | B-14 | ✅ |
+| S-70 | fixar, desafixar e remover recente pela boas-vindas, também pelo menu de contexto e pelo teclado | eq | integração | — | B-14 | ✅ |
+| S-71 | sem recentes → estado vazio que ensina o próximo passo; com só a raiz de scratch, mostra o comando `pnpm allowlist add` copiável | fron | integração | — | B-14 | ✅ |
+| S-72 | diálogo: raízes no topo; entrar numa subpasta atualiza o breadcrumb; o breadcrumb nunca sobe acima da raiz | eq | integração | — | B-15 | ✅ |
+| S-73 | teclado no diálogo: setas, `Enter` entra, `Backspace`/`Alt+↑` sobe, digitar filtra, `Esc` fecha e devolve o foco | eq | integração | — | B-15 | ✅ |
+| S-74 | "mostrar ocultas" refaz a listagem com `hidden=true` | eq | integração | — | B-15 | ✅ |
+| S-75 | `truncated: true` mostra o aviso e o filtro por prefixo vai ao servidor | fron | integração | — | B-15 | ✅ |
+| S-76 | os quatro estados do diálogo: skeleton, erro traduzido com "tentar de novo", vazio que explica, conteúdo | est | integração | `WORKSPACE_DIRECTORY_UNREADABLE` | B-15 | ✅ |
+| S-77 | cliques seguidos em pastas diferentes: a tela mostra só a listagem do último pedido | conc | integração | — | B-13 | ✅ |
+| S-78 | "Abrir" navega para `/workbench?folder=<caminho real>` — o link do symlink vira o caminho resolvido | eq | integração | — | B-16 | ✅ |
+| S-79 | `folder` fora da allowlist → erro traduzido com caminho de volta (boas-vindas, Abrir outra pasta) | err | integração | `WORKSPACE_NOT_ALLOWED` | B-16 | ✅ |
+| S-80 | `folder` inexistente | err | integração | `WORKSPACE_NOT_FOUND` | B-16 | ✅ |
+| S-81 | `folder` que é arquivo | err | integração | `WORKSPACE_NOT_A_DIRECTORY` | B-16 | ✅ |
+| S-82 | a sessão iniciada no workbench nasce com `workspacePath` = pasta da URL — nunca a primeira raiz por default (o caso relatado) | eq | integração | — | B-16 | ✅ |
+| S-83 | recarregar `/workbench?folder=` reabre a mesma pasta, sem duplicar o recente | idem | integração | — | B-16 | ✅ |
+| S-84 | literal apresentável nas telas novas → `lint` e `i18n:check` reprovam | err | unit | — | B-14 | ✅ |
+| S-85 | axe sem violação na boas-vindas e no diálogo | eq | integração | — | B-15 | ✅ |
+| S-183 | abrir pela URL com o usuário no teto de abas: aviso traduzido que não bloqueia — a pasta resolvida continua na tela e a sessão ainda nasce nela ([D-23](decisions.md#d-23--abrir-pela-url-no-teto-de-abas-antes-de-existir-fechar-aba)) | err | integração | `OPEN_FOLDERS_LIMIT_REACHED` | B-16 | ✅ |
+| S-184 | fixar, desafixar ou remover recente que o servidor recusa mantém a linha como estava, com o erro traduzido ao lado; o segundo clique enquanto o primeiro não voltou não manda outro pedido | err | integração | `NETWORK_UNREACHABLE` | B-14 | ✅ |
+| S-185 | a busca nos recentes aparece só com mais de 8 ([D-24](decisions.md#d-24--o-atalho-do-abrir-pasta-e-quando-a-lista-de-recentes-ganha-busca)), filtra por nome e caminho, e sem resultado diz que a busca não achou — não que não há recentes | fron | integração | — | B-14 | ✅ |
+| S-186 | `Ctrl+O` (Mac: `Cmd+O`) na boas-vindas abre o diálogo; o atalho está escrito ao lado do botão | eq | integração | — | B-14 | ✅ |
 
 ## Sistema visual, moldura e moldura de tela — B-17…B-19
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-86 | tema escuro por default com `prefers-color-scheme: dark`; a escolha salva vence; `localStorage` que lança cai no default sem erro | est | unit | — | B-17 | ⬜ |
-| S-87 | cor literal em classe de componente de feature, ou ícone fora do `lucide-react` → lint reprova | err | unit | — | B-17 | ⬜ |
-| S-88 | toda variável de tema existe nos temas claro **e** escuro — variável faltando num deles reprova o teste de tokens | err | unit | — | B-17 | ⬜ |
-| S-89 | a navegação global lista, em ordem, só as entradas registradas: Workbench, Auditoria, Regras, Dispositivos, Logs e diagnóstico, Configurações — e as dos planos 11 e 14 quando eles as registram | eq | unit | — | B-18 | ⬜ |
-| S-90 | o item ativo segue a rota, inclusive por deep link (`/audit?…`, `/rules/$ruleId`) | eq | integração | — | B-18 | ⬜ |
-| S-91 | abrir um deep link deslogado leva ao login e volta à mesma rota **com** a search | est | integração | `UNAUTHENTICATED` | B-18 | ⬜ |
-| S-92 | abaixo de `md` a navegação vira menu com foco preso; `Esc` fecha e devolve o foco | fron | integração | — | B-18 | ⬜ |
-| S-93 | a moldura de tela mostra título, propósito e o botão de ajuda; o painel de ajuda traz "o que é", "o que cada estado significa", "o que não é registrado" e os atalhos da tela | eq | integração | — | B-19 | ⬜ |
-| S-94 | tela que usa a moldura sem chave de ajuda em `en` ou `pt-BR` → `i18n:check` reprova | err | unit | — | B-19 | ⬜ |
-| S-95 | abrir a ajuda duas vezes não empilha dois painéis; o estado aberto/fechado é lembrado por visitante | idem | integração | — | B-19 | ⬜ |
+| S-86 | tema escuro por default com `prefers-color-scheme: dark`; a escolha salva vence; `localStorage` que lança cai no default sem erro | est | unit | — | B-17 | ✅ |
+| S-87 | cor literal em classe de componente de feature, ou ícone fora do `lucide-react` → lint reprova | err | unit | — | B-17 | ✅ |
+| S-88 | toda variável de tema existe nos temas claro **e** escuro — variável faltando num deles reprova o teste de tokens | err | unit | — | B-17 | ✅ |
+| S-89 | a navegação global lista, em ordem, só as entradas registradas: Workbench, Auditoria, Regras, Dispositivos, Logs e diagnóstico, Configurações — e as dos planos 11 e 14 quando eles as registram — na F3, Workbench, Auditoria e Regras; Dispositivos, Logs e diagnóstico e Configurações se registram com as suas telas (F5), e o teste já registra entradas nas posições reservadas | eq | unit | — | B-18 | ✅ |
+| S-90 | o item ativo segue a rota, inclusive por deep link (`/audit?…`, `/rules/$ruleId`) | eq | integração | — | B-18 | ✅ |
+| S-91 | abrir um deep link deslogado leva ao login e volta à mesma rota **com** a search | est | integração | `UNAUTHENTICATED` | B-18 | ✅ |
+| S-92 | abaixo de `md` a navegação vira menu com foco preso; `Esc` fecha e devolve o foco | fron | integração | — | B-18 | ✅ |
+| S-93 | a moldura de tela mostra título, propósito e o botão de ajuda; o painel de ajuda traz "o que é", "o que cada estado significa", "o que não é registrado" e os atalhos da tela | eq | integração | — | B-19 | ✅ |
+| S-94 | tela que usa a moldura sem chave de ajuda em `en` ou `pt-BR` → `i18n:check` reprova | err | unit | — | B-19 | ✅ |
+| S-187 | a entrada **Workbench** da navegação leva à aba ativa — a última deste navegador, se ainda aberta; senão a primeira; sem abas, à boas-vindas ([D-25](decisions.md#d-25--quando--passa-a-levar-à-aba-ativa)) | est | integração | — | B-18 | ✅ |
+| S-192 | a navegação de quem não entrou não lê as abas do servidor | fron | integração | — | B-18 | ✅ |
+| S-95 | abrir a ajuda duas vezes não empilha dois painéis; o estado aberto/fechado é lembrado por visitante | idem | integração | — | B-19 | ✅ |
 
 ## Abas de pasta — B-20
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-96 | abrir uma segunda pasta cria uma segunda aba e a ativa; a URL passa a ter o `folder` dela | eq | integração | — | B-20 | ⬜ |
-| S-97 | abrir uma pasta já aberta foca a aba existente, sem duplicar | idem | integração | — | B-20 | ⬜ |
-| S-98 | pasta e subpasta abertas são abas distintas — sem dedupe por prefixo | fron | integração | — | B-20 | ⬜ |
-| S-99 | **vazamento entre abas**: view ativa, seleção, rascunho e tamanhos de uma aba não aparecem em outra — store por pasta, nunca global | eq | integração | — | B-20 | ⬜ |
-| S-100 | alternar A → B → A preserva o estado de A | est | integração | — | B-20 | ⬜ |
-| S-101 | fechar uma aba não encerra as sessões do Claude daquela pasta, e a confirmação diz isso | est | integração | — | B-20 | ⬜ |
-| S-102 | fechar a aba ativa ativa a vizinha (direita, senão esquerda); fechar a última volta à boas-vindas | fron | integração | — | B-20 | ⬜ |
-| S-103 | URL com uma pasta que não está entre as abertas a abre como aba nova | eq | integração | — | B-20 | ⬜ |
-| S-104 | aba cuja pasta saiu da allowlist ou sumiu abre em estado de erro; as outras seguem funcionando | err | integração | `WORKSPACE_NOT_ALLOWED`, `WORKSPACE_NOT_FOUND` | B-20 | ⬜ |
-| S-105 | abrir além do teto → recusa traduzida que diz o teto | err | integração | `OPEN_FOLDERS_LIMIT_REACHED` | B-20 | ⬜ |
-| S-106 | arrastar para reordenar, e a alternativa por teclado e por menu ("mover para a esquerda/direita"); a ordem sobrevive à recarga | eq | integração | — | B-20 | ⬜ |
-| S-107 | duas janelas do navegador abrindo e fechando abas convergem para o mesmo conjunto guardado no servidor (D-10): a janela relê o conjunto ao ganhar foco e ao reconectar | conc | integração | — | B-20 | ⬜ |
-| S-108 | aba inativa desmonta a árvore e libera o watcher, mantendo o store; ao reativar, recarrega sem perder o estado da aba (D-11) | est | integração | — | B-20 | ⬜ |
-| S-181 | sessão viva de uma aba inativa continua anexada: o pedido de permissão e o stream chegam sem reanexar, e ao voltar não há replay | est | integração | — | B-20 | ⬜ |
-| S-109 | clique duplo em fechar fecha uma aba só | idem | integração | — | B-20 | ⬜ |
-| S-110 | em tela pequena as abas viram um seletor com as mesmas ações | fron | integração | — | B-20 | ⬜ |
+| S-96 | abrir uma segunda pasta cria uma segunda aba e a ativa; a URL passa a ter o `folder` dela | eq | integração | — | B-20 | ✅ |
+| S-97 | abrir uma pasta já aberta foca a aba existente, sem duplicar | idem | integração | — | B-20 | ✅ |
+| S-98 | pasta e subpasta abertas são abas distintas — sem dedupe por prefixo | fron | integração | — | B-20 | ✅ |
+| S-99 | **vazamento entre abas**: view ativa, seleção, rascunho e tamanhos de uma aba não aparecem em outra — store por pasta, nunca global — seleção e editores abertos são do plano 07; aqui, view, painel, rascunho do prompt e tamanhos | eq | integração | — | B-20 | ✅ |
+| S-100 | alternar A → B → A preserva o estado de A | est | integração | — | B-20 | ✅ |
+| S-101 | fechar uma aba não encerra as sessões do Claude daquela pasta, e a confirmação diz isso | est | integração | — | B-20 | ✅ |
+| S-102 | fechar a aba ativa ativa a vizinha (direita, senão esquerda); fechar a última volta à boas-vindas | fron | integração | — | B-20 | ✅ |
+| S-103 | URL com uma pasta que não está entre as abertas a abre como aba nova | eq | integração | — | B-20 | ✅ |
+| S-104 | aba cuja pasta saiu da allowlist ou sumiu abre em estado de erro; as outras seguem funcionando | err | integração | `WORKSPACE_NOT_ALLOWED`, `WORKSPACE_NOT_FOUND` | B-20 | ✅ |
+| S-105 | abrir além do teto → recusa traduzida que diz o teto | err | integração | `OPEN_FOLDERS_LIMIT_REACHED` | B-20 | ✅ |
+| S-106 | arrastar para reordenar, e a alternativa por teclado e por menu ("mover para a esquerda/direita"); a ordem sobrevive à recarga | eq | integração | — | B-20 | ✅ |
+| S-107 | duas janelas do navegador abrindo e fechando abas convergem para o mesmo conjunto guardado no servidor (D-10): a janela relê o conjunto ao ganhar foco e ao reconectar | conc | integração | — | B-20 | ✅ |
+| S-108 | aba inativa desmonta a árvore e libera o watcher, mantendo o store; ao reativar, recarrega sem perder o estado da aba (D-11) — o watcher é do plano 07; aqui, a árvore sai e o store fica | est | integração | — | B-20 | ✅ |
+| S-181 | sessão viva de uma aba inativa continua anexada: o pedido de permissão e o stream chegam sem reanexar, e ao voltar não há replay | est | integração | — | B-20 | ✅ |
+| S-188 | a pergunta de fechar só fecha pelos botões ou por `Esc`: o segundo clique de um clique duplo cai fora dela e não a dispensa | idem | integração | — | B-20 | ✅ |
+| S-191 | sair esquece a conversa, as perguntas e o estado das abas de quem estava — o próximo a entrar no navegador começa do zero | est | integração | — | B-20 | ✅ |
+| S-109 | clique duplo em fechar fecha uma aba só | idem | integração | — | B-20 | ✅ |
+| S-110 | em tela pequena as abas viram um seletor com as mesmas ações | fron | integração | — | B-20 | ✅ |
 
 ## Casca do workbench — B-21, B-22
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-111 | a activity bar alterna as views da side bar; clicar na view ativa recolhe a side bar | est | integração | — | B-21 | ⬜ |
-| S-112 | view registrada por outro plano (Explorer do 07, Busca do 09, Sessões do 08) aparece na activity bar na posição declarada; sem registro, o placeholder com estado vazio traduzido | eq | unit | — | B-21 | ⬜ |
-| S-113 | redimensionar respeita mínimos e máximos; tamanhos salvos por visitante; `localStorage` que lança → defaults, sem erro | fron | unit | — | B-21 | ⬜ |
-| S-114 | a status bar mostra conexão (e muda quando o socket cai e volta), pasta, idioma, tema e o sino de notificações | est | integração | — | B-21 | ⬜ |
-| S-115 | até o plano 08, a secondary side bar mostra a sessão da pasta com os componentes de hoje (conversa, tools, composer) — iniciar, conversar e aprovar sem sair da aba; nada regride | eq | integração | — | B-21 | ⬜ |
-| S-116 | em `md+`, explorer, área de editor e chat do Claude ficam **lado a lado, ao mesmo tempo, na mesma aba de pasta**; nenhuma rota leva ao chat fora da aba | eq | integração | — | B-21 | ⬜ |
-| S-117 | abaixo de `md`: uma view por vez — Explorer, Editor, Claude, Painel — trocadas **dentro da mesma aba de pasta**, barra de views embaixo, sem scroll horizontal em 360 px, alvos de 44×44 px | fron | integração | — | B-22 | ⬜ |
-| S-118 | mudar a largura da janela entre os dois layouts não perde o estado da aba | est | integração | — | B-22 | ⬜ |
+| S-111 | a activity bar alterna as views da side bar; clicar na view ativa recolhe a side bar | est | integração | — | B-21 | ✅ |
+| S-112 | view registrada por outro plano (Explorer do 07, Busca do 09, Sessões do 08) aparece na activity bar na posição declarada; sem registro, o placeholder com estado vazio traduzido | eq | unit | — | B-21 | ✅ |
+| S-113 | redimensionar respeita mínimos e máximos; tamanhos salvos por visitante; `localStorage` que lança → defaults, sem erro | fron | unit | — | B-21 | ✅ |
+| S-114 | a status bar mostra conexão (e muda quando o socket cai e volta), pasta, idioma, tema e o sino de notificações — o sino nasce com a B-26 ([D-27](decisions.md#d-27--o-que-a-f3-deixa-para-a-f4-e-a-f5)); o idioma troca pela própria status bar | est | integração | — | B-21 | ✅ |
+| S-115 | até o plano 08, a secondary side bar mostra a sessão da pasta com os componentes de hoje (conversa, tools, composer) — iniciar, conversar e aprovar sem sair da aba; nada regride | eq | integração | — | B-21 | ✅ |
+| S-116 | em `md+`, explorer, área de editor e chat do Claude ficam **lado a lado, ao mesmo tempo, na mesma aba de pasta**; nenhuma rota leva ao chat fora da aba — `/sessions/$sessionId` ainda responde até sair na B-33 (S-150) | eq | integração | — | B-21 | ✅ |
+| S-117 | abaixo de `md`: uma view por vez — Explorer, Editor, Claude, Painel — trocadas **dentro da mesma aba de pasta**, barra de views embaixo, sem scroll horizontal em 360 px, alvos de 44×44 px — a medida em pixels (360 px sem scroll horizontal, 44×44) é de navegador de verdade: S-161, na F6 | fron | integração | — | B-22 | ✅ |
+| S-189 | a entrada que assumiu um lugar reservado, retirada, devolve o placeholder; id já tomado é recusado no registro | err | unit | — | B-21 | ✅ |
+| S-190 | o idioma escolhido na status bar vale para a interface inteira e é lembrado por visitante; `localStorage` que lança → o idioma do navegador | est | integração | — | B-21 | ✅ |
+| S-118 | mudar a largura da janela entre os dois layouts não perde o estado da aba | est | integração | — | B-22 | ✅ |
 
 ## Comandos, menu Arquivo, notificações e restauração — B-23…B-27
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-119 | comando com id duplicado, ou atalho em conflito no mesmo contexto, é recusado no registro | err | unit | — | B-23 | ⬜ |
-| S-120 | atalho da casca dentro de campo de texto não dispara — exceto o da paleta | fron | unit | — | B-23 | ⬜ |
-| S-121 | comando indisponível no contexto (condição falsa) não executa pelo atalho | eq | unit | — | B-23 | ⬜ |
-| S-122 | os atalhos de troca de aba (D-16) funcionam num navegador comum, sem depender de tecla reservada | eq | integração | — | B-23 | ⬜ |
-| S-123 | `Ctrl/Cmd+Shift+P` abre a paleta; filtra por rótulo traduzido e por categoria, mostra o atalho, executa e fecha; os comandos de arquivo (abrir pasta, abrir recente, fechar aba de pasta) estão lá desde este plano | eq | integração | — | B-24 | ⬜ |
-| S-124 | prefixo muda o modo (`>` comandos); modo registrado por outro plano (Quick Open do 09) aparece sem mudar a paleta | eq | unit | — | B-24 | ⬜ |
-| S-125 | abrir a paleta com ela aberta não abre outra; `Esc` fecha e devolve o foco a quem o tinha | idem | integração | — | B-24 | ⬜ |
-| S-126 | comando que lança erro ao executar vira notificação traduzida, e a paleta fecha sem travar | err | integração | — | B-24 | ⬜ |
-| S-127 | o menu **Arquivo** sai do registro, com grupos na ordem do VS Code (novo arquivo, nova pasta · abrir pasta, abrir recente · salvar, salvar tudo · fechar editor, fechar aba de pasta): rótulo, atalho e disponibilidade iguais aos da paleta | eq | integração | — | B-25 | ⬜ |
-| S-128 | item cujo comando ainda não foi registrado (novo arquivo, salvar — plano 07) não aparece; aparece quando o plano o registra | fron | unit | — | B-25 | ⬜ |
-| S-129 | o menu Arquivo é navegável por teclado (padrão ARIA menubar) e, abaixo de `md`, mora no menu da navegação | fron | integração | — | B-25 | ⬜ |
-| S-130 | notificação vira toast com severidade e ação; some sozinha quando informativa, fica quando pede ação | eq | integração | — | B-26 | ⬜ |
-| S-131 | o centro de notificações lê o histórico do servidor (B-40) e o reencontra depois de recarregar; limpar uma, limpar todas, marcar como lida; "não perturbe", por visitante, silencia toasts sem perder o histórico | est | integração | — | B-26 | ⬜ |
-| S-132 | rajada de notificações iguais é agrupada com contador antes de ir ao servidor — uma gravação, não uma por repetição | conc | unit | — | B-26 | ⬜ |
-| S-182 | falha ao gravar a notificação no servidor não perde o toast nem o item no centro; o reenvio usa o mesmo `clientId` e não duplica | err | integração | `NETWORK_UNREACHABLE` | B-26 | ⬜ |
-| S-133 | toast é anunciado ao leitor de tela (`role="status"`/`alert` por severidade) e não rouba o foco | eq | integração | — | B-26 | ⬜ |
-| S-134 | recarregar restaura, por aba, a view ativa, o layout e o painel; editores abertos voltam pelo gancho que o plano 07 registra | est | integração | — | B-27 | ⬜ |
-| S-135 | estado restaurado de uma pasta que não está mais aberta é descartado; estado corrompido cai no default sem erro | err | unit | — | B-27 | ⬜ |
+| S-119 | comando com id duplicado, ou atalho em conflito no mesmo contexto, é recusado no registro | err | unit | — | B-23 | ✅ |
+| S-120 | atalho da casca dentro de campo de texto não dispara — exceto o da paleta | fron | unit | — | B-23 | ✅ |
+| S-121 | comando indisponível no contexto (condição falsa) não executa pelo atalho | eq | unit | — | B-23 | ✅ |
+| S-122 | os atalhos de troca de aba (D-16) funcionam num navegador comum, sem depender de tecla reservada | eq | integração | — | B-23 | ✅ |
+| S-123 | `Ctrl/Cmd+Shift+P` abre a paleta; filtra por rótulo traduzido e por categoria, mostra o atalho, executa e fecha; os comandos de arquivo (abrir pasta, abrir recente, fechar aba de pasta) estão lá desde este plano | eq | integração | — | B-24 | ✅ |
+| S-124 | prefixo muda o modo (`>` comandos); modo registrado por outro plano (Quick Open do 09) aparece sem mudar a paleta | eq | unit | — | B-24 | ✅ |
+| S-125 | abrir a paleta com ela aberta não abre outra; `Esc` fecha e devolve o foco a quem o tinha | idem | integração | — | B-24 | ✅ |
+| S-126 | comando que lança erro ao executar vira notificação traduzida, e a paleta fecha sem travar | err | integração | — | B-24 | ✅ |
+| S-127 | o menu **Arquivo** sai do registro, com grupos na ordem do VS Code (novo arquivo, nova pasta · abrir pasta, abrir recente · salvar, salvar tudo · fechar editor, fechar aba de pasta): rótulo, atalho e disponibilidade iguais aos da paleta | eq | integração | — | B-25 | ✅ |
+| S-128 | item cujo comando ainda não foi registrado (novo arquivo, salvar — plano 07) não aparece; aparece quando o plano o registra | fron | unit | — | B-25 | ✅ |
+| S-129 | o menu Arquivo é navegável por teclado (padrão ARIA menubar) e, abaixo de `md`, mora no menu da navegação | fron | integração | — | B-25 | ✅ |
+| S-130 | notificação vira toast com severidade e ação; some sozinha quando informativa, fica quando pede ação | eq | integração | — | B-26 | ✅ |
+| S-131 | o centro de notificações lê o histórico do servidor (B-40) e o reencontra depois de recarregar; limpar uma, limpar todas, marcar como lida; "não perturbe", por visitante, silencia toasts sem perder o histórico | est | integração | — | B-26 | ✅ |
+| S-132 | rajada de notificações iguais é agrupada com contador antes de ir ao servidor — uma gravação, não uma por repetição | conc | unit | — | B-26 | ✅ |
+| S-182 | falha ao gravar a notificação no servidor não perde o toast nem o item no centro; o reenvio usa o mesmo `clientId` e não duplica | err | integração | `NETWORK_UNREACHABLE` | B-26 | ✅ |
+| S-133 | toast é anunciado ao leitor de tela (`role="status"`/`alert` por severidade) e não rouba o foco | eq | integração | — | B-26 | ✅ |
+| S-134 | recarregar restaura, por aba, a view ativa, o layout e o painel; editores abertos voltam pelo gancho que o plano 07 registra | est | integração | — | B-27 | ✅ |
+| S-135 | estado restaurado de uma pasta que não está mais aberta é descartado; estado corrompido cai no default sem erro | err | unit | — | B-27 | ✅ |
+| S-193 | a conexão que cai vira um aviso, e a volta uma informação — uma vez por queda; abrir o app e sair não dizem nada ([D-17](decisions.md#d-17--o-que-vira-notificação-e-onde-vive-o-histórico)) | est | unit | — | B-26 | ✅ |
+| S-194 | pasta de aba aberta que sai da allowlist durante a sessão vira aviso com o caminho; a que já estava fora na primeira leitura não | est | unit | — | B-26 | ✅ |
+| S-195 | "Abrir recente" lista os recentes que ainda abrem (fixados primeiro) — no submenu do Arquivo e num modo da paleta que filtra por nome e caminho —, e termina em "Mais…", que leva à boas-vindas | eq | integração | — | B-24, B-25 | ✅ |
+| S-196 | fechar a aba descarta o que o navegador guardou dela; sair descarta o de todas | est | unit | — | B-27 | ✅ |
+| S-197 | "Abrir pasta…" (`Ctrl+O`/`Cmd+O`, menu e paleta) abre o mesmo diálogo em qualquer tela, não só na boas-vindas ([D-28](decisions.md#d-28--um-diálogo-abrir-pasta-e-comandos-registrados-por-quem-os-executa)) | eq | integração | — | B-23 | ✅ |
+| S-198 | a ajuda de cada tela lista os atalhos lidos do registro; `Shift+F1` a abre onde a tela tem ajuda, e o comando não existe onde não tem | eq | integração | — | B-23 | ✅ |
+| S-199 | notificação que o servidor recusa (`INVALID_INPUT`) fica só nesta janela, marcada, e não é reenviada; limpar uma que ainda não chegou ao servidor a tira da fila | err | unit | `INVALID_INPUT` | B-26 | ✅ |
 
 ## Telas separadas — B-28…B-34
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-136 | Auditoria abre na sua própria tela com o conteúdo de hoje; `/audit?…` filtrado continua sendo um link | eq | integração | — | B-28 | ⬜ |
-| S-137 | Regras abre na sua própria tela; `/rules/$ruleId` abre a regra, em qualquer estado | eq | integração | — | B-28 | ⬜ |
-| S-138 | Dispositivos é uma tela própria (não uma seção de Configurações), com a lista de hoje: aprovar e revogar funcionam igual | eq | integração | — | B-29 | ⬜ |
-| S-139 | Logs e diagnóstico: o ping (`diag.ping`) saiu da home para cá e mostra a ida e volta | eq | integração | — | B-30 | ⬜ |
-| S-140 | ping com o socket fechado → erro traduzido com "reconectar" | err | integração | `NETWORK_UNREACHABLE` | B-30 | ⬜ |
-| S-141 | dois pings seguidos: cada resposta casa com o seu pedido | conc | integração | — | B-30 | ⬜ |
-| S-142 | Configurações: a seção está na URL (`/settings/appearance`); seção desconhecida cai na primeira, sem erro | fron | integração | — | B-31 | ⬜ |
-| S-143 | Aparência: tema (claro, escuro, do sistema), idioma e densidade mudam na hora e persistem por visitante | eq | integração | — | B-31 | ⬜ |
-| S-144 | Workspaces: raízes só leitura (nenhum controle de edição), com o comando do script copiável; recentes com fixar e remover | eq | integração | — | B-31 | ⬜ |
-| S-145 | nenhuma seção de Configurações trata do Claude (modelo, permission mode, MCP) — isso é da tela do plano 11 | eq | unit | — | B-31 | ⬜ |
-| S-146 | seção registrada por outro plano (Editor do 07, Terminal do 10) aparece no registro; sem registro, não aparece | eq | unit | — | B-31 | ⬜ |
-| S-147 | falha ao carregar as raízes em Workspaces → erro traduzido com "tentar de novo" | err | integração | `NETWORK_UNREACHABLE` | B-31 | ⬜ |
-| S-148 | Sobre mostra as versões e copia o bloco de versões para um relato de defeito | eq | integração | — | B-32 | ⬜ |
-| S-149 | a home não tem mais seletor de workspace, ping nem dispositivos; o store global de workspace selecionado não existe mais | est | unit | — | B-33 | ⬜ |
-| S-150 | `/sessions/$sessionId`, `/history` e `/history/$conversationId` não existem mais (D-07): nenhum link, comando ou navegação do app aponta para elas, colar o link antigo cai no "não encontrado" traduzido (a metade do S-06 que veio da F0 — [D-18](decisions.md#d-18--os-cenários-de-rota-que-dependem-de-produto)), e iniciar uma sessão mantém o usuário na aba da pasta | eq | integração | `NOT_FOUND` | B-33 | ⬜ |
-| S-151 | todo controle só de ícone nas telas deste plano tem tooltip e `aria-label` traduzidos | eq | integração | — | B-34 | ⬜ |
-| S-152 | todo estado vazio das telas deste plano ensina o próximo passo com uma ação; todo erro diz o que fazer | eq | integração | — | B-34 | ⬜ |
-| S-153 | "saiba mais" de cada tela abre a ajuda na seção certa | eq | integração | — | B-34 | ⬜ |
-| S-154 | cada atalho listado na ajuda de uma tela executa o que diz | eq | integração | — | B-34 | ⬜ |
+| S-136 | Auditoria abre na sua própria tela com o conteúdo de hoje; `/audit?…` filtrado continua sendo um link | eq | integração | — | B-28 | ✅ |
+| S-137 | Regras abre na sua própria tela; `/rules/$ruleId` abre a regra, em qualquer estado | eq | integração | — | B-28 | ✅ |
+| S-138 | Dispositivos é uma tela própria (não uma seção de Configurações), com a lista de hoje: aprovar e revogar funcionam igual | eq | integração | — | B-29 | ✅ |
+| S-139 | Logs e diagnóstico: o ping (`diag.ping`) saiu da home para cá e mostra a ida e volta | eq | integração | — | B-30 | ✅ |
+| S-140 | ping com o socket fechado → erro traduzido com "reconectar" | err | integração | `NETWORK_UNREACHABLE` | B-30 | ✅ |
+| S-141 | dois pings seguidos: cada resposta casa com o seu pedido | conc | integração | — | B-30 | ✅ |
+| S-142 | Configurações: a seção está na URL (`/settings/appearance`); seção desconhecida cai na primeira, sem erro | fron | integração | — | B-31 | ✅ |
+| S-143 | Aparência: tema (claro, escuro, do sistema), idioma e densidade mudam na hora e persistem por visitante | eq | integração | — | B-31 | ✅ |
+| S-144 | Workspaces: raízes só leitura (nenhum controle de edição), com o comando do script copiável; recentes com fixar e remover | eq | integração | — | B-31 | ✅ |
+| S-145 | nenhuma seção de Configurações trata do Claude (modelo, permission mode, MCP) — isso é da tela do plano 11 | eq | unit | — | B-31 | ✅ |
+| S-146 | seção registrada por outro plano (Editor do 07, Terminal do 10) aparece no registro; sem registro, não aparece | eq | unit | — | B-31 | ✅ |
+| S-147 | falha ao carregar as raízes em Workspaces → erro traduzido com "tentar de novo" | err | integração | `NETWORK_UNREACHABLE` | B-31 | ✅ |
+| S-148 | Sobre mostra as versões e copia o bloco de versões para um relato de defeito | eq | integração | — | B-32 | ✅ |
+| S-149 | a home não tem mais seletor de workspace, ping nem dispositivos; o store global de workspace selecionado não existe mais | est | unit | — | B-33 | ✅ |
+| S-150 | `/sessions/$sessionId`, `/history` e `/history/$conversationId` não existem mais (D-07): nenhum link, comando ou navegação do app aponta para elas, colar o link antigo cai no "não encontrado" traduzido (a metade do S-06 que veio da F0 — [D-18](decisions.md#d-18--os-cenários-de-rota-que-dependem-de-produto)), e iniciar uma sessão mantém o usuário na aba da pasta | eq | integração | `NOT_FOUND` | B-33 | ✅ |
+| S-151 | todo controle só de ícone nas telas deste plano tem tooltip e `aria-label` traduzidos | eq | integração | — | B-34 | ✅ |
+| S-152 | todo estado vazio das telas deste plano ensina o próximo passo com uma ação; todo erro diz o que fazer | eq | integração | — | B-34 | ✅ |
+| S-153 | "saiba mais" de cada tela abre a ajuda na seção certa | eq | integração | — | B-34 | ✅ |
+| S-154 | cada atalho listado na ajuda de uma tela executa o que diz | eq | integração | — | B-34 | ✅ |
+| S-200 | "reconectar" em Logs e diagnóstico tenta na hora, sem esperar o backoff; com a reconexão **segurada pelo servidor** (`throttled`) o botão fica desabilitado e a tela diz por quê; com o socket pronto, não há o que reconectar ([D-32](decisions.md#d-32--o-que-a-f5-decidiu-na-execução)) | est | unit | — | B-30 | ✅ |
+| S-201 | cada opção de Aparência mostra o valor padrão e "restaurar padrão" volta a ele — tema do sistema, idioma do navegador, densidade compacta —, e a opção já no padrão não oferece restaurar | eq | integração | — | B-31 | ✅ |
+| S-202 | tema "do sistema" acompanha a troca do sistema operacional com a tela aberta; tema escolhido à mão não acompanha | est | unit | — | B-31 | ✅ |
+| S-203 | a busca das Configurações acha a opção pelo rótulo traduzido em qualquer seção e leva à seção dela; nada encontrado diz isso, com o que foi buscado | fron | integração | — | B-31 | ✅ |
+| S-204 | Sobre: versão que o backend não pôde ler aparece como tal, com o motivo traduzido; falha ao pedir as versões → erro com "tentar de novo", e a versão do web continua na tela; o navegador recusando a cópia → a tela diz para copiar à mão | err | integração | `NETWORK_UNREACHABLE` | B-32 | ✅ |
+| S-205 | uma resposta de ping que não é de nenhum pedido desta tela — outra janela, o replay — não encerra a espera de nenhum pedido nem aparece como resposta dele | conc | unit | — | B-30 | ✅ |
+| S-206 | densidade e tema com `localStorage` que lança → os padrões, sem quebrar a tela; valor guardado que não é um dos conhecidos → o padrão | err | unit | — | B-31 | ✅ |
 
 ## E2E — B-35…B-39
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-155 | abrir uma pasta pelo diálogo navegando das raízes → URL → recarga mantém | eq | e2e | — | B-36 | ⬜ |
-| S-156 | a sessão iniciada no workbench roda na pasta da aba — o Claude roteirizado reporta o `cwd` | eq | e2e | — | B-36 | ⬜ |
-| S-157 | pasta fora da allowlist pela URL → erro com caminho de volta | err | e2e | `WORKSPACE_NOT_ALLOWED` | B-36 | ⬜ |
-| S-158 | duas pastas em duas abas: alternar sem perder estado, fechar uma sem afetar a outra, recarga restaura conjunto, ordem e ativa | est | e2e | — | B-37 | ⬜ |
-| S-159 | a pasta de uma aba removida do disco: a aba abre em erro, as outras seguem | err | e2e | `WORKSPACE_NOT_FOUND` | B-37 | ⬜ |
-| S-160 | abrir pasta pelo menu Arquivo e pela paleta; a notificação de uma recusa aparece como toast e fica no centro de notificações | eq | e2e | — | B-38 | ⬜ |
-| S-161 | viewport de celular: seletor de abas, uma view por vez, menu da navegação, sem scroll horizontal | fron | e2e | — | B-39 | ⬜ |
-| S-162 | axe sem violação no workbench, na boas-vindas, no diálogo e em cada tela global, nos temas claro e escuro | eq | e2e | — | B-39 | ⬜ |
-| S-163 | as rotas que ficam abrem a tela certa — trilha filtrada, regra —, e as removidas pela D-07 (sessão, histórico) caem no "não encontrado" traduzido | eq | e2e | `NOT_FOUND` | B-39 | ⬜ |
-| S-166 | a stack de e2e sobe com a árvore de fixtures e a allowlist default — a cópia local de quem roda o teste não muda o resultado | eq | e2e | — | B-35 | ⬜ |
+| S-155 | abrir uma pasta pelo diálogo navegando das raízes → URL → recarga mantém | eq | e2e | — | B-36 | ✅ |
+| S-156 | a sessão iniciada no workbench roda na pasta da aba — o Claude roteirizado reporta o `cwd` | eq | e2e | — | B-36 | ✅ |
+| S-157 | pasta fora da allowlist pela URL → erro com caminho de volta | err | e2e | `WORKSPACE_NOT_ALLOWED` | B-36 | ✅ |
+| S-158 | duas pastas em duas abas: alternar sem perder estado, fechar uma sem afetar a outra, recarga restaura conjunto, ordem e ativa | est | e2e | — | B-37 | ✅ |
+| S-159 | a pasta de uma aba removida do disco: a aba abre em erro, as outras seguem | err | e2e | `WORKSPACE_NOT_FOUND` | B-37 | ✅ |
+| S-160 | abrir pasta pelo menu Arquivo e pela paleta; a notificação de uma recusa aparece como toast e fica no centro de notificações | eq | e2e | — | B-38 | ✅ |
+| S-161 | viewport de celular (360 px): seletor de abas, uma view por vez, menu da navegação, sem scroll horizontal, alvos de 44×44 px | fron | e2e | — | B-39 | ✅ |
+| S-162 | axe sem violação no workbench, na boas-vindas, no diálogo e em cada tela global, nos temas claro e escuro | eq | e2e | — | B-39 | ✅ |
+| S-163 | as rotas que ficam abrem a tela certa — trilha filtrada, regra —, e as removidas pela D-07 (sessão, histórico) caem no "não encontrado" traduzido | eq | e2e | `NOT_FOUND` | B-39 | ✅ |
+| S-166 | a stack de e2e sobe com a árvore de fixtures e a allowlist default — a cópia local de quem roda o teste não muda o resultado | eq | e2e | — | B-35 | ✅ |
+| S-207 | o replay roteirizado diz o diretório da sessão onde a gravação diz `/workspace` — no texto da resposta e no `result` —, e deixa intacto o input das tools; sem diretório da sessão, a gravação como foi gravada (descoberto na F6) | eq | integração | — | B-35 | ✅ |
+| S-208 | recarga de quem continua autenticado (status `unknown` → renovado) devolve o estado guardado das abas; página que acha ninguém autenticado (`anonymous`) o esquece (descoberto pelo S-158) | est | integração | — | B-37 | ✅ |
+| S-209 | requisição recusada dentro do handler → a linha `http.response` diz o status com que foi respondida (não o 200 padrão de antes de o filter escrever), com o `traceId` dela (descoberto no log do e2e da F6) | err | unit, integração, e2e | `UNAUTHENTICATED` | B-35 | ✅ |
+| S-210 | o runner do e2e drena o log do backend enquanto a suíte roda: a linha chega ao arquivo durante a execução, e o arquivo não sobra depois dela (descoberto pelo S-209) | est | integração, e2e | — | B-35 | ✅ |
 
 ---
 
@@ -278,7 +306,7 @@ O protocolo exige justificar dimensão vazia, não omiti-la.
 | Sistema visual e molduras (B-17…B-19) | `conc` | apresentação sem I/O concorrente; o único recurso compartilhado é o `localStorage`, cujo acesso é síncrono no navegador |
 | Casca do workbench (B-21, B-22) | `err` | a casca não faz I/O próprio: a única falha dela — `localStorage` que lança — está em S-113, e o erro de cada view é de quem a registra (planos 07–10) |
 | Casca do workbench (B-21, B-22) | `conc`, `idem` | layout sem recurso compartilhado além do `localStorage`, síncrono; a repetição que importa — clicar duas vezes na view ativa — é transição de estado (S-111) |
-| Telas separadas (B-28…B-34) | `idem` | as telas movidas mantêm os cenários de repetição dos planos que as criaram ([03](../03-rules-and-audit/scenarios.md), [02](../02-mobile-approval/scenarios.md)); o que muda aqui é a moldura, coberta por S-95 |
+| Telas separadas (B-28…B-34) | `idem` | as telas movidas mantêm os cenários de repetição dos planos que as criaram ([03](../03-rules-and-audit/scenarios.md), [02](../02-mobile-approval/scenarios.md)); o que muda aqui é a moldura, coberta por S-95; o pong repetido no replay continua descartado pelo `seq` (plano 00), e fixar/remover recente duas vezes é o S-184 |
 | E2E (B-35…B-39) | `conc`, `idem` | concorrência de abertura e repetição são exatas e baratas em integração (S-46, S-107, S-41, S-97); pela porta do usuário custariam minutos para provar o mesmo |
 
 ---

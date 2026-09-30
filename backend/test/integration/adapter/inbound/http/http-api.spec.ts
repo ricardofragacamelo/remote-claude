@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 
 import { CheckHealthUseCase } from '@application/health';
@@ -174,6 +174,20 @@ describe('the HTTP surface', () => {
       expect(harness.log.withOp('http.response')[0]).toMatchObject({
         durationMs: expect.any(Number),
         httpStatus: 200,
+      });
+    });
+
+    it('logs a refused request with the status it was answered with, and its trace', async () => {
+      const response = await http().post('/auth/refresh').set('x-trace-id', 'trace-refused');
+
+      expect(response.status).toBe(401);
+      // The exception filter writes after the interceptor; the line comes once that is done.
+      await vi.waitFor(() => {
+        expect(harness.log.withOp('http.response')[0]).toMatchObject({
+          msg: 'http response failed',
+          httpStatus: 401,
+          traceId: 'trace-refused',
+        });
       });
     });
 

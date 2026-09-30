@@ -99,7 +99,7 @@ describe('createI18n', () => {
   it('falls back to English rather than to an empty string', () => {
     const instance = createI18n('pt-BR');
 
-    expect(instance.t('session.ping.title', { lng: 'de' })).toBe('Round trip');
+    expect(instance.t('diagnostics.ping.title', { lng: 'de' })).toBe('Round trip');
   });
 
   it('answers the key itself when there is no translation at all', () => {

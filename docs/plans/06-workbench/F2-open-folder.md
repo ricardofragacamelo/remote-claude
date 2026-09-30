@@ -24,7 +24,7 @@ sobre um store global de "workspace selecionado" — exatamente o desenho que le
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-13 — Service e hooks de pastas na feature `workspace` 🔲
+### B-13 — Service e hooks de pastas na feature `workspace` ✅
 
 A cadeia [Component → Hook → Service → `api.ts`](../../architecture/web/01-architecture.md#os-quatro-elos):
 `workspace.service` ganha `listDirectories`, `listRecent`, fixar/remover recente e as pastas
@@ -36,7 +36,7 @@ Navegar rápido pelo diálogo dispara vários pedidos: o que chega depois do ped
 descartado (chave por caminho, e o `signal` do Query cancela o anterior) — a tela nunca mostra a
 pasta errada por ordem de chegada.
 
-### B-14 — Tela de boas-vindas 🔲
+### B-14 — Tela de boas-vindas ✅
 
 Em `/`, quando não há aba aberta ([D-07](decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)):
 
@@ -53,7 +53,7 @@ Em `/`, quando não há aba aberta ([D-07](decisions.md#d-07--o-destino-da-home-
 Os quatro estados ([web/03](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre));
 zero string literal ([i18n](../../architecture/shared/02-i18n.md)).
 
-### B-15 — Diálogo "Abrir pasta" 🔲
+### B-15 — Diálogo "Abrir pasta" ✅
 
 Sobre o `Dialog` do shadcn (foco preso, `Esc` fecha):
 
@@ -70,7 +70,7 @@ Sobre o `Dialog` do shadcn (foco preso, `Esc` fecha):
 - quatro estados — skeleton com a forma da lista, erro com "tentar de novo", vazio que explica;
 - ajuda do diálogo: por que só aparecem as raízes liberadas e como acrescentar uma.
 
-### B-16 — A pasta na URL, e a sessão que nasce nela 🔲
+### B-16 — A pasta na URL, e a sessão que nasce nela ✅
 
 `/workbench?folder=<path>` ([D-06](decisions.md#d-06--a-url-do-workbench)):
 
@@ -89,7 +89,7 @@ Sobre o `Dialog` do shadcn (foco preso, `Esc` fecha):
 
 ## Cenários cobertos
 
-S-03, S-69…S-85.
+S-03, S-69…S-85, S-183…S-186.
 
 ---
 

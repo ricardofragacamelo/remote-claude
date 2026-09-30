@@ -1,0 +1,6 @@
+{
+  "id": "06·S-157",
+  "title": "a folder outside the allowlist in the address — directly, or through a symbolic link that escapes — is refused with the way back",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": { "code": "WORKSPACE_NOT_ALLOWED", "refused": "This installation does not allow" }
+}

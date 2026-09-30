@@ -1,4 +1,5 @@
-import { create } from 'zustand';
+import { createStore } from 'zustand/vanilla';
+import type { StoreApi } from 'zustand/vanilla';
 import type { Envelope } from '@remote-claude/contracts';
 
 import { rewoundOf } from '../services/checkpoint.service';
@@ -46,9 +47,6 @@ export interface LiveSessionState extends Conversation {
    */
   readonly lastRewind: RewindOutcome | null;
 
-  /** Points the store at a session, clearing whatever the last one left. */
-  open(sessionId: string, options?: { readonly partial?: boolean }): void;
-
   /** Applies one frame from the stream. */
   apply(frame: Envelope): void;
 
@@ -69,9 +67,16 @@ export interface LiveSessionState extends Conversation {
   hydrate(conversationId: string, events: readonly HistoryEvent[]): void;
 }
 
+/** The store of one session's conversation. */
+export type LiveSessionStore = StoreApi<LiveSessionState>;
+
+/** How a store starts: marked partial when the screen arrived at a session it did not start. */
+export interface LiveSessionOptions {
+  readonly partial?: boolean;
+}
+
 /** A session nothing has been said in yet. */
 const EMPTY = {
-  sessionId: null,
   status: 'starting' as SessionStatus,
   lastSeq: 0,
   messages: [],
@@ -82,10 +87,14 @@ const EMPTY = {
   conversationId: null,
   historyFrom: null,
   lastRewind: null,
-} satisfies Omit<LiveSessionState, 'open' | 'apply' | 'reset' | 'hydrate'>;
+} satisfies Omit<LiveSessionState, 'sessionId' | 'apply' | 'reset' | 'hydrate'>;
 
 /**
- * The live stream of one session.
+ * The live stream of one session — **one store per session**, never one for "the session on screen".
+ *
+ * Several sessions are attached at once: each folder tab keeps its own while it is not on screen
+ * ([06 · D-11](../../../../../docs/plans/06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas)),
+ * and one store pointed at whichever was shown last would mix two conversations.
  *
  * Three rules of the contract live here, and none of them is optional
  * (docs/architecture/web/04-state-and-data.md):
@@ -103,57 +112,88 @@ const EMPTY = {
  * stream, never mixed into it. The history carries no `seq`, and the stream keeps arriving while it
  * loads — so it is merged by message and tool id, with the stream on top (S-14, S-15).
  */
-export const useLiveSessionStore = create<LiveSessionState>((set) => ({
-  ...EMPTY,
+export function createLiveSessionStore(
+  sessionId: string | null,
+  options: LiveSessionOptions = {},
+): LiveSessionStore {
+  return createStore<LiveSessionState>((set) => ({
+    ...EMPTY,
+    sessionId,
+    isPartial: options.partial ?? false,
 
-  open: (sessionId, options) => {
-    set({ ...EMPTY, sessionId, isPartial: options?.partial ?? false });
-  },
+    apply: (frame) =>
+      set((state) => {
+        const seq = frame.seq;
 
-  apply: (frame) =>
-    set((state) => {
-      const seq = frame.seq;
+        // A `request` frame carries no `seq` — a question is not part of the history — and belongs
+        // to the permission queue, not to the conversation.
+        if (seq === undefined || seq <= state.lastSeq) {
+          return state;
+        }
 
-      // A `request` frame carries no `seq` — a question is not part of the history — and belongs
-      // to the permission queue, not to the conversation.
-      if (seq === undefined || seq <= state.lastSeq) {
-        return state;
-      }
+        const started = conversationOfStart(frame);
+        const rewound = rewoundOf(frame);
 
-      const started = conversationOfStart(frame);
-      const rewound = rewoundOf(frame);
+        return {
+          ...readEvent(state, frame),
+          lastSeq: seq,
+          ...(rewound === null ? {} : { lastRewind: rewound }),
+          ...(started === null
+            ? {}
+            : {
+                conversationId: started.claudeSessionId ?? state.conversationId,
+                // A resume: what was said before this session began is in the transcript, not in
+                // the buffer, and it is read from the conversation this one continues.
+                historyFrom: started.resumedFrom ?? state.historyFrom,
+              }),
+        };
+      }),
 
-      return {
-        ...readEvent(state, frame),
-        lastSeq: seq,
-        ...(rewound === null ? {} : { lastRewind: rewound }),
-        ...(started === null
-          ? {}
-          : {
-              conversationId: started.claudeSessionId ?? state.conversationId,
-              // A resume: what was said before this session began is in the transcript, not in
-              // the buffer, and it is read from the conversation this one continues.
-              historyFrom: started.resumedFrom ?? state.historyFrom,
-            }),
-      };
-    }),
+    reset: (claudeSessionId = null) => {
+      // The session stays the one it is; what it said is what goes. Stitching a partial hole
+      // produces a view that looks complete and is not.
+      set((state) => ({
+        ...EMPTY,
+        conversationId: claudeSessionId ?? state.conversationId,
+        historyFrom: claudeSessionId,
+      }));
+    },
 
-  reset: (claudeSessionId = null) => {
-    // The session stays the one on screen; what it said is what goes. Stitching a partial hole
-    // produces a view that looks complete and is not.
-    set((state) => ({
-      ...EMPTY,
-      sessionId: state.sessionId,
-      conversationId: claudeSessionId ?? state.conversationId,
-      historyFrom: claudeSessionId,
-    }));
-  },
+    hydrate: (conversationId, events) => {
+      set((state) =>
+        state.historyFrom === conversationId
+          ? { ...withHistory(state, events), historyFrom: null, isPartial: false }
+          : state,
+      );
+    },
+  }));
+}
 
-  hydrate: (conversationId, events) => {
-    set((state) =>
-      state.historyFrom === conversationId
-        ? { ...withHistory(state, events), historyFrom: null, isPartial: false }
-        : state,
-    );
-  },
-}));
+/** The store of each session this page has shown or kept attached. */
+const stores = new Map<string, LiveSessionStore>();
+
+/**
+ * The store of one session — the same one for everybody who asks, created on the first ask.
+ *
+ * `options` only count at creation: whether a session is partial is decided by what the screen knew
+ * when it first arrived at it, and a store that already holds the conversation keeps it.
+ */
+export function liveSessionStoreOf(
+  sessionId: string,
+  options?: LiveSessionOptions,
+): LiveSessionStore {
+  const existing = stores.get(sessionId);
+
+  if (existing !== undefined) {
+    return existing;
+  }
+
+  const created = createLiveSessionStore(sessionId, options);
+  stores.set(sessionId, created);
+  return created;
+}
+
+/** Drops every store — what a sign-out calls for, and what keeps one test from seeing another's. */
+export function forgetLiveSessions(): void {
+  stores.clear();
+}

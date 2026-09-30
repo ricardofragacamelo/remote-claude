@@ -80,7 +80,7 @@ import {
   waitForBoot,
   withSdkOnPath,
 } from './lib/emulator.mjs';
-import { commandExists, run } from './lib/exec.mjs';
+import { commandExists, run, runAsync } from './lib/exec.mjs';
 import { bringUp, composeRunner, stillPending, STACK_TIMEOUT_MS } from './lib/local-stack.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { findFreePort } from './lib/ports.mjs';
@@ -110,12 +110,12 @@ const STACK_FAILED = 1;
 const dotEnvPath = path.join(repoRoot, 'e2e', '.env');
 
 /**
- * Where the backend's own log of this run is kept.
+ * Where the backend's own log of this run is kept — every run, and gone in the teardown.
  *
- * Only the live suite reads it, and it reads it for one thing: the line the mapper writes when the
- * SDK sends a message variant this build has never seen. That warning is the whole point of
- * `smoke-live` — a contract break that only shows up as a log line nobody reads is a contract
- * break that reaches production quietly.
+ * The live suite reads it for the line the mapper writes when the SDK sends a message variant this
+ * build has never seen: a contract break that only shows up as a log line nobody reads is a
+ * contract break that reaches production quietly. The hermetic one reads it for what the backend
+ * says of its own HTTP edges — the status a refusal is logged with (`http-contract`).
  */
 const backendLogPath = BACKEND_LOG_FILE;
 
@@ -464,9 +464,8 @@ async function startBackend(urls, env) {
     ['--filter', './backend', live ? 'start' : 'start:scripted'],
     urls.backend,
     env,
-    // Only the live suite reads it. Keeping a log of every run would be a file that grows and
-    // that nothing ever looks at.
-    live ? backendLogPath : undefined,
+    // Written as well as shown, and removed in the teardown: it never outlives the run.
+    backendLogPath,
   );
 }
 
@@ -545,13 +544,18 @@ async function startLimitsStack(ports, limits, env) {
  * both runners write their report to stdout; piping and re-emitting keeps the output *and* the
  * exit code, which is the one thing this script must not lose.
  *
+ * **Without blocking the event loop** (`runAsync`): the backend's output reaches this process
+ * through a pipe, and it is this loop that drains it into the backend's log. A blocking run held
+ * the loop for the whole suite — the log stopped at the boot, and whatever the backend wrote
+ * waited in the pipe until the teardown, or blocked the backend once the pipe was full.
+ *
  * @param {NodeJS.ProcessEnv} env
- * @returns {number} the suite's exit code
+ * @returns {Promise<number>} the suite's exit code
  */
-function runSuite(env) {
+async function runSuite(env) {
   appBuilt = mobile;
-  const suite = mobile
-    ? run(
+  const suite = await (mobile
+    ? runAsync(
         process.execPath,
         [path.join(repoRoot, 'scripts/mobile.mjs'), push ? 'test:e2e:push' : 'test:e2e'],
         {
@@ -560,11 +564,11 @@ function runSuite(env) {
           timeoutMs: 1_800_000,
         },
       )
-    : run('pnpm', ['--filter', './e2e', 'exec', 'playwright', 'test', ...playwrightArgs], {
+    : runAsync('pnpm', ['--filter', './e2e', 'exec', 'playwright', 'test', ...playwrightArgs], {
         cwd: repoRoot,
         env,
         timeoutMs: 1_800_000,
-      });
+      }));
 
   line(suite.stdout.trimEnd());
   if (suite.stderr.trim() !== '') {

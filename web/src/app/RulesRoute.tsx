@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
 import { RuleList } from '@/features/permission';
-import { Screen, SignedIn } from './Screen';
+import { ScreenFrame } from '@/shared/components/ScreenFrame';
+import { useShellShortcuts } from './screen-shortcuts';
 
 /**
  * `/rules` — what the user authorised in advance, and where it is taken back.
@@ -12,19 +13,17 @@ import { Screen, SignedIn } from './Screen';
  * link works pasted on another device, which is what a route is for.
  */
 export function RulesRoute(): React.JSX.Element {
+  const shortcuts = useShellShortcuts();
   const { t } = useTranslation();
 
   return (
-    <Screen
+    <ScreenFrame
       title={t('rules.screen.title')}
-      links={[
-        { to: '/', label: t('rules.screen.back') },
-        { to: '/audit', label: t('audit.screen.open') },
-      ]}
+      purpose={t('rules.screen.purpose')}
+      help="rules.help"
+      shortcuts={shortcuts}
     >
-      <SignedIn returnTo="/rules">
-        <RuleList />
-      </SignedIn>
-    </Screen>
+      <RuleList />
+    </ScreenFrame>
   );
 }

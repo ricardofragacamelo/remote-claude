@@ -20,7 +20,7 @@ export interface Credentials {
 
 /** Everything a caller may vary about one request. */
 export interface RequestOptions {
-  readonly method?: 'GET' | 'POST' | 'DELETE';
+  readonly method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   readonly body?: unknown;
   readonly locale?: string;
   readonly signal?: AbortSignal;
@@ -72,6 +72,14 @@ export class ApiClient {
 
   post<T>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
     return this.request<T>(path, { ...options, method: 'POST', body });
+  }
+
+  put<T>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
+    return this.request<T>(path, { ...options, method: 'PUT', body });
+  }
+
+  delete<T>(path: string, options: RequestOptions = {}): Promise<T> {
+    return this.request<T>(path, { ...options, method: 'DELETE' });
   }
 
   /**

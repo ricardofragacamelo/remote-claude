@@ -299,7 +299,46 @@ como o da aba: nulo quando a pasta não vive mais sob raiz nenhuma do usuário.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| — | nenhuma decisão em aberto — a fase implementa o que a F0 e a F1 fixam | — | — | — | — |
+| D-22 | O que a home (`/`) mostra entre a F2 e a B-33 | descoberto na execução: a B-16 tira do store global a origem do `workspacePath`, e o seletor de workspace da home ficaria escolhendo nada | B-14, B-16 | 2026-09-29 · **boas-vindas no lugar do seletor e do "Iniciar sessão"**; ping e dispositivos ficam até a B-33 — tomada pelo agente na execução, **a confirmar pelo usuário** | ✅ |
+| D-23 | Abrir uma pasta pela URL quando o usuário já está no teto de abas, antes de existir como fechar uma | descoberto na execução: abrir grava a aba (D-10), e fechar aba só nasce na F3 | B-16 | 2026-09-29 · **aviso traduzido que não bloqueia**: a pasta resolvida continua utilizável e a sessão nasce nela — tomada pelo agente na execução | ✅ |
+| D-24 | O atalho do "Abrir pasta…" e quando a lista de recentes ganha busca | a B-14 pede "o atalho à vista" e busca "quando a lista passa de uma tela", sem dizer qual nem quanto | B-14 | 2026-09-29 · **`Ctrl+O` (Mac: `Cmd+O`)**, preso à boas-vindas até o registro de comandos da B-23 assumi-lo; busca com **mais de 8** recentes — tomada pelo agente na execução | ✅ |
+
+### D-22 — O que a home mostra entre a F2 e a B-33
+
+A B-16 manda que o `useWorkspaceStore.selected` deixe de ser a origem do `workspacePath` da sessão, e
+a B-33 desmonta a home. Entre as duas, o seletor de workspace da home seleciona uma raiz que ninguém
+mais lê — um botão com `aria-pressed` que não muda nada é pior que botão nenhum. E a boas-vindas da
+B-14 já lista as raízes.
+
+**Tomada na execução, pelo agente — a confirmar pelo usuário:** a home passa a ser a boas-vindas; o
+seletor, o "Iniciar sessão" da home e o store global saem **nesta fase**, porque o último consumidor
+deles saiu (a outra metade do S-149 — ping e dispositivos — continua na B-33). O custo: o botão
+"Histórico" por raiz, que era a única entrada para `/history?workspacePath=` pela tela, sai três fases
+antes da rota (D-07). `/history` e `/history/$id` continuam respondendo pelo link, e a conversa
+continua alcançável pela sessão ("Ver a conversa inteira") até a B-33.
+
+### D-23 — Abrir pela URL no teto de abas, antes de existir fechar aba
+
+Abrir uma pasta grava a aba e o recente (`POST /workspaces/open-folders`, D-10), e acima de 8 abas o
+servidor responde `OPEN_FOLDERS_LIMIT_REACHED`. Na F2 não há aba na tela, nem como fechá-la — a F3 é
+quem as traz.
+
+**Tomada na execução, pelo agente:** a pasta **resolvida** (`GET /workspaces/resolve`) é o que
+decide se o workbench abre; a gravação é um passo seguinte, e a recusa dela vira um aviso traduzido
+ao lado do nome da pasta, sem tirar a pasta da tela nem impedir a sessão ([S-183](scenarios.md)).
+Recusa de **caminho** (fora da allowlist, inexistente, arquivo) continua sendo o estado de erro da
+B-16, porque aí não há pasta a mostrar.
+
+### D-24 — O atalho do "Abrir pasta…" e quando a lista de recentes ganha busca
+
+A B-14 pede "o atalho à vista" e busca "quando a lista passa de uma tela", sem dizer qual atalho nem
+quantas linhas são uma tela. O registro de comandos e atalhos só nasce na B-23 (F4).
+
+**Tomada na execução, pelo agente:** `Ctrl+O` (Mac: `Cmd+O`) — o do VS Code, que o navegador entrega
+à página —, escutado só enquanto a boas-vindas está montada e só na combinação exata (`Ctrl+Shift+O`
+continua do navegador). A B-23 o migra para o registro, que passa a ser a única fonte. A busca aparece
+com **mais de 8** recentes (`SEARCH_AFTER`): oito linhas de recente cabem numa tela de celular sem
+rolar.
 
 ---
 
@@ -309,6 +348,60 @@ como o da aba: nulo quando a pasta não vive mais sob raiz nenhuma do usuário.
 |---|---|---|---|---|---|
 | D-08 | O workbench em tela pequena | nenhum técnico; é a forma no celular | B-01, B-22 | 2026-09-28 · **uma view por vez** abaixo de `md`, decisão do usuário: Explorer, Editor, Claude e Painel na mesma aba de pasta, barra de views embaixo, seletor de abas no topo, um store para os dois layouts | ✅ |
 | D-11 | O que uma aba inativa mantém vivo, e o teto de abas | memória de uma aba montada no navegador; o limite `attachedSessions` por connection do [plano 05](../05-hardening-operations/F0-limits.md) — **medir** | B-20 | 2026-09-28 · **híbrido**, decisão do usuário, que resolve a divergência com os planos 08 e 10: store em memória, árvore desmontada, watcher liberado, e **sessões e terminais continuam anexados**; teto de **8** abas, ajustável pela medição. A [D-11 do plano 08](../08-claude-panel/decisions.md#d-11--o-que-a-aba-inativa-mantém) fecha junto | ✅ |
+| D-25 | Quando `/` passa a levar à aba ativa (S-05) | descoberto ao começar a F3: a home ainda carrega o ping e os Dispositivos até a B-33, e o redirecionamento os esconderia de quem tem abas abertas — a aprovação de um celular novo inclusive | B-20, B-33 | 2026-09-30 · **S-05 adiado para a B-33**, decisão do usuário, a recomendada: `/` continua a boas-vindas até a home ser desmontada; na F3 a entrada **Workbench** da navegação já leva à aba ativa quando há abas | ✅ |
+| D-26 | Como a sessão de uma aba inativa continua anexada (S-181) | descoberto na execução: o store da conversa e a fila de permissão eram **um só** para "a sessão na tela", e o anexo era da tela — desmontar a aba desanexava, e duas sessões anexadas se misturariam | B-20 | 2026-09-30 · **um store por sessão e anexos com dono**: `liveSessionStoreOf`/`permissionQueueOf` e `sessionAttachments` contando donos; a aba e a tela seguram, voltar não manda nada no fio — tomada pelo agente na execução | ✅ |
+| D-27 | O que a F3 deixa para a F4 e a F5 | descoberto na execução: o sino da status bar (S-114) é da B-26, os atalhos de alternar side bar e painel e o da ajuda são do registro da B-23, e os primitivos `command`, `menubar`, `sonner` e `select` da B-17 não têm quem os use na F3 | B-17, B-19, B-21 | 2026-09-30 · **cada um nasce com quem o usa**: sino na B-26, atalhos na B-23 (na F3, botões com tooltip), `command`/`menubar`/`sonner` na F4 e `select` na F5; `scroll-area` não foi preciso — tomada pelo agente na execução | ✅ |
+
+### D-25 — Quando `/` passa a levar à aba ativa
+
+A D-18 moveu o S-05 ("`/` com abas abertas vai para a ativa") para a B-20, porque as abas nascem ali.
+Mas a home só é desmontada na B-33 (F5): até lá ela carrega o ping e a lista de Dispositivos, e
+redirecionar `/` os tiraria da tela de quem tem uma aba aberta — a aprovação de um celular novo
+inclusive — por duas fases.
+
+| Opção | Contra |
+|---|---|
+| **adiar o S-05 para a B-33** | `/` segue sendo a boas-vindas com abas abertas até a F5 |
+| antecipar B-29/B-30 (Dispositivos, Logs e diagnóstico) para a F3 | a F3 cresce com telas da F5 |
+| redirecionar já, e aceitar a perda | ping e dispositivos inalcançáveis para quem tem abas |
+
+**Decidido em 2026-09-30, pelo usuário, como recomendado:** o S-05 passa à B-33, na mesma mudança
+que tira ping e dispositivos da home. Na F3, a entrada **Workbench** da navegação global leva à aba
+ativa — a última ativada neste navegador, se ainda aberta; senão a primeira; sem abas, a
+boas-vindas ([S-187](scenarios.md)).
+
+### D-26 — Um store por sessão e anexos com dono
+
+A D-11 decidiu que a aba inativa mantém as sessões **anexadas**, com a árvore **desmontada**. O código
+de antes não comportava as duas coisas: o store da conversa (`useLiveSessionStore`) e a fila de
+permissão eram globais — um para "a sessão na tela" —, e o anexo vivia no efeito da tela, que o
+desfazia ao desmontar.
+
+| Opção | Contra |
+|---|---|
+| **um store por sessão, anexo com contagem de donos** | mexe nos stores de `session` e `permission` e nos seus testes |
+| manter a árvore da aba inativa montada e escondida | contraria a D-11 (árvore desmontada), e duas sessões anexadas ainda dividiriam um store |
+| reanexar ao voltar, com replay por `seq` | é exatamente o que o S-181 recusa: a permissão pedida com a aba fora da tela não chegaria |
+
+**Tomada na execução, pelo agente:** `liveSessionStoreOf(id)` e `permissionQueueOf(id)` criam o store
+na primeira pergunta e o devolvem a quem perguntar de novo; `sessionAttachments.retain(chave, id)`
+anexa para o primeiro dono e só conta os seguintes. A moldura do app segura as sessões de todas as abas
+abertas (`KeepTabsAttached`) — em qualquer tela, não só no workbench: a pergunta feita enquanto a
+pessoa lê a trilha espera na aba —, e a tela da sessão também; fechar a aba solta o anexo e **não
+encerra** a sessão. Sair esquece todos os stores. A
+regra das três de [web/04](../../architecture/web/04-state-and-data.md#o-store-de-stream) — `seq`
+repetido, `gap`, `delta` por mensagem — continua em cada store.
+
+### D-27 — O que a F3 deixa para a F4 e a F5
+
+A F3 lista itens cujo dono nasce depois: o sino de notificações na status bar (S-114) é a UI da B-26;
+"alternar side bar e painel pela paleta e por atalho" (B-21) e "o atalho da ajuda" (B-19) dependem do
+registro de comandos da B-23; e os primitivos `command`, `menubar`, `sonner` e `select` da B-17 não
+têm uso na F3 — gerados agora, seriam código morto até a fase seguinte.
+
+**Tomada na execução, pelo agente:** cada um nasce com quem o usa. Na F3 a status bar tem conexão,
+pasta, idioma e tema; side bar, painel e ajuda abrem por botões com tooltip; `command`, `menubar` e
+`sonner` entram na F4, `select` na F5, e `scroll-area` não foi necessário (o `overflow` nativo basta).
 
 ### D-08 — O workbench em tela pequena
 
@@ -370,6 +463,10 @@ plano 10 deixa de pedir a exceção: ela está dita aqui.
 |---|---|---|---|---|---|
 | D-16 | Atalhos que o navegador reserva: quais usar para trocar e fechar aba de pasta | quais combinações Chrome, Firefox e Safari entregam à página — **medir** nos três | B-23 | 2026-09-28 · **a recomendação**, decisão do usuário: `Alt+1…9`, `Ctrl+Alt+PageUp/PageDown` (Mac: `Cmd+Alt+←/→`), fechar só pela paleta e pelo menu; a medição confirma a lista reservada que o registro recusa | ✅ |
 | D-17 | O que vira notificação, e onde vive o histórico | nenhum — é escolha de produto | B-26 | 2026-09-28 · **o que vira notificação é a recomendação; o histórico vive no servidor**, decisão do usuário, contra a recomendação: por usuário, **30 dias** de retenção, teto de **200**, "lida" sincronizada entre dispositivos. Nasce a B-40 (backend) | ✅ |
+| D-28 | Onde mora o diálogo "Abrir pasta" e quem registra cada comando | descoberto na execução: a B-23 põe "abrir pasta" entre os comandos da casca, e o diálogo existia duas vezes — na boas-vindas e no workbench —, cada um com o seu estado; o comando tem de funcionar em qualquer tela | B-23, B-25 | 2026-09-30 · **um diálogo só, na moldura, e o comando registrado por quem executa a ação, enquanto está montado** (`useCommands`): o diálogo e os recentes pela `workspace`, as abas pelo `Workbench` — "Fechar aba de pasta" não aparece fora do workbench, em vez de ficar desabilitado — tomada pelo agente na execução | ✅ |
+| D-29 | Os atalhos que a D-16 não fixou | a B-23 pede atalho para paleta, ajuda, side bar e painel, sem dizer quais | B-23 | 2026-09-30 · **os do editor que o usuário conhece**, fora da lista reservada: paleta `Ctrl/Cmd+Shift+P` e `F1`, ajuda `Shift+F1`, side bar `Ctrl/Cmd+B`, painel `Ctrl/Cmd+J`, abrir pasta `Ctrl/Cmd+O` (D-24); a medição nos três navegadores continua o gap da D-16 — tomada pelo agente na execução, **a confirmar pelo usuário** | ✅ |
+| D-30 | O que emite notificação nesta fase, e como vai o nome do comando | a D-17 diz o que **pode** virar notificação; a B-26 não diz quem emite nem com que texto o parâmetro `command` do catálogo vai | B-26 | 2026-09-30 · **comando que falhou, conexão perdida e recuperada, pasta aberta que saiu da allowlist**; `notification.tabs.saveFailed` fica sem emissor, porque a recusa de gravar, fechar ou reordenar aba já tem lugar na tela. `command` vai com o **rótulo traduzido** no idioma de quem o disparou. Rajada de 1,5 s; reenvio em 2, 5, 15, 30 e 60 s e ao reconectar; `INVALID_INPUT` não é reenviado — tomada pelo agente na execução | ✅ |
+| D-31 | Onde fica o estado restaurável de cada aba | a F3 guardava os tamanhos numa chave por pasta; a B-27 pede o resto do layout e um gancho para os planos 07 e 08 | B-27 | 2026-09-30 · **um registro de restauração (`tabRestorers`) e uma chave só, `workbench.tabState`, com versão por parte**: o layout da 06 é a primeira entrada; a chave antiga dos tamanhos é ignorada, e quem tinha tamanhos salvos volta aos iniciais uma vez; sair apaga tudo (S-191) — tomada pelo agente na execução | ✅ |
 
 ### D-16 — Atalhos que o navegador reserva
 
@@ -412,6 +509,63 @@ e `params`, **nunca** conteúdo de conversa nem comando, como o push; o "não pe
 visitante; a falha ao gravar não perde o toast. O contrato WebSocket não muda: as janelas convergem
 relendo o histórico ao ganhar foco e ao reconectar.
 
+### D-28 — Um diálogo "Abrir pasta", e comandos registrados por quem os executa
+
+Até a F3, "Abrir pasta…" era um estado da boas-vindas e outro do workbench. Com o comando no menu
+Arquivo e na paleta de **toda** tela, dois diálogos — ou um terceiro para as telas globais — seriam
+três estados para o mesmo gesto.
+
+**Tomada na execução, pelo agente:** o diálogo mora na moldura (`FolderDialogHost`, da `workspace`),
+aberto por um store (`useFolderDialog`); a boas-vindas, o `+` das abas, o `Ctrl+O`, o menu e a paleta
+abrem o mesmo. Cada comando é registrado por quem executa a ação e enquanto ela existe
+(`useCommands`, da `commands`): os de pasta pela `workspace`, os das abas pelo `Workbench`, os do
+app (ir para cada tela, tema, idioma, ajuda) pela moldura. Consequência: fora do workbench "Fechar aba
+de pasta" **não aparece** no menu — não há o que fechar —, em vez de aparecer desabilitado.
+
+### D-29 — Os atalhos que a D-16 não fixou
+
+**Tomada na execução, pelo agente — a confirmar pelo usuário:** os do editor que o usuário conhece,
+todos fora da lista reservada que o registro recusa: paleta `Ctrl/Cmd+Shift+P` e `F1`; ajuda da tela
+`Shift+F1` (o `F1` é da paleta); side bar `Ctrl/Cmd+B`; painel `Ctrl/Cmd+J`; abrir pasta
+`Ctrl/Cmd+O` (a D-24, agora no registro). Dentro de campo de texto só o da paleta dispara; dentro de
+um diálogo, nenhum.
+
+Duas ressalvas, para a medição que a D-16 já pedia nos três navegadores e que não foi feita aqui:
+`Ctrl+J` é "Downloads" no Chrome e no Firefox fora do Mac, e falta medir se a página consegue
+impedi-lo; e `Cmd+Alt+←/→`, que a D-16 escolheu para trocar de aba no Mac, é o atalho do próprio Chrome
+para trocar de aba do navegador no Mac. O registro aceita os dois (não estão na lista reservada), e
+a troca, se a medição pedir, é uma linha na declaração.
+
+### D-30 — O que emite notificação nesta fase
+
+A [D-17](#d-17--o-que-vira-notificação-e-onde-vive-o-histórico) diz o que **pode** virar notificação.
+**Tomada na execução, pelo agente:**
+
+| Emissor | Chave | Severidade |
+|---|---|---|
+| comando da paleta, do menu ou de atalho que lançou erro | `notification.command.failed` | erro |
+| conexão que caiu / voltou — uma vez por queda | `notification.connection.lost` / `.restored` | aviso / informação |
+| pasta de aba aberta que saiu da allowlist durante a sessão | `notification.folder.notAllowed` | aviso |
+
+`notification.tabs.saveFailed` continua no catálogo sem emissor: a recusa de gravar, fechar ou
+reordenar aba já tem lugar na tela (o aviso acima da aba e o do `FolderGate`), e a D-17 exclui erro com
+lugar. O parâmetro `command` vai com o **rótulo traduzido** no idioma de quem disparou: um id não é
+texto para gente, e a notificação que reaparece em outro dispositivo, em outro idioma, mostra o rótulo
+no idioma original. A rajada agrupa por 1,5 s; o reenvio de quem não alcançou o servidor espera 2, 5,
+15, 30 e 60 s — e sai na hora quando a conexão volta —, sempre com o mesmo `clientId`; `INVALID_INPUT`
+(chave ou parâmetro fora do catálogo) não é reenviado e fica marcado só nesta janela.
+
+### D-31 — Um registro de restauração por aba
+
+**Tomada na execução, pelo agente:** o estado restaurável de cada aba é um registro
+(`tabRestorers`, no barril da `workbench`): cada entrada declara `id`, `version`, `parse`, `capture`,
+`apply` e `subscribe`. O workbench aplica o que foi guardado quando o store da aba nasce — antes de
+qualquer coisa dela aparecer — e grava o que muda, numa chave só (`rc.visitor.workbench.tabState`,
+formato 1, com a versão de cada parte). O layout da 06 (view, side bar e painel abertos, view no
+celular, tamanhos) é a primeira entrada; os planos 07 e 08 registram as suas no carregamento. A chave
+antiga dos tamanhos (`workbench.layout:<pasta>`) é ignorada. Fechar a aba descarta o que ela guardou;
+ler o conjunto de abas descarta o de pasta que não está mais aberta; sair descarta tudo.
+
 ---
 
 ## F5 — Telas separadas
@@ -420,6 +574,7 @@ relendo o histórico ao ganhar foco e ao reconectar.
 |---|---|---|---|---|---|
 | D-12 | O que a tela "Logs e diagnóstico" tem neste plano | nenhum — a divisão com o plano 16 | B-30 | 2026-09-28 · **ping e estado da conexão**, decisão do usuário; o plano 16 completa a mesma tela, na mesma rota | ✅ |
 | D-13 | Onde vivem as configurações do app, e quais seções entram | nenhum técnico; por item, se segue o usuário ou fica no dispositivo | B-02, B-31 | 2026-09-28 · **a tabela da recomendação**, decisão do usuário: tema, densidade e idioma por visitante; recentes e abas no servidor; raízes só leitura; seções Aparência e Workspaces | ✅ |
+| D-32 | O que a F5 decidiu na execução: onde mora o ping, "reconectar", tema do sistema, densidade, busca, licença no "Sobre", o destino do histórico e dos specs de e2e | nenhum — lacunas das tarefas B-29…B-33 | B-29…B-33 | 2026-09-30 · **tomada na execução, pelo agente** — ver a seção | ✅ |
 
 ### D-12 — O que a tela "Logs e diagnóstico" tem neste plano
 
@@ -445,6 +600,26 @@ ser avisado: a parte dele que é tela é do app, e continua lá.
 permission mode, MCP) **não** é seção daqui: é tela própria do [plano 11](../11-claude-settings/README.md).
 Dispositivos também não: é tela própria (B-29).
 
+### D-32 — O que a F5 decidiu na execução
+
+**Tomada na execução, pelo agente.** As tarefas diziam o quê; faltava onde e como:
+
+| Assunto | Escolha | Por quê |
+|---|---|---|
+| Onde mora o ping | sai de `features/session` para `features/diagnostics` — serviço, store, hook e painel | é a feature da tela; `session` fica com a sessão viva |
+| "Reconectar" | um método do `wsClient`, `reconnect()`: cancela a espera do backoff e conecta já; com o socket aberto ou conectando não faz nada; **segurado pelo servidor** (`throttled`) não tenta antes do prazo — o botão fica desabilitado e a tela diz por quê (S-200) | voltar logo depois de ser fechado por excesso é o excesso de novo (plano 05) |
+| Ping com o socket fora do ar | o botão segue clicável, e o clique vira `NETWORK_UNREACHABLE` traduzido com "reconectar" ao lado (S-140) | um botão desabilitado não diz o que fazer |
+| Pings seguidos | **um em voo por vez** — o duplo clique manda um só ([00 · S-110](../00-bootstrap/scenarios.md)); cada pedido é uma linha, que espera até o pong com o **mesmo `nonce`**, com a ida e volta medida no relógio do navegador; pong sem pedido desta tela (outra janela, o replay) não encerra a espera de ninguém (S-141, S-205) | "cada resposta casa com o seu pedido", sem desfazer o S-110 do plano 00 |
+| Tema | continuam **dois temas**; a **preferência** tem três valores — claro, escuro e do sistema (o padrão), que acompanha o `prefers-color-scheme` ao vivo (S-202). O botão da status bar e o comando da paleta escolhem à mão | web/03 · Tema: escuro é o default quando o sistema pede; o S-143 pede "do sistema" como escolha |
+| Densidade | dois valores, `compact` (o padrão, o molde do VS Code) e `comfortable`, trocando os tokens da escala por `data-density` no `<html>`; o alvo de toque de 44 px não muda | "a densidade é decidida em `globals.css` uma vez" — a escolha muda o token, não o componente |
+| "Restaurar padrão" | tema → do sistema; idioma → **esquece** a escolha e volta ao do navegador; densidade → compacta | o padrão é o que a pessoa teria sem nunca ter escolhido |
+| Busca das Configurações | sobre as **opções que cada seção declara** no registro (id e rótulo), pelo rótulo traduzido; o resultado leva à seção (S-203) | uma seção de outro plano entra na busca por registrar-se, sem editar a tela |
+| Onde nascem as seções | o registro `settingsSections`, no barril de `settings`, já com Aparência e Workspaces declaradas; o conteúdo de Workspaces vem do barril de `workspace` (raízes, comando do script, recentes) | a seção precisa existir quando a rota decide se a da URL é conhecida; registrada por um efeito, `/settings/workspaces` cairia na primeira no primeiro render |
+| Licença no "Sobre" | o repositório **não declara licença** (nenhum `LICENSE`, `private: true` sem `license`): a tela diz isso, em vez de inventar uma; "documentação" leva ao índice `docs/` do repositório | escrever uma licença é decisão do dono do projeto, não desta fase |
+| `/` com abas | a boas-vindas espera o conjunto de abas (esqueleto, não um relance da boas-vindas) e, havendo abas, **substitui** o endereço pelo da aba ativa (S-05) | substituído, para "voltar" não cair num laço entre `/` e a aba |
+| Os componentes do histórico | `HistoryScreen`, `ConversationList` e a retomada **ficam** nas features, sem rota; o `SessionScreen` perde o "ver a conversa inteira" até o plano 08 (o `onOpenHistory`, sem quem o passe, não renderiza o botão) | a view Sessões do [plano 08](../08-claude-panel/decisions.md#d-24--o-link-de-uma-sessão-e-de-uma-conversa) os remonta pelo link da D-24 dele |
+| Specs de e2e | `commands-and-undo` (04·S-49…S-51) e `history-and-resume` · `history-gap` (04·S-47) abrem a sessão **pela aba da pasta**, com "Iniciar sessão" na side bar, e a suíte se anexa a ela para o que só um socket faz; `history-resume` (04·S-46) e `history-workspace-removed` (04·S-53) **saem** do e2e do web — só tinham porta em `/history` —, devolvidos ao plano 08; o `limits` · idle (05·S-42) deixa de seguir "ver a conversa inteira" (o texto que aponta o histórico fica: o app o tem); o `vertical-slice` pinga em `/diagnostics` | B-33: o que tem porta no workbench entra por ela; o resto sai, nunca `skip` |
+
 ---
 
 ## F6 — E2E
@@ -452,6 +627,23 @@ Dispositivos também não: é tela própria (B-29).
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | — | nenhuma decisão em aberto — a fase prova o que as anteriores entregaram | — | — | — | — |
+| D-33 | O que a F6 decidiu na execução | as tarefas diziam o que provar; faltava como o Claude roteirizado diz o `cwd`, como uma aba sai da allowlist sem mexer na allowlist e com que axe | B-35…B-39 | 2026-09-30 · ver a seção abaixo — tomada pelo agente na execução | ✅ |
+
+### D-33 — O que a F6 decidiu na execução
+
+**Tomada na execução, pelo agente.**
+
+| Assunto | Escolha | Por quê |
+|---|---|---|
+| O Claude que reporta o `cwd` | uma gravação nova, **`cwd-turn`**, capturada pelo `pnpm fixtures:record` (o CLI real responde só o caminho do diretório em que roda); o replay põe o diretório da sessão onde a gravação diz `/workspace` — **só no que o Claude diz** (texto da resposta e o `result`), nunca no input de uma tool | fixture escrita à mão provaria só o fake (01 · D-04); o `/workspace` é o nome que o gravador dá ao diretório descartável, e o CLI rodando na pasta da aba diria aquela pasta. Input de tool fica intacto porque as regras concedidas pelas specs casam nele (`Write(/workspace/…)`) |
+| A allowlist da stack de e2e | a spec lê a allowlist **default** do repositório e a cópia local, se houver: a API e o diálogo listam exatamente as raízes da default, e nenhuma raiz só da cópia local (S-166) | a máquina de quem roda o teste pode ter a cópia local (a desta tem); uma stack que a lesse testaria a máquina, não o produto |
+| Uma pasta de aba que sai da allowlist | a pasta é trocada no disco por um link simbólico que sai da raiz; o caminho que a aba guarda é o mesmo, e o backend, que resolve todo link, a recusa (S-160) | a stack não recarrega a allowlist (`RC_PID_FILE=off`, S-59), e editar a default mudaria todas as specs da execução |
+| A releitura das abas que revela a recusa | abrir outra pasta (menu Arquivo) invalida as abas; é essa leitura que acha a pasta recusada e emite a notificação | é o caminho de quem usa: a janela relê as abas quando algo muda nelas; esperar o `staleTime` de 30 s seria `sleep` |
+| axe no navegador | `@axe-core/playwright` no pacote `e2e`, com as tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`; o tema é o do sistema, escolhido pelo `colorScheme` do navegador | o `jest-axe` roda em jsdom, sem layout nem cor: contraste só se julga aqui; o tema "do sistema" é o padrão, e o navegador que pede escuro o prova sem escrever preferência |
+| Estado das abas numa recarga | o web esquece sessões, filas de permissão e o estado das abas quando o status de autenticação **passa a** `anonymous` (saída, ou renovação recusada) — não mais no `session === null` com que toda página começa | o S-158 achou que toda recarga apagava o layout guardado das abas: o S-134 só valia em jsdom, que monta já autenticado. Regressão coberta no `providers.spec` |
+| Foco ao abrir o centro de notificações | o próprio sheet recebe o foco, como no `HelpDrawer` | o S-160 achou o foco no primeiro botão ("não perturbe"), cujo tooltip abre no foco: o primeiro `Esc` fechava o tooltip, não o centro |
+| O status de uma recusa no log de I/O | o interceptor fecha o par `http.request`/`http.response` quando a resposta é escrita (`close`), preso ao contexto do trace; resposta já escrita fecha na hora | lia `statusCode` antes de o exception filter escrever: toda recusa saía com 200 (S-209) |
+| O runner do e2e e o log do backend | a suíte roda com `runAsync`, e o log do backend vai para `e2e/.backend.log` em **toda** execução, apagado no teardown | o `run` síncrono segurava o loop que drena o pipe do backend: o log parava no boot — o `smoke-live` lia um arquivo sem o que procurava —, e um pipe cheio travaria o backend (S-210) |
 
 ---
 

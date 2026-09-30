@@ -1,0 +1,9 @@
+{
+  "id": "06·S-143",
+  "title": "the theme picked in Settings is on the page at once and still there after a reload, until the default is restored",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "pick": "Dark",
+    "restore": "Restore the default of Theme"
+  }
+}

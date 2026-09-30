@@ -150,6 +150,46 @@ describe('the scripted Agent SDK, writing what it replays', () => {
     expect(existsSync(recorded.file_path)).toBe(false);
   });
 
+  it('names the directory the session runs in where the recording named its own — plan 06, S-207', async () => {
+    const stream = await turn(
+      { performWritesIn: 'cwd' },
+      { cwd: CWD, sessionId: OURS },
+      'where are you? [fixture:cwd-turn]',
+    );
+
+    const said = stream.flatMap((message) =>
+      message.type === 'assistant' && Array.isArray(message.message.content)
+        ? message.message.content.flatMap((block) => (block.type === 'text' ? [block.text] : []))
+        : [],
+    );
+    const result = stream.find((message) => message.type === 'result');
+
+    expect(said).toEqual([CWD]);
+    expect(result?.subtype === 'success' ? result.result : null).toBe(CWD);
+  });
+
+  it('leaves what a tool was given as the recording has it, and what nobody placed as recorded — plan 06, S-207', async () => {
+    directory = mkdtempSync(path.join(tmpdir(), 'rc-scripted-'));
+    const moved = await turn(
+      { performWritesIn: 'cwd' },
+      { cwd: directory, sessionId: OURS },
+      'do the work [fixture:tool-turn]',
+    );
+    const unplaced = await turn({}, { sessionId: OURS }, 'where are you? [fixture:cwd-turn]');
+
+    const inputs = moved.flatMap((message) =>
+      message.type === 'assistant' && Array.isArray(message.message.content)
+        ? message.message.content.flatMap((block) =>
+            block.type === 'tool_use' ? [JSON.stringify(block.input)] : [],
+          )
+        : [],
+    );
+    expect(inputs.some((input) => input.includes('"/workspace/summary.md"'))).toBe(true);
+    expect(unplaced.find((message) => message.type === 'result')).toMatchObject({
+      result: '/workspace',
+    });
+  });
+
   it('replays the recording byte for byte when there is no store to write to', async () => {
     const recording = loadFixture('text-turn');
 

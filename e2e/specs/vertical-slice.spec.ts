@@ -10,6 +10,7 @@ import { scenario } from '../scenarios';
  * ```
  * OIDC sign-in (PKCE, state validated)
  *  → the socket opens and the handshake is authenticated
+ *  → Logs and diagnostics, from the navigation (plan 06, B-30)
  *  → diag.ping goes out
  *  → diag.pong comes back with a seq
  *  → the screen renders it, translated
@@ -45,10 +46,15 @@ test.describe(`${shared.id} — ${shared.title}`, () => {
     expect(page.url()).toContain('code_challenge_method=S256');
     await submitCredentials(page, shared.user);
 
-    await page.waitForURL(`${environment.webUrl}/`);
+    await page.waitForURL(`${environment.webUrl}/**`);
+
+    // The round trip left the home for a screen of its own (plan 06, B-30), reached from the
+    // navigation — the home itself leads to the workbench when the user has folders open.
+    await page.getByRole('link', { name: 'Logs and diagnostics' }).click();
+    await page.waitForURL(`${environment.webUrl}/diagnostics`);
     await expect(page.getByRole('button', { name: 'Send ping' })).toBeVisible();
 
-    const status = page.getByTestId('connection-status');
+    const status = page.getByRole('status').filter({ hasText: /^Connected$/ });
     await expect(status).toHaveText(expected.connectionStatus === 'ready' ? 'Connected' : '');
 
     await page.getByRole('button', { name: 'Send ping' }).click();
@@ -61,7 +67,7 @@ test.describe(`${shared.id} — ${shared.title}`, () => {
     await page.getByRole('button', { name: 'Send ping' }).click();
     await expect(page.getByText(`Pong ${String(expected.pingCounts[1])} at `)).toBeVisible();
 
-    await expect(page.getByText(/^Session /)).toBeVisible();
+    await expect(page.getByText(/^Diagnostic session /)).toBeVisible();
   });
 
   test('speaks the visitor’s language, and not the one the code was written in', async ({

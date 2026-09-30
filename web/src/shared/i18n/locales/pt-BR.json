@@ -69,16 +69,6 @@
       "rewindIncomplete": "O desfazer parou antes do fim: {{failed}} arquivo(s) não puderam voltar, e cada um ficou exatamente como estava.",
       "invalidTransition": "A sessão não conseguiu mudar de estado. É uma falha do nosso lado; tente de novo."
     },
-    "ping": {
-      "title": "Ida e volta",
-      "description": "Um comando por todas as camadas: o gateway, o caso de uso, a regra, o banco e a volta como evento.",
-      "action": "Enviar ping",
-      "pending": "Aguardando o pong…",
-      "empty": "Nenhuma ida e volta ainda. Envie uma para ver a cadeia inteira funcionar.",
-      "result": "Pong {{count}} às {{at}}",
-      "sequence": "Sequência {{seq}}",
-      "sessionLabel": "Sessão {{sessionId}}"
-    },
     "status": {
       "starting": "Iniciando",
       "idle": "Parada",
@@ -109,8 +99,7 @@
       "title": "Abrir uma sessão",
       "description": "O Claude roda nesta máquina, na pasta que você escolher acima.",
       "action": "Abrir sessão",
-      "pending": "Abrindo…",
-      "chooseWorkspace": "Escolha uma pasta acima primeiro."
+      "pending": "Abrindo…"
     },
     "screen": {
       "title": "Sessão",
@@ -149,16 +138,91 @@
       "openFoldersLimitReached": "Você já tem {{limit}} pastas abertas, que é o máximo de uma janela. Feche uma antes — fechar uma pasta não encerra as sessões do Claude dela.",
       "openFoldersOrderConflict": "Suas abas de pasta mudaram em outra janela. Elas aparecem como estão agora — tente de novo."
     },
-    "selector": {
-      "title": "Workspace",
-      "description": "O Claude roda dentro da pasta que você escolher aqui, e em nenhuma outra.",
+    "welcome": {
+      "title": "Boas-vindas",
+      "startTitle": "Começar",
+      "startDescription": "Abra uma pasta desta máquina. O Claude roda dentro dela, e em nenhum outro lugar.",
+      "openFolder": "Abrir pasta…",
+      "purpose": "Abra uma pasta desta máquina para trabalhar nela com o Claude.",
+      "loading": "Procurando suas pastas abertas…"
+    },
+    "recent": {
+      "title": "Recentes",
+      "description": "As pastas que você abriu, com as fixadas primeiro.",
+      "loading": "Carregando suas pastas recentes…",
+      "emptyTitle": "Nenhuma pasta recente ainda",
+      "emptyDescription": "Abra uma pasta e ela aparece aqui, para a próxima vez ser um clique.",
+      "search": "Buscar nas pastas recentes",
+      "noMatch": "Nenhuma pasta recente corresponde a “{{search}}”.",
+      "open": "Abrir",
+      "pin": "Fixar {{name}}",
+      "unpin": "Desafixar {{name}}",
+      "remove": "Tirar {{name}} dos recentes",
+      "pinned": "Fixada",
+      "openedAt": "Aberta em {{at}}",
+      "notAllowed": "Não é mais liberada nesta máquina",
+      "missing": "Não está mais no disco"
+    },
+    "roots": {
+      "title": "Pastas liberadas",
+      "description": "As raízes que esta máquina deixa você abrir, e tudo o que há dentro delas.",
       "loading": "Carregando as pastas que você pode usar…",
-      "lastUsed": "Aberta pela última vez em {{at}}",
-      "neverUsed": "Nunca aberta",
-      "emptyTitle": "Nenhuma pasta disponível para você",
-      "emptyDescription": "A allowlist desta máquina ainda não menciona a sua conta. Quem instalou o remote-claude pode acrescentar uma pasta.",
-      "history": "Histórico",
-      "historyOf": "Conversas em {{label}}"
+      "emptyTitle": "Nenhuma pasta está disponível para você",
+      "emptyDescription": "A allowlist desta máquina ainda não menciona a sua conta. Quem instalou o remote-claude pode acrescentar uma pasta a ela.",
+      "browse": "Navegar em {{label}}"
+    },
+    "allowlist": {
+      "title": "Precisa de outra pasta?",
+      "description": "Rode isto na máquina em que o backend roda — não neste dispositivo. A pasta entra numa cópia local da allowlist, e o backend em execução a recebe.",
+      "command": "pnpm allowlist add <caminho>",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "copyFailed": "Este navegador não deixou copiar. Selecione o comando e copie à mão."
+    },
+    "dialog": {
+      "title": "Abrir pasta",
+      "description": "Entre numa pasta, ou abra a pasta em que você está. Só as pastas liberadas aparecem aqui.",
+      "breadcrumb": "Onde você está",
+      "roots": "Pastas liberadas",
+      "listLabel": "Pastas em {{folder}}",
+      "loading": "Carregando as pastas…",
+      "showHidden": "Mostrar pastas ocultas",
+      "filter": "Mostrando nomes que começam com “{{filter}}”",
+      "clearFilter": "Limpar",
+      "truncated": "Esta pasta tem mais subpastas do que cabem numa lista. Digite o começo de um nome para achar as outras.",
+      "noMatch": "Nenhuma pasta aqui começa com “{{filter}}”.",
+      "emptyTitle": "Nenhuma subpasta aqui",
+      "emptyDescription": "Você ainda pode abrir esta pasta como ela está.",
+      "noRootsTitle": "Nenhuma pasta está disponível para você",
+      "noRootsDescription": "A allowlist desta máquina ainda não menciona a sua conta.",
+      "symlink": "Link simbólico",
+      "symlinkOption": "{{name}}, link simbólico",
+      "helpToggle": "Por que só estas pastas?",
+      "helpBody": "O remote-claude só abre pastas que a allowlist da máquina nomeia, para que um celular nunca descubra o que mais há no disco. As setas movem, Enter entra, Backspace ou Alt+↑ sobe, e digitar filtra a lista.",
+      "open": "Abrir",
+      "cancel": "Cancelar"
+    },
+    "folder": {
+      "loading": "Abrindo a pasta…",
+      "refusedTitle": "Esta pasta não pode ser aberta",
+      "refusedDescription": "Volte para a tela de boas-vindas, ou escolha outra pasta.",
+      "backToWelcome": "Voltar para as boas-vindas",
+      "openOther": "Abrir outra pasta",
+      "notKept": "A pasta está aberta, mas não entrou nas suas abas nem nas recentes."
+    },
+    "welcomeHelp": {
+      "what": "A porta de entrada do workbench. Cada pasta que você abre vira uma aba própria, com os arquivos, o editor e o chat com o Claude lado a lado. Só abrem as pastas sob as raízes que esta instalação libera. Até cada um ganhar tela própria, a ida e volta da conexão e os seus aparelhos aprovados ficam aqui embaixo.",
+      "states": "As pastas recentes vêm primeiro, as fixadas no topo. Uma pasta marcada como indisponível saiu da allowlist ou do disco: ela continua listada para você saber por quê, e não pode ser aberta. Sem nenhuma recente ainda, a lista diz isso, e as raízes abaixo são o ponto de partida. As raízes são a allowlist — as únicas pastas em que esta instalação deixa o Claude trabalhar. Para liberar outra, rode o comando mostrado abaixo delas na máquina em que o backend roda: o web nunca muda a allowlist.",
+      "notRecorded": "Abrir uma pasta a registra entre as suas recentes e as suas abas, no servidor, para que elas acompanhem você em outro aparelho. Nada dentro de uma pasta é lido para listá-la aqui, e as raízes não mudam por esta tela: isso é o comando pnpm allowlist, na máquina."
+    },
+    "recentMenu": {
+      "loading": "Carregando as pastas recentes…",
+      "unavailable": "Não foi possível ler as pastas recentes. Tente de novo em instantes.",
+      "empty": "Nenhuma pasta recente ainda.",
+      "more": "Mais…"
+    },
+    "recentMode": {
+      "placeholder": "Digite para filtrar as pastas recentes"
     }
   },
   "notification": {
@@ -248,8 +312,7 @@
   "audit": {
     "screen": {
       "title": "O que rodou na sua máquina",
-      "open": "O que rodou",
-      "back": "Voltar às sessões"
+      "purpose": "O que rodou na sua máquina sem perguntar — e quem ou o que disse sim."
     },
     "list": {
       "title": "Trilha de auditoria",
@@ -304,6 +367,11 @@
     "error": {
       "unavailable": "Não foi possível gravar a trilha de auditoria, então nada foi autorizado a rodar.",
       "forbidden": "Essa sessão é de outra pessoa, então a trilha dela não é sua para ler."
+    },
+    "help": {
+      "what": "A trilha de cada tool que o Claude pediu para rodar, e como cada uma foi decidida: por uma regra que você concedeu, por uma pessoa, ou por ninguém a tempo. Os filtros moram no endereço, então uma trilha filtrada é um link que você pode guardar ou compartilhar.",
+      "states": "Uma entrada decidida por regra abre essa regra, mesmo depois de revogada. Uma entrada que ninguém respondeu a tempo foi recusada. Carregar mais acrescenta a página seguinte; uma falha ali mantém o que já está na tela, com o motivo ao lado.",
+      "notRecorded": "A trilha guarda o input exato de cada tool, nunca o conteúdo de um arquivo que uma tool leu: para uma leitura, guarda o caminho e o tamanho. Ela registra decisões, não a conversa."
     }
   },
   "devices": {
@@ -333,13 +401,21 @@
       "description": "{{name}} para de responder a pedidos de permissão imediatamente, e as conexões abertas dele são fechadas.",
       "cancel": "Manter",
       "confirm": "Revogar"
+    },
+    "screen": {
+      "title": "Dispositivos",
+      "purpose": "Os celulares que podem responder às perguntas do Claude, e os que esperam a sua aprovação."
+    },
+    "help": {
+      "what": "Um celular com o app entra na sua conta e aparece aqui, esperando. Depois que você o aprova, ele recebe um push quando o Claude pede permissão, e pode responder — permitir ou recusar — de onde você estiver. Um celular nunca aprova a si mesmo: só um navegador em que você já entrou pode.",
+      "states": "Esperando aprovação: entrou na conta, ainda não pode responder. Aprovado: recebe as perguntas e pode respondê-las. Revogado: parou de responder na hora, e as conexões dele foram fechadas; para usá-lo de novo, entre nele de novo. “Sem token de push” quer dizer que o celular só ouve uma pergunta com o app aberto.",
+      "notRecorded": "Aprovar e revogar ficam registrados na auditoria, com quem fez e quando. A tela não mostra o que um celular respondeu — isso está na trilha de auditoria, entrada por entrada."
     }
   },
   "rules": {
     "screen": {
       "title": "Suas regras",
-      "open": "Regras que você concedeu",
-      "back": "Voltar para as sessões"
+      "purpose": "O que você autorizou de antemão — e onde você retira."
     },
     "list": {
       "title": "Regras que você concedeu",
@@ -381,7 +457,18 @@
       "description": "O que esta regra deixa o Claude fazer, e se ainda deixa.",
       "loading": "Carregando a regra…",
       "emptyTitle": "Nenhuma regra",
-      "emptyDescription": "Não há regra para mostrar."
+      "emptyDescription": "Não há regra para mostrar.",
+      "purpose": "Uma regra que você concedeu, seja qual for o destino dela."
+    },
+    "help": {
+      "what": "Cada regra que você concedeu a partir de um pedido de permissão: qual tool, qual padrão, onde vale e até quando. Revogar é um clique, e o próximo pedido que casar volta a perguntar.",
+      "states": "Uma regra ativa responde aos pedidos sem perguntar. Uma regra perto de expirar — menos de sete dias — fica marcada. Uma regra expirada continua na lista, marcada como tal; uma revogada sai da lista. Uma revogação que falha mantém a linha, com o motivo ao lado.",
+      "notRecorded": "Regras que só valem para uma sessão não aparecem: elas acabam com ela. Esta tela não mostra quais pedidos uma regra respondeu — a trilha de auditoria mostra."
+    },
+    "detailHelp": {
+      "what": "Uma regra, aberta pela trilha de auditoria ou pela lista: o que ela permite, onde, desde quando e até quando.",
+      "states": "Ativa, com o caminho para revogá-la; expirada; ou revogada, dizendo quando — nunca uma página vazia.",
+      "notRecorded": "Ela não lista os pedidos que a regra respondeu; a trilha de auditoria lista."
     }
   },
   "transcript": {
@@ -391,11 +478,6 @@
       "claudeUnavailable": "O Claude não conseguiu ler o histórico nesta máquina.",
       "claudeTimeout": "O Claude demorou demais para ler o histórico. Tente de novo.",
       "cursorStale": "Esta conversa mudou enquanto você a lia. Recarregue a partir das mensagens mais recentes."
-    },
-    "screen": {
-      "title": "Histórico",
-      "noWorkspaceTitle": "Nenhuma pasta escolhida",
-      "noWorkspaceDescription": "Abra o histórico a partir de uma das suas pastas na tela inicial."
     },
     "list": {
       "title": "Conversas",
@@ -485,6 +567,377 @@
       "unchanged": "Já estavam como eram",
       "failed": "Não puderam voltar — ficaram exatamente como estavam",
       "nothing": "O desfazer não encontrou nada para mudar."
+    }
+  },
+  "navigation": {
+    "entry": {
+      "workbench": "Workbench",
+      "audit": "Auditoria",
+      "rules": "Regras",
+      "devices": "Dispositivos",
+      "diagnostics": "Logs e diagnóstico",
+      "settings": "Configurações",
+      "about": "Sobre"
+    },
+    "menu": {
+      "open": "Abrir o menu",
+      "description": "Todas as telas do app, uma por assunto."
+    },
+    "manage": {
+      "label": "Gerenciar"
+    },
+    "account": {
+      "label": "Conta",
+      "signedInAs": "Conectado como {{name}}"
+    },
+    "bar": {
+      "appName": "remote-claude"
+    },
+    "global": {
+      "label": "Navegação global"
+    }
+  },
+  "help": {
+    "panel": {
+      "open": "Ajuda desta tela",
+      "close": "Fechar a ajuda",
+      "title": "Ajuda: {{screen}}"
+    },
+    "section": {
+      "what": "O que é esta tela",
+      "states": "O que cada estado significa",
+      "notRecorded": "O que ela não mostra nem registra",
+      "shortcuts": "Atalhos"
+    },
+    "shortcuts": {
+      "none": "Esta tela não tem atalhos próprios."
+    },
+    "learnMore": {
+      "action": "Saiba mais",
+      "label": "Saiba mais sobre {{topic}}"
+    },
+    "topic": {
+      "allowlist": "as pastas que esta instalação libera",
+      "tabLimit": "quantas pastas podem ficar abertas",
+      "devices": "aprovar um celular"
+    }
+  },
+  "workbench": {
+    "activityBar": {
+      "label": "Visões desta pasta"
+    },
+    "editor": {
+      "label": "Editor",
+      "placeholderTitle": "Nenhum arquivo aberto",
+      "placeholderDescription": "Os arquivos que você abrir aparecem aqui, ao lado do chat com o Claude. Abrir e editar chegam com o Explorador."
+    },
+    "panel": {
+      "label": "Painel",
+      "placeholderTitle": "Nada no painel ainda",
+      "placeholderDescription": "O terminal e a saída de uma sessão ficarão aqui."
+    },
+    "claude": {
+      "label": "Claude",
+      "newSession": "Iniciar uma nova sessão nesta pasta"
+    },
+    "mobile": {
+      "label": "Visões desta pasta",
+      "explorer": "Explorador",
+      "editor": "Editor",
+      "claude": "Claude",
+      "panel": "Painel"
+    },
+    "layout": {
+      "sideBar": "Mostrar ou ocultar a barra lateral",
+      "panel": "Mostrar ou ocultar o painel"
+    },
+    "tabs": {
+      "label": "Pastas abertas",
+      "open": "Abrir pasta…",
+      "close": "Fechar {{name}}",
+      "pick": "Aba de pasta: {{name}}",
+      "actionsOf": "Ações de {{name}}",
+      "notKept": "Fora das suas abas: o servidor não a guardou."
+    },
+    "close": {
+      "titleOne": "Fechar {{name}}?",
+      "titleMany": "Fechar {{count}} pastas?",
+      "sessionsCarryOn": "As sessões do Claude destas pastas continuam rodando na máquina: fechar uma aba não as encerra.",
+      "listLabel": "Pastas a fechar",
+      "keep": "Manter abertas",
+      "confirm": "Fechar",
+      "pending": "Fechando…"
+    },
+    "explorer": {
+      "label": "Explorador",
+      "placeholder": "Os arquivos desta pasta ficarão aqui: abrir, criar e editar chegam com o Explorador."
+    },
+    "search": {
+      "label": "Busca",
+      "placeholder": "Encontrar arquivos e texto nesta pasta ficará aqui, com a Busca."
+    },
+    "sessions": {
+      "label": "Sessões do Claude",
+      "placeholder": "As sessões e conversas desta pasta serão listadas aqui. Até lá, o chat ao lado do editor guarda a sessão desta aba."
+    },
+    "tabState": {
+      "notAllowed": "Não é mais permitida",
+      "missing": "Não existe mais no disco"
+    },
+    "tabCopy": {
+      "copied": "Caminho copiado.",
+      "failed": "O navegador recusou a área de transferência — selecione o caminho e copie à mão."
+    },
+    "tabAction": {
+      "close": "Fechar",
+      "closeOthers": "Fechar as outras",
+      "closeRight": "Fechar à direita",
+      "moveLeft": "Mover para a esquerda",
+      "moveRight": "Mover para a direita",
+      "copyPath": "Copiar caminho"
+    },
+    "screen": {
+      "title": "Workbench",
+      "purpose": "Uma pasta desta máquina: os arquivos, o editor e o Claude, lado a lado."
+    },
+    "help": {
+      "what": "Cada aba é uma pasta desta máquina, com tudo dela: os arquivos, o editor e o chat com o Claude ao lado. Uma sessão iniciada aqui roda dentro da pasta da aba, e em nenhum outro lugar. Abra outra pasta com “Abrir pasta…” ou o + da barra de abas; cada uma vira uma aba própria.",
+      "states": "Até 8 pastas podem ficar abertas ao mesmo tempo; para abrir outra, feche uma antes. Fechar uma aba nunca encerra as sessões do Claude dela — elas continuam rodando na máquina, e voltam quando você abre a pasta de novo. Uma aba cuja pasta saiu da allowlist, ou do disco, abre em erro, e as outras abas seguem. Um lugar ainda vazio diz o que vai morar ali.",
+      "notRecorded": "Quais pastas estão abertas, e a ordem delas, ficam no servidor, para seguirem você em outro dispositivo. O layout de cada aba — tamanhos, painéis abertos — fica só neste navegador. O que você diz ao Claude e o que ele responde é da sessão, não da aba; as decisões de permissão vão para a trilha de auditoria."
+    }
+  },
+  "status": {
+    "folder": {
+      "label": "Copiar o caminho {{path}}"
+    },
+    "language": {
+      "pick": "Idioma: {{language}}. Trocar",
+      "title": "Idioma",
+      "en": "English",
+      "ptBR": "Português (Brasil)"
+    },
+    "theme": {
+      "toLight": "Mudar para o tema claro",
+      "toDark": "Mudar para o tema escuro"
+    },
+    "bar": {
+      "label": "Barra de status"
+    },
+    "folderState": {
+      "notAllowed": "não é mais permitida",
+      "missing": "não existe mais no disco"
+    },
+    "folderCopy": {
+      "copied": "Copiado",
+      "failed": "Copie à mão"
+    }
+  },
+  "command": {
+    "category": {
+      "file": "Arquivo",
+      "view": "Exibir",
+      "go": "Ir para",
+      "preferences": "Preferências",
+      "help": "Ajuda",
+      "notifications": "Notificações"
+    },
+    "palette": {
+      "show": "Mostrar todos os comandos"
+    },
+    "workspace": {
+      "openFolder": "Abrir pasta…",
+      "openRecent": "Abrir recente"
+    },
+    "workbench": {
+      "closeFolderTab": "Fechar aba de pasta",
+      "nextFolderTab": "Próxima aba de pasta",
+      "previousFolderTab": "Aba de pasta anterior",
+      "goToFolderTab": "Aba de pasta {{place}}",
+      "toggleSideBar": "Mostrar ou esconder a barra lateral",
+      "togglePanel": "Mostrar ou esconder o painel"
+    },
+    "notifications": {
+      "show": "Mostrar notificações",
+      "doNotDisturbOn": "Ativar o não perturbe",
+      "doNotDisturbOff": "Desativar o não perturbe"
+    },
+    "preferences": {
+      "languageEn": "Mudar o idioma para inglês (English)",
+      "languagePtBR": "Mudar o idioma para português (Brasil)"
+    },
+    "help": {
+      "show": "Ajuda desta tela"
+    }
+  },
+  "palette": {
+    "commands": {
+      "placeholder": "Digite o nome de um comando",
+      "noMatch": "Nenhum comando corresponde ao que você digitou."
+    },
+    "dialog": {
+      "title": "Paleta de comandos",
+      "description": "Digite para achar o que o app sabe fazer. Enter executa; Esc fecha.",
+      "input": "Buscar comandos",
+      "results": "Resultados",
+      "noMode": "Comece com {{prefixes}} para buscar os comandos.",
+      "placeholder": "Digite > para ver os comandos"
+    }
+  },
+  "fileMenu": {
+    "bar": {
+      "label": "Menu do aplicativo"
+    },
+    "file": {
+      "title": "Arquivo"
+    }
+  },
+  "notifications": {
+    "severity": {
+      "info": "Informação:",
+      "warning": "Aviso:",
+      "error": "Erro:"
+    },
+    "toast": {
+      "dismiss": "Dispensar"
+    },
+    "toasts": {
+      "label": "Notificações"
+    },
+    "center": {
+      "title": "Notificações",
+      "description": "O que o app avisou e não tinha outro lugar na tela — o mesmo em todo dispositivo que você usa, por 30 dias.",
+      "doNotDisturb": "Não perturbe neste navegador",
+      "markAllRead": "Marcar todas como lidas",
+      "clearAll": "Limpar todas",
+      "silenced": "O não perturbe está ativo: nada aparece neste navegador, e tudo continua guardado aqui.",
+      "loading": "Carregando as notificações…",
+      "emptyTitle": "Nenhuma notificação",
+      "emptyDescription": "Quando acontece algo que não tem outro lugar na tela — um comando que falhou, a conexão perdida —, aparece aqui.",
+      "list": "Notificações, as mais novas primeiro",
+      "more": "Carregar as mais antigas",
+      "loadingMore": "Carregando as mais antigas…"
+    },
+    "entry": {
+      "unreadAt": "Não lida · {{when}}",
+      "markRead": "Marcar como lida",
+      "remove": "Limpar",
+      "count": "×{{count}}"
+    },
+    "pending": {
+      "saving": "{{when}} · sendo salva nesta máquina",
+      "unsaved": "{{when}} · ainda não salva nesta máquina — tentando de novo",
+      "refused": "{{when}} · esta máquina não a guardou; ela fica só nesta janela"
+    },
+    "bell": {
+      "label": "Notificações: {{count}} não lidas"
+    }
+  },
+  "diagnostics": {
+    "screen": {
+      "title": "Logs e diagnóstico",
+      "purpose": "Se este navegador alcança o backend, e quanto demora uma ida e volta."
+    },
+    "help": {
+      "what": "Onde olhar quando algo parece travado. A conexão mostra se este navegador está falando com o backend agora; a ida e volta manda um comando por todas as camadas — o gateway, as regras, o banco — e mostra a resposta e quanto ela demorou.",
+      "states": "Conectado quer dizer que tudo na tela está ao vivo. Reconectando quer dizer que a conexão caiu e o app está tentando de novo sozinho, esperando um pouco mais a cada vez: “Reconectar” tenta agora. Quando o servidor pediu para o app ir mais devagar, o botão espera o tempo que o servidor pediu, e diz isso. Um ping esperando a resposta aparece carregando; um ping mandado com a conexão fora do ar diz isso, com o caminho para reconectar.",
+      "notRecorded": "Nada aqui lê suas conversas ou arquivos. Uma ida e volta é contada no servidor, e nada mais é guardado. Os logs do backend e do app ainda não aparecem aqui."
+    },
+    "ping": {
+      "title": "Ida e volta",
+      "description": "Um comando por todas as camadas — o gateway, o caso de uso, a regra, o banco — e de volta como evento.",
+      "action": "Enviar ping",
+      "emptyTitle": "Nenhuma ida e volta ainda",
+      "empty": "Envie um ping para ver a cadeia inteira responder, e quanto ela demora.",
+      "listLabel": "Idas e voltas",
+      "pending": "Esperando a resposta…",
+      "result": "Pong {{count}} às {{at}}",
+      "roundTrip": "{{ms}} ms de ida e volta",
+      "sequence": "Sequência {{seq}}",
+      "sessionLabel": "Sessão de diagnóstico {{sessionId}}"
+    },
+    "connection": {
+      "title": "Conexão",
+      "description": "A conexão única que todas as telas deste navegador compartilham com o backend.",
+      "reconnect": "Reconectar",
+      "heldBack": "O servidor pediu para este app ir mais devagar. Ele reconecta sozinho assim que o servidor permitir."
+    }
+  },
+  "settings": {
+    "screen": {
+      "title": "Configurações",
+      "purpose": "Como este app aparece neste dispositivo, e as pastas que ele pode abrir."
+    },
+    "help": {
+      "what": "As configurações do próprio app: a aparência — tema, idioma, densidade — e as pastas em que ele trabalha. As configurações do Claude — o modelo, o permission mode, os servidores MCP — não ficam aqui: elas têm uma tela própria.",
+      "states": "Toda opção mostra o seu padrão, e “Restaurar padrão” quando está em outro valor. A aparência muda na hora e fica guardada só neste dispositivo, então o seu celular pode ter outra cara que o desktop. As pastas que esta instalação libera aqui são só leitura: liberar outra exige um comando na máquina em que o backend roda, que a seção mostra pronto para copiar.",
+      "notRecorded": "A aparência fica só neste navegador, nunca no servidor. As pastas recentes ficam no servidor, para seguirem você em outro dispositivo; tirar uma daqui a tira de todos, e nunca mexe na pasta no disco."
+    },
+    "section": {
+      "appearance": "Aparência",
+      "workspaces": "Workspaces"
+    },
+    "sections": {
+      "label": "Seções"
+    },
+    "search": {
+      "label": "Buscar nas configurações",
+      "placeholder": "Buscar nas configurações",
+      "none": "Nenhuma configuração corresponde a “{{query}}”.",
+      "results": "Configurações encontradas"
+    },
+    "appearance": {
+      "theme": "Tema",
+      "themeDescription": "O do sistema acompanha o seu sistema operacional, mesmo quando ele muda com o app aberto.",
+      "themeSystem": "O do sistema",
+      "themeLight": "Claro",
+      "themeDark": "Escuro",
+      "language": "Idioma",
+      "languageDescription": "O idioma da interface neste dispositivo. As notificações push mantêm o idioma com que o celular se registrou.",
+      "languageDefault": "o deste navegador ({{language}})",
+      "density": "Densidade",
+      "densityDescription": "Compacta cabe mais na tela, como num editor de código; confortável tem linhas mais altas e texto maior.",
+      "densityCompact": "Compacta",
+      "densityComfortable": "Confortável"
+    },
+    "option": {
+      "default": "Padrão: {{value}}",
+      "restore": "Restaurar padrão",
+      "restoreLabel": "Restaurar o padrão de {{option}}"
+    }
+  },
+  "about": {
+    "screen": {
+      "title": "Sobre",
+      "purpose": "As versões que esta instalação roda — prontas para colar num relato de defeito."
+    },
+    "help": {
+      "what": "A versão de cada parte desta instalação: este web, o backend, o Agent SDK, a ferramenta de linha de comando do Claude e o Node. Quando algo der errado, copie o bloco e cole no relato: é a primeira coisa que quem for ajudar vai perguntar.",
+      "states": "Uma versão que o backend não conseguiu ler diz por quê: não instalado, ou instalado mas ilegível. Quando o backend não responde, só a versão deste web aparece, com o caminho para tentar de novo.",
+      "notRecorded": "Ler as versões não registra nada. Copiar põe o bloco na sua área de transferência e em nenhum outro lugar."
+    },
+    "versions": {
+      "title": "Versões",
+      "description": "Copie inteiras para um relato de defeito.",
+      "loading": "Lendo as versões…",
+      "copy": "Copiar versões",
+      "copied": "Copiado — cole no relato.",
+      "copyFailed": "Este navegador não permitiu copiar. Selecione as versões acima e copie à mão."
+    },
+    "version": {
+      "web": "Web",
+      "backend": "Backend",
+      "agentSdk": "Agent SDK",
+      "claudeCli": "CLI do Claude",
+      "node": "Node",
+      "notInstalled": "não instalado",
+      "unreadable": "não foi possível ler"
+    },
+    "project": {
+      "title": "O projeto",
+      "description": "Onde ler mais sobre como ele funciona.",
+      "documentation": "Documentação",
+      "newTab": "(abre numa nova aba)",
+      "license": "O repositório não declara uma licença."
     }
   }
 }

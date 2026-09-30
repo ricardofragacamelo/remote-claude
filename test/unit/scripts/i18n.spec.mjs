@@ -5,12 +5,15 @@ import {
   MUSTACHE,
   compareCatalogues,
   emittedMessageKeys,
+  findMissingHelp,
   findOrphans,
+  findUndeclared,
   findUntranslated,
   flatten,
   fromArb,
   mergeUsage,
   paramsOf,
+  screenHelpIn,
   usageInDart,
   usageInLiterals,
   usageInTypeScript,
@@ -231,6 +234,117 @@ describe('the keys the backend sends — plan 06, S-01', () => {
     expect(findUntranslated(en.entries, ['b.c.d', 'a.b.c', 'b.c.d']).map((p) => p.key)).toEqual([
       'a.b.c',
       'b.c.d',
+    ]);
+  });
+});
+
+describe('the keys a screen asks for — plan 06, S-84', () => {
+  const screen = [
+    "const title = t('workspace.welcome.title');",
+    "const typo = t('workspace.welcome.titel');",
+    'const state = t(`connection.status.${status}`);',
+  ].join('\n');
+
+  it('fails a key a screen names that the source catalogue never declared', () => {
+    const en = catalogue('en', { 'workspace.welcome.title': 'Welcome' });
+
+    expect(findUndeclared(en.entries, usageInTypeScript(screen).keys)).toEqual([
+      {
+        kind: 'undeclared',
+        key: 'workspace.welcome.titel',
+        detail: 'a screen asks for it by name, and no catalogue declares it',
+      },
+    ]);
+  });
+
+  it('does not take a prefix built at runtime for a key', () => {
+    const en = catalogue('en', {
+      'workspace.welcome.title': 'Welcome',
+      'workspace.welcome.titel': 'x',
+    });
+
+    expect(findUndeclared(en.entries, usageInTypeScript(screen).keys)).toEqual([]);
+  });
+
+  it('reports a key named from many places once, in a stable order', () => {
+    expect(
+      findUndeclared(new Map(), ['b.c.d', 'a.b.c', 'b.c.d']).map((problem) => problem.key),
+    ).toEqual(['a.b.c', 'b.c.d']);
+  });
+});
+
+describe('the help of a screen frame — plan 06, S-94', () => {
+  const screen = [
+    'export function Audit() {',
+    '  return (',
+    '    <ScreenFrame',
+    "      title={t('audit.screen.title')}",
+    '      help="audit.help"',
+    '      actions={<Button onClick={() => undefined}>go</Button>}',
+    '    >',
+    '      <Trail />',
+    '    </ScreenFrame>',
+    '  );',
+    '}',
+  ].join('\n');
+
+  it('reads the three parts every help panel needs, from the prefix the frame is given', () => {
+    expect(screenHelpIn(screen)).toEqual({
+      keys: new Set(['audit.help.what', 'audit.help.states', 'audit.help.notRecorded']),
+      unreadable: 0,
+    });
+  });
+
+  it('reads a prefix in single quotes too, and every frame of a source', () => {
+    const two = `${screen}\n<ScreenFrame help='rules.help'>x</ScreenFrame>`;
+
+    expect([...screenHelpIn(two).keys]).toEqual(
+      expect.arrayContaining(['audit.help.what', 'rules.help.notRecorded']),
+    );
+  });
+
+  it('counts a frame whose help is not a literal: the check cannot vouch for it', () => {
+    expect(screenHelpIn('<ScreenFrame help={prefix} title="x">y</ScreenFrame>')).toEqual({
+      keys: new Set(),
+      unreadable: 1,
+    });
+  });
+
+  it('reads the help sheet of a screen with no frame the same way — the workbench, B-34', () => {
+    const workbench = '<HelpSheet title={t(\'a.b.c\')} help="workbench.help" shortcuts={s} />';
+
+    expect(screenHelpIn(workbench)).toEqual({
+      keys: new Set(['workbench.help.what', 'workbench.help.states', 'workbench.help.notRecorded']),
+      unreadable: 0,
+    });
+  });
+
+  it('counts a help sheet whose help is not a literal', () => {
+    expect(screenHelpIn('<HelpSheet help={prefix} />').unreadable).toBe(1);
+  });
+
+  it('finds nothing where there is no frame', () => {
+    expect(screenHelpIn("const title = t('a.b.c');")).toEqual({ keys: new Set(), unreadable: 0 });
+  });
+
+  it('fails a help key the source catalogue lacks — in en, since parity carries it to pt-BR', () => {
+    const en = catalogue('en', { 'audit.help.what': 'x', 'audit.help.states': 'y' });
+
+    expect(findMissingHelp(en.entries, screenHelpIn(screen).keys)).toEqual([
+      {
+        kind: 'help',
+        key: 'audit.help.notRecorded',
+        detail: 'a screen frame reads it for its help panel, and no catalogue declares it',
+      },
+    ]);
+  });
+
+  it('fails a help key only pt-BR lacks through the parity of the catalogues', () => {
+    const en = catalogue('en', { 'audit.help.what': 'x' });
+    const ptBR = catalogue('pt-BR', {});
+
+    expect(compareCatalogues([en, ptBR], MUSTACHE)).toEqual([
+      { kind: 'missing', key: 'audit.help.what', detail: 'absent from pt-BR' },
     ]);
   });
 });

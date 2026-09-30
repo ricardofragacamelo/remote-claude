@@ -12,5 +12,9 @@ export function Skeleton({
   className,
   ...props
 }: HTMLAttributes<HTMLDivElement>): React.JSX.Element {
-  return <div className={cn('animate-pulse rounded-lg bg-muted', className)} {...props} />;
+  // CUSTOM: a `status` role, so the label every skeleton here carries ("Opening the folder…") is
+  // allowed on it and announced: a label on a `div` with no role is refused by the ARIA rules.
+  return (
+    <div role="status" className={cn('animate-pulse rounded-lg bg-muted', className)} {...props} />
+  );
 }

@@ -251,6 +251,69 @@ describe('WsClient', () => {
       });
     });
 
+    describe('on request — plan 06, S-200', () => {
+      it('tries now instead of waiting out the backoff, and drops the attempt it was waiting on', () => {
+        connectAndReady();
+        sockets.latest.drop();
+
+        expect(client.reconnect()).toBe(true);
+        expect(sockets.created).toHaveLength(2);
+
+        scheduler.fire();
+        expect(sockets.created).toHaveLength(2);
+      });
+
+      it('comes back after a normal closure by the server too', () => {
+        connectAndReady();
+        sockets.latest.close(1000);
+
+        expect(client.reconnect()).toBe(true);
+        expect(sockets.created).toHaveLength(2);
+      });
+
+      it('does nothing with a socket open or opening', () => {
+        connectAndReady();
+        expect(client.reconnect()).toBe(false);
+
+        sockets.latest.drop();
+        client.reconnect();
+        expect(client.reconnect()).toBe(false);
+        expect(sockets.created).toHaveLength(2);
+      });
+
+      it('does nothing for somebody who closed the client — signed out', () => {
+        connectAndReady();
+        client.close();
+
+        expect(client.reconnect()).toBe(false);
+        expect(sockets.created).toHaveLength(1);
+      });
+
+      it('never comes back before the server allows, after a 4429', () => {
+        connectAndReady().close(CLOSE_RATE_LIMITED);
+
+        expect(client.reconnect()).toBe(false);
+        expect(sockets.created).toHaveLength(1);
+      });
+
+      it('never comes back before a Retry-After the server gave, whatever the state says', () => {
+        const socket = connectAndReady();
+        socket.receive(
+          serverFrame({
+            kind: 'error',
+            type: 'error',
+            payload: { code: 'RATE_LIMITED', params: { retryAfterSeconds: 30 } },
+          }),
+        );
+        socket.drop();
+
+        expect(client.reconnect()).toBe(false);
+
+        now += 31_000;
+        expect(client.reconnect()).toBe(true);
+      });
+    });
+
     it('starts the backoff over once it is ready again', () => {
       connectAndReady();
       sockets.latest.drop();

@@ -1,9 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
-import { EmptyState } from '@/shared/components/EmptyState';
-import { ErrorState } from '@/shared/components/ErrorState';
+import { ListStatus } from '@/shared/components/ListStatus';
 import { Panel } from '@/shared/components/Panel';
-import { Skeleton } from '@/shared/components/ui/skeleton';
 import type { AppError } from '@/shared/api/errors';
 
 /**
@@ -33,6 +31,15 @@ export interface LoadedListProps {
 
   onRetry(): void;
 
+  /** What goes above the rows — a search box — shown only with the content. */
+  readonly before?: React.ReactNode;
+
+  /** The next step out of the empty state, as something to press. */
+  readonly emptyAction?: React.ReactNode;
+
+  /** What goes below the panel's state, whichever it is — a way to get more into the list. */
+  readonly footer?: React.ReactNode;
+
   /** The `<li>` elements. Rendered only when there is something to show. */
   readonly children: React.ReactNode;
 }
@@ -55,27 +62,38 @@ export function LoadedList({
   error,
   isEmpty,
   onRetry,
+  emptyAction,
+  before,
+  footer,
   children,
 }: LoadedListProps): React.JSX.Element {
   const { t } = useTranslation();
 
   return (
     <Panel title={t(keys.title)} description={t(keys.description)}>
-      {isLoading && <Skeleton className="h-24 w-full" aria-label={t(keys.loading)} />}
-
-      {!isLoading && error !== null && <ErrorState error={error} onRetry={onRetry} />}
-
-      {!isLoading && error === null && isEmpty && (
-        <EmptyState title={t(keys.emptyTitle)} description={t(keys.emptyDescription)} />
-      )}
+      <ListStatus
+        isLoading={isLoading}
+        loadingLabel={t(keys.loading)}
+        error={error}
+        onRetry={onRetry}
+        isEmpty={isEmpty}
+        emptyTitle={t(keys.emptyTitle)}
+        emptyDescription={t(keys.emptyDescription)}
+        emptyAction={emptyAction}
+      />
 
       {!isLoading && error === null && !isEmpty && (
-        // Labelled by the same key as the panel: a list a screen reader reaches without a name is
-        // a list it announces as "list".
-        <ul className="flex flex-col gap-2" aria-label={t(keys.title)}>
-          {children}
-        </ul>
+        <>
+          {before}
+          {/* Labelled by the same key as the panel: a list a screen reader reaches without a name is
+              a list it announces as "list". */}
+          <ul className="flex flex-col gap-2" aria-label={t(keys.title)}>
+            {children}
+          </ul>
+        </>
       )}
+
+      {footer}
     </Panel>
   );
 }

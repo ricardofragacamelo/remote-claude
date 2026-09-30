@@ -8,27 +8,22 @@ import { useNavigate } from '@tanstack/react-router';
  * same callback for it. Built in two places, the two drift: one of them ends up with a link the
  * other does not reproduce. Each answer is **stable** across renders, because the features that
  * take them rebuild a subscription whenever they change.
+ *
+ * There is no way to a session or to a conversation of the history any more: the live session is in
+ * the tab of its folder, and the history comes back with the Sessions view of plan 08
+ * ([06 · D-07](../../../docs/plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)).
  */
 
-/** To a live session. */
-export function useOpenSession(): (sessionId: string) => void {
+/**
+ * To a folder, in the workbench — the folder in the search, never in the path
+ * ([06 · D-06](../../../docs/plans/06-workbench/decisions.md#d-06--a-url-do-workbench)).
+ */
+export function useOpenFolder(): (folder: string) => void {
   const navigate = useNavigate();
 
   return useCallback(
-    (sessionId: string) => {
-      void navigate({ to: '/sessions/$sessionId', params: { sessionId } });
-    },
-    [navigate],
-  );
-}
-
-/** To one conversation of the history — the whole of it, the part no ring buffer held included. */
-export function useOpenConversation(): (conversationId: string) => void {
-  const navigate = useNavigate();
-
-  return useCallback(
-    (conversationId: string) => {
-      void navigate({ to: '/history/$conversationId', params: { conversationId } });
+    (folder: string) => {
+      void navigate({ to: '/workbench', search: { folder } });
     },
     [navigate],
   );

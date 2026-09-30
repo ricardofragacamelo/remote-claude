@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useStore } from 'zustand';
 
 import type { AppError } from '@/shared/api/errors';
 import { wsClient } from '@/shared/api/ws';
 import type { ConnectionStatus } from '@/shared/api/ws-client';
-import { useSessionFrames } from '@/shared/hooks/useSessionFrames';
+import { useConnectionStatus } from '@/shared/hooks/useConnectionStatus';
 import { fetchHistoryPage } from '../services/history.service';
 import {
   closeSession,
@@ -13,10 +14,12 @@ import {
   setSessionPermissionMode,
   startSession,
 } from '../services/live-session.service';
-import { useLiveSessionStore } from '../store/live-session.store';
+import { createLiveSessionStore, liveSessionStoreOf } from '../store/live-session.store';
+import type { LiveSessionStore } from '../store/live-session.store';
 import { useOwnedSessionsStore } from '../store/owned-sessions.store';
 import type { Conversation } from '../types/live-session';
 import { useCommandRefusal } from './useCommandRefusal';
+import { useLiveSessionAttachment } from './useLiveSessionAttachment';
 
 /** Where the history under the stream is: arriving, failed, or not being waited for. */
 export interface HistoryStatus {
@@ -72,16 +75,17 @@ export interface LiveSession extends Conversation {
  * ([D-10](../../../../../docs/plans/01-live-session/decisions.md)).
  */
 export function useLiveSession(sessionId: string | null): LiveSession {
-  const state = useLiveSessionStore();
-  const [connection, setConnection] = useState<ConnectionStatus>('idle');
-
   // A session this browser opened is one it may close. Anything else it may only watch, and the
   // control says so rather than disappearing — hiding an authorisation rule makes it look like a
   // bug the first time somebody hits it. Kept in a store, because the screen that opened it is
   // usually not this one.
   const owned = useOwnedSessionsStore((store) => store.owned);
+  const connection = useConnectionStatus();
 
-  useEffect(() => wsClient.onStatus(setConnection), []);
+  // The store of **this** session. Arriving at one this browser did not start marks it partial:
+  // the replay is whatever survived, and that is exactly what the label is for.
+  const store = storeOf(sessionId, owned);
+  const state = useStore(store);
 
   // `session.start` **opens** the session it is about, so `session.started` arrives before
   // anything could have attached to it.
@@ -102,27 +106,11 @@ export function useLiveSession(sessionId: string | null): LiveSession {
     [],
   );
 
-  useEffect(() => {
-    if (sessionId === null) {
-      return;
-    }
+  // Held while the screen is up — and shared with the folder tab that keeps it attached when the
+  // screen is not, so coming back sends nothing on the wire (plan 06, S-181).
+  useLiveSessionAttachment(sessionId);
 
-    // Opened as partial whenever the screen arrived at a session it did not start: the replay is
-    // whatever survived, and that is exactly what the label is for.
-    useLiveSessionStore.getState().open(sessionId, { partial: !owned.includes(sessionId) });
-  }, [sessionId, owned]);
-
-  useSessionFrames(sessionId, {
-    apply: (frame) => {
-      useLiveSessionStore.getState().apply(frame);
-    },
-    reset: (claudeSessionId) => {
-      useLiveSessionStore.getState().reset(claudeSessionId);
-    },
-    lastSeq: () => useLiveSessionStore.getState().lastSeq,
-  });
-
-  const history = useHistoryUnderStream(state.historyFrom, state.conversationId);
+  const history = useHistoryUnderStream(store, state.historyFrom, state.conversationId);
   const { error: promptError, expect: expectRefusal } = useCommandRefusal();
 
   const start = useCallback((workspacePath: string) => {
@@ -199,7 +187,11 @@ interface HistoryFailure {
  * is **merged** by message id under whatever the stream brought meanwhile (S-15). An answer for a
  * conversation the store no longer waits on lands nowhere.
  */
-function useHistoryUnderStream(from: string | null, conversationId: string | null): HistoryStatus {
+function useHistoryUnderStream(
+  store: LiveSessionStore,
+  from: string | null,
+  conversationId: string | null,
+): HistoryStatus {
   const [attempt, setAttempt] = useState(0);
   const [failure, setFailure] = useState<HistoryFailure | null>(null);
 
@@ -213,7 +205,7 @@ function useHistoryUnderStream(from: string | null, conversationId: string | nul
     void fetchHistoryPage(from, null)
       .then((page) => {
         if (current) {
-          useLiveSessionStore.getState().hydrate(from, page.events);
+          store.getState().hydrate(from, page.events);
         }
       })
       .catch((error: AppError) => {
@@ -225,7 +217,7 @@ function useHistoryUnderStream(from: string | null, conversationId: string | nul
     return () => {
       current = false;
     };
-  }, [from, attempt]);
+  }, [store, from, attempt]);
 
   const failed = failure !== null && failure.from === from && failure.attempt === attempt;
 
@@ -237,4 +229,14 @@ function useHistoryUnderStream(from: string | null, conversationId: string | nul
       setAttempt((previous) => previous + 1);
     }, []),
   };
+}
+
+/** What a screen with no session reads: nothing, attached to nothing. */
+const DETACHED = createLiveSessionStore(null);
+
+/** The store of the session on screen — marked partial when this browser did not start it. */
+function storeOf(sessionId: string | null, owned: readonly string[]): LiveSessionStore {
+  return sessionId === null
+    ? DETACHED
+    : liveSessionStoreOf(sessionId, { partial: !owned.includes(sessionId) });
 }

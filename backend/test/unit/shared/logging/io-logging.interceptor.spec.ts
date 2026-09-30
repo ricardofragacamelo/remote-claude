@@ -1,9 +1,12 @@
+import { EventEmitter } from 'node:events';
+
 import { describe, expect, it } from 'vitest';
 import { of, throwError } from 'rxjs';
 import type { CallHandler, ExecutionContext } from '@nestjs/common';
 
 import { IoLoggingInterceptor } from '@shared/logging/io-logging.interceptor';
 import { OmitFromLog } from '@shared/logging/omit-from-log.decorator';
+import { runWithTrace } from '@shared/logging/trace-context';
 import { RecordingLogger } from '../../../support/fakes/recording-logger';
 
 /** A route method, optionally marked with the fields its log leaves out. */
@@ -17,14 +20,27 @@ function route(...omitted: readonly string[]): () => void {
   return method;
 }
 
+/** The response Express hands the interceptor: a status, whether it was written, and its events. */
+class FakeResponse extends EventEmitter {
+  statusCode = 201;
+  writableEnded = false;
+
+  /** What the exception filter does after the interceptor: sets the status, and writes. */
+  written(status: number): void {
+    this.statusCode = status;
+    this.writableEnded = true;
+    this.emit('close');
+  }
+}
+
 /** An execution context of a given transport, carrying a request and a response. */
 function contextOf(
   type: 'http' | 'ws',
   body: unknown = { nonce: 'n' },
   handlerMethod: () => void = route(),
+  response: FakeResponse = new FakeResponse(),
 ): ExecutionContext {
   const request = { method: 'POST', originalUrl: '/auth/session', body };
-  const response = { statusCode: 201 };
 
   return {
     getType: () => type,
@@ -57,17 +73,83 @@ describe('IoLoggingInterceptor', () => {
 
   it('closes the pair even when the handler throws, so no request is left hanging', async () => {
     const log = new RecordingLogger();
+    const response = new FakeResponse();
 
     await new Promise((resolve) =>
       new IoLoggingInterceptor(log.logger)
         .intercept(
-          contextOf('http'),
+          contextOf('http', undefined, undefined, response),
           handlerOf(() => throwError(() => new Error('boom'))),
         )
         .subscribe({ error: resolve }),
     );
+    response.written(404);
 
-    expect(log.withOp('http.response')[0]?.['msg']).toBe('http response failed');
+    expect(log.withOp('http.response')).toEqual([
+      expect.objectContaining({ msg: 'http response failed', httpStatus: 404 }),
+    ]);
+  });
+
+  it('logs a failure with the status the error became, not the default before it was written', async () => {
+    const log = new RecordingLogger();
+    const response = new FakeResponse();
+    response.statusCode = 200;
+
+    await new Promise((resolve) =>
+      new IoLoggingInterceptor(log.logger)
+        .intercept(
+          contextOf('http', undefined, undefined, response),
+          handlerOf(() => throwError(() => new Error('refused'))),
+        )
+        .subscribe({ error: resolve }),
+    );
+
+    // The exception filter has not written anything yet: nothing is said about the response.
+    expect(log.withOp('http.response')).toEqual([]);
+    response.written(403);
+    expect(log.withOp('http.response')[0]).toMatchObject({ httpStatus: 403 });
+  });
+
+  it('logs at once a failure whose response was already written', async () => {
+    const log = new RecordingLogger();
+    const response = new FakeResponse();
+    response.statusCode = 500;
+    response.writableEnded = true;
+
+    await new Promise((resolve) =>
+      new IoLoggingInterceptor(log.logger)
+        .intercept(
+          contextOf('http', undefined, undefined, response),
+          handlerOf(() => throwError(() => new Error('late'))),
+        )
+        .subscribe({ error: resolve }),
+    );
+
+    expect(log.withOp('http.response')[0]).toMatchObject({ httpStatus: 500 });
+  });
+
+  it('keeps the trace of the request on a failure logged when the response is written', async () => {
+    const log = new RecordingLogger();
+    const response = new FakeResponse();
+
+    await runWithTrace(
+      { traceId: 'trace-failed' },
+      () =>
+        new Promise((resolve) =>
+          new IoLoggingInterceptor(log.logger)
+            .intercept(
+              contextOf('http', undefined, undefined, response),
+              handlerOf(() => throwError(() => new Error('boom'))),
+            )
+            .subscribe({ error: resolve }),
+        ),
+    );
+    response.written(401);
+
+    expect(log.withOp('http.response')[0]).toMatchObject({
+      traceId: 'trace-failed',
+      httpStatus: 401,
+    });
   });
 
   it('redacts the body before writing it', async () => {

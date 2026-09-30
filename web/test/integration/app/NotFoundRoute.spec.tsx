@@ -53,3 +53,20 @@ describe('an address nobody answers — plan 06, S-07', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 });
+
+describe('the addresses plan 06 removed — D-07, S-150', () => {
+  it.each(['/sessions/01J0ABCDEFGHJKMNPQRSTVWXYZ', '/history?workspacePath=%2Fsrv', '/history/c1'])(
+    'answers %s, pasted from an old link, with the translated not-found',
+    async (href) => {
+      const t = translator('pt-BR');
+
+      mountAt(href, 'pt-BR');
+
+      expect(
+        await screen.findByRole('heading', { name: t('common.notFound.title') }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: t('common.notFound.home') })).toBeVisible();
+    },
+    15_000,
+  );
+});

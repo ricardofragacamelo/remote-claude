@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useStore } from 'zustand';
 
 import type { AppError } from '@/shared/api/errors';
 import { wsClient } from '@/shared/api/ws';
 import { fetchCheckpoints, incompleteRewindOf, rewindFiles } from '../services/checkpoint.service';
-import { useLiveSessionStore } from '../store/live-session.store';
+import { liveSessionStoreOf } from '../store/live-session.store';
 import type { Checkpoint, RewindOutcome, UndoAvailability } from '../types/checkpoint';
 import type { SessionStatus } from '../types/live-session';
 import { useCommandRefusal } from './useCommandRefusal';
@@ -54,8 +55,9 @@ export interface Undo {
  * and the refusal is there for the race the status cannot see — the other device's undo.
  */
 export function useUndo(sessionId: string): Undo {
-  const status = useLiveSessionStore((state) => state.status);
-  const outcome = useLiveSessionStore((state) => state.lastRewind);
+  const store = liveSessionStoreOf(sessionId);
+  const status = useStore(store, (state) => state.status);
+  const outcome = useStore(store, (state) => state.lastRewind);
   const queryClient = useQueryClient();
   const availability = availabilityOf(status);
   const { error: refusal, isAwaiting, expect, inFlight, settle } = useCommandRefusal();
@@ -73,7 +75,7 @@ export function useUndo(sessionId: string): Undo {
   // the store rather than on a render, because what matters is the change, not the value.
   useEffect(
     () =>
-      useLiveSessionStore.subscribe((state, previous) => {
+      store.subscribe((state, previous) => {
         if (state.lastRewind !== previous.lastRewind) {
           settle();
         }
@@ -82,7 +84,7 @@ export function useUndo(sessionId: string): Undo {
           void queryClient.invalidateQueries({ queryKey: checkpointKeys.of(sessionId) });
         }
       }),
-    [queryClient, sessionId, settle],
+    [queryClient, sessionId, settle, store],
   );
 
   useEffect(

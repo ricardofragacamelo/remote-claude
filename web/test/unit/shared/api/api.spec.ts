@@ -184,6 +184,24 @@ describe('ApiClient', () => {
     expect(requestOf(http).signal).toBe(controller.signal);
   });
 
+  it('replaces with PUT, sending the body as JSON', async () => {
+    await new ApiClient(BASE, anonymous, http as unknown as typeof fetch).put('/workspaces/pin', {
+      pinned: true,
+    });
+
+    expect(requestOf(http).method).toBe('PUT');
+    expect(requestOf(http).body).toBe('{"pinned":true}');
+    expect(headersOf(http)['content-type']).toBe('application/json');
+  });
+
+  it('removes with DELETE, and sends no body at all', async () => {
+    await new ApiClient(BASE, anonymous, http as unknown as typeof fetch).delete('/workspaces/x');
+
+    expect(requestOf(http).method).toBe('DELETE');
+    expect(requestOf(http).body).toBeUndefined();
+    expect(headersOf(http)['content-type']).toBeUndefined();
+  });
+
   it('defaults to GET when the caller names no method', async () => {
     await new ApiClient(BASE, anonymous, http as unknown as typeof fetch).request('/health');
 

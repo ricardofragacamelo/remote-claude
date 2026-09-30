@@ -24,6 +24,16 @@ export interface PromptComposerProps {
    * the text, so the composer stays the one owner of what is being written.
    */
   readonly menu?: ((insert: (text: string) => void) => React.ReactNode) | undefined;
+
+  /**
+   * What was being written when the box was last on screen. The box is the owner while it is up;
+   * this is only where it starts — a folder tab keeps it, so leaving the tab and coming back does
+   * not lose the half-written prompt (plan 06, S-99).
+   */
+  readonly draft?: string | undefined;
+
+  /** Told of every change to what is being written, sent or not. */
+  readonly onDraftChange?: ((text: string) => void) | undefined;
 }
 
 /**
@@ -44,15 +54,18 @@ export function PromptComposer({
   onSubmit,
   error = null,
   menu,
+  draft = '',
+  onDraftChange,
 }: PromptComposerProps): React.JSX.Element {
   const { t } = useTranslation();
   const { register, handleSubmit, reset, setValue, setFocus, formState } = useForm<PromptForm>({
     resolver: zodResolver(promptSchema),
-    defaultValues: { text: '' },
+    defaultValues: { text: draft },
   });
 
   const insert = (text: string): void => {
     setValue('text', text, { shouldDirty: true });
+    onDraftChange?.(text);
     setFocus('text');
   };
 
@@ -67,6 +80,7 @@ export function PromptComposer({
           void handleSubmit((values) => {
             onSubmit(values.text.trim());
             reset({ text: '' });
+            onDraftChange?.('');
           })(event);
         }}
       >
@@ -79,7 +93,11 @@ export function PromptComposer({
           className="min-h-24 rounded-lg border border-border bg-transparent p-2 text-sm"
           placeholder={t('session.composer.placeholder')}
           aria-invalid={formState.errors.text !== undefined}
-          {...register('text')}
+          {...register('text', {
+            onChange: (event: { target: { value: string } }) => {
+              onDraftChange?.(event.target.value);
+            },
+          })}
         />
 
         {error !== null && <ErrorState error={error} />}

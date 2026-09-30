@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useStore } from 'zustand';
 
 import { wsClient } from '@/shared/api/ws';
-import { useSessionFrames } from '@/shared/hooks/useSessionFrames';
 import { sendAnswer, sendExtension } from '../services/permission.service';
-import { usePermissionQueueStore } from '../store/permission.store';
+import { createPermissionQueueStore, permissionQueueOf } from '../store/permission.store';
+import { usePermissionAttachment } from './usePermissionAttachment';
 import type {
   PermissionDecision,
   PermissionOutcome,
@@ -41,29 +42,19 @@ const REFUSED_HERE = 'refused from the web client';
  * about nothing.
  */
 export function usePermissionQueue(sessionId: string | null): PermissionQueue {
-  const pending = usePermissionQueueStore((state) => state.pending);
-  const settled = usePermissionQueueStore((state) => state.settled);
-  const apply = usePermissionQueueStore((state) => state.apply);
-  const reset = usePermissionQueueStore((state) => state.reset);
-  const markAnswering = usePermissionQueueStore((state) => state.markAnswering);
-  const releaseAnswering = usePermissionQueueStore((state) => state.releaseAnswering);
-  const expire = usePermissionQueueStore((state) => state.expire);
+  const store = sessionId === null ? DETACHED : permissionQueueOf(sessionId);
+  const pending = useStore(store, (state) => state.pending);
+  const settled = useStore(store, (state) => state.settled);
+  const markAnswering = useStore(store, (state) => state.markAnswering);
+  const releaseAnswering = useStore(store, (state) => state.releaseAnswering);
+  const expire = useStore(store, (state) => state.expire);
 
   const [now, setNow] = useState(() => Date.now());
 
-  useEffect(() => {
-    reset();
-  }, [sessionId, reset]);
-
   // A subscription of its own, beside the conversation's. Both watch the same session and neither
-  // knows the other exists; the transport attaches once and re-delivers to both.
-  useSessionFrames(sessionId, {
-    apply,
-    reset,
-    // Always from the beginning of what the buffer has: a question is a `request` frame and
-    // carries no `seq`, so this queue has no position of its own to resume from.
-    lastSeq: () => 0,
-  });
+  // knows the other exists; the transport attaches once and re-delivers to both. Shared with the
+  // folder tab that keeps the session attached while it is not on screen (plan 06, S-181).
+  usePermissionAttachment(sessionId);
 
   useEffect(() => {
     if (pending.length === 0) {
@@ -127,3 +118,6 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
 
   return { pending, settled, remainingMs, answer, extend };
 }
+
+/** What a screen with no session reads: an empty queue, attached to nothing. */
+const DETACHED = createPermissionQueueStore();

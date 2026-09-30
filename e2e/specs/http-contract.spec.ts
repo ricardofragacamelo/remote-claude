@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 
+import { linesOfTrace } from '../fixtures/backend-log';
 import { environment } from '../fixtures/environment';
 
 /**
@@ -109,5 +110,20 @@ test.describe('S-19 — the status line carries the outcome, never the body alon
     });
 
     expect(response.headers()['x-trace-id']).toBe(traceId);
+  });
+
+  test('a refusal is logged with the status it was answered with, not the default before it', async ({
+    request,
+  }) => {
+    const traceId = '01JBOOTSTRAPE2ETRACE000002';
+    const response = await request.post(`${environment.backendUrl}/auth/refresh`, {
+      headers: { 'x-trace-id': traceId },
+    });
+    expect(response.status()).toBe(401);
+
+    // The exit half of the edge is written once the response is — the log may trail the answer.
+    await expect
+      .poll(() => linesOfTrace(traceId).filter((line) => line['op'] === 'http.response'))
+      .toEqual([expect.objectContaining({ msg: 'http response failed', httpStatus: 401 })]);
   });
 });

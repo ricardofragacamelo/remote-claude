@@ -3,12 +3,16 @@ import { useCallback, useEffect } from 'react';
 import { navigation } from '@/shared/lib/navigation';
 import { logger } from '@/shared/logging/logger';
 import { beginLogin, endSession, providerLogoutUrl, renewSession } from '../services/auth.service';
+import { displayNameOf } from '../services/identity';
 import { renewalDelay, useAuthStore } from '../store/auth.store';
 import type { AuthSession } from '../types/session';
 
 /** What a component knows about the sign-in. Not one word of it mentions OIDC. */
 export interface Auth {
   readonly userId: string | null;
+
+  /** What to call whoever is signed in — for the account menu, never for a decision. */
+  readonly displayName: string | null;
   readonly isAuthenticated: boolean;
   readonly isResolving: boolean;
   readonly accessToken: string | null;
@@ -101,6 +105,7 @@ export function useAuth(): Auth {
 
   return {
     userId: session?.userId ?? null,
+    displayName: session === null ? null : displayNameOf(session),
     isAuthenticated: status === 'authenticated',
     isResolving: status === 'unknown',
     accessToken: session?.accessToken ?? null,

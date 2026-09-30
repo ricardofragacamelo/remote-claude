@@ -1,0 +1,13 @@
+{
+  "id": "06·S-163",
+  "title": "the addresses that stay open their screen — the filtered trail, a rule — and the ones D-07 removed fall on the translated \"not found\"",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "removed": [
+      "/sessions/01J0ABCDEFGHJKMNPQRSTVWXYZ",
+      "/history",
+      "/history/6d0f7c52-8a43-4e57-9b1c-2f5e8d7a9c10"
+    ],
+    "notFound": { "en": "Nothing lives at this address", "pt-BR": "Não há nada neste endereço" }
+  }
+}

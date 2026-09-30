@@ -1,0 +1,9 @@
+{
+  "id": "06·S-160",
+  "title": "a folder opens from the File menu and from the palette; a tab whose folder leaves the allowlist is told as a toast, and kept in the notification centre",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "command": "Open folder…",
+    "notice": "is no longer allowed on this machine. Its tab stays, but nothing opens in it."
+  }
+}

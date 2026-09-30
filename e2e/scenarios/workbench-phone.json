@@ -1,0 +1,10 @@
+{
+  "id": "06·S-161",
+  "title": "on a 360 px phone: the tab selector, one view at a time, the navigation menu, no horizontal scroll, targets of 44 × 44 px",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "viewport": { "width": 360, "height": 740 },
+    "target": 44,
+    "views": ["Explorer", "Editor", "Claude", "Panel"]
+  }
+}

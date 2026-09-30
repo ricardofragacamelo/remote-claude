@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { AUDIT_DECISIONS, AuditTrail } from '@/features/audit';
 import type { AuditDecision, AuditFilters } from '@/features/audit';
-import { Screen, SignedIn } from './Screen';
+import { ScreenFrame } from '@/shared/components/ScreenFrame';
+import { useShellShortcuts } from './screen-shortcuts';
 
 /** A search parameter as a non-empty string, or nothing. */
 function text(value: unknown): string | undefined {
@@ -45,20 +46,6 @@ export function readAuditSearch(search: Readonly<Record<string, unknown>>): Audi
 }
 
 /**
- * The trail's own address, filters included — where a sign-in comes back to.
- *
- * `/audit` alone would bring somebody who opened a filtered trail signed out back to the whole of
- * it: the link would work only for whoever was already signed in, which is not what a link is.
- */
-export function auditLocation(filters: AuditFilters): string {
-  const search = new URLSearchParams(
-    Object.entries(filters).filter((entry): entry is [string, string] => entry[1] !== undefined),
-  ).toString();
-
-  return search === '' ? '/audit' : `/audit?${search}`;
-}
-
-/**
  * `/audit` — "what ran on my machine without asking me?"
  *
  * The filters are in the **search**, not in state: a filtered trail pasted on another device is the
@@ -66,8 +53,9 @@ export function auditLocation(filters: AuditFilters): string {
  * answered, the rule opens — the second of the two ways in to the rules that D-04 requires.
  */
 export function AuditRoute(): React.JSX.Element {
+  const shortcuts = useShellShortcuts();
   const { t } = useTranslation();
-  const filters = useSearch({ from: '/audit' });
+  const filters = useSearch({ from: '/_frame/audit' });
   const navigate = useNavigate();
 
   const filter = useCallback(
@@ -85,16 +73,13 @@ export function AuditRoute(): React.JSX.Element {
   );
 
   return (
-    <Screen
+    <ScreenFrame
       title={t('audit.screen.title')}
-      links={[
-        { to: '/', label: t('audit.screen.back') },
-        { to: '/rules', label: t('rules.screen.open') },
-      ]}
+      purpose={t('audit.screen.purpose')}
+      help="audit.help"
+      shortcuts={shortcuts}
     >
-      <SignedIn returnTo={auditLocation(filters)}>
-        <AuditTrail filters={filters} onFilter={filter} onOpenRule={openRule} />
-      </SignedIn>
-    </Screen>
+      <AuditTrail filters={filters} onFilter={filter} onOpenRule={openRule} />
+    </ScreenFrame>
   );
 }

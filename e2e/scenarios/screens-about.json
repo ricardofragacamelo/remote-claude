@@ -1,0 +1,9 @@
+{
+  "id": "06·S-148",
+  "title": "About shows the versions the running backend reads, ready to copy, reached from the manage menu",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "components": ["Web", "Backend", "Agent SDK", "Claude CLI", "Node"],
+    "unreadable": "could not be read"
+  }
+}

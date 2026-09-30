@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
-import { usePermissionQueueStore } from '@/features/permission';
+import { forgetPermissionQueues, permissionQueueOf } from '@/features/permission';
 import { usePermissionQueue } from '@/features/permission/hooks/usePermissionQueue';
 import { setAccessToken } from '@/shared/api/credentials';
 import { wsClient } from '@/shared/api/ws';
@@ -50,7 +50,7 @@ describe('the permission queue hook', () => {
   let sockets: InstalledWebSocket;
 
   beforeEach(() => {
-    usePermissionQueueStore.getState().reset();
+    forgetPermissionQueues();
     setAccessToken('token-1');
     sockets = installFakeWebSocket();
   });
@@ -111,7 +111,7 @@ describe('the permission queue hook', () => {
     expect(result.current.pending).toHaveLength(1);
 
     const seen: boolean[] = [];
-    const unsubscribe = usePermissionQueueStore.subscribe((state) => {
+    const unsubscribe = permissionQueueOf(SESSION).subscribe((state) => {
       seen.push(state.pending[0]?.isAnswering ?? false);
     });
 

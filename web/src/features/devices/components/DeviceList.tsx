@@ -1,3 +1,6 @@
+import { useTranslation } from 'react-i18next';
+
+import { LearnMore } from '@/shared/components/LearnMore';
 import { LoadedList } from '@/shared/components/LoadedList';
 import type { ListKeys } from '@/shared/components/LoadedList';
 import { useDevices } from '../hooks/useDevices';
@@ -25,6 +28,7 @@ const KEYS: ListKeys = {
  * It imports a hook, and nothing else: no service, no `api.ts`.
  */
 export function DeviceList(): React.JSX.Element {
+  const { t } = useTranslation();
   const { isLoading, error, devices, pendingId, approve, revoke, reload } = useDevices();
 
   return (
@@ -34,6 +38,7 @@ export function DeviceList(): React.JSX.Element {
       error={error}
       isEmpty={devices.length === 0}
       onRetry={reload}
+      emptyAction={<LearnMore section="what" topic={t('help.topic.devices')} />}
     >
       {devices.map((device) => (
         <DeviceRow

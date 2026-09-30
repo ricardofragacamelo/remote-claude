@@ -1,0 +1,9 @@
+{
+  "id": "06·S-158",
+  "title": "two folders in two tabs: switching keeps each one's state, closing one leaves the other and its sessions, a reload finds the set, the order and the active one",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "prompt": "Where are you working? [fixture:cwd-turn]",
+    "sessionsCarryOn": "The Claude sessions of these folders keep running on the machine: closing a tab does not end them."
+  }
+}

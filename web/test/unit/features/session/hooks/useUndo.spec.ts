@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
-import { useLiveSessionStore } from '@/features/session';
+import { liveSessionStoreOf } from '@/features/session';
 import { useUndo } from '@/features/session/hooks/useUndo';
 import type { SessionStatus } from '@/features/session';
 import type { Envelope } from '@remote-claude/contracts';
@@ -21,7 +21,7 @@ const PATH = `/sessions/${SESSION}/checkpoints`;
 
 const apply = (type: string, seq: number, payload: Record<string, unknown>): void => {
   act(() => {
-    useLiveSessionStore
+    liveSessionStoreOf(SESSION)
       .getState()
       .apply(hubEvent(SESSION, type, seq, payload) as unknown as Envelope);
   });
@@ -34,7 +34,6 @@ describe('useUndo — plan 04, B-19', () => {
   let socket: LiveSocket;
 
   beforeEach(() => {
-    useLiveSessionStore.getState().open(SESSION);
     socket = aLiveSocket();
     socket.connect();
   });
@@ -65,7 +64,7 @@ describe('useUndo — plan 04, B-19', () => {
     (status) => {
       routeApi({ [PATH]: [{ checkpoints: [] }] });
       act(() => {
-        useLiveSessionStore.setState({ status });
+        liveSessionStoreOf(SESSION).setState({ status });
       });
       const { result } = renderHook(() => useUndo(SESSION), { wrapper: providers() });
 

@@ -35,7 +35,7 @@ chegam vazios — **placeholders com estado vazio traduzido** — e são preench
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-17 — Sistema visual: densidade, tokens, tema e ícones 🔲
+### B-17 — Sistema visual: densidade, tokens, tema e ícones ✅
 
 O que torna a ferramenta "profissional e organizada" é consistência, e consistência só existe se
 for verificada. Critérios de aceite, escritos em [web/03](../../architecture/web/03-ui-system.md#tema)
@@ -60,7 +60,13 @@ Onde a regra não é verificada por máquina ainda — cor literal em classe (`b
 em componente de feature, ícone de outra biblioteca —, esta task acrescenta a verificação ao lint
 ([regra 9 do AGENTS.md](../../../AGENTS.md#regras-que-valem-sempre-não-precisam-de-leitura-adicional)).
 
-### B-18 — Moldura do app e navegação global: uma tela por assunto 🔲
+> **Na execução:** `command`, `menubar` e `sonner` nascem na F4 e `select` na F5, com quem os usa;
+> `scroll-area` não foi preciso ([D-27](decisions.md#d-27--o-que-a-f3-deixa-para-a-f4-e-a-f5)). O
+> lint ganhou `no-literal-colour` e `icons-only-lucide`
+> ([09-code-quality](../../architecture/shared/09-code-quality.md)). O contraste AA nos dois temas é
+> medido pelo axe no navegador, na F6 (S-162); aqui o axe roda sobre cada tela em jsdom.
+
+### B-18 — Moldura do app e navegação global: uma tela por assunto ✅
 
 A moldura substitui o `Screen` de coluna única em **todas** as rotas. Navegação global à esquerda
 (fora das abas de pasta), na ordem:
@@ -82,7 +88,12 @@ diagnóstico** · **Configuração do Claude** · **Configurações**
 - abaixo de `md`, a navegação vira um menu (`sheet`) com foco preso e `Esc` fecha
   ([D-08](decisions.md#d-08--o-workbench-em-tela-pequena)).
 
-### B-19 — Moldura de tela: cabeçalho, propósito e ajuda 🔲
+> **Na execução:** a moldura e o portão de login moram num layout sem caminho (`_frame`), e o
+> `returnTo` é o endereço na tela. **Workbench** leva à aba ativa ([D-25](decisions.md#d-25--quando--passa-a-levar-à-aba-ativa),
+> S-187), e `/` segue a boas-vindas até a B-33. Dispositivos, Logs e diagnóstico e Configurações se
+> registram com as suas telas (F5); o menu de gerenciar não aparece enquanto ninguém registra nele.
+
+### B-19 — Moldura de tela: cabeçalho, propósito e ajuda ✅
 
 Componente compartilhado em `shared/components/` que toda tela fora do workbench usa — as deste
 plano (Dispositivos, Logs e diagnóstico, Configurações, Sobre) e as dos planos
@@ -101,10 +112,15 @@ plano (Dispositivos, Logs e diagnóstico, Configurações, Sobre) e as dos plano
 - corpo com largura e espaçamento da tela; os quatro estados por conta de quem a usa;
 - o estado do painel (aberto/fechado) é conveniência por visitante, com `try/catch`.
 
+> **Na execução:** a ajuda abre pelo ícone; o atalho e a paleta chegam com o registro da B-23, e os
+> atalhos listados vêm da tela até lá ([D-27](decisions.md#d-27--o-que-a-f3-deixa-para-a-f4-e-a-f5)).
+> Auditoria, Regras, a regra, a sessão, o histórico e a boas-vindas já usam a moldura, com a ajuda
+> mínima que o conteúdo de hoje sustenta; a completa é da B-34.
+
 É o que faz as telas parecerem uma família em vez de páginas soltas — e o que impede cada plano
 seguinte de inventar o seu cabeçalho.
 
-### B-20 — Abas de pasta 🔲
+### B-20 — Abas de pasta ✅
 
 Cada aba é um **workbench completo de uma pasta**, várias abertas ao mesmo tempo:
 
@@ -129,7 +145,12 @@ Cada aba é um **workbench completo de uma pasta**, várias abertas ao mesmo tem
   traduzida diz qual é e que fechar uma aba não encerra as sessões dela;
 - em tela pequena as abas viram um seletor com as mesmas ações.
 
-### B-21 — A casca do workbench 🔲
+> **Na execução:** a conversa e a fila de permissão passaram a ser **um store por sessão**, com o
+> anexo contado por dono — é o que deixa a sessão da aba inativa anexada sem reanexar ao voltar
+> ([D-26](decisions.md#d-26--um-store-por-sessão-e-anexos-com-dono)). A pergunta de fechar só fecha
+> pelos botões ou `Esc` (S-188). O watcher e o polling da D-11 são dos planos 07 e 08.
+
+### B-21 — A casca do workbench ✅
 
 Dentro de cada aba, a anatomia do VS Code — e a regra que o usuário confirmou: **o chat do Claude
 e o sistema de arquivos e editor ficam na mesma aba**. Em `md+`, explorer (side bar), área de editor
@@ -152,7 +173,12 @@ tela nem uma rota própria. Abaixo de `md`, viram views alternáveis dentro da m
   socket (e a mudança quando cai), pasta, idioma, tema, sino de notificações (B-26);
 - placeholders com estado vazio que diz o que vai morar ali, nunca uma área em branco sem motivo.
 
-### B-22 — O workbench abaixo de `md` 🔲
+> **Na execução:** side bar e painel alternam por botões com tooltip no topo do workbench; o atalho e a
+> paleta são da B-23, e o sino da status bar, da B-26 ([D-27](decisions.md#d-27--o-que-a-f3-deixa-para-a-f4-e-a-f5)).
+> Iniciar uma sessão mantém o usuário na aba, com a sessão na secondary side bar; o e2e `limits` lê
+> a sessão de lá.
+
+### B-22 — O workbench abaixo de `md` ✅
 
 Conforme a [D-08](decisions.md#d-08--o-workbench-em-tela-pequena): uma view por vez, com barra de
 views embaixo (Explorer, Editor, Claude, Painel), abas de pasta como seletor no topo, navegação
@@ -163,7 +189,7 @@ store da aba serve os dois layouts — mudar a largura da janela não perde esta
 
 ## Cenários cobertos
 
-S-05, S-86…S-118, S-181.
+S-86…S-118, S-181, S-187…S-192. O S-05 foi para a B-33 ([D-25](decisions.md#d-25--quando--passa-a-levar-à-aba-ativa)).
 
 ---
 

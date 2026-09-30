@@ -97,7 +97,7 @@ export const BRACE = /\{\s*([A-Za-z0-9_]+)\s*\}/g;
 
 /**
  * @typedef {object} Problem
- * @property {'missing' | 'extra' | 'params' | 'orphan' | 'untranslated'} kind
+ * @property {'missing' | 'extra' | 'params' | 'orphan' | 'untranslated' | 'undeclared' | 'help'} kind
  * @property {string} key
  * @property {string} detail
  */
@@ -288,12 +288,149 @@ export function emittedMessageKeys(source) {
  * @returns {Problem[]}
  */
 export function findUntranslated(declared, emitted) {
-  return [...new Set(emitted)]
+  return absent(
+    declared,
+    emitted,
+    'untranslated',
+    'the backend sends it as a messageKey, and no catalogue translates it',
+  );
+}
+
+/**
+ * Keys a screen asks for by name that the catalogue never declared.
+ *
+ * `t('a.b.c')` with no `a.b.c` in the catalogue renders the dotted name, and nothing else in the
+ * check would say so: the orphan check reads the other direction. Only the static form counts — a
+ * key built at runtime covers a prefix, and a prefix is not a key (plan 06, S-84).
+ *
+ * @param {ReadonlyMap<string, string>} declared the source catalogue
+ * @param {Iterable<string>} named keys named in full in a `t()` call
+ * @returns {Problem[]}
+ */
+export function findUndeclared(declared, named) {
+  return absent(
+    declared,
+    named,
+    'undeclared',
+    'a screen asks for it by name, and no catalogue declares it',
+  );
+}
+
+/** The parts every screen frame's help panel reads, under the prefix the frame is given. */
+export const HELP_PARTS = ['what', 'states', 'notRecorded'];
+
+/**
+ * The components that hold a screen's help and take its prefix as `help`: the screen frame, and the
+ * help sheet of a screen that has no frame — the workbench.
+ */
+export const HELP_HOSTS = ['<ScreenFrame', '<HelpSheet'];
+
+/**
+ * The opening tag of each help host of a source — `<ScreenFrame …>`, `<HelpSheet …>` —, attributes
+ * and all.
+ *
+ * Read by walking it rather than by a pattern: an attribute can hold JSX or an arrow function, and
+ * their `>` is not the end of the tag. The end is the first `>` outside every `{…}`.
+ *
+ * @param {string} source
+ * @returns {string[]}
+ */
+function screenFramesIn(source) {
+  /** @type {string[]} */
+  const tags = [];
+
+  for (const host of HELP_HOSTS) {
+    let from = source.indexOf(host);
+
+    while (from !== -1) {
+      let depth = 0;
+      let at = from + host.length;
+
+      for (; at < source.length; at += 1) {
+        const char = source[at];
+        if (char === '{') depth += 1;
+        if (char === '}') depth -= 1;
+        if (char === '>' && depth === 0) break;
+      }
+
+      tags.push(source.slice(from, at + 1));
+      from = source.indexOf(host, at);
+    }
+  }
+
+  return tags;
+}
+
+/** `help="a.b"` or `help='a.b'` — the one form the check can read. */
+const HELP_LITERAL = /\bhelp=(?:"([A-Za-z0-9_.]+)"|'([A-Za-z0-9_.]+)')/;
+
+/**
+ * @typedef {object} ScreenHelp
+ * @property {Set<string>} keys every key the help panels of a source read
+ * @property {number} unreadable frames whose `help` is not a literal the check can read
+ */
+
+/**
+ * What the screen frames of a source need from the catalogue.
+ *
+ * The frame builds the keys of its help panel from the prefix it is given — `<help>.what`,
+ * `<help>.states`, `<help>.notRecorded` — so no `t('…')` names them, and without this the check
+ * would call them unused, and never notice one missing (plan 06, S-94). A prefix given as anything
+ * but a literal is a frame the check cannot vouch for, and is counted.
+ *
+ * @param {string} source
+ * @returns {ScreenHelp}
+ */
+export function screenHelpIn(source) {
+  /** @type {Set<string>} */
+  const keys = new Set();
+  let unreadable = 0;
+
+  for (const tag of screenFramesIn(source)) {
+    const match = HELP_LITERAL.exec(tag);
+    const prefix = match?.[1] ?? match?.[2];
+
+    if (prefix === undefined) {
+      unreadable += 1;
+      continue;
+    }
+
+    for (const part of HELP_PARTS) {
+      keys.add(`${prefix}.${part}`);
+    }
+  }
+
+  return { keys, unreadable };
+}
+
+/**
+ * Keys a screen frame's help needs that the catalogue never declared.
+ *
+ * @param {ReadonlyMap<string, string>} declared the source catalogue
+ * @param {Iterable<string>} needed
+ * @returns {Problem[]}
+ */
+export function findMissingHelp(declared, needed) {
+  return absent(
+    declared,
+    needed,
+    'help',
+    'a screen frame reads it for its help panel, and no catalogue declares it',
+  );
+}
+
+/**
+ * The keys of a list the catalogue lacks, each once and in a stable order.
+ *
+ * @param {ReadonlyMap<string, string>} declared
+ * @param {Iterable<string>} keys
+ * @param {'untranslated' | 'undeclared' | 'help'} kind
+ * @param {string} detail
+ * @returns {Problem[]}
+ */
+function absent(declared, keys, kind, detail) {
+  return [...new Set(keys)]
     .filter((key) => !declared.has(key))
     .sort()
-    .map((key) => ({
-      kind: /** @type {const} */ ('untranslated'),
-      key,
-      detail: 'the backend sends it as a messageKey, and no catalogue translates it',
-    }));
+    .map((key) => ({ kind, key, detail }));
 }

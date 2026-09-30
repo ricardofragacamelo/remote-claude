@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { useLiveSessionStore } from '@/features/session';
+import { createLiveSessionStore, forgetLiveSessions, liveSessionStoreOf } from '@/features/session';
+import type { LiveSessionStore } from '@/features/session';
 
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
 const AT = '2026-09-19T12:00:00.000Z';
@@ -20,7 +21,8 @@ function event(type: string, seq: number, payload: Record<string, unknown>): Env
   };
 }
 
-const store = () => useLiveSessionStore.getState();
+let current: LiveSessionStore = createLiveSessionStore(SESSION);
+const store = () => current.getState();
 
 /**
  * The three rules of the stream, and the reason each one exists.
@@ -31,8 +33,7 @@ const store = () => useLiveSessionStore.getState();
  */
 describe('the live session store', () => {
   beforeEach(() => {
-    store().reset();
-    store().open(SESSION);
+    current = createLiveSessionStore(SESSION);
   });
 
   it('starts empty, pointed at the session', () => {
@@ -159,7 +160,7 @@ describe('the live session store', () => {
     });
 
     it('stops calling what is on screen partial once the history is under it', () => {
-      store().open(SESSION, { partial: true });
+      current = createLiveSessionStore(SESSION, { partial: true });
       store().apply(
         event('session.started', 1, {
           sessionId: SESSION,
@@ -436,7 +437,7 @@ describe('the live session store', () => {
   });
 
   it('opens a session as partial when the screen arrived after the fact — S-96', () => {
-    store().open(SESSION, { partial: true });
+    current = createLiveSessionStore(SESSION, { partial: true });
 
     expect(store().isPartial).toBe(true);
   });
@@ -459,5 +460,46 @@ describe('the live session store', () => {
     // A later event of another kind leaves it where it is.
     store().apply(event('session.statusChanged', 3, { status: 'idle' }));
     expect(store().lastRewind?.promptId).toBe('prompt-2');
+  });
+});
+
+/**
+ * One store per session, never one for "the session on screen": a folder tab that is not on screen
+ * keeps its session attached, and its conversation cannot land in another's (plan 06, S-181).
+ */
+describe('the stores of several sessions', () => {
+  const OTHER = '01J0ZYXWVTSRQPNMKJHGFEDCBA';
+
+  afterEach(() => {
+    forgetLiveSessions();
+  });
+
+  it('answers the same store for the same session, and another for another', () => {
+    const first = liveSessionStoreOf(SESSION);
+
+    expect(liveSessionStoreOf(SESSION)).toBe(first);
+    expect(liveSessionStoreOf(OTHER)).not.toBe(first);
+  });
+
+  it('keeps what one session said out of the other', () => {
+    liveSessionStoreOf(SESSION)
+      .getState()
+      .apply(event('message.delta', 1, { messageId: 'm1', delta: 'only here' }));
+
+    expect(liveSessionStoreOf(SESSION).getState().messages).toHaveLength(1);
+    expect(liveSessionStoreOf(OTHER).getState().messages).toEqual([]);
+  });
+
+  it('decides "partial" once, when the store is first asked for', () => {
+    liveSessionStoreOf(SESSION, { partial: true });
+
+    expect(liveSessionStoreOf(SESSION, { partial: false }).getState().isPartial).toBe(true);
+  });
+
+  it('starts over once forgotten — what a sign-out calls for', () => {
+    const first = liveSessionStoreOf(SESSION);
+    forgetLiveSessions();
+
+    expect(liveSessionStoreOf(SESSION)).not.toBe(first);
   });
 });

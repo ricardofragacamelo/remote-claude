@@ -6,6 +6,9 @@ import type { AppError } from '@/shared/api/errors';
 export interface ErrorStateProps {
   readonly error: AppError;
   readonly onRetry?: () => void;
+
+  /** What the recovery is called, when it is not "try again" — "reconnect". Translated. */
+  readonly retryLabel?: string;
 }
 
 /**
@@ -15,7 +18,7 @@ export interface ErrorStateProps {
  * somebody can find in the log. It reacts to `error.code`, never to an HTTP status — the status
  * stopped existing at `api.ts`.
  */
-export function ErrorState({ error, onRetry }: ErrorStateProps): React.JSX.Element {
+export function ErrorState({ error, onRetry, retryLabel }: ErrorStateProps): React.JSX.Element {
   const { t } = useTranslation();
 
   return (
@@ -29,7 +32,7 @@ export function ErrorState({ error, onRetry }: ErrorStateProps): React.JSX.Eleme
       </p>
       {onRetry !== undefined && (
         <Button variant="outline" onClick={onRetry}>
-          {t('common.action.retry')}
+          {retryLabel ?? t('common.action.retry')}
         </Button>
       )}
     </div>

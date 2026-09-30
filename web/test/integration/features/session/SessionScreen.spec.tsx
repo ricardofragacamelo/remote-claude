@@ -3,7 +3,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
-import { SessionScreen, useLiveSessionStore } from '@/features/session';
+import { forgetLiveSessions, liveSessionStoreOf, SessionScreen } from '@/features/session';
 import { api } from '@/shared/api/api';
 import { setAccessToken } from '@/shared/api/credentials';
 import { wsClient } from '@/shared/api/ws';
@@ -51,7 +51,7 @@ describe('the session screen', () => {
   let sockets: InstalledWebSocket;
 
   beforeEach(() => {
-    useLiveSessionStore.getState().reset();
+    forgetLiveSessions();
     setAccessToken('token-1');
     sockets = installFakeWebSocket();
   });
@@ -355,7 +355,7 @@ describe('the session screen, with the history under the stream — plan 04', ()
   });
 
   beforeEach(() => {
-    useLiveSessionStore.getState().reset();
+    forgetLiveSessions();
     live = aLiveSocket();
   });
 
@@ -447,7 +447,7 @@ describe('the session screen, with the history under the stream — plan 04', ()
     const texts = screen.getAllByText(/Said (in the editor|now)\./).map((node) => node.textContent);
     expect(texts).toEqual(['Said in the editor.', 'Said now.']);
     expect(get).toHaveBeenCalledWith(`/transcripts/${SOURCE}/messages`);
-    expect(useLiveSessionStore.getState().lastSeq).toBe(2);
+    expect(liveSessionStoreOf(SESSION).getState().lastSeq).toBe(2);
   });
 
   it('opens the whole conversation once it knows which one it is', async () => {

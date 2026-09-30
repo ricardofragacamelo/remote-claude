@@ -74,9 +74,14 @@ export function renderRouted(
     path: '/history',
     component: () => null,
   });
+  const workbench = createRoute({
+    getParentRoute: () => root,
+    path: '/workbench',
+    component: () => null,
+  });
 
   const router = createRouter({
-    routeTree: root.addChildren([index, session, rules, history]),
+    routeTree: root.addChildren([index, session, rules, history, workbench]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
   });
 

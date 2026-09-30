@@ -132,6 +132,29 @@ export class WsClient {
     };
   }
 
+  /**
+   * Tries again **now**, instead of waiting out the backoff — the "reconnect" a person presses.
+   *
+   * Nothing to do while a socket is open or opening, nor for somebody who closed the client (signed
+   * out). And never before the server's own deadline: a client closed with `4429` that came straight
+   * back would be the hammering it was closed for (plan 06, S-200).
+   *
+   * @returns whether an attempt started
+   */
+  reconnect(): boolean {
+    const heldBack = this.status === 'throttled' || this.holdUntilMs > this.now();
+
+    if (!this.wanted || this.socket !== null || heldBack) {
+      return false;
+    }
+
+    logger.debug({ op: 'ws.connection', attempt: this.attempt }, 'ws reconnecting on request');
+    this.cancelRetry?.();
+    this.cancelRetry = null;
+    this.connect();
+    return true;
+  }
+
   /** Closes for good. A normal closure is not retried. */
   close(): void {
     this.wanted = false;

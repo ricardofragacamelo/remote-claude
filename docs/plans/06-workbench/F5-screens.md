@@ -33,7 +33,7 @@ este não a antecipa:
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-28 — Auditoria e Regras como telas próprias 🔲
+### B-28 — Auditoria e Regras como telas próprias ✅
 
 `/audit` e `/rules`, `/rules/$ruleId` passam a morar na moldura, cada uma na sua entrada da
 navegação, com a moldura de tela (B-19) e o conteúdo de hoje — sem redesenho. As garantias de
@@ -43,14 +43,14 @@ continuam valendo: filtros na search, a trilha filtrada é um link inclusive dep
 abre em qualquer estado. A ajuda da tela é a mínima que o conteúdo de hoje sustenta; a completa é
 dos planos 12 e 14.
 
-### B-29 — Dispositivos como tela própria 🔲
+### B-29 — Dispositivos como tela própria ✅
 
 O `DeviceList` sai da home para `/devices`, entrada própria da navegação — **não** uma seção de
 Configurações: aprovar um aparelho é uma decisão de segurança, e mora ao lado das outras. Aprovar e
 revogar funcionam como hoje; a ajuda diz o que um aparelho aprovado pode fazer. O resto — último
 acesso, push de teste, histórico — é do [plano 15](../15-devices/README.md).
 
-### B-30 — Logs e diagnóstico, mínima 🔲
+### B-30 — Logs e diagnóstico, mínima ✅
 
 `/diagnostics` nasce com o que existe: o **ping de ponta a ponta** (`diag.ping`, o
 `SessionPingPanel` que sai da home), o estado da conexão do socket e o botão de reconectar. Ping com
@@ -58,7 +58,7 @@ o socket fechado → `NETWORK_UNREACHABLE` traduzido, com a ação. Dois pings s
 casa com o seu pedido. Visualizador de logs e saúde da instalação são do
 [plano 16](../16-logs-and-diagnostics/README.md) ([D-12](decisions.md#d-12--o-que-a-tela-logs-e-diagnóstico-tem-neste-plano)).
 
-### B-31 — Configurações do app 🔲
+### B-31 — Configurações do app ✅
 
 `/settings/$section`, uma seção por vez, com a lista de seções à esquerda (em cima abaixo de `md`)
 e busca pelas opções. Seções deste plano ([D-13](decisions.md#d-13--onde-vivem-as-configurações-do-app-e-quais-seções-entram)):
@@ -74,17 +74,20 @@ seção trata do Claude — modelo, permission mode e MCP são da tela do plano 
 recusa a mistura. Seção desconhecida na URL cai na primeira, sem erro. Toda opção mostra o valor
 padrão e tem "restaurar padrão".
 
-### B-32 — Sobre 🔲
+### B-32 — Sobre ✅
 
 `/about`, pelo menu de gerenciar e pela paleta: as versões do backend, do web, do Agent SDK, do CLI
 do Claude e do Node (B-12), com "copiar" do bloco inteiro para um relato de defeito; o que não se
 pôde ler aparece como tal, com o motivo. Links para a documentação do repositório e a licença.
 
-### B-33 — A home desmontada, e as rotas antigas 🔲
+### B-33 — A home desmontada, e as rotas antigas ✅
 
 - a home deixa de ter `WorkspaceSelector`, `SessionStarter` solto, `SessionPingPanel` e
   `DeviceList` — cada um foi para o seu lugar (boas-vindas, workbench, Logs e diagnóstico,
   Dispositivos);
+- `/` com abas abertas passa a levar à aba ativa, e sem abas segue a boas-vindas (S-05, movido da
+  F3 pela [D-25](decisions.md#d-25--quando--passa-a-levar-à-aba-ativa)) — é na mesma mudança que ping
+  e dispositivos saem da home, que ele deixa de esconder alguma coisa;
 - o store global `useWorkspaceStore.selected` **deixa de existir**: pasta é da aba (B-20). É a raiz
   do caso relatado, e sai com teste que impede a volta;
 - o `Screen` de coluna única sai, e com ele as rotas `/sessions/$sessionId`, `/history` e
@@ -100,7 +103,7 @@ pôde ler aparece como tal, com o motivo. Links para a documentação do reposit
   cenários do plano 04 que ele provava registrados como devolvidos ao plano 08. O app continua
   provando o histórico no `integration_test`.
 
-### B-34 — Usabilidade e ajuda das telas deste plano 🔲
+### B-34 — Usabilidade e ajuda das telas deste plano ✅
 
 A task explícita de "ajuda de verdade", para a boas-vindas, o diálogo Abrir pasta, o workbench,
 Dispositivos, Logs e diagnóstico, Configurações e Sobre:
@@ -117,7 +120,8 @@ Dispositivos, Logs e diagnóstico, Configurações e Sobre:
 
 ## Cenários cobertos
 
-S-136…S-154.
+S-05 (da F3, pela [D-25](decisions.md#d-25--quando--passa-a-levar-à-aba-ativa)), S-136…S-154, e os
+descobertos na execução, S-200…S-206 ([D-32](decisions.md#d-32--o-que-a-f5-decidiu-na-execução)).
 
 ---
 

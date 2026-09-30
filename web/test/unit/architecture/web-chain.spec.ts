@@ -127,6 +127,18 @@ describe('the rules that protect the user', () => {
     expect(fired).toContain('react/jsx-no-literals');
   });
 
+  it.each(['web/src/features/workspace/components/Probe.tsx', 'web/src/app/ProbeRoute.tsx'])(
+    'refuses a presentable literal on the screens of plan 06 too, in %s — S-84',
+    async (file) => {
+      const fired = await rulesFiredOn(
+        file,
+        'export function Probe(): React.JSX.Element {\n  return <button type="button">Open folder</button>;\n}\n',
+      );
+
+      expect(fired).toContain('react/jsx-no-literals');
+    },
+  );
+
   it('allows text that came from a translation key', async () => {
     const fired = await rulesFiredOn(
       COMPONENT,
@@ -165,5 +177,80 @@ describe('the rules that protect the user', () => {
     );
 
     expect(fired).toContain('no-restricted-syntax');
+  });
+});
+
+/**
+ * The visual system, as the build enforces it — plan 06, S-87: a colour is a role of the theme, and
+ * an icon comes from `lucide-react`. The rule that no machine checks does not exist.
+ */
+describe('the visual system, as the build enforces it', () => {
+  it.each([
+    ['a Tailwind shade', '<div className="bg-red-500 p-2" />'],
+    ['white text', '<div className="text-white" />'],
+    ['an arbitrary hex', '<div className="border-[#ff0000]" />'],
+    ['an arbitrary oklch', '<div className="bg-[oklch(50%_0.1_20)]" />'],
+  ])('refuses %s in a component of a feature', async (_case, jsx) => {
+    const fired = await rulesFiredOn(COMPONENT, `export const A = () => ${jsx};\n`);
+
+    expect(fired).toContain('no-restricted-syntax');
+  });
+
+  it('refuses a shade built in a class template too', async () => {
+    const fired = await rulesFiredOn(
+      COMPONENT,
+      "import { cn } from '@/shared/lib/utils';\nexport const a = (x: boolean) => cn('p-2', x && `text-blue-600`);\n",
+    );
+
+    expect(fired).toContain('no-restricted-syntax');
+  });
+
+  it('refuses one in the frame of the app and in a shared composite', async () => {
+    const code = 'export const A = () => <div className="bg-zinc-900" />;\n';
+
+    expect(await rulesFiredOn('web/src/app/Probe.tsx', code)).toContain('no-restricted-syntax');
+    expect(await rulesFiredOn('web/src/shared/components/Probe.tsx', code)).toContain(
+      'no-restricted-syntax',
+    );
+  });
+
+  it('allows the role tokens of the theme', async () => {
+    const fired = await rulesFiredOn(
+      COMPONENT,
+      'export const A = () => <div className="bg-destructive text-muted-foreground border-border" />;\n',
+    );
+
+    expect(fired).not.toContain('no-restricted-syntax');
+  });
+
+  it('still refuses a token in localStorage where colours are checked', async () => {
+    const fired = await rulesFiredOn(
+      COMPONENT,
+      "export const A = (token: string) => {\n  localStorage.setItem('rc.token', token);\n  return null;\n};\n",
+    );
+
+    expect(fired).toContain('no-restricted-syntax');
+  });
+
+  it.each([
+    ['a component', COMPONENT],
+    ['the app', 'web/src/app/Probe.tsx'],
+    ['a shared composite', 'web/src/shared/components/Probe.tsx'],
+  ])('refuses an icon from another library in %s', async (_case, file) => {
+    const fired = await rulesFiredOn(
+      file,
+      "import { FaBeer } from 'react-icons/fa';\nexport const A = FaBeer;\n",
+    );
+
+    expect(fired).toContain('no-restricted-imports');
+  });
+
+  it('allows the icons of lucide-react', async () => {
+    const fired = await rulesFiredOn(
+      COMPONENT,
+      "import { Folder } from 'lucide-react';\nexport const A = Folder;\n",
+    );
+
+    expect(fired).not.toContain('no-restricted-imports');
   });
 });

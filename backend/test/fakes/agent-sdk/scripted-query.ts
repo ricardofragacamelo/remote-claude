@@ -123,6 +123,9 @@ export interface ScriptOptions {
    * A replay that only fired the hooks left the disk untouched, and the undo, which is about the
    * disk, would have had nothing real to put back. Only `Write` is performed: it is what the
    * recordings contain, and its input says everything the write needs.
+   *
+   * The same directory takes the recording's place in what Claude says, too (`spokenIn`): a turn
+   * that names where it runs names the session's directory, as the real CLI would (plan 06, S-156).
    */
   readonly performWritesIn?: string;
 
@@ -240,6 +243,40 @@ function asTurnOf(fixture: AgentSdkFixture, conversationId: string, turn: number
   }
 
   return JSON.parse(text) as AgentSdkFixture;
+}
+
+/** The recorder's name for the throwaway directory a recording ran in, as a whole path segment. */
+const RECORDED_DIRECTORY = /\/workspace(?![\w.-])/g;
+
+/**
+ * The recording as Claude would have said it in `directory`.
+ *
+ * The recorder writes its throwaway directory as `/workspace`; a real CLI running in `directory`
+ * names `directory` instead. Only what Claude **says** is moved — the text of its answer and of
+ * the result: a tool's input stays the recording's, byte for byte, because the rules the suites
+ * grant match on it, and a write already goes where {@link ScriptOptions.performWritesIn} puts it.
+ */
+function spokenIn(fixture: AgentSdkFixture, directory: string | undefined): AgentSdkFixture {
+  if (directory === undefined) {
+    return fixture;
+  }
+
+  const moved = (text: string): string => text.replace(RECORDED_DIRECTORY, () => directory);
+  const messages = fixture.messages.map((message): SDKMessage => {
+    if (message.type === 'result' && message.subtype === 'success') {
+      return { ...message, result: moved(message.result) };
+    }
+    if (message.type !== 'assistant' || !Array.isArray(message.message.content)) {
+      return message;
+    }
+
+    const content = message.message.content.map((block) =>
+      block.type === 'text' ? { ...block, text: moved(block.text) } : block,
+    );
+    return { ...message, message: { ...message.message, content } };
+  });
+
+  return { ...fixture, messages };
 }
 
 /** A message of the stream as `getSessionMessages` returns it, or `null` when it is not one. */
@@ -374,7 +411,10 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     // the turn that asks for permission and the turn that does not — an end-to-end suite gets one
     // backend per run, and starting a second one per scenario would cost more than it proves.
     this.turns += 1;
-    const recording = loadFixture(fixtureNamedIn(prompt) ?? this.script.fixture ?? 'text-turn');
+    const recording = spokenIn(
+      loadFixture(fixtureNamedIn(prompt) ?? this.script.fixture ?? 'text-turn'),
+      this.writesRoot,
+    );
     const conversation = this.conversation;
     this.fixture =
       conversation === null

@@ -1,0 +1,6 @@
+{
+  "id": "06·S-156",
+  "title": "a session started beside the editor runs in the folder of its tab — the scripted Claude names that very directory",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": { "prompt": "Where are you working? [fixture:cwd-turn]" }
+}

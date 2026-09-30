@@ -1,0 +1,6 @@
+{
+  "id": "06·S-159",
+  "title": "the folder of a tab removed from the disk: that tab opens in error, the others carry on",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": { "code": "WORKSPACE_NOT_FOUND", "marked": "No longer on disk" }
+}

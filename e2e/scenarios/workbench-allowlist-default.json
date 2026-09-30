@@ -1,0 +1,9 @@
+{
+  "id": "06·S-166",
+  "title": "the e2e stack runs on the default allowlist: the roots it lists are the ones the default declares, and a local copy on the machine adds none",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "defaultAllowlist": "infra/workspace-allowlist.yaml",
+    "localAllowlist": "infra/workspace-allowlist.local.yaml"
+  }
+}

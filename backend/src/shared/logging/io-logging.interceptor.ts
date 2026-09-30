@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import { Inject, Injectable } from '@nestjs/common';
 import type { CallHandler, ExecutionContext, NestInterceptor } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -72,9 +74,21 @@ export class IoLoggingInterceptor implements NestInterceptor {
           log('http response');
         },
         // The exception filter turns this into a response; the pair still has to close, or the
-        // log shows a request that never came back.
+        // log shows a request that never came back. It closes once that response is written: the
+        // filter runs after this, and until then the status is Express's default 200, whatever the
+        // error became. `close` fires also when the client gave up, so the pair closes either way —
+        // bound to this request's context, or the line would lose its `traceId`.
         error: () => {
-          log('http response failed');
+          const failed = AsyncLocalStorage.bind(() => {
+            log('http response failed');
+          });
+
+          if (response.writableEnded) {
+            failed();
+            return;
+          }
+
+          response.once('close', failed);
         },
       }),
     );

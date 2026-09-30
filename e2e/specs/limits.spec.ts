@@ -2,7 +2,6 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import { signIn } from '../fixtures/auth';
-import type { AuthenticatedUser } from '../fixtures/auth';
 import { environment } from '../fixtures/environment';
 import { cardFor, send } from '../fixtures/history';
 import {
@@ -12,6 +11,7 @@ import {
   fillUntilRefused,
   limitsSocket,
   openedSessionOf,
+  sessionLabelOf,
   startButton,
   startOn,
   startScreen,
@@ -42,18 +42,6 @@ const expiry = scenario('limits-token-expiry');
 const refused = scenario('limits-renewal-refused');
 
 const context = workspaceFor(ceiling.user);
-
-/** The label the screen gives the workspace every scenario here uses. */
-async function workspaceLabel(user: AuthenticatedUser, workspacePath: string): Promise<string> {
-  const response = await fetch(`${environment.backendUrl}/workspaces`, {
-    headers: { authorization: `Bearer ${user.accessToken}` },
-  });
-  const { workspaces } = (await response.json()) as {
-    workspaces: { path: string; label: string }[];
-  };
-
-  return workspaces.find((workspace) => workspace.path === workspacePath)?.label ?? workspacePath;
-}
 
 /** The refusal the screen shows, in the alert beside the starter. */
 function refusalOn(page: Page): ReturnType<Page['getByRole']> {
@@ -86,9 +74,9 @@ async function withShortTokens(seconds: number, body: () => Promise<void>): Prom
   }
 }
 
-/** Opens a session from the start screen and answers its id, from the address the screen moved to. */
-async function openedFromTheScreen(page: Page, label: string): Promise<string> {
-  await startScreen(page, ceiling.user, label);
+/** Opens a session from the start screen and answers its id, from the chat it stays in. */
+async function openedFromTheScreen(page: Page, workspacePath: string): Promise<string> {
+  await startScreen(page, ceiling.user, workspacePath);
   await startButton(page).click();
   return openedSessionOf(page);
 }
@@ -114,8 +102,7 @@ test.describe('the limits, on the screen', () => {
    * screen connected to it.
    */
   async function onScreen(page: Page): Promise<string> {
-    const label = await workspaceLabel(context().user, context().workspace);
-    const sessionId = await openedFromTheScreen(page, label);
+    const sessionId = await openedFromTheScreen(page, context().workspace);
     opened.push(sessionId);
     await expect(connectedOn(page)).toBeVisible();
     return sessionId;
@@ -147,11 +134,10 @@ test.describe('the limits, on the screen', () => {
 
   test(`${ceiling.id} and ${freed.id} — ${ceiling.title}; ${freed.title}`, async ({ page }) => {
     const expected = ceiling.expect as { ceiling: number; code: string; refusal: string };
-    const label = await workspaceLabel(context().user, context().workspace);
     const recorded = PageSockets.watch(page);
 
     // The screen first, so the machine fills while it is already looking at it.
-    await startScreen(page, ceiling.user, label);
+    await startScreen(page, ceiling.user, context().workspace);
 
     const filler = await socketOnLimits();
     const full = await fillUntilRefused(filler, context().workspace);
@@ -182,8 +168,6 @@ test.describe('the limits, on the screen', () => {
 
   test(`${lastSlot.id} — ${lastSlot.title}`, async ({ browser }) => {
     const expected = lastSlot.expect as { ceiling: number; refusal: string };
-    const label = await workspaceLabel(context().user, context().workspace);
-
     // One slot left: every one but the last is taken.
     const filler = await socketOnLimits();
     for (let taken = 0; taken < expected.ceiling - 1; taken += 1) {
@@ -193,14 +177,14 @@ test.describe('the limits, on the screen', () => {
     }
 
     const pages = await Promise.all([1, 2].map(async () => (await browser.newContext()).newPage()));
-    await Promise.all(pages.map((page) => startScreen(page, lastSlot.user, label)));
+    await Promise.all(pages.map((page) => startScreen(page, lastSlot.user, context().workspace)));
 
     // Both at once, through the button.
     await Promise.all(pages.map((page) => startButton(page).click()));
 
     /** Where one page stands: on the session it opened, told it was refused, or neither yet. */
     const stateOf = async (page: Page): Promise<'opened' | 'refused' | 'waiting'> => {
-      if (new URL(page.url()).pathname.startsWith('/sessions/')) {
+      if (await sessionLabelOf(page).isVisible()) {
         return 'opened';
       }
       return (await refusalOn(page).getByText(expected.refusal).isVisible())
@@ -243,10 +227,11 @@ test.describe('the limits, on the screen', () => {
     const ended = page.getByRole('status').filter({ hasText: expected.reason });
     await expect(ended).toBeVisible({ timeout: expected.idleTtlSeconds * 2_000 });
 
-    // What only a live session can do is off; where to resume it is on.
+    // What only a live session can do is off. The screen says where to resume it — the history,
+    // which the app has; the web's way there left with its route and comes back with plan 08
+    // (plan 06, D-07, D-32).
     await expect(page.getByRole('button', { name: 'Send' })).toBeDisabled();
-    await page.getByRole('button', { name: 'See the whole conversation' }).click();
-    await page.waitForURL('**/history/*');
+    await expect(page.getByRole('button', { name: 'See the whole conversation' })).toHaveCount(0);
 
     opened.splice(opened.indexOf(sessionId), 1);
   });

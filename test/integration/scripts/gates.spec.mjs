@@ -86,13 +86,13 @@ describe('i18n-check.mjs', () => {
   it('fails when a key never reached the other language', async () => {
     const file = editTemporarily('web/src/shared/i18n/locales/en.json');
     const catalogue = JSON.parse(fs.readFileSync(file, 'utf8'));
-    catalogue.session.ping.brandNew = 'Only here';
+    catalogue.diagnostics.ping.brandNew = 'Only here';
     fs.writeFileSync(file, JSON.stringify(catalogue, null, 2));
 
     const result = await runScript('i18n-check.mjs');
 
     expect(result.code).toBe(1);
-    expect(result.stdout).toContain('session.ping.brandNew');
+    expect(result.stdout).toContain('diagnostics.ping.brandNew');
     expect(result.stdout).toContain('absent from pt-BR');
   });
 
@@ -115,7 +115,7 @@ describe('i18n-check.mjs', () => {
     for (const locale of ['en', 'pt-BR']) {
       const file = editTemporarily(`web/src/shared/i18n/locales/${locale}.json`);
       const catalogue = JSON.parse(fs.readFileSync(file, 'utf8'));
-      catalogue.session.ping.forgotten = 'Nobody asks for this';
+      catalogue.diagnostics.ping.forgotten = 'Nobody asks for this';
       fs.writeFileSync(file, JSON.stringify(catalogue, null, 2));
     }
 

@@ -20,6 +20,10 @@ export interface SessionScreenProps {
    * the feature never learns the router exists.
    */
   onOpenHistory?(conversationId: string): void;
+
+  /** What was being written in the prompt box — kept by whoever hosts the screen. */
+  readonly draft?: string | undefined;
+  readonly onDraftChange?: ((text: string) => void) | undefined;
 }
 
 /**
@@ -41,7 +45,12 @@ export interface SessionScreenProps {
  *
  * It imports a hook and nothing else: no service, no `api.ts`.
  */
-export function SessionScreen({ sessionId, onOpenHistory }: SessionScreenProps): React.JSX.Element {
+export function SessionScreen({
+  sessionId,
+  onOpenHistory,
+  draft,
+  onDraftChange,
+}: SessionScreenProps): React.JSX.Element {
   const { t } = useTranslation();
   const session = useLiveSession(sessionId);
   const { ending, history } = session;
@@ -110,6 +119,8 @@ export function SessionScreen({ sessionId, onOpenHistory }: SessionScreenProps):
         disabled={ending !== null}
         onSubmit={session.prompt}
         error={session.promptError}
+        draft={draft}
+        onDraftChange={onDraftChange}
         // An ended session has no installation left to ask: the menu goes with it.
         menu={
           ending === null

@@ -126,6 +126,8 @@ Cada regra estrutural desta documentação tem um verificador. **A violação qu
 | `no-react-in-services` | `react` dentro de `services/` | [01](../web/01-architecture.md) |
 | `no-cross-feature-internals` | caminho profundo entre features | [02](../web/02-folder-structure.md) |
 | `shared-cannot-import-features` | `shared/` importando `features/` | [02](../web/02-folder-structure.md) |
+| `no-literal-colour` | cor literal em classe (`bg-red-500`, `text-white`, `bg-[#…]`, `oklch(…)`) em componente de feature, no `app/` e nos compostos de `shared/components/` — o token do papel (`bg-destructive`) é o caminho | [03](../web/03-ui-system.md#o-sistema-visual) |
+| `icons-only-lucide` | ícone de outra biblioteca (`react-icons`, `@heroicons/*`, `@radix-ui/react-icons`…) em componente, `app/` ou `shared/` | [03](../web/03-ui-system.md#o-sistema-visual) |
 
 ### Mobile — `import_lint`
 

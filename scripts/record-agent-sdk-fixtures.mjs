@@ -75,6 +75,14 @@ const SCENARIOS = [
         "const fs = require('fs');\nconsole.log(fs.readFileSync(process.argv[2], 'utf8').split(/\\s+/).length);\n",
     },
   },
+  {
+    name: 'cwd-turn',
+    why: 'Claude names the directory it runs in — what proves, through the door a person uses, that a session runs in the folder of its tab (plan 06, S-156)',
+    prompt:
+      'Reply with only the absolute path of your current working directory, on one line, ' +
+      'and nothing else. Do not use any tool.',
+    files: {},
+  },
 ];
 
 /**

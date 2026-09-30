@@ -7,11 +7,27 @@ export interface Workspace {
   readonly lastUsedAt: string | null;
 }
 
+/** A path that cleared every check (`GET /workspaces/resolve`), and the root it cleared under. */
+export interface ResolvedFolder {
+  /** The **real** path — every symlink resolved. It is what a session is started on. */
+  readonly path: string;
+  /** The last segment of the path — what a person calls the folder. */
+  readonly name: string;
+  readonly root: Workspace;
+}
+
+/** What one listing is asked: a folder, whether dot-folders come too, and a name prefix. */
+export interface DirectoryQuery {
+  readonly path: string;
+  readonly hidden: boolean;
+  /** One name, never a path. Reaches what the ceiling cut (plan 06, D-05). */
+  readonly prefix?: string | undefined;
+}
+
 /**
  * One subdirectory of a listing (`GET /workspaces/directories`).
  *
- * The shapes below mirror the contract of docs/architecture/backend/03-modules.md#workspace; the
- * service that reads them arrives with the "Open folder" dialog (plan 06, F2).
+ * The shapes below mirror the contract of docs/architecture/backend/03-modules.md#workspace.
  */
 export interface DirectoryEntry {
   readonly name: string;
@@ -32,15 +48,26 @@ export interface DirectoryListing {
   readonly truncated: boolean;
 }
 
+/**
+ * Why a recent folder can no longer be opened.
+ *
+ * `notAllowed` when it lives under no root of this user any more; `missing` when the root is still
+ * there and the folder is not.
+ */
+export type UnavailableReason = 'notAllowed' | 'missing';
+
 /** One folder this user opened, as the welcome screen lists it (`GET /workspaces/recent`). */
 export interface RecentFolder {
   readonly path: string;
-  readonly rootLabel: string;
+  /** The last segment of the path — what a person calls the folder. */
+  readonly name: string;
+  /** The label of the root it lives under, or `null` once it lives under none. */
+  readonly rootLabel: string | null;
   /** ISO-8601. */
   readonly lastOpenedAt: string;
   readonly pinned: boolean;
-  /** `false` for a folder that left the allowlist or the disk — marked, rather than dropped. */
-  readonly available: boolean;
+  /** `null` while it can be opened — marked with the reason otherwise, rather than dropped. */
+  readonly unavailable: UnavailableReason | null;
 }
 
 /** Whether an open tab can still be used, as the server revalidated it. */

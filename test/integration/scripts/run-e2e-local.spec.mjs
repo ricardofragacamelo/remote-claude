@@ -186,10 +186,11 @@ describe('run-e2e-local.mjs, against real docker', () => {
     }
   });
 
-  it('S-58 — leaves no container, no volume and no e2e/.env behind', () => {
+  it('S-58 — leaves no container, no volume, no e2e/.env and no backend log behind', () => {
     expect(e2eContainers()).toEqual([]);
     expect(e2eVolumes()).toEqual([]);
     expect(fs.existsSync(path.join(repoRoot, 'e2e/.env'))).toBe(false);
+    expect(fs.existsSync(path.join(repoRoot, 'e2e/.backend.log'))).toBe(false);
   });
 
   it('S-59 — purges the orphan volume of a project no `compose ls` can see', () => {

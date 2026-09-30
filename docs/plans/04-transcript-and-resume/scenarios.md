@@ -120,14 +120,14 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-46 | retomar uma sessão encerrada e continuar a conversa | eq | e2e | — | B-23 | ✅ |
+| S-46 | retomar uma sessão encerrada e continuar a conversa — o e2e do web saiu com `/history` ([06 · D-07](../06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)) e volta pelo [08 · S-266](../08-claude-panel/scenarios.md); o app segue provando no `integration_test` | eq | e2e | — | B-23 | ✅ |
 | S-47 | `gap: true` → recarrega o transcript por HTTP e a tela volta coerente | est | e2e | — | B-23 | ✅ |
 | S-48 | abrir no celular a sessão que começou no navegador | eq | e2e | — | B-22 | ✅ |
 | S-49 | `/init` pelo menu pede `Write` e escreve o arquivo | est | e2e | — | B-25 | ✅ |
 | S-50 | desfazer pela UI devolve o arquivo ao estado anterior | eq | e2e | — | B-24 | ✅ |
 | S-51 | desfazer durante um turno em execução é recusado, com explicação | conc | e2e | `SESSION_LOCKED` | B-24 | ✅ |
 | S-52 | `smoke-live`: `supportedCommands()` real e `/init` terminando em sucesso | eq | e2e | — | B-25 | ✅ |
-| S-53 | retomar sessão cujo workspace foi removido — apagado, ou agora fora da allowlist — mostra erro traduzido | err | e2e | `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_ALLOWED` | B-23 | ✅ |
+| S-53 | retomar sessão cujo workspace foi removido — apagado, ou agora fora da allowlist — mostra erro traduzido — o e2e do web saiu com `/history` ([06 · D-07](../06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)) e volta pelo [08 · S-266](../08-claude-panel/scenarios.md) | err | e2e | `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_ALLOWED` | B-23 | ✅ |
 | S-88 | a tela que abre uma sessão já em andamento pede o replay (`resumeFromSeq: 0`) e recebe o que o buffer guarda — ou o `gap`, quando ele perdeu o começo | est | unit | — | B-22 | ✅ |
 
 ---

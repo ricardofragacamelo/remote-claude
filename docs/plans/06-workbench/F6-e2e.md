@@ -24,32 +24,32 @@ porta do usuário, de que o caso relatado não volta
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-35 — Fixtures de pastas e o cenário roteirizado 🔲
+### B-35 — Fixtures de pastas e o cenário roteirizado ✅
 
 Uma árvore de pastas dentro da raiz de e2e — subpastas aninhadas, uma oculta, um symlink que fica
 na raiz e um que escapa, uma pasta que o teste remove no meio — montada pelos fixtures de
 `e2e/fixtures/`, e um cenário roteirizado em `e2e/scenarios/` em que o Claude responde com o `cwd`
 da sessão. A stack de e2e continua lendo a allowlist **default**, nunca a cópia local da B-10.
 
-### B-36 — Abrir pasta e a sessão na pasta 🔲
+### B-36 — Abrir pasta e a sessão na pasta ✅
 
 Da boas-vindas: Abrir pasta → navegar das raízes até uma subpasta → Abrir → a URL tem o caminho
 real → recarga mantém. Iniciar uma sessão na secondary side bar e ver o Claude roteirizado
 responder com **aquele** `cwd`, com explorer, editor e chat lado a lado na aba. Pasta fora da
 allowlist pela URL → erro traduzido com caminho de volta.
 
-### B-37 — Abas de pasta 🔲
+### B-37 — Abas de pasta ✅
 
 Duas pastas em duas abas: alternar sem perder estado, fechar uma sem afetar a outra (e a
 confirmação diz que as sessões continuam), recarregar e reencontrar o conjunto, a ordem e a ativa.
 A pasta de uma aba removida do disco: a aba abre em erro, as outras seguem.
 
-### B-38 — Paleta, menu Arquivo e notificações 🔲
+### B-38 — Paleta, menu Arquivo e notificações ✅
 
 Abrir pasta pelo menu **Arquivo** e pela paleta (`Ctrl/Cmd+Shift+P`); uma recusa (pasta fora da
 allowlist) aparece como toast e fica no centro de notificações.
 
-### B-39 — Telas separadas, rotas antigas, celular e acessibilidade 🔲
+### B-39 — Telas separadas, rotas antigas, celular e acessibilidade ✅
 
 - as rotas que ficam abrem a tela certa — a trilha filtrada (`/audit?…`), a regra
   (`/rules/$ruleId`) —, e as removidas pela [D-07](decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)
@@ -62,7 +62,7 @@ allowlist) aparece como toast e fica no centro de notificações.
 
 ## Cenários cobertos
 
-S-155…S-163, S-166.
+S-155…S-163, S-166 — e, descobertos na execução, S-207 e S-208 ([D-33](decisions.md#d-33--o-que-a-f6-decidiu-na-execução)).
 
 ---
 

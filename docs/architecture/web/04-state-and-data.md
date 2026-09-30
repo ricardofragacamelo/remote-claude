@@ -106,6 +106,15 @@ Não conhece React. Ver [contrato](../shared/05-websocket-protocol.md) e
 
 ### O store de stream
 
+**Um store por sessão**, criado sob demanda e compartilhado por quem pede a mesma
+(`liveSessionStoreOf`, `permissionQueueOf`) — nunca um store de "a sessão na tela": a aba de pasta
+inativa mantém a sessão dela anexada ([06 · D-11](../../plans/06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas)),
+e duas conversas no mesmo store se misturariam. O anexo também é compartilhado, com contagem de
+donos (`sessionAttachments` em `shared/api/`): a aba e a tela da sessão o seguram; quem chega depois
+do primeiro não manda nada no fio, e voltar à aba não reanexa nem pede replay
+([06 · D-26](../../plans/06-workbench/decisions.md#d-26--um-store-por-sessão-e-anexos-com-dono)). Sair
+esquece todos os stores.
+
 Eventos chegam fora de ordem em replay e podem repetir. O store é quem garante coerência:
 
 ```ts
@@ -150,7 +159,7 @@ sessão que não está mais na tela.
 
 ### O histórico é dado do servidor
 
-> As rotas de histórico **saem do web** no [plano 06 · B-33](../../plans/06-workbench/F5-screens.md#b-33--a-home-desmontada-e-as-rotas-antigas-)
+> As rotas de histórico **saíram do web** no [plano 06 · B-33](../../plans/06-workbench/F5-screens.md#b-33--a-home-desmontada-e-as-rotas-antigas-)
 > ([D-07](../../plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)) e o
 > histórico volta com a view Sessões do [plano 08](../../plans/08-claude-panel/README.md). A regra
 > abaixo — leitura paginada no Query, não num store — vale para ela também.
@@ -203,8 +212,9 @@ estado dela é **dela**:
 
 - **um store por pasta**, criado por **fábrica** e chaveado pelo **caminho real** que o backend
   resolveu — nunca um global compartilhado. Um store global de "workspace selecionado" foi o que
-  levou uma sessão a nascer na primeira raiz em vez da pasta escolhida; é o anti-exemplo, e sai no
-  [plano 06 · B-33](../../plans/06-workbench/F5-screens.md#b-33--a-home-desmontada-e-as-rotas-antigas-);
+  levou uma sessão a nascer na primeira raiz em vez da pasta escolhida; é o anti-exemplo, e saiu no
+  [plano 06 · B-33](../../plans/06-workbench/F5-screens.md#b-33--a-home-desmontada-e-as-rotas-antigas-),
+  com um teste que impede a volta;
 - o store de uma aba **inativa** fica em memória, e a árvore dela é desmontada: A → B → A não perde
   nada ([06 · D-11](../../plans/06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas));
 - o mesmo store serve o layout de `md+` e o de uma view por vez: mudar a largura não perde estado.
@@ -216,9 +226,13 @@ Onde mora cada parte:
 | a aba **ativa** | a URL (`/workbench?folder=`) | o link reproduz a tela ([D-06](../../plans/06-workbench/decisions.md#d-06--a-url-do-workbench)) |
 | o **conjunto e a ordem** das abas | o servidor (`/workspaces/open-folders`) | segue o usuário para outro dispositivo e sobrevive a limpar o navegador ([D-10](../../plans/06-workbench/decisions.md#d-10--onde-persiste-o-conjunto-de-abas-abertas)); a janela relê ao ganhar foco e ao reconectar |
 | os recentes | o servidor (`/workspaces/recent`) | idem ([D-13](../../plans/06-workbench/decisions.md#d-13--onde-vivem-as-configurações-do-app-e-quais-seções-entram)) |
-| **dentro** da aba: view ativa, tamanhos de painel, painel inferior aberto, e o que os planos seguintes registram (editores abertos, conversa aberta) | `localStorage`, chaveado pela pasta real | o layout do celular não é o do desktop; é conveniência, não dado |
+| **dentro** da aba: view ativa, tamanhos de painel, painel inferior aberto, e o que os planos seguintes registram (editores abertos, conversa aberta) | `localStorage`, chaveado pela pasta real — uma chave só (`workbench.tabState`), por parte e versão, preenchida pelo registro `tabRestorers` ([06 · D-31](../../plans/06-workbench/decisions.md#d-31--um-registro-de-restauração-por-aba)) | o layout do celular não é o do desktop; é conveniência, não dado |
 | tema, densidade, idioma | `localStorage` | por visitante (D-13) |
 | a allowlist | o arquivo no disco da máquina | só leitura na UI: mudá-la exige acesso ao disco ([backend/03](../backend/03-modules.md#workspace)) |
+
+O estado guardado de uma aba volta quando o store dela nasce, antes de ela aparecer. Fechar a aba o
+descarta; ler o conjunto de abas descarta o de pasta que não está mais aberta; sair descarta o de
+todas.
 
 **Todo acesso a `localStorage` é envolvido em `try/catch`.** Navegador privado, cota cheia ou
 armazenamento bloqueado lançam — e a resposta é o default, nunca uma tela quebrada. Estado
@@ -249,21 +263,26 @@ mapa; as fases dele o constroem, e o router o testa.
 
 | Rota | Tela |
 |---|---|
-| `/` | a boas-vindas — ou a aba ativa, se há abas abertas ([D-07](../../plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)) |
+| `/` | a aba ativa, se há abas abertas — o endereço é **substituído** pelo dela —; sem abas, a boas-vindas ([D-07](../../plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)). Espera o conjunto de abas antes de decidir; conjunto que não se pôde ler abre a boas-vindas |
 | `/workbench?folder=<path>` | o workbench, com a pasta ativa na search; `folder` ausente cai na boas-vindas, não num erro |
 | `/audit?…`, `/rules`, `/rules/$ruleId` | Auditoria e Regras, com os deep links de hoje intactos |
 | `/devices` | Dispositivos |
 | `/diagnostics` | Logs e diagnóstico |
-| `/settings/$section` | Configurações do app, uma seção por vez; seção desconhecida cai na primeira |
+| `/settings/$section` | Configurações do app, uma seção por vez; `/settings` sozinho e seção desconhecida caem na primeira, com o endereço substituído |
 | `/about` | Sobre |
 | `/claude…`, `/usage…` | **reservadas** aos planos [11](../../plans/11-claude-settings/README.md) e [14](../../plans/14-usage-and-cost/README.md): ninguém as registra ainda, e caem no "não encontrado" |
-| `/sessions/$sessionId`, `/history`, `/history/$conversationId` | **removidas** na [B-33](../../plans/06-workbench/F5-screens.md#b-33--a-home-desmontada-e-as-rotas-antigas-), sem deep link de compatibilidade: a sessão viva mora na secondary side bar da aba, e o histórico volta com o plano 08 |
+| `/sessions/$sessionId`, `/history`, `/history/$conversationId` | **removidas** ([B-33](../../plans/06-workbench/F5-screens.md#b-33--a-home-desmontada-e-as-rotas-antigas-)), sem deep link de compatibilidade: caem no "não encontrado". A sessão viva mora na secondary side bar da aba, e o histórico volta com o plano 08 |
 | o callback do login (`CALLBACK_PATH`) | não muda — voltar ao link pedido depois do login vale para todas |
 
 Endereço que nenhuma rota responde — nunca válido, removido ou reservado — renderiza o **"não
 encontrado" traduzido** do root (`NotFoundRoute`), com o caminho de volta ao início; nunca uma tela
 vazia. Ele fica fora do portão de login: a tabela de rotas vai no bundle, e dizer que uma não existe
 não conta nada a ninguém.
+
+Todas as outras telas moram sob um layout sem caminho próprio (`_frame`): a moldura e o portão de
+login estão nele, e nenhuma tela consegue esquecê-los. O endereço não muda; o id da rota ganha o
+prefixo (`useSearch({ from: '/_frame/workbench' })`). O `returnTo` do login é o endereço na tela,
+search incluída.
 
 ---
 

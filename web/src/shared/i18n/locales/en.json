@@ -69,16 +69,6 @@
       "rewindIncomplete": "The undo stopped short: {{failed}} file(s) could not be put back, and each of them was left exactly as it was.",
       "invalidTransition": "The session could not change state. This is a fault on our side; try again."
     },
-    "ping": {
-      "title": "Round trip",
-      "description": "One command across every layer: the gateway, the use case, the rule, the database and back as an event.",
-      "action": "Send ping",
-      "pending": "Waiting for the pong…",
-      "empty": "No round trip yet. Send one to see the whole chain work.",
-      "result": "Pong {{count}} at {{at}}",
-      "sequence": "Sequence {{seq}}",
-      "sessionLabel": "Session {{sessionId}}"
-    },
     "status": {
       "starting": "Starting",
       "idle": "Idle",
@@ -109,8 +99,7 @@
       "title": "Start a session",
       "description": "Claude runs on this machine, in the folder you choose above.",
       "action": "Start session",
-      "pending": "Starting…",
-      "chooseWorkspace": "Choose a folder above first."
+      "pending": "Starting…"
     },
     "screen": {
       "title": "Session",
@@ -149,16 +138,91 @@
       "openFoldersLimitReached": "You already have {{limit}} folders open, which is as many as a window holds. Close one first — closing a folder does not end its Claude sessions.",
       "openFoldersOrderConflict": "Your folder tabs changed in another window. Showing them as they are now — try again."
     },
-    "selector": {
-      "title": "Workspace",
-      "description": "Claude runs inside the folder you pick here, and nowhere else.",
+    "welcome": {
+      "title": "Welcome",
+      "startTitle": "Start",
+      "startDescription": "Open a folder of this machine. Claude runs inside it, and nowhere else.",
+      "openFolder": "Open folder…",
+      "purpose": "Open a folder of this machine to work on it with Claude.",
+      "loading": "Looking for your open folders…"
+    },
+    "recent": {
+      "title": "Recent",
+      "description": "The folders you opened, pinned ones first.",
+      "loading": "Loading your recent folders…",
+      "emptyTitle": "No recent folders yet",
+      "emptyDescription": "Open a folder and it shows up here, so the next time is one click.",
+      "search": "Search recent folders",
+      "noMatch": "No recent folder matches “{{search}}”.",
+      "open": "Open",
+      "pin": "Pin {{name}}",
+      "unpin": "Unpin {{name}}",
+      "remove": "Remove {{name}} from recent",
+      "pinned": "Pinned",
+      "openedAt": "Opened {{at}}",
+      "notAllowed": "Not allowed on this machine any more",
+      "missing": "No longer on the disk"
+    },
+    "roots": {
+      "title": "Allowed folders",
+      "description": "The roots this machine lets you open, and everything inside them.",
       "loading": "Loading the folders you may use…",
-      "lastUsed": "Last opened {{at}}",
-      "neverUsed": "Never opened",
       "emptyTitle": "No folder is available to you",
       "emptyDescription": "The allowlist of this machine does not mention your account yet. Whoever installed remote-claude can add a folder to it.",
-      "history": "History",
-      "historyOf": "Conversations in {{label}}"
+      "browse": "Browse {{label}}"
+    },
+    "allowlist": {
+      "title": "Need another folder?",
+      "description": "Run this on the machine the backend runs on — not on this device. The folder is added to a local copy of the allowlist, and the running backend picks it up.",
+      "command": "pnpm allowlist add <path>",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "This browser did not allow copying. Select the command and copy it by hand."
+    },
+    "dialog": {
+      "title": "Open folder",
+      "description": "Go into a folder, or open the one you are in. Only the allowed folders are here.",
+      "breadcrumb": "Where you are",
+      "roots": "Allowed folders",
+      "listLabel": "Folders in {{folder}}",
+      "loading": "Loading the folders…",
+      "showHidden": "Show hidden folders",
+      "filter": "Showing names starting with “{{filter}}”",
+      "clearFilter": "Clear",
+      "truncated": "This folder has more subfolders than one list shows. Type the start of a name to find the others.",
+      "noMatch": "No folder here starts with “{{filter}}”.",
+      "emptyTitle": "No subfolders here",
+      "emptyDescription": "You can still open this folder as it is.",
+      "noRootsTitle": "No folder is available to you",
+      "noRootsDescription": "The allowlist of this machine does not mention your account yet.",
+      "symlink": "Symbolic link",
+      "symlinkOption": "{{name}}, symbolic link",
+      "helpToggle": "Why only these folders?",
+      "helpBody": "remote-claude only opens folders the machine's allowlist names, so a phone never learns what else is on the disk. Arrows move, Enter goes in, Backspace or Alt+↑ goes up, and typing narrows the list.",
+      "open": "Open",
+      "cancel": "Cancel"
+    },
+    "folder": {
+      "loading": "Opening the folder…",
+      "refusedTitle": "This folder cannot be opened",
+      "refusedDescription": "Go back to the welcome screen, or pick another folder.",
+      "backToWelcome": "Back to the welcome screen",
+      "openOther": "Open another folder",
+      "notKept": "The folder is open, but it was not added to your tabs and recent folders."
+    },
+    "welcomeHelp": {
+      "what": "The way into the workbench. Every folder you open becomes a tab of its own, with its files, its editor and its chat with Claude side by side. Only folders under the roots this installation allows can be opened. Until each moves to a screen of its own, the round trip of the connection and your approved devices are below.",
+      "states": "Recent folders come first, pinned ones on top. A folder marked as unavailable left the allowlist or the disk: it stays listed so you know why, and it cannot be opened. With no recent folder yet the list says so, and the roots below are where to start. The roots are the allowlist — the only folders this installation lets Claude work in. To allow another, run the command shown under them on the machine the backend runs on: the web never changes the allowlist.",
+      "notRecorded": "Opening a folder records it among your recent folders and your tabs, on the server, so they follow you to another device. Nothing inside a folder is read to list it here, and the roots cannot be changed from this screen: that takes the pnpm allowlist command on the machine."
+    },
+    "recentMenu": {
+      "loading": "Loading the recent folders…",
+      "unavailable": "The recent folders could not be read. Try again in a moment.",
+      "empty": "No recent folder yet.",
+      "more": "More…"
+    },
+    "recentMode": {
+      "placeholder": "Type to narrow the recent folders"
     }
   },
   "notification": {
@@ -248,8 +312,7 @@
   "audit": {
     "screen": {
       "title": "What ran on your machine",
-      "open": "What ran",
-      "back": "Back to sessions"
+      "purpose": "What ran on your machine without asking you — and who or what said yes."
     },
     "list": {
       "title": "Audit trail",
@@ -304,6 +367,11 @@
     "error": {
       "unavailable": "The audit trail could not be written, so nothing was allowed to run.",
       "forbidden": "That session belongs to somebody else, so its trail is not yours to read."
+    },
+    "help": {
+      "what": "The trail of every tool Claude asked to run, and how each was decided: by a rule you granted, by a person, or by nobody in time. The filters live in the address, so a filtered trail is a link you can keep or share.",
+      "states": "An entry a rule decided opens that rule, even after it was revoked. An entry nobody answered in time was refused. Loading more adds the next page; a failure there keeps what is already on screen, with the reason beside it.",
+      "notRecorded": "The trail keeps the exact input of each tool, never the content of a file a tool read: for a read it keeps the path and the size. It records decisions, not the conversation."
     }
   },
   "devices": {
@@ -333,13 +401,21 @@
       "description": "{{name}} will stop answering permission requests immediately, and its open connections will be closed.",
       "cancel": "Keep it",
       "confirm": "Revoke it"
+    },
+    "screen": {
+      "title": "Devices",
+      "purpose": "The phones that may answer Claude's questions, and the ones waiting for your approval."
+    },
+    "help": {
+      "what": "A phone with the app signs in and appears here, waiting. Once you approve it, it gets a push when Claude asks for permission, and can answer — allow or refuse — from wherever you are. A phone never approves itself: only a browser where you are already signed in can.",
+      "states": "Waiting for approval: signed in, not allowed to answer yet. Approved: it receives the questions and may answer them. Revoked: it stopped answering at once, and its connections were closed; to use it again, sign in on it again. “No push token” means the phone only hears a question while the app is open.",
+      "notRecorded": "Approving and revoking are recorded in the audit, with who did it and when. The screen does not show what a phone answered — that is in the audit trail, entry by entry."
     }
   },
   "rules": {
     "screen": {
       "title": "Your rules",
-      "open": "Rules you granted",
-      "back": "Back to sessions"
+      "purpose": "What you authorised in advance — and where you take it back."
     },
     "list": {
       "title": "Rules you granted",
@@ -381,7 +457,18 @@
       "description": "What this rule lets Claude do, and whether it still does.",
       "loading": "Loading the rule…",
       "emptyTitle": "No rule",
-      "emptyDescription": "There is no rule to show."
+      "emptyDescription": "There is no rule to show.",
+      "purpose": "One rule you granted, whatever became of it."
+    },
+    "help": {
+      "what": "Every rule you granted from a permission request: which tool, which pattern, where it applies and until when. Revoking is one click, and the next matching request asks you again.",
+      "states": "An active rule answers requests without asking. A rule close to expiring — less than seven days left — is marked. An expired rule stays listed, marked as such; a revoked one leaves the list. A revocation that fails keeps the row, with the reason beside it.",
+      "notRecorded": "Rules that only last a session are not listed: they end with it. This screen does not show which requests a rule answered — the audit trail does."
+    },
+    "detailHelp": {
+      "what": "One rule, opened from the audit trail or from the list: what it allows, where, since when and until when.",
+      "states": "Active, with the way to revoke it; expired; or revoked, saying when — never an empty page.",
+      "notRecorded": "It does not list the requests the rule answered; the audit trail does."
     }
   },
   "transcript": {
@@ -391,11 +478,6 @@
       "claudeUnavailable": "Claude could not read its history on this machine.",
       "claudeTimeout": "Claude took too long to read its history. Try again.",
       "cursorStale": "This conversation changed while you were reading it. Reload it from the latest messages."
-    },
-    "screen": {
-      "title": "History",
-      "noWorkspaceTitle": "No folder chosen",
-      "noWorkspaceDescription": "Open the history from one of your folders on the start screen."
     },
     "list": {
       "title": "Conversations",
@@ -485,6 +567,377 @@
       "unchanged": "Were already the way they were",
       "failed": "Could not be put back — left exactly as they were",
       "nothing": "The undo found nothing to change."
+    }
+  },
+  "navigation": {
+    "entry": {
+      "workbench": "Workbench",
+      "audit": "Audit",
+      "rules": "Rules",
+      "devices": "Devices",
+      "diagnostics": "Logs and diagnostics",
+      "settings": "Settings",
+      "about": "About"
+    },
+    "menu": {
+      "open": "Open the menu",
+      "description": "Every screen of the app, one per subject."
+    },
+    "manage": {
+      "label": "Manage"
+    },
+    "account": {
+      "label": "Account",
+      "signedInAs": "Signed in as {{name}}"
+    },
+    "bar": {
+      "appName": "remote-claude"
+    },
+    "global": {
+      "label": "Global navigation"
+    }
+  },
+  "help": {
+    "panel": {
+      "open": "Help for this screen",
+      "close": "Close the help",
+      "title": "Help: {{screen}}"
+    },
+    "section": {
+      "what": "What this screen is",
+      "states": "What each state means",
+      "notRecorded": "What it does not show or record",
+      "shortcuts": "Shortcuts"
+    },
+    "shortcuts": {
+      "none": "This screen has no shortcuts of its own."
+    },
+    "learnMore": {
+      "action": "Learn more",
+      "label": "Learn more about {{topic}}"
+    },
+    "topic": {
+      "allowlist": "the folders this installation allows",
+      "tabLimit": "how many folders can be open",
+      "devices": "approving a phone"
+    }
+  },
+  "workbench": {
+    "activityBar": {
+      "label": "Views of this folder"
+    },
+    "editor": {
+      "label": "Editor",
+      "placeholderTitle": "No file open",
+      "placeholderDescription": "The files you open appear here, beside the chat with Claude. Opening and editing them arrives with the Explorer."
+    },
+    "panel": {
+      "label": "Panel",
+      "placeholderTitle": "Nothing in the panel yet",
+      "placeholderDescription": "The terminal and the output of a session will be here."
+    },
+    "claude": {
+      "label": "Claude",
+      "newSession": "Start a new session in this folder"
+    },
+    "mobile": {
+      "label": "Views of this folder",
+      "explorer": "Explorer",
+      "editor": "Editor",
+      "claude": "Claude",
+      "panel": "Panel"
+    },
+    "layout": {
+      "sideBar": "Show or hide the side bar",
+      "panel": "Show or hide the panel"
+    },
+    "tabs": {
+      "label": "Open folders",
+      "open": "Open folder…",
+      "close": "Close {{name}}",
+      "pick": "Folder tab: {{name}}",
+      "actionsOf": "Actions for {{name}}",
+      "notKept": "Not among your tabs: the server did not keep it."
+    },
+    "close": {
+      "titleOne": "Close {{name}}?",
+      "titleMany": "Close {{count}} folders?",
+      "sessionsCarryOn": "The Claude sessions of these folders keep running on the machine: closing a tab does not end them.",
+      "listLabel": "Folders to close",
+      "keep": "Keep open",
+      "confirm": "Close",
+      "pending": "Closing…"
+    },
+    "explorer": {
+      "label": "Explorer",
+      "placeholder": "The files of this folder will be here: opening, creating and editing them arrives with the Explorer."
+    },
+    "search": {
+      "label": "Search",
+      "placeholder": "Finding files and text in this folder will be here, with the Search."
+    },
+    "sessions": {
+      "label": "Claude sessions",
+      "placeholder": "The sessions and conversations of this folder will be listed here. Until then, the chat beside the editor holds the session of this tab."
+    },
+    "tabState": {
+      "notAllowed": "No longer allowed",
+      "missing": "No longer on disk"
+    },
+    "tabCopy": {
+      "copied": "Path copied.",
+      "failed": "The browser refused the clipboard — select the path and copy it by hand."
+    },
+    "tabAction": {
+      "close": "Close",
+      "closeOthers": "Close the others",
+      "closeRight": "Close to the right",
+      "moveLeft": "Move left",
+      "moveRight": "Move right",
+      "copyPath": "Copy path"
+    },
+    "screen": {
+      "title": "Workbench",
+      "purpose": "A folder of this machine: its files, its editor and Claude, side by side."
+    },
+    "help": {
+      "what": "Each tab is one folder of this machine, with everything about it: the files, the editor and the chat with Claude beside them. A session started here runs inside the folder of the tab, and nowhere else. Open another folder with “Open folder…” or the + of the tab bar; each one is a tab of its own.",
+      "states": "Up to 8 folders can be open at once; to open another, close one first. Closing a tab never ends its Claude sessions — they keep running on the machine, and come back when you open the folder again. A tab whose folder left the allowlist, or the disk, opens as an error, and the other tabs carry on. A place still empty says what will live there.",
+      "notRecorded": "Which folders are open, and their order, are kept on the server, so they follow you to another device. The layout of each tab — its sizes, the open panels — is kept only in this browser. What you say to Claude and what it answers is the session's, not the tab's; decisions on permissions go to the audit trail."
+    }
+  },
+  "status": {
+    "folder": {
+      "label": "Copy the path {{path}}"
+    },
+    "language": {
+      "pick": "Language: {{language}}. Change it",
+      "title": "Language",
+      "en": "English",
+      "ptBR": "Português (Brasil)"
+    },
+    "theme": {
+      "toLight": "Switch to the light theme",
+      "toDark": "Switch to the dark theme"
+    },
+    "bar": {
+      "label": "Status bar"
+    },
+    "folderState": {
+      "notAllowed": "no longer allowed",
+      "missing": "no longer on disk"
+    },
+    "folderCopy": {
+      "copied": "Copied",
+      "failed": "Copy it by hand"
+    }
+  },
+  "command": {
+    "category": {
+      "file": "File",
+      "view": "View",
+      "go": "Go to",
+      "preferences": "Preferences",
+      "help": "Help",
+      "notifications": "Notifications"
+    },
+    "palette": {
+      "show": "Show all commands"
+    },
+    "workspace": {
+      "openFolder": "Open folder…",
+      "openRecent": "Open recent"
+    },
+    "workbench": {
+      "closeFolderTab": "Close folder tab",
+      "nextFolderTab": "Next folder tab",
+      "previousFolderTab": "Previous folder tab",
+      "goToFolderTab": "Folder tab {{place}}",
+      "toggleSideBar": "Show or hide the side bar",
+      "togglePanel": "Show or hide the panel"
+    },
+    "notifications": {
+      "show": "Show notifications",
+      "doNotDisturbOn": "Turn on do not disturb",
+      "doNotDisturbOff": "Turn off do not disturb"
+    },
+    "preferences": {
+      "languageEn": "Change the language to English",
+      "languagePtBR": "Change the language to Portuguese (Português do Brasil)"
+    },
+    "help": {
+      "show": "Help for this screen"
+    }
+  },
+  "palette": {
+    "commands": {
+      "placeholder": "Type the name of a command",
+      "noMatch": "No command matches what you typed."
+    },
+    "dialog": {
+      "title": "Command palette",
+      "description": "Type to find what the app can do. Enter runs it; Esc closes.",
+      "input": "Search commands",
+      "results": "Results",
+      "noMode": "Start with {{prefixes}} to search the commands.",
+      "placeholder": "Type > to see the commands"
+    }
+  },
+  "fileMenu": {
+    "bar": {
+      "label": "Application menu"
+    },
+    "file": {
+      "title": "File"
+    }
+  },
+  "notifications": {
+    "severity": {
+      "info": "Information:",
+      "warning": "Warning:",
+      "error": "Error:"
+    },
+    "toast": {
+      "dismiss": "Dismiss"
+    },
+    "toasts": {
+      "label": "Notifications"
+    },
+    "center": {
+      "title": "Notifications",
+      "description": "What the app told you that had no other place on the screen — the same on every device you use, for 30 days.",
+      "doNotDisturb": "Do not disturb in this browser",
+      "markAllRead": "Mark all as read",
+      "clearAll": "Clear all",
+      "silenced": "Do not disturb is on: nothing pops up in this browser, and everything is still kept here.",
+      "loading": "Loading the notifications…",
+      "emptyTitle": "No notifications",
+      "emptyDescription": "When something happens that has no other place on the screen — a command that failed, the connection lost — it is listed here.",
+      "list": "Notifications, newest first",
+      "more": "Load older ones",
+      "loadingMore": "Loading older ones…"
+    },
+    "entry": {
+      "unreadAt": "Unread · {{when}}",
+      "markRead": "Mark as read",
+      "remove": "Clear",
+      "count": "×{{count}}"
+    },
+    "pending": {
+      "saving": "{{when}} · being saved on this machine",
+      "unsaved": "{{when}} · not saved on this machine yet — trying again",
+      "refused": "{{when}} · this machine did not keep it; it stays in this window only"
+    },
+    "bell": {
+      "label": "Notifications: {{count}} unread"
+    }
+  },
+  "diagnostics": {
+    "screen": {
+      "title": "Logs and diagnostics",
+      "purpose": "Whether this browser reaches the backend, and how long a round trip takes."
+    },
+    "help": {
+      "what": "Where to look when something seems stuck. The connection shows whether this browser is talking to the backend right now; the round trip sends one command through every layer — the gateway, the rules, the database — and shows the answer and how long it took.",
+      "states": "Connected means everything on screen is live. Reconnecting means the connection dropped and the app is trying again on its own, waiting a little longer each time: “Reconnect” tries now. When the server asked the app to slow down, the button waits as long as the server asked, and says so. A ping waiting for its answer shows as loading; a ping sent while the connection is down says so, with the way to reconnect.",
+      "notRecorded": "Nothing here reads your conversations or files. A round trip is counted on the server, and nothing else is kept. The logs of the backend and of the app are not shown here yet."
+    },
+    "ping": {
+      "title": "Round trip",
+      "description": "One command across every layer — the gateway, the use case, the rule, the database — and back as an event.",
+      "action": "Send ping",
+      "emptyTitle": "No round trip yet",
+      "empty": "Send a ping to see the whole chain answer, and how long it takes.",
+      "listLabel": "Round trips",
+      "pending": "Waiting for the answer…",
+      "result": "Pong {{count}} at {{at}}",
+      "roundTrip": "{{ms}} ms there and back",
+      "sequence": "Sequence {{seq}}",
+      "sessionLabel": "Diagnostic session {{sessionId}}"
+    },
+    "connection": {
+      "title": "Connection",
+      "description": "The one connection every screen of this browser shares with the backend.",
+      "reconnect": "Reconnect",
+      "heldBack": "The server asked this app to slow down. It reconnects on its own as soon as the server allows."
+    }
+  },
+  "settings": {
+    "screen": {
+      "title": "Settings",
+      "purpose": "How this app looks on this device, and the folders it may open."
+    },
+    "help": {
+      "what": "The settings of the app itself: its look — theme, language, density — and the folders it works in. Claude's own settings — the model, the permission mode, MCP servers — are not here: they have a screen of their own.",
+      "states": "Every option shows its default, and “Restore default” when it is set to something else. Appearance changes at once and is kept on this device only, so your phone can look different from your desktop. The folders this installation allows are read only here: adding one takes a command on the machine the backend runs on, which the section shows ready to copy.",
+      "notRecorded": "Appearance is kept only in this browser, never on the server. Recent folders are kept on the server, so they follow you to another device; removing one here removes it everywhere, and never touches the folder on disk."
+    },
+    "section": {
+      "appearance": "Appearance",
+      "workspaces": "Workspaces"
+    },
+    "sections": {
+      "label": "Sections"
+    },
+    "search": {
+      "label": "Search the settings",
+      "placeholder": "Search the settings",
+      "none": "No setting matches “{{query}}”.",
+      "results": "Settings found"
+    },
+    "appearance": {
+      "theme": "Theme",
+      "themeDescription": "The system's follows your operating system, even when it changes while the app is open.",
+      "themeSystem": "The system's",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "language": "Language",
+      "languageDescription": "The language of the interface on this device. Push notifications keep the language the phone registered with.",
+      "languageDefault": "this browser's ({{language}})",
+      "density": "Density",
+      "densityDescription": "Compact fits more on the screen, as a code editor does; comfortable has taller rows and larger text.",
+      "densityCompact": "Compact",
+      "densityComfortable": "Comfortable"
+    },
+    "option": {
+      "default": "Default: {{value}}",
+      "restore": "Restore default",
+      "restoreLabel": "Restore the default of {{option}}"
+    }
+  },
+  "about": {
+    "screen": {
+      "title": "About",
+      "purpose": "The versions this installation runs — ready to paste into a bug report."
+    },
+    "help": {
+      "what": "The version of every part of this installation: this web, the backend, the Agent SDK, Claude's command-line tool and Node. When something goes wrong, copy the block and paste it into the report: it is the first thing anybody helping you will ask.",
+      "states": "A version the backend could not read says why: not installed, or installed but unreadable. When the backend cannot be reached, only this web's version is shown, with the way to try again.",
+      "notRecorded": "Reading the versions records nothing. Copying puts the block on your clipboard and nowhere else."
+    },
+    "versions": {
+      "title": "Versions",
+      "description": "Copy them whole into a bug report.",
+      "loading": "Reading the versions…",
+      "copy": "Copy versions",
+      "copied": "Copied — paste it into the report.",
+      "copyFailed": "This browser did not allow copying. Select the versions above and copy them by hand."
+    },
+    "version": {
+      "web": "Web",
+      "backend": "Backend",
+      "agentSdk": "Agent SDK",
+      "claudeCli": "Claude CLI",
+      "node": "Node",
+      "notInstalled": "not installed",
+      "unreadable": "could not be read"
+    },
+    "project": {
+      "title": "The project",
+      "description": "Where to read more about how it works.",
+      "documentation": "Documentation",
+      "newTab": "(opens in a new tab)",
+      "license": "The repository does not declare a license."
     }
   }
 }

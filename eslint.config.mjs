@@ -25,6 +25,47 @@ const CROSS_FEATURE = {
     'no-cross-feature-internals: another feature is reached through its barrel (`@/features/x`), never through a deep path.',
 };
 
+/**
+ * Icons come from `lucide-react` and nowhere else: one set, one stroke, one way to label them
+ * (docs/architecture/web/03-ui-system.md#o-sistema-visual). Reused by every scope of the web below.
+ */
+const OTHER_ICONS = {
+  group: [
+    'react-icons',
+    'react-icons/*',
+    '@heroicons/*',
+    '@radix-ui/react-icons',
+    '@tabler/icons-react',
+    '@mui/icons-material',
+    '@mui/icons-material/*',
+    '@phosphor-icons/*',
+    'phosphor-react',
+    '@fortawesome/*',
+    'react-feather',
+    'lucide',
+  ],
+  message:
+    'icons-only-lucide: the web draws its icons from `lucide-react` alone, so every control that is only an icon looks and is labelled the same way.',
+};
+
+/** A token in `localStorage` is a token any script on the page can read — see the scope below. */
+const TOKEN_IN_WEB_STORAGE = {
+  selector: 'CallExpression[callee.object.name="localStorage"][callee.property.name="setItem"]',
+  message:
+    'localStorage is readable by any script on the page. A credential belongs in memory, or in an httpOnly cookie.',
+};
+
+/**
+ * A colour is a role token (`bg-destructive`), never a shade (`bg-red-500`) nor a literal
+ * (`bg-[#f00]`): a shade breaks the dark theme, and a rebrand becomes a search-and-replace
+ * (docs/architecture/web/03-ui-system.md#token-semântico-nunca-cor-literal).
+ */
+const LITERAL_COLOUR =
+  '/\\b(bg|text|border|ring|fill|stroke|outline|divide|from|via|to|shadow|decoration|accent|caret|placeholder)-(red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone|black|white)\\b|-\\[(#|rgb|hsl|oklch|color)/';
+
+const LITERAL_COLOUR_MESSAGE =
+  'no-literal-colour: use the role token of the theme (`bg-destructive`, `text-muted-foreground`), never a shade or a literal colour.';
+
 export default tseslint.config(
   {
     name: 'remote-claude/ignores',
@@ -120,6 +161,7 @@ export default tseslint.config(
                 'no-api-in-components: a component talks to a hook. Four reasons to change collapse into one file otherwise, and every one of them then means editing JSX.',
             },
             CROSS_FEATURE,
+            OTHER_ICONS,
           ],
         },
       ],
@@ -179,9 +221,19 @@ export default tseslint.config(
               message:
                 'shared-cannot-import-features: shared/ is the bottom of the stack. The arrow points at it, never away from it.',
             },
+            OTHER_ICONS,
           ],
         },
       ],
+    },
+  },
+
+  {
+    // The app layer composes screens and draws the frame: the same one set of icons.
+    name: 'remote-claude/web-app-icons',
+    files: ['web/src/app/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [OTHER_ICONS] }],
     },
   },
 
@@ -214,13 +266,28 @@ export default tseslint.config(
     name: 'remote-claude/no-token-in-web-storage',
     files: ['web/src/**/*.{ts,tsx}'],
     rules: {
+      'no-restricted-syntax': ['error', TOKEN_IN_WEB_STORAGE],
+    },
+  },
+
+  {
+    // Where the interface is drawn, a colour is a role of the theme — plan 06, S-87. The generated
+    // primitives of `components/ui/` are the generator's, and use the tokens already. Repeats the
+    // storage rule because a scope's `no-restricted-syntax` replaces the one above it.
+    name: 'remote-claude/no-literal-colour',
+    files: [
+      'web/src/features/*/components/**/*.tsx',
+      'web/src/app/**/*.tsx',
+      'web/src/shared/components/*.tsx',
+    ],
+    rules: {
       'no-restricted-syntax': [
         'error',
+        TOKEN_IN_WEB_STORAGE,
+        { selector: `Literal[value=${LITERAL_COLOUR}]`, message: LITERAL_COLOUR_MESSAGE },
         {
-          selector:
-            'CallExpression[callee.object.name="localStorage"][callee.property.name="setItem"]',
-          message:
-            'localStorage is readable by any script on the page. A credential belongs in memory, or in an httpOnly cookie.',
+          selector: `TemplateElement[value.raw=${LITERAL_COLOUR}]`,
+          message: LITERAL_COLOUR_MESSAGE,
         },
       ],
     },

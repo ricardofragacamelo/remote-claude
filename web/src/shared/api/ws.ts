@@ -1,4 +1,5 @@
 import { config } from '@/shared/config/env';
+import { createAttachments } from './attachments';
 import { credentials, currentLocale } from './credentials';
 import { WsClient } from './ws-client';
 
@@ -9,3 +10,6 @@ export const wsClient = new WsClient({
   locale: currentLocale,
   appVersion: config.appVersion,
 });
+
+/** The sessions of that client held attached by more than one owner — a tab, and its screen. */
+export const sessionAttachments = createAttachments(wsClient);

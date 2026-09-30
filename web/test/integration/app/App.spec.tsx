@@ -3,15 +3,15 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
-import { App } from '@/app/App';
 import { Callback } from '@/app/Callback';
 import { useAuthStore } from '@/features/auth';
 import * as authService from '@/features/auth/services/auth.service';
-import { useWorkspaceStore } from '@/features/workspace';
-import { api } from '@/shared/api/api';
 import { AppError } from '@/shared/api/errors';
 import { navigation } from '@/shared/lib/navigation';
-import { render, renderRouted, translator } from '../../support/render';
+import { mountApp } from '../../support/app';
+import { render, translator } from '../../support/render';
+import { VISITOR_PREFIX } from '@/shared/lib/visitor-storage';
+import { aTab, fakeWorkspaceApi, projects } from '../../support/workspace-api';
 
 const t = translator('en');
 
@@ -34,7 +34,7 @@ describe('the shell', () => {
   it('waits rather than deciding, while the sign-in is still unknown', async () => {
     vi.spyOn(authService, 'renewSession').mockImplementation(() => new Promise(() => undefined));
 
-    renderRouted(<App />);
+    mountApp('/');
 
     // `findBy` and not `getBy`: the router resolves its first route asynchronously, so the shell
     // is mounted one tick after the render call rather than inside it.
@@ -43,57 +43,119 @@ describe('the shell', () => {
 
   it('signs the visitor in from the refresh cookie when there is one', async () => {
     vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    fakeWorkspaceApi({ roots: [projects], recent: [], openFolders: [] });
 
-    renderRouted(<App />);
+    mountApp('/');
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: t('session.ping.action') })).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByRole('button', { name: t('workspace.welcome.openFolder') }),
+    ).toBeVisible();
   });
 
-  it('leads a signed-in visitor to the rules they granted', async () => {
+  it('leads a signed-in visitor to the rules they granted, from the navigation', async () => {
     vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
     const user = userEvent.setup();
-    const mounted = renderRouted(<App />);
+    const mounted = mountApp('/');
 
-    await user.click(await screen.findByRole('link', { name: t('rules.screen.open') }));
+    await user.click(await screen.findByRole('link', { name: t('navigation.entry.rules') }));
 
     await waitFor(() => {
       expect(mounted.path()).toBe('/rules');
     });
   });
 
-  it('leads from a workspace to the conversations held in it', async () => {
+  it('opens a recent folder in the workbench, the folder in the search — D-22', async () => {
     vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
-    // Only the workspaces answer: the rest of the shell stays loading, which is none of this
-    // case's business.
-    vi.spyOn(api, 'get').mockImplementation((path: string) =>
-      path === '/workspaces'
-        ? Promise.resolve({
-            workspaces: [{ path: '/srv/projects', label: 'Projects', lastUsedAt: null }],
-          })
-        : new Promise(() => undefined),
-    );
-    useWorkspaceStore.getState().select(null);
+    fakeWorkspaceApi({
+      roots: [projects],
+      openFolders: [],
+      recent: [
+        {
+          path: '/srv/projects/app',
+          rootLabel: 'Projects',
+          lastOpenedAt: '2026-09-29T10:00:00.000Z',
+          pinned: false,
+          available: true,
+        },
+      ],
+    });
     const user = userEvent.setup();
-    const mounted = renderRouted(<App />);
+    const mounted = mountApp('/');
 
-    await user.click(
-      await screen.findByRole('button', {
-        name: t('workspace.selector.historyOf', { label: 'Projects' }),
-      }),
-    );
+    await user.click(await screen.findByRole('button', { name: /^app/ }));
 
     await waitFor(() => {
-      expect(mounted.path()).toBe('/history');
+      expect(mounted.path()).toBe('/workbench');
     });
-    expect(mounted.search()).toEqual({ workspacePath: '/srv/projects' });
+    expect(mounted.search()).toEqual({ folder: '/srv/projects/app' });
+  });
+
+  it('holds the welcome screen alone: no workspace selector, session starter, ping nor devices — S-149', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    fakeWorkspaceApi({ roots: [projects], recent: [], openFolders: [] });
+
+    mountApp('/');
+
+    expect(
+      await screen.findByRole('button', { name: t('workspace.welcome.openFolder') }),
+    ).toBeVisible();
+    expect(screen.queryByRole('button', { name: t('session.starter.action') })).toBeNull();
+    expect(screen.queryByRole('button', { name: t('diagnostics.ping.action') })).toBeNull();
+    expect(screen.queryByText(t('devices.list.title'))).toBeNull();
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+
+  it('waits for the folder tabs before deciding, rather than showing the welcome screen first — S-05', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    fakeWorkspaceApi({ roots: [projects], recent: [] });
+
+    mountApp('/');
+
+    expect(await screen.findByLabelText(t('workspace.welcome.loading'))).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('workspace.welcome.openFolder') })).toBeNull();
+  });
+
+  it('leads / to the active folder tab when tabs are open, replacing the address — S-05', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    fakeWorkspaceApi({
+      roots: [projects],
+      recent: [],
+      openFolders: [aTab('/srv/projects/a'), aTab('/srv/projects/b')],
+    });
+    localStorage.setItem(
+      `${VISITOR_PREFIX}workbench.lastFolder`,
+      JSON.stringify('/srv/projects/b'),
+    );
+
+    const mounted = mountApp('/');
+
+    await waitFor(() => {
+      expect(mounted.path()).toBe('/workbench');
+    });
+    expect(mounted.search()).toEqual({ folder: '/srv/projects/b' });
+    expect(mounted.router.history.canGoBack()).toBe(false);
+  });
+
+  it('opens the welcome screen when the folder tabs could not be read — nobody is kept out', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    fakeWorkspaceApi({
+      roots: [projects],
+      recent: [],
+      openFolders: new AppError('NETWORK_UNREACHABLE', 'common.error.offline', 't'),
+    });
+
+    const mounted = mountApp('/');
+
+    expect(
+      await screen.findByRole('button', { name: t('workspace.welcome.openFolder') }),
+    ).toBeVisible();
+    expect(mounted.path()).toBe('/');
   });
 
   it('asks the visitor to sign in when there is no session to resume', async () => {
     vi.spyOn(authService, 'renewSession').mockRejectedValue(new AppError('X', 'k', 't'));
 
-    renderRouted(<App />);
+    mountApp('/');
 
     await waitFor(() => {
       expect(screen.getByText(t('auth.signIn.title'))).toBeInTheDocument();
@@ -102,7 +164,7 @@ describe('the shell', () => {
 
   it('has no accessibility violation', async () => {
     vi.spyOn(authService, 'renewSession').mockRejectedValue(new AppError('X', 'k', 't'));
-    const { container } = renderRouted(<App />);
+    const { container } = mountApp('/');
 
     await waitFor(() => {
       expect(screen.getByText(t('auth.signIn.title'))).toBeInTheDocument();
@@ -151,9 +213,10 @@ describe('the sign-out', () => {
   it('drops the cookie, forgets the session and ends it at the provider too', async () => {
     vi.spyOn(authService, 'renewSession').mockResolvedValue({ ...session, idToken: 'id-1' });
     const user = userEvent.setup();
-    renderRouted(<App />);
+    mountApp('/');
 
-    await user.click(await screen.findByRole('button', { name: t('auth.signOut.action') }));
+    await user.click(await screen.findByRole('button', { name: t('navigation.account.label') }));
+    await user.click(await screen.findByRole('menuitem', { name: t('auth.signOut.action') }));
 
     await waitFor(() => {
       expect(assign).toHaveBeenCalledTimes(1);
@@ -169,10 +232,10 @@ describe('the sign-out', () => {
   it('shows no sign-out to somebody who is not signed in', async () => {
     vi.spyOn(authService, 'renewSession').mockRejectedValue(new AppError('X', 'k', 't'));
 
-    renderRouted(<App />);
+    mountApp('/');
 
     expect(await screen.findByText(t('auth.signIn.title'))).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: t('auth.signOut.action') })).toBeNull();
+    expect(screen.queryByRole('button', { name: t('navigation.account.label') })).toBeNull();
   });
 });
 

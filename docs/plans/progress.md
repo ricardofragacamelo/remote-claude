@@ -14,7 +14,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 
 ## Panorama
 
-**Última atualização:** 2026-09-29
+**Última atualização:** 2026-09-30
 
 ```
 00-bootstrap             ████████████████████ 100%   ✅ concluído
@@ -23,7 +23,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 03-rules-and-audit       ████████████████████ 100%   ✅ concluído
 04-transcript-and-resume ████████████████████ 100%   ✅ concluído
 05-hardening-operations  ████████████████████ 100%   ✅ concluído
-06-workbench             ███████░░░░░░░░░░░░░  33%   🔄 em andamento
+06-workbench             ████████████████████ 100%   ✅ concluído
 07-explorer-and-editor   ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 08-claude-panel          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 09-search                ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
@@ -51,7 +51,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [03 — Regras e trilha](03-rules-and-audit/README.md) | 5/5 | 23/23 | 92/92 | 22/22 | ✅ |
 | [04 — Histórico e retomada](04-transcript-and-resume/README.md) | 6/6 | 25/25 | 88/88 | 7/7 | ✅ |
 | [05 — Endurecimento e operação](05-hardening-operations/README.md) | 5/5 | 22/22 | 77/77 | 14/14 | ✅ |
-| [06 — Workbench](06-workbench/README.md) | 2/7 | 13/40 | 82/182 | 21/21 | 🔄 |
+| [06 — Workbench](06-workbench/README.md) | 7/7 | 40/40 | 210/210 | 33/33 | ✅ |
 | [07 — Explorer e editor](07-explorer-and-editor/README.md) | 0/9 | 0/61 | 0/360 | 19/20 | 🔲 |
 | [08 — Painel do Claude](08-claude-panel/README.md) | 0/7 | 0/58 | 0/272 | 24/24 | 🔲 |
 | [09 — Busca](09-search/README.md) | 0/4 | 0/24 | 0/171 | 8/8 | 🔲 |
@@ -63,7 +63,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [15 — Dispositivos](15-devices/README.md) | 0/4 | 0/28 | 0/118 | 0/12 | 🔲 |
 | [16 — Logs e diagnóstico](16-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 2/16 | 🔲 |
 | [17 — Distribuição](17-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/8 | 🔲 |
-| **Total** | **38/100** | **216/647** | **663/2715** | **203/284** | 🔄 |
+| **Total** | **43/100** | **243/647** | **791/2743** | **215/296** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -311,6 +311,7 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-09-30 | **Plano 06 concluído — F6** | o workbench provado pela porta do usuário: abrir pasta das raízes até a URL com o caminho real, a sessão da aba na pasta dela (o Claude roteirizado, da gravação nova `cwd-turn`, diz o diretório), abas que sobrevivem à recarga, menu Arquivo, paleta, notificação da pasta que sai da allowlist, celular a 360 px e axe nos dois temas. O e2e achou dois defeitos da F3/F4 — toda recarga apagava o layout guardado das abas, e o primeiro `Esc` no centro de notificações fechava só um tooltip —, corrigidos com teste. `pnpm verify:full` 0 (11 portões). Depois dele, e **sem novo `verify:full`** (decisão do usuário ao encerrar): o log de I/O passou a dizer o status real de uma recusa, e o runner do e2e deixou de bloquear o loop que drena o log do backend — o `smoke-live` lia um log parado no boot; validados por checagens direcionadas ([diário, ciclo 34](06-workbench/progress.md#histórico-de-validação)) |
 | 2026-09-28 | **Plano 05 concluído (F4)** | os limites pela porta do usuário, nas duas pontas, sobre uma **stack de limites** própria da execução (05 · D-13): teto, ociosidade, ritmo, token que expira no meio do turno e renovação recusada. Os cenários acharam o produto travando sob limite — o iniciador do web preso em "Starting…" e o toque na pasta do app sem efeito no teto, a sessão aberta pela tela inicial tratada como de outro navegador, a primeira requisição de cada carga do web sem token, e o app que continuava "logado" com a renovação recusada — todos corrigidos com teste. O `4429` virou o estado `throttled`, com o motivo na tela. `pnpm verify:full` 0, `pnpm test:e2e:mobile` 15/15, `pnpm test:e2e:live` 2/2. Os planos 06–16 podem começar ([06 · D-02](06-workbench/decisions.md)) |
 | 2026-09-28 | **Plano 11: as 21 decisões em aberto respondidas pelo usuário** | vinte seguem a recomendação: store de MCP nosso com `strictMcpConfig`, segredo cifrado entregue por `setMcpServers()` e nunca pelo argv, módulo `claude-config`, fixture MCP stdio própria, padrões por usuário e por pasta, catálogo por sessão viva ou sonda efêmera, conta visível a quem tem raiz, teste de conexão com dono neste plano, esta tela dona dos padrões, apertar-vale-já, `.mcp.json` aprovado por digest, regras `mcp__` revogadas quando o programa muda, annotation só sobe risco, indicador de MCP entregue aqui, configuração de projeto lida pelo formato publicado e só leitura, criação pela escrita do 07, shell inline desligado para todas as origens se escapar da aprovação e skills de sistema por leitura tolerante. **Uma muda o plano:** plugins de marketplace entram (11 · D-15), baixados pelo backend para diretório próprio, só de marketplace declarado no arquivo da allowlist, fixados e atualizados só por decisão — nasce a B-47, com S-200…S-213 |
 | 2026-09-28 | **Plano 10: as 11 decisões em aberto respondidas pelo usuário** | todas seguem a recomendação, e nenhuma muda tarefa ou cenário: step-up por `auth_time` + `max_age` (300 s, reanexar também exige, falha fechada), texto UTF-8 com fluxo no servidor, scrollback por terminal headless com uma connection por terminal, interruptor por `sub` no arquivo da allowlist, "só do web" por `azp` (o `Origin` com o 17), trilha só do ciclo de vida e nunca as teclas, `node-pty` carregado sob demanda, os limites propostos, shell integration injetada no spawn, perfis detectados + personalizados e xterm com renderizador DOM em chunk próprio. O empacotamento do `node-pty` fica como nota ao [plano 17](17-distribution/README.md) |

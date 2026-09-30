@@ -5,14 +5,9 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import { callApi } from '../fixtures/api';
-import {
-  cardFor,
-  scratchFolders,
-  send,
-  sessionScreen,
-  startConversation,
-} from '../fixtures/history';
-import { closeSession, connected, workspaceFor } from '../fixtures/live-session';
+import { cardFor, scratchFolders, send } from '../fixtures/history';
+import { attachFrom, closeSession, connected, workspaceFor } from '../fixtures/live-session';
+import { closeTab, sessionInTab } from '../fixtures/workbench';
 import type { E2eSocket } from '../fixtures/ws';
 import { scenario } from '../scenarios';
 
@@ -25,6 +20,9 @@ import { scenario } from '../scenarios';
  *
  * The permission deadline of this stack is five seconds, and nothing here waits on it: every
  * question is answered on the card as soon as it appears.
+ *
+ * The session is opened where a person opens it now — in the tab of its folder, from the chat beside
+ * the editor — and a socket of the suite attaches to it for what only a socket does (plan 06, B-33).
  */
 
 const init = scenario('commands-init');
@@ -34,16 +32,22 @@ const locked = scenario('undo-during-turn');
 const context = workspaceFor(init.user);
 const scratch = scratchFolders();
 
-/** A session on a folder of its own, open in the browser, and the socket that owns it. */
+/** A session started in the tab of a folder of its own, and a socket of the suite attached to it. */
 async function onScreen(
   page: Page,
   workspace: string,
 ): Promise<{ socket: E2eSocket; sessionId: string }> {
+  const sessionId = await sessionInTab(page, init.user, workspace);
   const socket = await connected(context().user);
-  const { sessionId } = await startConversation(socket, workspace);
-  await sessionScreen(page, init.user, sessionId);
+  await attachFrom(socket, sessionId, 0);
 
   return { socket, sessionId };
+}
+
+/** Ends what a test opened: the session, and the folder tab it was born in. */
+async function cleanUp(socket: E2eSocket, sessionId: string, workspace: string): Promise<void> {
+  await closeSession(socket, sessionId);
+  await closeTab(context().user, workspace);
 }
 
 /** The status the screen shows for a session with nothing running. */
@@ -113,7 +117,7 @@ test(`${init.id} — ${init.title}`, async ({ page }) => {
     const written = fs.readFileSync(path.join(workspace, expected.file), 'utf8');
     expect(written.startsWith(`# ${expected.file}`)).toBe(true);
   } finally {
-    await closeSession(socket, sessionId);
+    await cleanUp(socket, sessionId, workspace);
   }
 });
 
@@ -141,7 +145,7 @@ test(`${undone.id} — ${undone.title}`, async ({ page }) => {
     await expect(report.getByRole('list', { name: 'Put back' }).getByText(file)).toBeVisible();
     expect(fs.readFileSync(file, 'utf8')).toBe(expected.before);
   } finally {
-    await closeSession(socket, sessionId);
+    await cleanUp(socket, sessionId, workspace);
   }
 });
 
@@ -192,6 +196,6 @@ test(`${locked.id} — ${locked.title}`, async ({ page }) => {
     await expect(page.getByText(expected.busy)).toBeHidden();
     await expect(confirmation.getByRole('button', { name: 'Undo these files' })).toBeEnabled();
   } finally {
-    await closeSession(socket, sessionId);
+    await cleanUp(socket, sessionId, workspace);
   }
 });

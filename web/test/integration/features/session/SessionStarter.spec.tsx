@@ -47,7 +47,7 @@ describe('starting a session', () => {
     });
   }
 
-  function mount(workspacePath: string | null) {
+  function mount(workspacePath: string) {
     return renderRouted(
       <SessionStarter
         workspacePath={workspacePath}
@@ -55,14 +55,6 @@ describe('starting a session', () => {
       />,
     );
   }
-
-  it('cannot start without a folder, and says so', async () => {
-    mount(null);
-    connect();
-
-    expect(await screen.findByText(t('session.starter.chooseWorkspace'))).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: t('session.starter.action') })).toBeDisabled();
-  });
 
   it('cannot start while the socket is down', async () => {
     mount('/srv/projects/app');

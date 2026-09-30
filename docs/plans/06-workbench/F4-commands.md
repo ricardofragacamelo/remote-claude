@@ -28,7 +28,7 @@ temas, zen mode, layout configurável e o resto do menu ficam fora ([Não entra]
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-23 — Registro de comandos e atalhos 🔲
+### B-23 — Registro de comandos e atalhos ✅
 
 Cada **comando** tem id, rótulo traduzido, categoria, ícone opcional, condição de disponibilidade
 (`when`) e ação; cada **atalho** liga uma tecla a um comando num contexto. Os planos seguintes
@@ -43,7 +43,7 @@ para cada tela global, tema, idioma, ajuda da tela.
   navegador reserva `Ctrl+Tab`, `Ctrl+W`, `Ctrl+T`, `Ctrl+N`, e a escolha tem de funcionar num
   navegador comum.
 
-### B-24 — Command palette 🔲
+### B-24 — Command palette ✅
 
 `Ctrl/Cmd+Shift+P` abre a paleta (`command` do shadcn) sobre o registro:
 
@@ -55,7 +55,7 @@ para cada tela global, tema, idioma, ajuda da tela.
 - abrir com ela aberta não abre outra; `Esc` fecha e devolve o foco a quem o tinha;
 - padrão ARIA de combobox + listbox, anunciado ao leitor de tela.
 
-### B-25 — Menu Arquivo 🔲
+### B-25 — Menu Arquivo ✅
 
 Um menu só, **Arquivo**, no topo da moldura em `md+` (`menubar` do shadcn) e dentro do menu da
 navegação abaixo de `md`. Ele **sai do registro** — rótulo, atalho e disponibilidade iguais aos da
@@ -72,7 +72,7 @@ Item cujo comando ainda não foi registrado **não aparece** — nada de item de
 esperando outro plano. "Abrir recente" lista os recentes (fixados primeiro) e termina em "mais…",
 que abre a boas-vindas. Navegável por teclado no padrão ARIA de menubar.
 
-### B-26 — Centro de notificações 🔲
+### B-26 — Centro de notificações ✅
 
 Um serviço de notificação no `shared/` (`notify({ severity, messageKey, params, actions })`) e a sua
 UI:
@@ -93,7 +93,7 @@ UI:
 Texto sempre por chave de i18n; o erro do backend chega como `code` + `messageKey` e é traduzido
 aqui ([04-errors-and-http](../../architecture/shared/04-errors-and-http.md#o-envelope-de-erro)).
 
-### B-27 — Estado de cada aba restaurado ao recarregar 🔲
+### B-27 — Estado de cada aba restaurado ao recarregar ✅
 
 Recarregar a página (ou reabrir o navegador) devolve cada aba de pasta como estava: a view ativa da
 activity bar, o tamanho dos painéis, se o painel inferior estava aberto — e, pelo **gancho de
@@ -112,7 +112,7 @@ restauração** que esta task define, o que os planos seguintes registram (os ed
 
 ## Cenários cobertos
 
-S-119…S-135, S-182.
+S-119…S-135, S-182, S-193…S-199.
 
 ---
 

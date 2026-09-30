@@ -3,7 +3,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
-import { PermissionQueuePanel, usePermissionQueueStore } from '@/features/permission';
+import { forgetPermissionQueues, PermissionQueuePanel } from '@/features/permission';
 import { setAccessToken } from '@/shared/api/credentials';
 import { wsClient } from '@/shared/api/ws';
 import { render, translator } from '../../../support/render';
@@ -66,7 +66,7 @@ describe('the permission queue', () => {
 
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true, now: NOW });
-    usePermissionQueueStore.getState().reset();
+    forgetPermissionQueues();
     setAccessToken('token-1');
     sockets = installFakeWebSocket();
   });

@@ -1,0 +1,17 @@
+{
+  "id": "06·S-162",
+  "title": "axe finds no violation on the workbench, the welcome screen, the open-folder dialog and every global screen, in the light and the dark theme",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "themes": ["light", "dark"],
+    "tags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+    "screens": [
+      { "path": "/audit", "heading": "What ran on your machine" },
+      { "path": "/rules", "heading": "Your rules" },
+      { "path": "/devices", "heading": "Devices" },
+      { "path": "/diagnostics", "heading": "Logs and diagnostics" },
+      { "path": "/settings/appearance", "heading": "Settings" },
+      { "path": "/about", "heading": "About" }
+    ]
+  }
+}

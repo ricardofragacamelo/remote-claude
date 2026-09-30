@@ -1,23 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-  RouterProvider,
-} from '@tanstack/react-router';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
-import { AuditRoute, readAuditSearch } from '@/app/AuditRoute';
-import { RuleRoute } from '@/app/RuleRoute';
 import { useAuthStore } from '@/features/auth';
 import * as authService from '@/features/auth/services/auth.service';
 import { api } from '@/shared/api/api';
 import { navigation } from '@/shared/lib/navigation';
-import { render, translator } from '../../support/render';
+import { mountApp } from '../../support/app';
+import { translator } from '../../support/render';
 
 const t = translator('en');
 const session = {
@@ -62,30 +53,9 @@ const revokedRule = {
 
 /** `/audit` and `/rules/:ruleId`, reached by their links alone — which is what routes are for. */
 function mountAt(url: string) {
-  const root = createRootRoute({ component: Outlet });
-  const audit = createRoute({
-    getParentRoute: () => root,
-    path: '/audit',
-    validateSearch: readAuditSearch,
-    component: AuditRoute,
-  });
-  const rule = createRoute({
-    getParentRoute: () => root,
-    path: '/rules/$ruleId',
-    component: RuleRoute,
-  });
-  const rules = createRoute({ getParentRoute: () => root, path: '/rules', component: () => null });
-  const home = createRoute({ getParentRoute: () => root, path: '/', component: () => null });
+  const mounted = mountApp(url);
 
-  const router = createRouter({
-    routeTree: root.addChildren([audit, rule, rules, home]),
-    history: createMemoryHistory({ initialEntries: [url] }),
-  });
-
-  return {
-    ...render(<RouterProvider router={router} />),
-    location: () => router.state.location,
-  };
+  return { ...mounted, location: () => mounted.router.state.location };
 }
 
 describe('the audit route', () => {
@@ -175,13 +145,31 @@ describe('the audit route', () => {
     ).toBeInTheDocument();
   });
 
-  it('leads to the rules and back to the sessions', async () => {
+  it('lives in its own screen of the frame, with the trail of today and its help — S-136', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    vi.spyOn(api, 'get').mockResolvedValue({ entries: [], nextCursor: null });
+
+    mountAt('/audit?toolName=Bash');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: t('audit.screen.title') }),
+    ).toBeVisible();
+    expect(screen.getByText(t('audit.screen.purpose'))).toBeVisible();
+    expect(screen.getByRole('button', { name: t('help.panel.open') })).toBeVisible();
+    expect(api.get).toHaveBeenCalledWith(expect.stringContaining('toolName=Bash'));
+  });
+
+  it('leads to the rules from the navigation, lit on the trail — S-90', async () => {
     vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
     vi.spyOn(api, 'get').mockResolvedValue({ entries: [], nextCursor: null });
     const user = userEvent.setup();
-    const mounted = mountAt('/audit');
+    const mounted = mountAt('/audit?decision=allowed');
 
-    await user.click(await screen.findByRole('link', { name: t('rules.screen.open') }));
+    expect(await screen.findByRole('link', { name: t('navigation.entry.audit') })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await user.click(screen.getByRole('link', { name: t('navigation.entry.rules') }));
 
     await waitFor(() => {
       expect(mounted.location().pathname).toBe('/rules');

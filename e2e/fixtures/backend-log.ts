@@ -21,3 +21,16 @@ export function unknownVariants(): string[] {
       return parsed.variant ?? 'unknown';
     });
 }
+
+/** One line of the backend's log, as it was written. */
+export type LogLine = Readonly<Record<string, unknown>>;
+
+/** Every line the backend wrote under one trace, in order — both halves of an HTTP edge included. */
+export function linesOfTrace(traceId: string): LogLine[] {
+  return fs
+    .readFileSync(environment.backendLog, 'utf8')
+    .split('\n')
+    .filter((line) => line.includes(traceId))
+    .map((line) => JSON.parse(line) as LogLine)
+    .filter((line) => line['traceId'] === traceId);
+}

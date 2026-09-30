@@ -38,9 +38,10 @@ export interface E2eEnvironment {
   /**
    * The backend's own log of this run.
    *
-   * Read by `smoke-live/` and by nothing else, for one line: the warning the mapper writes when
-   * the SDK sends a message variant this build has never seen. A contract break that only shows
-   * up as a log line nobody reads is a contract break that reaches production quietly.
+   * Read by `smoke-live/` for one line: the warning the mapper writes when the SDK sends a message
+   * variant this build has never seen — a contract break that only shows up as a log line nobody
+   * reads is a contract break that reaches production quietly. And by `http-contract`, for the
+   * status the backend logs a refusal with.
    */
   readonly backendLog: string;
 

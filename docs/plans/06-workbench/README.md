@@ -122,10 +122,10 @@ verde.
 |---|---|---|---|---|
 | F0 | [Contrato](F0-contract.md) | ADR-014, documentos normativos, contrato HTTP, códigos de erro, rotas | B-01…B-05 | ✅ |
 | F1 | [Navegar pelas pastas](F1-directory-browse.md) | listagem de subpastas, recentes e abas no servidor, `pnpm allowlist`, recarga, versões, histórico de notificações | B-06…B-12, B-40 | ✅ |
-| F2 | [Abrir pasta](F2-open-folder.md) | boas-vindas, diálogo, pasta na URL, sessão na pasta escolhida | B-13…B-16 | 🔲 |
-| F3 | [Moldura e casca](F3-layout.md) | sistema visual, navegação global, moldura de tela, abas de pasta, casca responsiva | B-17…B-22 | 🔲 |
-| F4 | [Comandos e notificações](F4-commands.md) | registro, paleta, menu Arquivo, notificações, estado por aba | B-23…B-27 | 🔲 |
-| F5 | [Telas separadas](F5-screens.md) | uma tela por assunto, home desmontada, rotas antigas removidas, ajuda | B-28…B-34 | 🔲 |
+| F2 | [Abrir pasta](F2-open-folder.md) | boas-vindas, diálogo, pasta na URL, sessão na pasta escolhida | B-13…B-16 | ✅ |
+| F3 | [Moldura e casca](F3-layout.md) | sistema visual, navegação global, moldura de tela, abas de pasta, casca responsiva | B-17…B-22 | ✅ |
+| F4 | [Comandos e notificações](F4-commands.md) | registro, paleta, menu Arquivo, notificações, estado por aba | B-23…B-27 | ✅ |
+| F5 | [Telas separadas](F5-screens.md) | uma tela por assunto, home desmontada, rotas antigas removidas, ajuda | B-28…B-34 | ✅ |
 | F6 | [E2E](F6-e2e.md) | o workbench pela porta do usuário | B-35…B-39 | 🔲 |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
@@ -150,10 +150,10 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Boas-vindas e diálogo "Abrir pasta" navegando pelas raízes | B-13…B-15 | [web/03 · Estados de tela](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre) | S-69…S-77, S-84, S-85, S-155, S-157 |
 | Versões na tela "Sobre" | B-12, B-32 | [backend/03](../../architecture/backend/03-modules.md) | S-65…S-68, S-148 |
 | Sistema visual consistente, claro e escuro, verificado por máquina | B-17 | [web/03 · Tema](../../architecture/web/03-ui-system.md#tema) | S-86…S-88, S-162 |
-| Uma tela por assunto, pela navegação global; configurações do app e do Claude nunca juntas | B-18, B-28…B-31 | [web/03](../../architecture/web/03-ui-system.md) | S-89…S-92, S-136…S-147 |
+| Uma tela por assunto, pela navegação global; configurações do app e do Claude nunca juntas | B-18, B-28…B-31 | [web/03](../../architecture/web/03-ui-system.md) | S-89…S-92, S-136…S-147, S-187, S-192 |
 | Toda tela com propósito, ajuda, tooltips, estados vazios que ensinam | B-19, B-34 | [web/03](../../architecture/web/03-ui-system.md), [i18n](../../architecture/shared/02-i18n.md) | S-93…S-95, S-151…S-154 |
-| Abas de pasta: várias, isoladas, persistidas, sem encerrar sessão ao fechar | B-20 | [web/04 · Onde cada estado mora](../../architecture/web/04-state-and-data.md#onde-cada-estado-mora) | S-96…S-110, S-158, S-159, S-181 |
-| Arquivos, editor e chat do Claude lado a lado na mesma aba; views alternáveis no celular | B-21, B-22 | [web/03 · Responsividade](../../architecture/web/03-ui-system.md#responsividade) | S-111…S-118, S-161 |
+| Abas de pasta: várias, isoladas, persistidas, sem encerrar sessão ao fechar | B-20 | [web/04 · Onde cada estado mora](../../architecture/web/04-state-and-data.md#onde-cada-estado-mora) | S-96…S-110, S-158, S-159, S-181, S-188, S-191 |
+| Arquivos, editor e chat do Claude lado a lado na mesma aba; views alternáveis no celular | B-21, B-22 | [web/03 · Responsividade](../../architecture/web/03-ui-system.md#responsividade) | S-111…S-118, S-161, S-189, S-190 |
 | Comandos registrados uma vez: paleta, menu Arquivo e ajuda dizem o mesmo | B-23…B-25 | [web/03](../../architecture/web/03-ui-system.md) | S-119…S-129, S-160 |
 | Notificações com histórico no servidor, e estado de cada aba restaurado ao recarregar | B-26, B-27, B-40 | [web/04](../../architecture/web/04-state-and-data.md), [backend/03 · notification](../../architecture/backend/03-modules.md#notification) | S-130…S-135, S-167…S-178, S-182 |
 | O workbench provado pela porta do usuário | B-35…B-39 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-155…S-163, S-166 |

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
 import { useLiveSession } from '@/features/session/hooks/useLiveSession';
-import { useLiveSessionStore } from '@/features/session';
+import { forgetLiveSessions } from '@/features/session';
 import { setAccessToken } from '@/shared/api/credentials';
 import { wsClient } from '@/shared/api/ws';
 import { installFakeWebSocket } from '../../../../support/fake-websocket';
@@ -30,7 +30,7 @@ describe('driving a session', () => {
   let sockets: InstalledWebSocket;
 
   beforeEach(() => {
-    useLiveSessionStore.getState().reset();
+    forgetLiveSessions();
     setAccessToken('token-1');
     sockets = installFakeWebSocket();
   });

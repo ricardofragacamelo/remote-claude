@@ -6,66 +6,50 @@ import {
   defaultStringifySearch,
 } from '@tanstack/react-router';
 
-import { auditLocation, readAuditSearch } from '@/app/AuditRoute';
-import { historyLocation, readHistorySearch } from '@/app/HistoryRoute';
+import { readAuditSearch } from '@/app/AuditRoute';
 import { routeTree, router } from '@/app/router';
 import { readWorkbenchSearch, workbenchLocation } from '@/app/workbench-location';
 import { CALLBACK_PATH } from '@/features/auth';
 
 describe('the routes', () => {
   it('serves the screen at the root', () => {
-    expect(Object.keys(router.routesById)).toContain('/');
+    expect(Object.keys(router.routesByPath)).toContain('/');
   });
 
   it('serves the provider’s callback, at the path the login publishes', () => {
-    expect(Object.keys(router.routesById)).toContain(CALLBACK_PATH);
-  });
-
-  it('carries the session in the path, so the link reproduces the screen', () => {
-    // The test the architecture states: pasting the link on another device brings up the same
-    // screen. A session held in a store would fail it.
-    expect(Object.keys(router.routesById)).toContain('/sessions/$sessionId');
+    expect(Object.keys(router.routesByPath)).toContain(CALLBACK_PATH);
   });
 
   it('gives the rules a route of their own, so revoking is one click away — D-04', () => {
-    expect(Object.keys(router.routesById)).toContain('/rules');
+    expect(Object.keys(router.routesByPath)).toContain('/rules');
   });
 
   it('gives one rule a route of its own, so a trail entry can open it — D-18', () => {
-    expect(Object.keys(router.routesById)).toContain('/rules/$ruleId');
+    expect(Object.keys(router.routesByPath)).toContain('/rules/$ruleId');
   });
 
   it('gives the trail a route of its own — B-13', () => {
-    expect(Object.keys(router.routesById)).toContain('/audit');
+    expect(Object.keys(router.routesByPath)).toContain('/audit');
   });
 
-  it('gives the history two levels of its own — plan 04, D-03', () => {
-    expect(Object.keys(router.routesById)).toEqual(
-      expect.arrayContaining(['/history', '/history/$conversationId']),
+  it('gives each subject a screen of its own — plan 06, B-29…B-32', () => {
+    expect(Object.keys(router.routesByPath)).toEqual(
+      expect.arrayContaining([
+        '/devices',
+        '/diagnostics',
+        '/settings',
+        '/settings/$section',
+        '/about',
+      ]),
     );
   });
-});
 
-describe('the workspace of the history, read from the URL — plan 04', () => {
-  it('keeps a workspace the link names, trimmed', () => {
-    expect(readHistorySearch({ workspacePath: ' /srv/projects/app ' })).toEqual({
-      workspacePath: '/srv/projects/app',
-    });
-  });
-
-  it.each([
-    ['absent', {}],
-    ['empty', { workspacePath: '  ' }],
-    ['not text', { workspacePath: 3 }],
-  ])('drops one that is %s', (_case, search) => {
-    expect(readHistorySearch(search)).toEqual({});
-  });
-
-  it('writes its own address back, workspace included', () => {
-    expect(historyLocation({})).toBe('/history');
-    expect(historyLocation({ workspacePath: '/srv/projects/app' })).toBe(
-      '/history?workspacePath=%2Fsrv%2Fprojects%2Fapp',
+  it('has no route for a session nor for the history any more — D-07, S-150', () => {
+    const removed = Object.keys(router.routesByPath).filter(
+      (path) => path.startsWith('/sessions') || path.startsWith('/history'),
     );
+
+    expect(removed).toEqual([]);
   });
 });
 
@@ -99,18 +83,6 @@ describe('the filters of the trail, read from the URL', () => {
   });
 });
 
-describe('the address a sign-in comes back to, from the trail', () => {
-  it('is the trail alone when nothing is filtered', () => {
-    expect(auditLocation({})).toBe('/audit');
-  });
-
-  it('carries every filter, so a filtered link survives the sign-in — S-43', () => {
-    expect(auditLocation({ sessionId: 'S1', decision: 'allowed', toolName: 'Write' })).toBe(
-      '/audit?sessionId=S1&decision=allowed&toolName=Write',
-    );
-  });
-});
-
 /** The real table of routes, landed on `href` — what pasting the link in the browser does. */
 async function land(href: string) {
   const landed = createRouter({
@@ -130,16 +102,16 @@ describe('the routes that stay, reached by their links — plan 06, S-06', () =>
   it('lands the filtered trail with every filter it was given', async () => {
     const landed = await land('/audit?decision=allowed&toolName=Bash&sessionId=S1');
 
-    expect(landed.routes).toEqual(['__root__', '/audit']);
+    expect(landed.routes).toEqual(['__root__', '/_frame', '/_frame/audit']);
     expect(landed.search).toEqual({ decision: 'allowed', toolName: 'Bash', sessionId: 'S1' });
   });
 
   it('lands the rules, and one rule by its id', async () => {
-    expect((await land('/rules')).routes).toEqual(['__root__', '/rules']);
+    expect((await land('/rules')).routes).toEqual(['__root__', '/_frame', '/_frame/rules']);
 
     const rule = await land('/rules/01J0RULE');
 
-    expect(rule.routes).toEqual(['__root__', '/rules/$ruleId']);
+    expect(rule.routes).toEqual(['__root__', '/_frame', '/_frame/rules/$ruleId']);
     expect(rule.params).toEqual({ ruleId: '01J0RULE' });
   });
 
@@ -148,6 +120,46 @@ describe('the routes that stay, reached by their links — plan 06, S-06', () =>
 
     expect(landed.routes).toEqual(['__root__', CALLBACK_PATH]);
     expect(landed.search).toEqual({ code: 'c1', state: 's1' });
+  });
+});
+
+describe('the addresses plan 06 removed — D-07, S-150', () => {
+  it.each([
+    '/sessions/01J0ABCDEFGHJKMNPQRSTVWXYZ',
+    '/history',
+    '/history?workspacePath=%2Fsrv',
+    '/history/c1',
+  ])('answers %s with the root alone, which renders the translated not-found', async (href) => {
+    expect((await land(href)).routes).toEqual(['__root__']);
+  });
+});
+
+describe('the settings, one section at a time — plan 06, S-142', () => {
+  it('lands the section the link names', async () => {
+    const landed = await land('/settings/workspaces');
+
+    expect(landed.routes).toEqual(['__root__', '/_frame', '/_frame/settings/$section']);
+    expect(landed.params).toEqual({ section: 'workspaces' });
+  });
+
+  it.each(['/settings', '/settings/editor', '/settings/claude'])(
+    'sends %s, which names no section here, to the first one — without an error',
+    async (href) => {
+      const landed = await land(href);
+
+      expect(landed.routes).toEqual(['__root__', '/_frame', '/_frame/settings/$section']);
+      expect(landed.params).toEqual({ section: 'appearance' });
+    },
+  );
+});
+
+describe('the other screens of the navigation, reached by their links', () => {
+  it.each([
+    ['/devices', '/_frame/devices'],
+    ['/diagnostics', '/_frame/diagnostics'],
+    ['/about', '/_frame/about'],
+  ])('lands %s inside the frame', async (href, id) => {
+    expect((await land(href)).routes).toEqual(['__root__', '/_frame', id]);
   });
 });
 
@@ -166,6 +178,24 @@ describe('the addresses no plan has registered yet — plan 06, S-07', () => {
 
     expect(reserved).toEqual([]);
   });
+});
+
+describe('the workbench, reached by its link — plan 06, B-16', () => {
+  it('lands the workbench with the folder the link names', async () => {
+    const landed = await land(workbenchLocation({ folder: '/srv/projects/a b#1' }));
+
+    expect(landed.routes).toEqual(['__root__', '/_frame', '/_frame/workbench']);
+    expect(landed.search).toEqual({ folder: '/srv/projects/a b#1' });
+  });
+
+  it.each(['/workbench', '/workbench?folder=', '/workbench?folder=123'])(
+    'sends %s, which names no folder, to the welcome screen rather than to an error — S-03',
+    async (href) => {
+      const landed = await land(href);
+
+      expect(landed.routes).toEqual(['__root__', '/_frame', '/_frame/']);
+    },
+  );
 });
 
 describe('the folder of the workbench, read from the URL — plan 06, S-04', () => {

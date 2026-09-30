@@ -20,10 +20,13 @@ import {
   compareCatalogues,
   emittedMessageKeys,
   findOrphans,
+  findMissingHelp,
+  findUndeclared,
   findUntranslated,
   flatten,
   fromArb,
   mergeUsage,
+  screenHelpIn,
   usageInDart,
   usageInLiterals,
   usageInTypeScript,
@@ -43,6 +46,11 @@ import { bold, dim, fail, hint, line, ok, title } from './lib/ui.mjs';
  *   name a key as a plain string rather than translating it
  * @property {readonly { dir: string, extensions: readonly string[] }[]} [senders] modules whose
  *   every `messageKey` this family has to translate
+ * @property {boolean} [declaresEveryUse] every key named in a `t('…')` of the sources has to be in
+ *   the catalogue — the screens of this family resolve keys at runtime, where a missing one shows
+ *   its dotted name
+ * @property {boolean} [screenFrames] every `<ScreenFrame help="…">` of the sources needs its help
+ *   keys in the catalogue, and a frame whose help is not a literal fails (plan 06, S-94)
  */
 
 /**
@@ -74,6 +82,10 @@ export const FAMILIES = [
     // And the other way round: every `messageKey` the backend sends is one the web must carry,
     // or the screen shows the dotted name (plan 06, S-01).
     senders: [{ dir: 'backend/src', extensions: ['.ts'] }],
+    // And a screen that asks for a key nobody declared shows the dotted name too (plan 06, S-84).
+    declaresEveryUse: true,
+    // And a screen frame reads its help from a prefix, so its keys are named nowhere else (S-94).
+    screenFrames: true,
   },
   {
     name: 'backend',
@@ -130,10 +142,19 @@ export function checkFamily(family) {
     };
   });
 
+  const sources = filesUnder(
+    path.join(repoRoot, family.sourceDir),
+    family.sourceExtensions,
+    isGenerated,
+  ).map((file) => fs.readFileSync(file, 'utf8'));
+
+  const help = family.screenFrames === true ? sources.map((text) => screenHelpIn(text)) : [];
+  const helpKeys = help.flatMap((each) => [...each.keys]);
+  const unreadableHelp = help.reduce((total, each) => total + each.unreadable, 0);
+
   const usage = mergeUsage([
-    ...filesUnder(path.join(repoRoot, family.sourceDir), family.sourceExtensions, isGenerated).map(
-      (file) => family.readUsage(fs.readFileSync(file, 'utf8')),
-    ),
+    { keys: new Set(helpKeys), prefixes: new Set() },
+    ...sources.map((text) => family.readUsage(text)),
     ...(family.emitters ?? []).flatMap((emitter) =>
       filesUnder(path.join(repoRoot, emitter.dir), emitter.extensions, isGenerated).map((file) =>
         usageInLiterals(fs.readFileSync(file, 'utf8')),
@@ -153,7 +174,26 @@ export function checkFamily(family) {
     ...compareCatalogues(catalogues, family.placeholders),
     ...(source === undefined
       ? []
-      : [...findOrphans(source.entries.keys(), usage), ...findUntranslated(source.entries, sent)]),
+      : [
+          ...findOrphans(source.entries.keys(), usage),
+          ...findUntranslated(source.entries, sent),
+          ...(family.declaresEveryUse === true
+            ? findUndeclared(
+                source.entries,
+                sources.flatMap((text) => [...usageInTypeScript(text).keys]),
+              )
+            : []),
+          ...findMissingHelp(source.entries, helpKeys),
+        ]),
+    ...(unreadableHelp === 0
+      ? []
+      : [
+          {
+            kind: /** @type {const} */ ('help'),
+            key: '<ScreenFrame help={…}>',
+            detail: `${String(unreadableHelp)} screen frame(s) with a help prefix that is not a literal the check can read`,
+          },
+        ]),
   ];
 }
 
