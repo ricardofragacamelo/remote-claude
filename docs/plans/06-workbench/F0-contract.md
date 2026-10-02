@@ -46,8 +46,8 @@ que ainda faltam — e confere que ela diz:
   sessões), várias abertas ao mesmo tempo. Isso **não** é multi-root workspace (várias raízes numa
   árvore só), que continua fora;
 - **uma tela por assunto**: a navegação global leva a telas próprias — Workbench, Auditoria,
-  Regras, Dispositivos, Uso e custo ([plano 14](../14-usage-and-cost/README.md)), Logs e diagnóstico,
-  Configuração do Claude ([plano 11](../11-claude-settings/README.md)) e Configurações do app; e,
+  Regras, Dispositivos, Uso e custo ([plano 16](../16-usage-and-cost/README.md)), Logs e diagnóstico,
+  Configuração do Claude ([plano 13](../13-claude-settings/README.md)) e Configurações do app; e,
   pelo menu de gerenciar, Sobre. Configurações do app e configuração do Claude **nunca** dividem
   uma tela;
 - **a paridade com o VS Code é a de arquivos** — abrir, criar, funções de arquivo e editar
@@ -159,12 +159,12 @@ O mapa de rotas, documentado em `web/04` e testado pelo router:
 |---|---|
 | `/` | boas-vindas — ou a aba ativa, se há abas abertas ([D-07](decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)) |
 | `/workbench?folder=<path>` | o workbench, com a pasta ativa na **search** ([D-06](decisions.md#d-06--a-url-do-workbench)) — o link reproduz a tela |
-| `/audit?…`, `/rules`, `/rules/$ruleId` | Auditoria e Regras, com o conteúdo de hoje e os deep links intactos; o redesenho é dos planos [12](../12-audit-explained/README.md) e [13](../13-rules-management/README.md) |
-| `/devices` | Dispositivos, com a lista de hoje; a profundidade é do [plano 15](../15-devices/README.md) |
-| `/diagnostics` | Logs e diagnóstico, mínima — o ping; completada pelo [plano 16](../16-logs-and-diagnostics/README.md) |
+| `/audit?…`, `/rules`, `/rules/$ruleId` | Auditoria e Regras, com o conteúdo de hoje e os deep links intactos; o redesenho é dos planos [14](../14-audit-explained/README.md) e [15](../15-rules-management/README.md) |
+| `/devices` | Dispositivos, com a lista de hoje; a profundidade é do [plano 17](../17-devices/README.md) |
+| `/diagnostics` | Logs e diagnóstico, mínima — o ping; completada pelo [plano 18](../18-logs-and-diagnostics/README.md) |
 | `/settings/$section` | Configurações do app, uma seção por vez |
 | `/about` | Sobre |
-| `/claude…`, `/usage…` | **reservadas** aos planos 11 e 14; este plano não as renderiza |
+| `/claude…`, `/usage…` | **reservadas** aos planos 13 e 16; este plano não as renderiza |
 | `/sessions/$sessionId`, `/history`, `/history/$conversationId` | **removidas** ([D-07](decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)): caem no "não encontrado" traduzido. A sessão viva mora na secondary side bar da aba; o histórico volta ao web pela view Sessões do [plano 08](../08-claude-panel/README.md) |
 
 `folder` ausente em `/workbench` cai na boas-vindas, não num erro. O callback do login

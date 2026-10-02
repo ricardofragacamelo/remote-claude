@@ -25,7 +25,7 @@ const DESCRIPTORS = '/proc/self/fd';
  * 3. links that lead back to themselves (`ELOOP`) are refused, never followed for ever (S-24).
  *
  * Nothing is cached: no "this folder was checked already". The descriptor check is Linux-only —
- * where there is no `/proc`, step 2 is skipped, which is the gap plan 17 owns (R-02).
+ * where there is no `/proc`, step 2 is skipped, which is the gap plan 19 owns (R-02).
  */
 export class FolderFence {
   constructor(private readonly fs: FolderFileSystem) {}

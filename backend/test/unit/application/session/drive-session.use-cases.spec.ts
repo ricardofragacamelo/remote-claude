@@ -32,6 +32,11 @@ import {
 } from '../../../support/builders/session.builder';
 import { RecordingBroadcaster } from '../../../support/fakes/recording-broadcaster';
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
+import {
+  aContextResolver,
+  ScriptedReferenceInspector,
+} from '../../../support/fakes/scripted-reference-inspector';
+import { WorkspaceNotAllowedError } from '@domain/workspace';
 
 const owner = UserId.create('auth|owner');
 const stranger = UserId.create('auth|stranger');
@@ -57,6 +62,7 @@ describe('the commands that drive a running session', () => {
       new PromptSessionUseCase(registry, new CommandCatalog(), {
         ids: new SequentialIds('01J0QUE0000000000000000'),
         broadcaster,
+        context: aContextResolver(),
       });
 
     /**
@@ -145,6 +151,57 @@ describe('the commands that drive a running session', () => {
       expect(session.prompts.turnEnded()?.text).toBe('second');
     });
 
+    describe('with context — plan 08, B-44', () => {
+      it('sends the context composed after the text, and what the log may say beside it', async () => {
+        await prompter()
+          .execute(SESSION_ID, 'explain', owner, 'web', [{ path: 'src/a.ts' }])
+          .then((send) => {
+            send();
+          });
+
+        expect(handle.prompts).toEqual(['explain\n\n<reference path="src/a.ts" />']);
+        expect(handle.extras[0]).toEqual({
+          typed: 'explain',
+          images: [],
+          context: [{ kind: 'file', path: 'src/a.ts', bytes: 8 }],
+        });
+      });
+
+      it('queues a prompt with context during a turn, with its context — S-205', async () => {
+        const prompt = prompter();
+        await sent(prompt, 'first');
+
+        await prompt
+          .execute(SESSION_ID, 'second', owner, 'web', [{ kind: 'folder', path: 'docs' }])
+          .then((send) => {
+            send();
+          });
+
+        expect(broadcaster.events[0]?.event.payload).toMatchObject({ preview: 'second' });
+        const next = session.prompts.turnEnded();
+        expect(next?.text).toBe('second\n\n<reference path="docs" kind="folder" />');
+        expect(next?.extras?.context).toEqual([{ kind: 'folder', path: 'docs' }]);
+      });
+
+      it('refuses the whole prompt when one item is refused, and sends nothing — S-199', async () => {
+        const inspector = new ScriptedReferenceInspector().refuse(
+          '../out',
+          new WorkspaceNotAllowedError('/srv/projects/out'),
+        );
+        const prompt = new PromptSessionUseCase(registry, new CommandCatalog(), {
+          ids: new SequentialIds(),
+          broadcaster,
+          context: aContextResolver(inspector),
+        });
+
+        await expect(
+          prompt.execute(SESSION_ID, 'x', owner, 'web', [{ path: 'ok.ts' }, { path: '../out' }]),
+        ).rejects.toBeInstanceOf(WorkspaceNotAllowedError);
+        expect(handle.prompts).toEqual([]);
+        expect(session.prompts.turnOpen).toBe(false);
+      });
+    });
+
     it('names the client that sent a queued prompt', async () => {
       const prompt = prompter();
       await sent(prompt, 'first');
@@ -173,6 +230,7 @@ describe('the commands that drive a running session', () => {
         new PromptSessionUseCase(aRegistry([]).registry, new CommandCatalog(), {
           ids: new SequentialIds(),
           broadcaster,
+          context: aContextResolver(),
         }).execute(SESSION_ID, 'x', owner),
       ).rejects.toThrow(SessionNotFoundError);
     });

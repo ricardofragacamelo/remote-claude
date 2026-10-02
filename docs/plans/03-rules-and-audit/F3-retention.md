@@ -39,7 +39,7 @@ Idempotente: interrompida no meio e reexecutada, não apaga duas vezes nem perde
 
 Quem dispara é um **job interno do backend**, em intervalo configurado
 ([D-07](decisions.md#d-07--quem-varre-a-trilha)) — a purga não depende de como o produto foi
-instalado, e por isso esta fase não espera o [plano 17](../17-distribution/README.md). A rotina
+instalado, e por isso esta fase não espera o [plano 19](../19-distribution/README.md). A rotina
 roda sob **advisory lock**: job e comando manual podem cair no mesmo minuto, e duas purgas sobre
 a mesma janela é a receita para o lote perdido que o S-37 proíbe — a segunda sai com 0 sem
 apagar nada, e diz por quê (S-51).

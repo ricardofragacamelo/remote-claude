@@ -13,7 +13,15 @@
  * `stop`, not `down`: the development stack **keeps its volumes**. Losing the local database at
  * every Ctrl+C is daily friction, and the command that does reclaim disk is `pnpm clean`.
  *
- * Usage: `pnpm dev`
+ * Usage: `pnpm dev`, or `pnpm dev:public [--url <origin>]`
+ *
+ * `--public` puts the same stack behind a tunnel, on one HTTPS origin (docs/plans/20-dev-public):
+ *
+ *   tunnel  →  compose up -d (+ docker-compose.public.yml)  →  the public redirect on the realm
+ *           →  backend and web with the public origin and issuer  →  the board, with the origin
+ *
+ * The tunnel comes first because it is the cheap failure. Ctrl+C takes it down last, right before
+ * `compose stop`. Without `--public`, an `RC_PUBLIC_URL` left in `.env` is blanked (D-02).
  *
  * The `dev` script `exec`s this file. Without it pnpm's `sh` sits in between, takes the Ctrl+C
  * itself, and dies of it while this file is still tearing down — pnpm then reports
@@ -21,25 +29,46 @@
  */
 
 import fs from 'node:fs';
+import path from 'node:path';
 import process from 'node:process';
 
 import { LOCAL_ALLOWLIST_FILE, activeAllowlist, withActiveAllowlist } from './lib/allowlist.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { resolveComposeCli } from './lib/compose.mjs';
 import { run } from './lib/exec.mjs';
+import { ensurePublicRedirect } from './lib/keycloak-admin.mjs';
 import { bringUp, composeRunner, stillPending } from './lib/local-stack.mjs';
 import { cleanupOnce, kill, onTermination, startProc } from './lib/proc.mjs';
+import {
+  ORIGIN_REFUSALS,
+  PUBLIC_URL_VARIABLE,
+  composeFiles,
+  localEnvironment,
+  parsePublicOrigin,
+  parseStartArgs,
+  publicEnvironment,
+} from './lib/public-url.mjs';
 import {
   HEALTH_PATH,
   boardRows,
   lanAddress,
   loadDotEnv,
+  REALM,
   projectName,
   resolvePorts,
   serviceUrls,
   watchEnvironment,
   workspaceStatus,
 } from './lib/stack.mjs';
+import {
+  TUNNEL_COMMAND,
+  TUNNEL_TOKEN_FILE,
+  TunnelError,
+  readTunnelToken,
+  startTunnel,
+  tunnelEnvironment,
+  tunnelMismatch,
+} from './lib/tunnel.mjs';
 import { bold, cyan, dim, fail, hint, info, line, ok, title, warn, yellow } from './lib/ui.mjs';
 import { WaitError, waitForHttp } from './lib/wait.mjs';
 import { ensureDeclaredRoots } from './lib/workspaces.mjs';
@@ -65,9 +94,32 @@ const children = [];
  */
 let foreground = null;
 
+/**
+ * Whether this run brought compose up. A run that failed before it — a tunnel that did not open —
+ * must not `compose stop` a stack someone else has up under the same project.
+ */
+let composeStarted = false;
+
 // Before anything reads the environment: compose loads `.env` on its own, node does not, and
 // the ports printed in the URL board have to be the ones compose actually published.
 loadDotEnv(repoRoot);
+
+const startArgs = parseStartArgs(process.argv.slice(2));
+if (!startArgs.ok) {
+  fail(startArgs.message);
+  hint('usage: `pnpm dev`, or `pnpm dev:public [--url <origin>]`');
+  process.exit(1);
+}
+
+/** Whether this run goes behind the tunnel. */
+const publicMode = startArgs.public;
+
+/** The origin to ask the tunnel for: `--url`, else `.env`, else the account's own domain. */
+const requestedOrigin = startArgs.url ?? process.env[PUBLIC_URL_VARIABLE] ?? '';
+
+// Blanked, not deleted, so neither the web config nor compose reads it back from `.env` (D-02).
+// The public run sets it again once the tunnel says which origin it opened.
+Object.assign(process.env, localEnvironment(process.env));
 
 // The backend refuses to start when a root of the allowlist does not exist. Creating the
 // development roots here is what keeps that rule from turning a fresh clone into a boot failure.
@@ -76,8 +128,11 @@ ensureDeclaredRoots();
 const composeCli = resolveComposeCli((command, args) => run(command, args, { timeoutMs: 20_000 }));
 const project = projectName(process.env);
 
-/** One compose call against the development project. */
-const compose = composeRunner(composeCli, project, { cwd: repoRoot });
+/** One compose call against the development project — with the public override, in public mode. */
+const compose = composeRunner(composeCli, project, {
+  cwd: repoRoot,
+  files: composeFiles(publicMode),
+});
 
 /**
  * Waits for each started workspace to answer, and says which ones did not.
@@ -114,6 +169,113 @@ async function waitForWorkspaces(urls, running) {
   );
 
   return problems;
+}
+
+/**
+ * Opens the tunnel and turns the environment public, before compose reads it.
+ *
+ * @param {number} webPort
+ * @returns {Promise<string>} the public origin
+ * @throws {Error} with the line to print when the origin is refused or the tunnel does not open
+ */
+async function openPublicOrigin(webPort) {
+  /** @type {string | null} */
+  let host = null;
+
+  if (requestedOrigin.trim() !== '') {
+    const parsed = parsePublicOrigin(requestedOrigin);
+    if (!parsed.ok) {
+      throw new TunnelError(
+        `${PUBLIC_URL_VARIABLE}=${requestedOrigin} ${ORIGIN_REFUSALS[parsed.reason]}`,
+      );
+    }
+    host = parsed.host;
+  }
+
+  info(
+    `tunnel: ${TUNNEL_COMMAND} → localhost:${String(webPort)}${host === null ? '' : ` as ${host}`}`,
+  );
+
+  // The token goes to the tunnel's environment only; `process.env` — the backend's and the web's
+  // — never holds it (D-05).
+  const kept = readTunnelToken(path.join(repoRoot, TUNNEL_TOKEN_FILE));
+  if (kept.exposed) {
+    warn(`${TUNNEL_TOKEN_FILE} is readable by others`, `chmod 600 ${TUNNEL_TOKEN_FILE}`);
+  }
+  const tunnelEnv = tunnelEnvironment(process.env, kept.token);
+  info(`tunnel authtoken: ${tunnelEnv.source === 'file' ? TUNNEL_TOKEN_FILE : tunnelEnv.source}`);
+
+  const tunnel = await startTunnel({
+    port: webPort,
+    host,
+    env: tunnelEnv.env,
+    onError: (message) => {
+      warn('tunnel', message);
+    },
+  });
+  children.push(tunnel.proc);
+
+  const mismatch = tunnelMismatch(tunnel.url, host);
+  const opened = parsePublicOrigin(tunnel.url);
+  if (mismatch !== null || !opened.ok) {
+    throw new TunnelError(
+      mismatch ?? `the tunnel opened ${tunnel.url}, which is not an https origin`,
+    );
+  }
+
+  Object.assign(process.env, publicEnvironment(process.env, opened.origin));
+  ok('tunnel', opened.origin);
+  return opened.origin;
+}
+
+/**
+ * Lets the realm's web client redirect back to the public origin.
+ *
+ * @param {string} origin
+ * @param {string} keycloakUrl
+ */
+async function registerPublicRedirect(origin, keycloakUrl) {
+  const result = await ensurePublicRedirect(
+    {
+      keycloakUrl,
+      realm: REALM,
+      clientId: process.env['OIDC_CLIENT_ID_WEB'] ?? 'remote-claude-web',
+      username: process.env['RC_KEYCLOAK_ADMIN'] ?? 'admin',
+      password: process.env['RC_KEYCLOAK_ADMIN_PASSWORD'] ?? 'admin',
+    },
+    origin,
+  );
+  ok('redirect', `${origin}/* ${result === 'added' ? 'added to' : 'already on'} the web client`);
+}
+
+/**
+ * The public half of the board, and what reaching it means.
+ *
+ * @param {string} origin
+ */
+async function publicBoard(origin) {
+  const issuer = process.env['OIDC_ISSUER'] ?? '';
+
+  try {
+    // The backend reads discovery through the tunnel too (R-02), so this is its path, tested.
+    await waitForHttp(`${issuer}/.well-known/openid-configuration`, {
+      timeoutMs: 15_000,
+      intervalMs: 1_000,
+      accept: (status) => status === 200,
+    });
+  } catch (error) {
+    warn('issuer not answering through the tunnel', error instanceof Error ? error.message : '');
+  }
+
+  line();
+  line(`  ${bold('Public')}  ${cyan(origin)}  ${dim('login, API and WebSocket on this origin')}`);
+  line(dim(`          issuer ${issuer}`));
+  line(
+    yellow(
+      '  Anyone with this address reaches the login of a backend that runs Bash on this machine.',
+    ),
+  );
+  line(dim('  The development users have known passwords. Use this URL on this machine too.'));
 }
 
 /**
@@ -169,7 +331,7 @@ const shutdown = cleanupOnce(async () => {
     await kill(child);
   }
 
-  if (composeCli !== null) {
+  if (composeCli !== null && composeStarted) {
     // `stop`, not `down`: see the header of this file. In its own process group, so the second
     // Ctrl+C of an impatient hand does not interrupt it halfway and leave containers up.
     const stop = compose(['stop'], { ownProcessGroup: true });
@@ -180,12 +342,15 @@ const shutdown = cleanupOnce(async () => {
     }
   }
 
-  ok('stopped', 'volumes preserved — `pnpm clean` is what reclaims them');
+  ok(
+    'stopped',
+    composeStarted ? 'volumes preserved — `pnpm clean` is what reclaims them' : undefined,
+  );
 });
 
 /** @returns {Promise<number | null>} exit code, or null to stay running */
 async function main() {
-  title('dev — local stack');
+  title(publicMode ? 'dev — public stack' : 'dev — local stack');
 
   const ports = resolvePorts(process.env);
   const urls = serviceUrls(ports);
@@ -197,9 +362,16 @@ async function main() {
     return 1;
   }
 
+  const origin = publicMode ? await openPublicOrigin(ports.web) : null;
+
   info(`compose: ${`${composeCli.command} ${composeCli.args.join(' ')}`.trimEnd()}`);
 
+  composeStarted = true;
   await bringUp(compose, urls);
+
+  if (origin !== null) {
+    await registerPublicRedirect(origin, urls.keycloak);
+  }
 
   // The local copy `pnpm allowlist` writes, when there is one and `.env` left the variable at the
   // default (plan 06, D-09). Said out loud: "which allowlist is this?" is the first question.
@@ -233,6 +405,10 @@ async function main() {
   const problems = await waitForWorkspaces(urls, running);
   const rows = boardRows(ports, { env: process.env, lan: lanAddress() });
   board(rows, new Set(running.keys()), problems);
+
+  if (origin !== null) {
+    await publicBoard(origin);
+  }
   foreground = setInterval(() => {}, 60_000);
   return null;
 }
@@ -250,7 +426,13 @@ try {
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 
-  if (composeCli !== null) {
+  if (error instanceof TunnelError) {
+    // Before compose: nothing of the stack was started, and the fix is on the tunnel's side.
+    hint(
+      `the authtoken goes in ${TUNNEL_TOKEN_FILE} (ignored by git), or in the tunnel's own config`,
+    );
+    hint(`${PUBLIC_URL_VARIABLE} empty uses the account's own domain; another run may hold it`);
+  } else if (composeCli !== null) {
     // Whatever went wrong, the useful next step is the same: compose has already printed its own
     // diagnosis above, and what this adds is which service never made it.
     hint('the output above is compose’s own; `pnpm doctor` checks the environment around it');

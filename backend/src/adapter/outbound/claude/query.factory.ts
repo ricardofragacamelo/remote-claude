@@ -49,7 +49,7 @@ export class UnsafeSdkOptionsError extends Error {
  * A fourth check, of the same kind: **the environment**. An absent `env` makes the SDK hand the CLI
  * the backend's whole `process.env`, and an `env` that carries the backend's configuration gives
  * every `Bash` Claude runs the database password — both in silence
- * ([10 · D-10](../../../../../docs/plans/10-integrated-terminal/decisions.md)). The error names the
+ * ([12 · D-10](../../../../../docs/plans/12-integrated-terminal/decisions.md)). The error names the
  * variables and never their values.
  */
 export const realQueryFactory: QueryFactory = ({ prompt, options }) => {

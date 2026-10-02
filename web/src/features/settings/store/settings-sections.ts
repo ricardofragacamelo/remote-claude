@@ -8,7 +8,7 @@ import type { SettingsSectionEntry } from '../types/settings';
 
 /**
  * What a section of the **app's** settings may never be about: Claude's model, permission mode and
- * MCP servers are the screen of plan 11, and a section here would put the two in one screen — which
+ * MCP servers are the screen of plan 13, and a section here would put the two in one screen — which
  * the navigation promises they never share (plan 06, S-145).
  */
 const CLAUDE_SUBJECT = /claude|model|permission|mcp/i;
@@ -24,7 +24,7 @@ export function assertAppSection(entry: SettingsSectionEntry): void {
 
   if (claude !== undefined) {
     throw new Error(
-      `settings sections: "${entry.id}" is about Claude ("${claude}") — that is plan 11's screen`,
+      `settings sections: "${entry.id}" is about Claude ("${claude}") — that is plan 13's screen`,
     );
   }
 }
@@ -77,7 +77,7 @@ export function createSettingsSections(
   };
 }
 
-/** The sections of the app's Settings — where plans 07 and 10 register theirs. */
+/** The sections of the app's Settings — where plans 07 and 12 register theirs. */
 export const settingsSections = createSettingsSections();
 
 /**

@@ -24,8 +24,35 @@ export { resumeStrategyFor } from './services/resume-strategy';
 export { sessionCapacity } from './services/session-capacity';
 export type { CapacityInputs } from './services/session-capacity';
 export type { ResumeCaller, ResumeCandidate, ResumeStrategy } from './services/resume-strategy';
-export { SUGGESTED_COMMANDS, commandIn, isHidden, menuOf, offers } from './services/slash-commands';
-export type { MenuCommand, SlashCommand } from './services/slash-commands';
+export {
+  SUGGESTED_COMMANDS,
+  SYSTEM_SKILLS_PLUGIN,
+  USER_SKILLS_PLUGIN,
+  commandIn,
+  isHidden,
+  menuOf,
+  offers,
+  originOf,
+} from './services/slash-commands';
+export type { CommandOrigin, MenuCommand, SlashCommand } from './services/slash-commands';
+export {
+  MENTION_GUARD,
+  composePrompt,
+  guardMentions,
+  referenceLine,
+  textBlock,
+} from './services/prompt-context';
+export type {
+  ContextFact,
+  PromptExtras,
+  PromptImage,
+  PromptReference,
+  PromptText,
+} from './services/prompt-context';
+export { ATTACHMENT_IMAGE_TYPES, attachmentKindOf } from './services/attachment-kind';
+export type { AttachmentKind } from './services/attachment-kind';
+export { AttachmentTooLargeError } from './errors/attachment-too-large.error';
+export { ReferenceKindMismatchError } from './errors/reference-kind-mismatch.error';
 export {
   latestBaselines,
   planFor,

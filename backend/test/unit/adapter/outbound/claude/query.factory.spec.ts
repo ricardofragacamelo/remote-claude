@@ -85,7 +85,7 @@ describe('realQueryFactory', () => {
     ['a compose password', { RC_POSTGRES_PASSWORD: 'secret' }],
     ['the identity provider configuration', { OIDC_ISSUER: 'http://localhost/realms/x' }],
     ['a libpq variable', { PGPASSWORD: 'secret' }],
-  ])('refuses an env that carries %s — 10 · B-13', (_case, leak) => {
+  ])('refuses an env that carries %s — 12 · B-13', (_case, leak) => {
     // An env that carries the backend's configuration gives every `Bash` Claude runs the database
     // password. Nothing in the SDK complains.
     expect(() =>

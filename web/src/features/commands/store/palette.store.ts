@@ -49,5 +49,5 @@ export const usePalette = create<PaletteState>((set, get) => ({
   },
 }));
 
-/** The modes of the palette. The commands' is the palette's own; plan 09 registers Quick Open. */
+/** The modes of the palette. The commands' is the palette's own; plan 11 registers Quick Open. */
 export const paletteModes = createRegistry<PaletteMode>('palette modes');

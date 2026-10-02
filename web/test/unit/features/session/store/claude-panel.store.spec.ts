@@ -72,6 +72,7 @@ describe('what a reload gives the panel back — S-125', () => {
       reviewed: { s1: { '/x': 'r1' } },
       tabs: [],
       active: null,
+      contexts: {},
     });
 
     forgetClaudePanel(null);
@@ -99,12 +100,14 @@ describe('what a reload gives the panel back — S-125', () => {
       reviewed: { s1: { '/x': 'r' }, s2: {} },
       tabs: [],
       active: null,
+      contexts: {},
     });
     expect(keptClaudePanelFrom({})).toEqual({
       changesFilter: 'pending',
       reviewed: {},
       tabs: [],
       active: null,
+      contexts: {},
     });
   });
 
@@ -244,5 +247,124 @@ describe('the conversations of the panel, in tabs — S-150', () => {
     panel().promote(draft, 's1');
 
     expect(panel().active).toBe('session:s9');
+  });
+});
+
+describe('the context of each conversation — plan 08, B-47', () => {
+  const file = {
+    id: 'f',
+    kind: 'file',
+    path: 'a.ts',
+    size: 3,
+    binary: false,
+    missing: false,
+  } as const;
+  const upload = {
+    id: 'u',
+    kind: 'upload',
+    name: 'shot.png',
+    mediaType: 'image/png',
+    size: 9,
+    uploadKind: 'image',
+    attachmentId: 'att_1',
+    error: null,
+  } as const;
+  const panel = () => claudePanelStore('/c').getState();
+
+  it('keeps a set per tab, and a notice per tab — two conversations, two sets (S-225)', () => {
+    const one = panel().openDraft();
+    const two = panel().openDraft();
+    panel().setContext(one, [file]);
+    panel().setNotice(two, { key: 'composer.set.overflow', params: { count: 1 } });
+
+    expect(panel().contexts).toEqual({ [one]: [file] });
+    expect(panel().notices[two]).toMatchObject({ key: 'composer.set.overflow' });
+
+    panel().setContext(one, []);
+    panel().setNotice(two, null);
+    expect(panel().contexts).toEqual({});
+    expect(panel().notices).toEqual({});
+  });
+
+  it('lets the set of a tab go with it, and moves the set of a draft to its session', () => {
+    const one = panel().openDraft();
+    const two = panel().openDraft();
+    panel().setContext(one, [file]);
+    panel().setContext(two, [file]);
+
+    panel().close(one);
+    panel().promote(two, 's1');
+
+    expect(panel().contexts).toEqual({ [tabKeyOf('session', 's1')]: [file] });
+    panel().promote(panel().openDraft(), 's2');
+    expect(Object.keys(panel().contexts)).toEqual([tabKeyOf('session', 's1')]);
+  });
+
+  it('keeps the set across a reload — paths, lines and held uploads, never a text — S-221', () => {
+    const key = panel().openDraft();
+    const range = {
+      id: 'r',
+      kind: 'range',
+      path: 'b.ts',
+      startLine: 2,
+      endLine: 4,
+      size: 9,
+      binary: false,
+      missing: false,
+    } as const;
+    panel().setContext(key, [
+      file,
+      { id: 'd', kind: 'folder', path: 'src' },
+      range,
+      upload,
+      { ...upload, id: 'u2', attachmentId: null },
+      { id: 't', kind: 'text', source: 'terminal', label: 'b', content: 'out' },
+    ]);
+
+    const kept = CLAUDE_PANEL_RESTORER.capture('/c');
+    const parsed = keptClaudePanelFrom(JSON.parse(JSON.stringify(kept)));
+
+    expect(parsed?.contexts[key]).toEqual([
+      { ...file, size: null },
+      { id: 'd', kind: 'folder', path: 'src' },
+      { ...range, size: null },
+      upload,
+    ]);
+  });
+
+  it('trusts only what reads as an item of the context', () => {
+    const parsed = keptClaudePanelFrom({
+      contexts: {
+        a: [
+          { id: 'f', kind: 'file' },
+          { id: 'r', kind: 'range', path: 'x', startLine: 0, endLine: 2 },
+          { kind: 'folder', path: 'y' },
+          {
+            id: 'u',
+            kind: 'upload',
+            name: 'n',
+            mediaType: 'm',
+            size: 'big',
+            uploadKind: 'image',
+            attachmentId: 'a',
+          },
+          {
+            id: 'u',
+            kind: 'upload',
+            name: 'n',
+            mediaType: 'm',
+            size: 1,
+            uploadKind: 'video',
+            attachmentId: 'a',
+          },
+          { id: 'd', kind: 'folder', path: 'ok' },
+        ],
+        b: 'nonsense',
+        c: [],
+      },
+    });
+
+    expect(parsed?.contexts).toEqual({ a: [{ id: 'd', kind: 'folder', path: 'ok' }] });
+    expect(keptClaudePanelFrom({ contexts: 'x' })?.contexts).toEqual({});
   });
 });

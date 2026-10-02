@@ -19,12 +19,12 @@ este não a antecipa:
 
 | Tela | Aqui | A profundidade |
 |---|---|---|
-| Auditoria | a trilha de hoje, na moldura | [12 — Auditoria explicada](../12-audit-explained/README.md) |
-| Regras | as regras de hoje, na moldura | [13 — Gestão de regras](../13-rules-management/README.md) |
-| Dispositivos | a lista de hoje, que sai da home | [15 — Dispositivos](../15-devices/README.md) |
-| Logs e diagnóstico | o ping, que sai da home | [16 — Logs e diagnóstico](../16-logs-and-diagnostics/README.md) |
-| Configuração do Claude | só a posição na navegação | [11 — Configuração do Claude](../11-claude-settings/README.md) |
-| Uso e custo | só a posição na navegação | [14 — Uso e custo](../14-usage-and-cost/README.md) |
+| Auditoria | a trilha de hoje, na moldura | [14 — Auditoria explicada](../14-audit-explained/README.md) |
+| Regras | as regras de hoje, na moldura | [15 — Gestão de regras](../15-rules-management/README.md) |
+| Dispositivos | a lista de hoje, que sai da home | [17 — Dispositivos](../17-devices/README.md) |
+| Logs e diagnóstico | o ping, que sai da home | [18 — Logs e diagnóstico](../18-logs-and-diagnostics/README.md) |
+| Configuração do Claude | só a posição na navegação | [13 — Configuração do Claude](../13-claude-settings/README.md) |
+| Uso e custo | só a posição na navegação | [16 — Uso e custo](../16-usage-and-cost/README.md) |
 
 ---
 
@@ -41,14 +41,14 @@ navegação, com a moldura de tela (B-19) e o conteúdo de hoje — sem redesenh
 [web/03 · Regras](../../architecture/web/03-ui-system.md#regras--onde-a-autorização-é-retirada)
 continuam valendo: filtros na search, a trilha filtrada é um link inclusive depois do login, a regra
 abre em qualquer estado. A ajuda da tela é a mínima que o conteúdo de hoje sustenta; a completa é
-dos planos 12 e 14.
+dos planos 14 e 16.
 
 ### B-29 — Dispositivos como tela própria ✅
 
 O `DeviceList` sai da home para `/devices`, entrada própria da navegação — **não** uma seção de
 Configurações: aprovar um aparelho é uma decisão de segurança, e mora ao lado das outras. Aprovar e
 revogar funcionam como hoje; a ajuda diz o que um aparelho aprovado pode fazer. O resto — último
-acesso, push de teste, histórico — é do [plano 15](../15-devices/README.md).
+acesso, push de teste, histórico — é do [plano 17](../17-devices/README.md).
 
 ### B-30 — Logs e diagnóstico, mínima ✅
 
@@ -56,7 +56,7 @@ acesso, push de teste, histórico — é do [plano 15](../15-devices/README.md).
 `SessionPingPanel` que sai da home), o estado da conexão do socket e o botão de reconectar. Ping com
 o socket fechado → `NETWORK_UNREACHABLE` traduzido, com a ação. Dois pings seguidos: cada resposta
 casa com o seu pedido. Visualizador de logs e saúde da instalação são do
-[plano 16](../16-logs-and-diagnostics/README.md) ([D-12](decisions.md#d-12--o-que-a-tela-logs-e-diagnóstico-tem-neste-plano)).
+[plano 18](../18-logs-and-diagnostics/README.md) ([D-12](decisions.md#d-12--o-que-a-tela-logs-e-diagnóstico-tem-neste-plano)).
 
 ### B-31 — Configurações do app ✅
 
@@ -69,8 +69,8 @@ e busca pelas opções. Seções deste plano ([D-13](decisions.md#d-13--onde-viv
   explicação de onde ele roda; as pastas recentes, com fixar e remover.
 
 As seções são um **registro**: o [plano 07](../07-explorer-and-editor/README.md) registra "Editor" e o
-[plano 10](../10-integrated-terminal/README.md) "Terminal"; sem registro, a seção não aparece. Nenhuma
-seção trata do Claude — modelo, permission mode e MCP são da tela do plano 11, e o teste do registro
+[plano 12](../12-integrated-terminal/README.md) "Terminal"; sem registro, a seção não aparece. Nenhuma
+seção trata do Claude — modelo, permission mode e MCP são da tela do plano 13, e o teste do registro
 recusa a mistura. Seção desconhecida na URL cai na primeira, sem erro. Toda opção mostra o valor
 padrão e tem "restaurar padrão".
 

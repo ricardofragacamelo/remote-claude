@@ -112,6 +112,7 @@ export function codeEditorContract(name: string, make: () => CodeEditorEngine): 
       view.setPosition({ line: 2, column: 2 });
       expect(view.position()).toEqual({ line: 2, column: 2 });
       expect(view.selection()).toBeNull();
+      expect(view.selections()).toEqual([]);
       expect(view.selectionLength()).toBe(0);
 
       view.update({ ...VIEW_OPTIONS, wordWrap: true });

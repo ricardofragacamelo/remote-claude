@@ -448,7 +448,7 @@ function linkCommands(folder: string, read: Reader, t: TFunction): CommandDeclar
       when: () => read.ready() && claudeContextTargets.entries().length > 0,
       run: () => {
         const path = read.path();
-        if (path !== null) addFileToClaude(folder, path, activeView(folder)?.selection() ?? null);
+        if (path !== null) addFileToClaude(folder, path, activeView(folder)?.selections() ?? []);
       },
       keys: [{ key: 'Mod+K A', context: 'workbench', allowInInput: true }],
     },

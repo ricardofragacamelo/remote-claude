@@ -9,7 +9,10 @@
   "required": ["sessionId", "text"],
   "properties": {
     "sessionId": { "type": "string" },
-    "text": { "type": "string", "description": "What the user typed." },
+    "text": {
+      "type": "string",
+      "description": "What the user typed. Empty only when `attachments` carries something: the context alone is a prompt, and nothing at all is refused with `INVALID_INPUT` (plan 08, S-215)."
+    },
     "attachments": {
       "type": "array",
       "maxItems": 20,
@@ -83,7 +86,7 @@
           "source": {
             "type": "string",
             "enum": ["terminal"],
-            "description": "The provider that holds the `text` — the integrated terminal of plan 10, when it exists. An enum read as a string, so a provider added later does not break a client already published."
+            "description": "The provider that holds the `text` — the integrated terminal of plan 12, when it exists. An enum read as a string, so a provider added later does not break a client already published."
           },
           "label": {
             "type": "string",

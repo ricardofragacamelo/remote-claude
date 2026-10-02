@@ -27,7 +27,7 @@ export function isBackendVariable(name: string): boolean {
  * `pnpm dev` loads the whole `.env` into the backend's process, so handing the CLI `process.env`
  * as it is gives every `Bash` Claude runs the database password and the identity provider's admin
  * password — an `env` away, and one `Bash(*)` rule away from nobody being asked
- * ([10 · D-10](../../../../../docs/plans/10-integrated-terminal/decisions.md)).
+ * ([12 · D-10](../../../../../docs/plans/12-integrated-terminal/decisions.md)).
  *
  * A deny list and not an allow list, on purpose: the CLI needs whatever the user's machine gives
  * it — `PATH`, `HOME`, proxy, CA bundle, `ANTHROPIC_*`, the cloud provider's credentials — and,

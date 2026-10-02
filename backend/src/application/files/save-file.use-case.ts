@@ -53,7 +53,7 @@ export interface SavedFile {
  *    - the trail first, then the atomic write, which checks the version once more right before its
  *      rename, against writers outside this process.
  *
- * Exported by the module: plan 09's replace-in-files and plan 11's `CLAUDE.md` write through this,
+ * Exported by the module: plan 11's replace-in-files and plan 13's `CLAUDE.md` write through this,
  * and inherit the `ETag`, the trail and the atomicity rather than writing their own.
  */
 export class SaveFileUseCase {

@@ -98,15 +98,18 @@ describe('.env.example', () => {
     expect(uncommented).toEqual([]);
   });
 
-  it('declares every variable docker-compose.yml interpolates', () => {
-    // The compose file reads the environment just like the code does, and it is the one place
-    // the scan above cannot see — there is no `process.env` in a YAML file to find.
-    const compose = fs.readFileSync(path.join(repoRoot, 'docker-compose.yml'), 'utf8');
-    const declared = declaredVariables(example);
-    const missing = interpolatedVariables(compose).filter((name) => !declared.has(name));
+  it.each(['docker-compose.yml', 'docker-compose.public.yml'])(
+    'declares every variable %s interpolates',
+    (file) => {
+      // The compose files read the environment just like the code does, and they are the one place
+      // the scan above cannot see — there is no `process.env` in a YAML file to find.
+      const compose = fs.readFileSync(path.join(repoRoot, file), 'utf8');
+      const declared = declaredVariables(example);
+      const missing = interpolatedVariables(compose).filter((name) => !declared.has(name));
 
-    expect(missing).toEqual([]);
-  });
+      expect(missing).toEqual([]);
+    },
+  );
 
   it('carries no Claude credential — the backend inherits the local login', () => {
     // There is deliberately no variable for the Claude credential: the backend runs as the owner

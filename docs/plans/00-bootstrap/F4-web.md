@@ -84,6 +84,6 @@ pnpm --filter web verify
 E: um componente importando `@/shared/api` **quebra o build**.
 
 O portão de arquitetura do web é lint — as quatro regras de
-[09](../../architecture/shared/09-code-quality.md#web--eslint-no-restricted-imports-por-escopo) vivem no
+[10](../../architecture/shared/09-code-quality.md#web--eslint-no-restricted-imports-por-escopo) vivem no
 `eslint.config.mjs`. O que pode falhar sozinho é elas **deixarem de morder**, e é isso que
 `pnpm --filter web lint:arch` verifica, sobre trechos propositalmente errados.

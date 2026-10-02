@@ -65,6 +65,16 @@ export class InstallationCache<T> {
   }
 
   /**
+   * Keeps an answer that was not asked of a live session — the query that only asks, of the
+   * catalogue before a session (plan 08, D-13). An unknown version is never kept, as above.
+   */
+  put(version: string | null, workspace: string, answer: T): void {
+    if (version !== null) {
+      this.remember(keyOf(version, workspace), answer);
+    }
+  }
+
+  /**
    * The answer remembered last for a workspace, whatever version gave it — what is known about an
    * installation before a session of it has said its version.
    */

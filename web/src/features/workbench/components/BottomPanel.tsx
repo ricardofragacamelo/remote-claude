@@ -11,7 +11,7 @@ export interface BottomPanelProps {
 }
 
 /**
- * The bottom panel: the tabs plans 08 and 10 register — the terminal, the output of a session. With
+ * The bottom panel: the tabs plans 08 and 12 register — the terminal, the output of a session. With
  * none registered it says what will live here, rather than showing an empty strip.
  */
 export function BottomPanel({ folder }: BottomPanelProps): React.JSX.Element {

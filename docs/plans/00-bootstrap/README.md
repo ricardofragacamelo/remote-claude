@@ -186,7 +186,7 @@ Todos em `.mjs`, executados direto pelo `node`, sem build.
 | Script | Task | Faz | Comando |
 |---|---|---|---|
 | `doctor.mjs` | B-48, [06 · B-10](../06-workbench/F1-directory-browse.md#b-10--raízes-locais-de-desenvolvimento-pnpm-allowlist-) | verifica pré-requisitos: versão do node, pnpm, docker, flutter, portas livres — e qual allowlist o `pnpm dev` usa | `pnpm doctor` |
-| `start-local.mjs` | B-10 | sobe a stack de desenvolvimento, portas fixas | `pnpm dev` |
+| `start-local.mjs` | B-10 | sobe a stack de desenvolvimento, portas fixas; com `--public`, atrás de um túnel ([plano 20](../20-dev-public/README.md)) | `pnpm dev`, `pnpm dev:public` |
 | `allowlist.mjs` | [06 · B-10, B-11](../06-workbench/F1-directory-browse.md#b-10--raízes-locais-de-desenvolvimento-pnpm-allowlist-) | libera uma pasta na cópia local da allowlist (ignorada pelo git, validada pelo schema do boot) e manda `SIGHUP` ao backend do `pnpm dev` | `pnpm allowlist add <pasta>` · `remove` · `list` |
 | `run-e2e-local.mjs` | B-37 | sobe stack efêmera, roda e2e, derruba tudo | `pnpm test:e2e` · `:mobile` · `--live` |
 | `run-mobile-local.mjs` | — (ferramenta de dev, 2026-10-01) | roda o app Flutter num Android contra a stack do `pnpm dev`: defines do `.env`, aparelho conectado ou AVD com janela, `adb reverse`, `flutter run` em primeiro plano; na saída, desliga o emulador que ligou e limpa forwards, servidor `adb` e daemons do Gradle | `pnpm dev:mobile` |

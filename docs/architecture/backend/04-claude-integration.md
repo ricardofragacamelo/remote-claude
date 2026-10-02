@@ -257,7 +257,7 @@ Duas consequências que não são detalhe de implementação:
 2. **o prefixo respeita fronteira de token.** `Bash(git status:*)` não cobre `git statusx`. É o
    furo que passa despercebido num matcher escrito com igualdade de string;
 3. **numa linha de shell, a decisão muda a leitura — sempre para o lado seguro**
-   ([13 · D-07](../../plans/13-rules-management/decisions.md)). Um `allow` de **prefixo** só cobre
+   ([15 · D-07](../../plans/15-rules-management/decisions.md)). Um `allow` de **prefixo** só cobre
    linha que é um comando só: `Bash(git status:*)` não responde `git status && curl … | sh`, nem
    linha com substituição ou redirecionamento — mesmo entre aspas, porque não há parser, e sem
    parser o único erro seguro é perguntar de novo. O `allow` **exato** continua casando a string
@@ -389,7 +389,7 @@ apareceu algo novo para mapear.
 | Sessão ociosa além do TTL é encerrada, com `session.closed { reason: 'idleTimeout' }` | libera recurso | 30 min desde o último evento do Claude ou comando do dono; só `idle` conta — esperar permissão **nunca** é ociosidade ([05 · D-02](../../plans/05-hardening-operations/decisions.md)) |
 | O shutdown fecha todas as sessões, na ordem | shutdown limpo | `GracefulShutdown` — ver [backend/06](06-realtime.md#shutdown) |
 | Sessão órfã (backend reiniciou) é detectada no boot e limpa | processo sobrevive ao pai | o subprocesso nasce com `REMOTE_CLAUDE_OWNER` e `REMOTE_CLAUDE_PARENT_PID` no ambiente; no boot, `OrphanSweep` encerra só o que tem a marca **e** cujo backend morreu — nunca por nome de binário, que mataria o Claude Code do terminal |
-| O subprocesso **não herda a configuração do backend** | o `pnpm dev` carrega o `.env` inteiro no processo: um `Bash` do Claude com `env` veria a senha do banco e a do admin do provedor | `claudeEnvironment` tira tudo que é do backend — os prefixos `RC_`, `OIDC_`, `DATABASE_`, `PG` e `NODE_ENV`/`LOG_LEVEL` — e mantém o resto da máquina (`PATH`, `HOME`, proxy, CA, `ANTHROPIC_*`, `CLAUDE_CONFIG_DIR`); um teste confere o filtro contra as chaves do schema **e** do `.env.example`, e o `realQueryFactory` recusa `env` ausente ou com variável do backend ([10 · D-10](../../plans/10-integrated-terminal/decisions.md)) |
+| O subprocesso **não herda a configuração do backend** | o `pnpm dev` carrega o `.env` inteiro no processo: um `Bash` do Claude com `env` veria a senha do banco e a do admin do provedor | `claudeEnvironment` tira tudo que é do backend — os prefixos `RC_`, `OIDC_`, `DATABASE_`, `PG` e `NODE_ENV`/`LOG_LEVEL` — e mantém o resto da máquina (`PATH`, `HOME`, proxy, CA, `ANTHROPIC_*`, `CLAUDE_CONFIG_DIR`); um teste confere o filtro contra as chaves do schema **e** do `.env.example`, e o `realQueryFactory` recusa `env` ausente ou com variável do backend ([12 · D-10](../../plans/12-integrated-terminal/decisions.md)) |
 
 O registro de sessões vivas é **em memória** (`Map<SessionId, SessionRunner>`), não no
 Postgres — é estado de processo, morre com ele. O Postgres guarda metadado e auditoria.

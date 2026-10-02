@@ -18,7 +18,9 @@ const HELP_SHORTCUTS = [
  * The help of the panel of Claude and of its changes (plan 08, B-43), for somebody who has never seen
  * the product: what each mode stops asking, the queue, editing and sending again — and that the files
  * do not go back on their own —, accepting against rejecting and what rejecting keeps, the meter and
- * `/compact`, and what is never recorded.
+ * `/compact`, and what is never recorded. Since F5, the composer too (B-52): what `@` and `/` do, what
+ * dragging from each place does, the set of context and its estimate, what Claude reads and what goes
+ * to the trail, what a file of the desktop becomes, and where the skills come from.
  */
 export function PanelHelp({
   open,
@@ -29,7 +31,22 @@ export function PanelHelp({
 }): React.JSX.Element {
   const { t } = useTranslation();
   const shortcuts = useScreenShortcuts(HELP_SHORTCUTS);
-  const topics = ['modes', 'queue', 'resend', 'review', 'context', 'notices'] as const;
+  const topics = [
+    'modes',
+    'queue',
+    'composer',
+    'mention',
+    'commands',
+    'drag',
+    'contextSet',
+    'reads',
+    'desktop',
+    'skills',
+    'resend',
+    'review',
+    'context',
+    'notices',
+  ] as const;
 
   return (
     <HelpSheet

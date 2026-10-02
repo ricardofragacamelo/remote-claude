@@ -5,7 +5,7 @@ Plano: [07 — Explorer and editor](README.md) · Cenários: [scenarios.md](scen
 **Depende de:** [F5](F5-editor.md).
 **Entrega:** o núcleo do plano — abrir, criar, funções de arquivo e editar — provado pela porta do
 usuário, inclusive a convivência com o Claude escrevendo no mesmo arquivo, e o app ainda verde com o
-contrato novo. É o ponto em que os planos 08 e 09 podem começar.
+contrato novo. É o ponto em que os planos 08 e 11 podem começar.
 
 ## Por quê
 

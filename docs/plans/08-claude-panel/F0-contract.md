@@ -52,8 +52,8 @@ As obrigatoriedades por `kind` vivem no schema, em `x-required-when`
 com `because`; `maxItems` e o teto de `content` também. `kind` ausente continua valendo como `file`
 — é isso que mantém `v`. Regenera TypeScript e Dart; o app não envia anexos e continua verde.
 
-O `text` existe para o `@terminal` do [plano 10](../10-integrated-terminal/README.md), que registra o
-provedor quando o terminal existir: o contrato não depende do plano 10 existir.
+O `text` existe para o `@terminal` do [plano 12](../12-integrated-terminal/README.md), que registra o
+provedor quando o terminal existir: o contrato não depende do plano 12 existir.
 
 ### B-02 — Stream e comandos: thinking, subagents, compactação, fila, fork, esforço, rejeitar ✅
 

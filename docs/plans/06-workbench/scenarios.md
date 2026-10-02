@@ -164,7 +164,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 | S-86 | tema escuro por default com `prefers-color-scheme: dark`; a escolha salva vence; `localStorage` que lança cai no default sem erro | est | unit | — | B-17 | ✅ |
 | S-87 | cor literal em classe de componente de feature, ou ícone fora do `lucide-react` → lint reprova | err | unit | — | B-17 | ✅ |
 | S-88 | toda variável de tema existe nos temas claro **e** escuro — variável faltando num deles reprova o teste de tokens | err | unit | — | B-17 | ✅ |
-| S-89 | a navegação global lista, em ordem, só as entradas registradas: Workbench, Auditoria, Regras, Dispositivos, Logs e diagnóstico, Configurações — e as dos planos 11 e 14 quando eles as registram — na F3, Workbench, Auditoria e Regras; Dispositivos, Logs e diagnóstico e Configurações se registram com as suas telas (F5), e o teste já registra entradas nas posições reservadas | eq | unit | — | B-18 | ✅ |
+| S-89 | a navegação global lista, em ordem, só as entradas registradas: Workbench, Auditoria, Regras, Dispositivos, Logs e diagnóstico, Configurações — e as dos planos 13 e 16 quando eles as registram — na F3, Workbench, Auditoria e Regras; Dispositivos, Logs e diagnóstico e Configurações se registram com as suas telas (F5), e o teste já registra entradas nas posições reservadas | eq | unit | — | B-18 | ✅ |
 | S-90 | o item ativo segue a rota, inclusive por deep link (`/audit?…`, `/rules/$ruleId`) | eq | integração | — | B-18 | ✅ |
 | S-91 | abrir um deep link deslogado leva ao login e volta à mesma rota **com** a search | est | integração | `UNAUTHENTICATED` | B-18 | ✅ |
 | S-92 | abaixo de `md` a navegação vira menu com foco preso; `Esc` fecha e devolve o foco | fron | integração | — | B-18 | ✅ |
@@ -202,7 +202,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
 | S-111 | a activity bar alterna as views da side bar; clicar na view ativa recolhe a side bar | est | integração | — | B-21 | ✅ |
-| S-112 | view registrada por outro plano (Explorer do 07, Busca do 09, Sessões do 08) aparece na activity bar na posição declarada; sem registro, o placeholder com estado vazio traduzido | eq | unit | — | B-21 | ✅ |
+| S-112 | view registrada por outro plano (Explorer do 07, Busca do 11, Sessões do 08) aparece na activity bar na posição declarada; sem registro, o placeholder com estado vazio traduzido | eq | unit | — | B-21 | ✅ |
 | S-113 | redimensionar respeita mínimos e máximos; tamanhos salvos por visitante; `localStorage` que lança → defaults, sem erro | fron | unit | — | B-21 | ✅ |
 | S-114 | a status bar mostra conexão (e muda quando o socket cai e volta), pasta, idioma, tema e o sino de notificações — o sino nasce com a B-26 ([D-27](decisions.md#d-27--o-que-a-f3-deixa-para-a-f4-e-a-f5)); o idioma troca pela própria status bar | est | integração | — | B-21 | ✅ |
 | S-115 | até o plano 08, a secondary side bar mostra a sessão da pasta com os componentes de hoje (conversa, tools, composer) — iniciar, conversar e aprovar sem sair da aba; nada regride | eq | integração | — | B-21 | ✅ |
@@ -221,7 +221,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 | S-121 | comando indisponível no contexto (condição falsa) não executa pelo atalho | eq | unit | — | B-23 | ✅ |
 | S-122 | os atalhos de troca de aba (D-16) funcionam num navegador comum, sem depender de tecla reservada | eq | integração | — | B-23 | ✅ |
 | S-123 | `Ctrl/Cmd+Shift+P` abre a paleta; filtra por rótulo traduzido e por categoria, mostra o atalho, executa e fecha; os comandos de arquivo (abrir pasta, abrir recente, fechar aba de pasta) estão lá desde este plano | eq | integração | — | B-24 | ✅ |
-| S-124 | prefixo muda o modo (`>` comandos); modo registrado por outro plano (Quick Open do 09) aparece sem mudar a paleta | eq | unit | — | B-24 | ✅ |
+| S-124 | prefixo muda o modo (`>` comandos); modo registrado por outro plano (Quick Open do 11) aparece sem mudar a paleta | eq | unit | — | B-24 | ✅ |
 | S-125 | abrir a paleta com ela aberta não abre outra; `Esc` fecha e devolve o foco a quem o tinha | idem | integração | — | B-24 | ✅ |
 | S-126 | comando que lança erro ao executar vira notificação traduzida, e a paleta fecha sem travar | err | integração | — | B-24 | ✅ |
 | S-127 | o menu **Arquivo** sai do registro, com grupos na ordem do VS Code (novo arquivo, nova pasta · abrir pasta, abrir recente · salvar, salvar tudo · fechar editor, fechar aba de pasta): rótulo, atalho e disponibilidade iguais aos da paleta | eq | integração | — | B-25 | ✅ |
@@ -255,8 +255,8 @@ Códigos **novos** deste plano, acrescentados ao catálogo pela [B-03](F0-contra
 | S-142 | Configurações: a seção está na URL (`/settings/appearance`); seção desconhecida cai na primeira, sem erro | fron | integração | — | B-31 | ✅ |
 | S-143 | Aparência: tema (claro, escuro, do sistema), idioma e densidade mudam na hora e persistem por visitante | eq | integração | — | B-31 | ✅ |
 | S-144 | Workspaces: raízes só leitura (nenhum controle de edição), com o comando do script copiável; recentes com fixar e remover | eq | integração | — | B-31 | ✅ |
-| S-145 | nenhuma seção de Configurações trata do Claude (modelo, permission mode, MCP) — isso é da tela do plano 11 | eq | unit | — | B-31 | ✅ |
-| S-146 | seção registrada por outro plano (Editor do 07, Terminal do 10) aparece no registro; sem registro, não aparece | eq | unit | — | B-31 | ✅ |
+| S-145 | nenhuma seção de Configurações trata do Claude (modelo, permission mode, MCP) — isso é da tela do plano 13 | eq | unit | — | B-31 | ✅ |
+| S-146 | seção registrada por outro plano (Editor do 07, Terminal do 12) aparece no registro; sem registro, não aparece | eq | unit | — | B-31 | ✅ |
 | S-147 | falha ao carregar as raízes em Workspaces → erro traduzido com "tentar de novo" | err | integração | `NETWORK_UNREACHABLE` | B-31 | ✅ |
 | S-148 | Sobre mostra as versões e copia o bloco de versões para um relato de defeito | eq | integração | — | B-32 | ✅ |
 | S-149 | a home não tem mais seletor de workspace, ping nem dispositivos; o store global de workspace selecionado não existe mais | est | unit | — | B-33 | ✅ |
@@ -304,7 +304,7 @@ O protocolo exige justificar dimensão vazia, não omiti-la.
 | Contrato, documentos e rotas (B-01…B-05) | `idem` | resolver a mesma rota duas vezes é função pura do router; a repetição que importa — recarregar a URL — está em S-83 e S-158 |
 | Sobre (B-12) | `est`, `conc` | leitura sem estado próprio; a versão do CLI vem do cache por versão que o [plano 04 · F3](../04-transcript-and-resume/F3-commands.md) já prova sob concorrência |
 | Sistema visual e molduras (B-17…B-19) | `conc` | apresentação sem I/O concorrente; o único recurso compartilhado é o `localStorage`, cujo acesso é síncrono no navegador |
-| Casca do workbench (B-21, B-22) | `err` | a casca não faz I/O próprio: a única falha dela — `localStorage` que lança — está em S-113, e o erro de cada view é de quem a registra (planos 07–10) |
+| Casca do workbench (B-21, B-22) | `err` | a casca não faz I/O próprio: a única falha dela — `localStorage` que lança — está em S-113, e o erro de cada view é de quem a registra (planos 07–12) |
 | Casca do workbench (B-21, B-22) | `conc`, `idem` | layout sem recurso compartilhado além do `localStorage`, síncrono; a repetição que importa — clicar duas vezes na view ativa — é transição de estado (S-111) |
 | Telas separadas (B-28…B-34) | `idem` | as telas movidas mantêm os cenários de repetição dos planos que as criaram ([03](../03-rules-and-audit/scenarios.md), [02](../02-mobile-approval/scenarios.md)); o que muda aqui é a moldura, coberta por S-95; o pong repetido no replay continua descartado pelo `seq` (plano 00), e fixar/remover recente duas vezes é o S-184 |
 | E2E (B-35…B-39) | `conc`, `idem` | concorrência de abertura e repetição são exatas e baratas em integração (S-46, S-107, S-41, S-97); pela porta do usuário custariam minutos para provar o mesmo |

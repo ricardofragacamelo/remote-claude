@@ -188,7 +188,7 @@ function fileActions(tab: EditorTab, context: TabMenuContext): EditorTabAction[]
             icon: MessageSquarePlus,
             disabled: false,
             run: () => {
-              addFileToClaude(folder, path, null);
+              addFileToClaude(folder, path, []);
             },
           },
         ]

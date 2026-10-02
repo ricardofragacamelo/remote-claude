@@ -56,7 +56,7 @@ unwatch desconhecido é `ack`.
 - recarga da allowlist que tira a pasta → `workspace.watchStopped { reason: allowlistChanged }` e o
   watcher sai; pasta apagada → `reason: folderDeleted`;
 - mil ciclos watch/unwatch devolvem watchers, listeners e memória ao inicial (S-145) — e a tela de
-  saúde do [plano 16](../16-logs-and-diagnostics/README.md) lê a contagem de watchers abertos daqui.
+  saúde do [plano 18](../18-logs-and-diagnostics/README.md) lê a contagem de watchers abertos daqui.
 
 ### B-22 — Quem mudou: a origem ✅
 

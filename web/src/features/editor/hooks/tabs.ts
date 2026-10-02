@@ -175,6 +175,20 @@ export function activeFile(folder: string): string | null {
   return activeFileOf(editorStoreOf(folder).getState());
 }
 
+/**
+ * The files open in the editor, the active one first, then the ones opened last — what an `@` of
+ * Claude's panel offers first (plan 08, B-48). Without repeats, in that order.
+ */
+export function openAndRecentFiles(folder: string): readonly string[] {
+  const state = editorStoreOf(folder).getState();
+  const active = activeFileOf(state);
+  const open = state.groups.flatMap((group) =>
+    group.tabs.flatMap((tab) => (tab.kind === 'file' ? [tab.path] : [])),
+  );
+
+  return [...new Set([...(active === null ? [] : [active]), ...open, ...state.recent])];
+}
+
 /** Puts a tab of a group on screen, and the focus in that group. */
 export function activateTab(folder: string, group: string, id: string): void {
   editorStoreOf(folder).setState((state) => ({

@@ -168,9 +168,9 @@ describe('adding to Claude’s context — plan 07, B-42', () => {
     const unregister = claudeContextTargets.register({ id: 'chat', position: 1, add });
     const range = { startLine: 1, startColumn: 1, endLine: 2, endColumn: 3 };
 
-    addFileToClaude(FOLDER, 'src/a.ts', null);
-    addFileToClaude(FOLDER, 'src/a.ts', range);
-    addFileToClaude(FOLDER, 'src/a.ts', null);
+    addFileToClaude(FOLDER, 'src/a.ts', []);
+    addFileToClaude(FOLDER, 'src/a.ts', [range]);
+    addFileToClaude(FOLDER, 'src/a.ts', []);
 
     expect(add.mock.calls).toEqual([
       [{ folder: FOLDER, entries: [{ path: 'src/a.ts', kind: 'file' }] }],
@@ -185,8 +185,23 @@ describe('adding to Claude’s context — plan 07, B-42', () => {
     unregister();
   });
 
+  it('hands one range for each cursor that selects something — plan 08, S-251', () => {
+    const add = vi.fn();
+    const unregister = claudeContextTargets.register({ id: 'chat', position: 1, add });
+    const first = { startLine: 1, startColumn: 1, endLine: 1, endColumn: 4 };
+    const second = { startLine: 5, startColumn: 1, endLine: 7, endColumn: 2 };
+
+    addFileToClaude(FOLDER, 'src/a.ts', [first, second]);
+
+    expect(add.mock.calls).toEqual([
+      [{ folder: FOLDER, entries: [], selection: { path: 'src/a.ts', range: first } }],
+      [{ folder: FOLDER, entries: [], selection: { path: 'src/a.ts', range: second } }],
+    ]);
+    unregister();
+  });
+
   it('says nothing took it when nobody does (S-276)', () => {
-    addFileToClaude(FOLDER, 'a.ts', null);
+    addFileToClaude(FOLDER, 'a.ts', []);
     expect(editorState().announcement?.key).toBe('editor.claude.unavailable');
     announce(FOLDER, 'editor.claude.added');
     expect(editorState().announcement?.params).toEqual({});

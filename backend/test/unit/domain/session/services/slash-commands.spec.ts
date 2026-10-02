@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { commandIn, isHidden, menuOf, offers, SUGGESTED_COMMANDS } from '@domain/session';
+import {
+  commandIn,
+  isHidden,
+  menuOf,
+  offers,
+  originOf,
+  SUGGESTED_COMMANDS,
+  SYSTEM_SKILLS_PLUGIN,
+  USER_SKILLS_PLUGIN,
+} from '@domain/session';
 import type { SlashCommand } from '@domain/session';
 import { loadCommands } from '../../../../fakes/agent-sdk/fixture';
 import { aCommand } from '../../../../support/builders/session.builder';
@@ -103,6 +112,9 @@ describe('the slash command menu', () => {
         argumentHint: '[interval] [prompt]',
         aliases: ['proactive'],
         suggested: false,
+        origin: 'project',
+        label: 'loop',
+        shadowed: false,
       });
     });
 
@@ -157,6 +169,60 @@ describe('the slash command menu', () => {
 
     it('answers yes for a hidden command: hiding is not refusing', () => {
       expect(offers([aCommand('__remote-workflow')], '__remote-workflow')).toBe(true);
+    });
+  });
+
+  describe('origins and collisions — plan 08, B-50', () => {
+    it('reads the origin from the marker and from the namespace of our plugins — S-241, S-242', () => {
+      expect(originOf(aCommand('compact', { builtin: true }))).toBe('builtin');
+      expect(originOf(aCommand('deploy'))).toBe('project');
+      expect(originOf(aCommand(`${USER_SKILLS_PLUGIN}:notes`))).toBe('user');
+      expect(originOf(aCommand(`${SYSTEM_SKILLS_PLUGIN}:pdf`))).toBe('system');
+      expect(originOf(aCommand('other-plugin:lint'))).toBe('project');
+    });
+
+    it('shows a qualified skill by its simple name, and inserts the qualified one — S-242', () => {
+      const [skill] = menuOf([aCommand(`${USER_SKILLS_PLUGIN}:notes`)]);
+
+      expect(skill).toMatchObject({
+        name: `${USER_SKILLS_PLUGIN}:notes`,
+        label: 'notes',
+        origin: 'user',
+        shadowed: false,
+      });
+    });
+
+    it.each([
+      ['the Claude Code row first', true],
+      ['the Claude Code row last', false],
+    ])(
+      'lists both rows of one name and covers the unmarked one, with %s — S-243',
+      (_order, builtinFirst) => {
+        const builtin = aCommand('review', { builtin: true });
+        const project = aCommand('review', { description: "the project's" });
+        const menu = menuOf(builtinFirst ? [builtin, project] : [project, builtin]);
+
+        expect(menu.map((row) => [row.origin, row.shadowed])).toEqual([
+          ['builtin', false],
+          ['project', true],
+        ]);
+      },
+    );
+
+    it('does not cover a qualified row whose simple name a Claude Code command has — S-243', () => {
+      const menu = menuOf([
+        aCommand(`${USER_SKILLS_PLUGIN}:review`),
+        aCommand('review', { builtin: true }),
+      ]);
+
+      expect(menu.map((row) => [row.name, row.shadowed])).toEqual([
+        ['review', false],
+        [`${USER_SKILLS_PLUGIN}:review`, false],
+      ]);
+    });
+
+    it('keeps one row of a name listed twice with the same marker', () => {
+      expect(menuOf([aCommand('init'), aCommand('init')])).toHaveLength(1);
     });
   });
 });

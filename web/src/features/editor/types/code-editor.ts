@@ -99,6 +99,9 @@ export interface CodeView {
   /** The selection, or `null` when it is empty. */
   selection(): TextRange | null;
 
+  /** Every selection that is not empty, in order — several with more than one cursor (08 · B-51). */
+  selections(): readonly TextRange[];
+
   /** How many characters are selected. */
   selectionLength(): number;
   scrollTop(): number;

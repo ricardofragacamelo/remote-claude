@@ -88,7 +88,7 @@ erro sem derrubar as outras.
 
 Uma seção "Arquivos" mínima na tela de Auditoria do plano 06, sobre o `GET /audit-events` (B-17):
 ato, caminho, quem, quando — nunca conteúdo. O redesenho e a linha do tempo única são do
-[plano 12](../12-audit-explained/README.md) ([D-13](decisions.md#d-13--onde-os-fatos-de-arquivo-aparecem-na-trilha)).
+[plano 14](../14-audit-explained/README.md) ([D-13](decisions.md#d-13--onde-os-fatos-de-arquivo-aparecem-na-trilha)).
 
 ### B-30 — Usabilidade e ajuda do Explorer ✅
 

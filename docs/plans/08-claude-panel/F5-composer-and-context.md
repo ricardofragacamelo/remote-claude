@@ -4,7 +4,7 @@ Plano: [08 — Painel do Claude](README.md) · Cenários: [scenarios.md](scenari
 
 **Depende de:** [F4](F4-chat-panel.md); do explorer, das abas e da API de arquivos do
 [plano 07](../07-explorer-and-editor/README.md); e, para o autocomplete fuzzy, do localizador de arquivos
-do [plano 09](../09-search/README.md) (a D-12).
+do [plano 11](../11-search/README.md) (a D-12).
 **Entrega:** escolher o que faz parte do contexto de um prompt como no plugin do Claude — `@` seleciona
 arquivo, pasta, seleção ou terminal com autocomplete; arrastar do explorer, das abas e do desktop põe no
 contexto; o contexto aparece em chips removíveis com tamanho e tokens estimados; `/` chama comando ou
@@ -35,7 +35,7 @@ silêncio (D-22).
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-44 — Backend: referências de arquivo, pasta e trecho, e texto de provedor 🔲
+### B-44 — Backend: referências de arquivo, pasta e trecho, e texto de provedor ✅
 
 O `session.prompt` com `attachments` (a [B-01](F0-contract.md)) passa por uma validação **antes** de
 qualquer coisa chegar ao Claude, e ela é tudo ou nada — um anexo inválido recusa o prompt inteiro, com o
@@ -55,7 +55,7 @@ O log de `claude.input` leva caminhos e tamanhos, nunca conteúdo
 ([logging desta borda](../../architecture/backend/04-claude-integration.md#logging-desta-borda)). Prompt
 com contexto durante um turno entra na fila da B-34 como qualquer outro.
 
-### B-45 — Backend: anexos enviados (imagem e arquivo do desktop) 🔲
+### B-45 — Backend: anexos enviados (imagem e arquivo do desktop) ✅
 
 Pela D-02 e pela D-22: `POST /sessions/:sessionId/attachments` recebe imagem (PNG/JPEG/GIF/WebP) ou
 arquivo de texto, com teto (`413 PAYLOAD_TOO_LARGE`) e tipo (`415 ATTACHMENT_TYPE_UNSUPPORTED`), e
@@ -68,7 +68,7 @@ devolve o mesmo id.
 
 Se o spike da D-02 reprovar a imagem, a parte de imagem sai, com registro no [progresso](progress.md).
 
-### B-46 — O composer 🔲
+### B-46 — O composer ✅
 
 Substitui o `PromptComposer` de uma linha: multilinha que cresce até um teto, Enter envia, Shift+Enter
 quebra linha, Enter durante composição IME não envia. Prompt vazio **e** sem contexto não envia — o
@@ -76,7 +76,7 @@ botão diz por quê. Com um turno em execução, enviar diz que o prompt vai par
 backend chega pelo `correlationId`, traduzida, e o texto e o contexto ficam. Continua em React Hook
 Form com Zod, como o de hoje, e sem depender do menu: o que se digita é o que se envia.
 
-### B-47 — O conjunto de contexto, em chips 🔲
+### B-47 — O conjunto de contexto, em chips ✅
 
 Acima do composer, o contexto do próximo prompt em chips: arquivo, pasta, trecho (com as linhas), imagem
 (com miniatura), texto enviado e terminal — cada um com ícone, nome relativo à pasta e remover (clique e
@@ -91,7 +91,7 @@ sem bloquear; acima do teto duro, não envia e diz por quê.
   recusado com o caminho; binário é avisado no chip;
 - cada conversa tem o seu conjunto.
 
-### B-48 — `@` com autocomplete 🔲
+### B-48 — `@` com autocomplete ✅
 
 `@` abre o menu de menções no cursor:
 
@@ -99,16 +99,20 @@ sem bloquear; acima do teto duro, não envia e diz por quê.
 |---|---|
 | arquivos e pastas da pasta aberta, por busca fuzzy — abertos no editor e recentes primeiro | chip de arquivo ou pasta |
 | `@seleção` | o trecho selecionado no editor ativo da aba |
-| `@terminal` | a saída recente do terminal ativo, como `text` — registrado pelo [plano 10](../10-integrated-terminal/README.md); ausente enquanto ele não existir ou com o terminal desligado |
+| `@terminal` | a saída recente do terminal ativo, como `text` — registrado pelo [plano 12](../12-integrated-terminal/README.md); ausente enquanto ele não existir ou com o terminal desligado |
 
-A busca, pela D-12, é o localizador de arquivos do plano 09 (`GET /search/files`), dentro da pasta; a
-resposta atrasada de uma consulta velha é descartada. Sem resultado, pasta vazia e resultado acima do
+A busca, pela D-12, é o localizador de arquivos do plano 11 (`GET /search/files`), dentro da pasta; a
+resposta atrasada de uma consulta velha é descartada. **Enquanto o plano 11 não existe, a fonte é o passo
+provisório que a D-12 prevê** — a completação por nível sobre `GET /files/tree` do plano 07 (`@src/co`
+lista `src` e procura `co` nele, com casamento solto de letras em ordem), registrada no
+[progresso](progress.md); a troca para o fuzzy é a [B-25 do plano 11](../11-search/F2-search-ui.md#b-25--o--do-composer-do-08-passa-ao-localizador-),
+que traz a fonte. Sem resultado, pasta vazia e resultado acima do
 teto (`truncated`: "refine a busca") têm texto próprio. Caminho fora da pasta não é oferecido, e digitado
 à mão é recusado no envio. Busca que falha diz isso e deixa digitar o caminho. Teclado: setas navegam,
 Enter/Tab escolhem, Esc fecha sem apagar o texto — padrão ARIA de combobox. Os provedores (`@seleção`,
 `@terminal`) vivem num registro do cliente, que outro plano estende sem mexer no composer.
 
-### B-49 — Arrastar e soltar 🔲
+### B-49 — Arrastar e soltar ✅
 
 | Origem | Resultado |
 |---|---|
@@ -121,7 +125,7 @@ e o envio vai para a fila. Item arrastado de **outra** aba de pasta é recusado 
 da pasta da sessão. A área de soltar é anunciada, e há alternativa sem arrastar: "adicionar ao contexto"
 no menu de contexto do explorer e da aba do editor.
 
-### B-50 — `/` com autocomplete: comandos e skills de todas as origens 🔲
+### B-50 — `/` com autocomplete: comandos e skills de todas as origens ✅
 
 O `supportedCommands()` devolve comandos **e skills** — o próprio `sdk.d.ts` o descreve como "a lista de
 skills disponíveis" —, e o menu do [plano 04](../04-transcript-and-resume/F3-commands.md) já os lista; o
@@ -129,10 +133,10 @@ que falta é distingui-los e mostrá-los como o plugin do Claude:
 
 - **origem** de cada item, com selo: **Claude Code** (o `builtin` do SDK), **Projeto**, **Usuário** e
   **Sistema**. Por decisão do usuário (2026-09-26), as skills carregam das três origens: as de usuário e
-  de sistema entram por um plugin local que o [plano 11](../11-claude-settings/README.md) monta pela opção
+  de sistema entram por um plugin local que o [plano 13](../13-claude-settings/README.md) monta pela opção
   `plugins` do SDK, mantendo o `settingSources: ['project']` do ADR-011; elas chegam qualificadas
   (`plugin:skill`), e o nome do plugin diz a origem. Nome simples, descrição e dica de argumento à vista;
-  escolher insere o nome **que o CLI roda** (o qualificado, quando é o caso). Skill desligada no plano 11
+  escolher insere o nome **que o CLI roda** (o qualificado, quando é o caso). Skill desligada no plano 13
   não aparece;
 - **colisão**: o mesmo nome em duas origens aparece duas vezes, distinguido pelo selo. Entre um `builtin`
   e um sem marca, `/nome` roda o `builtin` **qualquer que seja a ordem** (é o que o SDK documenta) — hoje o
@@ -148,14 +152,14 @@ que falta é distingui-los e mostrá-los como o plugin do Claude:
 A origem entra no formato de `GET /sessions/:sessionId/commands` como campo novo (`origin`), documentado
 em [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#slash-commands).
 
-### B-51 — Do editor para o contexto 🔲
+### B-51 — Do editor para o contexto ✅
 
 "Adicionar seleção ao chat" no menu de contexto do editor (e atalho) cria o chip do trecho na conversa
 ativa da mesma aba; seleção vazia acrescenta o arquivo inteiro; várias seleções (multicursor) viram um
 chip por trecho, até o teto. Aba do editor **suja** → o chip avisa que o Claude lê o que está salvo, não
 o que está na tela (R-05).
 
-### B-52 — Usabilidade e ajuda do composer 🔲
+### B-52 — Usabilidade e ajuda do composer ✅
 
 Uma seção da ajuda do painel, em en e pt-BR: o que `@` e `/` fazem, o que arrastar de cada lugar faz, o
 que é o conjunto de contexto e o aviso de tamanho, **o que o Claude lê** (a referência, pelo `Read`, e o

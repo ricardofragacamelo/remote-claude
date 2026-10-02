@@ -1,6 +1,8 @@
 import { api } from '@/shared/api/api';
 import { isRecord, readText } from '@/shared/lib/json';
-import type { CommandGroups, CommandMenu, SlashCommand } from '../types/command';
+import type { CommandGroups, CommandMenu, CommandOrigin, SlashCommand } from '../types/command';
+
+const ORIGINS: readonly string[] = ['builtin', 'project', 'user', 'system'];
 
 /** The shape the backend answers with. It stops existing at the end of this file. */
 interface CommandMenuResponse {
@@ -31,7 +33,8 @@ export async function fetchCommands(sessionId: string): Promise<CommandMenu> {
   };
 }
 
-function toSlashCommand(value: unknown): SlashCommand[] {
+/** One row of a menu the backend answered — or nothing, for one this build cannot read. */
+export function toSlashCommand(value: unknown): SlashCommand[] {
   if (!isRecord(value)) {
     return [];
   }
@@ -52,6 +55,13 @@ function toSlashCommand(value: unknown): SlashCommand[] {
       argumentHint: readText(value, 'argumentHint') ?? '',
       aliases: aliases.filter((alias): alias is string => typeof alias === 'string'),
       suggested: value['suggested'] === true,
+      // A backend older than plan 08 says neither: a row with no origin is the project's, named as
+      // it is.
+      origin: ORIGINS.includes(value['origin'] as string)
+        ? (value['origin'] as CommandOrigin)
+        : 'project',
+      label: readText(value, 'label') ?? name,
+      shadowed: value['shadowed'] === true,
     },
   ];
 }
@@ -69,7 +79,7 @@ export function searchCommands(commands: readonly SlashCommand[], search: string
     wanted === ''
       ? commands
       : commands.filter((command) =>
-          [command.name, command.description, ...command.aliases].some((text) =>
+          [command.name, command.label, command.description, ...command.aliases].some((text) =>
             text.toLowerCase().includes(wanted),
           ),
         );

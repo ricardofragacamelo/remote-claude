@@ -1,5 +1,7 @@
 import type { SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 
+import type { PromptImage } from '@domain/session';
+
 /**
  * The prompts of a session, as an `AsyncIterable` the SDK pulls from.
  *
@@ -37,15 +39,18 @@ export class SessionInputQueue implements AsyncIterable<SDKUserMessage> {
    * Pushing to a closed queue is ignored rather than thrown: closing races with a prompt that was
    * already in flight, and turning that race into an error would surface a failure for something
    * the user cannot avoid doing.
+   *
+   * @param images go beside the text, as blocks of image of the Messages API — the CLI takes them
+   *   from the streaming input (measured, discovery §10.2)
    */
-  push(text: string): void {
+  push(text: string, images: readonly PromptImage[] = []): void {
     if (this.closed) {
       return;
     }
 
     const message: SDKUserMessage = {
       type: 'user',
-      message: { role: 'user', content: text },
+      message: { role: 'user', content: contentOf(text, images) },
       parent_tool_use_id: null,
     };
 
@@ -106,4 +111,26 @@ export class SessionInputQueue implements AsyncIterable<SDKUserMessage> {
       },
     };
   }
+}
+
+/** A text alone stays a string, as before images existed; with images, the text goes first. */
+function contentOf(
+  text: string,
+  images: readonly PromptImage[],
+): SDKUserMessage['message']['content'] {
+  if (images.length === 0) {
+    return text;
+  }
+
+  return [
+    { type: 'text', text },
+    ...images.map((image) => ({
+      type: 'image' as const,
+      source: {
+        type: 'base64' as const,
+        media_type: image.mediaType as 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp',
+        data: image.data,
+      },
+    })),
+  ];
 }

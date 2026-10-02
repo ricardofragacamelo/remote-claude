@@ -148,7 +148,7 @@ describe('the settings, one section at a time — plan 06, S-142', () => {
     expect(landed.params).toEqual({ section: 'editor' });
   });
 
-  // `/settings/terminal` is plan 10's, not installed yet; `/settings/editor` is plan 07's, and is.
+  // `/settings/terminal` is plan 12's, not installed yet; `/settings/editor` is plan 07's, and is.
   it.each(['/settings', '/settings/terminal', '/settings/claude'])(
     'sends %s, which names no section here, to the first one — without an error',
     async (href) => {

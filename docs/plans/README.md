@@ -24,23 +24,31 @@ Voltar para o [índice geral](../architecture/README.md).
 | 06 | [Workbench](06-workbench/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
 | 07 | [Explorer e editor](07-explorer-and-editor/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 | 08 | [Painel do Claude](08-claude-panel/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
-| 09 | [Busca](09-search/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
-| 10 | [Terminal integrado](10-integrated-terminal/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
-| 11 | [Configuração do Claude](11-claude-settings/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
-| 12 | [Auditoria explicada](12-audit-explained/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
-| 13 | [Gestão de regras](13-rules-management/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
-| 14 | [Uso e custo](14-usage-and-cost/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
-| 15 | [Dispositivos](15-devices/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
-| 16 | [Logs e diagnóstico](16-logs-and-diagnostics/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
-| 17 | [Distribuição](17-distribution/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm dist:verify` saem com código 0 |
+| 09 | [Layout do chat](09-chat-layout/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 10 | [Layout do chat no app](10-mobile-chat-layout/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
+| 11 | [Busca](11-search/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 12 | [Terminal integrado](12-integrated-terminal/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
+| 13 | [Configuração do Claude](13-claude-settings/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
+| 14 | [Auditoria explicada](14-audit-explained/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 15 | [Gestão de regras](15-rules-management/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 16 | [Uso e custo](16-usage-and-cost/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 17 | [Dispositivos](17-devices/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
+| 18 | [Logs e diagnóstico](18-logs-and-diagnostics/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 19 | [Distribuição](19-distribution/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm dist:verify` saem com código 0 |
+| 20 | [Dev public](20-dev-public/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
 A ordem é **dependência**, não preferência: cada plano pressupõe o anterior, como as fases
-dentro de um plano. A exceção declarada são os planos **06 a 16** — o cliente no molde do VS Code,
+dentro de um plano. A exceção declarada são os planos **06 a 18** — o cliente no molde do VS Code,
 criados em 2026-09-26: começam depois que o **05** fechar, e não dependem da distribuição
 ([06 · D-02](06-workbench/decisions.md)), e cada um diz no seu README de quais outros depende.
-A **distribuição** ([17](17-distribution/README.md)) é o último plano: empacota o produto que os
+O **09** ([Layout do chat](09-chat-layout/README.md)) entrou em 2026-10-02, depois do 08, por pedido do
+usuário: refaz a disposição do painel do Claude no molde do plugin do VS Code, e os planos que eram
+09…18 passaram a 10…19 na mesma data. O **10** ([Layout do chat no app](10-mobile-chat-layout/README.md))
+entrou no mesmo dia, depois do 09: leva o mesmo molde ao app Flutter, com paridade com o painel web, e
+os planos que eram 10…19 passaram a 11…20 pelo `pnpm plan new --at 10`.
+A **distribuição** ([19](19-distribution/README.md)) é o último plano: empacota o produto que os
 anteriores entregam, e foi movida para o fim em 2026-09-27, por decisão do usuário — há muito a
 resolver antes de empacotar.
 Quanto já foi feito, em todos eles, está no

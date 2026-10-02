@@ -14,7 +14,7 @@ import { InputValidationError } from '@shared/errors/input-validation.error';
 import { RateLimitedError } from '@shared/errors/rate-limited.error';
 import { UnsupportedProtocolVersionError } from '@shared/errors/unsupported-protocol-version.error';
 import { LOGGER, type Logger } from '@shared/logging/logger';
-import { forLog } from '@shared/logging/redact';
+import { forLog, framePayloadForLog } from '@shared/logging/redact';
 import { runWithTrace } from '@shared/logging/trace-context';
 import { ConnectionRegistry } from './connection-registry';
 import type { Connection, Sendable } from './connection-registry';
@@ -197,7 +197,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const traceId = frame.traceId ?? this.ids.next();
 
     await runWithTrace({ traceId }, async () => {
-      const logged = forLog(frame.payload);
+      const logged = forLog(framePayloadForLog(frame.type, frame.payload));
       this.logger.debug(
         {
           op: 'ws.inbound',

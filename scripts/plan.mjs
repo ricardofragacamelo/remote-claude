@@ -10,11 +10,16 @@
  * that only updates its own diary leaves the project-wide answer wrong. The counters cover the
  * open decisions too, because a decision nobody tracks is a decision taken by omission.
  *
+ * `--at <nn>` creates the plan in the middle of the sequence: every plan from `<nn>` on moves up
+ * by one — its directory and every explicit reference to it, across the repository — and the
+ * lines the rewrite could not decide on are listed for a person to read (scripts/lib/plan-renumber.mjs).
+ *
  * Usage:
- *   pnpm plan new <name> [--phases foundation,backend,web]
+ *   pnpm plan new <name> [--phases foundation,backend,web] [--at <nn>]
  *   pnpm plan progress [<plan>]      # also accepts --progress
  */
 
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -26,13 +31,14 @@ import {
   summarizeOverall,
   summarizePlan,
 } from './lib/plan-progress.mjs';
+import { directoryMoves, shiftReferences, suspectLines } from './lib/plan-renumber.mjs';
 import {
   buildPlanFiles,
   isValidSlug,
   withPlanIndexed,
   withPlanInOverallProgress,
 } from './lib/plan-template.mjs';
-import { dim, fail, hint, line, ok, title } from './lib/ui.mjs';
+import { dim, fail, hint, line, ok, title, warn } from './lib/ui.mjs';
 
 const plansDir = path.join(repoRoot, 'docs', 'plans');
 const PLAN_DIR = /^(\d{2})-([a-z0-9-]+)$/;
@@ -80,35 +86,156 @@ function nextPlanNumber() {
   return String((existingPlans().at(-1)?.number ?? -1) + 1).padStart(2, '0');
 }
 
+/** The files whose references a renumbering rewrites: text that people and agents read. */
+const RENUMBERED_FILE = /\.(?:md|mjs|js|cjs|ts|tsx|dart|json|ya?ml|arb|sh|txt)$/u;
+
+/** Text that is written by a tool, never by hand — the tool that wrote it rewrites it. */
+const GENERATED_FILE = /(?:^|\/)pnpm-lock\.yaml$|\.g\.dart$|\.gen\.ts$/u;
+
 /**
- * @param {readonly string[]} args
- * @returns {number}
+ * The renumbering's own source and tests: their plan numbers are examples of the forms it
+ * rewrites, and rewriting them would change what the tests assert.
  */
-function createPlan(args) {
+const RENUMBERING_ITSELF = new Set([
+  'scripts/lib/plan-renumber.mjs',
+  'test/unit/scripts/plan-renumber.spec.mjs',
+]);
+
+/**
+ * The number asked for with `--at <nn>`, `null` without the flag, or `NaN` when it is not two
+ * digits.
+ *
+ * @param {readonly string[]} args
+ * @returns {number | null}
+ */
+function insertionPointOf(args) {
+  const atFlag = args.indexOf('--at');
+  if (atFlag === -1) {
+    return null;
+  }
+  const value = args[atFlag + 1] ?? '';
+  return /^\d{2}$/u.test(value) ? Number(value) : Number.NaN;
+}
+
+/**
+ * Every file of the working tree git would consider — tracked or new, never ignored.
+ *
+ * @returns {string[]} paths relative to the repository root
+ */
+function workingTreeFiles() {
+  return execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  })
+    .split('\0')
+    .filter((file) => RENUMBERED_FILE.test(file) && !GENERATED_FILE.test(file))
+    .filter((file) => !RENUMBERING_ITSELF.has(file))
+    .filter((file) => fs.existsSync(path.join(repoRoot, file)));
+}
+
+/**
+ * Moves every plan from `from` on up by one: the references first, while every path still
+ * resolves, then the directories, highest first.
+ *
+ * @param {number} from
+ * @returns {void}
+ */
+function makeRoomAt(from) {
+  const moves = directoryMoves(existingPlans(), from);
+  const shift = { from, slugs: moves.map((move) => move.from.slice(3)) };
+
+  /** @type {string[]} */
+  const suspects = [];
+  let rewritten = 0;
+
+  for (const file of workingTreeFiles()) {
+    const absolute = path.join(repoRoot, file);
+    const before = fs.readFileSync(absolute, 'utf8');
+    const after = shiftReferences(before, shift);
+
+    for (const suspect of suspectLines(before, after, shift)) {
+      suspects.push(`${file}:${String(suspect.line)}  ${suspect.text}`);
+    }
+    if (after !== before) {
+      fs.writeFileSync(absolute, after);
+      rewritten += 1;
+    }
+  }
+
+  for (const move of moves) {
+    fs.renameSync(path.join(plansDir, move.from), path.join(plansDir, move.to));
+    ok(`${move.from} → ${move.to}`);
+  }
+  ok(`${String(rewritten)} files`, 'references rewritten');
+
+  if (suspects.length > 0) {
+    line();
+    warn(`${String(suspects.length)} lines to read — a bare number, or the story of a renumbering`);
+    for (const suspect of suspects) {
+      line(dim(`  ${suspect}`));
+    }
+    line();
+  }
+}
+
+/**
+ * The plan `new` was asked for, or `null` after saying why the arguments do not describe one.
+ *
+ * @param {readonly string[]} args
+ * @returns {{ number: string, slug: string, phases: string[] } | null}
+ */
+function requestedPlan(args) {
   const slug = args[0];
   const phases = phasesOf(args);
 
   if (slug === undefined || !isValidSlug(slug)) {
     fail('a plan name in kebab-case is required', 'e.g. pnpm plan new claude-integration');
-    return 1;
+    return null;
   }
 
   const invalidPhase = phases.find((phase) => !isValidSlug(phase));
   if (phases.length === 0 || invalidPhase !== undefined) {
     fail(`phase names must be kebab-case: ${invalidPhase ?? '(none given)'}`);
     hint('pnpm plan new <name> --phases foundation,backend,web');
+    return null;
+  }
+
+  const lastNumber = nextPlanNumber();
+  const insertionPoint = insertionPointOf(args);
+
+  if (insertionPoint !== null && !(insertionPoint <= Number(lastNumber))) {
+    fail(
+      `--at takes a two-digit plan number up to ${lastNumber}`,
+      'e.g. pnpm plan new mobile --at 10',
+    );
+    return null;
+  }
+
+  if (existingPlans().some((plan) => plan.name.slice(3) === slug)) {
+    fail(`a plan named ${slug} already exists`);
+    return null;
+  }
+
+  const number = insertionPoint === null ? lastNumber : String(insertionPoint).padStart(2, '0');
+  return { number, slug, phases };
+}
+
+/**
+ * @param {readonly string[]} args
+ * @returns {number}
+ */
+function createPlan(args) {
+  const spec = requestedPlan(args);
+
+  if (spec === null) {
     return 1;
   }
 
-  const nextNumber = nextPlanNumber();
-  const planDir = path.join(plansDir, `${nextNumber}-${slug}`);
-
-  if (fs.existsSync(planDir)) {
-    fail(`${path.relative(repoRoot, planDir)} already exists`);
-    return 1;
+  if (spec.number !== nextPlanNumber()) {
+    makeRoomAt(Number(spec.number));
   }
 
-  const spec = { number: nextNumber, slug, phases };
+  const planDir = path.join(plansDir, `${spec.number}-${spec.slug}`);
   const indexPath = path.join(plansDir, 'README.md');
   const indexed = withPlanIndexed(fs.readFileSync(indexPath, 'utf8'), spec);
 
@@ -339,7 +466,7 @@ function main() {
   }
 
   fail(`unknown command: ${command ?? '(none)'}`);
-  hint('pnpm plan new <name> [--phases a,b,c]');
+  hint('pnpm plan new <name> [--phases a,b,c] [--at <nn>]');
   hint('pnpm plan progress [<plan>]');
   return 1;
 }

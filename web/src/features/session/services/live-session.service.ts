@@ -1,4 +1,4 @@
-import type { Envelope } from '@remote-claude/contracts';
+import type { Envelope, SessionPromptPayloadAttachmentsItem } from '@remote-claude/contracts';
 
 import { toAppError } from '@/shared/api/errors';
 import type { AppError } from '@/shared/api/errors';
@@ -72,8 +72,17 @@ export function startedBy(frame: Envelope, commandId: string): string | null {
  *
  * @returns the id of the command frame, or `null` when the socket was not ready and nothing left
  */
-export function sendPrompt(client: WsClient, sessionId: string, text: string): string | null {
-  return client.issue(SESSION_COMMANDS.prompt, { sessionId, text });
+export function sendPrompt(
+  client: WsClient,
+  sessionId: string,
+  text: string,
+  attachments: readonly SessionPromptPayloadAttachmentsItem[] = [],
+): string | null {
+  return client.issue(SESSION_COMMANDS.prompt, {
+    sessionId,
+    text,
+    ...(attachments.length === 0 ? {} : { attachments }),
+  });
 }
 
 /**

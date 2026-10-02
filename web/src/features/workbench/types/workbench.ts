@@ -40,7 +40,7 @@ export interface FolderViewProps {
  * A view of the activity bar — Explorer, Search, Claude's sessions.
  *
  * Plan 06 holds the places with placeholders; the plan that fills one registers the same id with
- * its component (plans 07, 09 and 08).
+ * its component (plans 07, 11 and 08).
  */
 export interface ViewEntry extends RegistryEntry {
   /** A translation key, named in full where the entry is declared. */
@@ -65,7 +65,7 @@ export interface FolderTabBadgeEntry extends RegistryEntry {
   readonly component: ComponentType<FolderViewProps>;
 }
 
-/** A tab of the bottom panel — plans 08 and 10 register theirs. */
+/** A tab of the bottom panel — plans 08 and 12 register theirs. */
 export interface PanelTabEntry extends RegistryEntry {
   readonly labelKey: string;
   readonly component: ComponentType<FolderViewProps>;

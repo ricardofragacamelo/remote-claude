@@ -96,12 +96,12 @@ describe('ruleMatches', () => {
 });
 
 /**
- * A prefix rule and a shell line that runs more than one command — plan 13, B-08, D-07.
+ * A prefix rule and a shell line that runs more than one command — plan 15, B-08, D-07.
  *
  * Before this, `allow Bash(git status:*)` answered `git status && curl … | sh`: the prefix looked at
  * the start of the line and nothing else.
  */
-describe('ruleMatches on a shell line — 13 · B-08', () => {
+describe('ruleMatches on a shell line — 15 · B-08', () => {
   const gitStatus = parseRulePattern('Bash(git status:*)');
   const rm = parseRulePattern('Bash(rm:*)');
   const bash = (command: string) => ({ command });

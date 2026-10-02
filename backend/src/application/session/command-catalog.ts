@@ -23,6 +23,16 @@ export class CommandCatalog {
   commandsOf(live: LiveSession): Promise<readonly SlashCommand[]> {
     return this.cache.of(live, (session) => session.handle.supportedCommands());
   }
+
+  /** Keeps what the query of the catalogue was told (plan 08, D-13). */
+  put(version: string | null, workspace: string, commands: readonly SlashCommand[]): void {
+    this.cache.put(version, workspace, commands);
+  }
+
+  /** The commands remembered last for a workspace, without asking anybody — or `null`. */
+  latestFor(workspace: string): readonly SlashCommand[] | null {
+    return this.cache.latestFor(workspace);
+  }
 }
 
 /**
@@ -41,6 +51,11 @@ export class ModelCatalog {
    */
   modelsOf(live: LiveSession): Promise<readonly InstallationModel[]> {
     return this.cache.of(live, (session) => session.handle.supportedModels());
+  }
+
+  /** Keeps what the query of the catalogue was told (plan 08, D-13). */
+  put(version: string | null, workspace: string, models: readonly InstallationModel[]): void {
+    this.cache.put(version, workspace, models);
   }
 
   /** The models remembered last for a workspace, without asking anybody — or `null`. */

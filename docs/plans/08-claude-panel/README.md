@@ -19,9 +19,9 @@ diff, a árvore e a API de arquivos) e, por ele, do [plano 06 — Workbench](../
 abas de pasta, a secondary side bar, a activity bar, a status bar, a command palette e o screen frame
 com ajuda) e do [plano 04 — Histórico e retomada](../04-transcript-and-resume/README.md) (histórico,
 retomada, fork, `attach`, slash commands e desfazer). A F5 usa o localizador de arquivos do
-[plano 09](../09-search/README.md) para o autocomplete do `@`
+[plano 11](../11-search/README.md) para o autocomplete do `@`
 ([D-12](decisions.md#d-12--o-autocomplete-do-)). **Nenhum** depende dos planos 05/06.
-O [plano 11 — Configuração do Claude](../11-claude-settings/README.md) depende deste.
+O [plano 09 — Layout do chat](../09-chat-layout/README.md) e o [plano 13 — Configuração do Claude](../13-claude-settings/README.md) dependem deste; o 09 rearranja o painel daqui no molde do plugin do VS Code, e a ordem dele em relação à F6 é a [09 · D-01](../09-chat-layout/decisions.md#f0--normas).
 
 Arquivos irmãos: [matriz de cenários](scenarios.md) · [decisões em aberto](decisions.md) ·
 [progresso](progress.md).
@@ -88,9 +88,9 @@ Só o que é de outro plano ou o que a arquitetura impede:
 - **Padrões do Claude e configuração de MCP e de skills** — modelo, modo e esforço **padrão**, servidores
   MCP (ligar, desligar, reconectar, acrescentar, remover), quais skills estão ligadas e o plugin local que
   traz as de usuário e sistema, a conta e a configuração de projeto — são do
-  [plano 11](../11-claude-settings/README.md), numa tela própria. Aqui ficam os controles **da sessão** e
+  [plano 13](../13-claude-settings/README.md), numa tela própria. Aqui ficam os controles **da sessão** e
   um indicador de status dos MCPs dela.
-- **Uso e custo agregados** (por dia, pasta, modelo, orçamento) — [plano 14](../14-usage-and-cost/README.md).
+- **Uso e custo agregados** (por dia, pasta, modelo, orçamento) — [plano 16](../16-usage-and-cost/README.md).
   Aqui, o custo do turno e o da sessão.
 - **Alterações de conversa encerrada.** O store de snapshots é purgado quando nenhuma sessão viva o
   alcança ([backend/05](../../architecture/backend/05-persistence.md#o-que-vai-no-banco-e-o-que-não-vai)); a
@@ -114,9 +114,9 @@ conclusão. A ordem é dependência, não preferência — uma fase só começa 
 | F0 | [Contrato](F0-contract.md) | o contrato do painel nas três pontas, os documentos normativos e as fixtures | B-01…B-06 | ✅ |
 | F1 | [Sessões da pasta](F1-sessions.md) | a view com as vivas, as ativas em outro lugar e o histórico da pasta, e o `attach`/retomar/fork a partir dela | B-07…B-13 | ✅ |
 | F2 | [Renderização](F2-rendering.md) | a conversa legível como na extensão: markdown, código, tools, thinking, tarefas, subagents, plano, turno | B-14…B-24 | ✅ |
-| F3 | [Diffs](F3-diffs.md) | o que o Claude mudou, visto antes de aprovar, no chat, no editor e por sessão — aceito ou rejeitado por arquivo e por trecho | B-25…B-31 | 🔲 |
-| F4 | [Painel de chat](F4-chat-panel.md) | o painel dentro da aba de pasta, com conversas, fila, reenviar, seletores, contexto, MCP, atalhos, badges e ajuda | B-32…B-43 | 🔲 |
-| F5 | [Composer e contexto](F5-composer-and-context.md) | escolher o contexto do prompt com `@`, arrastar e `/`, com autocomplete, em chips | B-44…B-52 | 🔲 |
+| F3 | [Diffs](F3-diffs.md) | o que o Claude mudou, visto antes de aprovar, no chat, no editor e por sessão — aceito ou rejeitado por arquivo e por trecho | B-25…B-31 | ✅ |
+| F4 | [Painel de chat](F4-chat-panel.md) | o painel dentro da aba de pasta, com conversas, fila, reenviar, seletores, contexto, MCP, atalhos, badges e ajuda | B-32…B-43 | ✅ |
+| F5 | [Composer e contexto](F5-composer-and-context.md) | escolher o contexto do prompt com `@`, arrastar e `/`, com autocomplete, em chips | B-44…B-52 | ✅ |
 | F6 | [E2E](F6-e2e.md) | o ciclo pela porta do usuário, o app verde e o `smoke-live` | B-53…B-58 | 🔲 |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
@@ -231,7 +231,7 @@ backend/test/fakes/agent-sdk/fixtures/       edit · reference-read · task-suba
 | R-04 | Cada conversa viva é um subprocesso de ~222 MB, e o teto (10) é da instalação: abas e conversas o esgotam rápido; a query efêmera do catálogo também conta enquanto dura | **aberto** — a sessão nasce no primeiro prompt ([D-07](decisions.md#d-07--a-sessão-nasce-no-primeiro-prompt)); a recusa diz que o teto é global e lista as sessões do usuário ([D-09](decisions.md#d-09--várias-sessões-da-mesma-pasta-e-o-teto)); o catálogo é cacheado ([D-13](decisions.md#d-13--o-catálogo-antes-da-sessão)) |
 | R-05 | A referência aponta o **disco**, não o buffer sujo do editor: o Claude pode ler outra coisa do que a pessoa vê | **aberto** — o chip avisa quando a aba do editor está suja (B-51, S-250) |
 | R-06 | A prévia do diff no card de permissão é calculada contra o disco **agora**; o arquivo pode mudar até a aprovação, e o Edit pode falhar | **aberto** — a prévia diz contra que momento foi calculada e é relida ao focar; o resultado da tool é a verdade (B-29, S-131) |
-| R-07 | Os planos 06, 07 e 09 ainda não existem em código: a aba de pasta, a secondary side bar, a aba de diff, a API do editor ativo e o localizador de arquivos são interfaces que este plano consome | **aberto** — as fases apontam os planos por arquivo; divergência de interface vira decisão registrada aqui, não adaptação calada |
+| R-07 | Os planos 06, 07 e 11 ainda não existem em código: a aba de pasta, a secondary side bar, a aba de diff, a API do editor ativo e o localizador de arquivos são interfaces que este plano consome | **aberto** — as fases apontam os planos por arquivo; divergência de interface vira decisão registrada aqui, não adaptação calada |
 | R-08 | Imagem pelo streaming input **não foi medida**, e o frame WS tem 64 KB por padrão — um print de tela não cabe | **aberto** — upload HTTP ([D-02](decisions.md#d-02--imagem-no-prompt)); se o spike reprovar, a imagem sai com registro no [progresso](progress.md) |
 | R-09 | Markdown, realce, ANSI e o composer pesam no bundle e no celular | **aberto** — carregados sob demanda e medidos na B-14; o realce é o do editor do plano 07 ([D-04](decisions.md#d-04--markdown-e-realce)) |
 | R-10 | `@caminho` no streaming input pode ser expandido pelo próprio CLI em conteúdo inline — leitura de arquivo sem `PreToolUse` | **aberto** — gap da [D-01](decisions.md#d-01--como-a-menção-chega-ao-claude), medido antes da B-44 e vigiado pelo `smoke-live` (S-271) |

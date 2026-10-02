@@ -32,10 +32,10 @@ Três fatos que explicam quase todas as decisões:
 ### Onde o produto roda, e como é alcançado
 
 - **Sistemas operacionais:** Linux, macOS e Windows são suportados; **o teste é só em Linux**
-  ([17 · D-01](../plans/17-distribution/decisions.md), decisão do usuário de 2026-09-26). macOS e
+  ([19 · D-01](../plans/19-distribution/decisions.md), decisão do usuário de 2026-09-26). macOS e
   Windows seguem sem verificação automatizada — é risco declarado, não garantia.
 - **Exposição é da infraestrutura, não do produto**
-  ([17 · D-04](../plans/17-distribution/decisions.md)). Um endereço externo, que a web e o celular
+  ([19 · D-04](../plans/19-distribution/decisions.md)). Um endereço externo, que a web e o celular
   alcançam, é provido por quem opera a instalação — túnel, VPN ou proxy com TLS é escolha dela, e
   o certificado também. O produto aceita ser servido atrás desse endereço (URL externa
   configurável) e **o default continua loopback**: sair dele é configuração explícita.

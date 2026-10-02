@@ -107,7 +107,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
 | 2026-09-26 | O plano ganhou as fases F7 (prévias e transferência) e F8 (histórico local), depois da F6 do núcleo | o usuário pediu paridade com o VS Code **nas funções de arquivo**; os arquivos de fase F0…F6 já existiam e não são renomeados, então as fases novas vêm depois do e2e do núcleo, cada uma com o seu próprio e2e | README, decisions (D-16…D-18), scenarios |
-| 2026-09-26 | Inteligência de linguagem e depuração saíram do alcance, e o git saiu do plano 09 | decisão do usuário: "não vai ter debug, nem inteligência de linguagem"; o plano 09 ficou só com busca | README (Não entra), D-09, F8 (a Linha do tempo é só histórico local) |
+| 2026-09-26 | Inteligência de linguagem e depuração saíram do alcance, e o git saiu do plano 11 | decisão do usuário: "não vai ter debug, nem inteligência de linguagem"; o plano 11 ficou só com busca | README (Não entra), D-09, F8 (a Linha do tempo é só histórico local) |
 | 2026-09-26 | A árvore e as abas viraram fonte de arraste para o chat do Claude (B-42) | pedido do usuário; o alvo é do plano 08 | F5, D-20 |
 | 2026-09-30 | `EACCES`/`EPERM`/`EROFS` em arquivo ou pasta da pasta aberta respondem **`422`**, não `403`: árvore ilegível reusa `WORKSPACE_DIRECTORY_UNREADABLE`, e ler/escrever arquivo que o sistema recusa é o código novo `FILE_ACCESS_DENIED` (`params.reason`: `permission`·`readOnlyFileSystem`) | **decisão do usuário** sobre o conflito entre S-33/S-58/S-77 (que diziam `FORBIDDEN`) e o doc 04, que já dizia que "a autorização passou, é o disco que recusa" (precedente do plano 06) | [scenarios](scenarios.md) S-33, S-58, S-77; doc 04; B-03 |
 | 2026-09-30 | S-10…S-13 passaram para B-24, B-26 e B-40; S-03 para B-21 | **decisão do usuário** para os quatro de UI: testam o explorer e o editor, que só nascem na F4/F5 — a F0 entrega a B-06 como desenho normativo (web/03, web/04). S-03 valida o payload no handler de `workspace.watch`, que é da B-21 | [scenarios](scenarios.md), [F0](F0-contract.md#cenários-cobertos) |
@@ -174,11 +174,11 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 | R-02 | Fuga de caminho por `..`, symlink ou troca entre checar e abrir | 🔲 aberto | verificação no descritor é Linux-only; D-05 |
 | R-03 | Watcher esgota o inotify ou vaza | 🔲 aberto | medir na B-19; D-08, D-10 |
 | R-04 | Editor pesado no celular, sem jsdom, ou com CDN | 🔲 aberto | medir antes de fechar a D-09 |
-| R-05 | Contrato WS numa ponta só, `seq` fora de sessão | 🔲 aberto | D-07; o plano 10 reusa a regra |
+| R-05 | Contrato WS numa ponta só, `seq` fora de sessão | 🔲 aberto | D-07; o plano 12 reusa a regra |
 | R-06 | Conteúdo de arquivo vazando para log, trilha, navegador ou URL | 🔲 aberto | S-61, S-116, D-14, D-16 |
 | R-07 | Conteúdo do usuário executando na origem do produto | 🔲 aberto | D-18 |
 | R-08 | Apagar sem volta | 🔲 aberto | D-06; resolvido para o que cabe no teto pela F8 |
-| R-09 | Save rápido em arquivo que muda a permissão | 🔲 aberto | D-15, coordenado com o plano 11 |
+| R-09 | Save rápido em arquivo que muda a permissão | 🔲 aberto | D-15, coordenado com o plano 13 |
 | R-10 | Escrita no disco alcançável pela rede antes do plano 05 | 🔲 aceito | ordem da D-02 do plano 06 |
 
 ---

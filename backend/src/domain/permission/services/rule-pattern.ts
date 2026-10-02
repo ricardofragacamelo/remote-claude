@@ -104,7 +104,7 @@ export function matchedInput(input: Readonly<Record<string, unknown>>): string |
  * is the hole nobody notices until something is named just so.
  *
  * **On a shell line, the decision changes the reading — on purpose, and in the safe direction
- * both times** ([13 · D-07](../../../../../docs/plans/13-rules-management/decisions.md)):
+ * both times** ([15 · D-07](../../../../../docs/plans/15-rules-management/decisions.md)):
  *
  * - an `allow` **prefix** covers only a line that is one command. `Bash(git status:*)` does not
  *   answer `git status && curl … | sh`, nor anything with a substitution or a redirection — even

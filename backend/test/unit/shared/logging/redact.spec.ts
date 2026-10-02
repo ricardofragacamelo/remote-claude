@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   forLog,
+  framePayloadForLog,
   isSensitive,
   MAX_PAYLOAD_BYTES,
   omitting,
@@ -115,5 +116,37 @@ describe('omitting — plan 06, S-178', () => {
     ['a list', ['params']],
   ])('leaves %s as it is', (_case, value) => {
     expect(omitting(value, ['params'])).toBe(value);
+  });
+});
+
+describe('framePayloadForLog — plan 08, S-204', () => {
+  it('keeps the content of the context of a prompt out, and says it was there', () => {
+    expect(
+      framePayloadForLog('session.prompt', {
+        sessionId: 's',
+        text: 't',
+        attachments: [
+          { kind: 'text', source: 'terminal', label: 'bash', content: '$ secret' },
+          { kind: 'file', path: 'a.ts' },
+          'odd',
+        ],
+      }),
+    ).toEqual({
+      sessionId: 's',
+      text: 't',
+      attachments: [
+        { kind: 'text', source: 'terminal', label: 'bash', content: REDACTED },
+        { kind: 'file', path: 'a.ts' },
+        'odd',
+      ],
+    });
+  });
+
+  it('leaves the frames of other types, and a prompt without context, as they are', () => {
+    const payload = { content: 'x' };
+
+    expect(framePayloadForLog('session.start', payload)).toBe(payload);
+    expect(framePayloadForLog('session.prompt', { text: 'a' })).toEqual({ text: 'a' });
+    expect(framePayloadForLog('session.prompt', null)).toBeNull();
   });
 });

@@ -226,7 +226,7 @@ observar são linguagem e invariantes próprias, e a primeira linha de defesa co
   se abre é aberto com `O_NOFOLLOW` e conferido **no descritor** (`/proc/self/fd/<fd>`), o que pega a
   troca de um diretório intermediário por symlink entre checar e abrir. Symlink só é seguido quando
   o alvo fica dentro; laço é `422` `symlinkLoop`. A conferência no descritor é Linux-only; sem `/proc`
-  resta a do `realpath` (gap do [plano 17](../../plans/17-distribution/README.md)).
+  resta a do `realpath` (gap do [plano 19](../../plans/19-distribution/README.md)).
 - **Leitura:** do **mesmo descritor**, até o teto mais um byte — nunca `stat` e depois leitura;
   binário por NUL nos primeiros 8 KB; encoding só pelo que é certo (BOM, UTF-8 válido) ou pelo que o
   cliente pede ("reabrir com encoding"), nunca um palpite; FIFO aberto com `O_NONBLOCK` e recusado.
@@ -265,7 +265,7 @@ observar são linguagem e invariantes próprias, e a primeira linha de defesa co
     sem ramo no gateway); o shutdown (`GracefulShutdown`, junto dos sockets); a recarga da allowlist
     (`workspace.allowlistReloaded` no barramento → `revalidate()` pelo `FolderResolver` →
     `allowlistChanged`); a pasta apagada (`folderDeleted`). `openWatchers` é a contagem que a tela de
-    saúde do [plano 16](../../plans/16-logs-and-diagnostics/README.md) lê.
+    saúde do [plano 18](../../plans/18-logs-and-diagnostics/README.md) lê.
   - **A janela** (`RC_FILES_WATCH_WINDOW_MS`): as mudanças cruas se dobram no domínio
     (`foldInto`) — rajada num arquivo é um `changed`, criado e apagado é nada, apagado e recriado é
     `changed`, rename é `deleted` + `created` — e saem por assinatura, cortadas no teto por evento
@@ -274,8 +274,8 @@ observar são linguagem e invariantes próprias, e a primeira linha de defesa co
     `ClaudeWrites` ou de `UserWrites` — alimentada pelos use cases de escrita da pessoa depois do
     disco (salvar, criar, mover, copiar, apagar, com o que cada um deixou) — e vale o **hash final**,
     lido só quando há marca com conteúdo para comparar; nada casa → `external`. Rótulo, nunca decisão.
-- **Exporta** o `SaveFileUseCase` — o substituir em lote do [plano 09](../../plans/09-search/README.md)
-  e a edição de `CLAUDE.md` do [plano 11](../../plans/11-claude-settings/README.md) escrevem por ele,
+- **Exporta** o `SaveFileUseCase` — o substituir em lote do [plano 11](../../plans/11-search/README.md)
+  e a edição de `CLAUDE.md` do [plano 13](../../plans/13-claude-settings/README.md) escrevem por ele,
   e herdam `ETag`, trilha e atomicidade — e o `FolderWatches`, que o gateway (`workspace.watch` e
   `workspace.unwatch`, em `adapter/inbound/ws/files/`) e o shutdown usam.
 - **Tetos configurados** (`RC_FILES_*`): entradas por nível da árvore (5 000), limiar do modo leve
@@ -541,21 +541,33 @@ estender ao HTTP.
   `404` `SESSION_NOT_FOUND`, como os outros recursos dela.
 
   **`GET /sessions/:sessionId/commands`** ganha `origin` por item — `builtin`·`project`·`user`·`system`
-  — e a regra de colisão do SDK (F5); **`GET /catalog?workspacePath=`** responde comandos, skills e
-  modelos **sem sessão viva**, do catálogo por versão do CLI e pasta, e sem cache abre uma `query()`
-  efêmera que só pergunta — conta no teto enquanto dura, uma por vez por chave
+  —, `label` (o nome sem o prefixo do plugin) e `shadowed` (a regra de colisão do SDK: entre um `builtin`
+  e um sem marcador, `/nome` roda o `builtin` qualquer que seja a ordem) (F5); **`GET /catalog?workspacePath=`**
+  (`ReadCatalogUseCase`) responde comandos, skills, modelos e os tetos do composer **sem sessão viva**, do
+  catálogo por versão do CLI e pasta, e sem cache abre uma `query()` efêmera que só pergunta — pela mesma
+  porta `ClaudeSessionPort`, logo com `settingSources: ['project']` e o `PreToolUse` —, conta no teto
+  enquanto dura, uma por vez por pasta, e fecha
   ([08 · D-13](../../plans/08-claude-panel/decisions.md#d-13--o-catálogo-antes-da-sessão)) (F5).
+
+  **O contexto do prompt** (F5, B-44): o `PromptContextResolver` confere cada item do
+  `session.prompt.attachments` — arquivo e pasta pela porta `ReferenceInspector`, que o
+  `FilesModuleReferenceInspector` implementa com o `FilePath` e o `FolderDisk` do módulo `files` contra a
+  pasta **da sessão** —, tudo ou nada, e compõe o texto (`composePrompt`, no domínio). O prompt entra na
+  fila com o contexto composto e as imagens (`PromptExtras`).
 
   **`POST /sessions/:sessionId/attachments`** — o anexo do prompt, imagem ou texto (F5,
   [08 · D-02](../../plans/08-claude-panel/decisions.md#d-02--imagem-no-prompt) e D-22): `201`
-  `{ attachmentId, mediaType, size }`; `413` `PAYLOAD_TOO_LARGE` acima de 5 MB; `415`
-  `ATTACHMENT_TYPE_UNSUPPORTED` fora de PNG/JPEG/GIF/WebP e texto. Vive fora do workspace, da trilha e do
-  log (só tipo, tamanho e hash), e morre com a sessão ou no TTL.
+  `{ attachmentId, kind, mediaType, name, size }`; `413` `PAYLOAD_TOO_LARGE` acima do teto
+  (`RC_ATTACHMENT_MAX_BYTES`, até 5 MiB); `415` `ATTACHMENT_TYPE_UNSUPPORTED` fora de PNG/JPEG/GIF/WebP e
+  texto UTF-8, pelo tipo dos bytes. Vive no `AttachmentStore`, em memória — fora do workspace, da trilha e
+  do log (só tipo, tamanho e hash) —, e morre quando a sessão sai do registro (`SessionRegistry.onRemoved`),
+  no TTL ou, passada a memória de todos, do mais antigo para o mais novo.
 - **Erros:** `SESSION_NOT_FOUND`, `SESSION_LOCKED`,
   `SESSION_LIMIT_REACHED`, `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT`, `INVALID_INPUT`
   (`session.error.unknownCommand`, `session.error.rewindTargetUnknown`,
   `session.error.rewindPathUnknown`, `session.error.forkPointUnknown`,
-  `session.error.effortUnsupported`), `NOT_FOUND` (`session.error.changeNotFound`), `INTERNAL_ERROR`
+  `session.error.effortUnsupported`, `session.error.referenceKind`), `NOT_FOUND`
+  (`session.error.changeNotFound`), `PAYLOAD_TOO_LARGE` (`session.error.attachmentTooLarge`), `INTERNAL_ERROR`
   (`session.error.rewindIncomplete`), `CONFLICT` (`session.error.queuedPromptStarted`),
   `SESSION_CHANGE_STALE`, `SESSION_FORK_REJECTED`, `QUEUED_PROMPT_NOT_FOUND`, `TOOL_USE_NOT_FOUND`,
   `DIFF_NOT_APPLICABLE`, `ATTACHMENT_NOT_FOUND`, `ATTACHMENT_TYPE_UNSUPPORTED`
@@ -867,7 +879,7 @@ estender ao HTTP.
   100 (default 50); keyset descendente sobre `seq`, no índice `(user_id, seq DESC)` que a tabela já
   tem. `200` `{ events[{ id, kind, subjectId, subjectLabel, details, at }], nextCursor }`, `400`
   `INVALID_INPUT` para cursor, `limit` ou `kind` fora do formato. O redesenho da tela é do
-  [plano 12](../../plans/12-audit-explained/README.md), que absorve esta leitura em vez de escrever
+  [plano 14](../../plans/14-audit-explained/README.md), que absorve esta leitura em vez de escrever
   outra.
 - **HTTP — `GET /audit-entries`** (Bearer). Filtros opcionais `sessionId`, `toolName`, `decision`
   (`recorded`/`allowed`/`denied`), `from` (incluído) e `to` (excluído), em ISO 8601 com offset;

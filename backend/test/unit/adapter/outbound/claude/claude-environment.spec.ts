@@ -20,7 +20,7 @@ function declaredInEnvExample(): string[] {
     .filter((name): name is string => name !== undefined);
 }
 
-describe('claudeEnvironment — 10 · B-13, D-10', () => {
+describe('claudeEnvironment — 12 · B-13, D-10', () => {
   it('takes out every key of the configuration schema — S-108', () => {
     // Held against the schema itself and not a list typed here, so a configuration key added
     // tomorrow without one of the prefixes fails this gate instead of reaching Claude.

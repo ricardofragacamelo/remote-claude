@@ -511,6 +511,34 @@ describe('SessionRunner', () => {
       expect(String(line?.['prompt'])).toHaveLength(2_048);
     });
 
+    it('logs what was typed and the facts of the context, never what was composed — S-204', async () => {
+      harness.runner.run();
+      harness.runner.prompt(
+        'explain\n\n<context source="upload" label="n.txt">\nTOP SECRET\n</context>',
+        {
+          typed: 'explain',
+          images: [{ mediaType: 'image/png', data: 'AAAA' }],
+          context: [
+            { kind: 'file', path: 'src/a.ts', bytes: 12 },
+            { kind: 'upload', mediaType: 'text/plain', bytes: 10, sha256: 'abc' },
+          ],
+        },
+      );
+      await harness.settle();
+
+      const line = harness.log.withOp('claude.input')[0];
+      expect(line).toMatchObject({
+        prompt: 'explain',
+        images: 1,
+        context: [
+          { kind: 'file', path: 'src/a.ts', bytes: 12 },
+          { kind: 'upload', mediaType: 'text/plain', bytes: 10, sha256: 'abc' },
+        ],
+      });
+      expect(JSON.stringify(line)).not.toContain('TOP SECRET');
+      expect(JSON.stringify(line)).not.toContain('AAAA');
+    });
+
     it('says what it found of the trust mark', async () => {
       harness.runner.run();
       await harness.settle();
@@ -624,18 +652,19 @@ describe('SessionRunner', () => {
         description: expect.any(String) as string,
         argumentHint: '',
         aliases: ['cost', 'stats'],
+        builtin: true,
       });
       expect(harness.record.commandCalls).toBe(1);
     });
 
-    it('gives an empty list of aliases to a command that has none', async () => {
+    it('gives an empty list of aliases to a command that has none, and no marker to one unmarked', async () => {
       const narrow = runner({
         commands: [{ name: 'init', description: 'Initialise', argumentHint: '' }],
       });
       narrow.runner.run();
 
       expect(await narrow.runner.supportedCommands()).toEqual([
-        { name: 'init', description: 'Initialise', argumentHint: '', aliases: [] },
+        { name: 'init', description: 'Initialise', argumentHint: '', aliases: [], builtin: false },
       ]);
     });
 

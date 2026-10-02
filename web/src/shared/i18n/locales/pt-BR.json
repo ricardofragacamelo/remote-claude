@@ -79,7 +79,9 @@
       "forkPointUnknown": "Essa mensagem não é um prompt desta conversa. Recarregue a conversa e tente de novo.",
       "effortUnsupported": "{{model}} não aceita o nível de esforço {{level}}.",
       "changeNotFound": "{{path}} não está entre os arquivos que esta sessão alterou, ou não há rejeição dele para desfazer.",
-      "rewindPathUnknown": "{{path}} não é um arquivo que esta sessão alterou, por isso não pode ser rejeitado."
+      "rewindPathUnknown": "{{path}} não é um arquivo que esta sessão alterou, por isso não pode ser rejeitado.",
+      "attachmentTooLarge": "O arquivo passa do limite de um anexo ({{limit}} bytes).",
+      "referenceKind": "{{path}} não é do tipo {{kind}} esperado — foi escolhido como tal, e o prompt não foi enviado."
     },
     "status": {
       "starting": "Iniciando",
@@ -2073,11 +2075,85 @@
       "contextHeading": "O contexto e o /compact",
       "context": "O medidor mostra quão cheia está a janela de contexto da conversa, por categoria. Perto do limite, compactar resume a conversa até ali — o comando da instalação, enviado como prompt — e a conversa marca onde aconteceu.",
       "noticesHeading": "Perguntas que podem passar despercebidas",
-      "notices": "Uma pergunta feita numa aba de pasta que não está na tela, ou com o painel fechado, aparece como badge na aba e na activity bar, e como aviso com o caminho até ela. Com as notificações do navegador ligadas, a página escondida também é avisada — a pasta e o que aconteceu, nunca o comando."
+      "notices": "Uma pergunta feita numa aba de pasta que não está na tela, ou com o painel fechado, aparece como badge na aba e na activity bar, e como aviso com o caminho até ela. Com as notificações do navegador ligadas, a página escondida também é avisada — a pasta e o que aconteceu, nunca o comando.",
+      "composerHeading": "A caixa de prompt",
+      "composer": "Enter envia e Shift+Enter quebra a linha; enquanto um método de entrada compõe um caractere, Enter não faz nenhum dos dois. Sem nada escrito e sem contexto, o botão de enviar fica desligado e diz por quê. Enquanto o Claude trabalha, o que você enviar espera na fila.",
+      "mentionHeading": "@ — arquivos, pastas e a seleção",
+      "mention": "Digite @ para escolher um arquivo ou uma pasta desta pasta: os arquivos abertos e os recentes vêm primeiro, depois o que a pasta tem, nível a nível — digite / para entrar numa pasta. @selection acrescenta o que está selecionado no editor. Use as setas para andar, Enter ou Tab para escolher, e Esc para fechar a lista sem perder o que digitou.",
+      "commandsHeading": "/ — comandos e skills",
+      "commands": "Digite / no começo da caixa para os comandos e skills desta instalação, mesmo antes de a sessão existir. Escolher um o escreve com um espaço depois, e diz o que ele recebe. Se a lista não puder ser lida, o que você digitar continua indo como prompt.",
+      "dragHeading": "Arrastar para o contexto",
+      "drag": "Arraste arquivos e pastas do explorer, ou uma aba do editor, para a caixa ou para a conversa: cada um vira um chip, e uma pasta é um chip, nunca tudo o que ela tem. Sem arrastar, use “Adicionar ao contexto do Claude” no menu do explorer, de uma aba ou de uma seleção no editor. Itens de outra aba de pasta ficam de fora: o contexto é desta pasta.",
+      "contextSetHeading": "O contexto do próximo prompt",
+      "contextSet": "Os chips acima da caixa são o que vai com o próximo prompt; cada um sai pelo seu botão. A linha embaixo soma o tamanho deles e estima os tokens a cerca de quatro bytes cada — uma estimativa, não uma contagem. Passada uma parte do que resta da janela de contexto, avisa e ainda envia; passado o limite de um prompt, não envia, e diz por quê. O conjunto é desta conversa, e fica até você enviá-lo.",
+      "readsHeading": "O que o Claude lê",
+      "reads": "Um arquivo, uma pasta ou um trecho de linhas vai como referência, nunca como conteúdo: o Claude o lê com a tool Read, que a trilha de auditoria grava como qualquer outra. Ele lê o que está salvo no disco, não o que não foi salvo no editor — o chip avisa. Um @caminho digitado à mão não é lido pelo CLI por conta própria: só o Read do Claude o lê.",
+      "desktopHeading": "Arquivos do seu computador",
+      "desktop": "Uma imagem ou um arquivo de texto arrastado do seu computador vai com o prompt como anexo: fica na memória só para esta sessão, nunca é gravado na pasta nem na trilha, e some quando a sessão termina. Para pô-lo na pasta, faça o upload pelo explorer.",
+      "skillsHeading": "De onde vêm os comandos e as skills",
+      "skills": "Cada item do / diz a sua origem: Claude Code é o comando da própria instalação; Projeto vem da pasta .claude deste projeto; Usuário e Sistema são as skills do seu usuário e do sistema. Dois com o mesmo nome aparecem os dois, e o que o / roda é o do Claude Code — o outro diz que está encoberto."
     },
     "screen": {
       "title": "Claude",
       "purpose": "Converse com o Claude sobre esta pasta: abra conversas, acompanhe e aprove o que ele faz e revise o que ele alterou."
+    }
+  },
+  "composer": {
+    "set": {
+      "label": "Contexto do próximo prompt",
+      "totals": "{{count}} itens · {{size}} · ≈ {{tokens}} tokens (estimativa)",
+      "folders": "Pastas contam como itens: o Claude decide o que ler nelas.",
+      "warn": "É uma parte grande do que resta da janela de contexto — ainda assim envia.",
+      "overItems": "Um prompt leva no máximo 20 itens de contexto. Tire alguns para enviar.",
+      "overBytes": "Os arquivos do contexto somam mais do que este prompt pode levar. Tire alguns para enviar.",
+      "overflow": "Itens deixados de fora, além do limite de um prompt: {{count}}."
+    },
+    "chip": {
+      "remove": "Tirar {{name}} do contexto",
+      "missing": "não está mais na pasta",
+      "binary": "não é texto — o Claude não vai lê-lo",
+      "dirty": "não salvo — o Claude lê o que está salvo",
+      "pending": "vai junto com o prompt"
+    },
+    "drop": {
+      "here": "Solte para pôr no contexto do próximo prompt",
+      "tooLarge": "{{name}} passa de {{limit}} MB, o limite de um anexo.",
+      "unsupported": "{{name}} não pode ir com um prompt: imagem tem de ser PNG, JPEG, GIF ou WebP, e arquivo tem de ser texto.",
+      "otherFolder": "Itens de outra aba de pasta deixados de fora: {{count}}. O contexto de um prompt é desta pasta."
+    },
+    "mention": {
+      "label": "Arquivos, pastas e outros para pôr no contexto",
+      "loading": "Procurando na pasta…",
+      "failed": "Não foi possível procurar na pasta. Você ainda pode usar o caminho que digitou.",
+      "outside": "Só o que está dentro desta pasta pode ser oferecido.",
+      "emptyFolder": "Esta pasta está vazia.",
+      "noMatch": "Nada na pasta corresponde ao que você digitou.",
+      "truncated": "Há mais aqui do que a lista mostra — digite mais do nome para filtrar.",
+      "useTyped": "Usar “{{path}}” como digitado — é conferido ao enviar",
+      "open": "aberto",
+      "selection": "Seleção",
+      "selectionHint": "o que está selecionado no editor"
+    },
+    "slash": {
+      "label": "Comandos e skills desta instalação",
+      "loading": "Carregando os comandos desta instalação…",
+      "unavailable": "Os comandos não estão disponíveis agora. O que você digitar continua indo como prompt.",
+      "noMatch": "Nenhum comando ou skill corresponde ao que você digitou.",
+      "shadowed": "encoberto pelo comando do Claude Code de mesmo nome",
+      "argumentHint": "Recebe: {{hint}}"
+    },
+    "origin": {
+      "builtin": "Claude Code",
+      "project": "Projeto",
+      "user": "Usuário",
+      "system": "Sistema"
+    },
+    "send": {
+      "queued": "O Claude está trabalhando: o que você enviar agora espera na fila e roda em seguida.",
+      "queue": "Pôr na fila",
+      "empty": "Escreva um prompt ou ponha contexto para enviar.",
+      "missing": "{{path}} não está mais na pasta. Tire-o para enviar.",
+      "upload": "Não foi possível anexar {{name}}. Tire-o para enviar."
     }
   }
 }

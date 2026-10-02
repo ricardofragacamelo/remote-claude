@@ -11,7 +11,7 @@ import { useShellShortcuts } from './screen-shortcuts';
  * the link reproduces the screen (docs/architecture/web/04-state-and-data.md#a-url-é-estado).
  *
  * The route has already sent an unknown section to the first one. Claude's settings are never here:
- * they are the screen plan 11 registers at its own place in the navigation.
+ * they are the screen plan 13 registers at its own place in the navigation.
  */
 export function SettingsRoute(): React.JSX.Element {
   const { t } = useTranslation();

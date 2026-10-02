@@ -6,7 +6,7 @@
  * ([07 · D-15](../../../../docs/plans/07-explorer-and-editor/decisions.md#d-15--arquivos-que-mudam-a-permissão)).
  *
  * In `shared/` because the editor (saving), the explorer (renaming, moving, deleting) and the
- * Claude settings of plan 11 all ask the second step for the same files. The server refuses without
+ * Claude settings of plan 13 all ask the second step for the same files. The server refuses without
  * the confirmation either way (`428`, `reason: sensitiveFile`): this list only lets the screen ask
  * first, and say **what** the file controls.
  */

@@ -157,6 +157,12 @@ export const E2E_POSTGRES = {
  * @property {string} RC_FILES_HISTORY_RETENTION_DAYS
  * @property {string} RC_FILES_HISTORY_MAX_BATCH_ENTRIES
  * @property {string} RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS
+ * @property {string} RC_ATTACHMENT_MAX_BYTES
+ * @property {string} RC_ATTACHMENT_TTL_SECONDS
+ * @property {string} RC_ATTACHMENT_MEMORY_BYTES
+ * @property {string} RC_CONTEXT_WARN_PERCENT
+ * @property {string} RC_CONTEXT_DRAFT_WINDOW_TOKENS
+ * @property {string} RC_CONTEXT_MAX_BYTES
  * @property {string} RC_AUDIT_RETENTION_DAYS
  * @property {string} RC_AUDIT_PURGE_INTERVAL_MS
  * @property {string} [CLAUDE_CONFIG_DIR]
@@ -301,6 +307,12 @@ export function ephemeralEnvironment(ports, options = {}) {
     RC_FILES_HISTORY_RETENTION_DAYS: '30',
     RC_FILES_HISTORY_MAX_BATCH_ENTRIES: '1000',
     RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS: '120',
+    RC_ATTACHMENT_MAX_BYTES: '5242880',
+    RC_ATTACHMENT_TTL_SECONDS: '3600',
+    RC_ATTACHMENT_MEMORY_BYTES: '67108864',
+    RC_CONTEXT_WARN_PERCENT: '25',
+    RC_CONTEXT_DRAFT_WINDOW_TOKENS: '200000',
+    RC_CONTEXT_MAX_BYTES: '8388608',
 
     // The floor, and the job **off**. The retention spec plants rows past the window and purges them
     // through `pnpm db purge`, the door it is testing; a job waking up a minute after boot would race

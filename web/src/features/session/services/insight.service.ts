@@ -63,7 +63,7 @@ export async function fetchMcpServers(sessionId: string): Promise<readonly McpSe
   });
 }
 
-function modelOf(model: Readonly<Record<string, unknown>>): InstallationModel[] {
+export function modelOf(model: Readonly<Record<string, unknown>>): InstallationModel[] {
   const value = readText(model, 'value');
 
   if (value === null) {

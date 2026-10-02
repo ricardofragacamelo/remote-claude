@@ -1,6 +1,6 @@
 /**
  * Public surface of the `settings` feature — the app's Settings, and the registry of their sections,
- * where plan 07 registers "Editor" and plan 10 "Terminal". Never Claude's settings: plan 11.
+ * where plan 07 registers "Editor" and plan 12 "Terminal". Never Claude's settings: plan 13.
  */
 export { SettingChoice } from './components/SettingChoice';
 export type { Choice, SettingChoiceProps } from './components/SettingChoice';

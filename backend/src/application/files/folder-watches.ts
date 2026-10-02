@@ -134,7 +134,7 @@ export class FolderWatches {
     private readonly settings: WatchSettings,
   ) {}
 
-  /** How many watchers are open — what the health screen of plan 16 reads. */
+  /** How many watchers are open — what the health screen of plan 18 reads. */
   get openWatchers(): number {
     return this.watchers.size;
   }

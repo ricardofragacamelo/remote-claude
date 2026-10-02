@@ -120,6 +120,7 @@ silencioso.
 | Comando | Faz |
 |---|---|
 | `pnpm dev` | sobe a stack de desenvolvimento em **portas fixas** |
+| `pnpm dev:public` | a mesma stack atrás de um **túnel HTTPS**, num domínio só: login, API e WebSocket funcionam de um navegador fora desta máquina. Ver [abaixo](#a-stack-num-endereço-público--pnpm-devpublic) |
 | `pnpm dev:mobile` | roda o **app Flutter** num Android apontando para a stack do `pnpm dev` (que precisa estar de pé em outro terminal): usa o aparelho conectado ou sobe a AVD `remote_claude_api35` **com janela**, e fica de pé com o `flutter run` (hot reload). Ao sair — `q`, Ctrl+C ou queda — desliga o emulador que ligou e limpa o resto. Argumentos depois de `--` vão para o `flutter run` |
 | `pnpm allowlist add <pasta>` | libera uma pasta da máquina para o Claude sem editar YAML: grava na cópia local `infra/workspace-allowlist.local.yaml` (ignorada pelo git, validada pelo schema do boot), recusa `/`, pergunta antes do `$HOME` e manda `SIGHUP` ao backend do `pnpm dev`, que recarrega sem reiniciar. `remove <pasta>` tira; `list` diz qual arquivo está ativo e as raízes dele |
 | `pnpm db reset` | derruba, recria, migra e popula — a sequência que ninguém lembra na ordem certa |
@@ -150,6 +151,43 @@ sobrevive ao Ctrl+C, porque perdê-lo a cada encerramento é atrito diário.
 Sobre `pnpm clean`: volume órfão é **invisível ao `docker compose ls`** — quando uma execução
 morre de forma abrupta, os containers somem e o volume nomeado sobrevive. Por isso o comando
 existe.
+
+#### A stack num endereço público — `pnpm dev:public`
+
+Sobe o mesmo `pnpm dev` atrás de um túnel (ngrok) que publica a porta do web em HTTPS. Tudo
+passa por **um** domínio: o Vite serve o app e encaminha `/api` (sem o prefixo) e `/ws` ao backend,
+e `/realms` e `/resources` ao Keycloak, que sobe com o hostname público
+(`docker-compose.public.yml`). O console `/admin` do Keycloak **não** atravessa o túnel.
+
+```
+túnel  →  compose up (+ override público)  →  redirect público no client web do realm
+       →  backend e web com a origem e o issuer públicos  →  quadro com a URL pública
+```
+
+Uma vez por máquina, o authtoken do túnel vai num arquivo que o git ignora:
+
+```bash
+(umask 077; echo '<token>' > .secrets/ngrok-authtoken)
+```
+
+O script entrega o token como `NGROK_AUTHTOKEN` **só ao processo do túnel** — nunca ao backend nem
+ao web, e nunca o imprime —, e avisa se o arquivo for legível por outros usuários. Um
+`NGROK_AUTHTOKEN` exportado no shell vence o arquivo; sem nenhum dos dois, vale a config do próprio
+ngrok (`ngrok config add-authtoken`). Fora do `.env` de propósito: o `.env` vai inteiro para o
+backend e o web.
+
+Depois, `pnpm dev:public`. Sem `RC_PUBLIC_URL` no `.env`, o túnel usa o domínio que a conta
+recebeu e o script diz qual é; `pnpm dev:public --url <host>` pede outro. O `pnpm dev` comum
+**ignora** `RC_PUBLIC_URL`: um valor esquecido no `.env` nunca deixa a stack local pública.
+
+- Em modo público, abra a **URL pública** também nesta máquina: o bundle aponta para ela, e o
+  cookie de refresh não atravessa de `localhost` para outro site.
+- Quem tiver a URL chega à tela de login de um backend que executa `Bash` nesta máquina, e os
+  usuários do realm de desenvolvimento têm senha conhecida.
+- O primeiro acesso de cada navegador passa pela página de aviso do plano gratuito do túnel.
+- O app mobile continua no `pnpm dev:mobile`, com `localhost`; ele não usa a URL pública.
+
+O porquê de cada escolha está no [plano 20](docs/plans/20-dev-public/decisions.md).
 
 #### O app mobile local — `pnpm dev:mobile`
 
@@ -343,6 +381,7 @@ então este portão é o único que o protege.
 |---|---|
 | `pnpm docs:check` | link quebrado, âncora inexistente, documento fora do índice |
 | `pnpm plan new <nome>` | cria pasta de plano no formato normativo, já indexada e no progresso geral |
+| `pnpm plan new <nome> --at <nn>` | cria o plano no meio da sequência: os planos de `<nn>` em diante sobem um número, com pastas e referências explícitas reescritas no repositório; lista as linhas que precisam de leitura (número solto, história de renumeração) |
 | `pnpm plan progress` | recalcula os contadores do `progress.md` do plano **e** do progresso geral |
 
 `docs:check` existe porque nenhum outro portão pega isso, e a documentação **é** a interface

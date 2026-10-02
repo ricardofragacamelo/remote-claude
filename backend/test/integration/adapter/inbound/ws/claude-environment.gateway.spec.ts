@@ -17,7 +17,7 @@ import { commandFrame, TestSocket } from '../../../../support/app/ws-client';
 const SENTINEL = 'sentinel-that-must-not-reach-claude';
 
 /**
- * What the Claude subprocess inherits, through the real gateway — plan 10, B-13.
+ * What the Claude subprocess inherits, through the real gateway — plan 12, B-13.
  *
  * `pnpm dev` loads the whole `.env` into the backend's process. Here that is reproduced by putting
  * the same kind of variables in this process's environment — a connection string, the compose

@@ -12,7 +12,7 @@ Plano: [00 — Bootstrap](README.md) · Cenários: [scenarios.md](scenarios.md) 
 ### B-41 — Regras de arquitetura como lint ✅
 
 Toda regra estrutural da documentação ganha verificador. As tabelas completas estão em
-[09](../../architecture/shared/09-code-quality.md#regras-de-arquitetura-como-lint).
+[10](../../architecture/shared/09-code-quality.md#regras-de-arquitetura-como-lint).
 
 | Módulo | Ferramenta | Regras |
 |---|---|---|
@@ -76,7 +76,7 @@ Paridade de chaves `en` ↔ `pt-BR`, ausência de órfã, e params casando entre
 
 ### B-46 — `verify` e `verify:full` ✅
 
-Os portões de [11](../../architecture/shared/11-validation-protocol.md#estágio-2--os-portões),
+Os portões de [12](../../architecture/shared/11-validation-protocol.md#estágio-2--os-portões),
 **na ordem barato → caro**, parando no primeiro vermelho.
 
 ```bash

@@ -17,7 +17,7 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 > página quando for feita e, onde ela pode mudar um número ou um formato, o **Resultado** diz que é
 > provisório.
 
-> Os IDs D-01…D-10 são os do roteiro dos planos 06–11, para que os outros planos possam citá-los;
+> Os IDs D-01…D-10 são os do roteiro dos planos 06–13, para que os outros planos possam citá-los;
 > D-11…D-23 nasceram ao detalhar as fases; a D-24, de uma decisão do plano 06. A ordem no arquivo é a da fase que cada uma bloqueia
 > primeiro, por isso os números não aparecem em sequência.
 
@@ -145,7 +145,7 @@ subagent fica fora do stream e é carregado ao expandir, pelas funções do SDK 
 O `ModelInfo` diz se o modelo aceita esforço e quais níveis (`supportsEffort`,
 `supportedEffortLevels`); o `Query` tem `applyFlagSettings({ effortLevel })` e um
 `setMaxThinkingTokens` já marcado como obsoleto. O padrão de esforço é do
-[plano 11](../11-claude-settings/README.md); o controle **da sessão** seria daqui.
+[plano 13](../13-claude-settings/README.md); o controle **da sessão** seria daqui.
 
 **Recomendação:** entra, como `session.setEffort { sessionId, level }` (comando novo, nas três
 pontas) sobre `applyFlagSettings`, só quando o modelo o aceita — se o spike confirmar que vale no meio
@@ -300,7 +300,7 @@ aba de pasta (que o plano 06 restaura ao recarregar) — nunca no servidor, nunc
 | D-07 | A sessão nasce no primeiro prompt (rascunho sem subprocesso) ou ao abrir a conversa | — (custo medido: ~222 MB e 1 processo por sessão) | B-33 | 2026-09-28 · **a sessão nasce no primeiro prompt**: "nova conversa" é rascunho do cliente; o primeiro envio faz `session.start` (modelo, modo e esforço do rascunho) e, no `session.started`, o `session.prompt`; recusa no teto mantém o rascunho. Decisão do usuário com a recomendação | ✅ |
 | D-09 | Várias sessões da mesma pasta em abas, e como o teto de 10 aparece para quem tem várias abas | se mostrar a ocupação **global** do teto revela atividade de outros usuários | B-32, B-42 | 2026-09-28 · **várias conversas por pasta, em abas do painel**; `SESSION_LIMIT_REACHED` diz que o teto é da instalação, com o tempo de espera, e lista as sessões **do usuário**; a ocupação global não aparece. Decisão do usuário com a recomendação | ✅ |
 | D-11 | O que a aba de pasta inativa mantém das sessões dela | a D-11 do plano 06 (o que uma aba inativa mantém vivo) | B-42 | 2026-09-28 · **as sessões vivas das abas inativas continuam anexadas**, pela [D-11 do plano 06](../06-workbench/decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas), decidida pelo usuário com esta recomendação; a aba inativa suspende o polling da lista e a renderização | ✅ |
-| D-13 | De onde vem o catálogo da instalação — comandos, skills e modelos — antes de a sessão existir | a D-06 do plano 11 (catálogo sem sessão viva); quanto custa uma query efêmera que só pergunta | B-36, B-50 | 2026-09-28 · **`GET /catalog?workspacePath=` com cache** por versão do CLI e pasta, e **query efêmera** sem cache (sem prompt, sem token, conta no teto enquanto dura, uma por vez por chave); as skills de usuário e de sistema entram pelo plugin do plano 11. Decisão do usuário com a recomendação; se a D-06 do plano 11 decidir outra fonte, esta passa a ser a dele | ✅ |
+| D-13 | De onde vem o catálogo da instalação — comandos, skills e modelos — antes de a sessão existir | a D-06 do plano 13 (catálogo sem sessão viva); quanto custa uma query efêmera que só pergunta | B-36, B-50 | 2026-09-28 · **`GET /catalog?workspacePath=` com cache** por versão do CLI e pasta, e **query efêmera** sem cache (sem prompt, sem token, conta no teto enquanto dura, uma por vez por chave); as skills de usuário e de sistema entram pelo plugin do plano 13. Decisão do usuário com a recomendação; se a D-06 do plano 13 decidir outra fonte, esta passa a ser a dele | ✅ |
 | D-20 | Exportar conversa: o que entra e onde é gerado | — | B-39 | 2026-09-28 · **gerada no cliente, em Markdown**, a partir das páginas do transcript que a pessoa já lê; nenhum endpoint novo; saída de tool só com opção ligada, desligada por padrão. Decisão do usuário com a recomendação | ✅ |
 | D-21 | Notificação do navegador: quando pedir, quando mostrar e o que dizer | — | B-42 | 2026-09-28 · **permissão pedida só por ação explícita**; notifica com a página escondida, no fim de turno e no pedido de permissão; o texto diz a pasta e o tipo, nunca o comando. Decisão do usuário com a recomendação | ✅ |
 
@@ -339,12 +339,12 @@ O menu `/`, o seletor de modelo e o esforço precisam da lista da instalação, 
 |---|---|
 | **catálogo com cache + query efêmera no primeiro pedido** | `GET /catalog?workspacePath=` responde do cache por versão do CLI e pasta (o padrão do `CommandCatalog` do plano 04); sem cache, abre uma `query()` que só pergunta — nunca cede prompt, não custa token —, conta no teto enquanto dura e fecha |
 | só o cache | a primeira conversa numa pasta não tem menu nem modelos até o primeiro prompt |
-| esperar o plano 11 | o 11 depende deste; seria ciclo |
+| esperar o plano 13 | o 13 depende deste; seria ciclo |
 
 **Recomendação:** catálogo com cache e query efêmera, uma por vez por chave (duas conversas juntas fazem
 uma chamada). As skills de usuário e de sistema entram pelo plugin local do
-[plano 11](../11-claude-settings/README.md) quando ele existir, e o catálogo passa a incluí-las sem mudar
-de forma. Se o 11 decidir outra fonte (a D-06 dele), esta fonte vira a dele.
+[plano 13](../13-claude-settings/README.md) quando ele existir, e o catálogo passa a incluí-las sem mudar
+de forma. Se o 13 decidir outra fonte (a D-06 dele), esta fonte vira a dele.
 
 ### D-20 — exportar conversa
 
@@ -369,7 +369,7 @@ aparece na tela bloqueada, como o push do plano 02.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-12 | De onde vem o autocomplete do `@` | se o plano 09 (o localizador de arquivos) chega antes desta fase | B-48 | 2026-09-28 · **fuzzy pelo `GET /search/files` do plano 09**, com a F5 esperando a F1 de lá; se a ordem não permitir, a completação por segmento sobre `GET /files/tree` entra como passo provisório registrado no progresso, e a troca para fuzzy vira task. Decisão do usuário com a recomendação | ✅ |
+| D-12 | De onde vem o autocomplete do `@` | se o plano 11 (o localizador de arquivos) chega antes desta fase | B-48 | 2026-09-28 · **fuzzy pelo `GET /search/files` do plano 11**, com a F5 esperando a F1 de lá; se a ordem não permitir, a completação por segmento sobre `GET /files/tree` entra como passo provisório registrado no progresso, e a troca para fuzzy vira task. Decisão do usuário com a recomendação. **2026-10-02:** a F5 entrou no passo provisório (o 11 não tinha começado), e a troca, por decisão do usuário, é a [B-25 do plano 11](../11-search/F2-search-ui.md#b-25--o--do-composer-do-08-passa-ao-localizador-) — o plano que traz a fonte | ✅ |
 | D-22 | Arquivo arrastado do desktop: anexo enviado ou gravado na pasta | — | B-01, B-45, B-49 | 2026-09-28 · **anexo enviado** (B-45): imagem vira bloco de imagem, texto vira conteúdo delimitado com o nome, com teto e tipo, fora do workspace, morre com a sessão; gravar na pasta é o upload do plano 07, ação separada oferecida ao lado. Decisão do usuário com a recomendação | ✅ |
 | D-23 | Como estimar o tamanho do contexto em tokens, e onde ficam o aviso e o teto | a janela de contexto do modelo em uso (do `getContextUsage()`) e o que o `Read` carrega de um arquivo grande | B-47 | 2026-09-28 · **estimativa de ≈ 4 bytes por token** pelo tamanho dos arquivos, dita como estimativa; pasta como "*n* itens"; anexo pelo tamanho real; aviso acima de 25 % da janela livre (`getContextUsage()` com sessão, padrão configurado no rascunho); teto por `maxItems` e por bytes configurado. Decisão do usuário com a recomendação; **o limiar e o padrão do rascunho são provisórios** até a medida | ✅ |
 
@@ -380,11 +380,11 @@ primeiro.
 
 | Opção | Consequência |
 |---|---|
-| **fuzzy pelo `GET /search/files`** do [plano 09](../09-search/README.md) | igual ao VS Code; cria a dependência 09·F5 ← 10·F1 |
+| **fuzzy pelo `GET /search/files`** do [plano 11](../11-search/README.md) | igual ao VS Code; cria a dependência 09·F5 ← 10·F1 |
 | completar caminho por segmento sobre `GET /files/tree` do [plano 07](../07-explorer-and-editor/README.md) | sem dependência nova, exato, mesma cerca — mas não é o que foi pedido |
-| endpoint próprio, mais estreito | duplica o plano 09, e duplicação é portão |
+| endpoint próprio, mais estreito | duplica o plano 11, e duplicação é portão |
 
-**Recomendação:** o localizador do plano 09, com a F5 deste plano esperando a F1 de lá. Se a ordem dos
+**Recomendação:** o localizador do plano 11, com a F5 deste plano esperando a F1 de lá. Se a ordem dos
 planos não permitir, a completação por segmento entra como passo provisório **registrado** no
 [progresso](progress.md), e a troca para fuzzy vira task deste plano — nunca uma diferença calada.
 

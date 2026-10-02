@@ -71,7 +71,7 @@ Numa fixture gerada por execução (a D-07 do plano 04): uma menção real gera 
 no texto **não** é expandido em silêncio pelo CLI (a premissa da D-01, vigiada a cada versão);
 `supportedModels()`, `mcpServerStatus()` e `getContextUsage()` respondem; a skill de projeto da fixture
 aparece no `supportedCommands()` com o nome que o menu insere (e as de usuário e sistema, quando o plano
-11 existir); a imagem chega ao modelo, se a D-02 a mantiver; thinking e subagent reais têm o formato das
+13 existir); a imagem chega ao modelo, se a D-02 a mantiver; thinking e subagent reais têm o formato das
 fixtures. Rodar o `smoke-live` é item do Definition of Done de toda mudança no adapter do Claude.
 
 ---

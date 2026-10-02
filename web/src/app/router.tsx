@@ -109,7 +109,7 @@ const devicesRoute = createRoute({
   component: DevicesRoute,
 });
 
-/** Logs and diagnostics: the connection and the end-to-end round trip (B-30); plan 16 fills it. */
+/** Logs and diagnostics: the connection and the end-to-end round trip (B-30); plan 18 fills it. */
 const diagnosticsRoute = createRoute({
   getParentRoute: () => frameRoute,
   path: '/diagnostics',
@@ -158,7 +158,7 @@ const aboutRoute = createRoute({
  * Every route, as one tree — exported so a test can mount the real table on a memory history.
  *
  * The map is in docs/architecture/web/04-state-and-data.md#o-mapa-de-rotas. `/claude…` and
- * `/usage…` are **reserved** to plans 11 and 14 and are deliberately absent: an address nobody
+ * `/usage…` are **reserved** to plans 13 and 16 and are deliberately absent: an address nobody
  * registered answers the translated not-found, never an empty screen. So do `/sessions/$sessionId`,
  * `/history` and `/history/$conversationId`, removed without a compatibility link
  * ([06 · D-07](../../../docs/plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)):

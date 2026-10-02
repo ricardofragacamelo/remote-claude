@@ -9,7 +9,7 @@ const BUSY: ReadonlySet<SessionStatus> = new Set(['thinking', 'running', 'waitin
 /**
  * Where the turn is — thinking, running a tool, waiting on the person, which leads to the question
  * (S-96) — and what the session has cost **since it opened**, each turn counted once (S-99). The
- * cost per day, folder and model is plan 14's.
+ * cost per day, folder and model is plan 16's.
  */
 export function TurnStatus({
   sessionId,

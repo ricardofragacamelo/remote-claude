@@ -11,9 +11,9 @@ estado por aba de pasta no web.
 
 ## Por quê
 
-Três contratos nascem aqui e são consumidos por outros planos: a escrita humana auditada (o plano 09
-substitui em lote por ela; o 11 edita `CLAUDE.md` por ela), o stream de mudança com `seq` próprio (o
-plano 10 reusa a regra) e a aba de diff (o 08 abre as alterações do Claude nela). Escrevê-los depois
+Três contratos nascem aqui e são consumidos por outros planos: a escrita humana auditada (o plano 11
+substitui em lote por ela; o 13 edita `CLAUDE.md` por ela), o stream de mudança com `seq` próprio (o
+plano 12 reusa a regra) e a aba de diff (o 08 abre as alterações do Claude nela). Escrevê-los depois
 do código é descobrir, no plano seguinte, que cada um fala de um jeito.
 
 ---
@@ -126,7 +126,7 @@ Em [web/04-state-and-data](../../architecture/web/04-state-and-data.md#onde-cada
 - **a URL** leva o arquivo ativo da aba ativa (`/workbench?folder=…&file=…`); o resto (abas abertas,
   grupos) é restaurado pelo mecanismo de estado por aba do plano 06 — só caminhos, nunca conteúdo
   ([D-14](decisions.md#d-14--rascunho-não-salvo-e-a-recarga));
-- **os pontos de extensão** que outros planos usam: a aba de diff (planos 08 e 09), o comando
+- **os pontos de extensão** que outros planos usam: a aba de diff (planos 08 e 11), o comando
   "Adicionar ao contexto do Claude" e o tipo do arraste ([D-20](decisions.md#d-20--o-que-se-arrasta-para-o-claude),
   consumidos pelo 08), e as ações de arquivo no menu **Arquivo** e na command palette do 06;
 - os padrões de UI novos em `web/03`: árvore (ARIA tree), abas de editor, diálogo de conflito,

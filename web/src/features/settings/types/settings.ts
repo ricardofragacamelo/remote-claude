@@ -17,8 +17,8 @@ export interface SettingOption {
 
 /**
  * One section of the app's Settings — a registry entry: plan 06 declares Appearance and Workspaces,
- * plan 07 registers "Editor" and plan 10 "Terminal". **Never** Claude's settings, which are the
- * screen of plan 11 (docs/architecture/web/03-ui-system.md#os-registros--onde-os-planos-seguintes-encaixam).
+ * plan 07 registers "Editor" and plan 12 "Terminal". **Never** Claude's settings, which are the
+ * screen of plan 13 (docs/architecture/web/03-ui-system.md#os-registros--onde-os-planos-seguintes-encaixam).
  */
 export interface SettingsSectionEntry extends RegistryEntry {
   /** The last segment of `/settings/$section`. */

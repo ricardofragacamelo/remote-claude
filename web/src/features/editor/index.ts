@@ -13,7 +13,15 @@ export type { EditorLocationProps } from './components/EditorLocation';
 export { OpenEditors } from './components/OpenEditors';
 export { heldFile, reloadFromDisk as reloadFile } from './hooks/documents';
 export type { HeldFile } from './hooks/documents';
-export { activeFile, entryMoved, openDiff, openFile, openPreview } from './hooks/tabs';
+export {
+  activeFile,
+  entryMoved,
+  openAndRecentFiles,
+  openDiff,
+  openFile,
+  openPreview,
+} from './hooks/tabs';
+export { activeSelections } from './hooks/views';
 export { insertBlocker, insertIntoEditor } from './hooks/insert';
 export type { InsertBlocker } from './hooks/insert';
 export { colorizeCode, languageOfFence } from './lib/highlight';
@@ -21,6 +29,6 @@ export type { CodeToken } from './lib/highlight';
 export { useInsertBlocker } from './hooks/useInsertBlocker';
 export { canPreview } from './lib/preview-kinds';
 export { formatBytes } from './lib/text';
-export { useActiveFile } from './hooks/useEditor';
+export { useActiveFile, useFileDirty } from './hooks/useEditor';
 export { diffSources } from './store/diff-sources';
 export type { DiffSide, DiffSource, OpenFileOptions, ProvidedSide } from './types/editor';

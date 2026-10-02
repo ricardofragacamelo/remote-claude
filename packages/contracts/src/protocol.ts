@@ -226,7 +226,7 @@ export interface SessionPromptPayloadAttachmentsItem {
   readonly range?: SessionPromptPayloadAttachmentsItemRange;
   /** What `POST /sessions/:sessionId/attachments` answered, for an `upload`: an image, or a text file dropped from the desktop. Unknown, expired or of another session is `ATTACHMENT_NOT_FOUND`. */
   readonly attachmentId?: string;
-  /** The provider that holds the `text` — the integrated terminal of plan 10, when it exists. An enum read as a string, so a provider added later does not break a client already published. */
+  /** The provider that holds the `text` — the integrated terminal of plan 12, when it exists. An enum read as a string, so a provider added later does not break a client already published. */
   readonly source?: 'terminal';
   /** How the `text` is introduced to Claude and shown on the chip: "terminal: bash". */
   readonly label?: string;
@@ -237,7 +237,7 @@ export interface SessionPromptPayloadAttachmentsItem {
 /** Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way the Claude Code UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`). */
 export interface SessionPromptPayload {
   readonly sessionId: string;
-  /** What the user typed. */
+  /** What the user typed. Empty only when `attachments` carries something: the context alone is a prompt, and nothing at all is refused with `INVALID_INPUT` (plan 08, S-215). */
   readonly text: string;
   /** The context of the prompt, chosen with `@`, a drag or the editor: files, folders, ranges of lines, an uploaded attachment, or text a provider of the client holds (the terminal). A file or a folder is a **reference** — the backend checks it inside the session's folder, all or nothing, and Claude reads it through `Read`, which the trail records; its content never travels here (plan 08, D-01). */
   readonly attachments?: readonly SessionPromptPayloadAttachmentsItem[];

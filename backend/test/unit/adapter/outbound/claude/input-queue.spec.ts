@@ -115,4 +115,27 @@ describe('SessionInputQueue', () => {
       expect(queue.isClosed).toBe(true);
     });
   });
+
+  describe('images beside the text — plan 08, B-45, D-02', () => {
+    it('sends the text first, then each image as a block of the Messages API — S-206', async () => {
+      const queue = new SessionInputQueue();
+      queue.push('what is this?', [{ mediaType: 'image/png', data: 'iVBORw0K' }]);
+
+      const next = await queue[Symbol.asyncIterator]().next();
+
+      expect(next.value?.message.content).toEqual([
+        { type: 'text', text: 'what is this?' },
+        { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'iVBORw0K' } },
+      ]);
+    });
+
+    it('keeps a text without images a plain string, as before', async () => {
+      const queue = new SessionInputQueue();
+      queue.push('hello', []);
+
+      const next = await queue[Symbol.asyncIterator]().next();
+
+      expect(next.value?.message.content).toBe('hello');
+    });
+  });
 });

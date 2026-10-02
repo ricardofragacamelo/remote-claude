@@ -107,7 +107,7 @@ export interface PaletteModeProps {
 }
 
 /**
- * A mode of the palette: `>` for commands (plan 06), the Quick Open of plan 09 with its own. Plans
+ * A mode of the palette: `>` for commands (plan 06), the Quick Open of plan 11 with its own. Plans
  * register theirs; the palette never changes for it.
  */
 export interface PaletteMode extends RegistryEntry {

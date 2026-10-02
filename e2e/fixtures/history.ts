@@ -201,10 +201,18 @@ export function cardFor(page: Page, toolName: string): ReturnType<Page['getByRol
   return page.getByRole('listitem', { name: `Permission for ${toolName}` });
 }
 
-/** Writes a prompt into the screen's box and sends it, the way a person does. */
+/**
+ * Writes a prompt into the screen's box and sends it, the way a person does — with Enter, as the
+ * composer sends (plan 08, B-46). Not by clicking: the button sits at the foot of the panel, where
+ * the toasts of the notification centre appear, and a pointer held over a toast keeps it on screen
+ * (the toaster pauses its timer on hover) — a click that waits for it never lands.
+ */
 export async function send(page: Page, text: string): Promise<void> {
-  await page.getByLabel('Prompt').fill(text);
-  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  const box = page.getByLabel('Prompt');
+
+  await box.fill(text);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
+  await box.press('Enter');
 }
 
 /**

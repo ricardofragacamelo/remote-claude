@@ -85,6 +85,28 @@ describe('composeRunner', () => {
     });
   });
 
+  it('puts the compose files ahead of every subcommand, the same on every call (plan 20, S-24)', () => {
+    const compose = composeRunner(cli, 'p', {
+      cwd: '/repo',
+      files: ['docker-compose.yml', 'docker-compose.public.yml'],
+    });
+
+    compose(['up', '--detach']);
+    compose(['stop']);
+
+    const files = ['-f', 'docker-compose.yml', '-f', 'docker-compose.public.yml'];
+    expect(invoked.map((call) => call.args)).toEqual([
+      ['compose', '--project-name', 'p', ...files, 'up', '--detach'],
+      ['compose', '--project-name', 'p', ...files, 'stop'],
+    ]);
+  });
+
+  it('passes no file at all when there are none, so compose picks its default (S-25)', () => {
+    composeRunner(cli, 'p', { cwd: '/repo', files: [] })(['up']);
+
+    expect(invoked[0]?.args).toEqual(['compose', '--project-name', 'p', 'up']);
+  });
+
   it('attaches the terminal only when the caller asked for it', () => {
     const compose = composeRunner(cli, 'p', { cwd: '/repo' });
 

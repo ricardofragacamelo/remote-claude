@@ -13,7 +13,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 **Fase corrente:** nenhuma — F0 a F4 concluídas, com todos os cenários da F4 passando (S-54 e S-67 pela variante com push de verdade, D-26)
 **Última atualização:** 2026-09-24
 **Bloqueios:** nenhum. Só [D-17](decisions.md) segue ⛔, travada pelo
-[plano 17](../17-distribution/decisions.md), e ela não impede fase nenhuma deste plano.
+[plano 19](../19-distribution/decisions.md), e ela não impede fase nenhuma deste plano.
 
 **F0 fechada em 2026-09-19**, nas três pontas. Um aparelho é registrado, aprovado a partir do
 navegador e revogado, e a revogação alcança o socket que já estava aberto.
@@ -174,7 +174,7 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 | 2026-09-19 | A **F2 inteira** — B-14…B-19 | a F1 não tinha fechado, e o protocolo não deixa a próxima fase começar antes | **revertido em 2026-09-20**: feita por decisão explícita de quem pediu, com a exceção de ordem registrada acima |
 | 2026-09-24 | Nova tentativa do push quando o provedor falha | uma falha pontual de rede perde a notificação (ciclo 32); D-05 fechou "sem segundo canal", e nova tentativa não foi decidida [plano 05 · B-25](../05-hardening-operations/F0-limits.md#b-25--nova-tentativa-do-push-), com a política em aberto no D-09 de lá |
 | 2026-09-24 | A **biometria real** no emulador | o prompt é do SO e a AVD não tem bloqueio de tela; o e2e usa um `ConfirmingLock`, como já substituía a aba de login e o Keychain | a regra está provada no gate (unit) e nos argumentos do plugin (`biometricOnly: false`, unit). Continua o R-03 |
-| 2026-09-24 | Tema `AppCompat` para o diálogo de biometria no Android ≤ 8 | o `local_auth` pede `Theme.AppCompat` para não quebrar em Android 8 e anterior; o app não tem essa dependência e o escopo testado é API 35 | registrado como risco; `minSdk` é o do Flutter (24). Decisão do [plano 17](../17-distribution/README.md), que fecha o escopo de SO |
+| 2026-09-24 | Tema `AppCompat` para o diálogo de biometria no Android ≤ 8 | o `local_auth` pede `Theme.AppCompat` para não quebrar em Android 8 e anterior; o app não tem essa dependência e o escopo testado é API 35 | registrado como risco; `minSdk` é o do Flutter (24). Decisão do [plano 19](../19-distribution/README.md), que fecha o escopo de SO |
 | 2026-09-20 | O **transporte de push da plataforma** — a parte que falta de B-13 | biblioteca do fornecedor, canal de notificação Android e `google-services.json`. Ligar o plugin do Gradle sem o arquivo de credencial **quebra o build do APK**, e trocaria um portão verde por um vermelho para entregar algo que só um aparelho exercita | **revertido em 2026-09-23**: o plugin é aplicado só quando o arquivo existe, então o build sem ele segue verde. Fica de fora apenas o arquivo, que é de quem opera, e a entrega num aparelho, que é a [F4](F4-e2e.md) |
 
 ---

@@ -56,12 +56,12 @@ pode decidir nada é ruído, e telefone aprovando sem registro é shell remoto s
   [plano 05](../05-hardening-operations/README.md). Aqui ele continua rodando sob demanda, como
   [decidido no bootstrap](../00-bootstrap/README.md#riscos-e-decisões-em-aberto).
 - **Publicação em loja.** Assinatura, perfis e revisão são o
-  [plano 17](../17-distribution/README.md).
+  [plano 19](../19-distribution/README.md).
 - **iOS.** [D-12](decisions.md) fechou o escopo em **Android**: o app continua compilando para
   iOS, e push, biometria e `integration_test` não são exercitados lá. Reabrir é decisão do
-  [plano 17](../17-distribution/README.md).
+  [plano 19](../19-distribution/README.md).
 - **Como o celular alcança o backend fora da rede local** — túnel, VPN ou porta com TLS é o
-  [plano 17 · D-04](../17-distribution/decisions.md). A F4 prova o fluxo com `adb reverse`, na
+  [plano 20 · D-04](../19-distribution/decisions.md). A F4 prova o fluxo com `adb reverse`, na
   mesma máquina.
 
 ---
@@ -165,7 +165,7 @@ Sob o [protocolo de validação](../../architecture/shared/11-validation-protoco
 
 1. **Estágio 0** — revise a [matriz de cenários](scenarios.md) antes de começar.
 2. As decisões deste plano estão fechadas — só D-17 segue ⛔, travada pelo
-   [plano 17](../17-distribution/decisions.md), e não bloqueia fase nenhuma daqui.
+   [plano 19](../19-distribution/decisions.md), e não bloqueia fase nenhuma daqui.
 3. Uma fase por vez, em ordem. Ao fim de cada uma: `pnpm verify`.
 4. Vermelho → corrige e **reinicia do primeiro portão**. Registre o ciclo em [progress.md](progress.md).
 5. Três ciclos sem progresso no mesmo portão → **pare e escale**.

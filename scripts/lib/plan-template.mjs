@@ -460,7 +460,7 @@ export function buildPlanFiles(spec) {
 export function withPlanIndexed(indexContent, spec) {
   const row = `| ${spec.number} | [${titleize(spec.slug)}](${spec.number}-${spec.slug}/README.md) | 🔲 não iniciado | \`pnpm verify:full\` sai com código 0 |`;
 
-  return withRowAppended(indexContent, /^\|\s*\d{2}\s*\|/, row, 'docs/plans/README.md');
+  return withRowInOrder(indexContent, /^\|\s*(\d{2})\s*\|/u, row, spec, 'docs/plans/README.md');
 }
 
 /**
@@ -481,38 +481,48 @@ export function withPlanInOverallProgress(progressContent, spec) {
 
   // Only a row of the panel — a link followed by a counter. The same document links to every
   // plan from prose tables too, and appending after one of those leaves the plan off the panel.
-  return withRowAppended(
+  return withRowInOrder(
     progressContent,
-    /^\|\s*\[\d{2}\s*—[^\]]*\]\([^)]*\)\s*\|\s*\d+\/\d+\s*\|/u,
+    /^\|\s*\[(\d{2})\s*—[^\]]*\]\([^)]*\)\s*\|\s*\d+\/\d+\s*\|/u,
     row,
+    spec,
     'docs/plans/progress.md',
   );
 }
 
 /**
- * Inserts a row right after the last one that matches — the tables of both documents are
- * ordered by plan number, and a new plan is always the last.
+ * Inserts a row in plan order — the tables of both documents are ordered by plan number. A new
+ * plan is usually the last, but one created with `--at` goes in the middle, right after the
+ * last plan numbered below it (the ones above it have already moved up by one).
  *
  * @param {string} content
- * @param {RegExp} rowPattern what an existing row looks like
+ * @param {RegExp} rowPattern what an existing row looks like, with the plan number as group 1
  * @param {string} row
+ * @param {PlanSpec} spec
  * @param {string} what the document, for the error message
  * @returns {string}
  */
-function withRowAppended(content, rowPattern, row, what) {
+function withRowInOrder(content, rowPattern, row, spec, what) {
   const lines = content.split('\n');
+  const number = Number(spec.number);
 
-  let lastRow = -1;
+  let firstRow = -1;
+  let anchor = -1;
   for (const [index, text] of lines.entries()) {
-    if (rowPattern.test(text)) {
-      lastRow = index;
+    const match = rowPattern.exec(text);
+    if (match === null) {
+      continue;
+    }
+    firstRow = firstRow === -1 ? index : firstRow;
+    if (Number(match[1]) < number) {
+      anchor = index;
     }
   }
 
-  if (lastRow === -1) {
+  if (firstRow === -1) {
     throw new Error(`${what} has no plan table to append to`);
   }
 
-  lines.splice(lastRow + 1, 0, row);
+  lines.splice(anchor === -1 ? firstRow : anchor + 1, 0, row);
   return lines.join('\n');
 }

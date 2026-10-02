@@ -5,8 +5,8 @@ máquina navegando pelas raízes liberadas, cada pasta num workbench completo em
 arquivos, editor e o chat do Claude lado a lado), e uma tela própria para cada outro assunto.
 
 **Depende de:** [plano 05](../05-hardening-operations/README.md) concluído — decisão do usuário de
-2026-09-26 ([D-02](decisions.md#d-02--a-ordem-em-relação-aos-planos-05-e-17)); **não** depende do
-[17](../17-distribution/README.md).
+2026-09-26 ([D-02](decisions.md#d-02--a-ordem-em-relação-aos-planos-05-e-19)); **não** depende do
+[19](../19-distribution/README.md).
 
 **Critério de conclusão — é um comando, não uma opinião:**
 
@@ -85,15 +85,15 @@ Deliberadamente fora — cada item diz para onde foi, ou por quê:
 - **Ler, continuar e desfazer uma conversa antiga pelo web** — decisão do usuário de 2026-09-28
   ([D-07](decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)): `/history` e `/sessions/$id`
   saem neste plano, e o histórico volta ao web com a view Sessões do plano 08. O app continua com ele.
-- **Busca** (Quick Open, busca em arquivos, substituir) — [plano 09](../09-search/README.md).
-- **Terminal** — [plano 10](../10-integrated-terminal/README.md).
+- **Busca** (Quick Open, busca em arquivos, substituir) — [plano 11](../11-search/README.md).
+- **Terminal** — [plano 12](../12-integrated-terminal/README.md).
 - **Configuração do Claude** (modelo e permission mode padrão, MCP, configuração de projeto) —
-  [plano 11](../11-claude-settings/README.md). Nunca é seção das Configurações do app.
-- **O redesenho da Auditoria e das Regras** — planos [12](../12-audit-explained/README.md) e
-  [13](../13-rules-management/README.md). Aqui elas só ganham tela própria, com o conteúdo de hoje.
-- **Uso e custo** — [plano 14](../14-usage-and-cost/README.md). Aqui, só a posição na navegação.
-- **A profundidade de Dispositivos e de Logs e diagnóstico** — planos [15](../15-devices/README.md)
-  e [16](../16-logs-and-diagnostics/README.md). Aqui, a tela com o que já existe.
+  [plano 13](../13-claude-settings/README.md). Nunca é seção das Configurações do app.
+- **O redesenho da Auditoria e das Regras** — planos [14](../14-audit-explained/README.md) e
+  [15](../15-rules-management/README.md). Aqui elas só ganham tela própria, com o conteúdo de hoje.
+- **Uso e custo** — [plano 16](../16-usage-and-cost/README.md). Aqui, só a posição na navegação.
+- **A profundidade de Dispositivos e de Logs e diagnóstico** — planos [17](../17-devices/README.md)
+  e [18](../18-logs-and-diagnostics/README.md). Aqui, a tela com o que já existe.
 - **Inteligência de linguagem e depuração** (LSP, "Problemas", go-to-definition, debugger) —
   decisão do usuário de 2026-09-26: o produto não os terá.
 - **Controle de versão (git)** — decisão do usuário de 2026-09-26. A activity bar tem Explorer, Busca
@@ -209,7 +209,7 @@ e2e/{fixtures,scenarios,specs}/          árvore de pastas, Claude que reporta o
 | R-05 | Abas inativas consomem memória e anexos de sessão, e podem esbarrar no limite por connection do plano 05 | **aberto** — [D-11](decisions.md#d-11--o-que-uma-aba-inativa-mantém-vivo-e-o-teto-de-abas): árvore desmontada e watcher liberado; sessões e terminais seguem anexados, e as dez sessões da instalação cabem nos 16 anexos; teto de 8 abas, ajustado pela medição |
 | R-06 | Atalhos prometidos que o navegador não entrega (`Ctrl+Tab`, `Ctrl+W`) | **aberto** — [D-16](decisions.md#d-16--atalhos-que-o-navegador-reserva), com o registro recusando tecla reservada |
 | R-07 | Mudar a moldura quebra os deep links de hoje (a trilha filtrada, a regra, a volta do login) | **aberto** — as rotas de auditoria e regras não mudam (B-05), cenários de rota e de login (S-06, S-91) e o e2e das rotas (S-163). As de sessão e histórico saem por decisão (D-07), e os specs que entravam por elas migram na B-33 |
-| R-08 | Planos 11–13 e 14–16 dependem da navegação e da moldura de tela deste | **aberto** — registros (navegação, views, seções, comandos, restauração) documentados na F0 e testados na F3–F5, para que eles encaixem sem editar este plano |
+| R-08 | Planos 13–15 e 16–18 dependem da navegação e da moldura de tela deste | **aberto** — registros (navegação, views, seções, comandos, restauração) documentados na F0 e testados na F3–F5, para que eles encaixem sem editar este plano |
 
 ---
 

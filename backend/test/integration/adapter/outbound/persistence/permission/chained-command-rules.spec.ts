@@ -22,7 +22,7 @@ const HOUR = 3_600_000;
 
 /**
  * Prefix rules stored before the matcher learned about shell operators, read back from a real
- * PostgreSQL and asked the way a running session asks — plan 13, B-08, S-21.
+ * PostgreSQL and asked the way a running session asks — plan 15, B-08, S-21.
  *
  * Nothing about the stored rule changes: the same row that answered `git status && curl … | sh`
  * yesterday is read again on the next question, and now it does not. That is what makes the fix

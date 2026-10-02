@@ -390,7 +390,7 @@ A entrada resolvida por uma delas não oferece link: diz que a regra valia só n
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-07 | Quem dispara a purga: agendador do SO, job do backend, ou comando manual | como o produto é instalado — o que só se decide no [plano 17](../17-distribution/README.md) | B-18 | 2026-09-16 · **job interno do backend**, com lock; o subcomando do `db.mjs` é o mesmo código, disparado à mão | ✅ |
+| D-07 | Quem dispara a purga: agendador do SO, job do backend, ou comando manual | como o produto é instalado — o que só se decide no [plano 19](../19-distribution/README.md) | B-18 | 2026-09-16 · **job interno do backend**, com lock; o subcomando do `db.mjs` é o mesmo código, disparado à mão | ✅ |
 | D-08 | A trigger append-only do [plano 01](../01-live-session/decisions.md#d-06--append-only-de-verdade) aborta todo `DELETE`. Como a purga apaga? | descoberta ao propagar a D-07: os dois documentos se contradizem, e do jeito que estão a purga não roda | B-17, B-19 | 2026-09-16 · **a trigger passa a barrar `DELETE` só dentro do piso de 90 dias**; `UPDATE` continua sempre abortado | ✅ |
 | D-19 | Onde o registro da purga mora, e o que acontece se ele não puder ser gravado depois de apagar | descoberta ao começar a F3: `audit_events` exige `user_id` e sujeito, e uma purga não é fato de ninguém; e um registro gravado **depois** do `DELETE` deixa uma janela em que a trilha perde linhas sem rastro | B-19 | 2026-09-24 · **tabela própria, `audit_purges`, uma linha por lote, gravada na mesma instrução que apaga** | ✅ |
 | D-20 | O que "a trilha" é, para a purga | há duas tabelas com o mesmo piso (`audit_entries` e `audit_events`), e a F3 fala de uma | B-17 | 2026-09-24 · **as duas**, com a mesma janela; `audit_purges` e `permission_requests` ficam de fora | ✅ |
@@ -399,7 +399,7 @@ A entrada resolvida por uma delas não oferece link: diz que a regra valia só n
 
 ### D-07 — quem varre a trilha
 
-O gap dizia que a decisão dependia do [plano 17](../17-distribution/README.md). Depende **só se**
+O gap dizia que a decisão dependia do [plano 19](../19-distribution/README.md). Depende **só se**
 a purga for do agendador do SO: um job dentro do próprio backend não sabe nem precisa saber como
 o produto foi instalado.
 
@@ -418,7 +418,7 @@ O que a decisão cria:
 - o job é **desligável por configuração, nunca por acidente**: desligado, o backend loga em
   `warn` no boot que a retenção de 90 dias passou a depender de alguém rodar o comando. A
   promessa da F3 não pode morrer em silêncio;
-- o [plano 17](../17-distribution/README.md) **não** ganha dependência. Se o instalador quiser um
+- o [plano 19](../19-distribution/README.md) **não** ganha dependência. Se o instalador quiser um
   timer do SO depois, ele chama o mesmo comando — e é decisão dele, não deste plano.
 
 ### D-08 — quem pode apagar a trilha append-only

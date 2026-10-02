@@ -25,6 +25,11 @@ import {
   UNDO_JOURNAL,
   UndoPlanner,
   PromptSessionUseCase,
+  AttachmentStore,
+  PromptContextResolver,
+  ReadCatalogUseCase,
+  REFERENCE_INSPECTOR,
+  UploadAttachmentUseCase,
   ReapIdleSessionsUseCase,
   SessionEnder,
   ShutdownSessionsUseCase,
@@ -47,6 +52,7 @@ import type {
   ClaudeSessionPort,
   FolderLocator,
   PendingPermissions,
+  ReferenceInspector,
   UndoDisk,
   UndoJournal,
   ResumableConversationSource,
@@ -62,6 +68,14 @@ import { SessionController } from '@adapter/inbound/http/session/session.control
 import { SessionChangesController } from '@adapter/inbound/http/session/session-changes.controller';
 import { SessionInsightController } from '@adapter/inbound/http/session/session-insight.controller';
 import { LiveSessionsController } from '@adapter/inbound/http/session/live-sessions.controller';
+import { CatalogController } from '@adapter/inbound/http/session/catalog.controller';
+import {
+  ATTACHMENT_LIMITS,
+  SessionAttachmentsController,
+} from '@adapter/inbound/http/session/session-attachments.controller';
+import { FilesModuleReferenceInspector } from '@adapter/outbound/session/files-module-reference.inspector';
+import { NodeFolderDisk } from '@adapter/outbound/filesystem/node-folder-disk';
+import { ATTACHMENT_IMAGE_TYPES } from '@domain/session';
 import { RegistryPendingPermissions } from '@adapter/outbound/session/registry-pending-permissions';
 import { SessionRewindHandler } from '@adapter/inbound/ws/session/session-rewind.gateway-handler';
 import { NodeUndoDisk } from '@adapter/outbound/checkpoint/node-undo.disk';
@@ -132,6 +146,8 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     SessionChangesController,
     SessionInsightController,
     LiveSessionsController,
+    SessionAttachmentsController,
+    CatalogController,
   ],
   providers: [
     { provide: QUERY_FACTORY, useValue: realQueryFactory },
@@ -362,13 +378,96 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     { provide: ModelCatalog, useValue: new ModelCatalog() },
     {
       provide: PromptSessionUseCase,
-      inject: [SessionRegistry, CommandCatalog, ID_GENERATOR, SESSION_BROADCASTER],
+      inject: [
+        SessionRegistry,
+        CommandCatalog,
+        ID_GENERATOR,
+        SESSION_BROADCASTER,
+        PromptContextResolver,
+      ],
       useFactory: (
         registry: SessionRegistry,
         catalog: CommandCatalog,
         ids: IdGenerator,
         broadcaster: SessionBroadcaster,
-      ) => new PromptSessionUseCase(registry, catalog, { ids, broadcaster }),
+        context: PromptContextResolver,
+      ) => new PromptSessionUseCase(registry, catalog, { ids, broadcaster, context }),
+    },
+    // The composer (plan 08, F5): the references checked by the fence of `files`, the attachments
+    // held in memory for their session and let go when it leaves the registry, and the catalogue a
+    // draft asks before a session exists.
+    {
+      provide: REFERENCE_INSPECTOR,
+      inject: [LOGGER],
+      useFactory: (logger: Logger) => new FilesModuleReferenceInspector(new NodeFolderDisk(logger)),
+    },
+    {
+      provide: ATTACHMENT_LIMITS,
+      inject: [APP_CONFIG],
+      useFactory: (config: AppConfig) => config.composer.attachments,
+    },
+    {
+      provide: AttachmentStore,
+      inject: [CLOCK, APP_CONFIG, SessionRegistry],
+      useFactory: (clock: Clock, config: AppConfig, registry: SessionRegistry) => {
+        const store = new AttachmentStore(clock, config.composer.attachments);
+        registry.onRemoved((id) => {
+          store.discardSession(id.value);
+        });
+        return store;
+      },
+    },
+    {
+      provide: PromptContextResolver,
+      inject: [REFERENCE_INSPECTOR, AttachmentStore],
+      useFactory: (inspector: ReferenceInspector, attachments: AttachmentStore) =>
+        new PromptContextResolver(inspector, attachments),
+    },
+    {
+      provide: UploadAttachmentUseCase,
+      inject: [SessionRegistry, AttachmentStore, ID_GENERATOR, APP_CONFIG],
+      useFactory: (
+        registry: SessionRegistry,
+        store: AttachmentStore,
+        ids: IdGenerator,
+        config: AppConfig,
+      ) => new UploadAttachmentUseCase(registry, store, ids, config.composer.attachments),
+    },
+    {
+      provide: ReadCatalogUseCase,
+      inject: [
+        FOLDER_LOCATOR,
+        SessionRegistry,
+        CommandCatalog,
+        ModelCatalog,
+        CLAUDE_SESSION_PORT,
+        ID_GENERATOR,
+        CLAUDE_SESSION_ID_GENERATOR,
+        BUNDLED_CLI_VERSION,
+        APP_CONFIG,
+      ],
+      useFactory: (
+        folders: FolderLocator,
+        registry: SessionRegistry,
+        commands: CommandCatalog,
+        models: ModelCatalog,
+        claude: ClaudeSessionPort,
+        sessionIds: IdGenerator,
+        conversationIds: IdGenerator,
+        cliVersion: string | null,
+        config: AppConfig,
+      ) =>
+        new ReadCatalogUseCase(
+          folders,
+          registry,
+          { commands, models },
+          { claude, sessionIds, conversationIds, cliVersion },
+          {
+            attachmentMaxBytes: config.composer.attachments.maxBytes,
+            attachmentImageTypes: ATTACHMENT_IMAGE_TYPES,
+            ...config.composer.context,
+          },
+        ),
     },
     {
       provide: CancelQueuedPromptUseCase,
@@ -456,6 +555,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
                 command.text,
                 context.userId,
                 context.installId === null ? 'web' : 'mobile',
+                command.attachments ?? [],
               ),
             }),
         ),

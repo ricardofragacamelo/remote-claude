@@ -11,6 +11,7 @@ import {
 import type { MenuCommand, PermissionMode, SessionClient, SlashCommand } from '@domain/session';
 import type { SessionBroadcaster } from './ports/session-broadcaster.port';
 import type { CommandCatalog } from './command-catalog';
+import type { OutgoingPrompt, PromptAttachment, PromptContextResolver } from './prompt-context';
 import type { SessionEnder } from './session-ender';
 import type { LiveSession, SessionRegistry } from './session-registry';
 
@@ -41,6 +42,9 @@ abstract class SessionCommandUseCase {
 export interface PromptQueueing {
   readonly ids: IdGenerator;
   readonly broadcaster: SessionBroadcaster;
+
+  /** What checks and composes the context of a prompt (plan 08, B-44). */
+  readonly context: PromptContextResolver;
 }
 
 /**
@@ -59,7 +63,10 @@ export interface PromptQueueing {
  * (S-31).
  *
  * Checking a command can wait on the CLI, so the prompts of one session are checked in the order
- * they arrived: a plain prompt sent right after `/init` must not overtake it into the queue.
+ * they arrived: a plain prompt sent right after `/init` must not overtake it into the queue. The
+ * context of the prompt — files, folders, ranges, uploads, text — is checked in the same step, all
+ * or nothing, before anything reaches Claude (plan 08, B-44): a prompt with one bad item is refused
+ * whole, and its context goes into the queue with it when a turn is running (S-205).
  *
  * What `execute` answers is the **send**, and the caller runs it once the prompt has been
  * acknowledged. Handing the prompt to the CLI inside the check would let the first events of its
@@ -89,11 +96,14 @@ export class PromptSessionUseCase extends SessionCommandUseCase {
     text: string,
     userId: UserId,
     from: SessionClient = 'web',
+    attachments: readonly PromptAttachment[] = [],
   ): Promise<() => void> {
     const live = this.require(rawSessionId, userId);
     const key = live.session.id.value;
 
-    const checked = (this.tails.get(key) ?? Promise.resolve()).then(() => this.check(live, text));
+    const checked = (this.tails.get(key) ?? Promise.resolve()).then(() =>
+      this.check(live, text, attachments),
+    );
 
     // The chain only orders; the refusal of this prompt belongs to whoever sent it, and reaches
     // them through the `await` below — never through the prompt checked after it.
@@ -108,25 +118,32 @@ export class PromptSessionUseCase extends SessionCommandUseCase {
       }
     });
 
-    await checked;
+    const outgoing = await checked;
 
     return () => {
-      this.submit(live, text, from);
+      this.submit(live, text, outgoing, from);
     };
   }
 
   /** Hands the prompt to the CLI when no turn runs, and to the queue when one does. */
-  private submit(live: LiveSession, text: string, from: SessionClient): void {
+  private submit(
+    live: LiveSession,
+    typed: string,
+    outgoing: OutgoingPrompt,
+    from: SessionClient,
+  ): void {
     const prompt = {
       queueId: `q_${this.queueing.ids.next()}`,
-      text,
+      text: outgoing.text,
+      ...(outgoing.extras === undefined ? {} : { extras: outgoing.extras }),
       promptedBy: from,
-      preview: previewOf(text),
+      // What was typed — the row of the queue never shows the context composed after it.
+      preview: previewOf(typed),
     };
     const submission = live.session.prompts.submit(prompt);
 
     if (submission.kind === 'now') {
-      live.handle.prompt(text);
+      live.handle.prompt(prompt.text, outgoing.extras);
       return;
     }
 
@@ -141,7 +158,11 @@ export class PromptSessionUseCase extends SessionCommandUseCase {
     });
   }
 
-  private async check(live: LiveSession, text: string): Promise<void> {
+  private async check(
+    live: LiveSession,
+    text: string,
+    attachments: readonly PromptAttachment[],
+  ): Promise<OutgoingPrompt> {
     // Before the catalogue, and again after it: the undo may have taken the lock while the list was
     // being asked for, and a prompt let through then would start a turn on a disk halfway back.
     live.session.refusePromptWhileRewinding();
@@ -152,7 +173,11 @@ export class PromptSessionUseCase extends SessionCommandUseCase {
       throw new UnknownCommandError(command);
     }
 
+    const outgoing = await this.queueing.context.resolve(live, text, attachments);
+
     live.session.refusePromptWhileRewinding();
+
+    return outgoing;
   }
 
   /** Whether the installation runs `command` — or `true` when the list cannot be had. */

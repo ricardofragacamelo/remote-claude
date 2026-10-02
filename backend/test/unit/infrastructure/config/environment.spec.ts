@@ -73,6 +73,12 @@ const complete: RawEnvironment = {
   RC_FILES_HISTORY_RETENTION_DAYS: '30',
   RC_FILES_HISTORY_MAX_BATCH_ENTRIES: '1000',
   RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS: '120',
+  RC_ATTACHMENT_MAX_BYTES: '5242880',
+  RC_ATTACHMENT_TTL_SECONDS: '3600',
+  RC_ATTACHMENT_MEMORY_BYTES: '67108864',
+  RC_CONTEXT_WARN_PERCENT: '25',
+  RC_CONTEXT_DRAFT_WINDOW_TOKENS: '200000',
+  RC_CONTEXT_MAX_BYTES: '8388608',
 };
 
 /** The complete environment, with one variable changed or removed. */
@@ -150,6 +156,14 @@ describe('loadConfig', () => {
         },
       },
       transcript: { activeWindowMs: 120_000 },
+      composer: {
+        attachments: { maxBytes: 5_242_880, ttlMs: 3_600_000, memoryBytes: 67_108_864 },
+        context: {
+          contextWarnFraction: 0.25,
+          draftWindowTokens: 200_000,
+          contextMaxBytes: 8_388_608,
+        },
+      },
       oidc: {
         issuer: 'http://localhost:8180/realms/remote-claude',
         audience: 'https://api.remote-claude.local',
@@ -214,6 +228,12 @@ describe('loadConfig', () => {
     'RC_FILES_HISTORY_RETENTION_DAYS',
     'RC_FILES_HISTORY_MAX_BATCH_ENTRIES',
     'RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS',
+    'RC_ATTACHMENT_MAX_BYTES',
+    'RC_ATTACHMENT_TTL_SECONDS',
+    'RC_ATTACHMENT_MEMORY_BYTES',
+    'RC_CONTEXT_WARN_PERCENT',
+    'RC_CONTEXT_DRAFT_WINDOW_TOKENS',
+    'RC_CONTEXT_MAX_BYTES',
   ] as const)('refuses to produce a configuration when %s is missing', (variable) => {
     expect(() => loadConfig(withChange({ [variable]: undefined }))).toThrow(ConfigurationError);
   });
@@ -271,6 +291,14 @@ describe('loadConfig', () => {
     ['RC_FILES_HISTORY_RETENTION_DAYS', '36501'],
     ['RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS', '0'],
     ['RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS', '86401'],
+    ['RC_ATTACHMENT_MAX_BYTES', '1023'],
+    ['RC_ATTACHMENT_MAX_BYTES', '5242881'],
+    ['RC_ATTACHMENT_TTL_SECONDS', '0'],
+    ['RC_ATTACHMENT_MEMORY_BYTES', '1023'],
+    ['RC_CONTEXT_WARN_PERCENT', '0'],
+    ['RC_CONTEXT_WARN_PERCENT', '101'],
+    ['RC_CONTEXT_DRAFT_WINDOW_TOKENS', '999'],
+    ['RC_CONTEXT_MAX_BYTES', '1023'],
   ] as const)('refuses %s set to %s', (variable, value) => {
     expect(() => loadConfig(withChange({ [variable]: value }))).toThrow(ConfigurationError);
   });
@@ -297,6 +325,19 @@ describe('loadConfig', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(ConfigurationError);
         expect(String(error)).toContain('RC_FILES_UPLOAD_MAX_BYTES');
+      }
+    });
+
+    it('refuses an attachment ceiling above the memory all of them may hold, and names it — plan 08, D-02', () => {
+      expect.assertions(2);
+
+      try {
+        loadConfig(
+          withChange({ RC_ATTACHMENT_MAX_BYTES: '4096', RC_ATTACHMENT_MEMORY_BYTES: '2048' }),
+        );
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConfigurationError);
+        expect(String(error)).toContain('RC_ATTACHMENT_MAX_BYTES');
       }
     });
 

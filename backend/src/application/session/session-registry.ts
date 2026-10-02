@@ -54,6 +54,8 @@ export class SessionRegistry implements SessionConversations {
   /** Reservations taken before a subprocess exists, so two starts cannot both pass the limit. */
   private reserved = 0;
 
+  private readonly removals: ((id: SessionId) => void)[] = [];
+
   constructor(
     private readonly limit: number,
     private readonly clock: Clock,
@@ -180,6 +182,18 @@ export class SessionRegistry implements SessionConversations {
   /** Forgets a session. Forgetting one that is not there is not an error. */
   remove(id: SessionId): void {
     this.live.delete(id.value);
+
+    for (const listener of this.removals) {
+      listener(id);
+    }
+  }
+
+  /**
+   * Told of every session that leaves the registry, whatever ended it — what holds something for a
+   * session lets go of it there, the attachments of its prompts (plan 08, S-212).
+   */
+  onRemoved(listener: (id: SessionId) => void): void {
+    this.removals.push(listener);
   }
 
   /** Every live session, for the shutdown hook to close them all. */

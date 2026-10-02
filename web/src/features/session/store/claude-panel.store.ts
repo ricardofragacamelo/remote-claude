@@ -3,6 +3,7 @@ import type { StoreApi } from 'zustand/vanilla';
 
 import { perFolder } from '@/shared/lib/per-folder';
 import type { ChangesFilter } from '../types/changes';
+import type { ContextItem, ContextNotice } from '../types/context';
 
 /** What the panel of Claude shows: the conversation, or what the session changed (plan 08, B-28). */
 export type PanelPane = 'chat' | 'changes';
@@ -57,6 +58,15 @@ export interface ClaudePanelState {
   /** What was being written in each tab and not sent yet — the tab's own, never shared. */
   readonly drafts: Readonly<Record<string, string>>;
 
+  /**
+   * The context of the next prompt of each tab — its chips (plan 08, B-47). The tab's own: two
+   * conversations never share a set (S-225), and it stays until it is sent or cleared (S-221).
+   */
+  readonly contexts: Readonly<Record<string, readonly ContextItem[]>>;
+
+  /** What the set of each tab said last — what an add left out, a drop refused. Never kept. */
+  readonly notices: Readonly<Record<string, ContextNotice>>;
+
   showPane(pane: PanelPane): void;
 
   /** Opens a new draft, and puts it on screen. @returns its key */
@@ -70,6 +80,8 @@ export interface ClaudePanelState {
   close(key: string): void;
   move(key: string, by: -1 | 1): void;
   setDraft(key: string, text: string): void;
+  setContext(key: string, items: readonly ContextItem[]): void;
+  setNotice(key: string, notice: ContextNotice | null): void;
   setChoices(key: string, choices: DraftChoices): void;
 
   /** A draft became a session: its tab is the session's now, in the same place. */
@@ -91,6 +103,8 @@ function createClaudePanelStore(): ClaudePanelStore {
     tabs: [],
     active: null,
     drafts: {},
+    contexts: {},
+    notices: {},
 
     openDraft: () => {
       // A reload gives drafts back under their keys, and the count starts over: a key in use is
@@ -129,6 +143,8 @@ function createClaudePanelStore(): ClaudePanelStore {
         return {
           tabs,
           drafts: without(state.drafts, key),
+          contexts: without(state.contexts, key),
+          notices: without(state.notices, key),
           active: state.active === key ? neighbour : state.active,
         };
       });
@@ -138,6 +154,18 @@ function createClaudePanelStore(): ClaudePanelStore {
     },
     setDraft: (key, text) => {
       set((state) => ({ drafts: { ...state.drafts, [key]: text } }));
+    },
+    setContext: (key, items) => {
+      set((state) => ({
+        contexts:
+          items.length === 0 ? without(state.contexts, key) : { ...state.contexts, [key]: items },
+      }));
+    },
+    setNotice: (key, notice) => {
+      set((state) => ({
+        notices:
+          notice === null ? without(state.notices, key) : { ...state.notices, [key]: notice },
+      }));
     },
     setChoices: (key, choices) => {
       set((state) => ({
@@ -155,6 +183,9 @@ function createClaudePanelStore(): ClaudePanelStore {
             .map((tab) => (tab.key === key ? tabOf('session', sessionId, promoted) : tab)),
           active: state.active === key ? promoted : state.active,
           drafts: without(state.drafts, key),
+          // What the draft had and did not send — an upload that failed once the session opened,
+          // say — goes on in the session's tab, never lost with the draft's key.
+          contexts: movedContext(state.contexts, key, promoted),
         };
       });
     },
@@ -186,8 +217,19 @@ function createClaudePanelStore(): ClaudePanelStore {
   }));
 }
 
-function without(drafts: Readonly<Record<string, string>>, key: string): Record<string, string> {
-  return Object.fromEntries(Object.entries(drafts).filter(([each]) => each !== key));
+function without<T>(byTab: Readonly<Record<string, T>>, key: string): Record<string, T> {
+  return Object.fromEntries(Object.entries(byTab).filter(([each]) => each !== key));
+}
+
+function movedContext(
+  contexts: Readonly<Record<string, readonly ContextItem[]>>,
+  from: string,
+  to: string,
+): Record<string, readonly ContextItem[]> {
+  const items = contexts[from];
+  const rest = without(contexts, from);
+
+  return items === undefined ? rest : { ...rest, [to]: items };
 }
 
 function tabOf(kind: 'session' | 'conversation', id: string, key: string): PanelTab {

@@ -123,7 +123,11 @@ interface CommandGroupProps {
 /** One group of the menu, or nothing when the search left it empty. */
 function CommandGroup({ title, commands, onPick }: CommandGroupProps): React.JSX.Element {
   return (
-    <TitledList title={title} items={commands} keyOf={(command) => command.name}>
+    <TitledList
+      title={title}
+      items={commands}
+      keyOf={(command) => `${command.origin}:${command.name}`}
+    >
       {(command) => (
         <Button
           type="button"

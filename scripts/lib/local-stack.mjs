@@ -33,18 +33,22 @@ export const STACK_TIMEOUT_MS = 180_000;
  *
  * @param {import('./compose.mjs').ComposeCli | null} cli
  * @param {string} project value of `--project-name`
- * @param {{ cwd: string, timeoutMs?: number, env?: NodeJS.ProcessEnv }} options
+ * @param {{ cwd: string, timeoutMs?: number, env?: NodeJS.ProcessEnv,
+ *           files?: readonly string[] }} options `files` are passed as `-f`, in order, ahead of
+ *   every subcommand — the same set on every call, or `stop` would address a different project
+ *   than `up` did. Left out, compose picks its default file
  * @returns {Compose}
  */
 export function composeRunner(cli, project, options) {
   const timeoutMs = options.timeoutMs ?? STACK_TIMEOUT_MS;
+  const fileArgs = (options.files ?? []).flatMap((file) => ['-f', file]);
 
   return (args, callOptions = {}) => {
     if (cli === null) {
       return { found: false, code: 127, stdout: '', stderr: 'no compose' };
     }
 
-    const argv = composeArgv(cli, project, args);
+    const argv = composeArgv(cli, project, [...fileArgs, ...args]);
     const invoke = callOptions.attached === true ? runAttached : run;
 
     return invoke(argv.command, argv.args, {

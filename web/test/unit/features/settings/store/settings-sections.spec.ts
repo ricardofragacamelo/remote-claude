@@ -63,14 +63,14 @@ describe('the sections of the app’s Settings — plan 06, B-31', () => {
     ['an option', aSection({ options: [{ id: 'permissionMode', labelKey: 'settings.x.mode' }] })],
     ['an option’s label', aSection({ options: [{ id: 'servers', labelKey: 'settings.x.mcp' }] })],
   ])('refuses a section about Claude, given away by %s — S-145', (_how, section) => {
-    expect(() => createSettingsSections().register(section)).toThrow(/plan 11/);
+    expect(() => createSettingsSections().register(section)).toThrow(/plan 13/);
     expect(() => {
       assertAppSection(section);
     }).toThrow(/about Claude/);
   });
 
   it('refuses one declared at creation too', () => {
-    expect(() => createSettingsSections([aSection({ id: 'model' })])).toThrow(/plan 11/);
+    expect(() => createSettingsSections([aSection({ id: 'model' })])).toThrow(/plan 13/);
   });
 
   it('declares no section about Claude itself — S-145', () => {

@@ -25,7 +25,7 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 | D-01 | O explorer e o editor são um módulo novo (`files`) ou uma extensão do `workspace` | se `workspace` tem de ganhar escrita e conteúdo, ou se isso é linguagem de outro domínio | B-02 | 2026-09-28 · **módulo novo `files`**, decisão do usuário com a recomendação: `files → workspace` por porta (`FolderResolver`), `files → audit` escrevendo, nenhuma dependência de `session` — a origem `claude` chega por evento de domínio | ✅ |
 | D-02 | A escrita humana pela web vai para a trilha: o quê, quando, e o que acontece se a trilha cai | se leitura humana também é auditada; o que fazer quando o disco falha **depois** do registro | B-01, B-16 | 2026-09-28 · **kinds `file.*` em `audit_events`, gravados antes do disco**, sem conteúdo; trilha fora → `503` `SERVICE_UNAVAILABLE` com `Retry-After` e nada no disco; falha do disco depois → `file.failed` apontando o primeiro; leitura fora da trilha (log `debug`), download dentro (`file.downloaded`). Decisão do usuário com a recomendação; ADR-015 (B-01) e doc 04 (B-03) registram | ✅ |
 | D-03 | A semântica de concorrência entre o humano e o Claude no mesmo arquivo | se o validador é hash ou mtime; se `If-Match` é obrigatório em todo verbo; o que um reenvio depois de resposta perdida recebe | B-03, B-11 | 2026-09-28 · **`ETag` forte por sha256, `If-Match` obrigatório no `PUT`**, com os sete pontos da seção (`428` sem ou com `*`, `412` inclusive para apagado, `W/` nunca casa, reenvio idêntico → `200` sem escrita, `304` no `GET`, `If-Match` opcional em mover/apagar, criar com `O_EXCL` → `409`). Decisão do usuário com a recomendação | ✅ |
-| D-07 | Como a mudança no disco chega à web (WS com assinatura vs polling), e qual `seq` o stream carrega | o envelope exige `seq` monotônico **por sessão**, e este stream não é de sessão | B-04, B-23 | 2026-09-28 · **WS com assinatura**: `workspace.watch` → `watchId`, `workspace.filesChanged` com `seq` monotônico por `watchId` a partir de 1, **sem replay** — reconexão refaz o `watch` e recarrega a árvore; o envelope passa a dizer "monotônico por stream" (B-04) e o plano 10 reusa. Decisão do usuário com a recomendação | ✅ |
+| D-07 | Como a mudança no disco chega à web (WS com assinatura vs polling), e qual `seq` o stream carrega | o envelope exige `seq` monotônico **por sessão**, e este stream não é de sessão | B-04, B-23 | 2026-09-28 · **WS com assinatura**: `workspace.watch` → `watchId`, `workspace.filesChanged` com `seq` monotônico por `watchId` a partir de 1, **sem replay** — reconexão refaz o `watch` e recarrega a árvore; o envelope passa a dizer "monotônico por stream" (B-04) e o plano 12 reusa. Decisão do usuário com a recomendação | ✅ |
 | D-11 | A raiz do explorer é a pasta aberta, e a API recebe a pasta junto com o caminho | se a fronteira da escrita é a raiz da allowlist ou a pasta da aba | B-02, B-07 | 2026-09-28 · **`folder` (absoluto) + `path` relativo POSIX** em toda rota do `files`; `folder` pela regra do `ResolveWorkspaceUseCase`; `path` acima da pasta → `403`, mesmo dentro da raiz; o WS segue com `workspacePath`. Decisão do usuário com a recomendação; backend/03 registra que subpasta aberta é fronteira mais estreita | ✅ |
 
 ### D-01 — módulo novo ou extensão do workspace
@@ -38,7 +38,7 @@ e invariantes próprias, que é o critério da seção "Criando um módulo novo"
 
 | Opção | A favor | Contra |
 |---|---|---|
-| **Módulo `files`**, dependendo de `workspace` por porta | a fronteira de segurança (`workspace`) continua pequena e pura; o `files` cresce sem inflá-la; planos 08, 09 e 11 consomem o `files` sem tocar na allowlist | uma porta a mais (`FolderResolver`) |
+| **Módulo `files`**, dependendo de `workspace` por porta | a fronteira de segurança (`workspace`) continua pequena e pura; o `files` cresce sem inflá-la; planos 08, 11 e 13 consomem o `files` sem tocar na allowlist | uma porta a mais (`FolderResolver`) |
 | Estender `workspace` | nenhuma porta nova | mistura a primeira linha de defesa com I/O de conteúdo; o `workspace` passaria a escrever no disco, o que contradiz a própria definição |
 
 **Recomendação:** módulo novo `files`, com `files → workspace` por porta (resolver a pasta), `files
@@ -118,18 +118,18 @@ A árvore e as abas precisam saber quando o disco muda — o Claude escreve o te
 
 Sobre o `seq`: o evento precisa de um (o envelope o exige de todo `event`), mas replay não serve
 para árvore — o que importa depois de uma queda é o estado **atual** do disco, que uma recarga dá
-melhor que mil eventos reencaminhados. O [plano 10](../10-integrated-terminal/README.md) tem o
+melhor que mil eventos reencaminhados. O [plano 12](../12-integrated-terminal/README.md) tem o
 mesmo problema com `seq` por terminal.
 
 **Recomendação:** WS com assinatura. `workspace.watch` responde com um `watchId`; o `seq` é
 monotônico **por `watchId`**, começando em 1; **sem replay** — reconexão refaz o `watch` (novo
 `watchId`, `seq` do 1) e recarrega a árvore. O [contrato](../../architecture/shared/05-websocket-protocol.md#envelope)
-passa a dizer "monotônico **por stream** — uma sessão, ou uma assinatura", uma vez, e o plano 10
+passa a dizer "monotônico **por stream** — uma sessão, ou uma assinatura", uma vez, e o plano 12
 reusa a regra em vez de escrever a sua (B-04).
 
 ### D-11 — a raiz do explorer é a pasta aberta
 
-O esboço do roteiro dos planos 06–11 descrevia `GET /files/tree?path=` — só o caminho. Mas a ADR-015 diz que a
+O esboço do roteiro dos planos 06–13 descrevia `GET /files/tree?path=` — só o caminho. Mas a ADR-015 diz que a
 fronteira da escrita é "allowlist **+ pasta aberta**", e o cliente não é quem garante fronteira.
 
 | Opção | A favor | Contra |
@@ -151,7 +151,7 @@ fronteira mais estreita que a raiz, e é isso que ela significa.
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-04 | Tetos de tamanho (modo leve, edição, leitura paginada) e quais encodings se lê e se grava | quanto o editor escolhido (D-09) aguenta sem travar o celular; tamanho real dos arquivos dos repositórios do usuário — **medir** | B-09, B-11, B-38 | 2026-09-28 · **limiar 1 MB, teto de edição 10 MB, configurados**; acima → `413` `FILE_TOO_LARGE` e leitura paginada (F7); binário por NUL nos primeiros 8 KB; encoding só por BOM e UTF-8 válido, senão `415` e "reabrir com encoding" (`iconv-lite`), save no encoding de abertura, não representável → `422`; teto lido com `teto + 1` do mesmo descritor. Decisão do usuário com a recomendação; **os números são provisórios** até a medida (p50/p99 em `~/projects`, 1/5/10 MB no celular), que vem para esta página | ✅ |
-| D-05 | O que fazer com symlink (seguir? até onde?) e com hard link ao salvar | se a verificação pós-abertura (`/proc/self/fd`) é aceitável como Linux-only; o que o rename atômico faz com `nlink > 1` — **medir** | B-07, B-11 | 2026-09-28 · **symlink seguido só com `realpath` dentro da pasta aberta**; link para fora é `outside: true` e não navegável; verificação pós-abertura por `/proc/self/fd` em toda leitura e todo temporário (macOS é gap do plano 17); apagar symlink apaga o link; **`nlink > 1` → escrita no lugar com cópia temporária**. Decisão do usuário com a recomendação; a parte do hard link fica sujeita à medida do que o VS Code faz | ✅ |
+| D-05 | O que fazer com symlink (seguir? até onde?) e com hard link ao salvar | se a verificação pós-abertura (`/proc/self/fd`) é aceitável como Linux-only; o que o rename atômico faz com `nlink > 1` — **medir** | B-07, B-11 | 2026-09-28 · **symlink seguido só com `realpath` dentro da pasta aberta**; link para fora é `outside: true` e não navegável; verificação pós-abertura por `/proc/self/fd` em toda leitura e todo temporário (macOS é gap do plano 19); apagar symlink apaga o link; **`nlink > 1` → escrita no lugar com cópia temporária**. Decisão do usuário com a recomendação; a parte do hard link fica sujeita à medida do que o VS Code faz | ✅ |
 
 ### D-04 — teto de tamanho e encoding
 
@@ -195,7 +195,7 @@ Três perguntas diferentes, que costumam ser confundidas:
    leitura e para o temporário da escrita. O `rename` final continua sendo por caminho — a janela
    residual é a de um processo local, com escrita dentro da pasta, trocando um diretório no
    microssegundo certo, e é declarada (R-02). Em macOS o equivalente (`F_GETPATH`) não está no Node:
-   gap para o [plano 17](../17-distribution/README.md).
+   gap para o [plano 19](../19-distribution/README.md).
 3. **Hard link ao salvar.** O save atômico (temporário + `rename`) troca o inode: o outro nome do
    hard link continua com o conteúdo antigo, em silêncio. Medir o que o VS Code faz; a alternativa
    é escrever no lugar (com cópia de segurança temporária) quando `nlink > 1`.
@@ -214,8 +214,8 @@ temporária, para não quebrar o link em silêncio — sujeito à medida.
 |---|---|---|---|---|---|
 | D-06 | Apagar é definitivo, vai para uma lixeira, ou é desfeito pelo histórico local | onde uma lixeira poderia morar sem sair da allowlist nem sujar o repositório | B-15, B-58 | 2026-09-28 · **em duas etapas**: até a F8, definitivo com segundo passo (`409` `DIRECTORY_NOT_EMPTY` com contagem capada, apaga só com `expectedEntries` igual, senão `412`); com a F8, o que cabe no histórico é guardado e apagar vira aviso com **Desfazer** (B-58); o que não cabe mantém o segundo passo; falha ao guardar volta ao segundo passo. Decisão do usuário com a recomendação | ✅ |
 | D-12 | Como mover sem sobrescrever o destino, se o Node não tem `RENAME_NOREPLACE` | se `link` + `unlink` serve para arquivo; o que resta para diretório — **medir** | B-13 | 2026-09-28 · **arquivo por `link` + `unlink`; diretório por conferência + `rename` sob a trava por caminho** (B-18), janela residual declarada em R-02; `EXDEV` → `422` `FILE_OPERATION_INVALID` (`reason: crossDevice`), nunca cópia + remoção implícita. Decisão do usuário com a recomendação; a medida de uma biblioteca com `renameat2` sem módulo nativo ainda vem, e só troca o meio, não a semântica | ✅ |
-| D-13 | Onde os fatos `file.*` aparecem para o usuário — `/audit` só lê `audit_entries` hoje | se um `GET /audit-events` é deste plano ou do [plano 12](../12-audit-explained/README.md), que redesenha a trilha | B-17, B-29 | 2026-09-28 · **`GET /audit-events`** no `AuditQueryModule`, filtrado por quem pergunta, `kind` por prefixo, cursor keyset por `seq`, e uma seção "Arquivos" mínima na Auditoria; o plano 12 absorve, e se chegar antes B-17/B-29 consomem o dele. Decisão do usuário com a recomendação | ✅ |
-| D-15 | Arquivos que mudam o que o Claude pode fazer (`.claude/settings*.json`, `.mcp.json`) são editáveis pelo editor genérico | o que o [plano 11](../11-claude-settings/README.md) decide para a tela própria dele | B-11, B-34 | 2026-09-28 · **editável com segundo passo**: `PUT` sem `confirmSensitive: true` → `428` (`reason: sensitiveFile`); com ele, grava e registra `file.written` com `sensitive: true`; lista pura de domínio (`.claude/settings.json`, `.claude/settings.local.json`, `.mcp.json`) reusada pelo plano 11; criar, mover e apagar passam pelo mesmo passo. Decisão do usuário com a recomendação | ✅ |
+| D-13 | Onde os fatos `file.*` aparecem para o usuário — `/audit` só lê `audit_entries` hoje | se um `GET /audit-events` é deste plano ou do [plano 14](../14-audit-explained/README.md), que redesenha a trilha | B-17, B-29 | 2026-09-28 · **`GET /audit-events`** no `AuditQueryModule`, filtrado por quem pergunta, `kind` por prefixo, cursor keyset por `seq`, e uma seção "Arquivos" mínima na Auditoria; o plano 14 absorve, e se chegar antes B-17/B-29 consomem o dele. Decisão do usuário com a recomendação | ✅ |
+| D-15 | Arquivos que mudam o que o Claude pode fazer (`.claude/settings*.json`, `.mcp.json`) são editáveis pelo editor genérico | o que o [plano 13](../13-claude-settings/README.md) decide para a tela própria dele | B-11, B-34 | 2026-09-28 · **editável com segundo passo**: `PUT` sem `confirmSensitive: true` → `428` (`reason: sensitiveFile`); com ele, grava e registra `file.written` com `sensitive: true`; lista pura de domínio (`.claude/settings.json`, `.claude/settings.local.json`, `.mcp.json`) reusada pelo plano 13; criar, mover e apagar passam pelo mesmo passo. Decisão do usuário com a recomendação | ✅ |
 
 ### D-06 — apagar definitivo ou lixeira
 
@@ -223,7 +223,7 @@ O VS Code manda para a lixeira do SO. Aqui:
 
 - a lixeira do SO (`~/.local/share/Trash`) fica **fora da allowlist** — escrever lá é exatamente o
   que a fronteira proíbe;
-- uma lixeira **dentro** da pasta (`.rc-trash/`) aparece no `git status`, no Quick Open do plano 09
+- uma lixeira **dentro** da pasta (`.rc-trash/`) aparece no `git status`, no Quick Open do plano 11
   e no contexto do Claude;
 - o desfazer do [ADR-013](../../architecture/shared/00-decisions.md#adr-013--o-desfazer-não-usa-rewindfiles-o-store-de-checkpoint-é-nosso)
   é da **sessão** do Claude e não alcança escrita humana;
@@ -269,28 +269,28 @@ da F6 pede os três fatos na tela de Auditoria.
 
 **Recomendação:** `GET /audit-events`, filtrado sempre por quem pergunta, com `kind` por prefixo
 (`file.`), e uma seção "Arquivos" mínima na tela de Auditoria do [plano 06](../06-workbench/README.md).
-O redesenho da trilha é do [plano 12](../12-audit-explained/README.md), que junta `audit_events` à
-linha do tempo — ele absorve esta leitura em vez de escrever outra; se o 12 chegar antes, B-17 e
-B-29 viram consumo do endpoint dele. O substituir em lote do plano 09 escreve pela escrita deste
+O redesenho da trilha é do [plano 14](../14-audit-explained/README.md), que junta `audit_events` à
+linha do tempo — ele absorve esta leitura em vez de escrever outra; se o 14 chegar antes, B-17 e
+B-29 viram consumo do endpoint dele. O substituir em lote do plano 11 escreve pela escrita deste
 plano e cai nos mesmos fatos.
 
 ### D-15 — arquivos que mudam a permissão
 
 Uma regra `allow` no `.claude/settings.json` do projeto **fura o `canUseTool`** em diretório confiado
 (medido — [backend/04](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido)),
-e um hook ali é código que roda na próxima sessão. O plano 11 recomenda que a tela dele mostre isso
+e um hook ali é código que roda na próxima sessão. O plano 13 recomenda que a tela dele mostre isso
 só para leitura. Um editor genérico que salva qualquer arquivo abre a mesma porta por outro lado.
 
 | Opção | A favor | Contra |
 |---|---|---|
 | Editável como qualquer arquivo | é o humano decidindo, como faria no disco | um save rápido do celular muda o que o Claude pode fazer sem ninguém perceber que era isso |
-| Somente leitura no editor | coerente com o plano 11 | o usuário não consegue corrigir o próprio arquivo pela ferramenta que diz ser um editor |
+| Somente leitura no editor | coerente com o plano 13 | o usuário não consegue corrigir o próprio arquivo pela ferramenta que diz ser um editor |
 | **Editável com segundo passo** que diz o que o arquivo faz, e fato na trilha marcado `sensitive` | o humano decide sabendo; a trilha distingue | uma lista de nomes a manter |
 
 **Recomendação:** editável com segundo passo. O `PUT` de um caminho da lista sem a confirmação
 explícita (`confirmSensitive: true`) responde `428` `PRECONDITION_REQUIRED` (`params.reason:
 sensitiveFile`); com ela, grava e registra `file.written` com `sensitive: true`. A lista é regra pura
-de domínio (`.claude/settings.json`, `.claude/settings.local.json`, `.mcp.json`), e o plano 11 a
+de domínio (`.claude/settings.json`, `.claude/settings.local.json`, `.mcp.json`), e o plano 13 a
 reusa. Criar, mover e apagar esses caminhos passam pelo mesmo passo.
 
 ---
@@ -311,7 +311,7 @@ nosso disputam o mesmo número. Um repositório com `node_modules` passa de 50 m
 |---|---|---|
 | `fs.watch({ recursive: true })` (Node ≥ 20 no Linux) | sem dependência; percorre a árvore e põe um watch em cada diretório, **inclusive** os ignorados | watches consumidos com `node_modules`; latência de subir numa árvore grande |
 | `chokidar` v4 | API madura, `ignored` por função; sobre `fs.watch` | se o `ignored` evita pôr watch no diretório ignorado ou só filtra o evento |
-| `@parcel/watcher` | nativo, ignora por glob **antes** de pôr o watch; usado pelo VS Code | módulo nativo — custo no [plano 17](../17-distribution/README.md) |
+| `@parcel/watcher` | nativo, ignora por glob **antes** de pôr o watch; usado pelo VS Code | módulo nativo — custo no [plano 19](../19-distribution/README.md) |
 
 **Recomendação:** decidir pela medida, não pela reputação: um spike (B-19) num clone deste
 repositório com `pnpm install` feito, contando watches (`/proc/<pid>/fdinfo`) e tempo de subida das
@@ -403,10 +403,10 @@ registrados aqui como alternativa, sem task.
 | Celular / toque | fraco — seleção e teclado virtual são conhecidos por falhar | bom, desenhado para toque |
 | jsdom (unit/integração do web) | não roda — exige adaptador e teste real no e2e | roda parcialmente |
 | CSP e servir localmente | `@monaco-editor/react` busca da CDN por padrão; precisa de `loader.config` com o pacote local e `worker-src` para os workers | sem CDN, sem workers obrigatórios |
-| Reuso nos planos 08 e 09 | `colorize` para realce no chat; diff para as alterações do Claude e para a prévia do substituir | realce e diff por extensões diferentes |
+| Reuso nos planos 08 e 11 | `colorize` para realce no chat; diff para as alterações do Claude e para a prévia do substituir | realce e diff por extensões diferentes |
 | O que vem de graça | localizar/substituir, ir para linha, multicursor, minimap, sticky scroll, desfazer por aba | localizar e desfazer por extensão; minimap não existe |
 
-**Recomendação:** Monaco, pela fidelidade e pelo diff editor, que os planos 08 e 09 reusam —
+**Recomendação:** Monaco, pela fidelidade e pelo diff editor, que os planos 08 e 11 reusam —
 **carregado sob demanda** (chunk próprio, nunca no bundle inicial), **servido pelo nosso build**
 (nenhum byte de CDN), atrás de uma porta `CodeEditor` para que componentes e hooks sejam testados em
 jsdom com um falso e o Monaco real no e2e; em tela pequena, um modo simplificado (leitura, e edição

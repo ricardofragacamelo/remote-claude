@@ -207,7 +207,7 @@ prováveis de isso acontecer sem ser falha do provedor.
 O repositório tem `mobile/ios/Runner`, e a arquitetura cita Keychain e
 `ASWebAuthenticationSession` ([mobile/07-auth](../../architecture/mobile/07-auth.md)) — mas a F4
 é inteiramente Android (Gradle, emulador, cgroup), e o
-[plano 17 · D-01](../17-distribution/decisions.md) decide o SO da **instalação do backend**, não
+[plano 20 · D-01](../19-distribution/decisions.md) decide o SO da **instalação do backend**, não
 o do celular. Ninguém decidiu o escopo do aparelho em lugar nenhum.
 
 Com iOS no escopo entrariam conta de desenvolvedor paga, certificado APNs, biometria por
@@ -219,7 +219,7 @@ continua no emulador cercado por cgroup que o [plano 00](../00-bootstrap/F6-scri
 provou. O que ela custa, e que **precisa estar dito e não subentendido**: o app continua
 compilando para iOS com push, biometria e `integration_test` nunca exercitados ali — a linha
 entra no **Não entra** do [README](README.md#escopo), e reabrir o iOS é decisão do
-[plano 17](../17-distribution/README.md), onde a distribuição é decidida.
+[plano 19](../19-distribution/README.md), onde a distribuição é decidida.
 
 ### D-13 — o token que morre calado
 
@@ -405,7 +405,7 @@ de a permissão ter sido resolvida.
 |---|---|---|---|---|---|
 | D-09 | Qual imagem de emulador e API level o `integration_test` usa de forma reprodutível | **não é custo** — a primeira execução já aconteceu no [plano 00](../00-bootstrap/progress.md) (cgroup, 4 núcleos, 7 GB); o que não existe é a imagem fixada em lugar nenhum | B-28 | 2026-09-15 · **API 35 fixada** — a imagem com que o plano 00 saiu verde, e o mínimo que exibe o diálogo de permissão de notificação | ✅ |
 | D-26 | Como provar a entrega real do push e o diálogo do SO sem tirar a hermeticidade da suíte padrão | se o emulador fixado tem Play Services (tem: `google_apis_playstore`), e o que alcança a UI do sistema | B-28, B-34 | 2026-09-24 · **uma variante opt-in**, `pnpm test:e2e:mobile:push`: mesma stack, com o push do `.env` no lugar de `push.invalid`, rodada pelo `patrol`, que aperta `home`, responde o diálogo e toca a notificação. A suíte padrão continua hermética | ✅ |
-| D-17 | Como o celular alcança o backend fora da rede local | é o [plano 17 · D-04](../17-distribution/decisions.md) — túnel, VPN ou porta com TLS | nada nesta fase | — | ⛔ |
+| D-17 | Como o celular alcança o backend fora da rede local | é o [plano 20 · D-04](../19-distribution/decisions.md) — túnel, VPN ou porta com TLS | nada nesta fase | — | ⛔ |
 
 ### D-09 — o emulador reprodutível
 

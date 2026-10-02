@@ -171,7 +171,7 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `error` | envelope de erro | qualquer falha |
 
 **`seq` é obrigatório em todo `event`**, monotônico **por stream** — uma sessão, ou uma assinatura
-(a pasta assistida; o terminal do [plano 10](../../plans/10-integrated-terminal/README.md) reusa a
+(a pasta assistida; o terminal do [plano 12](../../plans/12-integrated-terminal/README.md) reusa a
 regra). Numa sessão é o que viabiliza o replay; numa assinatura **não há replay**. Um cliente nunca
 mistura dois streams: o `seq` de uma assinatura não move o ponto de retomada de sessão nenhuma
 ([07 · D-07](../../plans/07-explorer-and-editor/decisions.md#d-07--o-transporte-da-mudança-e-o-seq-do-stream)).
@@ -232,7 +232,7 @@ Dois campos opcionais, e nenhum muda o que um cliente antigo entende do resto
 
 Um build anterior a estes campos mostraria o fragmento de thinking como texto enquanto ele chega — o
 `message.completed` o corrige. Nenhum build publicado é anterior a eles (o
-[plano 17](../../plans/17-distribution/README.md) não começou), e os dois clientes deste repositório
+[plano 19](../../plans/19-distribution/README.md) não começou), e os dois clientes deste repositório
 passam a lê-los na mesma entrega.
 
 ### A lista de tarefas — `TodoWrite` e `Task*`
@@ -258,7 +258,7 @@ que a lista não tem, é uma tool como outra qualquer.
 | `file` — ou ausente, como era antes | `path`, `range?` `{ startLine, endLine }` | um arquivo, ou linhas dele, **dentro da pasta da sessão** |
 | `folder` | `path` | uma pasta dentro da pasta da sessão |
 | `upload` | `attachmentId` | o que `POST /sessions/:sessionId/attachments` respondeu: imagem, ou texto arrastado do desktop |
-| `text` | `source` (`terminal`), `label` (≤ 200), `content` (≤ 16 384) | o que um provedor do cliente tem e a pessoa já vê — o terminal do [plano 10](../../plans/10-integrated-terminal/README.md) |
+| `text` | `source` (`terminal`), `label` (≤ 200), `content` (≤ 16 384) | o que um provedor do cliente tem e a pessoa já vê — o terminal do [plano 12](../../plans/12-integrated-terminal/README.md) |
 
 - **Arquivo e pasta são referência, nunca conteúdo.** O backend os confere na pasta da sessão — tudo
   ou nada — e compõe a referência num formato delimitado; o Claude os lê pelo `Read`, que o hook
@@ -270,6 +270,48 @@ que a lista não tem, é uma tool como outra qualquer.
   pelo backend com `INVALID_INPUT` — ordem entre dois campos não é limite de um.
 - A imagem **não** viaja no frame: o frame tem 64 KB, e um print de tela não cabe
   ([08 · D-02](../../plans/08-claude-panel/decisions.md#d-02--imagem-no-prompt)).
+- **O que o Claude recebe** é composto no backend, igual para web e app: o texto digitado, uma linha
+  em branco e, na ordem escolhida, uma linha por referência — `<reference path="src/a.ts" />`,
+  `<reference path="src/a.ts" lines="10-20" />`, `<reference path="docs" kind="folder" />` (caminho
+  relativo à pasta da sessão; a própria pasta é `.`) — e um bloco por texto:
+  `<context source="terminal" label="terminal: bash">…</context>` (o texto de um arquivo do desktop vai
+  com `source="upload"` e o nome do arquivo como `label`). A imagem vai ao lado, como bloco `image` do
+  `SDKUserMessage`.
+- **Todo `@` que começa palavra no texto digitado ganha um `WORD JOINER` (U+2060) antes** — o CLI expande
+  `@caminho` em conteúdo sem `Read` e sem hook quando o `@` vem no começo ou depois de espaço (lido no CLI
+  2.1.277, [descoberta §10.1](../../discovery/01-descoberta-claude-agent-sdk.md#101--caminho-no-streaming-input-é-expandido-pelo-cli-sem-read-d-01-r-10));
+  com o caractere invisível antes, o `@` deixa de casar, e o modelo, se quiser o arquivo, o lê pelo
+  `Read`. Um `@` dentro de palavra (`a@b.com`) fica como está.
+- **Tudo ou nada**: o primeiro item recusado, na ordem escolhida, recusa o prompt inteiro, com o
+  `correlationId` — `WORKSPACE_NOT_ALLOWED` (fora da pasta, `..`, absoluto de outra pasta, symlink que
+  sai), `FILE_NOT_FOUND`, `FILE_NOT_TEXT` (binário que não é imagem, PDF), `INVALID_INPUT`
+  `session.error.referenceKind` (`params.path`, `params.kind`: pasta nomeada como arquivo, ou o
+  contrário), `ATTACHMENT_NOT_FOUND`.
+- O `content` de um `text` nunca chega ao log — nem no `ws.inbound`, onde é trocado pelo marcador de
+  redação, nem no `claude.input`, que leva o texto digitado (cortado) e, do contexto, só tipo, caminho,
+  linhas, tamanho e hash.
+
+**`POST /sessions/:sessionId/attachments`** (Bearer) — `multipart/form-data` com um campo `name` (o nome
+do arquivo na máquina da pessoa) e uma parte `file`, lida em stream e cortada um byte depois do teto
+(`RC_ATTACHMENT_MAX_BYTES`, até 5 MiB). O tipo é o **dos bytes**, nunca o declarado:
+
+```jsonc
+// 201
+{ "attachmentId": "att_01J…", "kind": "image", "mediaType": "image/png", "name": "print.png", "size": 48213 }
+```
+
+| Status | Quando |
+|---|---|
+| `201` | guardado — ou os mesmos bytes já estavam guardados para a sessão, e é o mesmo id (retry) |
+| `400` `INVALID_INPUT` | não é formulário, ou falta a parte `file`; `sessionId` que não é um |
+| `403` / `404` | sessão de outra pessoa / sessão que não está viva |
+| `413` `PAYLOAD_TOO_LARGE` | acima do teto (`session.error.attachmentTooLarge`, `params.limit`) |
+| `415` `ATTACHMENT_TYPE_UNSUPPORTED` | fora de PNG/JPEG/GIF/WebP e texto UTF-8 — SVG, PDF, binário (`params.mediaType`, o tipo dos bytes) |
+
+O anexo fica **em memória**, da sessão: nunca na pasta, na trilha ou no log (o log leva tipo, tamanho e
+hash). Some quando a sessão sai do registro, no TTL (`RC_ATTACHMENT_TTL_SECONDS`), ou, passada a memória
+de todos juntos (`RC_ATTACHMENT_MEMORY_BYTES`), do mais antigo para o mais novo. Id desconhecido, de
+outra sessão ou que já sumiu é o mesmo `ATTACHMENT_NOT_FOUND` no prompt.
 
 ### A fila de prompts
 
@@ -428,9 +470,45 @@ do estado de um pedido de permissão — é uma pergunta com resposta, não um f
 ```jsonc
 { "cliVersion": "2.1.277",          // do binário que o SDK spawnou; null antes do primeiro turno
   "commands": [
-    { "name": "init", "description": "…", "argumentHint": "", "aliases": [], "suggested": true }
+    { "name": "init", "description": "…", "argumentHint": "", "aliases": [], "builtin": true,
+      "suggested": true, "origin": "builtin", "label": "init", "shadowed": false },
+    { "name": "remote-claude-user:notes", "label": "notes", "origin": "user", "shadowed": false, … }
   ] }
 ```
+
+Desde o plano 08 (F5) cada item diz de onde vem e como aparece:
+
+- `origin` — `builtin` (o marcador `builtin` do SDK: é do próprio Claude Code), `project` (o `.claude/`
+  do projeto, ou um plugin que as configurações do projeto ligam), `user` e `system` (as skills que o
+  [plano 13](../../plans/13-claude-settings/README.md) traz pelos plugins locais `remote-claude-user` e
+  `remote-claude-system`). Lido pelo marcador e pelo prefixo do nome qualificado, nunca por lista nossa;
+- `label` — o nome sem o prefixo do plugin, o que a pessoa lê. O que se insere é **`name`**, o que o CLI
+  roda;
+- `shadowed` — dois itens podem ter o mesmo nome, e os dois aparecem. Entre um `builtin` e um sem
+  marcador, `/nome` roda o `builtin` **qualquer que seja a ordem** em que o SDK os listou (é o que o
+  `sdk.d.ts` documenta), e o sem marcador vem com `shadowed: true`. Um nome qualificado nunca é encoberto.
+
+**Antes da sessão — `GET /catalog?workspacePath=`** (Bearer). O rascunho não tem sessão
+([08 · D-07](../../plans/08-claude-panel/decisions.md#d-07--a-sessão-nasce-no-primeiro-prompt)), e o menu,
+o seletor de modelo e o conjunto de contexto precisam da instalação. Responde do catálogo que as sessões
+preenchem, por versão do CLI e pasta; sem nada para a pasta, abre **uma** `query()` que só pergunta — não
+recebe prompt, não custa cota, conta no teto de sessões enquanto vive — e a fecha. Duas conversas pedindo
+juntas fazem uma chamada ([08 · D-13](../../plans/08-claude-panel/decisions.md#d-13--o-catálogo-antes-da-sessão)).
+
+```jsonc
+{ "cliVersion": "2.1.277",
+  "commands": [ /* como acima */ ],
+  "models": [ /* como GET /sessions/:sessionId/models */ ],
+  "limits": { "attachmentMaxBytes": 5242880, "attachmentImageTypes": ["image/png", "…"],
+              "contextWarnFraction": 0.25, "draftWindowTokens": 200000, "contextMaxBytes": 8388608 } }
+```
+
+| Status | Quando |
+|---|---|
+| `200` | o catálogo |
+| `400` / `403` / `404` / `422` | a pasta, como `GET /sessions` a recusa |
+| `429` `SESSION_LIMIT_REACHED` | sem vaga para a consulta |
+| `502` / `504` | o CLI falhou ou não respondeu — o composer segue, e `/nome` digitado vai como texto |
 
 | Status | Quando |
 |---|---|

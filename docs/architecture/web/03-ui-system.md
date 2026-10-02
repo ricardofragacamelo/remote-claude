@@ -321,11 +321,11 @@ Dentro de cada aba de pasta, em `md+`, tudo ao mesmo tempo:
 
 | Parte | O que é | Quem preenche |
 |---|---|---|
-| **activity bar** | as views da pasta: **Explorer**, **Busca**, **Sessões do Claude**; clicar na ativa recolhe a side bar | planos [07](../../plans/07-explorer-and-editor/README.md), [09](../../plans/09-search/README.md), [08](../../plans/08-claude-panel/README.md) |
+| **activity bar** | as views da pasta: **Explorer**, **Busca**, **Sessões do Claude**; clicar na ativa recolhe a side bar | planos [07](../../plans/07-explorer-and-editor/README.md), [10](../../plans/11-search/README.md), [08](../../plans/08-claude-panel/README.md) |
 | **side bar** | a view ativa | quem registrou a view |
 | **área de editor** | os arquivos abertos | [plano 07](../../plans/07-explorer-and-editor/README.md) |
 | **secondary side bar** | **o painel do Claude, ao lado do editor** — nunca uma tela nem uma rota própria; abre e fecha (`Mod+Alt+B` e o botão do topo) sem perder nada, porque o estado do painel é da aba. Os comandos do painel (nova conversa, focar o prompt, interromper, próxima/anterior, alterações) vivem enquanto a aba está na tela, com o painel aberto ou não — focar o prompt é como um painel fechado abre | [plano 08](../../plans/08-claude-panel/README.md) (`ClaudePanel`, `PanelCommands`) |
-| **painel inferior** | abas registráveis | planos [08](../../plans/08-claude-panel/README.md) e [10](../../plans/10-integrated-terminal/README.md) |
+| **painel inferior** | abas registráveis | planos [08](../../plans/08-claude-panel/README.md) e [11](../../plans/12-integrated-terminal/README.md) |
 | **status bar** | itens da pasta à esquerda, do app à direita: conexão, pasta (um toque copia o caminho), idioma (troca por visitante), tema, sino de notificações (B-26) | registro |
 
 - Redimensionável (`resizable`), com mínimos e máximos; os tamanhos são conveniência por visitante
@@ -355,7 +355,7 @@ Cada aba é um **workbench completo de uma pasta**; várias abertas ao mesmo tem
 ### Moldura de tela
 
 Toda tela **fora** do workbench (Auditoria, Regras, Dispositivos, Logs e diagnóstico, Configurações,
-Sobre, e as dos planos 11–16) usa o mesmo componente de `shared/components/`:
+Sobre, e as dos planos 13–18) usa o mesmo componente de `shared/components/`:
 
 - **cabeçalho** com o título, o **propósito numa linha** e as ações da tela;
 - **painel de ajuda** (drawer em `md+`, `sheet` abaixo), aberto pelo ícone, pelo atalho e pela
@@ -395,7 +395,7 @@ rótulo e o mesmo atalho. Três listas à mão divergiriam na primeira semana.
   ajuda). Comando que falha vira notificação traduzida
   ([06 · D-28](../../plans/06-workbench/decisions.md#d-28--um-diálogo-abrir-pasta-e-comandos-registrados-por-quem-os-executa)).
 - **Paleta:** `Ctrl/Cmd+Shift+P`, sobre o registro; comando indisponível não aparece; modos por
-  **prefixo** registráveis (`>` comandos; o Quick Open do [plano 09](../../plans/09-search/README.md)
+  **prefixo** registráveis (`>` comandos; o Quick Open do [plano 11](../../plans/11-search/README.md)
   registra o seu, em `paletteModes`) ou entrados pelo nome (os recentes de "Abrir recente"). `Esc`
   fecha e devolve o foco a quem o tinha; o comando escolhido roda depois de a paleta fechar.
 - **Menu Arquivo:** sai do registro, nos grupos do VS Code (Novo, Abrir, Salvar, Fechar) — o comando
@@ -430,7 +430,7 @@ e como aparece. Entrada não registrada **não aparece** — nem link, nem item,
 
 | Registro | O que cada entrada declara | Quem registra |
 |---|---|---|
-| navegação global | rota, ícone, rótulo, posição, badge | 06; 11 e 14 nas posições reservadas |
+| navegação global | rota, ícone, rótulo, posição, badge | 06; 13 e 16 nas posições reservadas |
 | views da activity bar | id, ícone, rótulo, posição, badge, componente — o badge é um componente que recebe a pasta | 07 (Explorer), 08 (Sessões: as perguntas esperando, anunciadas com o painel fechado), 09 (Busca) |
 | badges da aba de pasta | `folderTabBadges`: um componente que recebe a pasta e se desenha ao lado do nome da aba — ou não se desenha | 08 (as perguntas esperando nas sessões da pasta) |
 | abas do painel inferior | id, rótulo, componente | 08, 10 |
@@ -443,12 +443,13 @@ e como aparece. Entrada não registrada **não aparece** — nem link, nem item,
 | fontes de lado de diff | `diffSources`: o id da fonte e `read(folder, key)` — um lado `provided` da aba de diff que o editor lê sem saber de quem é; não sobrevive à recarga | 08 (`session`: o antes e o depois de uma tool, o antes da sessão) |
 | área de editor | o componente que preenche a área de editor da aba (`editorAreas`); sem entrada, o placeholder | 07 |
 | o que fechar a aba perderia | os arquivos com alteração não salva de uma pasta (`folderTabKeepers`), listados na confirmação de fechar a aba de pasta | 07 (editor) |
-| alvos de arraste para o Claude | aceita `application/x-remote-claude-files+json` | 08 — a fonte é o 07 (árvore e abas) |
+| alvos de arraste para o Claude | `claudeContextTargets`: aceita `application/x-remote-claude-files+json` e o "Adicionar ao contexto do Claude" — o `add(payload)` põe na conversa na tela do painel da mesma aba de pasta (rascunho ou sessão; um rascunho novo quando a tela é uma conversa só de leitura) | 08 (`session.panel`) — a fonte é o 07 (árvore, abas e seleção do editor) |
+| provedores do `@` | `mentionProviders`: a palavra depois do `@`, rótulo e descrição traduzidos, e `items(folder)` — o que acrescentaria agora ao contexto, ou `null` sem nada a dar (aí não aparece) | 08 (`@selection`, a seleção do editor ativo); 10 (`@terminal`) |
 
 ### Explorer e editor
 
-Os padrões que o [plano 07](../../plans/07-explorer-and-editor/README.md) traz, para que o 08, o 09 e
-o 11 os reusem em vez de reinventar ([07 · B-06](../../plans/07-explorer-and-editor/F0-contract.md#b-06--o-estado-do-explorer-e-do-editor-por-aba-de-pasta-)):
+Os padrões que o [plano 07](../../plans/07-explorer-and-editor/README.md) traz, para que o 08, o 11 e
+o 13 os reusem em vez de reinventar ([07 · B-06](../../plans/07-explorer-and-editor/F0-contract.md#b-06--o-estado-do-explorer-e-do-editor-por-aba-de-pasta-)):
 
 - **A árvore é uma ARIA tree** (`role="tree"`, `treeitem`, `aria-expanded`, `aria-level`), virtualizada,
   navegável só por teclado — setas, Home/End, digitar para achar —, com seleção múltipla. O que a

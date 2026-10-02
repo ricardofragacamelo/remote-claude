@@ -5,7 +5,7 @@
  * Editable, with a second step: writing, creating, moving or deleting one of them needs the
  * explicit confirmation, and the trail marks the fact `sensitive`
  * ([07 · D-15](../../../../../docs/plans/07-explorer-and-editor/decisions.md#d-15--arquivos-que-mudam-a-permissão)).
- * Plan 11 reuses the same list for its own screen.
+ * Plan 13 reuses the same list for its own screen.
  */
 export const SENSITIVE_FILES = [
   '.claude/settings.json',

@@ -1,5 +1,6 @@
 import { QueuedPromptNotFoundError } from '../errors/queued-prompt-not-found.error';
 import { QueuedPromptStartedError } from '../errors/queued-prompt-started.error';
+import type { PromptExtras } from '../services/prompt-context';
 
 /** How much of a queued prompt its row shows — the start of what was typed, never the whole. */
 export const QUEUE_PREVIEW_LENGTH = 120;
@@ -10,7 +11,12 @@ export const REMEMBERED_DEPARTURES = 200;
 /** A prompt waiting for the running turn to end. */
 export interface QueuedPrompt {
   readonly queueId: string;
+
+  /** What Claude receives: the text typed, its mentions guarded, the context composed after it. */
   readonly text: string;
+
+  /** The images and what the log may say of the context — absent for a prompt without any. */
+  readonly extras?: PromptExtras;
 
   /** Who sent it: the kind of client — `web` or `mobile` — since the session is one person's. */
   readonly promptedBy: string;

@@ -263,7 +263,7 @@ confiança.
 
 ### Emenda · 2026-09-26 — skills de usuário e de sistema entram sem ampliar `settingSources`
 
-Decisão do usuário ([11 · D-20](../../plans/11-claude-settings/decisions.md)): as sessões carregam
+Decisão do usuário ([13 · D-20](../../plans/13-claude-settings/decisions.md)): as sessões carregam
 skills do **projeto**, do **usuário** e do **sistema**. `settingSources` **continua** `['project']`:
 a fonte `user` traria junto as regras `allow` e os hooks de `~/.claude/settings.json`, que furam o
 `canUseTool` e a trilha — o mesmo furo medido na D-11 do plano 01.
@@ -276,7 +276,7 @@ do `query()`.
 
 Fica em aberto, e bloqueia ligar as skills de usuário e de sistema: se o shell embutido de uma skill
 (os blocos `!`) passa pelo `canUseTool` e pelo `PreToolUse`. Se não passar, ele é desligado por
-`managedSettings` para essas origens ([11 · D-21](../../plans/11-claude-settings/decisions.md)).
+`managedSettings` para essas origens ([13 · D-21](../../plans/13-claude-settings/decisions.md)).
 
 ---
 
@@ -352,9 +352,9 @@ e [D-06 do plano 04](../../plans/04-transcript-and-resume/decisions.md#d-06--des
 
 > **Numeração.** As ADRs 014 a 019 foram reservadas em 2026-09-26 pelos planos que as abrem, na
 > ordem dos planos: 014 no [06](../../plans/06-workbench/README.md), 015 no
-> [07](../../plans/07-explorer-and-editor/README.md), 016 no [09](../../plans/09-search/README.md),
-> 017 no [10](../../plans/10-integrated-terminal/README.md), 018 no
-> [11](../../plans/11-claude-settings/README.md) e 019 no [12](../../plans/12-audit-explained/README.md).
+> [07](../../plans/07-explorer-and-editor/README.md), 016 no [10](../../plans/11-search/README.md),
+> 017 no [11](../../plans/12-integrated-terminal/README.md), 018 no
+> [12](../../plans/13-claude-settings/README.md) e 019 no [13](../../plans/14-audit-explained/README.md).
 > Por isso a 014 e a 017, cujas decisões já foram tomadas, aparecem aqui antes das outras.
 
 ## ADR-014 — O web vira um workbench, construído em React
@@ -380,8 +380,8 @@ um **cliente do Claude no molde do VS Code**.
   multi-root workspace (várias raízes numa árvore só), que continua fora. O chat nunca é tela nem
   rota própria;
 - **uma tela por assunto**: a navegação global leva a Workbench, Auditoria, Regras, Dispositivos,
-  Uso e custo ([plano 14](../../plans/14-usage-and-cost/README.md)), Logs e diagnóstico,
-  Configuração do Claude ([plano 11](../../plans/11-claude-settings/README.md)) e Configurações do
+  Uso e custo ([plano 16](../../plans/16-usage-and-cost/README.md)), Logs e diagnóstico,
+  Configuração do Claude ([plano 13](../../plans/13-claude-settings/README.md)) e Configurações do
   app — e, pelo menu de gerenciar, Sobre. Cada uma com tela e rota próprias. **Configurações do app
   e configuração do Claude nunca dividem uma tela**;
 - **a paridade com o VS Code é a de arquivos** — abrir, criar, funções de arquivo e editar (decisão
@@ -419,10 +419,10 @@ mesmo motivo tira o **marketplace de extensões**: extensão executa fora da per
 |---|---|
 | explorer, editor e funções de arquivo | [plano 07](../../plans/07-explorer-and-editor/README.md) — o 06 reserva a view e a área |
 | o painel do Claude completo, e o histórico de volta ao web | [plano 08](../../plans/08-claude-panel/README.md) |
-| busca | [plano 09](../../plans/09-search/README.md) |
-| terminal | [plano 10](../../plans/10-integrated-terminal/README.md), sob a [ADR-017](#adr-017--existe-um-terminal-fora-do-modelo-de-permissão-com-travas) |
-| configuração do Claude, uso e custo | planos [11](../../plans/11-claude-settings/README.md) e [14](../../plans/14-usage-and-cost/README.md) — o 06 só reserva a posição |
-| o redesenho da auditoria e das regras; a profundidade de dispositivos e de logs | planos [12](../../plans/12-audit-explained/README.md), [13](../../plans/13-rules-management/README.md), [15](../../plans/15-devices/README.md) e [16](../../plans/16-logs-and-diagnostics/README.md) |
+| busca | [plano 11](../../plans/11-search/README.md) |
+| terminal | [plano 12](../../plans/12-integrated-terminal/README.md), sob a [ADR-017](#adr-017--existe-um-terminal-fora-do-modelo-de-permissão-com-travas) |
+| configuração do Claude, uso e custo | planos [12](../../plans/13-claude-settings/README.md) e [15](../../plans/16-usage-and-cost/README.md) — o 06 só reserva a posição |
+| o redesenho da auditoria e das regras; a profundidade de dispositivos e de logs | planos [13](../../plans/14-audit-explained/README.md), [14](../../plans/15-rules-management/README.md), [16](../../plans/17-devices/README.md) e [17](../../plans/18-logs-and-diagnostics/README.md) |
 | LSP, depuração, git, multi-root, notebooks, colaboração, settings sync, editar a allowlist pela UI, as telas novas no app Flutter | fora do produto ([06 · Não entra](../../plans/06-workbench/README.md#não-entra)) |
 
 **Consequências:** a coluna única deixa de ser o layout do produto a partir de `md`. O detalhe é
@@ -529,7 +529,7 @@ antes do disco.
 
 ## ADR-017 — Existe um terminal, fora do modelo de permissão, com travas
 
-**Status:** aceita · 2026-09-26 · decisão do usuário ([10 · D-01](../../plans/10-integrated-terminal/decisions.md)),
+**Status:** aceita · 2026-09-26 · decisão do usuário ([12 · D-01](../../plans/12-integrated-terminal/decisions.md)),
 que aceitou a exceção abaixo por escrito
 
 **O que esta decisão aceita, sem eufemismo:** o terminal está **fora** do `canUseTool`, da allowlist
@@ -554,7 +554,7 @@ comando** e a propriedade "um humano leu isto antes".
 | trilha de abrir, reanexar e fechar — **nunca as teclas** | senha digitada indo para a trilha |
 | limites, TTL de ociosidade e nenhum shell sem dono | processo esquecido rodando para sempre |
 
-Cada trava tem o seu limite dito no [plano 10](../../plans/10-integrated-terminal/README.md) — a
+Cada trava tem o seu limite dito no [plano 12](../../plans/12-integrated-terminal/README.md) — a
 "só do web" não barra quem tem as credenciais do usuário. Job desacoplado pelo próprio usuário
 (`nohup`, `setsid`) sobrevive ao fechamento, como em qualquer terminal; um PTY não sobrevive ao
 restart do backend.

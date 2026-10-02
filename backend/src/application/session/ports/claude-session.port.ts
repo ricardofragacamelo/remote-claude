@@ -4,6 +4,7 @@ import type {
   InstallationModel,
   McpServer,
   PermissionMode,
+  PromptExtras,
   SessionCloseReason,
   SessionId,
   SlashCommand,
@@ -102,8 +103,12 @@ export interface ClaudeSessionHandle {
    * It does not wait: a prompt that arrives while a turn is running is **queued** and runs next,
    * which is what the SDK already does and what the Claude Code UI does. Refusing it with a
    * conflict was our own policy and it was the wrong one.
+   *
+   * @param text what Claude reads — composed already, mentions guarded (plan 08, B-44)
+   * @param extras the images that go beside it, and what the log may say of its context — never the
+   *   content (S-204)
    */
-  prompt(text: string): void;
+  prompt(text: string, extras?: PromptExtras): void;
 
   interrupt(): Promise<void>;
   setModel(model: string): Promise<void>;

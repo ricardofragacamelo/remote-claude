@@ -10,10 +10,10 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F3 e F4 concluídas (implementadas juntas, a pedido do usuário, com o portão completo só ao fim da F4) — a F5 é a próxima
+**Fase corrente:** F5 concluída — a F6 é a próxima. A troca do `@` para o localizador saiu para o plano 11 (B-25)
 **Última atualização:** 2026-10-02
-**Validação:** `pnpm verify:full` de 2026-10-02 com os onze portões verdes (saída 0; e2e 88/88), depois dos ciclos 11–14
-**Bloqueios:** nenhum — a D-25 foi decidida pelo usuário (as duas formas da lista)
+**Validação:** `pnpm verify:full` de 2026-10-02 com os onze portões verdes (saída 0; e2e 88/88), depois dos ciclos 15–20
+**Bloqueios:** nenhum
 
 ```
 F0 ████████████████████ 100%   ✅ concluída
@@ -21,7 +21,7 @@ F1 ████████████████████ 100%   ✅ concl
 F2 ████████████████████ 100%   ✅ concluída
 F3 ████████████████████ 100%   ✅ concluída
 F4 ████████████████████ 100%   ✅ concluída
-F5 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
+F5 ████████████████████ 100%   ✅ concluída
 F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 ```
 
@@ -38,9 +38,9 @@ F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 | [F2](F2-rendering.md) | B-14…B-24 | 11/11 | ✅ |
 | [F3](F3-diffs.md) | B-25…B-31 | 7/7 | ✅ |
 | [F4](F4-chat-panel.md) | B-32…B-43 | 12/12 | ✅ |
-| [F5](F5-composer-and-context.md) | B-44…B-52 | 0/9 | 🔲 |
+| [F5](F5-composer-and-context.md) | B-44…B-52 | 9/9 | ✅ |
 | [F6](F6-e2e.md) | B-53…B-58 | 0/6 | 🔲 |
-| **Total** | **B-01…B-58** | **43/58** | 🔄 |
+| **Total** | **B-01…B-58** | **52/58** | 🔄 |
 
 ---
 
@@ -48,7 +48,7 @@ F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 272 | 76 | 0 | 196 | 0 |
+| [Matriz](scenarios.md) | 272 | 18 | 0 | 254 | 0 |
 
 ---
 
@@ -84,6 +84,12 @@ Um registro por **ciclo**, conforme o
 | 12 | 2026-10-02 | F3 | cobertura do backend (portão 7 do `verify`) | `node-undo.disk.ts` com 89,18 % dos ramos (os de `read`/`write`, novos da F3) e o `audit-tool-invocation.recorder.ts` com 85,71 % (a memória das tools, nova da F3) | testes de integração do disco para os ramos de leitura e escrita, e unit do recorder; nenhum código mudou; `verify` de novo do portão 1 | verde |
 | 13 | 2026-10-02 | F4 | cobertura do backend (portão 7 do `verify:full`) | `installation-mapping.ts` e `transcript-module-conversation.source.ts` com 85,71 % dos ramos: o mapeamento só era exercido pelo runner, sem modelo sem níveis de esforço, categoria de tipo desconhecido nem servidor de status desconhecido; o `chainOf` de conversa que o store não tem não tinha teste | unit do mapeamento e o `chainOf` vazio; nenhum código mudou; `verify:full` de novo do portão 1 | verde |
 | 14 | 2026-10-02 | F4 | e2e (portão 9) — 04·S-46 | o `send` do e2e procurava o botão `Send` por nome parcial, e o "Editar e enviar de novo" da B-35, novo em cada prompt, também casa; os outros 87 passaram, já com a sessão nascendo do primeiro prompt do rascunho | o nome do botão passou a ser exato em todo o e2e; nenhum código do produto mudou; `verify:full` de novo do portão 1 | verde |
+| 15 | 2026-10-02 | F5 | formatação (portão 1 do `verify`) | `composer.service.spec.ts` fora do estilo — o Prettier precisou de uma segunda passada no arquivo | `prettier --write` de novo; nenhum código mudou; `verify` de novo do portão 1 | verde |
+| 16 | 2026-10-02 | F5 | lint (portão 2) | complexidade acima de 10 no `PromptComposer` (21), no `useCompletions` (18) e no seu `keyDown` (11), no menu do `@` (12), no `sameAs` (13), no `unsendable` (11) e no `itemFrom` do restaurador (11); literal em JSX (`` `@${…}` ``, `` `/${…}` ``); "Cannot create components during render" no ícone do chip; aviso do React Compiler pelo `watch` do RHF; e, na releitura, `react-hooks/immutability` no `ref` da caixa | o composer em peças (`useComposerForm`, `ComposerBox`, `boxKey`, `ariaOf`, `SendRow`); `useCompletions` em `hooks/`, com `menuKey` e `pickIn`; a identidade do item numa função; os leitores do restaurador por tipo; `ChipIcon`; `useWatch`; a caixa entregue por `attach`; o cursor segue o texto sem `requestAnimationFrame` | verde |
+| 17 | 2026-10-02 | F5 | duplicação (portão 5) | quatro clones: `MentionList` × `SlashList`, os imports do `CatalogController` × `LiveSessionsController`, as props do `SessionScreen`, a vista do anexo montada no use case e no controller | `MenuFrame`; o catálogo sem linha de log própria (as duas bordas são do interceptor, e a consulta ao CLI do adapter dele); `ComposedProps`; `AttachmentView` montada uma vez, no use case | verde |
+| 18 | 2026-10-02 | F5 | unit (portão 6) — `test/unit/env-example.spec.mjs` | as variáveis do composer no `.env.example` com um comentário só para o bloco, não um acima de cada | um comentário logo acima de cada variável | verde |
+| 19 | 2026-10-02 | F5 | cobertura (portão 7) — a integração S-30 do plano 04, e cinco arquivos do backend e doze do web abaixo de 90 % | o menu ganhou `builtin`/`origin`/`label`/`shadowed` e o S-30 comparava o objeto exato; ramos inalcançáveis (`?? ''` de grupo de regex, `isUtf8` depois do sniff, um efeito redundante de upload no `useContextSet`, `?? ''` em `queryFn` que só roda com sessão); e casos sem teste. Na medida apareceu um defeito: a sondagem que falha no envio fazia o texto sumir | a expectativa do S-30; os ramos inalcançáveis saíram por desenho (`skipToken`, fatias, o efeito removido); `uploadHeld` no serviço, `asAppError` e `completion-keys` em `lib/`, com unit; integração do arrastar que sai, do arquivo repetido, do socket caído no envio e no primeiro prompt, do upload recusado no rascunho, do catálogo com modelos. O `revalidate` passou a deixar como estava o arquivo que não pôde reler (o backend decide), com log | — |
+| 20 | 2026-10-02 | F5 | e2e (portão 9 do `verify:full`) — 05·S-43; os outros 87 passaram | o `send` do e2e clicava no Send, que no composer novo fica sob a área dos toasts; o toast "conexão perdida" do martelo de frames ficava na tela porque o Sonner pausa o temporizador com o ponteiro em cima — e o Playwright, esperando para clicar, mantinha o ponteiro ali até a sessão ser colhida por ociosidade (20 s na pilha de limites). Reproduzido sozinho; no HEAD, num worktree, o mesmo cenário passa | o `send` envia com Enter na caixa, como a B-46 define, depois de conferir o botão habilitado; nenhum código do produto mudou; S-43 sozinho verde, `verify:full` de novo do portão 1 | — |
 
 ---
 
@@ -93,6 +99,20 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
+| 2026-10-02 | A troca do `@` para o localizador (a B-59 desta fase) saiu para o **plano 11, como B-25 da F2**; a D-12 ganhou essa emenda | pedido do usuário: a task fica no plano que traz a fonte — o `useFileFinder` da B-13 do 11 —, que é quando ela pode ser feita. A F5 fecha com o que entregou (B-44…B-52) | F5, D-12; [11 · B-25](../11-search/F2-search-ui.md#b-25--o--do-composer-do-08-passa-ao-localizador-), S-172…S-174 do 10 |
+| 2026-10-02 | **D-12 no passo provisório**: o `@` completa **por nível** sobre `GET /files/tree` do plano 07 (`@src/co` lista `src` e procura `co` nele, letras em ordem), com os abertos e os recentes do editor primeiro; a troca para o fuzzy do `GET /search/files` é a **B-25 do plano 11** | o plano 11 não começou; a D-12 manda o passo provisório registrado e a troca como task — nunca uma diferença calada. S-226, S-228 e S-229 foram verificados contra a fonte provisória | B-48; [11 · B-25](../11-search/F2-search-ui.md#b-25--o--do-composer-do-08-passa-ao-localizador-) |
+| 2026-10-02 | O `@caminho` do texto livre é neutralizado com um `WORD JOINER` (U+2060) antes de todo `@` que começa palavra; um `@` dentro de palavra (`a@b.com`) fica | lido no binário do CLI 2.1.277: a expansão casa `(^\|\s\|。、？！)@…` — com o caractere invisível antes, o `@` deixa de casar, e o modelo lê o arquivo, se quiser, pelo `Read`. O `smoke-live` da F6 é quem vigia a premissa num CLI novo | B-44, R-10; [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#o-contexto-do-prompt--attachments) |
+| 2026-10-02 | O prompt pode ser **só contexto**: `text` vazio passa quando há `attachments`; nada nas duas é `INVALID_INPUT` | a B-46 diz "vazio **e** sem contexto não envia" — logo contexto sozinho envia; o schema já não tinha `minLength`, só o Zod do backend. A composição põe só as referências, sem a linha em branco | B-44, B-46, S-215; o schema de `session.prompt` (descrição) e o TS/Dart gerados |
+| 2026-10-02 | Os plugins locais do plano 13 se chamam `remote-claude-user` e `remote-claude-system`: uma skill `remote-claude-user:<nome>` é **Usuário**, `remote-claude-system:<nome>` é **Sistema**; qualquer outro plugin entra pelas configurações do projeto e é **Projeto** | o selo sai do prefixo do nome qualificado, e os dois planos precisam concordar nos nomes antes de o 13 existir | B-50, S-242; plano 13 (B-35) |
+| 2026-10-02 | `origin` do menu é `builtin`·`project`·`user`·`system`, com `label` (o nome sem prefixo) e `shadowed`; o `builtin` vence a colisão com um sem marcador **qualquer que seja a ordem**, e nome qualificado nunca é encoberto | os valores que o backend/03 já fixava; a regra é a do `sdk.d.ts` sobre o marcador | B-50, S-243 |
+| 2026-10-02 | O `GET /catalog` abre a consulta efêmera pela **mesma porta** `ClaudeSessionPort.start` de uma sessão (logo `settingSources: ['project']` e `PreToolUse`), com uma vaga do teto reservada enquanto vive, e a fecha; o web só a pede pelo `/` de um rascunho — abrir um rascunho não abre consulta | uma `query()` sem o hook é anti-padrão do AGENTS.md; pedir o catálogo ao abrir o rascunho tomaria uma vaga da máquina a cada aba nova (e disputaria com o e2e de limites). Os tetos do composer (`limits`) vêm no mesmo catálogo | B-50, D-13, S-244, S-245 |
+| 2026-10-02 | O anexo do desktop vive no `AttachmentStore`, em memória: TTL (`RC_ATTACHMENT_TTL_SECONDS`), memória de todos (`RC_ATTACHMENT_MEMORY_BYTES`, o mais antigo sai primeiro) e solto quando a sessão sai do registro (`SessionRegistry.onRemoved`); o tipo é **o dos bytes** (SVG e PDF recusados), e o nome vem num campo `name` do formulário | a D-02 deixa memória ou diretório temporário; memória não deixa resto em disco. Seis variáveis novas no `.env.example`, todas exigidas no boot | B-45, S-208…S-213 |
+| 2026-10-02 | No rascunho, o arquivo do desktop fica **na página** (nunca no store nem na recarga) até a sessão existir; aí sobe, e só então o primeiro prompt sai. Upload recusado nesse momento devolve texto e contexto à aba da sessão, com o item marcado; a recusa do primeiro prompt é vigiada pelo composer da sessão (`handOverFirstPrompt`) | a D-07 não tem sessão no rascunho, e o upload é da sessão (`POST /sessions/:sessionId/attachments`) | B-45, B-49, S-236 |
+| 2026-10-02 | A recarga guarda o conjunto de contexto (caminhos, linhas, upload pelo id que o servidor guarda) — não um `text` de provedor nem um upload ainda na página; a versão do restaurador fica 2 (a forma só cresceu) | S-221; o conteúdo do terminal não é coisa de guardar no navegador | B-47 |
+| 2026-10-02 | O `ws.inbound` troca o `content` de `session.prompt.attachments[]` pelo marcador de redação (`framePayloadForLog`) | achado pelo teste de S-204: o gateway logava o payload inteiro do comando, e com ele a saída do terminal | B-44, S-204; [shared/03-logging](../../architecture/shared/03-logging.md) via `redact.ts` |
+| 2026-10-02 | A caixa de prompt ganhou `id` gerado (`useId`) no lugar do `id="prompt"` fixo | duas caixas na mesma página (dois rascunhos) dividiam o id, e o rótulo apontava só para a primeira | B-46 |
+| 2026-10-02 | O `CodeView` do editor ganhou `selections()` — toda seleção não vazia —, e "Adicionar seleção ao chat" entrega um trecho por cursor | a B-51 pede um chip por trecho no multicursor; o `selection()` só dava a primeira | B-51, S-251; plano 07 (`text-actions`) |
+| 2026-10-02 | O menu de comandos do plano 04 (o botão "Commands") ficou, ao lado do `/` na caixa, com a chave por origem e nome | é o jeito de folhear a lista inteira com o mouse; o `/` é o caminho do teclado | B-50 |
 | 2026-10-02 | Atalhos do painel: `Mod+Alt+N` nova conversa, `Mod+Alt+L` focar o prompt, `Mod+Alt+I` interromper, `Mod+Alt+]`/`Mod+Alt+[` próxima e anterior, `Mod+Alt+G` alterações; abrir e fechar o painel é o `Mod+Alt+B` do workbench (`workbench.toggleSecondarySideBar`). Ficam no `PanelCommands`, ao lado da casca da aba, e não dentro do painel | o navegador guarda `Ctrl+N`/`Ctrl+Tab` (06 · D-16); o `Mod+Alt` não colide com o editor nem com a paleta. Dentro do painel os comandos sumiam com ele fechado — e "focar o prompt" é justamente como um painel fechado abre (S-185) | B-40; [web/03](../../architecture/web/03-ui-system.md) |
 | 2026-10-02 | O `ModelCatalog` (um `InstallationCache` por versão do CLI e workspace) responde o `GET …/models` **e** o `session.start` que traz `effort`: o esforço é recusado só quando o catálogo conhece o modelo e ele não aceita aquele nível; modelo que a lista não nomeia passa, e o CLI decide | a lista é descoberta, não fronteira (como o menu de comandos do plano 04); recusar um modelo por id completo que a lista nomeia só por alias seria recusar o que funciona | B-36, S-167, S-171 |
 | 2026-10-02 | Reenviar a partir do **primeiro** prompt da conversa abre uma conversa nova, sem `resume` — não há o que manter antes dele | o `resumeSessionAt` precisa de uma mensagem para guardar; o fork do começo é uma conversa vazia com o mesmo prompt (S-165) | B-35 |
@@ -129,7 +149,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 | 2026-09-28 | As 23 decisões em aberto respondidas pelo usuário, uma a uma; todas seguem a recomendação | as fases dependiam delas para começar | [decisions.md](decisions.md) D-01…D-24; nenhuma tarefa ou cenário mudou. Provisórios até o spike ou a medida: a sintaxe da referência (D-01), a imagem entrar (D-02), a fila segurada (D-14), o esforço no meio da sessão (D-16), a janela de 120 s (D-06), o encaminhamento de subagent (D-15) e o limiar de 25 % (D-23) |
 | 2026-09-28 | D-11 fechada pela D-11 do plano 06 (sessões das abas inativas continuam anexadas); B-12 reescrita e D-24 aberta, porque o 06 removeu `/sessions/$id` e `/history…` sem deep link (06 · D-07); a B-12 e a B-56 recebem de volta os cenários de e2e de histórico e retomada que o 06 tirou do web | decisões do usuário no plano 06, em 2026-09-28 | [decisions.md](decisions.md) D-11, D-24; B-12, B-56; S-52…S-54, S-266 |
 | 2026-09-26 | O composer e o contexto viraram fase própria (F5), e o e2e passou a F6 (`F5-e2e.md` → `F6-e2e.md`) | pedido explícito do usuário: escolher o contexto do prompt como no plugin do Claude (`@`, arrastar, `/` para comando ou skill, autocomplete) — uma fase é a unidade de validação, e o composer é uma fronteira de segurança | as fases F5 e F6, as tasks B-44…B-58 e os cenários S-197…S-272 |
-| 2026-09-26 | Skills carregam de projeto, usuário e sistema; as de usuário e sistema pelo plugin local do plano 11 | decisão do usuário; mantém o `settingSources: ['project']` do ADR-011 | B-50, S-241…S-243, S-272 |
+| 2026-09-26 | Skills carregam de projeto, usuário e sistema; as de usuário e sistema pelo plugin local do plano 13 | decisão do usuário; mantém o `settingSources: ['project']` do ADR-011 | B-50, S-241…S-243, S-272 |
 | 2026-09-26 | O `@problemas` saiu, e nada aqui depende de inteligência de linguagem, depuração ou git | decisão do usuário: esses planos foram removidos | B-48, "Não entra" |
 
 ---
@@ -140,6 +160,9 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 
 | Data | O que saiu | Por quê | Para onde foi |
 |---|---|---|---|
+| 2026-10-02 | O provedor `@terminal` | o terminal integrado é o plano 12, que não existe; o registro `mentionProviders` está pronto para ele, e a ausência é S-231 | [plano 12](../12-integrated-terminal/README.md) |
+| 2026-10-02 | A parte "skill desligada no plano 13 não aparece" da S-242 | desligar skill é a opção `skills` do `query()`, do plano 13; com ela, o `supportedCommands()` não a lista e o menu não a mostra, sem nada novo aqui | [plano 13](../13-claude-settings/README.md) (B-34) |
+| 2026-10-02 | O anexo **expirado** pelo TTL, na integração | esperar o relógio real é `sleep`, que a DoD proíbe; o TTL é provado no unit do `AttachmentStore` (S-210, S-212), e a integração prova o fechamento da sessão | — |
 | 2026-10-01 | `MultiEdit` das fixtures (S-11) | o CLI 2.1.277 não tem a tool; `Edit` e `Write` cobrem as edições | — |
 
 ---
@@ -154,12 +177,12 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 | R-02 | "Ativa em outro lugar" é heurística | 🔲 aberto | D-06 mede o intervalo real de escrita |
 | R-03 | Subpastas no histórico custam a varredura do store inteiro | 🔲 aberto | D-05 |
 | R-04 | Teto de 10 sessões da instalação esgotado por abas e conversas | 🔲 aberto | D-07, D-09, D-13 |
-| R-05 | A referência lê o disco, não o buffer sujo | 🔲 aberto | aviso no chip (B-51) |
+| R-05 | A referência lê o disco, não o buffer sujo | ✅ mitigado | o chip avisa "não salvo — o Claude lê o que está salvo" (B-51, S-250) |
 | R-06 | A prévia do diff na permissão pode ficar velha | 🔲 aberto | relida ao focar (B-29) |
-| R-07 | Interfaces dos planos 06, 07 e 09 ainda não existem em código | 🔲 aberto | divergência vira decisão registrada |
+| R-07 | Interfaces dos planos 06, 07 e 11 ainda não existem em código | 🔲 aberto | divergência vira decisão registrada |
 | R-08 | Imagem pelo streaming input não medida; frame de 64 KB | 🔲 aberto | D-02 |
 | R-09 | Peso de markdown, realce, ANSI e composer no bundle | 🔲 aberto | medir na B-14 |
-| R-10 | `@caminho` expandido pelo CLI sem `PreToolUse` | 🔲 aberto | **confirmado pelo spike (discovery §10)**: um `@arquivo` no texto do prompt é lido pelo CLI sem `Read` e sem auditoria — isso já vale hoje. A B-44 o neutraliza; até lá, é um buraco conhecido |
+| R-10 | `@caminho` expandido pelo CLI sem `PreToolUse` | ✅ mitigado | **confirmado pelo spike (discovery §10)**; a B-44 o neutraliza com o `WORD JOINER` antes de todo `@` que começa palavra, lido contra o CLI 2.1.277. O `smoke-live` (F6) vigia a premissa num CLI novo |
 | R-11 | Rejeitar trecho escreve no disco com três versões em jogo | 🔲 aberto | D-08 |
 | R-12 | Subagents encaminhados enchem o ring buffer | 🔲 aberto | D-15 |
 

@@ -76,16 +76,25 @@ export async function saveWithEncoding(
 }
 
 /**
- * Hands a file — or a selection of it, with its range — to Claude's context (B-42), and says how it
- * went. Repeating it hands it again: dropping repeats is the target's (S-278).
+ * Hands a file — or the selections of it, each with its range — to Claude's context (B-42), and says
+ * how it went. No selection hands the whole file; several cursors hand one range each (08 · B-51,
+ * S-251), and the set past its ceiling keeps what fits. Repeating it hands it again: dropping
+ * repeats is the target's (S-278).
  */
-export function addFileToClaude(folder: string, path: string, range: TextRange | null): void {
-  const { payload } = filesDragPayload(
-    folder,
-    range === null ? [{ path, kind: 'file' }] : [],
-    range === null ? undefined : { path, range },
-  );
-  const taken = payload !== null && addToClaudeContext(payload);
+export function addFileToClaude(
+  folder: string,
+  path: string,
+  selections: readonly TextRange[],
+): void {
+  const payloads =
+    selections.length === 0
+      ? [filesDragPayload(folder, [{ path, kind: 'file' }]).payload]
+      : selections.map((range) => filesDragPayload(folder, [], { path, range }).payload);
+  let taken = payloads.length > 0;
+
+  for (const payload of payloads) {
+    taken = payload !== null && addToClaudeContext(payload) && taken;
+  }
 
   announce(folder, taken ? 'editor.claude.added' : 'editor.claude.unavailable', { path });
 }

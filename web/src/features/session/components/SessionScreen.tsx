@@ -6,14 +6,19 @@ import { Panel } from '@/shared/components/Panel';
 import { Button } from '@/shared/components/ui/button';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 
+import { useComposerSend } from '../hooks/useComposerSend';
+import type { SessionComposer } from '../hooks/useComposerSend';
 import type { EditAndResend } from '../hooks/useEditAndResend';
 import { useLiveSession } from '../hooks/useLiveSession';
+import { usePanelDraft } from '../hooks/usePanelTabs';
+import { tabKeyOf } from '../store/claude-panel.store';
 import type { LiveSession } from '../hooks/useLiveSession';
 import type { SessionStatus } from '../types/live-session';
 import { EditBanner } from './panel/EditBanner';
 import { QueueList } from './panel/QueueList';
 import { SessionHeader } from './panel/SessionHeader';
 import { CommandMenu } from './CommandMenu';
+import { ContextDropZone } from './composer/ContextDropZone';
 import { Conversation } from './Conversation';
 import { PromptComposer } from './PromptComposer';
 import { SessionControls } from './SessionControls';
@@ -116,6 +121,46 @@ export function SessionScreen({
 
       <HistoryState history={history} onOpenHistory={onOpenHistory} />
 
+      <ComposedConversation
+        session={session}
+        folder={folder}
+        edit={edit}
+        draft={draft}
+        onDraftChange={onDraftChange}
+      />
+    </Panel>
+  );
+}
+
+/** What the conversation and its box are drawn from. */
+interface ComposedProps {
+  readonly session: LiveSession;
+  readonly folder: string;
+  readonly edit: EditAndResend | undefined;
+  readonly draft: string | undefined;
+  readonly onDraftChange: ((text: string) => void) | undefined;
+}
+
+/**
+ * The conversation, the queue and the box — one place to drop into (plan 08, B-49): what is dragged
+ * onto any of it goes into the context of the next prompt.
+ */
+function ComposedConversation({
+  session,
+  folder,
+  edit,
+  draft,
+  onDraftChange,
+}: ComposedProps): React.JSX.Element {
+  const sessionId = session.sessionId ?? '';
+  const key = tabKeyOf('session', sessionId);
+  const composer = useComposerSend(folder, key, sessionId);
+  // What is being written is the tab's, kept by the panel — given back there after a refusal.
+  const written = usePanelDraft(folder, key);
+  const conversationId = session.history.conversationId;
+
+  return (
+    <ContextDropZone folder={folder} context={composer.context}>
       <Conversation
         conversation={session}
         isPartial={session.isPartial}
@@ -132,8 +177,15 @@ export function SessionScreen({
 
       {edit !== undefined && <EditArea edit={edit} />}
 
-      <Composer session={session} edit={edit} draft={draft} onDraftChange={onDraftChange} />
-    </Panel>
+      <Composer
+        session={session}
+        composer={composer}
+        folder={folder}
+        edit={edit}
+        draft={draft ?? written.text}
+        onDraftChange={onDraftChange ?? written.setText}
+      />
+    </ContextDropZone>
   );
 }
 
@@ -196,33 +248,54 @@ function EditArea({ edit }: { readonly edit: EditAndResend }): React.JSX.Element
 /** The states in which a turn is running — what `Esc` interrupts (plan 08, B-40). */
 const RUNNING: ReadonlySet<SessionStatus> = new Set(['thinking', 'running', 'waitingPermission']);
 
-interface ComposerProps {
-  readonly session: LiveSession;
-  readonly edit: EditAndResend | undefined;
-  readonly draft: string | undefined;
-  readonly onDraftChange: ((text: string) => void) | undefined;
+interface ComposerProps extends ComposedProps {
+  readonly composer: SessionComposer;
 }
 
 /**
- * The prompt box of the session: a prompt, or — while one is edited — the edited prompt, sent as a
- * fork. `Esc` in it interrupts the turn running, once (S-183, S-184).
+ * The prompt box of the session: a prompt with its context, or — while one is edited — the edited
+ * prompt, sent as a fork, alone. `Esc` in it interrupts the turn running, once (S-183, S-184).
  */
-function Composer({ session, edit, draft, onDraftChange }: ComposerProps): React.JSX.Element {
+function Composer({
+  session,
+  composer,
+  folder,
+  edit,
+  draft,
+  onDraftChange,
+}: ComposerProps): React.JSX.Element {
   const { t } = useTranslation();
   const escape = useInterruptOnce(session);
   const editing = editingIn(edit);
 
+  if (editing !== null) {
+    return (
+      <PromptComposer
+        key={editing.messageId}
+        disabled={isLocked(session, edit)}
+        onSubmit={editing.send}
+        error={session.promptError}
+        draft={editing.original}
+        onEscape={escape}
+        submitLabel={t('sessions.edit.send')}
+      />
+    );
+  }
+
   return (
     <PromptComposer
-      key={editing?.messageId ?? 'prompt'}
+      key={`prompt-${String(composer.refusals)}`}
       disabled={isLocked(session, edit)}
-      onSubmit={editing?.send ?? session.prompt}
-      error={session.promptError}
-      draft={editing?.original ?? draft}
-      onDraftChange={editing === null ? onDraftChange : undefined}
+      onSubmit={composer.send}
+      error={composer.error ?? session.promptError}
+      draft={draft}
+      onDraftChange={onDraftChange}
       onEscape={escape}
-      submitLabel={editing === null ? undefined : t('sessions.edit.send')}
       menu={menuOf(session)}
+      context={folder === '' ? undefined : composer.context}
+      folder={folder}
+      sessionId={session.sessionId}
+      queued={RUNNING.has(session.status)}
     />
   );
 }

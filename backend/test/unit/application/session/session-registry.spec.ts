@@ -207,3 +207,19 @@ describe('SessionRegistry', () => {
     });
   });
 });
+
+describe('SessionRegistry — what leaves it, plan 08, S-212', () => {
+  it('tells every listener of each session removed', () => {
+    const registry = new SessionRegistry(10, aClock());
+    const removed: string[] = [];
+    registry.onRemoved((id) => {
+      removed.push(id.value);
+    });
+    const session = aSession();
+    registry.add({ session, handle: new RecordingHandle(), conversation: aConversation() });
+
+    registry.remove(session.id);
+
+    expect(removed).toEqual([session.id.value]);
+  });
+});

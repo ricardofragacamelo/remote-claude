@@ -7,6 +7,7 @@ import type {
   InstallationModel,
   McpServer,
   PermissionMode,
+  PromptExtras,
   SessionClient,
   SlashCommand,
 } from '@domain/session';
@@ -78,8 +79,12 @@ export class RecordingHandle implements ClaudeSessionHandle {
   /** When set, `supportedCommands()` rejects with it. */
   commandsFailWith: Error | null = null;
 
-  prompt(text: string): void {
+  /** What went beside each prompt — `undefined` for one without context (plan 08, B-44). */
+  readonly extras: (PromptExtras | undefined)[] = [];
+
+  prompt(text: string, extras?: PromptExtras): void {
     this.prompts.push(text);
+    this.extras.push(extras);
   }
 
   interrupt(): Promise<void> {
@@ -191,5 +196,6 @@ export function aCommand(name: string, overrides: Partial<SlashCommand> = {}): S
     description: overrides.description ?? `the ${name} command`,
     argumentHint: overrides.argumentHint ?? '',
     aliases: overrides.aliases ?? [],
+    ...(overrides.builtin === undefined ? {} : { builtin: overrides.builtin }),
   };
 }

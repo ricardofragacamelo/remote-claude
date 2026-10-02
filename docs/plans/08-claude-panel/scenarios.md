@@ -256,7 +256,7 @@ conteúdo hostil neutralizado na renderização.
 | S-176 | o indicador de MCP mostra cada servidor com o status (conectado, falhou, precisa auth, pendente, desligado) | eq | integração | — | B-38 | ✅ |
 | S-177 | a resposta nunca traz `config` nem `error` cru do servidor | eq | integração | — | B-38 | ✅ |
 | S-178 | sem servidores o indicador some; consulta que falha mostra erro compacto sem bloquear o chat | err | integração | `CLAUDE_UNAVAILABLE` | B-38 | ✅ |
-| S-179 | sem a tela do plano 11, o indicador não oferece link morto | fron | integração | — | B-38 | ✅ |
+| S-179 | sem a tela do plano 13, o indicador não oferece link morto | fron | integração | — | B-38 | ✅ |
 | S-180 | exportar gera o markdown da conversa inteira (todas as páginas), com as tools compactas | eq | integração | — | B-39 | ✅ |
 | S-181 | saídas de tool só entram com a opção ligada, desligada por padrão | est | integração | — | B-39 | ✅ |
 | S-182 | falha ao carregar uma página no meio da exportação não baixa um arquivo pela metade | err | integração | `CLAUDE_UNAVAILABLE` | B-39 | ✅ |
@@ -284,84 +284,84 @@ conteúdo hostil neutralizado na renderização.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-197 | referência de arquivo, de pasta e de trecho dentro da pasta da sessão chega ao Claude no formato da D-01, e o `Read`/`Glob` que ele fizer entra na trilha | eq | integração | — | B-44 | ⬜ |
-| S-198 | com `range`, as linhas; sem `range`, o arquivo | eq | unit | — | B-44 | ⬜ |
-| S-199 | caminho fora do workspace da sessão, ou com `..`, recusa o prompt **inteiro** | err | integração | `WORKSPACE_NOT_ALLOWED` | B-44 | ⬜ |
-| S-200 | symlink que escapa | err | integração | `WORKSPACE_NOT_ALLOWED` | B-44 | ⬜ |
-| S-201 | arquivo inexistente; `kind: 'file'` apontando diretório; arquivo binário que não é imagem | err | integração | `FILE_NOT_FOUND`, `FILE_NOT_TEXT` (do 07), `INVALID_INPUT` | B-44 | ⬜ |
-| S-202 | `range` além do fim do arquivo passa: o Claude lê o que existe | fron | unit | — | B-44 | ⬜ |
-| S-203 | `text` de provedor (`@terminal`) vai como conteúdo delimitado e rotulado pela origem, dentro do teto | eq | unit | — | B-44 | ⬜ |
-| S-204 | o log de `claude.input` leva os caminhos e tamanhos, nunca o conteúdo | eq | integração | — | B-44 | ⬜ |
-| S-205 | prompt com contexto durante um turno entra na fila como qualquer prompt | conc | integração | — | B-44 | ⬜ |
-| S-206 | imagem PNG/JPEG/GIF/WebP dentro do teto chega ao Claude como bloco de imagem | eq | integração | — | B-45 | ⬜ |
-| S-207 | arquivo de texto do desktop dentro do teto vai como conteúdo delimitado com o nome dele, sem tocar a pasta | eq | integração | — | B-45 | ⬜ |
-| S-208 | anexo exatamente no teto passa; um byte acima | fron | integração | `PAYLOAD_TOO_LARGE` | B-45 | ⬜ |
-| S-209 | tipo não aceito (SVG, PDF, binário) | err | integração | `ATTACHMENT_TYPE_UNSUPPORTED` (novo) | B-45 | ⬜ |
-| S-210 | `attachmentId` desconhecido, de outra sessão ou expirado | err | integração | `ATTACHMENT_NOT_FOUND` (novo) | B-45 | ⬜ |
-| S-211 | o anexo nunca vai para o workspace, a trilha ou o log — só tipo, tamanho e hash | eq | integração | — | B-45 | ⬜ |
-| S-212 | o anexo é descartado ao fechar a sessão e no TTL | est | integração | — | B-45 | ⬜ |
-| S-213 | o mesmo upload reenviado (retry) não duplica | idem | integração | — | B-45 | ⬜ |
+| S-197 | referência de arquivo, de pasta e de trecho dentro da pasta da sessão chega ao Claude no formato da D-01, e o `Read`/`Glob` que ele fizer entra na trilha | eq | integração | — | B-44 | ✅ |
+| S-198 | com `range`, as linhas; sem `range`, o arquivo | eq | unit | — | B-44 | ✅ |
+| S-199 | caminho fora do workspace da sessão, ou com `..`, recusa o prompt **inteiro** | err | integração | `WORKSPACE_NOT_ALLOWED` | B-44 | ✅ |
+| S-200 | symlink que escapa | err | integração | `WORKSPACE_NOT_ALLOWED` | B-44 | ✅ |
+| S-201 | arquivo inexistente; `kind: 'file'` apontando diretório; arquivo binário que não é imagem | err | integração | `FILE_NOT_FOUND`, `FILE_NOT_TEXT` (do 07), `INVALID_INPUT` | B-44 | ✅ |
+| S-202 | `range` além do fim do arquivo passa: o Claude lê o que existe | fron | unit | — | B-44 | ✅ |
+| S-203 | `text` de provedor (`@terminal`) vai como conteúdo delimitado e rotulado pela origem, dentro do teto | eq | unit | — | B-44 | ✅ |
+| S-204 | o log de `claude.input` leva os caminhos e tamanhos, nunca o conteúdo | eq | integração | — | B-44 | ✅ |
+| S-205 | prompt com contexto durante um turno entra na fila como qualquer prompt | conc | integração | — | B-44 | ✅ |
+| S-206 | imagem PNG/JPEG/GIF/WebP dentro do teto chega ao Claude como bloco de imagem | eq | integração | — | B-45 | ✅ |
+| S-207 | arquivo de texto do desktop dentro do teto vai como conteúdo delimitado com o nome dele, sem tocar a pasta | eq | integração | — | B-45 | ✅ |
+| S-208 | anexo exatamente no teto passa; um byte acima | fron | integração | `PAYLOAD_TOO_LARGE` | B-45 | ✅ |
+| S-209 | tipo não aceito (SVG, PDF, binário) | err | integração | `ATTACHMENT_TYPE_UNSUPPORTED` (novo) | B-45 | ✅ |
+| S-210 | `attachmentId` desconhecido, de outra sessão ou expirado | err | integração | `ATTACHMENT_NOT_FOUND` (novo) | B-45 | ✅ |
+| S-211 | o anexo nunca vai para o workspace, a trilha ou o log — só tipo, tamanho e hash | eq | integração | — | B-45 | ✅ |
+| S-212 | o anexo é descartado ao fechar a sessão e no TTL | est | integração | — | B-45 | ✅ |
+| S-213 | o mesmo upload reenviado (retry) não duplica | idem | integração | — | B-45 | ✅ |
 
 ## O composer e o conjunto de contexto — B-46, B-47
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-214 | Enter envia, Shift+Enter quebra linha, e Enter durante composição IME não envia | fron | integração | — | B-46 | ⬜ |
-| S-215 | prompt vazio e sem contexto não envia: o botão fica desabilitado com a razão | fron | integração | — | B-46 | ⬜ |
-| S-216 | recusa do prompt por contexto chega traduzida pelo `correlationId`, e o texto e o contexto ficam | err | integração | `WORKSPACE_NOT_ALLOWED` | B-46 | ⬜ |
-| S-217 | enviar com um turno em execução diz que o prompt vai para a fila | est | integração | — | B-46 | ⬜ |
-| S-218 | o contexto aparece em chips acima do composer — arquivo, pasta, trecho com as linhas, imagem, texto enviado, terminal —, cada um removível por clique e por teclado | eq | integração | — | B-47 | ⬜ |
-| S-219 | o conjunto mostra tamanho total e tokens estimados; acima do aviso, avisa sem bloquear; acima do teto duro, não envia e diz por quê | fron | integração | — | B-47 | ⬜ |
-| S-220 | o mesmo arquivo escolhido duas vezes vira um chip; trecho de arquivo que já está inteiro no contexto não duplica | idem | integração | — | B-47 | ⬜ |
-| S-221 | o conjunto persiste no rascunho da conversa, na aba de pasta, até enviar ou limpar — trocar de aba e recarregar o mantêm | est | integração | — | B-47 | ⬜ |
-| S-222 | enviar limpa o conjunto; envio recusado o mantém inteiro | est | integração | — | B-47 | ⬜ |
-| S-223 | arquivo apagado entre escolher e enviar → o chip fica marcado ao revalidar, e o envio é recusado com o caminho | err | integração | `FILE_NOT_FOUND` (do 07) | B-47 | ⬜ |
-| S-224 | arquivo binário escolhido → o chip avisa que o Claude não o lê como texto antes do envio | err | integração | `FILE_NOT_TEXT` (do 07) | B-47 | ⬜ |
-| S-225 | duas conversas da mesma aba têm conjuntos distintos | eq | integração | — | B-47 | ⬜ |
+| S-214 | Enter envia, Shift+Enter quebra linha, e Enter durante composição IME não envia | fron | integração | — | B-46 | ✅ |
+| S-215 | prompt vazio e sem contexto não envia: o botão fica desabilitado com a razão | fron | integração | — | B-46 | ✅ |
+| S-216 | recusa do prompt por contexto chega traduzida pelo `correlationId`, e o texto e o contexto ficam | err | integração | `WORKSPACE_NOT_ALLOWED` | B-46 | ✅ |
+| S-217 | enviar com um turno em execução diz que o prompt vai para a fila | est | integração | — | B-46 | ✅ |
+| S-218 | o contexto aparece em chips acima do composer — arquivo, pasta, trecho com as linhas, imagem, texto enviado, terminal —, cada um removível por clique e por teclado | eq | integração | — | B-47 | ✅ |
+| S-219 | o conjunto mostra tamanho total e tokens estimados; acima do aviso, avisa sem bloquear; acima do teto duro, não envia e diz por quê | fron | integração | — | B-47 | ✅ |
+| S-220 | o mesmo arquivo escolhido duas vezes vira um chip; trecho de arquivo que já está inteiro no contexto não duplica | idem | integração | — | B-47 | ✅ |
+| S-221 | o conjunto persiste no rascunho da conversa, na aba de pasta, até enviar ou limpar — trocar de aba e recarregar o mantêm | est | integração | — | B-47 | ✅ |
+| S-222 | enviar limpa o conjunto; envio recusado o mantém inteiro | est | integração | — | B-47 | ✅ |
+| S-223 | arquivo apagado entre escolher e enviar → o chip fica marcado ao revalidar, e o envio é recusado com o caminho | err | integração | `FILE_NOT_FOUND` (do 07) | B-47 | ✅ |
+| S-224 | arquivo binário escolhido → o chip avisa que o Claude não o lê como texto antes do envio | err | integração | `FILE_NOT_TEXT` (do 07) | B-47 | ✅ |
+| S-225 | duas conversas da mesma aba têm conjuntos distintos | eq | integração | — | B-47 | ✅ |
 
 ## Autocomplete do `@`, arrastar e soltar — B-48, B-49
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-226 | `@` abre o menu: arquivos e pastas por busca fuzzy na pasta, os abertos e recentes primeiro, e as entradas `@seleção` e `@terminal` | eq | integração | — | B-48 | ⬜ |
-| S-227 | teclado: setas navegam, Enter/Tab escolhem, Esc fecha sem apagar o texto — tudo sem mouse | eq | integração | — | B-48 | ⬜ |
-| S-228 | resposta atrasada de uma consulta velha é descartada: a mais nova vence | conc | integração | — | B-48 | ⬜ |
-| S-229 | sem resultado, pasta vazia, resultado acima do teto (`truncated`, "refine a busca") | fron | integração | — | B-48 | ⬜ |
-| S-230 | caminho fora da pasta (`@../x`, absoluto de fora) não é oferecido, e digitado à mão é recusado no envio | err | integração | `WORKSPACE_NOT_ALLOWED` | B-48 | ⬜ |
-| S-231 | provedor ausente (o `@terminal` antes do plano 10, ou com o terminal desligado) não aparece | fron | unit | — | B-48 | ⬜ |
-| S-232 | busca que falha → o menu diz e deixa digitar o caminho, validado no envio | err | integração | `NETWORK_UNREACHABLE` | B-48 | ⬜ |
-| S-233 | arrastar um ou vários arquivos e pastas do explorer para o composer ou para a conversa vira chips | eq | integração | — | B-49 | ⬜ |
-| S-234 | arrastar uma aba do editor vira o chip do arquivo | eq | integração | — | B-49 | ⬜ |
-| S-235 | pasta enorme arrastada vira **um** chip de pasta, sem expandir; mais itens que o teto entram até o teto, com aviso | fron | integração | — | B-49 | ⬜ |
-| S-236 | arrastar do desktop: imagem e texto viram anexo enviado, nada é gravado na pasta; salvar na pasta é ação separada, do plano 07 | est | integração | — | B-49 | ⬜ |
-| S-237 | arquivo do desktop acima do teto ou de tipo não aceito é recusado antes do envio | err | integração | `PAYLOAD_TOO_LARGE`, `ATTACHMENT_TYPE_UNSUPPORTED` (novo) | B-49 | ⬜ |
-| S-238 | soltar durante um turno põe no contexto do rascunho; enviar vai para a fila | conc | integração | — | B-49 | ⬜ |
-| S-239 | soltar arquivo arrastado de outra aba de pasta (outra pasta) → recusado com o motivo | err | integração | `WORKSPACE_NOT_ALLOWED` | B-49 | ⬜ |
-| S-240 | a área de soltar é anunciada, e há alternativa sem arrastar: "adicionar ao contexto" no menu de contexto do explorer e da aba do editor | eq | integração | — | B-49 | ⬜ |
+| S-226 | `@` abre o menu: arquivos e pastas por busca fuzzy na pasta, os abertos e recentes primeiro, e as entradas `@seleção` e `@terminal` | eq | integração | — | B-48 | ✅ |
+| S-227 | teclado: setas navegam, Enter/Tab escolhem, Esc fecha sem apagar o texto — tudo sem mouse | eq | integração | — | B-48 | ✅ |
+| S-228 | resposta atrasada de uma consulta velha é descartada: a mais nova vence | conc | integração | — | B-48 | ✅ |
+| S-229 | sem resultado, pasta vazia, resultado acima do teto (`truncated`, "refine a busca") | fron | integração | — | B-48 | ✅ |
+| S-230 | caminho fora da pasta (`@../x`, absoluto de fora) não é oferecido, e digitado à mão é recusado no envio | err | integração | `WORKSPACE_NOT_ALLOWED` | B-48 | ✅ |
+| S-231 | provedor ausente (o `@terminal` antes do plano 12, ou com o terminal desligado) não aparece | fron | unit | — | B-48 | ✅ |
+| S-232 | busca que falha → o menu diz e deixa digitar o caminho, validado no envio | err | integração | `NETWORK_UNREACHABLE` | B-48 | ✅ |
+| S-233 | arrastar um ou vários arquivos e pastas do explorer para o composer ou para a conversa vira chips | eq | integração | — | B-49 | ✅ |
+| S-234 | arrastar uma aba do editor vira o chip do arquivo | eq | integração | — | B-49 | ✅ |
+| S-235 | pasta enorme arrastada vira **um** chip de pasta, sem expandir; mais itens que o teto entram até o teto, com aviso | fron | integração | — | B-49 | ✅ |
+| S-236 | arrastar do desktop: imagem e texto viram anexo enviado, nada é gravado na pasta; salvar na pasta é ação separada, do plano 07 | est | integração | — | B-49 | ✅ |
+| S-237 | arquivo do desktop acima do teto ou de tipo não aceito é recusado antes do envio | err | integração | `PAYLOAD_TOO_LARGE`, `ATTACHMENT_TYPE_UNSUPPORTED` (novo) | B-49 | ✅ |
+| S-238 | soltar durante um turno põe no contexto do rascunho; enviar vai para a fila | conc | integração | — | B-49 | ✅ |
+| S-239 | soltar arquivo arrastado de outra aba de pasta (outra pasta) → recusado com o motivo | err | integração | `WORKSPACE_NOT_ALLOWED` | B-49 | ✅ |
+| S-240 | a área de soltar é anunciada, e há alternativa sem arrastar: "adicionar ao contexto" no menu de contexto do explorer e da aba do editor | eq | integração | — | B-49 | ✅ |
 
 ## Autocomplete do `/`, comandos e skills — B-50
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-241 | `/` no começo abre o menu com comandos **e skills** da instalação, cada um com selo de origem (Claude Code · Projeto · Usuário · Sistema), nome simples, descrição e dica de argumento | eq | integração | — | B-50 | ⬜ |
-| S-242 | skill de usuário e de sistema (pelo plugin local do plano 11) aparece com o selo certo, e escolhê-la insere o nome qualificado (`plugin:skill`) que o CLI roda; skill desligada no plano 11 não aparece | eq | integração | — | B-50 | ⬜ |
-| S-243 | o mesmo nome em duas origens aparece duas vezes, distinguido pelo selo; entre um `builtin` e um sem marca, `/nome` roda o `builtin` qualquer que seja a ordem, e o sem marca aparece como encoberto — a menos que tenha nome qualificado, que é o que se insere | fron | unit | — | B-50 | ⬜ |
-| S-244 | no rascunho, o menu vem do catálogo por versão do CLI e pasta; sem cache, uma query efêmera o preenche uma vez e fecha | est | integração | — | B-50 | ⬜ |
-| S-245 | duas conversas pedindo o catálogo juntas fazem uma chamada | idem | integração | — | B-50 | ⬜ |
-| S-246 | catálogo indisponível → o composer segue, e `/nome` digitado vai como texto, validado no envio | err | integração | `CLAUDE_UNAVAILABLE` | B-50 | ⬜ |
-| S-247 | o menu filtra enquanto se digita (nome, alias, descrição) e descarta resposta velha | conc | integração | — | B-50 | ⬜ |
-| S-248 | escolher insere `/nome ` com a dica de argumento como placeholder | eq | integração | — | B-50 | ⬜ |
+| S-241 | `/` no começo abre o menu com comandos **e skills** da instalação, cada um com selo de origem (Claude Code · Projeto · Usuário · Sistema), nome simples, descrição e dica de argumento | eq | integração | — | B-50 | ✅ |
+| S-242 | skill de usuário e de sistema (pelo plugin local do plano 13) aparece com o selo certo, e escolhê-la insere o nome qualificado (`plugin:skill`) que o CLI roda; skill desligada no plano 13 não aparece | eq | integração | — | B-50 | ✅ |
+| S-243 | o mesmo nome em duas origens aparece duas vezes, distinguido pelo selo; entre um `builtin` e um sem marca, `/nome` roda o `builtin` qualquer que seja a ordem, e o sem marca aparece como encoberto — a menos que tenha nome qualificado, que é o que se insere | fron | unit | — | B-50 | ✅ |
+| S-244 | no rascunho, o menu vem do catálogo por versão do CLI e pasta; sem cache, uma query efêmera o preenche uma vez e fecha | est | integração | — | B-50 | ✅ |
+| S-245 | duas conversas pedindo o catálogo juntas fazem uma chamada | idem | integração | — | B-50 | ✅ |
+| S-246 | catálogo indisponível → o composer segue, e `/nome` digitado vai como texto, validado no envio | err | integração | `CLAUDE_UNAVAILABLE` | B-50 | ✅ |
+| S-247 | o menu filtra enquanto se digita (nome, alias, descrição) e descarta resposta velha | conc | integração | — | B-50 | ✅ |
+| S-248 | escolher insere `/nome ` com a dica de argumento como placeholder | eq | integração | — | B-50 | ✅ |
 
 ## Do editor para o contexto, e a ajuda do composer — B-51, B-52
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-249 | "Adicionar seleção ao chat" no editor cria o chip do trecho na conversa ativa da mesma aba | eq | integração | — | B-51 | ⬜ |
-| S-250 | aba do editor suja → o chip avisa que o Claude lê o que está salvo | est | integração | — | B-51 | ⬜ |
-| S-251 | seleção vazia adiciona o arquivo inteiro; várias seleções (multicursor) viram um chip por trecho, até o teto | fron | integração | — | B-51 | ⬜ |
-| S-252 | a ajuda do composer explica `@`, `/`, arrastar, o conjunto de contexto, o que o Claude lê e o que vai para a trilha, em en e pt-BR | eq | integração | — | B-52 | ⬜ |
-| S-253 | só pelo teclado: abrir `@` e `/`, escolher, remover chip, enviar e interromper; axe sem violação | eq | integração | — | B-52 | ⬜ |
-| S-254 | literal apresentável no composer e no menu | err | unit | — | B-52 | ⬜ |
+| S-249 | "Adicionar seleção ao chat" no editor cria o chip do trecho na conversa ativa da mesma aba | eq | integração | — | B-51 | ✅ |
+| S-250 | aba do editor suja → o chip avisa que o Claude lê o que está salvo | est | integração | — | B-51 | ✅ |
+| S-251 | seleção vazia adiciona o arquivo inteiro; várias seleções (multicursor) viram um chip por trecho, até o teto | fron | integração | — | B-51 | ✅ |
+| S-252 | a ajuda do composer explica `@`, `/`, arrastar, o conjunto de contexto, o que o Claude lê e o que vai para a trilha, em en e pt-BR | eq | integração | — | B-52 | ✅ |
+| S-253 | só pelo teclado: abrir `@` e `/`, escolher, remover chip, enviar e interromper; axe sem violação | eq | integração | — | B-52 | ✅ |
+| S-254 | literal apresentável no composer e no menu | err | unit | — | B-52 | ✅ |
 
 ## E2E — B-53…B-58
 
@@ -384,7 +384,7 @@ conteúdo hostil neutralizado na renderização.
 | S-269 | `test:e2e:mobile` verde com o contrato novo | eq | e2e | — | B-57 | ⬜ |
 | S-270 | `smoke-live`: menção real gera `Read` auditado; `supportedModels()`, `mcpServerStatus()` e `getContextUsage()` reais respondem | eq | e2e | — | B-58 | ⬜ |
 | S-271 | `smoke-live`: `@caminho` no streaming input **não** é expandido em silêncio pelo CLI — a premissa da D-01 vale na versão atual | est | e2e | — | B-58 | ⬜ |
-| S-272 | `smoke-live`: skills de projeto (e de usuário e sistema, quando o plano 11 existir) aparecem no `supportedCommands()` real com o nome que o menu insere; imagem real chega (se a D-02 a mantiver); thinking e subagent reais têm o formato das fixtures | eq | e2e | — | B-58 | ⬜ |
+| S-272 | `smoke-live`: skills de projeto (e de usuário e sistema, quando o plano 13 existir) aparecem no `supportedCommands()` real com o nome que o menu insere; imagem real chega (se a D-02 a mantiver); thinking e subagent reais têm o formato das fixtures | eq | e2e | — | B-58 | ⬜ |
 
 ---
 

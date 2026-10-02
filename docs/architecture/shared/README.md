@@ -21,8 +21,8 @@ Voltar para o [índice geral](../README.md).
 | 07 | [Layout do repositório](07-repository-layout.md) | Vai criar pasta ou arquivo novo na raiz. Vai configurar tooling, workspace ou CI. |
 | 08 | [Autenticação (OIDC)](08-authentication.md) | Vai mexer em login, token, sessão de usuário, registro de device ou validação de credencial, em qualquer ponta. |
 | 09 | [Qualidade de código](09-code-quality.md) | Vai configurar lint, tipagem, duplicação, segurança estática ou quality gate. Leia antes de suprimir qualquer regra. |
-| 10 | [Definition of Done](10-definition-of-done.md) | **Antes de considerar qualquer tarefa concluída.** Leia no início da tarefa, não no fim. |
-| 11 | [Protocolo de validação](11-validation-protocol.md) | **Ao planejar uma fase/task** (a matriz de cenários é parte do plano) e **ao executar a validação**. O `10` diz o que; o `11` diz como. |
+| 11 | [Definition of Done](10-definition-of-done.md) | **Antes de considerar qualquer tarefa concluída.** Leia no início da tarefa, não no fim. |
+| 12 | [Protocolo de validação](11-validation-protocol.md) | **Ao planejar uma fase/task** (a matriz de cenários é parte do plano) e **ao executar a validação**. O `10` diz o que; o `11` diz como. |
 
 ---
 

@@ -1,11 +1,15 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
 
 import { useShortcut } from '@/features/commands';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { ErrorState } from '@/shared/components/ErrorState';
+import { useContextSet } from '../../hooks/useContextSet';
 import { useDraft } from '../../hooks/useDraft';
+import { unsendable } from '../../lib/context-set';
 import { useKnownModels } from '../../store/known-models.store';
+import { ContextDropZone } from '../composer/ContextDropZone';
 import { PromptComposer } from '../PromptComposer';
 import { EffortPicker, ModelPicker, ModePicker } from './SessionChoices';
 
@@ -27,6 +31,8 @@ export function DraftView({ folder, tabKey }: DraftViewProps): React.JSX.Element
   const known = useStore(useKnownModels, (state) => state.byFolder[folder]) ?? [];
   const chosen = known.find((model) => model.value === draft.choices.model);
   const focus = useShortcut('claude.focusComposer');
+  const context = useContextSet(folder, tabKey, null);
+  const [held, setHeld] = useState(0);
 
   return (
     <div className="flex flex-col gap-3">
@@ -72,14 +78,35 @@ export function DraftView({ folder, tabKey }: DraftViewProps): React.JSX.Element
 
       {draft.error !== null && <ErrorState error={draft.error} />}
 
-      <PromptComposer
-        key={draft.refusals}
-        disabled={draft.isStarting}
-        onSubmit={draft.send}
-        draft={draft.text}
-        onDraftChange={draft.setText}
-        submitLabel={draft.isStarting ? t('sessions.draft.starting') : undefined}
-      />
+      <ContextDropZone folder={folder} context={context}>
+        <PromptComposer
+          key={`${String(draft.refusals)}-${String(held)}`}
+          disabled={draft.isStarting}
+          onSubmit={(text) => {
+            // The files are checked before the session is opened: a file gone since it was chosen
+            // keeps the draft as it is, with its path said (S-223).
+            void context.revalidate().then((items) => {
+              const blocked = unsendable(items, context.totals, true);
+
+              if (blocked?.reason === 'missing') {
+                context.say({ key: 'composer.send.missing', params: { path: blocked.path } });
+                draft.setText(text);
+                setHeld((count) => count + 1);
+                return;
+              }
+
+              draft.send(text);
+            });
+          }}
+          draft={draft.text}
+          onDraftChange={draft.setText}
+          submitLabel={draft.isStarting ? t('sessions.draft.starting') : undefined}
+          context={context}
+          folder={folder}
+          sessionId={null}
+          pendingUploads
+        />
+      </ContextDropZone>
     </div>
   );
 }

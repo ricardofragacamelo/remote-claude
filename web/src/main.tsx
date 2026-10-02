@@ -3,7 +3,11 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider } from '@tanstack/react-router';
 
 import { registerExplorer } from '@/features/explorer';
-import { registerClaudeChanges, registerSessionsView } from '@/features/session';
+import {
+  registerClaudeChanges,
+  registerClaudeContext,
+  registerSessionsView,
+} from '@/features/session';
 import { Providers } from './app/providers';
 import { router } from './app/router';
 import '@/styles/globals.css';
@@ -13,6 +17,7 @@ import '@/styles/globals.css';
 registerExplorer();
 registerSessionsView();
 registerClaudeChanges();
+registerClaudeContext();
 
 const container = document.querySelector('#root');
 

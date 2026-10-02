@@ -95,7 +95,7 @@ No cabeçalho do composer:
   → `INVALID_INPUT` (`session.error.effortUnsupported`).
 
 Os **padrões** (modelo, modo e esforço de uma sessão nova) são do
-[plano 11](../11-claude-settings/README.md); o seletor daqui é o da sessão.
+[plano 13](../13-claude-settings/README.md); o seletor daqui é o da sessão.
 
 ### B-37 — Medidor de contexto e `/compact` ✅
 
@@ -110,7 +110,7 @@ o medidor some com o motivo no tooltip.
 `GET /sessions/:sessionId/mcp-servers` reduz o `mcpServerStatus()` a nome, status (conectado, falhou,
 precisa auth, pendente, desligado) e contagem de tools — **nunca** `config` (pode ter URL com token) nem
 `error` cru. O indicador compacto mostra quantos estão bem e quais não; sem servidores, some. Configurar
-servidor é do [plano 11](../11-claude-settings/README.md): o indicador leva à tela dele quando ela
+servidor é do [plano 13](../13-claude-settings/README.md): o indicador leva à tela dele quando ela
 existir, e até lá não oferece link morto.
 
 ### B-39 — Exportar a conversa ✅

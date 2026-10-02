@@ -13,7 +13,7 @@ import type { AuditEventPageDto, AuditEventsQuery } from './audit-events.dto';
  * resumed, the undos, and from plan 07 the person's writes to their files (B-17).
  *
  * `200` is a page, possibly empty; `400` a query this server cannot run — a malformed cursor or a
- * page size out of bounds (S-122). The redesign of the screen is plan 12's, which absorbs this read
+ * page size out of bounds (S-122). The redesign of the screen is plan 14's, which absorbs this read
  * rather than writing another ([07 · D-13](../../../../../../docs/plans/07-explorer-and-editor/decisions.md#d-13--onde-os-fatos-de-arquivo-aparecem-na-trilha)).
  */
 @Controller('audit-events')

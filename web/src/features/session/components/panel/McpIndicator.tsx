@@ -24,7 +24,7 @@ const STATUS_NAMES: Readonly<Record<McpServer['status'], string>> = {
 /**
  * The MCP servers of the session, compact (plan 08, B-38): how many are fine, which are not. With
  * none it is not there; a list that cannot be read is a short line, never in the way of the chat
- * (S-178). Configuring a server is the settings of plan 11 — until that screen exists there is no
+ * (S-178). Configuring a server is the settings of plan 13 — until that screen exists there is no
  * link to it, rather than a link to nowhere (S-179).
  */
 export function McpIndicator({

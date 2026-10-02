@@ -55,7 +55,7 @@ pontas, tela de diagnóstico, `osv-scanner`, Sonar e o job de e2e mobile no CI
 ### Não entra
 
 - **Empacotar, instalar e expor** o sistema na máquina do usuário —
-  [plano 17](../17-distribution/README.md).
+  [plano 19](../19-distribution/README.md).
 - **Enviar o log do web e do app ao backend.** Saiu em 2026-09-27: o log do cliente fica no
   cliente, e o `traceId` é o que liga os dois lados.
 - **Métrica e painel** (Prometheus, dashboards). Log estruturado já responde às perguntas que

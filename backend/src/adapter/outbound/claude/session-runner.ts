@@ -25,6 +25,7 @@ import type {
   InstallationModel,
   McpServer,
   PermissionMode,
+  PromptExtras,
   SessionCloseReason,
   SlashCommand,
 } from '@domain/session';
@@ -250,22 +251,28 @@ export class SessionRunner implements ClaudeSessionHandle {
       });
   }
 
-  prompt(text: string): void {
+  prompt(text: string, extras?: PromptExtras): void {
+    // What was typed, and never what was composed after it: the context is said by its kinds,
+    // paths, sizes and hashes — the content of a dropped file or of the terminal never reaches the
+    // log (plan 08, S-204, S-211).
+    const typed = extras?.typed ?? text;
+
     this.deps.logger.debug(
       {
         op: 'claude.input',
         layer: 'adapter',
         sessionId: this.start.sessionId.value,
         length: text.length,
-        prompt: text.slice(0, PROMPT_LOG_LIMIT),
-        truncated: text.length > PROMPT_LOG_LIMIT,
+        prompt: typed.slice(0, PROMPT_LOG_LIMIT),
+        truncated: typed.length > PROMPT_LOG_LIMIT,
+        ...(extras === undefined ? {} : { context: extras.context, images: extras.images.length }),
       },
       'prompt queued',
     );
 
     // Queued with the prompt, in the same order, and adopted when the CLI opens the turn.
     this.pendingTraces.push(currentTraceId());
-    this.queue.push(text);
+    this.queue.push(text, extras?.images ?? []);
   }
 
   async interrupt(): Promise<void> {
@@ -718,12 +725,16 @@ function isForkRefusal(message: SDKMessage): boolean {
   );
 }
 
-/** A command as the SDK describes it → ours. An absent list of aliases is an empty one. */
+/**
+ * A command as the SDK describes it → ours. An absent list of aliases is an empty one, and an absent
+ * marker is a command that is not Claude Code's own (plan 08, B-50).
+ */
 function toSlashCommand(command: SdkSlashCommand): SlashCommand {
   return {
     name: command.name,
     description: command.description,
     argumentHint: command.argumentHint,
     aliases: command.aliases ?? [],
+    builtin: command.builtin === true,
   };
 }

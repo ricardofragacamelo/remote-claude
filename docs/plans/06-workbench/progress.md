@@ -119,7 +119,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 | 2026-09-28 | As 14 decisões em aberto fechadas pelo usuário, em perguntas uma a uma; dez seguem a recomendação | as fases dependiam delas para começar | [decisions.md](decisions.md) D-04…D-17 |
 | 2026-09-28 | Rotas `/sessions/$id`, `/history` e `/history/$conversationId` removidas neste plano, sem deep link (D-07, contra a recomendação) | escolha de navegação do usuário, que aceitou o histórico fora do web até o plano 08 | B-05, B-33, B-39, S-06, S-150, S-163; specs `history-and-resume` e `commands-and-undo` migram na B-33; [plano 08](../08-claude-panel/decisions.md) ganhou a D-24 |
 | 2026-09-28 | Histórico de notificações no servidor: 30 dias, teto de 200, "lida" sincronizada (D-17, contra a recomendação) | o usuário quer reencontrá-lo em outro dispositivo | nova B-40 na F1, B-03, B-04, B-26, S-131, S-132, S-167…S-178, S-182 |
-| 2026-09-28 | Aba inativa: sessões e terminais continuam anexados (D-11, híbrido) | resolve a divergência com os planos 08 e 10 | B-20, S-108, S-181; D-11 do plano 08 fechada; nota do plano 10 · B-16 |
+| 2026-09-28 | Aba inativa: sessões e terminais continuam anexados (D-11, híbrido) | resolve a divergência com os planos 08 e 12 | B-20, S-108, S-181; D-11 do plano 08 fechada; nota do plano 13 · B-16 |
 | 2026-09-28 | Recarga da allowlist só por `SIGHUP`; o watch do arquivo foi considerado e descartado (D-15) | manter a regra "recarga explícita" de backend/03 | B-11, S-62, S-179, S-180 |
 | 2026-09-28 | S-03 → B-16, S-05 → B-20 e a metade "removidas" do S-06 → S-150 (D-18, decisão do usuário) | dependem da boas-vindas, das abas no servidor e da remoção das rotas, que são de fases seguintes; remover as rotas já quebraria o e2e que só migra na B-33 | F0, F2, F3, F5, S-03, S-05, S-06, S-150 |
 | 2026-09-28 | O `i18n:check` passa a reprovar `messageKey` que o backend envia e o catálogo do web não traduz (S-01) | a checagem de órfãs lia o backend só como uso; a chave enviada e nunca declarada chegava à tela crua — e havia uma: `session.error.invalidTransition`, agora traduzida | `scripts/lib/i18n.mjs`, `scripts/i18n-check.mjs` |
@@ -174,9 +174,9 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 
 | Data | O que saiu | Por quê | Para onde foi |
 |---|---|---|---|
-| 2026-09-26 | Redesenho da Auditoria e das Regras | têm plano próprio | planos [12](../12-audit-explained/README.md) e [13](../13-rules-management/README.md) |
-| 2026-09-26 | Profundidade de Dispositivos e de Logs e diagnóstico | têm plano próprio | planos [15](../15-devices/README.md) e [16](../16-logs-and-diagnostics/README.md) |
-| 2026-09-26 | Seção "Claude" das Configurações | configuração do Claude é tela própria | plano [11](../11-claude-settings/README.md) |
+| 2026-09-26 | Redesenho da Auditoria e das Regras | têm plano próprio | planos [14](../14-audit-explained/README.md) e [15](../15-rules-management/README.md) |
+| 2026-09-26 | Profundidade de Dispositivos e de Logs e diagnóstico | têm plano próprio | planos [17](../17-devices/README.md) e [18](../18-logs-and-diagnostics/README.md) |
+| 2026-09-26 | Seção "Claude" das Configurações | configuração do Claude é tela própria | plano [13](../13-claude-settings/README.md) |
 | 2026-09-26 | Editor de atalhos, vários temas, zen mode, layout configurável, menu completo, walkthrough | decisão do usuário: paridade é a de arquivos | fora do produto |
 | 2026-09-28 | Ler, continuar e desfazer conversa antiga pelo web (hoje em `/history`), e os cenários de e2e do web que só entravam por lá | decisão do usuário (D-07): as rotas antigas saem sem deep link | plano [08](../08-claude-panel/README.md), view Sessões; o app continua com o histórico |
 | 2026-09-29 | O botão "Histórico" por raiz da home — a única entrada **pela tela** para `/history?workspacePath=` | saiu com o seletor de workspace ([D-22](decisions.md#d-22--o-que-a-home-mostra-entre-a-f2-e-a-b-33)), três fases antes da rota | as rotas continuam respondendo pelo link até a B-33; o histórico volta com o plano [08](../08-claude-panel/README.md) |
@@ -201,7 +201,7 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 | R-05 | Abas inativas consomem memória e anexos | 🔲 aberto | D-11 decidida e feita (árvore desmontada, sessões anexadas — S-181, D-26); falta medir a memória por aba |
 | R-06 | Atalhos que o navegador não entrega | 🔲 aberto | D-16 decidida; falta medir nos três navegadores |
 | R-07 | Deep links de hoje quebrados pela moldura | 🔲 aberto | S-06, S-91, S-163; os de sessão e histórico saem por decisão (D-07) |
-| R-08 | Planos 11–13 e 14–16 dependem dos registros deste | 🔲 aberto | registros documentados na F0 ([web/03 · Os registros](../../architecture/web/03-ui-system.md#os-registros--onde-os-planos-seguintes-encaixam)); testados na F3–F5 |
+| R-08 | Planos 13–15 e 16–18 dependem dos registros deste | 🔲 aberto | registros documentados na F0 ([web/03 · Os registros](../../architecture/web/03-ui-system.md#os-registros--onde-os-planos-seguintes-encaixam)); testados na F3–F5 |
 
 ---
 

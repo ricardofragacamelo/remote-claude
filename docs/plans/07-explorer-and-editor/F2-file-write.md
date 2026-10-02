@@ -42,8 +42,8 @@ Arquivo sensível ([D-15](decisions.md#d-15--arquivos-que-mudam-a-permissão)) �
 `.claude/settings.local.json`, `.mcp.json`, lista pura no domínio — exige `confirmSensitive: true`,
 senão `428` (`reason: sensitiveFile`); o fato na trilha leva `sensitive: true`.
 
-O use case de escrita é **exportado** pelo módulo: o substituir em lote do plano 09 e a edição de
-`CLAUDE.md` do plano 11 escrevem por ele, e herdam `ETag`, trilha e atomicidade.
+O use case de escrita é **exportado** pelo módulo: o substituir em lote do plano 11 e a edição de
+`CLAUDE.md` do plano 13 escrevem por ele, e herdam `ETag`, trilha e atomicidade.
 
 ### B-12 — Criar arquivo e pasta ✅
 
@@ -93,7 +93,7 @@ do registro → `file.failed` apontando o primeiro. Reenvio idempotente (S-66) n
 Pela [D-13](decisions.md#d-13--onde-os-fatos-de-arquivo-aparecem-na-trilha): `GET /audit-events` no
 `AuditQueryModule`, filtrado sempre por quem pergunta, `kind` por prefixo, cursor keyset por `seq`
 descendente — a mesma disciplina de `GET /audit-entries` ([backend/03](../../architecture/backend/03-modules.md#audit)).
-Documentado no `backend/03`. O redesenho da tela é do [plano 12](../12-audit-explained/README.md); se
+Documentado no `backend/03`. O redesenho da tela é do [plano 14](../14-audit-explained/README.md); se
 ele chegar antes, esta task vira consumo do endpoint dele.
 
 ### B-18 — A escrita humana e a sessão viva ✅

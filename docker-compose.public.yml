@@ -1,0 +1,14 @@
+# The identity provider behind the public origin of `pnpm dev:public` — and nothing else.
+#
+# Passed after docker-compose.yml only in public mode (docs/plans/20-dev-public/decisions.md,
+# D-02); `pnpm dev` without it recreates the container without these, and the volume stays.
+#
+# `KC_HOSTNAME` is the whole origin, so the issuer, every endpoint and the login page are the
+# public ones whatever host a request arrives on — the backend compares `iss` byte for byte.
+# `KC_PROXY_HEADERS` makes the provider trust the `X-Forwarded-*` the tunnel sets, which is how
+# it knows the browser is on HTTPS while the web dev server talks to it in clear text (D-08).
+services:
+  keycloak:
+    environment:
+      KC_HOSTNAME: ${RC_PUBLIC_URL:?RC_PUBLIC_URL is set by pnpm dev:public}
+      KC_PROXY_HEADERS: xforwarded

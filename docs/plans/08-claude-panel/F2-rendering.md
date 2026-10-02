@@ -76,7 +76,7 @@ ANSI vira cor por token
 pelos tokens de tema — nunca HTML —, e OSC 8, título de janela e sequência desconhecida são
 descartados. Teto de exibição: acima dele, mostra o fim e "mostrar tudo". Rolagem segue a regra do
 stream: acompanha só quem está no fim. É esta saída que o painel "Saída" do
-[plano 10](../10-integrated-terminal/README.md) reaproveita.
+[plano 12](../12-integrated-terminal/README.md) reaproveita.
 
 ### B-19 — Thinking ✅
 
@@ -138,7 +138,7 @@ Indicador vivo pelo `session.statusChanged` (pensando, executando, esperando per
 card). Ao fim de cada turno, o resumo do `turn.completed`: custo, duração e tokens de entrada, saída e
 cache, formatados pelo idioma; turno interrompido sem `usage` mostra o que há. O custo **da sessão**
 soma os turnos que esta sessão viu, sem contar replay duas vezes, e diz que é desde que a sessão abriu.
-Agregados por dia, pasta e modelo são do [plano 14](../14-usage-and-cost/README.md).
+Agregados por dia, pasta e modelo são do [plano 16](../16-usage-and-cost/README.md).
 
 ### B-24 — Copiar mensagem e buscar na conversa ✅
 

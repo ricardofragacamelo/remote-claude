@@ -1,3 +1,5 @@
+import type { TextRange } from '@/shared/lib/files-drag';
+import { activeGroupOf, activeTabOf } from '../lib/layout';
 import { editorStoreOf } from '../store/editor.store';
 import type { CodeView } from '../types/code-editor';
 
@@ -28,4 +30,18 @@ export function activeView(folder: string): CodeView | null {
 /** Gives the focus back to the editor — a dialog closed (S-268), a command that acts in it ran. */
 export function focusEditor(folder: string): void {
   activeView(folder)?.focus();
+}
+
+/**
+ * What is selected in the active editor of a folder tab — its file and every selection that is not
+ * empty — or `null` with no editor, or nothing selected: the `@selection` of Claude's panel
+ * (plan 08, B-48).
+ */
+export function activeSelections(
+  folder: string,
+): { readonly path: string; readonly ranges: readonly TextRange[] } | null {
+  const tab = activeTabOf(activeGroupOf(editorStoreOf(folder).getState()));
+  const ranges = activeView(folder)?.selections() ?? [];
+
+  return tab?.kind !== 'file' || ranges.length === 0 ? null : { path: tab.path, ranges };
 }

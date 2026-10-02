@@ -37,7 +37,31 @@ describe('fetchCommands — plan 04, B-15', () => {
       argumentHint: '',
       aliases: ['squash'],
       suggested: false,
+      origin: 'project',
+      label: 'compact',
+      shadowed: false,
     });
+  });
+
+  it('reads the origin, the label and the cover of each row — plan 08, S-241, S-243', async () => {
+    vi.spyOn(api, 'get').mockResolvedValue({
+      cliVersion: '2.1.277',
+      commands: [
+        { name: 'review', origin: 'builtin', label: 'review' },
+        { name: 'review', origin: 'project', shadowed: true },
+        { name: 'remote-claude-user:notes', origin: 'user', label: 'notes' },
+        { name: 'odd', origin: 'elsewhere' },
+      ],
+    });
+
+    const menu = await fetchCommands(SESSION);
+
+    expect(menu.commands.map((row) => [row.origin, row.label, row.shadowed])).toEqual([
+      ['builtin', 'review', false],
+      ['project', 'review', true],
+      ['user', 'notes', false],
+      ['project', 'odd', false],
+    ]);
   });
 
   it('shows fewer when the installation offers fewer — no list of ours fills the gap, S-30', async () => {
@@ -72,6 +96,9 @@ describe('fetchCommands — plan 04, B-15', () => {
         argumentHint: '',
         aliases: ['k'],
         suggested: false,
+        origin: 'project',
+        label: 'kept',
+        shadowed: false,
       },
     ]);
   });
@@ -98,6 +125,9 @@ describe('searchCommands', () => {
     argumentHint: '',
     aliases: [],
     suggested: false,
+    origin: 'project',
+    label: name,
+    shadowed: false,
     ...extra,
   });
 

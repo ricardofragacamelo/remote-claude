@@ -6,7 +6,7 @@ import react from '@vitejs/plugin-react';
 import tailwind from '@tailwindcss/vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
-import { browserDefine, browserEnvironment } from './env';
+import { browserDefine, browserEnvironment, devServer } from './env';
 import manifest from './package.json' with { type: 'json' };
 
 // The repository `.env`, if there is one. The startup script exports it already; running
@@ -16,8 +16,8 @@ if (fs.existsSync(dotEnv)) {
   process.loadEnvFile(dotEnv);
 }
 
-/** The port both the dev server and `vite preview` bind, from the one variable that moves it. */
-const port = Number(process.env['RC_WEB_PORT'] ?? 5173);
+/** The dev server, and behind the public origin of `pnpm dev:public` its forwarding too. */
+const server = devServer(process.env);
 
 /**
  * The dev server, the build, and the preview server.
@@ -32,6 +32,6 @@ const port = Number(process.env['RC_WEB_PORT'] ?? 5173);
 export default defineConfig({
   plugins: [react(), tailwind(), tsconfigPaths()],
   define: browserDefine(browserEnvironment(process.env, manifest.version)),
-  server: { port, strictPort: true },
-  preview: { port, strictPort: true },
+  server,
+  preview: { port: server.port, strictPort: true },
 });

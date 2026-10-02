@@ -1037,7 +1037,7 @@ class SessionPromptPayloadAttachmentsItem {
   /// What `POST /sessions/:sessionId/attachments` answered, for an `upload`: an image, or a text file dropped from the desktop. Unknown, expired or of another session is `ATTACHMENT_NOT_FOUND`.
   final String? attachmentId;
 
-  /// The provider that holds the `text` — the integrated terminal of plan 10, when it exists. An enum read as a string, so a provider added later does not break a client already published.
+  /// The provider that holds the `text` — the integrated terminal of plan 12, when it exists. An enum read as a string, so a provider added later does not break a client already published.
   final String? source;
 
   /// How the `text` is introduced to Claude and shown on the chip: "terminal: bash".
@@ -1165,7 +1165,7 @@ class SessionPromptPayload {
 
   final String sessionId;
 
-  /// What the user typed.
+  /// What the user typed. Empty only when `attachments` carries something: the context alone is a prompt, and nothing at all is refused with `INVALID_INPUT` (plan 08, S-215).
   final String text;
 
   /// The context of the prompt, chosen with `@`, a drag or the editor: files, folders, ranges of lines, an uploaded attachment, or text a provider of the client holds (the terminal). A file or a folder is a **reference** — the backend checks it inside the session's folder, all or nothing, and Claude reads it through `Read`, which the trail records; its content never travels here (plan 08, D-01).

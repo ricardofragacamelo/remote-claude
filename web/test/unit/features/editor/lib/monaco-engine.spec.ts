@@ -150,6 +150,10 @@ const monaco = vi.hoisted(() => {
             endColumn: 4,
           };
     }
+    getSelections() {
+      const only = this.getSelection();
+      return only === null ? null : [only, { ...only, isEmpty: () => true }];
+    }
     getScrollTop(): number {
       return this.scroll;
     }
@@ -422,6 +426,8 @@ describe('the view of the Monaco adapter', () => {
     expect(view.selection()).toBeNull();
     if (editor !== undefined) editor.selection = { empty: false };
     expect(view.selection()).toEqual({ startLine: 1, startColumn: 2, endLine: 3, endColumn: 4 });
+    // Every cursor that selects something, and none that only sits somewhere (08 · S-251).
+    expect(view.selections()).toEqual([{ startLine: 1, startColumn: 2, endLine: 3, endColumn: 4 }]);
     expect(view.selectionLength()).toBe(3);
     view.setScrollTop(12);
     expect(view.scrollTop()).toBe(12);
@@ -432,6 +438,7 @@ describe('the view of the Monaco adapter', () => {
     }
     expect(view.position()).toEqual({ line: 1, column: 1 });
     expect(view.selection()).toBeNull();
+    expect(view.selections()).toEqual([]);
     expect(view.selectionLength()).toBe(0);
   });
 

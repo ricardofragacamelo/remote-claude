@@ -6,6 +6,7 @@ import { AUDIT_RETENTION_FLOOR_DAYS } from '@domain/audit';
 import { PERMISSION_MODES } from '@domain/session';
 import type { PermissionMode } from '@domain/session';
 import type { FileLimits, HistoryLimits, TransferLimits, WatchSettings } from '@application/files';
+import type { AttachmentLimits, ComposerLimits } from '@application/session';
 
 /**
  * Every variable the backend reads, with what it is for.
@@ -64,6 +65,12 @@ export const SESSION_IDLE_TTL_FLOOR_MS = 1_000;
  * stops the boot.
  */
 const pidFile = z.union([z.literal('off'), z.string().min(1)]);
+
+/**
+ * The largest an attachment of a prompt may be configured to: what the Messages API takes of one
+ * image. Above it, the model refuses what the backend would have held (plan 08, D-02).
+ */
+export const ATTACHMENT_BYTES_CEILING = 5 * 1024 * 1024;
 
 /** What a `/files` request carries beside a file's contents — the folder, the path, the flags. */
 const REQUEST_ENVELOPE_BYTES = 64 * 1024;
@@ -141,6 +148,12 @@ export const environmentSchema = z.object({
   // How recently a conversation begun elsewhere has to have been written to read as active there
   // (plan 08, D-06): an estimate, measured against how long one tool leaves the transcript unwritten.
   RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS: z.coerce.number().int().min(1).max(86_400),
+  RC_ATTACHMENT_MAX_BYTES: z.coerce.number().int().min(1_024).max(ATTACHMENT_BYTES_CEILING),
+  RC_ATTACHMENT_TTL_SECONDS: z.coerce.number().int().min(1).max(86_400),
+  RC_ATTACHMENT_MEMORY_BYTES: z.coerce.number().int().min(1_024),
+  RC_CONTEXT_WARN_PERCENT: z.coerce.number().int().min(1).max(100),
+  RC_CONTEXT_DRAFT_WINDOW_TOKENS: z.coerce.number().int().min(1_000),
+  RC_CONTEXT_MAX_BYTES: z.coerce.number().int().min(1_024),
 });
 
 /**
@@ -159,6 +172,11 @@ const consistentEnvironment = environmentSchema
   )
   // A floor above the ceiling is a capacity nobody can compute: refused at boot, not resolved in
   // favour of one of the two in silence.
+  // Memory for fewer bytes than one attachment would hold none, and refuse every upload in silence.
+  .refine((env) => env.RC_ATTACHMENT_MAX_BYTES <= env.RC_ATTACHMENT_MEMORY_BYTES, {
+    path: ['RC_ATTACHMENT_MAX_BYTES'],
+    message: 'must not be greater than RC_ATTACHMENT_MEMORY_BYTES',
+  })
   .refine((env) => env.RC_SESSION_MIN_CONCURRENT <= env.RC_SESSION_MAX_CONCURRENT, {
     path: ['RC_SESSION_MIN_CONCURRENT'],
     message: 'must not be greater than RC_SESSION_MAX_CONCURRENT',
@@ -316,6 +334,15 @@ export interface AppConfig {
     readonly activeWindowMs: number;
   };
 
+  /**
+   * What the composer of the panel takes (plan 08, F5): the ceilings of an attachment and of all of
+   * them in memory, how long one is held, and how the set of context warns and refuses (D-02, D-23).
+   */
+  readonly composer: {
+    readonly attachments: AttachmentLimits;
+    readonly context: Omit<ComposerLimits, 'attachmentMaxBytes' | 'attachmentImageTypes'>;
+  };
+
   readonly oidc: {
     readonly issuer: string;
     readonly audience: string;
@@ -419,6 +446,18 @@ export function loadConfig(source: RawEnvironment): AppConfig {
       },
     },
     transcript: { activeWindowMs: env.RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS * 1_000 },
+    composer: {
+      attachments: {
+        maxBytes: env.RC_ATTACHMENT_MAX_BYTES,
+        ttlMs: env.RC_ATTACHMENT_TTL_SECONDS * 1_000,
+        memoryBytes: env.RC_ATTACHMENT_MEMORY_BYTES,
+      },
+      context: {
+        contextWarnFraction: env.RC_CONTEXT_WARN_PERCENT / 100,
+        draftWindowTokens: env.RC_CONTEXT_DRAFT_WINDOW_TOKENS,
+        contextMaxBytes: env.RC_CONTEXT_MAX_BYTES,
+      },
+    },
     oidc: {
       issuer: env.OIDC_ISSUER,
       audience: env.OIDC_AUDIENCE,

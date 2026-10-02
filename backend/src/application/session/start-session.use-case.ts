@@ -398,7 +398,7 @@ export class StartSessionUseCase {
       return;
     }
 
-    live.handle.prompt(next.text);
+    live.handle.prompt(next.text, next.extras);
     this.broadcaster.publish(session.id, {
       type: 'prompt.dequeued',
       payload: { queueId: next.queueId, reason: 'started' },

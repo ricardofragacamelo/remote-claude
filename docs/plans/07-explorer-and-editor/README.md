@@ -15,7 +15,7 @@ pnpm test:e2e:mobile   # o app continua verde com o contrato WS novo
 **Depende de:** [plano 06 — Workbench](../06-workbench/README.md) (a aba de pasta, a URL
 `/workbench?folder=`, o registro de comandos, o menu **Arquivo**, a status bar e as Configurações), e
 por ele do [plano 04](../04-transcript-and-resume/README.md) (o store do desfazer, com o qual a escrita
-humana convive). Não depende dos planos 05 e 17.
+humana convive). Não depende dos planos 05 e 19.
 
 Arquivos irmãos: [matriz de cenários](scenarios.md) · [decisões em aberto](decisions.md) ·
 [progresso](progress.md).
@@ -35,7 +35,7 @@ Três escolhas dão forma ao plano:
 |---|---|
 | **O humano passa a escrever no disco, e isso é arquitetura** (ADR-015, aberta em B-01) | até aqui só o Claude escrevia, sob `canUseTool` e trilha; o ator novo precisa da mesma fronteira (allowlist **e** pasta aberta), da mesma trilha (antes do disco, sem conteúdo) e de uma relação dita com o desfazer do [ADR-013](../../architecture/shared/00-decisions.md#adr-013--o-desfazer-não-usa-rewindfiles-o-store-de-checkpoint-é-nosso) |
 | **Concorrência por conteúdo, não por relógio** — `ETag` sha256 e `If-Match` obrigatório ([D-03](decisions.md#d-03--a-semântica-de-concorrência)) | o Claude reescreve arquivos no mesmo segundo e com o mesmo tamanho; só o hash diz com certeza que o humano está salvando sobre a versão que viu |
-| **O núcleo fecha na F6**, prévias (F7) e histórico (F8) depois | os planos 08 e 09 consomem o núcleo — a aba de diff, a escrita auditada, o arraste para o chat — e não precisam esperar hexadecimal nem Linha do tempo |
+| **O núcleo fecha na F6**, prévias (F7) e histórico (F8) depois | os planos 08 e 11 consomem o núcleo — a aba de diff, a escrita auditada, o arraste para o chat — e não precisam esperar hexadecimal nem Linha do tempo |
 
 E uma que o plano recusa: embutir o editor do VS Code inteiro (openvscode-server/code-server). É a
 mesma decisão da ADR-014 do plano 06 — o terminal e as extensões dele furariam a trilha e a
@@ -66,13 +66,13 @@ permissão —, e o editor aqui é construído no web sobre uma biblioteca
   depurador. **Decisão do usuário de 2026-09-26**: o editor tem realce de sintaxe e nada que execute
   código do projeto.
 - **Git** — decorações na árvore, diff contra o HEAD, commits na Linha do tempo. Decisão do usuário
-  de 2026-09-26: o [plano 09](../09-search/README.md) ficou só com busca.
-- **Quick Open, busca em arquivos e substituir em lote** — [plano 09](../09-search/README.md),
+  de 2026-09-26: o [plano 11](../11-search/README.md) ficou só com busca.
+- **Quick Open, busca em arquivos e substituir em lote** — [plano 11](../11-search/README.md),
   que escreve pela escrita auditada deste plano (B-11).
 - **O chat, o alvo do arraste e os chips de contexto** — [plano 08](../08-claude-panel/README.md); daqui
   sai só a fonte de arraste e o comando "Adicionar ao contexto" (B-42).
-- **Terminal** — [plano 10](../10-integrated-terminal/README.md).
-- **A tela de configuração do Claude** — [plano 11](../11-claude-settings/README.md); este plano dá o
+- **Terminal** — [plano 12](../12-integrated-terminal/README.md).
+- **A tela de configuração do Claude** — [plano 13](../13-claude-settings/README.md); este plano dá o
   editor que ela usa para `CLAUDE.md` e o segundo passo dos arquivos que mudam a permissão
   ([D-15](decisions.md#d-15--arquivos-que-mudam-a-permissão)).
 - **Explorer e editor no app Flutter** — o web é mobile-first e responde no celular; o app só recebe
@@ -182,10 +182,10 @@ docs/architecture/                 ADR-015 · backend/03 · backend/05 · shared
 | # | Assunto | Estado |
 |---|---|---|
 | R-01 | **Perda de trabalho** entre o humano e o Claude no mesmo arquivo | **aberto** — `ETag` forte, `If-Match` obrigatório, save atômico e reenvio idempotente ([D-03](decisions.md#d-03--a-semântica-de-concorrência)); a trava por caminho serializa humano e desfazer no mesmo processo (B-18). Resta uma janela entre a última conferência do hash e o `rename` contra um escritor **externo** (o CLI escreve direto no disco): declarada, e coberta depois pelo watcher (aviso) e pelo desfazer (preserva) |
-| R-02 | **Fuga de caminho** por `..`, symlink ou troca de diretório entre checar e abrir | **aberto** — `FilePath` puro, `realpath` a cada operação, verificação no descritor ([D-05](decisions.md#d-05--symlinks-e-hard-links)); o `rename` é por caminho e tem janela residual; `/proc/self/fd` é Linux-only, e o macOS é gap para o [plano 17](../17-distribution/README.md) |
+| R-02 | **Fuga de caminho** por `..`, symlink ou troca de diretório entre checar e abrir | **aberto** — `FilePath` puro, `realpath` a cada operação, verificação no descritor ([D-05](decisions.md#d-05--symlinks-e-hard-links)); o `rename` é por caminho e tem janela residual; `/proc/self/fd` é Linux-only, e o macOS é gap para o [plano 19](../19-distribution/README.md) |
 | R-03 | O watcher **esgota o inotify** da máquina (e o VS Code do usuário para de ver mudanças) ou **vaza** | **aberto** — medido antes de escolher ([D-08](decisions.md#d-08--a-implementação-do-watcher)): `chokidar`, que não gasta watch nos não assistidos da [D-10](decisions.md#d-10--exclusões-padrão-e-teto-da-árvore) nem em `.git` e diz `ENOSPC` na subida e depois dela; refcount e liberação por toda saída, provados (S-142…S-147; mil ciclos em S-145); erro explícito no limite (S-135). Resta o custo de um watch por arquivo além de um por pasta — 2 805 neste repositório, contra os 709 de um watcher só de pastas |
 | R-04 | O editor é pesado no celular, não roda em jsdom, ou exige CDN | **aberto** — [D-09](decisions.md#d-09--monaco-ou-codemirror-6) decide depois de medir; porta `CodeEditor` com falso para os 90 % por arquivo; modo simplificado abaixo de `md` |
-| R-05 | Contrato WS alterado numa ponta só, ou `seq` de stream que não é sessão | **aberto** — nas três pontas na mesma mudança (B-04, B-05); a regra "por stream" é escrita uma vez e o plano 10 a reusa ([D-07](decisions.md#d-07--o-transporte-da-mudança-e-o-seq-do-stream)) |
+| R-05 | Contrato WS alterado numa ponta só, ou `seq` de stream que não é sessão | **aberto** — nas três pontas na mesma mudança (B-04, B-05); a regra "por stream" é escrita uma vez e o plano 12 a reusa ([D-07](decisions.md#d-07--o-transporte-da-mudança-e-o-seq-do-stream)) |
 | R-06 | **Conteúdo de arquivo vazando** para log, trilha, armazenamento do navegador ou URL | **aberto** — teste de marcador no log (S-61), trilha só com caminho e hash (S-116), nada de rascunho no navegador ([D-14](decisions.md#d-14--rascunho-não-salvo-e-a-recarga)), blob com Bearer ([D-16](decisions.md#d-16--download-sem-token-na-url-e-os-tetos)) |
 | R-07 | Servir conteúdo do usuário vira **script na origem do produto** | **aberto** — `sandbox`, `nosniff`, `attachment` e prévia sem navegar para o conteúdo ([D-18](decisions.md#d-18--servir-conteúdo-do-usuário-para-prévia)) |
 | R-08 | **Apagar sem volta** | **aberto** — contagem e segundo passo até a F8; depois, desfazer pelo histórico local para o que cabe no teto ([D-06](decisions.md#d-06--apagar-definitivo-ou-lixeira)) |

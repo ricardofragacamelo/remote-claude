@@ -25,7 +25,7 @@ duas pela estrutura, não por enfeite:
 As views do workbench (Explorer, Busca, Sessões do Claude) e os painéis do Claude e do terminal
 chegam vazios — **placeholders com estado vazio traduzido** — e são preenchidos pelos planos
 [07](../07-explorer-and-editor/README.md), [08](../08-claude-panel/README.md),
-[09](../09-search/README.md) e [10](../10-integrated-terminal/README.md). A casca
+[11](../11-search/README.md) e [12](../12-integrated-terminal/README.md). A casca
 é o contrato de onde cada um encaixa.
 
 ---
@@ -76,7 +76,7 @@ diagnóstico** · **Configuração do Claude** · **Configurações**
 
 - a navegação é um **registro**: cada entrada declara rota, ícone, rótulo, posição e badge
   opcional. "Uso e custo" e "Configuração do Claude" são entradas que os planos
-  [14](../14-usage-and-cost/README.md) e [11](../11-claude-settings/README.md) registram — este plano
+  [16](../16-usage-and-cost/README.md) e [13](../13-claude-settings/README.md) registram — este plano
   reserva a posição e a rota, e **não** renderiza link sem destino;
 - no rodapé, o menu de **gerenciar** (engrenagem, como no VS Code: paleta de comandos,
   Configurações, Sobre) e o menu de **conta** (quem está logado, sair);
@@ -97,9 +97,9 @@ diagnóstico** · **Configuração do Claude** · **Configurações**
 
 Componente compartilhado em `shared/components/` que toda tela fora do workbench usa — as deste
 plano (Dispositivos, Logs e diagnóstico, Configurações, Sobre) e as dos planos
-[11](../11-claude-settings/README.md), [12](../12-audit-explained/README.md),
-[13](../13-rules-management/README.md), [14](../14-usage-and-cost/README.md),
-[15](../15-devices/README.md) e [16](../16-logs-and-diagnostics/README.md):
+[13](../13-claude-settings/README.md), [14](../14-audit-explained/README.md),
+[15](../15-rules-management/README.md), [16](../16-usage-and-cost/README.md),
+[17](../17-devices/README.md) e [18](../18-logs-and-diagnostics/README.md):
 
 - **cabeçalho**: título, **propósito numa linha** ("o que foi executado na sua máquina sem
   perguntar"), ações da tela à direita;
@@ -158,14 +158,14 @@ e chat do Claude (secondary side bar) aparecem **lado a lado, ao mesmo tempo**; 
 tela nem uma rota própria. Abaixo de `md`, viram views alternáveis dentro da mesma aba (B-22).
 
 - **activity bar** com as views da pasta — **Explorer**, **Busca** e **Sessões do Claude** —, cada
-  uma registrada por quem a preenche (planos 07, 09 e 08) com posição, ícone e badge; clicar na view
+  uma registrada por quem a preenche (planos 07, 11 e 08) com posição, ícone e badge; clicar na view
   ativa recolhe a side bar;
 - **side bar**, **área de editor** (placeholder até o [plano 07](../07-explorer-and-editor/README.md)),
   **secondary side bar** do Claude (o painel completo é do [plano 08](../08-claude-panel/README.md);
   até lá, ela hospeda os componentes de sessão de hoje — `SessionStarter`, conversa, cards de tool,
   `PromptComposer` — presos à pasta da aba, para que nada regrida e o chat já more ao lado do
   editor), **painel
-  inferior** com abas registráveis (preenchido no 08 e no [10](../10-integrated-terminal/README.md));
+  inferior** com abas registráveis (preenchido no 08 e no [12](../12-integrated-terminal/README.md));
 - **redimensionável** (`resizable`), com mínimos e máximos; tamanhos por visitante em
   `localStorage` — conveniência, com `try/catch`, e o default quando não há; alternar side bar e
   painel pela paleta e por atalho;

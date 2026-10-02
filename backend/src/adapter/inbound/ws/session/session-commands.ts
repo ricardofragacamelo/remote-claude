@@ -76,11 +76,18 @@ export const sessionSchemas = {
       path: ['resumeSessionId'],
       message: 'forkAt needs resumeSessionId',
     }),
-  prompt: z.object({
-    sessionId: z.string().min(1),
-    text: z.string().min(1),
-    attachments: z.array(attachment).max(PROMPT_LIMITS.attachments.maxItems).optional(),
-  }),
+  prompt: z
+    .object({
+      sessionId: z.string().min(1),
+      text: z.string(),
+      attachments: z.array(attachment).max(PROMPT_LIMITS.attachments.maxItems).optional(),
+    })
+    // A turn says something or points at something: the context alone is a prompt — "these files"
+    // — and nothing at all is not (plan 08, S-215).
+    .refine((prompt) => prompt.text.trim() !== '' || (prompt.attachments?.length ?? 0) > 0, {
+      path: ['text'],
+      message: 'a prompt needs text or context',
+    }),
   model: z.object({ sessionId: z.string().min(1), model: z.string().min(1) }),
   mode: z.object({ sessionId: z.string().min(1), mode: z.enum(PERMISSION_MODES) }),
   locale: z.object({ locale: z.enum(['en', 'pt-BR']) }),

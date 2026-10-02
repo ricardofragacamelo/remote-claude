@@ -128,7 +128,7 @@ export function useCodeView({
       id: 'addSelectionToClaude',
       label: t('editor.claude.addSelection'),
       run: () => {
-        addFileToClaude(folder, path, view.selection());
+        addFileToClaude(folder, path, view.selections());
       },
     });
   }, [view, targets, folder, path, t]);

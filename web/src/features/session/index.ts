@@ -2,6 +2,7 @@
 export { ConversationReader } from './components/ConversationReader';
 export { registerSessionsView, SESSIONS_VIEW } from './components/sessions/registration';
 export { registerClaudeChanges } from './register-changes';
+export { registerClaudeContext } from './register-context';
 export { ChangesView } from './components/changes/ChangesView';
 export { ClaudePanel } from './components/panel/ClaudePanel';
 export { PanelCommands } from './components/panel/PanelCommands';

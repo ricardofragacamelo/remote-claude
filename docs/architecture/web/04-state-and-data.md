@@ -294,7 +294,7 @@ servidor, a URL só pede. O par `readWorkbenchSearch`/`workbenchLocation` ganha 
 (abas abertas, grupos) vem da restauração da aba, nunca da URL.
 
 **Pontos de extensão que outros planos consomem:** a **aba de diff** (o 08 abre nela as alterações
-do Claude; o 09, a prévia do substituir); o comando **"Adicionar ao contexto do Claude"** e o tipo do
+do Claude; o 11, a prévia do substituir); o comando **"Adicionar ao contexto do Claude"** e o tipo do
 arraste (`application/x-remote-claude-files+json`, com `scopeDragPayload` em `shared/` —
 [07 · D-20](../../plans/07-explorer-and-editor/decisions.md#d-20--o-que-se-arrasta-para-o-claude)), que
 só aparecem com um consumidor registrado; e as **ações de arquivo** no menu **Arquivo** e na command
@@ -342,7 +342,7 @@ mapa; as fases dele o constroem, e o router o testa.
 | `/diagnostics` | Logs e diagnóstico |
 | `/settings/$section` | Configurações do app, uma seção por vez; `/settings` sozinho e seção desconhecida caem na primeira, com o endereço substituído |
 | `/about` | Sobre |
-| `/claude…`, `/usage…` | **reservadas** aos planos [11](../../plans/11-claude-settings/README.md) e [14](../../plans/14-usage-and-cost/README.md): ninguém as registra ainda, e caem no "não encontrado" |
+| `/claude…`, `/usage…` | **reservadas** aos planos [12](../../plans/13-claude-settings/README.md) e [15](../../plans/16-usage-and-cost/README.md): ninguém as registra ainda, e caem no "não encontrado" |
 | `/sessions/$sessionId`, `/history`, `/history/$conversationId` | **removidas** ([B-33](../../plans/06-workbench/F5-screens.md#b-33--a-home-desmontada-e-as-rotas-antigas-)), sem deep link de compatibilidade: caem no "não encontrado". A sessão viva mora na secondary side bar da aba, e o histórico volta com o plano 08 |
 | o callback do login (`CALLBACK_PATH`) | não muda — voltar ao link pedido depois do login vale para todas |
 

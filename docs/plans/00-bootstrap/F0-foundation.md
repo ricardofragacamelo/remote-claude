@@ -28,7 +28,7 @@ Dependência de runtime na raiz é erro: some da árvore do workspace que de fat
 ### B-02 — TypeScript base ✅
 
 `tsconfig.base.json` com o strict de
-[09](../../architecture/shared/09-code-quality.md#tipagem-estrita--não-negociável), incluindo
+[10](../../architecture/shared/09-code-quality.md#tipagem-estrita--não-negociável), incluindo
 `noUncheckedIndexedAccess` e `exactOptionalPropertyTypes`. Path aliases de
 [backend/02](../../architecture/backend/02-folder-structure.md#path-aliases) e
 [web/02](../../architecture/web/02-folder-structure.md#path-aliases).

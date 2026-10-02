@@ -185,7 +185,7 @@ const TRANSFER_PROVIDERS = [
  * internal bus (docs/architecture/backend/03-modules.md#files). The lock it writes under is the
  * platform's, the same instance the undo of a session takes.
  *
- * It exports the save, and the watched folders: plan 09's replace-in-files and plan 11's `CLAUDE.md`
+ * It exports the save, and the watched folders: plan 11's replace-in-files and plan 13's `CLAUDE.md`
  * write through the first, and inherit the `ETag`, the trail and the atomicity; the gateway hands
  * `workspace.watch` to the second, and the shutdown closes its watchers (plan 07, B-21).
  */

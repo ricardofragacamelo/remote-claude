@@ -96,7 +96,7 @@ Placeholders com motivo e ação: binário → "abrir em hexadecimal" (F7); acim
 ([D-04](decisions.md#d-04--teto-de-tamanho-e-encoding)), o **modo leve** — sem minimap, sem folding,
 sem realce pesado — e a aba diz isso. A **aba de diff** somente leitura (o diff do editor), usada pelo
 conflito, por "comparar selecionados", por "comparar com o salvo" (buffer × disco), e depois pelos
-planos 08 (alterações do Claude) e 10 (prévia do substituir).
+planos 08 (alterações do Claude) e 11 (prévia do substituir).
 
 ### B-39 — Preferências do editor ✅
 

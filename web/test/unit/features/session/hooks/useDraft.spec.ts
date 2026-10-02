@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useDraft } from '@/features/session/hooks/useDraft';
 import {
@@ -109,7 +109,7 @@ describe('a draft of the panel — plan 08, B-33', () => {
     expect(hook.result.current.text).toBe('');
   });
 
-  it('opens the session it asked for and sends the prompt there', () => {
+  it('opens the session it asked for and sends the prompt there', async () => {
     const { key, hook } = aDraft();
     live.connect();
 
@@ -131,8 +131,11 @@ describe('a draft of the panel — plan 08, B-33', () => {
     });
 
     expect(starts()[0]).toMatchObject({ payload: { permissionMode: 'acceptEdits' } });
-    expect(live.lastSent('session.prompt')).toMatchObject({
-      payload: { sessionId: SESSION, text: 'go' },
+    // The prompt waits for the attachments the draft held — none here — and then leaves.
+    await waitFor(() => {
+      expect(live.lastSent('session.prompt')).toMatchObject({
+        payload: { sessionId: SESSION, text: 'go' },
+      });
     });
     expect(
       claudePanelStore(FOLDER)

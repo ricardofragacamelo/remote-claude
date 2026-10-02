@@ -111,6 +111,20 @@ export { SESSION_FILE_EVENTS } from './ports/session-file-events.port';
 export type { ToolInvocation, ToolInvocationRecorder } from './ports/tool-invocation.port';
 export { TOOL_INVOCATION_RECORDER } from './ports/tool-invocation.port';
 export type { WorkspaceResolver } from './ports/workspace-resolver.port';
+export type { InspectedReference, ReferenceInspector } from './ports/prompt-reference.port';
+export { REFERENCE_INSPECTOR } from './ports/prompt-reference.port';
+export { PromptContextResolver } from './prompt-context';
+export type { OutgoingPrompt, PromptAttachment } from './prompt-context';
+export { AttachmentStore, UploadAttachmentUseCase } from './prompt-attachments';
+export { ReadCatalogUseCase } from './catalog.use-case';
+export type { CatalogProbing, ComposerLimits, InstallationCatalog } from './catalog.use-case';
+export type {
+  AttachmentLimits,
+  AttachmentUpload,
+  AttachmentView,
+  HeldAttachment,
+  UploadedAttachment,
+} from './prompt-attachments';
 export { WORKSPACE_RESOLVER } from './ports/workspace-resolver.port';
 export type { SessionOrigin, SessionOriginRepository } from './ports/session-origin.repository';
 export {

@@ -25,6 +25,17 @@ export function useActiveFile(folder: string): string | null {
   return useEditorState(folder, activeFileOf);
 }
 
+/**
+ * Whether the buffer of a file has changes the disk does not — what a chip of Claude's context warns
+ * of: Claude reads what is saved, not what is on screen (plan 08, S-250).
+ */
+export function useFileDirty(folder: string, path: string): boolean {
+  return useEditorState(folder, (state) => {
+    const doc = state.docs[path];
+    return doc !== undefined && isDirty(doc);
+  });
+}
+
 /** The open file the active tab of the group with the focus shows, as React state. */
 export function useActiveDocument(folder: string): FileDocument | undefined {
   return useEditorState(folder, (state) => {

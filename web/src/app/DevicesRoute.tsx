@@ -8,7 +8,7 @@ import { useFramedScreen } from './screen-shortcuts';
  *
  * A screen of its own, and **not** a section of Settings: approving a phone is a security decision,
  * and it lives beside the audit trail and the rules (plan 06, B-29). The list is today's; the last
- * access, the test push and the history of a device are plan 15's.
+ * access, the test push and the history of a device are plan 17's.
  */
 export function DevicesRoute(): React.JSX.Element {
   return (

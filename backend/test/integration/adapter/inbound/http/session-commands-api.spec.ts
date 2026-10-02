@@ -185,7 +185,11 @@ describe('the slash commands of a session', () => {
           description: 'The only one',
           argumentHint: '',
           aliases: [],
+          builtin: false,
           suggested: false,
+          origin: 'project',
+          label: 'zeta',
+          shadowed: false,
         },
       ],
     });

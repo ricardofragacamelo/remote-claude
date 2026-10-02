@@ -30,7 +30,7 @@ const ACTS: Readonly<Record<FileAct, string>> = {
 /**
  * "Files" — what the person did to the files of their open folders, from the web: the act, the path,
  * who and when. Never what a file holds: the trail does not keep it (S-196). A minimal section until
- * plan 12 joins it to one timeline (07 · D-13); its failure is said here, and the trail above carries
+ * plan 14 joins it to one timeline (07 · D-13); its failure is said here, and the trail above carries
  * on (S-197).
  */
 export function FileFacts(): React.JSX.Element {

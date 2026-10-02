@@ -23,7 +23,7 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-01 | Construir o workbench em React ou embutir o VS Code (openvscode-server / code-server) | se o VS Code embutido pode ter terminal, tarefas e extensões desligados de forma que não se religuem, e quanto o `iframe` custa em integração com a nossa autenticação | B-01 | 2026-09-26 · **construir em React**, decisão do usuário — o VS Code embutido traria terminal e extensões fora da aprovação e da trilha; a ADR-014 (B-01) registra | ✅ |
-| D-02 | A ordem dos planos 06–16 em relação ao que falta do 05 e ao 17 | se algum endpoint novo precisa dos limites HTTP do 05 antes de existir | B-01 | 2026-09-26 · **terminar o plano 05 antes**, decisão do usuário (contra a recomendação): os planos 06–16 começam depois que o 05 fechar; o 17 não é pré-requisito deles | ✅ |
+| D-02 | A ordem dos planos 06–18 em relação ao que falta do 05 e ao 19 | se algum endpoint novo precisa dos limites HTTP do 05 antes de existir | B-01 | 2026-09-26 · **terminar o plano 05 antes**, decisão do usuário (contra a recomendação): os planos 06–18 começam depois que o 05 fechar; o 18 não é pré-requisito deles | ✅ |
 | D-06 | A URL do workbench: pasta na search ou no path | como o TanStack Router trata caminho absoluto com `/` num parâmetro de path, e o que acontece com `#` e `%` | B-05 | 2026-09-28 · **pasta na search** (`/workbench?folder=`, e `&file=` do plano 07 ao lado), decisão do usuário; o gap do splat deixa de importar — o S-04 prova a ida e volta com `#`, `%`, `?` e `&` | ✅ |
 | D-07 | O destino da home (`/`) e das rotas antigas (`/sessions/$id`, `/history…`) | nenhum — é escolha de navegação | B-05, B-33 | 2026-09-28 · **`/` abre a aba ativa ou a boas-vindas; `/sessions/$sessionId`, `/history` e `/history/$conversationId` são removidas neste plano**, sem deep link de compatibilidade — decisão do usuário, contra a recomendação, sabendo que o histórico, a retomada e o desfazer de conversa antiga saem do web até o [plano 08](../08-claude-panel/README.md) (o app continua com o histórico). Os specs de e2e que entravam por elas migram para o workbench na B-33 | ✅ |
 | D-18 | Os cenários de rota da F0 que dependem de produto de fases seguintes (S-03, S-05 e a metade "removidas" do S-06) | se remover `/sessions` e `/history` já na F0 quebra o e2e que entra por elas (sim: `history-and-resume` e `commands-and-undo`, que só migram na B-33) | B-05 | 2026-09-28 · **parte na F0, resto move**, decisão do usuário, a recomendada: a F0 fixa o mapa e entrega o que não depende de produto — o par que lê e escreve `?folder=` (S-04), o "não encontrado" traduzido para rota reservada (S-07) e as rotas que ficam (S-06); o S-03 vai para a B-16, o S-05 para a B-20, e as removidas para o S-150 da B-33 | ✅ |
@@ -47,22 +47,22 @@ do usuário, e extensões se instalam por ele.
 humano dizer sim" continua verdade na tela inteira. Registrar na ADR-014 com a alternativa descartada
 e o motivo.
 
-### D-02 — A ordem em relação aos planos 05 e 17
+### D-02 — A ordem em relação aos planos 05 e 19
 
 O plano 05 está em andamento: F0 quase fechada, F1 concluída, **F2 bloqueada** pelo R-01 dele (qual
 provedor OIDC real), F3 e F4 não iniciadas. O 06 empacota o produto.
 
 | Opção | Efeito |
 |---|---|
-| 06–16 esperam o 05 e o 17 | o usuário continua com a interface que chamou de "muito pobre" enquanto um bloqueio de terceiro decide o calendário |
-| **06–16 não dependem do que falta do 05 nem do 17** | o 05 termina em paralelo e endurece a superfície **final** (rate limit HTTP, TTL, limites) em vez de uma que vai mudar; o 17 empacota o produto que existe |
+| 06–18 esperam o 05 e o 19 | o usuário continua com a interface que chamou de "muito pobre" enquanto um bloqueio de terceiro decide o calendário |
+| **06–18 não dependem do que falta do 05 nem do 19** | o 05 termina em paralelo e endurece a superfície **final** (rate limit HTTP, TTL, limites) em vez de uma que vai mudar; o 18 empacota o produto que existe |
 
-**Recomendação:** nenhum dos planos 06–16 depende do que falta do 05 ou do 17. Os endpoints novos
+**Recomendação:** nenhum dos planos 06–18 depende do que falta do 05 ou do 19. Os endpoints novos
 entram sob "os limites do plano 05" quando ele os estender ao HTTP — citado nas tasks, não esperado.
 O teto de entradas da listagem ([D-05](#d-05--teto-de-entradas-por-listagem)) já limita o custo por
 pedido sem depender de rate limit.
 
-**Decidido em 2026-09-26, contra a recomendação:** os planos 06–16 esperam o 05 fechar; o 17 não é
+**Decidido em 2026-09-26, contra a recomendação:** os planos 06–18 esperam o 05 fechar; o 19 não é
 pré-requisito deles.
 
 ### D-06 — A URL do workbench
@@ -347,7 +347,7 @@ rolar.
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-08 | O workbench em tela pequena | nenhum técnico; é a forma no celular | B-01, B-22 | 2026-09-28 · **uma view por vez** abaixo de `md`, decisão do usuário: Explorer, Editor, Claude e Painel na mesma aba de pasta, barra de views embaixo, seletor de abas no topo, um store para os dois layouts | ✅ |
-| D-11 | O que uma aba inativa mantém vivo, e o teto de abas | memória de uma aba montada no navegador; o limite `attachedSessions` por connection do [plano 05](../05-hardening-operations/F0-limits.md) — **medir** | B-20 | 2026-09-28 · **híbrido**, decisão do usuário, que resolve a divergência com os planos 08 e 10: store em memória, árvore desmontada, watcher liberado, e **sessões e terminais continuam anexados**; teto de **8** abas, ajustável pela medição. A [D-11 do plano 08](../08-claude-panel/decisions.md#d-11--o-que-a-aba-inativa-mantém) fecha junto | ✅ |
+| D-11 | O que uma aba inativa mantém vivo, e o teto de abas | memória de uma aba montada no navegador; o limite `attachedSessions` por connection do [plano 05](../05-hardening-operations/F0-limits.md) — **medir** | B-20 | 2026-09-28 · **híbrido**, decisão do usuário, que resolve a divergência com os planos 08 e 12: store em memória, árvore desmontada, watcher liberado, e **sessões e terminais continuam anexados**; teto de **8** abas, ajustável pela medição. A [D-11 do plano 08](../08-claude-panel/decisions.md#d-11--o-que-a-aba-inativa-mantém) fecha junto | ✅ |
 | D-25 | Quando `/` passa a levar à aba ativa (S-05) | descoberto ao começar a F3: a home ainda carrega o ping e os Dispositivos até a B-33, e o redirecionamento os esconderia de quem tem abas abertas — a aprovação de um celular novo inclusive | B-20, B-33 | 2026-09-30 · **S-05 adiado para a B-33**, decisão do usuário, a recomendada: `/` continua a boas-vindas até a home ser desmontada; na F3 a entrada **Workbench** da navegação já leva à aba ativa quando há abas | ✅ |
 | D-26 | Como a sessão de uma aba inativa continua anexada (S-181) | descoberto na execução: o store da conversa e a fila de permissão eram **um só** para "a sessão na tela", e o anexo era da tela — desmontar a aba desanexava, e duas sessões anexadas se misturariam | B-20 | 2026-09-30 · **um store por sessão e anexos com dono**: `liveSessionStoreOf`/`permissionQueueOf` e `sessionAttachments` contando donos; a aba e a tela seguram, voltar não manda nada no fio — tomada pelo agente na execução | ✅ |
 | D-27 | O que a F3 deixa para a F4 e a F5 | descoberto na execução: o sino da status bar (S-114) é da B-26, os atalhos de alternar side bar e painel e o da ajuda são do registro da B-23, e os primitivos `command`, `menubar`, `sonner` e `select` da B-17 não têm quem os use na F3 | B-17, B-19, B-21 | 2026-09-30 · **cada um nasce com quem o usa**: sino na B-26, atalhos na B-23 (na F3, botões com tooltip), `command`/`menubar`/`sonner` na F4 e `select` na F5; `scroll-area` não foi preciso — tomada pelo agente na execução | ✅ |
@@ -436,7 +436,7 @@ mensagem diz que fechar uma aba não encerra as sessões dela.
 **Divergência com dois planos, a resolver ao decidir esta D:** a
 [D-11 do plano 08](../08-claude-panel/decisions.md) recomenda que a aba inativa **mantenha as sessões
 anexadas** (10 sessões cabem em `maxAttachedSessions` = 16), para a permissão e o stream chegarem sem
-reanexar; e o [plano 10](../10-integrated-terminal/README.md) exige que o **terminal** de uma aba
+reanexar; e o [plano 12](../12-integrated-terminal/README.md) exige que o **terminal** de uma aba
 inativa continue anexado, porque a carência de desconexão o mataria. As duas contradizem a linha
 "stream de sessão — desanexa" da tabela acima. Quem decidir esta D decide as três juntas e atualiza
 os dois planos na mesma mudança.
@@ -448,12 +448,12 @@ os dois planos na mesma mudança.
 | store da aba (estado de UI) | **mantido** em memória (S-100) |
 | árvore de componentes | **desmontada** |
 | sessões vivas da pasta | **continuam anexadas** — o pedido de permissão e o stream chegam sem reanexar; as dez sessões que a instalação comporta cabem nos 16 de `maxAttachedSessions` (S-181) |
-| terminais (plano 10) | **continuam anexados** — suspender deixaria a carência matar o shell |
+| terminais (plano 12) | **continuam anexados** — suspender deixaria a carência matar o shell |
 | watcher de arquivos (plano 07) | **liberado**; ao reativar, a árvore recarrega |
 | polling de listas (plano 08) | **parado**; ao reativar, recarrega uma vez |
 
 Teto de **8** abas, ajustável pela medição do gap. A D-11 do plano 08 fecha com este resultado, e o
-plano 10 deixa de pedir a exceção: ela está dita aqui.
+plano 12 deixa de pedir a exceção: ela está dita aqui.
 
 ---
 
@@ -572,7 +572,7 @@ ler o conjunto de abas descarta o de pasta que não está mais aberta; sair desc
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-12 | O que a tela "Logs e diagnóstico" tem neste plano | nenhum — a divisão com o plano 16 | B-30 | 2026-09-28 · **ping e estado da conexão**, decisão do usuário; o plano 16 completa a mesma tela, na mesma rota | ✅ |
+| D-12 | O que a tela "Logs e diagnóstico" tem neste plano | nenhum — a divisão com o plano 18 | B-30 | 2026-09-28 · **ping e estado da conexão**, decisão do usuário; o plano 18 completa a mesma tela, na mesma rota | ✅ |
 | D-13 | Onde vivem as configurações do app, e quais seções entram | nenhum técnico; por item, se segue o usuário ou fica no dispositivo | B-02, B-31 | 2026-09-28 · **a tabela da recomendação**, decisão do usuário: tema, densidade e idioma por visitante; recentes e abas no servidor; raízes só leitura; seções Aparência e Workspaces | ✅ |
 | D-32 | O que a F5 decidiu na execução: onde mora o ping, "reconectar", tema do sistema, densidade, busca, licença no "Sobre", o destino do histórico e dos specs de e2e | nenhum — lacunas das tarefas B-29…B-33 | B-29…B-33 | 2026-09-30 · **tomada na execução, pelo agente** — ver a seção | ✅ |
 
@@ -580,10 +580,10 @@ ler o conjunto de abas descarta o de pasta que não está mais aberta; sair desc
 
 O plano 05 · F1 já está concluído: ingestão dos logs do web e do app, e a tela de diagnóstico **do
 app** (`mobile/lib/features/diagnostics`). O web não tem tela nenhuma. O
-[plano 16](../16-logs-and-diagnostics/README.md) é dono do visualizador de logs e da saúde.
+[plano 18](../18-logs-and-diagnostics/README.md) é dono do visualizador de logs e da saúde.
 
 **Recomendação:** este plano cria a tela com o **ping de ponta a ponta** que sai da home e o estado
-da conexão — só o que já existe; o 16 completa a mesma tela, na mesma rota. O plano 05 não precisa
+da conexão — só o que já existe; o 18 completa a mesma tela, na mesma rota. O plano 05 não precisa
 ser avisado: a parte dele que é tela é do app, e continua lá.
 
 ### D-13 — Onde vivem as configurações do app, e quais seções entram
@@ -596,8 +596,8 @@ ser avisado: a parte dele que é tela é do app, e continua lá.
 | raízes liberadas | arquivo no disco, **só leitura** na UI | mudar exige acesso à máquina ([backend/03](../../architecture/backend/03-modules.md#workspace)) |
 
 **Recomendação:** a tabela acima, com as seções **Aparência** e **Workspaces** neste plano; "Editor"
-(plano 07) e "Terminal" (plano 10) entram pelo registro de seções. Configuração do Claude (modelo,
-permission mode, MCP) **não** é seção daqui: é tela própria do [plano 11](../11-claude-settings/README.md).
+(plano 07) e "Terminal" (plano 12) entram pelo registro de seções. Configuração do Claude (modelo,
+permission mode, MCP) **não** é seção daqui: é tela própria do [plano 13](../13-claude-settings/README.md).
 Dispositivos também não: é tela própria (B-29).
 
 ### D-32 — O que a F5 decidiu na execução
@@ -662,7 +662,7 @@ Dispositivos também não: é tela própria (B-29).
 
 - `D-nn` é sequencial **no plano inteiro** e nunca é reaproveitado — decisão descartada mantém
   o número, com o motivo em **Resultado**. A numeração segue a ordem em que o roteiro dos planos
-  06–16 as citou, e não a das fases — outros planos já as referenciam pelo número (a D-11 pelo 07).
+  06–18 as citou, e não a das fases — outros planos já as referenciam pelo número (a D-11 pelo 07).
 - Fase sem decisão em aberto **diz isso**, com uma linha própria. Silêncio não é ausência.
 - Decisão descoberta durante a execução entra aqui; a mudança que ela causou no plano vai para o
   [progresso](progress.md). Uma é a escolha, a outra é o efeito.

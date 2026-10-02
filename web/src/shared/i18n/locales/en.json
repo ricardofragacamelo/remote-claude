@@ -79,7 +79,9 @@
       "forkPointUnknown": "That message is not a prompt of this conversation. Reload the conversation and try again.",
       "effortUnsupported": "{{model}} does not take the effort level {{level}}.",
       "changeNotFound": "{{path}} is not among the files this session changed, or there is no rejection of it left to undo.",
-      "rewindPathUnknown": "{{path}} is not a file this session changed, so it cannot be rejected."
+      "rewindPathUnknown": "{{path}} is not a file this session changed, so it cannot be rejected.",
+      "attachmentTooLarge": "The file is larger than the limit of an attachment ({{limit}} bytes).",
+      "referenceKind": "{{path}} is not a {{kind}} — it was chosen as one, and the prompt was not sent."
     },
     "status": {
       "starting": "Starting",
@@ -2073,11 +2075,85 @@
       "contextHeading": "The context and /compact",
       "context": "The meter shows how full the conversation's context window is, by category. Near the limit, compacting summarises the conversation so far — the command of the installation, sent as a prompt — and the conversation marks where it happened.",
       "noticesHeading": "Questions you might miss",
-      "notices": "A question asked in a folder tab that is not on screen, or with the panel closed, shows as a badge on the tab and on the activity bar, and as a notice with the way to it. With the browser's notifications turned on, a hidden page is told too — the folder and what happened, never the command."
+      "notices": "A question asked in a folder tab that is not on screen, or with the panel closed, shows as a badge on the tab and on the activity bar, and as a notice with the way to it. With the browser's notifications turned on, a hidden page is told too — the folder and what happened, never the command.",
+      "composerHeading": "The prompt box",
+      "composer": "Enter sends and Shift+Enter breaks the line; while an input method is composing a character, Enter does neither. With nothing written and no context, the send button stays off and says why. While Claude works, what you send waits in the queue.",
+      "mentionHeading": "@ — files, folders and the selection",
+      "mention": "Type @ to choose a file or a folder of this folder: the open files and the recent ones come first, then what the folder holds, level by level — type a / to go into a folder. @selection adds what is selected in the editor. Use the arrows to move, Enter or Tab to choose, and Esc to close the list without losing what you typed.",
+      "commandsHeading": "/ — commands and skills",
+      "commands": "Type / at the start of the box for the commands and skills of this installation, even before the session exists. Choosing one writes it with a space after it, and says what it takes. If the list cannot be read, anything you type still goes as the prompt.",
+      "dragHeading": "Dragging into the context",
+      "drag": "Drag files and folders from the explorer, or a tab of the editor, onto the box or the conversation: each becomes a chip, and a folder is one chip, never everything in it. Without dragging, use “Add to Claude's context” in the menu of the explorer, of a tab, or of a selection in the editor. Items from another folder tab are left out: the context is this folder's.",
+      "contextSetHeading": "The context of the next prompt",
+      "contextSet": "The chips above the box are what goes with the next prompt; each one can be removed with its button. The line under them adds up their size and estimates the tokens at about four bytes each — an estimate, not a count. Past a share of what is left of the context window it warns and still sends; past the limit of a prompt it does not send, and says why. The set is this conversation's, and stays until you send it.",
+      "readsHeading": "What Claude reads",
+      "reads": "A file, a folder or a range of lines goes as a reference, never as its contents: Claude reads it with the Read tool, which the audit trail records like any other tool. It reads what is saved on disk, not what is unsaved in the editor — the chip warns you. An @path you type by hand is not read by the CLI on its own: only Claude's Read reads it.",
+      "desktopHeading": "Files from your computer",
+      "desktop": "An image or a text file dragged from your computer goes with the prompt as an attachment: it is kept in memory for this session only, never written into the folder nor into the trail, and is gone when the session ends. To put it in the folder, upload it in the explorer instead.",
+      "skillsHeading": "Where the commands and skills come from",
+      "skills": "Each entry of / says its origin: Claude Code is the command of the installation itself; Project comes from the .claude folder of this project; User and System are the skills of your user and of the system. Two with the same name are both listed, and the one / runs is Claude Code's — the other says it is covered."
     },
     "screen": {
       "title": "Claude",
       "purpose": "Talk to Claude about this folder: start conversations, follow and approve what it does, and review what it changed."
+    }
+  },
+  "composer": {
+    "set": {
+      "label": "Context of the next prompt",
+      "totals": "{{count}} items · {{size}} · ≈ {{tokens}} tokens (an estimate)",
+      "folders": "Folders count as items: Claude decides what to read in them.",
+      "warn": "That is a large share of what is left of the context window — it still sends.",
+      "overItems": "A prompt carries at most 20 items of context. Remove some to send.",
+      "overBytes": "The files of the context add up to more than this prompt may carry. Remove some to send.",
+      "overflow": "Items left out, past the limit of a prompt: {{count}}."
+    },
+    "chip": {
+      "remove": "Remove {{name}} from the context",
+      "missing": "gone from the folder",
+      "binary": "not text — Claude will not read it",
+      "dirty": "unsaved — Claude reads what is saved",
+      "pending": "sent with the prompt"
+    },
+    "drop": {
+      "here": "Drop to add to the context of the next prompt",
+      "tooLarge": "{{name}} is larger than {{limit}} MB, the limit of an attachment.",
+      "unsupported": "{{name}} cannot go with a prompt: images must be PNG, JPEG, GIF or WebP, and files must be text.",
+      "otherFolder": "Items from another folder tab left out: {{count}}. The context of a prompt is this folder's."
+    },
+    "mention": {
+      "label": "Files, folders and more to add to the context",
+      "loading": "Looking in the folder…",
+      "failed": "The folder could not be searched. You can still use the path you typed.",
+      "outside": "Only what is inside this folder can be offered.",
+      "emptyFolder": "This folder is empty.",
+      "noMatch": "Nothing in the folder matches what you typed.",
+      "truncated": "There is more here than the list shows — type more of the name to narrow it.",
+      "useTyped": "Use “{{path}}” as typed — it is checked when you send",
+      "open": "open",
+      "selection": "Selection",
+      "selectionHint": "what is selected in the editor"
+    },
+    "slash": {
+      "label": "Commands and skills of this installation",
+      "loading": "Loading the commands of this installation…",
+      "unavailable": "The commands are not available right now. Anything you type still goes as the prompt.",
+      "noMatch": "No command or skill matches what you typed.",
+      "shadowed": "covered by the Claude Code command of the same name",
+      "argumentHint": "Takes: {{hint}}"
+    },
+    "origin": {
+      "builtin": "Claude Code",
+      "project": "Project",
+      "user": "User",
+      "system": "System"
+    },
+    "send": {
+      "queued": "Claude is working: what you send now waits in the queue and runs next.",
+      "queue": "Add to queue",
+      "empty": "Write a prompt or add context to send.",
+      "missing": "{{path}} is no longer in the folder. Remove it to send.",
+      "upload": "{{name}} could not be attached. Remove it to send."
     }
   }
 }

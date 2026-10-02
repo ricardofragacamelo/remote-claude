@@ -58,6 +58,19 @@ describe('the attachments of session.prompt', () => {
     expect(parsed.attachments).toEqual([{ path: 'notes.md' }]);
   });
 
+  it('accepts the context alone, and refuses a prompt with neither text nor context — S-215', () => {
+    expect(
+      payloadOf(
+        frame({ sessionId: 's', text: '', attachments: [{ path: 'a.ts' }] }),
+        sessionSchemas.prompt,
+      ),
+    ).toMatchObject({ text: '' });
+    expect(refusedFields(sessionSchemas.prompt, { sessionId: 's', text: '  ' })).toEqual(['text']);
+    expect(
+      refusedFields(sessionSchemas.prompt, { sessionId: 's', text: '', attachments: [] }),
+    ).toEqual(['text']);
+  });
+
   it('accepts a prompt with no attachments, as before', () => {
     expect(payloadOf(frame({ sessionId: 's', text: 'hi' }), sessionSchemas.prompt)).toEqual({
       sessionId: 's',

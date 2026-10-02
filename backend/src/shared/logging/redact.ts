@@ -77,6 +77,40 @@ export function omitting(value: unknown, fields: readonly string[]): unknown {
   return copy;
 }
 
+/**
+ * What a frame of a given type carries that never reaches a log, though no name gives it away: the
+ * text the person handed over as the context of a prompt — the output of a terminal — goes to Claude
+ * and to no line of ours (plan 08, S-204). Each is replaced by the marker, so the line still says it
+ * was there and how the frame was shaped.
+ */
+const FRAME_CONTENT: Readonly<Record<string, { readonly list: string; readonly field: string }>> = {
+  'session.prompt': { list: 'attachments', field: 'content' },
+};
+
+/** The payload of a frame of `type`, with what {@link FRAME_CONTENT} keeps out of the log replaced. */
+export function framePayloadForLog(type: string, payload: unknown): unknown {
+  const rule = FRAME_CONTENT[type];
+
+  if (rule === undefined || typeof payload !== 'object' || payload === null) {
+    return payload;
+  }
+
+  const items = (payload as Record<string, unknown>)[rule.list];
+
+  if (!Array.isArray(items)) {
+    return payload;
+  }
+
+  return {
+    ...payload,
+    [rule.list]: items.map((item: unknown) =>
+      typeof item === 'object' && item !== null && rule.field in item
+        ? { ...item, [rule.field]: REDACTED }
+        : item,
+    ),
+  };
+}
+
 /** A payload and whether it had to be cut down to fit the cap. */
 export interface LoggedPayload {
   readonly payload: unknown;

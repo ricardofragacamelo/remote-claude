@@ -21,7 +21,19 @@ export interface SlashCommand {
 
   /** Whether it belongs to the group on top. A ranking of names, not a list of commands. */
   readonly suggested: boolean;
+
+  /** Where it comes from — the badge of the menu (plan 08, B-50). */
+  readonly origin: CommandOrigin;
+
+  /** The name a person reads, without the namespace of a plugin; `name` is what is inserted. */
+  readonly label: string;
+
+  /** Another row of the same name is what `/name` runs: listed, and said to be covered (S-243). */
+  readonly shadowed: boolean;
 }
+
+/** Where a command or a skill comes from: Claude Code, the project, the user, the system. */
+export type CommandOrigin = 'builtin' | 'project' | 'user' | 'system';
 
 /** What the installation of a live session offers. */
 export interface CommandMenu {

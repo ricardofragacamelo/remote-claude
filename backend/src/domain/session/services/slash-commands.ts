@@ -14,12 +14,69 @@ export interface SlashCommand {
 
   /** Other names that run the same command: `/cost` and `/stats` both run `/usage`. */
   readonly aliases: readonly string[];
+
+  /**
+   * Whether it is Claude Code's own — the SDK's marker. Absent or `false` for a command or a skill of
+   * the project, of a plugin or of an MCP server.
+   */
+  readonly builtin?: boolean;
 }
+
+/**
+ * Where a command or a skill comes from — the badge of the menu (plan 08, B-50): Claude Code's own,
+ * the project's `.claude/`, or the skills of the user and of the system, which plan 13 brings in
+ * through a local plugin of ours.
+ */
+export type CommandOrigin = 'builtin' | 'project' | 'user' | 'system';
+
+/**
+ * The names of the local plugins plan 13 builds with the skills of the user and of the system,
+ * fixed by plan 08 ([progress](../../../../../docs/plans/08-claude-panel/progress.md)) so the two plans
+ * agree on them before 11 exists: a skill of theirs arrives
+ * qualified, `remote-claude-user:<skill>`, and the name of the plugin is what says its origin. Any
+ * other plugin comes in by the project's settings, and is the project's.
+ */
+export const USER_SKILLS_PLUGIN = 'remote-claude-user';
+export const SYSTEM_SKILLS_PLUGIN = 'remote-claude-system';
 
 /** A command as the menu shows it. */
 export interface MenuCommand extends SlashCommand {
   /** Whether it belongs to the group shown first. */
   readonly suggested: boolean;
+  readonly origin: CommandOrigin;
+
+  /** The name a person reads — without the namespace of a plugin. What is inserted is `name`. */
+  readonly label: string;
+
+  /**
+   * `/name` runs another row: an unmarked row whose name a Claude Code command also has. Listed, so
+   * nothing vanishes in silence, and said to be covered (S-243).
+   */
+  readonly shadowed: boolean;
+}
+
+/** The order of the origins when two rows share a name — the one `/name` runs first. */
+const ORIGIN_ORDER: readonly CommandOrigin[] = ['builtin', 'project', 'user', 'system'];
+
+/** Where a row comes from: the marker, then the namespace of the plugin of a qualified name. */
+export function originOf(command: SlashCommand): CommandOrigin {
+  if (command.builtin === true) {
+    return 'builtin';
+  }
+
+  const separator = command.name.lastIndexOf(':');
+  const plugin = separator === -1 ? null : command.name.slice(0, separator);
+
+  if (plugin === USER_SKILLS_PLUGIN) {
+    return 'user';
+  }
+
+  return plugin === SYSTEM_SKILLS_PLUGIN ? 'system' : 'project';
+}
+
+/** The name without the namespace of a plugin. */
+function labelOf(name: string): string {
+  return name.slice(name.lastIndexOf(':') + 1);
 }
 
 /**
@@ -69,19 +126,29 @@ export function isHidden(command: SlashCommand): boolean {
  *
  * The suggested group follows {@link SUGGESTED_COMMANDS}; everything else is sorted by name, so two
  * installations that offer the same commands show them in the same order whatever order the CLI
- * listed them in. A name the CLI lists twice is shown once — the first row, which is the one `/name`
- * runs.
+ * listed them in.
+ *
+ * Two rows may share a name (plan 08, B-50, S-243): both are listed, told apart by their origin.
+ * Between a Claude Code row and an unmarked one, `/name` runs Claude Code's **whatever the order**
+ * — the SDK says so of its marker — and the unmarked one is listed as covered. A row listed twice
+ * with the same marker is one row.
  */
 export function menuOf(commands: readonly SlashCommand[]): MenuCommand[] {
   const seen = new Set<string>();
   const visible: SlashCommand[] = [];
 
   for (const command of commands) {
-    if (!isHidden(command) && !seen.has(command.name)) {
-      seen.add(command.name);
+    const key = `${command.name}\n${String(command.builtin === true)}`;
+
+    if (!isHidden(command) && !seen.has(key)) {
+      seen.add(key);
       visible.push(command);
     }
   }
+
+  const builtinNames = new Set(
+    visible.filter((command) => command.builtin === true).map((command) => command.name),
+  );
 
   const rank = (command: SlashCommand): number => {
     const position = SUGGESTED_COMMANDS.indexOf(command.name);
@@ -89,8 +156,19 @@ export function menuOf(commands: readonly SlashCommand[]): MenuCommand[] {
   };
 
   return visible
-    .map((command) => ({ ...command, suggested: rank(command) < SUGGESTED_COMMANDS.length }))
-    .sort((left, right) => rank(left) - rank(right) || left.name.localeCompare(right.name));
+    .map((command) => ({
+      ...command,
+      suggested: rank(command) < SUGGESTED_COMMANDS.length,
+      origin: originOf(command),
+      label: labelOf(command.name),
+      shadowed: command.builtin !== true && builtinNames.has(command.name),
+    }))
+    .sort(
+      (left, right) =>
+        rank(left) - rank(right) ||
+        left.label.localeCompare(right.label) ||
+        ORIGIN_ORDER.indexOf(left.origin) - ORIGIN_ORDER.indexOf(right.origin),
+    );
 }
 
 /**

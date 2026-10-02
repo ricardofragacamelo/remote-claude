@@ -5,7 +5,7 @@ Plano: [06 — Workbench](README.md) · Cenários: [scenarios.md](scenarios.md) 
 **Depende de:** [F3](F3-layout.md).
 **Entrega:** o registro de comandos e atalhos, a command palette, o menu **Arquivo**, o centro de
 notificações e a restauração do estado de cada aba de pasta ao recarregar — os serviços da casca
-sobre os quais os planos 07 a 10 registram o que é deles.
+sobre os quais os planos 07 a 12 registram o que é deles.
 
 ---
 
@@ -50,7 +50,7 @@ para cada tela global, tema, idioma, ajuda da tela.
 - filtra por rótulo traduzido e por categoria ("Arquivo: Abrir pasta…"), mostra o atalho de cada
   comando, executa e fecha; comando indisponível no contexto não aparece;
 - **modos por prefixo**, registráveis: `>` comandos (este plano); o Quick Open do
-  [plano 09](../09-search/README.md) registra o seu sem mudar a paleta;
+  [plano 11](../11-search/README.md) registra o seu sem mudar a paleta;
 - comando que lança erro vira notificação traduzida (B-26) e a paleta fecha sem travar;
 - abrir com ela aberta não abre outra; `Esc` fecha e devolve o foco a quem o tinha;
 - padrão ARIA de combobox + listbox, anunciado ao leitor de tela.

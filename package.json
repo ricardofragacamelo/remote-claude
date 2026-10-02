@@ -13,6 +13,7 @@
     "doctor": "node scripts/doctor.mjs",
     "allowlist": "node scripts/allowlist.mjs",
     "dev": "exec node scripts/start-local.mjs",
+    "dev:public": "exec node scripts/start-local.mjs --public",
     "dev:mobile": "exec node scripts/run-mobile-local.mjs",
     "clean": "node scripts/clean.mjs",
     "db": "node scripts/db.mjs",

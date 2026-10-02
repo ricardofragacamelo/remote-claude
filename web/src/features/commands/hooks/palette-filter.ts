@@ -10,7 +10,7 @@ export interface ModeMatch {
 /**
  * The mode the palette is in: the one entered by name, or the one whose prefix the field starts
  * with — the longest, so a mode of `>>` would never be shadowed by `>`. A mode with an empty prefix
- * (the Quick Open of plan 09) is what is left when no other matches; with none, there is no mode,
+ * (the Quick Open of plan 11) is what is left when no other matches; with none, there is no mode,
  * and the palette says which prefixes there are (plan 06, S-124).
  */
 export function modeFor(

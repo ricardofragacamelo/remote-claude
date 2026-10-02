@@ -172,6 +172,12 @@ export function testEnvironment(
   process.env['RC_FILES_HISTORY_RETENTION_DAYS'] = '30';
   process.env['RC_FILES_HISTORY_MAX_BATCH_ENTRIES'] = '1000';
   process.env['RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS'] = '120';
+  process.env['RC_ATTACHMENT_MAX_BYTES'] = '5242880';
+  process.env['RC_ATTACHMENT_TTL_SECONDS'] = '3600';
+  process.env['RC_ATTACHMENT_MEMORY_BYTES'] = '67108864';
+  process.env['RC_CONTEXT_WARN_PERCENT'] = '25';
+  process.env['RC_CONTEXT_DRAFT_WINDOW_TOKENS'] = '200000';
+  process.env['RC_CONTEXT_MAX_BYTES'] = '8388608';
   process.env['RC_AUDIT_RETENTION_DAYS'] = '90';
   // On, and a day long: the first run is a minute after boot, which no suite waits for — the suites
   // about the purge drive it directly, at the instant they choose.

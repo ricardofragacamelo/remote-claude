@@ -17,7 +17,7 @@ import type { Registry, RegistryEntry } from '@/shared/lib/registry';
 /**
  * The places of the global navigation, in order — one screen per subject
  * (docs/architecture/web/03-ui-system.md#a-moldura-do-app). A place is reserved by its position; the
- * plan that owns it registers the entry. "Usage and cost" (plan 14) and "Claude settings" (plan 11)
+ * plan that owns it registers the entry. "Usage and cost" (plan 16) and "Claude settings" (plan 13)
  * are held here and render **no link** until they do: a link with no destination is worse than none.
  */
 export const NAVIGATION_POSITIONS = {
@@ -67,7 +67,7 @@ export interface ManageEntry extends RegistryEntry {
 }
 
 /**
- * The entries plan 06 declares: every place of the navigation but the two held for plans 11 and 14.
+ * The entries plan 06 declares: every place of the navigation but the two held for plans 13 and 16.
  */
 const DECLARED: readonly NavigationEntry[] = [
   {
@@ -116,7 +116,7 @@ const DECLARED: readonly NavigationEntry[] = [
     sections: ['diagnostics'],
   },
   {
-    // The app's settings — never Claude's, which is the screen plan 11 registers at its own place.
+    // The app's settings — never Claude's, which is the screen plan 13 registers at its own place.
     id: 'settings',
     position: NAVIGATION_POSITIONS.settings,
     labelKey: 'navigation.entry.settings',

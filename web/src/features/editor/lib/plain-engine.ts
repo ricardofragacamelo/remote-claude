@@ -239,6 +239,12 @@ class PlainView implements CodeView {
     };
   }
 
+  selections(): readonly TextRange[] {
+    // A text area has one selection: there is no second cursor to have another.
+    const only = this.selection();
+    return only === null ? [] : [only];
+  }
+
   selectionLength(): number {
     return this.area.selectionEnd - this.area.selectionStart;
   }

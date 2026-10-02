@@ -36,7 +36,7 @@ describe('the global navigation — plan 06, S-89', () => {
     ]);
   });
 
-  it('holds the places of plans 11 and 14 without a link, and puts their entries there', () => {
+  it('holds the places of plans 13 and 16 without a link, and puts their entries there', () => {
     const navigation = createNavigation();
     expect(navigation.entries().some((entry) => entry.id === 'usage')).toBe(false);
 
