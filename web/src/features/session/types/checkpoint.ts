@@ -56,6 +56,9 @@ export interface RewindOutcome {
 
   /** Put back it could not. Each is left exactly as it was — nothing is half-written. */
   readonly failed: readonly string[];
+
+  /** The one hunk that went back — a rejection of a hunk (plan 08, B-31); `null` otherwise. */
+  readonly hunkId: string | null;
 }
 
 /** Whether the undo can be asked for, and when it cannot, why. */

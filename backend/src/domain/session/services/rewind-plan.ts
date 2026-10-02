@@ -1,20 +1,10 @@
 import type { SessionFileState } from '../entities/session-file-state.entity';
 import type { TurnFileCheckpoint } from '../entities/turn-file-checkpoint.entity';
 import { RewindTargetUnknownError } from '../errors/rewind-target-unknown.error';
+import { isAsLeft } from './file-state';
+import type { FileObservation } from './file-state';
 
-/**
- * What is at a path right now, as the undo is allowed to see it.
- *
- * `unsafe` is a path the undo will not write through: it became a symbolic link, a hard link or
- * something other than a regular file, or its directory no longer resolves to where it did. It was
- * the SDK's `skippedLinks`; writing the files ourselves, the check is ours, and without it a
- * restore is a way of writing outside the workspace
- * ([D-06](../../../../../docs/plans/04-transcript-and-resume/decisions.md#d-06--desfazer-sem-destruir)).
- */
-export type FileObservation =
-  | { readonly kind: 'file'; readonly hash: string }
-  | { readonly kind: 'absent' }
-  | { readonly kind: 'unsafe' };
+export type { FileObservation } from './file-state';
 
 /** Why a path is left as it is. The contract carries the same four. */
 export type PreservationReason = 'modifiedOutside' | 'notRestorable' | 'unsafePath' | 'noBaseline';
@@ -230,13 +220,4 @@ function isAtPoint(checkpoint: TurnFileCheckpoint, now: FileObservation): boolea
   }
 
   return now.kind === 'file' && checkpoint.hash !== null && now.hash === checkpoint.hash;
-}
-
-/** Whether what is there now is what the session left. */
-function isAsLeft(baseline: SessionFileState, now: FileObservation): boolean {
-  if (baseline.hash === null) {
-    return now.kind === 'absent';
-  }
-
-  return now.kind === 'file' && now.hash === baseline.hash;
 }

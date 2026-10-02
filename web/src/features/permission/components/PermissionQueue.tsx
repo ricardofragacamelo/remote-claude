@@ -11,10 +11,13 @@ export interface PermissionQueuePanelProps {
   readonly sessionId: string | null;
 
   /** Opens the rules screen — one of the two ways in to it that D-04 requires. */
-  onOpenRules?: () => void;
+  onOpenRules?: (() => void) | undefined;
 
   /** A plan was approved, to go on in this mode (plan 08, B-22). */
   onPlanApproved?: (mode: PlanMode) => void;
+
+  /** The folder of the tab — what a pending edit is previewed against (plan 08, B-29). */
+  readonly folder?: string | null;
 }
 
 /**
@@ -27,6 +30,7 @@ export function PermissionQueuePanel({
   sessionId,
   onOpenRules,
   onPlanApproved,
+  folder = null,
 }: PermissionQueuePanelProps): React.JSX.Element {
   const { t } = useTranslation();
   const { pending, settled, remainingMs, answer, extend } = usePermissionQueue(sessionId);
@@ -63,6 +67,7 @@ export function PermissionQueuePanel({
                 onAnswer={answer}
                 onExtend={extend}
                 onOpenRules={onOpenRules}
+                folder={folder}
               />
             );
           })}

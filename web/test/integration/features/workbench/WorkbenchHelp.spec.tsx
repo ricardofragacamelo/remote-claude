@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { wsClient } from '@/shared/api/ws';
 import { VISITOR_PREFIX } from '@/shared/lib/visitor-storage';
 import { translator } from '../../../support/render';
-import { openWorkbench, tabNamed } from '../../../support/workbench';
+import { draftOnScreen, openWorkbench, tabNamed } from '../../../support/workbench';
 import { aTab, aTabServer, projects, refusal } from '../../../support/workspace-api';
 
 const t = translator('en');
@@ -20,7 +20,7 @@ afterEach(() => {
 /** The workbench of A, over two tabs, with its folder resolved and on screen. */
 async function on() {
   const mounted = openWorkbench(A, aTabServer([aTab(A), aTab(B)]));
-  await screen.findByRole('button', { name: t('session.starter.action') });
+  await draftOnScreen();
   await tabNamed('b');
   return mounted;
 }

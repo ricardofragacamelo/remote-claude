@@ -104,6 +104,17 @@ credencial com `connection.reauthenticate`, e logar I/O em `debug`.
 Não conhece React. Ver [contrato](../shared/05-websocket-protocol.md) e
 [autenticação](../shared/08-authentication.md).
 
+Quem ouve o quê — e a diferença importa, porque a aba de pasta mantém as sessões dela anexadas:
+
+| Método | Ouve | Para quê |
+|---|---|---|
+| `attach(sessionId, …)` | os frames da sessão, a quem a observa | o store da sessão |
+| `observe(listener)` | o que **não** pertence a sessão anexada: recusas por `correlationId`, o `session.started` de uma sessão que acabou de abrir | quem mandou um comando reconhece a resposta dele |
+| `onSessionLifecycle(listener)` | todo `session.started`/`session.closed`, anexada ou não | invalidar a lista de sessões ([08 · D-10](../../plans/08-claude-panel/decisions.md#d-10--a-lista-de-sessões-se-atualiza-como)) |
+| `onSessionFrame(listener)` | todo `event` e `request` de sessão, anexada ou não, sem desviar o frame | os avisos de pergunta em aba que ninguém olha e as notificações do navegador ([08 · B-42](../../plans/08-claude-panel/F4-chat-panel.md#b-42--permissão-nunca-se-perde-badges-e-notificações-)) |
+
+Aviso que escuta por `observe` nunca ouve uma sessão anexada — e no painel toda sessão está anexada.
+
 ### O store de stream
 
 **Um store por sessão**, criado sob demanda e compartilhado por quem pede a mesma

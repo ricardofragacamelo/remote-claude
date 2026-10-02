@@ -10,6 +10,7 @@ import { send } from '../fixtures/history';
 import { attachFrom, connected } from '../fixtures/live-session';
 import {
   conversationOf,
+  draftOf,
   folderDialog,
   goDown,
   namesListed,
@@ -232,7 +233,7 @@ test(`${missing.id} — ${missing.title}`, async ({ page }) => {
   // The other tab carries on, and the tabs read again mark the one that left the disk.
   await tabOf(page, 'gamma').click();
   await page.waitForURL(onWorkbenchOf(gamma));
-  await expect(page.getByRole('button', { name: 'Start session' })).toBeVisible();
+  await expect(draftOf(page)).toBeVisible();
   await page.reload();
   await expect(tabOf(page, 'doomed')).toHaveAccessibleName(`doomed ${expected.marked}`);
   expect(await tabsOf(user())).toEqual([doomed, gamma]);

@@ -35,6 +35,7 @@ export class SessionRewindHandler implements WsCommandHandler {
       sessionId: command.sessionId,
       promptId: command.promptId,
       userId: context.userId,
+      ...(command.paths === undefined ? {} : { paths: command.paths }),
     });
 
     return {

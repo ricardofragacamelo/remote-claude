@@ -117,7 +117,7 @@ describe('the link of a session and of a conversation', () => {
     );
 
     expect(
-      await within(await claude()).findByRole('button', { name: t('session.starter.action') }),
+      await within(await claude()).findByRole('group', { name: t('sessions.draft.choices') }),
     ).toBeInTheDocument();
     await waitFor(() => {
       expect(mounted.search()['session']).toBeUndefined();
@@ -140,6 +140,37 @@ describe('the link of a session and of a conversation', () => {
     await waitFor(() => {
       expect(mounted.search()['conversation']).toBeUndefined();
     });
+  });
+
+  it('goes on as a session in the same panel when the conversation is resumed — plan 08, B-32', async () => {
+    const user = userEvent.setup();
+    const RESUMED = '01J0RESUMEDRESUMEDRESUMED0';
+    const mounted = open({ conversation: CONVERSATION });
+
+    await user.click(
+      await within(await claude()).findByRole('button', { name: t('history.screen.resume') }),
+    );
+    live.receive({
+      v: 1,
+      id: 'started-resumed',
+      kind: 'event',
+      type: 'session.started',
+      ts: '2026-09-30T12:00:00.000Z',
+      seq: 1,
+      sessionId: RESUMED,
+      correlationId: live.lastSent('session.start')?.['id'],
+      payload: { sessionId: RESUMED, resumedFrom: CONVERSATION, workspacePath: A },
+    });
+
+    expect(
+      await within(await claude()).findByText(
+        t('session.screen.sessionLabel', { sessionId: RESUMED }),
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mounted.search()).toMatchObject({ session: RESUMED });
+    });
+    expect(mounted.search()['conversation']).toBeUndefined();
   });
 
   it('puts what the panel shows into the address, so the link reproduces the screen', async () => {

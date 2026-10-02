@@ -99,6 +99,9 @@ export class WsClient {
 
   /** Who wants to hear that a session began or ended, whoever is watching it. */
   private readonly lifecycleListeners = new Set<(frame: Envelope) => void>();
+
+  /** Who wants to hear every frame of a session — a fact or a question — whoever watches it. */
+  private readonly sessionListeners = new Set<(frame: Envelope) => void>();
   private readonly watchers = new Set<(status: ConnectionStatus) => void>();
   private readonly schedule: Scheduler;
   private readonly random: () => number;
@@ -243,6 +246,19 @@ export class WsClient {
     return () => this.lifecycleListeners.delete(listener);
   }
 
+  /**
+   * Hears every frame of a session this socket receives — an `event` or a `request` — of a session
+   * somebody watches here or of one nobody does.
+   *
+   * It exists for the notices of plan 08 (B-42): the sessions of every folder tab stay attached, so
+   * {@link observe} never hears them, and a question asked in a tab nobody looks at has to be told
+   * everywhere. It hears, and changes nothing: the frame still goes where it would have gone.
+   */
+  onSessionFrame(listener: (frame: Envelope) => void): () => void {
+    this.sessionListeners.add(listener);
+    return () => this.sessionListeners.delete(listener);
+  }
+
   /** Sends a command. Silently queues nothing: a command sent while down is a command lost. */
   command(type: string, payload: Readonly<Record<string, unknown>>): boolean {
     return this.issue(type, payload) !== null;
@@ -385,6 +401,9 @@ export class WsClient {
     // waiting. Both belong to a session and both go to whoever is watching it.
     if (parsed.kind === 'event' || parsed.kind === 'request') {
       this.announceLifecycle(parsed);
+      for (const listener of this.sessionListeners) {
+        listener(parsed);
+      }
       this.deliver(parsed);
       return;
     }

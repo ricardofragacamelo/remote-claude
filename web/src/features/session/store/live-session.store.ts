@@ -2,11 +2,13 @@ import { createStore } from 'zustand/vanilla';
 import type { StoreApi } from 'zustand/vanilla';
 import type { Envelope } from '@remote-claude/contracts';
 
+import { readText } from '@/shared/lib/json';
 import { rewoundOf } from '../services/checkpoint.service';
 import { conversationOfStart, readEvent, withHistory } from '../services/live-session.service';
+import { queueAfter } from '../services/queue.service';
 import type { RewindOutcome } from '../types/checkpoint';
 import type { HistoryEvent } from '../types/history';
-import type { Conversation, SessionStatus } from '../types/live-session';
+import type { Conversation, QueuedPrompt, SessionStatus } from '../types/live-session';
 
 /** The conversation of one session, as the client has it. */
 export interface LiveSessionState extends Conversation {
@@ -46,6 +48,20 @@ export interface LiveSessionState extends Conversation {
    * changed for all of them.
    */
   readonly lastRewind: RewindOutcome | null;
+
+  /** The prompts waiting for the turn running to end, in order (plan 08, B-34). */
+  readonly queue: readonly QueuedPrompt[];
+
+  /** The model and the mode the session runs with — `null` until the stream said (B-36). */
+  readonly model: string | null;
+  readonly permissionMode: string | null;
+
+  /** The folder the session runs in, as `session.started` said — where a fork of it starts. */
+  readonly workspacePath: string | null;
+
+  /** What this browser changed them to: the server acknowledges, it does not echo (B-36). */
+  noteModel(model: string): void;
+  noteMode(mode: string): void;
 
   /** Applies one frame from the stream. */
   apply(frame: Envelope): void;
@@ -89,7 +105,14 @@ const EMPTY = {
   conversationId: null,
   historyFrom: null,
   lastRewind: null,
-} satisfies Omit<LiveSessionState, 'sessionId' | 'apply' | 'reset' | 'hydrate'>;
+  queue: [],
+  model: null,
+  permissionMode: null,
+  workspacePath: null,
+} satisfies Omit<
+  LiveSessionState,
+  'sessionId' | 'apply' | 'reset' | 'hydrate' | 'noteModel' | 'noteMode'
+>;
 
 /**
  * The live stream of one session — **one store per session**, never one for "the session on screen".
@@ -139,10 +162,12 @@ export function createLiveSessionStore(
         return {
           ...readEvent(state, frame),
           lastSeq: seq,
+          queue: queueAfter(state.queue, frame),
           ...(rewound === null ? {} : { lastRewind: rewound }),
           ...(started === null
             ? {}
             : {
+                ...runsWith(frame, state),
                 conversationId: started.claudeSessionId ?? state.conversationId,
                 // A resume: what was said before this session began is in the transcript, not in
                 // the buffer, and it is read from the conversation this one continues.
@@ -150,6 +175,13 @@ export function createLiveSessionStore(
               }),
         };
       }),
+
+    noteModel: (model) => {
+      set({ model });
+    },
+    noteMode: (permissionMode) => {
+      set({ permissionMode });
+    },
 
     reset: (claudeSessionId = null) => {
       // The session stays the one it is; what it said is what goes. Stitching a partial hole
@@ -169,6 +201,20 @@ export function createLiveSessionStore(
       );
     },
   }));
+}
+
+/** The model and the mode a `session.started` says the session runs with. */
+function runsWith(
+  frame: Envelope,
+  state: Pick<LiveSessionState, 'model' | 'permissionMode' | 'workspacePath'>,
+): Pick<LiveSessionState, 'model' | 'permissionMode' | 'workspacePath'> {
+  const payload = frame.payload ?? {};
+
+  return {
+    model: readText(payload, 'model') ?? state.model,
+    permissionMode: readText(payload, 'permissionMode') ?? state.permissionMode,
+    workspacePath: readText(payload, 'workspacePath') ?? state.workspacePath,
+  };
 }
 
 /** The store of each session this page has shown or kept attached. */

@@ -20,7 +20,7 @@ export interface DiffPaneProps {
 }
 
 /** What a side of a diff is called — named in full so the i18n check sees each key. */
-const SIDE_LABELS: Readonly<Record<DiffSide['source'], string>> = {
+const SIDE_LABELS: Readonly<Record<Exclude<DiffSide['source'], 'provided'>, string>> = {
   disk: 'editor.diff.disk',
   buffer: 'editor.diff.buffer',
   history: 'editor.diff.history',
@@ -35,7 +35,13 @@ function sideLabel(side: DiffSide, t: TFunction, language: string): string {
           new Date(side.version.at),
         );
 
-  return t(SIDE_LABELS[side.source], { name: baseName(side.path), when });
+  // A provided side is named by whoever provides it (plan 08: "before Claude's changes").
+  const key =
+    side.source === 'provided'
+      ? (side.provided?.labelKey ?? 'editor.diff.disk')
+      : SIDE_LABELS[side.source];
+
+  return t(key, { name: baseName(side.path), when });
 }
 
 /**

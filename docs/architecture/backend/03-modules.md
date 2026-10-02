@@ -481,36 +481,64 @@ estender ao HTTP.
 
   **`GET /sessions/:sessionId/tools/:toolUseId/diff`** — antes e depois de um `Edit`, `MultiEdit` ou
   `Write` (F3), do input da tool e do snapshot que o desfazer já guarda
-  ([08 · D-03](../../plans/08-claude-panel/decisions.md#d-03--de-onde-vem-o-diff)). `before.state` diz o
-  que se sabe do lado anterior: `content`, `absent` (arquivo novo), `unavailable` (segundo toque no mesmo
-  turno, sem snapshot intermediário — com o motivo) ou `notRestorable` (acima do teto do snapshot).
+  ([08 · D-03](../../plans/08-claude-panel/decisions.md#d-03--de-onde-vem-o-diff)). O input vem da
+  `SessionChangeMemory` — o que o `PreToolUse` gravou na trilha, guardado em memória com a sessão viva,
+  porque a trilha é só de escrita para os outros módulos —, com teto de invocações e de tamanho; a que
+  saiu do teto responde como a que nunca existiu. `before.state` diz o que se sabe do lado anterior:
+  `content`, `absent` (arquivo novo), `unavailable` (com `reason`: `laterTouch` — segundo toque no mesmo
+  turno, sem snapshot intermediário —, `noSnapshot`) ou `notRestorable` (`tooLarge`·`unreadable`).
+  `after.state` é `content` — o `content` de um `Write`; de uma edição, o disco **só** enquanto ele ainda
+  é o que a sessão deixou e nenhuma escrita posterior da sessão tocou o arquivo — ou `unavailable`
+  (`laterWrite`·`changedSince`). `scope` diz de que são os trechos: `file` (antes contra depois, os dois
+  conhecidos) ou `edit` (as strings que a edição trocou, um trecho por edição, na ordem). A regra é
+  domínio puro (`toolDiffOf`, `line-diff`).
 
   | Status | Quando |
   |---|---|
-  | `200` `{ path, before: { state, content? }, after: { content? }, hunks: [...] }` | o diff, com o caminho relativo à pasta |
+  | `200` `{ path, toolName, scope, before: { state, content?, reason? }, after: { state, content?, reason? }, hunks: [{ id, oldStart, oldLines, newStart, newLines, lines: [{ kind, text }] }] }` | o diff; `path` absoluto, como o desfazer nomeia |
   | `404` `TOOL_USE_NOT_FOUND` | `toolUseId` que a sessão não tem |
-  | `422` `DIFF_NOT_APPLICABLE` | tool que não escreve arquivo (`Bash`, `Read`) |
-  | `415` `FILE_NOT_TEXT` | conteúdo binário |
+  | `422` `DIFF_NOT_APPLICABLE` | tool que não escreve arquivo (`Bash`, `Read`), ou cujo input não nomeia caminho absoluto |
+  | `415` `FILE_NOT_TEXT` | um lado binário ou fora de UTF-8 |
 
   **`GET /sessions/:sessionId/changes`** — os arquivos que a sessão (e a conversa continuada in-place)
-  criou, modificou ou apagou, contra **antes da sessão** (F3): `path`, `kind` (`created`·`modified`·
-  `deleted`), `modifiedOutside`, `added`, `removed`. `200` com lista vazia quando a sessão não mudou nada.
+  criou, modificou ou apagou, contra **antes da sessão** — o snapshot do primeiro turno que tocou cada
+  caminho (F3): `{ promptId, files: [{ path, kind, promptId, modifiedOutside, added, removed, revision }] }`.
+  `path` é absoluto; `kind` é `created`·`modified`·`deleted`; o `promptId` do arquivo é o turno que o
+  tocou primeiro — o que rejeitá-lo inteiro manda —, e o de cima é o do primeiro turno de todos — o que
+  "rejeitar tudo" manda (`null` sem alteração); `added`/`removed` são `null` quando um lado não é texto;
+  `revision` é o hash do disco ao listar (`absent` para arquivo apagado), do que a marca de revisão do
+  cliente é. Arquivo que voltou a ser o que era antes da sessão não é alteração e não aparece. `200` com
+  lista vazia quando a sessão não mudou nada.
 
-  **`GET /sessions/:sessionId/changes/file?path=`** — um arquivo dessas alterações: o antes da sessão,
-  o agora, os trechos com `hunkId` e a `revision` (o hash do disco no cálculo) que o
-  `session.rejectChange` confere (F3). `404` `NOT_FOUND` para caminho que não é da sessão; `403`
-  `WORKSPACE_NOT_ALLOWED` para caminho que virou symlink para fora, recusado **sem ler**.
+  **`GET /sessions/:sessionId/changes/file?path=`** — um arquivo dessas alterações: `{ path, kind,
+  promptId, modifiedOutside, before, now, revision, hunks }` — o antes da sessão, o agora (disco), os
+  trechos com `id` e a `revision` (o hash do disco no cálculo, `absent` sem arquivo) que o
+  `session.rejectChange` confere (F3). `kind` `null` para o arquivo que voltou a ser o que era (sem
+  trechos). Lido de uma vez: uma escrita atômica no meio é vista antes ou depois, nunca pela metade.
+  `400` para `path` relativo; `404` `NOT_FOUND` (`session.error.changeNotFound`) para caminho que não é da
+  sessão; `403` `WORKSPACE_NOT_ALLOWED` para caminho que virou symlink para fora, recusado **sem ler**;
+  `415` `FILE_NOT_TEXT`.
 
-  **`GET /sessions/:sessionId/models`** — o `supportedModels()` da instalação, pelo catálogo do plano 04
-  (F4): `value`, `displayName`, `description`, `supportsEffort`, `supportedEffortLevels`. `502`/`504`
-  quando o CLI falha ou não responde — o seletor continua mostrando o modelo atual.
+  **`GET /sessions/:sessionId/models`** — o `supportedModels()` da instalação (F4):
+  `{ current, models: [{ value, resolvedModel, displayName, description, supportsEffort,
+  supportedEffortLevels }] }`, `current` o modelo com que a sessão roda. Guardado pelo `ModelCatalog`
+  (o `InstallationCache` do plano 04), por versão do CLI e workspace: duas sessões juntas fazem **uma**
+  chamada, e versão nova do CLI lê de novo. O mesmo cache é o que o `session.start` consulta para recusar
+  um `effort` que o modelo não aceita. `502`/`504` quando o CLI falha ou não responde — o seletor
+  continua mostrando o modelo atual.
 
-  **`GET /sessions/:sessionId/mcp-servers`** — o `mcpServerStatus()` **reduzido** a `name`, `status`
-  (`connected`·`failed`·`needs-auth`·`pending`) e `toolCount` (F4). **Nunca** `config` nem `error` cru:
-  podem carregar segredo e caminho. `502`/`504` como acima.
+  **`GET /sessions/:sessionId/mcp-servers`** — o `mcpServerStatus()` **reduzido** a
+  `{ servers: [{ name, status, toolCount }] }`, `status` `connected`·`failed`·`needs-auth`·`pending`·
+  `disabled` (F4). **Nunca** `config` nem `error` cru: podem carregar segredo e caminho. `502`/`504` como
+  acima.
 
-  **`GET /sessions/:sessionId/context`** — o `getContextUsage({ detail: 'summary' })` por categoria, e o
-  total contra a janela do modelo (F4). `502`/`504` como acima.
+  **`GET /sessions/:sessionId/context`** — o `getContextUsage({ detail: 'summary' })` reduzido a
+  `{ model, totalTokens, maxTokens, percentage, categories: [{ id, name, tokens, kind }] }`, `kind`
+  `used`·`free`·`buffer`·`deferred` e `id` o nome da categoria em camelCase (F4). O cliente relê a cada
+  `turn.completed` — é quando ele muda, `/compact` incluído. `502`/`504` como acima.
+
+  As três perguntam à sessão viva por uma control request com prazo; a sessão que acabou é
+  `404` `SESSION_NOT_FOUND`, como os outros recursos dela.
 
   **`GET /sessions/:sessionId/commands`** ganha `origin` por item — `builtin`·`project`·`user`·`system`
   — e a regra de colisão do SDK (F5); **`GET /catalog?workspacePath=`** responde comandos, skills e
@@ -526,7 +554,8 @@ estender ao HTTP.
 - **Erros:** `SESSION_NOT_FOUND`, `SESSION_LOCKED`,
   `SESSION_LIMIT_REACHED`, `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT`, `INVALID_INPUT`
   (`session.error.unknownCommand`, `session.error.rewindTargetUnknown`,
-  `session.error.forkPointUnknown`, `session.error.effortUnsupported`), `INTERNAL_ERROR`
+  `session.error.rewindPathUnknown`, `session.error.forkPointUnknown`,
+  `session.error.effortUnsupported`), `NOT_FOUND` (`session.error.changeNotFound`), `INTERNAL_ERROR`
   (`session.error.rewindIncomplete`), `CONFLICT` (`session.error.queuedPromptStarted`),
   `SESSION_CHANGE_STALE`, `SESSION_FORK_REJECTED`, `QUEUED_PROMPT_NOT_FOUND`, `TOOL_USE_NOT_FOUND`,
   `DIFF_NOT_APPLICABLE`, `ATTACHMENT_NOT_FOUND`, `ATTACHMENT_TYPE_UNSUPPORTED`

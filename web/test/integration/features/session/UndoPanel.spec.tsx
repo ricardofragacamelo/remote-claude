@@ -21,6 +21,10 @@ import {
 const t = translator('en');
 const PATH = `/sessions/${SESSION}/checkpoints`;
 
+/** How many times the points were asked for — the header's own reads are not the panel's. */
+const readsOf = (get: { readonly mock: { readonly calls: readonly unknown[][] } }): number =>
+  get.mock.calls.filter(([path]) => path === PATH).length;
+
 const panel = (): HTMLElement => screen.getByRole('region', { name: t('undo.panel.title') });
 const confirmation = (): HTMLElement =>
   screen.getByRole('group', { name: t('undo.confirm.title') });
@@ -69,7 +73,7 @@ describe('the undo panel', () => {
     render(<SessionScreen sessionId={SESSION} />);
     live.connect();
 
-    expect(get).not.toHaveBeenCalled();
+    expect(readsOf(get)).toBe(0);
   });
 
   it('lists the points, newest first, naming an unlabelled one', async () => {
@@ -200,7 +204,7 @@ describe('the undo panel', () => {
     expect(within(report).queryByRole('list', { name: t('undo.outcome.failed') })).toBeNull();
     expect(within(panel()).queryByRole('status')).toBeNull();
     await waitFor(() => {
-      expect(get).toHaveBeenCalledTimes(2);
+      expect(readsOf(get)).toBe(2);
     });
   });
 
@@ -292,7 +296,7 @@ describe('the undo panel', () => {
     const get = routeApi({ [PATH]: [{ checkpoints: [] }] });
     await openIdle();
     await waitFor(() => {
-      expect(get).toHaveBeenCalledTimes(1);
+      expect(readsOf(get)).toBe(1);
     });
 
     live.receive(
@@ -305,7 +309,7 @@ describe('the undo panel', () => {
     );
 
     await waitFor(() => {
-      expect(get).toHaveBeenCalledTimes(2);
+      expect(readsOf(get)).toBe(2);
     });
   });
 
@@ -321,7 +325,7 @@ describe('the undo panel', () => {
 
     expect(within(panel()).getByRole('note')).toHaveTextContent(t('undo.panel.ended'));
     expect(within(panel()).queryByRole('list')).toBeNull();
-    expect(get).not.toHaveBeenCalled();
+    expect(readsOf(get)).toBe(0);
   });
 
   it('says there is nothing to undo yet', async () => {

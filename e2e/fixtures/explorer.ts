@@ -8,7 +8,7 @@ import type { Locator, Page } from '@playwright/test';
 import { openSignedIn } from './auth';
 import type { WorkbenchSuite } from './folder-tree';
 import { cardFor, send } from './history';
-import { openedSessionOf, startButton } from './workbench';
+import { openFromDraft } from './workbench';
 import type { ScenarioUser } from '../scenarios';
 
 /**
@@ -142,8 +142,7 @@ export async function claudeBeside(
   await openSignedIn(page, side.user, fileAddress(folder, file));
   await expect(page.getByText('Connected', { exact: true }).first()).toBeVisible();
   await monacoShows(page, file, text);
-  await startButton(page).click();
-  const sessionId = await openedSessionOf(page);
+  const sessionId = await openFromDraft(page);
   side.opened(sessionId);
 
   return sessionId;

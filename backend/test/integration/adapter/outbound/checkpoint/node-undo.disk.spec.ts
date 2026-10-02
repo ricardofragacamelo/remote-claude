@@ -229,4 +229,83 @@ describe('NodeUndoDisk', () => {
       expect(await readFile(path.join(root, 'outside.md'), 'utf8')).toBe('not yours');
     });
   });
+
+  describe('reading a path for the diffs of a session — plan 08, F3', () => {
+    it('reads a plain file whole, with its hash', async () => {
+      await writeFile(at('a.md'), 'hello', 'utf8');
+
+      const read = await disk.read(at('a.md'), 100);
+
+      expect(read).toMatchObject({ kind: 'file', hash: digest('hello') });
+      expect(read.kind === 'file' ? Buffer.from(read.bytes).toString('utf8') : null).toBe('hello');
+    });
+
+    it('says what is missing, and what is past the ceiling, without reading it', async () => {
+      await writeFile(at('big.md'), 'x'.repeat(20), 'utf8');
+
+      expect(await disk.read(at('none.md'), 100)).toEqual({ kind: 'absent' });
+      expect(await disk.read(at('big.md'), 10)).toEqual({ kind: 'tooLarge', sizeBytes: 20 });
+    });
+
+    it('never reads through a link, nor a relative path — S-117', async () => {
+      await writeFile(path.join(root, 'outside.md'), 'not yours', 'utf8');
+      await symlink(path.join(root, 'outside.md'), at('link.md'));
+
+      expect(await disk.read(at('link.md'), 100)).toEqual({ kind: 'unsafe' });
+      expect(await disk.read('relative.md', 100)).toEqual({ kind: 'unsafe' });
+      expect(await disk.read(at('missing-dir/a.md'), 100)).toEqual({ kind: 'unsafe' });
+    });
+
+    it('logs the path and the size, never the contents — S-112', async () => {
+      await writeFile(at('a.md'), 'the secret', 'utf8');
+
+      await disk.read(at('a.md'), 100);
+
+      expect(JSON.stringify(log.lines)).not.toContain('the secret');
+      expect(log.withOp('checkpoint.read')).toEqual([
+        expect.objectContaining({ level: 'debug', path: at('a.md'), sizeBytes: 10 }),
+      ]);
+    });
+
+    it('reads what it may not read as unsafe, never as absent', async () => {
+      await writeFile(at('locked.md'), 'secret', { encoding: 'utf8', mode: 0o000 });
+      expect(await disk.read(at('locked.md'), 100)).toEqual({ kind: 'unsafe' });
+
+      await chmod(path.join(root, 'work'), 0o600);
+      expect(await disk.read(at('locked.md'), 100)).toEqual({ kind: 'unsafe' });
+      await expect(disk.write(at('locked.md'), new TextEncoder().encode('x'))).rejects.toThrow();
+    });
+
+    it('gives the bytes a checkpoint kept, checked against its hash', async () => {
+      const kept = await snapshotOf(at('a.md'), 'before');
+
+      expect(Buffer.from(await disk.snapshotOf(kept)).toString('utf8')).toBe('before');
+    });
+  });
+
+  describe('writing contents over a path — plan 08, B-31', () => {
+    it('writes atomically, keeps the mode, and answers the hash', async () => {
+      await writeFile(at('a.md'), 'old', { encoding: 'utf8', mode: 0o640 });
+
+      const written = await disk.write(at('a.md'), new TextEncoder().encode('new'));
+
+      expect(written).toMatchObject({ sizeBytes: 3, hash: digest('new') });
+      expect(await readFile(at('a.md'), 'utf8')).toBe('new');
+      expect((await stat(at('a.md'))).mode & 0o777).toBe(0o640);
+      expect(
+        (await readdir(path.join(root, 'work'))).filter((name) => name.includes('rc-undo')),
+      ).toEqual([]);
+    });
+
+    it('creates a file that is not there, and never writes through a link — S-143', async () => {
+      await writeFile(path.join(root, 'outside.md'), 'not yours', 'utf8');
+      await symlink(path.join(root, 'outside.md'), at('link.md'));
+
+      await disk.write(at('fresh.md'), new TextEncoder().encode('fresh'));
+      await expect(disk.write(at('link.md'), new TextEncoder().encode('x'))).rejects.toThrow();
+
+      expect(await readFile(at('fresh.md'), 'utf8')).toBe('fresh');
+      expect(await readFile(path.join(root, 'outside.md'), 'utf8')).toBe('not yours');
+    });
+  });
 });

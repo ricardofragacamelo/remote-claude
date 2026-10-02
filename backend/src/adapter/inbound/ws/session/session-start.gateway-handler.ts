@@ -38,6 +38,8 @@ export class SessionStartHandler implements WsCommandHandler {
       model: command.model ?? null,
       permissionMode: command.permissionMode ?? null,
       resumeSessionId: command.resumeSessionId ?? null,
+      forkAt: command.forkAt ?? null,
+      effort: command.effort ?? null,
       userId: context.userId,
       // A socket that declared an installation is the app's; a browser declares none.
       openedFrom: context.installId === null ? 'web' : 'mobile',

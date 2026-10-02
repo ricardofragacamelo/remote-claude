@@ -6,6 +6,9 @@ import { useRegistry } from '@/shared/hooks/useRegistry';
 import { workbenchViews } from '../store/registries';
 
 export interface ActivityBarProps {
+  /** The real path of the folder of the tab — what a view's badge counts for. */
+  readonly folder: string;
+
   /** The view of the side bar, and whether the side bar is open at all. */
   readonly view: string;
   readonly sideBarOpen: boolean;
@@ -21,6 +24,7 @@ export interface ActivityBarProps {
  * The one showing is pressed; pressing it again closes the side bar (plan 06, S-111).
  */
 export function ActivityBar({
+  folder,
   view,
   sideBarOpen,
   onPick,
@@ -39,18 +43,24 @@ export function ActivityBar({
         orientation === 'vertical' ? 'w-rail flex-col' : 'border-b border-border',
       )}
     >
-      {views.map((entry) => (
-        <IconButton
-          key={entry.id}
-          size="rail"
-          icon={entry.icon}
-          label={t(entry.labelKey)}
-          aria-pressed={sideBarOpen && entry.id === view}
-          onClick={() => {
-            onPick(entry.id);
-          }}
-        />
-      ))}
+      {views.map((entry) => {
+        const Badge = entry.badge;
+
+        return (
+          <span key={entry.id} className="relative">
+            <IconButton
+              size="rail"
+              icon={entry.icon}
+              label={t(entry.labelKey)}
+              aria-pressed={sideBarOpen && entry.id === view}
+              onClick={() => {
+                onPick(entry.id);
+              }}
+            />
+            {Badge !== undefined && <Badge folder={folder} />}
+          </span>
+        );
+      })}
     </div>
   );
 }

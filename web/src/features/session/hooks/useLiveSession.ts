@@ -13,7 +13,6 @@ import {
   sendPrompt,
   setSessionModel,
   setSessionPermissionMode,
-  startSession,
 } from '../services/live-session.service';
 import { createLiveSessionStore, liveSessionStoreOf } from '../store/live-session.store';
 import type { LiveSessionStore } from '../store/live-session.store';
@@ -58,7 +57,6 @@ export interface LiveSession extends Conversation {
    */
   readonly promptError: AppError | null;
 
-  start(workspacePath: string): void;
   prompt(text: string): void;
   interrupt(): void;
   setModel(model: string): void;
@@ -117,10 +115,6 @@ export function useLiveSession(sessionId: string | null): LiveSession {
   const history = useHistoryUnderStream(store, state.historyFrom, state.conversationId);
   const { error: promptError, expect: expectRefusal } = useCommandRefusal();
 
-  const start = useCallback((workspacePath: string) => {
-    startSession(wsClient, workspacePath);
-  }, []);
-
   const drive = useCallback(
     (run: (id: string) => void) => {
       if (sessionId !== null) {
@@ -145,7 +139,6 @@ export function useLiveSession(sessionId: string | null): LiveSession {
     isOwner: sessionId !== null && owned.includes(sessionId),
     history,
     promptError,
-    start,
     prompt: useCallback(
       (text: string) => {
         drive((id) => {

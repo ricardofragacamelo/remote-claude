@@ -7,7 +7,7 @@ import type { Page } from '@playwright/test';
 import { callApi } from '../fixtures/api';
 import { cardFor, confirmationOfTheOnlyPoint, scratchFolders, send } from '../fixtures/history';
 import { attachFrom, closeSession, connected, workspaceFor } from '../fixtures/live-session';
-import { closeTab, sessionInTab } from '../fixtures/workbench';
+import { closeTab, sessionInTab, turnsEnded } from '../fixtures/workbench';
 import type { E2eSocket } from '../fixtures/ws';
 import { scenario } from '../scenarios';
 
@@ -55,9 +55,12 @@ function idle(page: Page): ReturnType<Page['getByText']> {
   return page.getByText('Idle', { exact: true });
 }
 
-/** Waits for the first turn to end, as the screen says it: what the session has cost over it, and the session idle again. */
+/**
+ * Waits for the first turn of the test to end — the one after the opening — as the screen says it:
+ * what the session has cost over both, and the session idle again.
+ */
 async function firstTurnEnded(page: Page): Promise<void> {
-  await expect(page.getByText(/^This session has cost .+ over 1 turn\(s\)$/)).toBeVisible();
+  await expect(turnsEnded(page, 2)).toBeVisible();
   await expect(idle(page)).toBeVisible();
 }
 
@@ -95,7 +98,7 @@ test(`${init.id} — ${init.title}`, async ({ page }) => {
     // the recording of a real `/init` to replay.
     await box.press('End');
     await box.pressSequentially(`[fixture:${expected.fixture}]`);
-    await page.getByRole('button', { name: 'Send' }).click();
+    await page.getByRole('button', { name: 'Send', exact: true }).click();
 
     // The recorded `/init` asks twice — a shell command, then the write. The shell command is
     // refused, as a cautious person would; the write goes through the same card as any other.

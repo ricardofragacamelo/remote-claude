@@ -11,7 +11,7 @@ import { useTheme } from '@/shared/hooks/useTheme';
 import { installFakeWebSocket } from '../../../support/fake-websocket';
 import { translator } from '../../../support/render';
 import { aViewport } from '../../../support/viewport';
-import { openWorkbench, tabNamed } from '../../../support/workbench';
+import { draftOnScreen, openWorkbench, tabNamed } from '../../../support/workbench';
 import { aTab, aTabServer, projects } from '../../../support/workspace-api';
 
 const t = translator('en');
@@ -27,7 +27,7 @@ afterEach(() => {
 /** The workbench of A, with its folder resolved and on screen. */
 async function onA() {
   const mounted = openWorkbench(A, aTabServer([aTab(A), aTab(B)]));
-  await screen.findByRole('button', { name: t('session.starter.action') });
+  await draftOnScreen();
   return mounted;
 }
 
@@ -49,7 +49,7 @@ describe('the anatomy of the workbench from md up — plan 06, S-116', () => {
     expect(sideBar('workbench.explorer.label')).toBeVisible();
     expect(screen.getByRole('region', { name: t('workbench.editor.label') })).toBeVisible();
     const claude = sideBar('workbench.claude.label')!;
-    expect(within(claude).getByRole('button', { name: t('session.starter.action') })).toBeVisible();
+    expect(within(claude).getByRole('group', { name: t('sessions.draft.choices') })).toBeVisible();
     // Held places say what will live there, never a blank.
     expect(screen.getByText(t('workbench.explorer.placeholder'))).toBeVisible();
     expect(screen.getByText(t('workbench.editor.placeholderTitle'))).toBeVisible();
@@ -270,7 +270,7 @@ describe('the workbench under md — plan 06, S-117, S-118', () => {
 
     await user.click(within(bar).getByRole('button', { name: t('workbench.mobile.explorer') }));
     expect(sideBar('workbench.explorer.label')).toBeVisible();
-    expect(screen.queryByRole('button', { name: t('session.starter.action') })).toBeNull();
+    expect(screen.queryByRole('group', { name: t('sessions.draft.choices') })).toBeNull();
     await user.click(view('workbench.search.label'));
     await user.click(view('workbench.search.label'));
     expect(sideBar('workbench.search.label')).toBeVisible();

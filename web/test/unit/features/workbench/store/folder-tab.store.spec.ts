@@ -18,16 +18,15 @@ describe('the state of a folder tab', () => {
       panelOpen: false,
       mobileView: 'claude',
       sessionId: null,
-      draft: '',
     });
   });
 
   it('is one store per folder — a folder and its subfolder share nothing (S-98, S-99)', () => {
     folderTabStore(A).getState().pickView('search');
-    folderTabStore(A).getState().setDraft('half a prompt');
+    folderTabStore(A).getState().showSession('S1');
 
     expect(folderTabStore(A)).toBe(folderTabStore(A));
-    expect(folderTabStore(B).getState()).toMatchObject({ view: FIRST_VIEW, draft: '' });
+    expect(folderTabStore(B).getState()).toMatchObject({ view: FIRST_VIEW, sessionId: null });
   });
 
   it('closes the side bar when the view already open is picked again, and opens it on another (S-111)', () => {
@@ -70,12 +69,11 @@ describe('the state of a folder tab', () => {
     expect(folderTabStore(A).getState().mobileView).toBe('editor');
   });
 
-  it('shows a session, and a new one starts with nothing half-written', () => {
+  it('shows a session, and none', () => {
     const tab = folderTabStore(A);
-    tab.getState().setDraft('for the old one');
 
     tab.getState().showSession('S1');
-    expect(tab.getState()).toMatchObject({ sessionId: 'S1', draft: '' });
+    expect(tab.getState()).toMatchObject({ sessionId: 'S1', conversationId: null });
 
     tab.getState().showSession(null);
     expect(tab.getState().sessionId).toBeNull();
@@ -114,14 +112,14 @@ describe('the state of a folder tab', () => {
   });
 
   it('starts over once the tab is closed, and all of them on a sign-out', () => {
-    folderTabStore(A).getState().setDraft('x');
-    folderTabStore(B).getState().setDraft('y');
+    folderTabStore(A).getState().showSession('x');
+    folderTabStore(B).getState().showSession('y');
 
     forgetFolderTab(A);
-    expect(folderTabStore(A).getState().draft).toBe('');
-    expect(folderTabStore(B).getState().draft).toBe('y');
+    expect(folderTabStore(A).getState().sessionId).toBeNull();
+    expect(folderTabStore(B).getState().sessionId).toBe('y');
 
     forgetFolderTabs();
-    expect(folderTabStore(B).getState().draft).toBe('');
+    expect(folderTabStore(B).getState().sessionId).toBeNull();
   });
 });

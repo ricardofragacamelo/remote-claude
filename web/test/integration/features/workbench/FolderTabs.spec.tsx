@@ -7,7 +7,13 @@ import { axe } from 'jest-axe';
 import { workbenchLocation } from '@/app/workbench-location';
 import { translator } from '../../../support/render';
 import { aViewport } from '../../../support/viewport';
-import { openWorkbench, strip, tabNamed, tabNames } from '../../../support/workbench';
+import {
+  draftOnScreen,
+  openWorkbench,
+  strip,
+  tabNamed,
+  tabNames,
+} from '../../../support/workbench';
 import { aTab, aTabServer, projects, refusal } from '../../../support/workspace-api';
 
 const t = translator('en');
@@ -118,7 +124,7 @@ describe('a tab whose folder cannot be used — plan 06, S-104, S-105', () => {
     await waitFor(() => {
       expect(mounted.search()).toEqual({ folder: A });
     });
-    expect(await screen.findByRole('button', { name: t('session.starter.action') })).toBeVisible();
+    expect(await draftOnScreen()).toBeVisible();
   });
 
   it('says the ceiling of tabs, and that closing one does not end its sessions — S-105', async () => {
@@ -412,7 +418,7 @@ describe('the strip of tabs', () => {
   it('has no accessibility violation', async () => {
     const server = aTabServer([aTab(A), aTab(B)]);
     const { container } = openWorkbench(A, server);
-    await screen.findByRole('button', { name: t('session.starter.action') });
+    await draftOnScreen();
 
     expect(await axe(container)).toHaveNoViolations();
   });

@@ -61,13 +61,18 @@ function DesktopShell({ folder, claude }: FolderShellProps): React.JSX.Element {
 
   return (
     <div className="flex min-h-0 flex-1">
-      <ActivityBar view={view.id} sideBarOpen={tab.sideBarOpen} onPick={tab.pickView} />
+      <ActivityBar
+        folder={folder}
+        view={view.id}
+        sideBarOpen={tab.sideBarOpen}
+        onPick={tab.pickView}
+      />
 
       {/* Keyed by which panels there are: the library lays a group out once, from its default. */}
       <ResizablePanelGroup
-        key={tab.sideBarOpen ? 'with-side-bar' : 'without-side-bar'}
+        key={`${String(tab.sideBarOpen)}:${String(tab.secondaryOpen)}`}
         orientation="horizontal"
-        defaultLayout={columnsOf(layout, tab.sideBarOpen)}
+        defaultLayout={columnsOf(layout, tab.sideBarOpen, tab.secondaryOpen)}
         onLayoutChanged={columnsChanged}
       >
         {tab.sideBarOpen && (
@@ -99,10 +104,15 @@ function DesktopShell({ folder, claude }: FolderShellProps): React.JSX.Element {
           )}
         </ResizablePanel>
 
-        <ResizableHandle />
-        <ResizablePanel id="secondary" {...bounds(LAYOUT_LIMITS.secondary)}>
-          <SecondarySideBar>{claude}</SecondarySideBar>
-        </ResizablePanel>
+        {/* Hidden, the chat keeps everything: its state is the tab's, never the panel's (B-32). */}
+        {tab.secondaryOpen && (
+          <>
+            <ResizableHandle />
+            <ResizablePanel id="secondary" {...bounds(LAYOUT_LIMITS.secondary)}>
+              <SecondarySideBar>{claude}</SecondarySideBar>
+            </ResizablePanel>
+          </>
+        )}
       </ResizablePanelGroup>
     </div>
   );
@@ -116,7 +126,13 @@ function PhoneShell({ folder, claude }: FolderShellProps): React.JSX.Element {
   const screens: Readonly<Record<MobileView, ReactNode>> = {
     explorer: (
       <div className="flex min-h-0 flex-1 flex-col">
-        <ActivityBar view={view.id} sideBarOpen onPick={tab.showView} orientation="horizontal" />
+        <ActivityBar
+          folder={folder}
+          view={view.id}
+          sideBarOpen
+          onPick={tab.showView}
+          orientation="horizontal"
+        />
         <SideBar folder={folder} view={view} />
       </div>
     ),

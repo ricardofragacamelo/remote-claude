@@ -1,6 +1,15 @@
 import type { UserId } from '@domain/auth';
-import { commandIn, menuOf, offers, SessionId, UnknownCommandError } from '@domain/session';
-import type { MenuCommand, PermissionMode, SlashCommand } from '@domain/session';
+import type { IdGenerator } from '@domain/shared';
+import {
+  commandIn,
+  menuOf,
+  offers,
+  previewOf,
+  SessionId,
+  UnknownCommandError,
+} from '@domain/session';
+import type { MenuCommand, PermissionMode, SessionClient, SlashCommand } from '@domain/session';
+import type { SessionBroadcaster } from './ports/session-broadcaster.port';
 import type { CommandCatalog } from './command-catalog';
 import type { SessionEnder } from './session-ender';
 import type { LiveSession, SessionRegistry } from './session-registry';
@@ -28,13 +37,20 @@ abstract class SessionCommandUseCase {
   }
 }
 
+/** What queueing a prompt needs: an id for it, and who to tell that it waits. */
+export interface PromptQueueing {
+  readonly ids: IdGenerator;
+  readonly broadcaster: SessionBroadcaster;
+}
+
 /**
  * Sends one turn.
  *
- * A prompt that arrives while a turn is running is **queued** and runs next — the SDK does that
- * natively, it was measured, and it is what the Claude Code UI does. Refusing it with a `409` was
- * our own policy and it was the wrong one
- * ([R-02](../../../../docs/plans/00-bootstrap/progress.md)).
+ * A prompt that arrives while a turn is running is **queued** and runs next, as a turn of its own.
+ * The queue is the backend's since plan 08 (D-14): a prompt handed to the SDK mid-turn is folded
+ * into the running turn (measured, discovery §10.4) and cannot be taken back. Held here, every
+ * client watching sees it wait (`prompt.queued`) and any of them can take it out first. Refusing it
+ * with a `409` was never the answer ([R-02](../../../../docs/plans/00-bootstrap/progress.md)).
  *
  * The one prompt that **is** refused is a slash command the installation does not have (S-34):
  * sent on, the CLI would answer in prose of its own, inside the conversation. The question is asked
@@ -57,16 +73,23 @@ export class PromptSessionUseCase extends SessionCommandUseCase {
   constructor(
     registry: SessionRegistry,
     private readonly catalog: CommandCatalog,
+    private readonly queueing: PromptQueueing,
   ) {
     super(registry);
   }
 
   /**
-   * @returns the send, to run once the prompt was acknowledged
+   * @param from the client that sent it — what the row of the queue says of its author
+   * @returns the send, to run once the prompt was acknowledged: now, or into the queue
    * @throws {UnknownCommandError} the prompt invokes a command the installation does not have
    * @throws {import('@domain/session').SessionLockedError} an undo is putting files back (B-27)
    */
-  async execute(rawSessionId: string, text: string, userId: UserId): Promise<() => void> {
+  async execute(
+    rawSessionId: string,
+    text: string,
+    userId: UserId,
+    from: SessionClient = 'web',
+  ): Promise<() => void> {
     const live = this.require(rawSessionId, userId);
     const key = live.session.id.value;
 
@@ -88,8 +111,34 @@ export class PromptSessionUseCase extends SessionCommandUseCase {
     await checked;
 
     return () => {
-      live.handle.prompt(text);
+      this.submit(live, text, from);
     };
+  }
+
+  /** Hands the prompt to the CLI when no turn runs, and to the queue when one does. */
+  private submit(live: LiveSession, text: string, from: SessionClient): void {
+    const prompt = {
+      queueId: `q_${this.queueing.ids.next()}`,
+      text,
+      promptedBy: from,
+      preview: previewOf(text),
+    };
+    const submission = live.session.prompts.submit(prompt);
+
+    if (submission.kind === 'now') {
+      live.handle.prompt(text);
+      return;
+    }
+
+    this.queueing.broadcaster.publish(live.session.id, {
+      type: 'prompt.queued',
+      payload: {
+        queueId: prompt.queueId,
+        position: submission.position,
+        promptedBy: prompt.promptedBy,
+        preview: prompt.preview,
+      },
+    });
   }
 
   private async check(live: LiveSession, text: string): Promise<void> {
@@ -119,6 +168,23 @@ export class PromptSessionUseCase extends SessionCommandUseCase {
     }
 
     return offers(commands, command);
+  }
+}
+
+/**
+ * Takes a prompt out of the queue before it reaches Claude (plan 08, B-34). Any client watching may.
+ *
+ * A second cancel of the same prompt is an `ack` with no effect; one that already became a turn is
+ * `CONFLICT` — stopping it now is interrupting the turn.
+ */
+export class CancelQueuedPromptUseCase extends SessionCommandUseCase {
+  /**
+   * @returns whether the prompt left the queue now — `false` when an earlier cancel took it
+   * @throws {import('@domain/session').QueuedPromptStartedError} it already started (S-158)
+   * @throws {import('@domain/session').QueuedPromptNotFoundError} the queue never had it (S-159)
+   */
+  execute(rawSessionId: string, queueId: string, userId: UserId): boolean {
+    return this.require(rawSessionId, userId).session.prompts.cancel(queueId) === 'cancelled';
   }
 }
 

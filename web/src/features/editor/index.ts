@@ -22,4 +22,5 @@ export { useInsertBlocker } from './hooks/useInsertBlocker';
 export { canPreview } from './lib/preview-kinds';
 export { formatBytes } from './lib/text';
 export { useActiveFile } from './hooks/useEditor';
-export type { DiffSide, OpenFileOptions } from './types/editor';
+export { diffSources } from './store/diff-sources';
+export type { DiffSide, DiffSource, OpenFileOptions, ProvidedSide } from './types/editor';

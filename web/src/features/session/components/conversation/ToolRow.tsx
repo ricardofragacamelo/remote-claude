@@ -16,6 +16,10 @@ import type { ToolExecution, ToolStatus } from '../../types/live-session';
 import { AnsiText } from './AnsiText';
 import { SubagentChildren } from './SubagentChildren';
 import type { TimelineContext } from './timeline-context';
+import { ToolDiffView } from './ToolDiffView';
+
+/** The tools whose change the chat shows as a diff (plan 08, B-27). */
+const DIFFABLE = new Set(['Edit', 'MultiEdit', 'Write']);
 
 /** The icon of each state of a tool — beside its words, never instead of them (S-75). */
 const STATUS_ICON: Readonly<Record<ToolStatus, LucideIcon>> = {
@@ -70,6 +74,9 @@ export function ToolRow({ tool, context }: ToolRowProps): React.JSX.Element {
           {tool.status === 'running' && tool.elapsed !== null ? tool.elapsed : status}
         </span>
       </button>
+      {DIFFABLE.has(tool.toolName) && tool.status === 'succeeded' && context.sessionId !== null && (
+        <ToolDiffView tool={tool} sessionId={context.sessionId} folder={context.folder} />
+      )}
       {open && <ToolDetails tool={tool} context={context} />}
     </li>
   );

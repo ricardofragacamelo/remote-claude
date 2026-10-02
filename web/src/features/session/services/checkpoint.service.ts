@@ -110,6 +110,7 @@ export function rewoundOf(frame: Envelope): RewindOutcome | null {
     preserved: preservedOf(recordsOf(payload['preserved'])),
     unchanged: pathsOf(recordsOf(payload['unchanged'])),
     failed: pathsOf(recordsOf(payload['failed'])),
+    hunkId: readText(payload, 'hunkId'),
   };
 }
 

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 /** SHA-256 of some contents, in hex — the hash every half of the undo compares by. */
-export function digestOf(content: Buffer): string {
+export function digestOf(content: Uint8Array): string {
   return createHash('sha256').update(content).digest('hex');
 }
 

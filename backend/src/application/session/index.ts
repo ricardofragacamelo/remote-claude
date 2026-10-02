@@ -15,8 +15,12 @@ export type {
   StartedSession,
 } from './start-session.use-case';
 export type { StartSessionCommand } from './commands/start-session.command';
-export { CommandCatalog, MAX_CACHED_LISTS } from './command-catalog';
+export { CommandCatalog, MAX_CACHED_LISTS, ModelCatalog } from './command-catalog';
+export { InstallationCache } from './installation-cache';
+export { InspectSessionUseCase } from './session-insight.use-cases';
+export type { SessionModels } from './session-insight.use-cases';
 export {
+  CancelQueuedPromptUseCase,
   CloseSessionUseCase,
   InterruptSessionUseCase,
   ListSessionCommandsUseCase,
@@ -24,7 +28,7 @@ export {
   SetSessionModelUseCase,
   SetSessionPermissionModeUseCase,
 } from './drive-session.use-cases';
-export type { SessionCommandMenu } from './drive-session.use-cases';
+export type { PromptQueueing, SessionCommandMenu } from './drive-session.use-cases';
 export {
   ListUndoPointsUseCase,
   MAX_UNDO_POINTS,
@@ -37,7 +41,39 @@ export type {
   RewindOutcome,
   UndoPointPreview,
 } from './rewind-files.use-cases';
-export type { RestoredFile, UndoDisk, UndoJournal, UndoReach } from './ports/undo.ports';
+export type {
+  FileContent,
+  RestoredFile,
+  UndoDisk,
+  UndoJournal,
+  UndoReach,
+  WrittenFile,
+} from './ports/undo.ports';
+export {
+  ABSENT_REVISION,
+  ListSessionChangesUseCase,
+  ReadSessionChangeUseCase,
+  RejectChangeUseCase,
+  RestoreChangeUseCase,
+  ShowToolDiffUseCase,
+} from './session-changes.use-cases';
+export type {
+  ChangeLimits,
+  ChangeSide,
+  ChangeStores,
+  ChangeWriting,
+  RejectChangeCommand,
+  RestoreChangeCommand,
+  SessionChangeFile,
+  SessionChanges,
+  SessionChangeSummary,
+} from './session-changes.use-cases';
+export {
+  MAX_REMEMBERED_INPUT_CHARS,
+  MAX_REMEMBERED_TOOLS,
+  SessionChangeMemory,
+} from './session-change-memory';
+export type { RecordedTool, Rejection, RememberedInvocation } from './session-change-memory';
 export { UNDO_DISK, UNDO_JOURNAL } from './ports/undo.ports';
 export type { JournalScope } from './ports/session-file-journal.port';
 export { SessionRegistry } from './session-registry';

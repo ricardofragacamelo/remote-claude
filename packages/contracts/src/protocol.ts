@@ -21,6 +21,7 @@ export const FRAME_TYPES = [
   'session.interrupt',
   'session.prompt',
   'session.rejectChange',
+  'session.restoreChange',
   'session.rewindFiles',
   'session.setLocale',
   'session.setModel',
@@ -251,6 +252,13 @@ export interface SessionRejectChangePayload {
   readonly hunkId: string;
   /** The `revision` the hunks were computed against — the hash of the disk then. It is what keeps a hunk from being applied to a file that moved under it. */
   readonly revision: string;
+}
+
+/** Undoes the last rejection of a file — of one hunk (`session.rejectChange`) or of the whole file (`session.rewindFiles` with `paths`): the file gets back, byte for byte, what the rejection replaced. Only while the file is still exactly what the rejection left; otherwise `SESSION_CHANGE_STALE`. A file with no rejection to undo is `NOT_FOUND`. The same locks as an undo apply (`SESSION_LOCKED`), and the trail is written before the disk. The outcome arrives as `session.rewound`, with the file in `reverted`. */
+export interface SessionRestoreChangePayload {
+  readonly sessionId: string;
+  /** The file, as `GET /sessions/:sessionId/changes` named it. */
+  readonly path: string;
 }
 
 /** Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not `rewindFiles()` of the SDK: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`. */
@@ -1011,6 +1019,22 @@ export function isSessionRejectChangePayload(value: unknown): value is SessionRe
     typeof record['path'] === 'string',
     typeof record['hunkId'] === 'string',
     typeof record['revision'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionRestoreChangePayload}. Unknown fields are accepted.
+ */
+export function isSessionRestoreChangePayload(value: unknown): value is SessionRestoreChangePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['path'] === 'string',
   ].every(Boolean);
 }
 
@@ -1910,6 +1934,26 @@ export function isSessionRejectChangeFrame(value: unknown): value is SessionReje
     value.kind === 'command' &&
     value.type === 'session.rejectChange' &&
     isSessionRejectChangePayload(value.payload)
+  );
+}
+
+/** Undoes the last rejection of a file — of one hunk (`session.rejectChange`) or of the whole file (`session.rewindFiles` with `paths`): the file gets back, byte for byte, what the rejection replaced. Only while the file is still exactly what the rejection left; otherwise `SESSION_CHANGE_STALE`. A file with no rejection to undo is `NOT_FOUND`. The same locks as an undo apply (`SESSION_LOCKED`), and the trail is written before the disk. The outcome arrives as `session.rewound`, with the file in `reverted`. */
+export interface SessionRestoreChangeFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.restoreChange';
+  readonly payload: SessionRestoreChangePayload;
+}
+
+/** Whether `value` is a {@link SessionRestoreChangeFrame}. */
+export function isSessionRestoreChangeFrame(value: unknown): value is SessionRestoreChangeFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.restoreChange' &&
+    isSessionRestoreChangePayload(value.payload)
   );
 }
 

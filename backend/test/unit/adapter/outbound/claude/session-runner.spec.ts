@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { COMMANDS_TIMEOUT_MS, SessionRunner } from '@adapter/outbound/claude/session-runner';
-import type { SessionEvent, ToolInvocation } from '@application/session';
+import type { ClaudeSessionStart, SessionEvent, ToolInvocation } from '@application/session';
 import type { SessionCloseReason } from '@domain/session';
 import { ClaudeTimeoutError, ClaudeUnavailableError, SessionId } from '@domain/session';
 import { ClaudeSessionId } from '@domain/transcript';
 import { aConversation } from '../../../../support/builders/session.builder';
 import { WorkspacePath } from '@domain/workspace';
-import { loadCommands, loadFixture } from '../../../../fakes/agent-sdk/fixture';
+import { loadCommands, loadFixture, loadInstallation } from '../../../../fakes/agent-sdk/fixture';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
 import type { ScriptOptions, ScriptRecord } from '../../../../fakes/agent-sdk/scripted-query';
 import { FixedClock } from '../../../../support/fakes/fixed-clock';
@@ -25,7 +25,11 @@ const now = new Date('2026-09-18T12:00:00.000Z');
 /** A runner over a scripted stream, with everything it produced collected. */
 function runner(
   script: ScriptOptions = {},
-  extra: { scheduler?: ManualScheduler; bundledCliVersion?: string | null } = {},
+  extra: {
+    scheduler?: ManualScheduler;
+    bundledCliVersion?: string | null;
+    start?: Pick<ClaudeSessionStart, 'effort' | 'forkAt' | 'onForkRejected'>;
+  } = {},
 ): {
   runner: SessionRunner;
   events: SessionEvent[];
@@ -54,6 +58,7 @@ function runner(
       conversation: { claudeSessionId: ClaudeSessionId.create(CONVERSATION), resumedFrom: null },
       onEvent: (event) => events.push(event),
       onClosed: (reason) => closed.push(reason),
+      ...extra.start,
     },
     {
       createQuery,
@@ -704,6 +709,147 @@ describe('SessionRunner', () => {
       unknown.runner.run();
 
       expect(unknown.runner.cliVersion).toBeNull();
+    });
+  });
+
+  describe('what the installation says about itself — plan 08, F4', () => {
+    it('lists the models as the installation recorded them, in our shape — S-166', async () => {
+      harness.runner.run();
+
+      const models = await harness.runner.supportedModels();
+
+      expect(models).toHaveLength(loadInstallation().models.length);
+      expect(models.find((model) => model.value === 'sonnet')).toEqual({
+        value: 'sonnet',
+        resolvedModel: 'claude-sonnet-5',
+        displayName: 'Sonnet',
+        description: expect.any(String) as string,
+        supportsEffort: true,
+        supportedEffortLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
+      });
+      expect(models.find((model) => model.value === 'haiku')).toMatchObject({
+        resolvedModel: 'claude-haiku-4-5-20251001',
+        supportsEffort: false,
+        supportedEffortLevels: [],
+      });
+    });
+
+    it('measures the context by category, without the grid nor any file — S-173', async () => {
+      harness.runner.run();
+
+      const context = await harness.runner.contextUse();
+
+      expect(context).toMatchObject({ maxTokens: 1_000_000, percentage: 3 });
+      expect(context.categories).toContainEqual({
+        id: 'freeSpace',
+        name: 'Free space',
+        tokens: 934_595,
+        kind: 'free',
+      });
+      expect(Object.keys(context)).toEqual([
+        'model',
+        'totalTokens',
+        'maxTokens',
+        'percentage',
+        'categories',
+      ]);
+    });
+
+    it('reduces the MCP servers to a name, a status and a count — never the configuration — S-177', async () => {
+      const withServers = runner({
+        mcpServers: [
+          {
+            name: 'docs',
+            status: 'connected',
+            config: { type: 'http', url: 'https://x.example/?token=secret' },
+            tools: [{ name: 'search' }, { name: 'read' }],
+          },
+          { name: 'broken', status: 'failed', error: 'ENOENT /home/someone/.mcp' },
+          { name: 'odd', status: 'weird' as never },
+        ],
+      });
+      withServers.runner.run();
+
+      const servers = await withServers.runner.mcpServers();
+
+      expect(servers).toEqual([
+        { name: 'docs', status: 'connected', toolCount: 2 },
+        { name: 'broken', status: 'failed', toolCount: 0 },
+        { name: 'odd', status: 'failed', toolCount: 0 },
+      ]);
+      expect(JSON.stringify(withServers.log.lines)).not.toContain('secret');
+    });
+
+    it('answers unavailable when the CLI fails, and a timeout when it never answers — S-168', async () => {
+      const failing = runner({ installationFails: new Error('gone') });
+      failing.runner.run();
+      await expect(failing.runner.mcpServers()).rejects.toThrow(ClaudeUnavailableError);
+
+      const scheduler = new ManualScheduler();
+      const hanging = runner({ installationFails: 'hang' }, { scheduler });
+      hanging.runner.run();
+      const asking = hanging.runner.contextUse();
+      scheduler.fire();
+      await expect(asking).rejects.toThrow(ClaudeTimeoutError);
+    });
+  });
+
+  describe('effort and the fork of an edit-and-resend — D-16, D-19', () => {
+    it('opens the query with the effort and the point of the fork', () => {
+      const forking = runner(
+        {},
+        { start: { effort: 'high', forkAt: { keepUpTo: 'a1', dropsTurn: 'u2' } } },
+      );
+      forking.runner.run();
+
+      expect(forking.record.options).toMatchObject({
+        effort: 'high',
+        resumeSessionAt: 'a1',
+        resumeDropsTurn: 'u2',
+      });
+      expect(harness.record.options?.effort).toBeUndefined();
+    });
+
+    it('says the CLI refused the point of the fork, and ends — S-164', async () => {
+      let refused = 0;
+      const forking = runner(
+        { refuseFork: true },
+        {
+          start: {
+            forkAt: { keepUpTo: 'a1', dropsTurn: 'u2' },
+            onForkRejected: () => {
+              refused += 1;
+            },
+          },
+        },
+      );
+      forking.runner.run();
+      forking.runner.prompt('again, edited');
+      await forking.settle();
+
+      expect(refused).toBe(1);
+      expect(forking.closed).toEqual(['completed']);
+    });
+
+    it('takes an ordinary error result for what it is', async () => {
+      const failing = runner({
+        extraMessages: [
+          {
+            type: 'result',
+            subtype: 'error_during_execution',
+            errors: ['something else'],
+            total_cost_usd: 0,
+            duration_ms: 0,
+            usage: {},
+            uuid: 'r-x',
+          },
+        ],
+      });
+      failing.runner.run();
+      failing.runner.prompt('hello');
+      await failing.settle();
+
+      expect(failing.log.lines.some((line) => line['phase'] === 'forkRejected')).toBe(false);
     });
   });
 });

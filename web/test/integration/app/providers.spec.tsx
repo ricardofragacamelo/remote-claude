@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { act, renderHook, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 import { render as rtlRender } from '@testing-library/react';
@@ -7,7 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { Providers } from '@/app/providers';
 import { useAuthStore } from '@/features/auth';
 import { permissionQueueOf } from '@/features/permission';
-import { liveSessionStoreOf } from '@/features/session';
+import { liveSessionStoreOf, registerClaudeChanges } from '@/features/session';
+import { claudePanelStore } from '@/features/session/store/claude-panel.store';
 import { useFolderTab } from '@/features/workbench';
 import { useDensity } from '@/shared/hooks/useDensity';
 import { useTheme } from '@/shared/hooks/useTheme';
@@ -96,9 +97,12 @@ describe('the providers', () => {
     });
     const conversation = liveSessionStoreOf('S1');
     const questions = permissionQueueOf('S1');
-    const { result } = renderHook(() => useFolderTab('/srv/projects/a'));
+    // The panel keeps its drafts among what a folder tab keeps — registered as the app does at load.
+    const unregister = registerClaudeChanges();
+    onTestFinished(unregister);
+    const panel = claudePanelStore('/srv/projects/a');
     act(() => {
-      result.current.setDraft('the last person’s words');
+      panel.getState().setDraft('draft:1', 'the last person’s words');
     });
 
     act(() => {
@@ -109,7 +113,7 @@ describe('the providers', () => {
       expect(liveSessionStoreOf('S1')).not.toBe(conversation);
     });
     expect(permissionQueueOf('S1')).not.toBe(questions);
-    expect(renderHook(() => useFolderTab('/srv/projects/a')).result.current.draft).toBe('');
+    expect(claudePanelStore('/srv/projects/a').getState().drafts).toEqual({});
   });
 
   it('keeps what the tabs held through a page load of somebody still signed in — S-208', async () => {

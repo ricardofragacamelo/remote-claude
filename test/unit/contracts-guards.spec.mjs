@@ -102,6 +102,7 @@ describe('the generated protocol surface', () => {
       'session.interrupt',
       'session.prompt',
       'session.rejectChange',
+      'session.restoreChange',
       'session.rewindFiles',
       'session.rewound',
       'session.setLocale',

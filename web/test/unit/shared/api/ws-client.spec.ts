@@ -418,6 +418,31 @@ describe('WsClient', () => {
       expect(heard).toEqual(['session.started:brand-new', 'session.closed:s1']);
     });
 
+    it('lets who listens hear every frame of a session, watched or not — plan 08, B-42', () => {
+      const heard: string[] = [];
+      const watched: string[] = [];
+      const socket = connectAndReady();
+      client.attach('s1', {
+        onEvent: (frame) => watched.push(frame.type),
+        onGap: () => undefined,
+        lastSeq: () => 0,
+      });
+      const stop = client.onSessionFrame((frame) =>
+        heard.push(`${frame.type}:${String(frame.sessionId)}`),
+      );
+
+      socket.receive(serverFrame({ sessionId: 's1', seq: 1, type: 'turn.completed' }));
+      socket.receive(
+        serverFrame({ sessionId: 'other', type: 'permission.requested', kind: 'request' }),
+      );
+      stop();
+      socket.receive(serverFrame({ sessionId: 's1', seq: 2, type: 'message.delta' }));
+
+      expect(heard).toEqual(['turn.completed:s1', 'permission.requested:other']);
+      // Still delivered where it would have gone.
+      expect(watched).toEqual(['turn.completed', 'message.delta']);
+    });
+
     it('stops offering once the observer unsubscribes', () => {
       const seen: Envelope[] = [];
       const socket = connectAndReady();

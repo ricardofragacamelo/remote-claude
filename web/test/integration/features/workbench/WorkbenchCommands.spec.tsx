@@ -6,7 +6,7 @@ import { releaseFolderTabs } from '@/features/workbench/store/folder-tab.store';
 import { wsClient } from '@/shared/api/ws';
 import { VISITOR_PREFIX } from '@/shared/lib/visitor-storage';
 import { translator } from '../../../support/render';
-import { openWorkbench, tabNamed } from '../../../support/workbench';
+import { draftOnScreen, openWorkbench, tabNamed } from '../../../support/workbench';
 import { aTab, aTabServer, projects } from '../../../support/workspace-api';
 
 const t = translator('en');
@@ -23,7 +23,7 @@ afterEach(() => {
 /** The workbench of `folder`, over three tabs, with its folder resolved and on screen. */
 async function on(folder = A) {
   const mounted = openWorkbench(folder, aTabServer([aTab(A), aTab(B), aTab(C)]));
-  await screen.findByRole('button', { name: t('session.starter.action') });
+  await draftOnScreen();
   await tabNamed('c');
   return mounted;
 }

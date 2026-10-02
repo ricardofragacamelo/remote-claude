@@ -62,13 +62,17 @@ export function layoutFrom(saved: unknown): WorkbenchLayout {
 export function columnsOf(
   layout: WorkbenchLayout,
   sideBarOpen: boolean,
+  secondaryOpen = true,
 ): Readonly<Record<string, number>> {
   const sideBar = sideBarOpen ? layout.sideBar : 0;
-  const center = 100 - sideBar - layout.secondary;
+  const secondary = secondaryOpen ? layout.secondary : 0;
+  const center = 100 - sideBar - secondary;
 
-  return sideBarOpen
-    ? { sideBar, center, secondary: layout.secondary }
-    : { center, secondary: layout.secondary };
+  return {
+    ...(sideBarOpen ? { sideBar } : {}),
+    center,
+    ...(secondaryOpen ? { secondary } : {}),
+  };
 }
 
 /** The rows of the middle column, in percent, when the panel is open. */

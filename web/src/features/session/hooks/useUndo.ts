@@ -9,6 +9,7 @@ import { liveSessionStoreOf } from '../store/live-session.store';
 import type { Checkpoint, RewindOutcome, UndoAvailability } from '../types/checkpoint';
 import type { SessionStatus } from '../types/live-session';
 import { useCommandRefusal } from './useCommandRefusal';
+import { useDiskMoves } from './useDiskMoves';
 
 /** The keys of the undo points, in one place. */
 export const checkpointKeys = {
@@ -71,21 +72,15 @@ export function useUndo(sessionId: string): Undo {
     refetchOnWindowFocus: false,
   });
 
-  // A turn that completed may have written files; an undo that landed certainly did. Watched on
-  // the store rather than on a render, because what matters is the change, not the value.
-  useEffect(
-    () =>
-      store.subscribe((state, previous) => {
-        if (state.lastRewind !== previous.lastRewind) {
-          settle();
-        }
+  // A turn that completed may have written files; an undo that landed certainly did — and an undo
+  // that landed is the outcome of mine, if one was in flight.
+  useDiskMoves(sessionId, ({ rewound }) => {
+    if (rewound) {
+      settle();
+    }
 
-        if (state.lastTurn !== previous.lastTurn || state.lastRewind !== previous.lastRewind) {
-          void queryClient.invalidateQueries({ queryKey: checkpointKeys.of(sessionId) });
-        }
-      }),
-    [queryClient, sessionId, settle, store],
-  );
+    void queryClient.invalidateQueries({ queryKey: checkpointKeys.of(sessionId) });
+  });
 
   useEffect(
     () =>

@@ -6,12 +6,21 @@ import {
   FOLDER_LOCATOR,
   ListLiveSessionsUseCase,
   PENDING_PERMISSIONS,
+  CancelQueuedPromptUseCase,
   CloseSessionUseCase,
   CommandCatalog,
+  InspectSessionUseCase,
+  ModelCatalog,
   InterruptSessionUseCase,
   ListSessionCommandsUseCase,
   ListUndoPointsUseCase,
+  ListSessionChangesUseCase,
+  ReadSessionChangeUseCase,
+  RejectChangeUseCase,
+  RestoreChangeUseCase,
   RewindFilesUseCase,
+  SessionChangeMemory,
+  ShowToolDiffUseCase,
   UNDO_DISK,
   UNDO_JOURNAL,
   UndoPlanner,
@@ -33,6 +42,8 @@ import {
   WORKSPACE_RESOLVER,
 } from '@application/session';
 import type {
+  ChangeStores,
+  ChangeWriting,
   ClaudeSessionPort,
   FolderLocator,
   PendingPermissions,
@@ -48,6 +59,8 @@ import type { PathLock } from '@application/shared';
 import type { Clock, IdGenerator } from '@domain/shared';
 import { ContractCommandHandler } from '@adapter/inbound/ws/contract-command.gateway-handler';
 import { SessionController } from '@adapter/inbound/http/session/session.controller';
+import { SessionChangesController } from '@adapter/inbound/http/session/session-changes.controller';
+import { SessionInsightController } from '@adapter/inbound/http/session/session-insight.controller';
 import { LiveSessionsController } from '@adapter/inbound/http/session/live-sessions.controller';
 import { RegistryPendingPermissions } from '@adapter/outbound/session/registry-pending-permissions';
 import { SessionRewindHandler } from '@adapter/inbound/ws/session/session-rewind.gateway-handler';
@@ -90,6 +103,12 @@ import { SessionRegistryModule } from './session-registry.module';
 import { TranscriptModule } from './transcript.module';
 import { WorkspaceModule } from './workspace.module';
 
+/** The disk and the journal the diffs read, and the ceiling of what they read. */
+const CHANGE_STORES = Symbol('ChangeStores');
+
+/** What the two rejections write with: the path lock, the trail and the clock. */
+const CHANGE_WRITING = Symbol('ChangeWriting');
+
 /**
  * The `session` module: the live session of Claude, across all four layers.
  *
@@ -108,7 +127,12 @@ import { WorkspaceModule } from './workspace.module';
     WorkspaceModule,
     WebsocketModule,
   ],
-  controllers: [SessionController, LiveSessionsController],
+  controllers: [
+    SessionController,
+    SessionChangesController,
+    SessionInsightController,
+    LiveSessionsController,
+  ],
   providers: [
     { provide: QUERY_FACTORY, useValue: realQueryFactory },
     { provide: BUNDLED_CLI_VERSION, useFactory: () => bundledCliVersion() },
@@ -148,13 +172,77 @@ import { WorkspaceModule } from './workspace.module';
     },
     {
       provide: RewindFilesUseCase,
-      inject: [SessionRegistry, UndoPlanner, RecordAuditEventUseCase, CLOCK],
+      inject: [SessionRegistry, UndoPlanner, RecordAuditEventUseCase, CLOCK, SessionChangeMemory],
       useFactory: (
         registry: SessionRegistry,
         planner: UndoPlanner,
         trail: RecordAuditEventUseCase,
         clock: Clock,
-      ) => new RewindFilesUseCase(registry, planner, trail, clock),
+        memory: SessionChangeMemory,
+      ) => new RewindFilesUseCase(registry, planner, trail, clock, memory),
+    },
+    // The diffs of plan 08 (F3): what a session changed, read from the same journal and disk the undo
+    // uses, and what its tools and rejections were — kept in memory, with the live session.
+    { provide: SessionChangeMemory, useValue: new SessionChangeMemory() },
+    {
+      provide: CHANGE_STORES,
+      inject: [UNDO_JOURNAL, UNDO_DISK, APP_CONFIG],
+      useFactory: (journal: UndoJournal, disk: UndoDisk, config: AppConfig): ChangeStores => ({
+        journal,
+        disk,
+        limits: { maxFileBytes: config.checkpoints.maxFileBytes },
+      }),
+    },
+    {
+      provide: CHANGE_WRITING,
+      inject: [PATH_LOCK, RecordAuditEventUseCase, CLOCK],
+      useFactory: (
+        lock: PathLock,
+        trail: RecordAuditEventUseCase,
+        clock: Clock,
+      ): ChangeWriting => ({
+        lock,
+        trail,
+        clock,
+      }),
+    },
+    {
+      provide: ShowToolDiffUseCase,
+      inject: [SessionRegistry, SessionChangeMemory, CHANGE_STORES],
+      useFactory: (registry: SessionRegistry, memory: SessionChangeMemory, stores: ChangeStores) =>
+        new ShowToolDiffUseCase(registry, memory, stores),
+    },
+    {
+      provide: ListSessionChangesUseCase,
+      inject: [SessionRegistry, CHANGE_STORES],
+      useFactory: (registry: SessionRegistry, stores: ChangeStores) =>
+        new ListSessionChangesUseCase(registry, stores),
+    },
+    {
+      provide: ReadSessionChangeUseCase,
+      inject: [SessionRegistry, CHANGE_STORES],
+      useFactory: (registry: SessionRegistry, stores: ChangeStores) =>
+        new ReadSessionChangeUseCase(registry, stores),
+    },
+    {
+      provide: RejectChangeUseCase,
+      inject: [SessionRegistry, SessionChangeMemory, CHANGE_STORES, CHANGE_WRITING],
+      useFactory: (
+        registry: SessionRegistry,
+        memory: SessionChangeMemory,
+        stores: ChangeStores,
+        writing: ChangeWriting,
+      ) => new RejectChangeUseCase(registry, memory, stores, writing),
+    },
+    {
+      provide: RestoreChangeUseCase,
+      inject: [SessionRegistry, SessionChangeMemory, CHANGE_STORES, CHANGE_WRITING],
+      useFactory: (
+        registry: SessionRegistry,
+        memory: SessionChangeMemory,
+        stores: ChangeStores,
+        writing: ChangeWriting,
+      ) => new RestoreChangeUseCase(registry, memory, stores, writing),
     },
     SnapshotPurgeJob,
     // Where a conversation to continue ran, and who opened it here — `transcript` and provenance.
@@ -238,6 +326,7 @@ import { WorkspaceModule } from './workspace.module';
         SESSION_ORIGIN_REPOSITORY,
         RESUMABLE_CONVERSATION_SOURCE,
         RecordAuditEventUseCase,
+        ModelCatalog,
       ],
       useFactory: (
         workspaces: WorkspaceResolver,
@@ -251,6 +340,7 @@ import { WorkspaceModule } from './workspace.module';
         origins: SessionOriginRepository,
         conversations: ResumableConversationSource,
         trail: RecordAuditEventUseCase,
+        models: ModelCatalog,
       ) =>
         new StartSessionUseCase(
           workspaces,
@@ -262,17 +352,34 @@ import { WorkspaceModule } from './workspace.module';
           config.session.defaults,
           { ids: claudeIds, origins },
           { conversations, trail },
+          models,
         ),
     },
 
     // One per process, like the registry: the list is a property of the installation, and two
     // catalogues would ask the CLI twice for the same answer (S-36).
     { provide: CommandCatalog, useValue: new CommandCatalog() },
+    { provide: ModelCatalog, useValue: new ModelCatalog() },
     {
       provide: PromptSessionUseCase,
-      inject: [SessionRegistry, CommandCatalog],
-      useFactory: (registry: SessionRegistry, catalog: CommandCatalog) =>
-        new PromptSessionUseCase(registry, catalog),
+      inject: [SessionRegistry, CommandCatalog, ID_GENERATOR, SESSION_BROADCASTER],
+      useFactory: (
+        registry: SessionRegistry,
+        catalog: CommandCatalog,
+        ids: IdGenerator,
+        broadcaster: SessionBroadcaster,
+      ) => new PromptSessionUseCase(registry, catalog, { ids, broadcaster }),
+    },
+    {
+      provide: CancelQueuedPromptUseCase,
+      inject: [SessionRegistry],
+      useFactory: (registry: SessionRegistry) => new CancelQueuedPromptUseCase(registry),
+    },
+    {
+      provide: InspectSessionUseCase,
+      inject: [SessionRegistry, ModelCatalog],
+      useFactory: (registry: SessionRegistry, models: ModelCatalog) =>
+        new InspectSessionUseCase(registry, models),
     },
     {
       provide: ListSessionCommandsUseCase,
@@ -304,6 +411,34 @@ import { WorkspaceModule } from './workspace.module';
     { provide: SESSION_HANDLERS.start, useClass: SessionStartHandler },
     { provide: SESSION_HANDLERS.rewind, useClass: SessionRewindHandler },
     {
+      provide: SESSION_HANDLERS.rejectChange,
+      inject: [RejectChangeUseCase],
+      useFactory: (reject: RejectChangeUseCase) =>
+        new ContractCommandHandler(
+          'session.rejectChange',
+          sessionSchemas.rejectChange,
+          async (command, context) => ({
+            sessionId: command.sessionId,
+            type: 'session.rewound',
+            payload: { ...(await reject.execute({ ...command, userId: context.userId })) },
+          }),
+        ),
+    },
+    {
+      provide: SESSION_HANDLERS.restoreChange,
+      inject: [RestoreChangeUseCase],
+      useFactory: (restore: RestoreChangeUseCase) =>
+        new ContractCommandHandler(
+          'session.restoreChange',
+          sessionSchemas.restoreChange,
+          async (command, context) => ({
+            sessionId: command.sessionId,
+            type: 'session.rewound',
+            payload: { ...(await restore.execute({ ...command, userId: context.userId })) },
+          }),
+        ),
+    },
+    {
       provide: SESSION_HANDLERS.prompt,
       inject: [PromptSessionUseCase],
       useFactory: (prompt: PromptSessionUseCase) =>
@@ -315,7 +450,33 @@ import { WorkspaceModule } from './workspace.module';
             // what the Claude Code UI does. What is refused is a slash command the installation does
             // not have, and that refusal is this command's `error` (S-34). The prompt reaches the CLI
             // only after the ack, so no event of its turn can overtake it.
-            ({ afterAck: await prompt.execute(command.sessionId, command.text, context.userId) }),
+            ({
+              afterAck: await prompt.execute(
+                command.sessionId,
+                command.text,
+                context.userId,
+                context.installId === null ? 'web' : 'mobile',
+              ),
+            }),
+        ),
+    },
+    {
+      provide: SESSION_HANDLERS.cancelQueuedPrompt,
+      inject: [CancelQueuedPromptUseCase],
+      useFactory: (cancel: CancelQueuedPromptUseCase) =>
+        new ContractCommandHandler(
+          'session.cancelQueuedPrompt',
+          sessionSchemas.cancelQueued,
+          (command, context) =>
+            // Everybody watching sees the queue, so everybody is told it moved; a second cancel of
+            // the same prompt changed nothing, and says nothing (S-159).
+            cancel.execute(command.sessionId, command.queueId, context.userId)
+              ? {
+                  sessionId: command.sessionId,
+                  type: 'prompt.dequeued',
+                  payload: { queueId: command.queueId, reason: 'cancelled' },
+                }
+              : undefined,
         ),
     },
     {

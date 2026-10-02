@@ -2,7 +2,14 @@ import { SessionRegistry } from '@application/session';
 import type { ClaudeSessionHandle, SessionConversation } from '@application/session';
 import { UserId } from '@domain/auth';
 import { Session, SessionId } from '@domain/session';
-import type { PermissionMode, SessionClient, SlashCommand } from '@domain/session';
+import type {
+  ContextUse,
+  InstallationModel,
+  McpServer,
+  PermissionMode,
+  SessionClient,
+  SlashCommand,
+} from '@domain/session';
 import { ClaudeSessionId } from '@domain/transcript';
 import { WorkspacePath } from '@domain/workspace';
 import { FixedClock } from '../fakes/fixed-clock';
@@ -104,6 +111,46 @@ export class RecordingHandle implements ClaudeSessionHandle {
     }
 
     return this.commands;
+  }
+
+  /** What `supportedModels()` answers, and how many times it was asked. */
+  offered: InstallationModel[] = [];
+  modelCalls = 0;
+
+  /** Held until released, so a test can put two asks for the models in flight at once. */
+  modelsHeld: Promise<void> | null = null;
+
+  /** What `contextUse()` and `mcpServers()` answer. */
+  context: ContextUse = {
+    model: 'claude-sonnet-5',
+    totalTokens: 1_000,
+    maxTokens: 200_000,
+    percentage: 1,
+    categories: [],
+  };
+  servers: McpServer[] = [];
+
+  /** When set, the three questions about the installation reject with it. */
+  insightFailWith: Error | null = null;
+
+  async supportedModels(): Promise<readonly InstallationModel[]> {
+    this.modelCalls += 1;
+    await this.modelsHeld;
+    return this.answer(this.offered);
+  }
+
+  contextUse(): Promise<ContextUse> {
+    return this.answer(this.context);
+  }
+
+  mcpServers(): Promise<readonly McpServer[]> {
+    return this.answer(this.servers);
+  }
+
+  private answer<T>(value: T): Promise<T> {
+    return this.insightFailWith === null
+      ? Promise.resolve(value)
+      : Promise.reject(this.insightFailWith);
   }
 
   private settle(): Promise<void> {

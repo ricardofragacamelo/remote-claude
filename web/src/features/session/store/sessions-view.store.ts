@@ -1,6 +1,7 @@
 import { createStore } from 'zustand/vanilla';
 import type { StoreApi } from 'zustand/vanilla';
 
+import { perFolder } from '@/shared/lib/per-folder';
 import type { OriginFilter, SessionGroup, SessionSort } from '../types/sessions-view';
 
 /** What the view of Claude's sessions keeps **for one folder tab** (plan 08, B-09). */
@@ -84,7 +85,7 @@ function createSessionsViewStore(): SessionsViewStore {
   }));
 }
 
-const stores = new Map<string, SessionsViewStore>();
+const views = perFolder(createSessionsViewStore);
 
 /**
  * The state of the view **of one folder tab**, keyed by the folder's real path — never one global
@@ -92,23 +93,10 @@ const stores = new Map<string, SessionsViewStore>();
  * other's (plan 08, S-38).
  */
 export function sessionsViewStore(folder: string): SessionsViewStore {
-  const existing = stores.get(folder);
-
-  if (existing !== undefined) {
-    return existing;
-  }
-
-  const created = createSessionsViewStore();
-  stores.set(folder, created);
-  return created;
+  return views.of(folder);
 }
 
 /** The tab closed — or, for `null`, every tab went: its view's state goes with it. */
 export function forgetSessionsView(folder: string | null): void {
-  if (folder === null) {
-    stores.clear();
-    return;
-  }
-
-  stores.delete(folder);
+  views.forget(folder);
 }

@@ -1,6 +1,6 @@
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
 
-import type { PermissionMode } from '@domain/session';
+import type { EffortLevel, PermissionMode } from '@domain/session';
 import type { WorkspacePath } from '@domain/workspace';
 
 /** Limits the installation puts on a session. Numbers, from configuration — never from a client. */
@@ -25,6 +25,15 @@ export interface SdkOptionsInput {
    * into a new one of ours ([D-04](../../../../../docs/plans/04-transcript-and-resume/decisions.md)).
    */
   readonly conversation: { readonly claudeSessionId: string; readonly resumedFrom: string | null };
+
+  /** How hard the model thinks, for the life of the session — absent for its default (D-16). */
+  readonly effort?: EffortLevel | null;
+
+  /**
+   * Where a fork for an edit-and-resend starts (plan 08, D-19) — absent for any other session. The
+   * conversation must be a fork: `resumedFrom` is the one sent again, `claudeSessionId` the new one.
+   */
+  readonly forkAt?: { readonly keepUpTo: string; readonly dropsTurn: string } | null;
   readonly limits: SessionLimits;
   readonly abortController: AbortController;
 
@@ -106,8 +115,23 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
     stderr: input.onStderr,
 
     ...(input.model === null ? {} : { model: input.model }),
+    ...(input.effort == null ? {} : { effort: input.effort }),
     ...conversationOptions(input.conversation),
+    ...forkOptions(input.forkAt),
   };
+}
+
+/**
+ * Where a fork for an edit-and-resend starts: the conversation kept up to the entry before the
+ * prompt, and that prompt's turn declared as the one dropped — so the CLI checks that nothing else
+ * would be lost, and refuses deterministically when something would (D-19).
+ */
+function forkOptions(
+  forkAt: SdkOptionsInput['forkAt'],
+): Pick<Options, 'resumeDropsTurn' | 'resumeSessionAt'> {
+  return forkAt == null
+    ? {}
+    : { resumeSessionAt: forkAt.keepUpTo, resumeDropsTurn: forkAt.dropsTurn };
 }
 
 /**

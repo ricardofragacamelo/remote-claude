@@ -75,3 +75,11 @@ export async function typeIn(
   field.focus();
   await user.type(field, text, { skipClick: true });
 }
+
+/**
+ * The draft of the panel of Claude, on screen — what a folder tab shows before it has a session
+ * (plan 08, B-33). By its role, so the drafts of the tabs that are not on screen are not counted.
+ */
+export function draftOnScreen(): Promise<HTMLElement> {
+  return screen.findByRole('group', { name: t('sessions.draft.choices') });
+}

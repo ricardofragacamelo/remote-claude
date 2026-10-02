@@ -7,7 +7,7 @@ import { api } from '@/shared/api/api';
 import { wsClient } from '@/shared/api/ws';
 import { mountApp } from '../../support/app';
 import { translator } from '../../support/render';
-import { openWorkbench, tabNamed } from '../../support/workbench';
+import { draftOnScreen, openWorkbench, tabNamed } from '../../support/workbench';
 import { aTab, aTabServer, fakeWorkspaceApi, projects } from '../../support/workspace-api';
 
 const t = translator('en');
@@ -86,7 +86,7 @@ describe('every control that is only an icon, on the screens of plan 06 — S-15
 
   it('has a name and a tooltip, in the workbench', async () => {
     openWorkbench(`${projects.path}/a`, aTabServer([aTab(`${projects.path}/a`)]));
-    await screen.findByRole('button', { name: t('session.starter.action') });
+    await draftOnScreen();
     await tabNamed('a');
 
     expectNamedWithTooltip();

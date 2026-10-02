@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/components/ui/button';
+import { EditPreviewView } from './EditPreviewView';
 import type {
   PermissionDecision,
   PermissionRequest,
@@ -20,6 +21,9 @@ export interface PermissionCardProps {
 
   /** Where the rules are revoked. Absent, the second step says so without offering the way. */
   onOpenRules?: (() => void) | undefined;
+
+  /** The folder of the tab — what a pending edit is previewed against (plan 08, B-29). */
+  readonly folder?: string | null;
 }
 
 /** The emphasis each risk gets. A token per role, never a literal shade. */
@@ -50,6 +54,7 @@ export function PermissionCard({
   onAnswer,
   onExtend,
   onOpenRules,
+  folder = null,
 }: PermissionCardProps): React.JSX.Element {
   const { t } = useTranslation();
   const seconds = Math.ceil(remainingMs / 1_000);
@@ -84,6 +89,8 @@ export function PermissionCard({
           {request.description}
         </pre>
       )}
+
+      <EditPreviewView request={request} folder={folder} />
 
       {armed === null ? (
         <div className="flex flex-wrap gap-2">

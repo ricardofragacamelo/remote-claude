@@ -24,6 +24,12 @@ export const NOTIFICATION_CATALOGUE: readonly NotificationKind[] = [
   // A delete the local history kept went without a question; the toast carries its Undo (07 · B-58).
   { messageKey: 'notification.files.deletedOne', params: ['name'] },
   { messageKey: 'notification.files.deletedMany', params: ['count'] },
+  // A rejection of what a session changed went without a question; the toast carries its Undo
+  // (08 · D-08).
+  { messageKey: 'notification.changes.rejectedFile', params: ['name'] },
+  { messageKey: 'notification.changes.rejectedHunk', params: ['name'] },
+  // Claude asks something in a folder tab not on screen; the toast leads to it (08 · B-42).
+  { messageKey: 'notification.permission.waiting', params: ['folder'] },
 ];
 
 /** One kind of notification: its key, and the names of the parameters it interpolates. */

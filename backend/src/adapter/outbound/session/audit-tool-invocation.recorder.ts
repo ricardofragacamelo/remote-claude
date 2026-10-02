@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { RecordToolInvocationUseCase } from '@application/audit';
-import { SESSION_BROADCASTER, SessionRegistry } from '@application/session';
+import { SESSION_BROADCASTER, SessionChangeMemory, SessionRegistry } from '@application/session';
 import type {
   SessionBroadcaster,
   ToolInvocation,
@@ -41,6 +41,7 @@ export class AuditToolInvocationRecorder implements ToolInvocationRecorder {
     @Inject(SessionRegistry) private readonly registry: SessionRegistry,
     @Inject(SESSION_BROADCASTER) private readonly broadcaster: SessionBroadcaster,
     @Inject(LOGGER) private readonly logger: Logger,
+    @Inject(SessionChangeMemory) private readonly changes: SessionChangeMemory,
   ) {}
 
   /**
@@ -65,6 +66,17 @@ export class AuditToolInvocationRecorder implements ToolInvocationRecorder {
     });
 
     if (outcome === 'recorded') {
+      // Remembered once it is on the trail: the diff of a tool is made of the input the trail holds,
+      // and the trail is write-only to everybody else (plan 08, B-25).
+      if (live !== null && invocation.toolUseId !== null) {
+        this.changes.rememberTool(live.session, {
+          toolUseId: invocation.toolUseId,
+          toolName: invocation.toolName,
+          input: invocation.input,
+          promptId: invocation.promptId,
+        });
+      }
+
       return;
     }
 

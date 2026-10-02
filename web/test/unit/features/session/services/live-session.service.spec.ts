@@ -16,7 +16,9 @@ import {
   sendPrompt,
   setSessionModel,
   setSessionPermissionMode,
-  startSession,
+  startDraft,
+  startedBy,
+  forkConversation,
 } from '@/features/session/services/live-session.service';
 import type { WsClient } from '@/shared/api/ws-client';
 
@@ -49,13 +51,67 @@ function aClient(ready = true) {
  * about when it should be called. That is the hook's decision.
  */
 describe('the session commands', () => {
-  it('opens a session on a workspace, and answers the id its refusal would name — S-80', () => {
+  it('opens the session of a draft with what was chosen, and answers its id — S-152', () => {
     const { client, sent } = aClient();
 
-    expect(startSession(client, '/srv/projects/app')).toBe('cmd-1');
+    expect(
+      startDraft(client, {
+        workspacePath: '/srv/projects/app',
+        model: null,
+        permissionMode: 'default',
+        effort: null,
+      }),
+    ).toBe('cmd-1');
+    startDraft(client, {
+      workspacePath: '/srv/projects/app',
+      model: 'opus',
+      permissionMode: 'plan',
+      effort: 'high',
+    });
+
     expect(sent).toEqual([
-      { type: 'session.start', payload: { workspacePath: '/srv/projects/app' } },
+      {
+        type: 'session.start',
+        payload: { workspacePath: '/srv/projects/app', permissionMode: 'default' },
+      },
+      {
+        type: 'session.start',
+        payload: {
+          workspacePath: '/srv/projects/app',
+          permissionMode: 'plan',
+          model: 'opus',
+          effort: 'high',
+        },
+      },
     ]);
+  });
+
+  it('forks a conversation up to before a prompt — never a truncation, D-19', () => {
+    const { client, sent } = aClient();
+
+    expect(forkConversation(client, '/srv/projects/app', 'conv-1', 'msg-3')).toBe('cmd-1');
+    expect(sent).toEqual([
+      {
+        type: 'session.start',
+        payload: { workspacePath: '/srv/projects/app', resumeSessionId: 'conv-1', forkAt: 'msg-3' },
+      },
+    ]);
+  });
+
+  it('reads the session a start of its own opened, and nothing else', () => {
+    const started = {
+      v: 1,
+      id: 'evt-1',
+      kind: 'event',
+      type: 'session.started',
+      ts: AT,
+      correlationId: 'cmd-1',
+      payload: { sessionId: SESSION },
+    } as unknown as Envelope;
+
+    expect(startedBy(started, 'cmd-1')).toBe(SESSION);
+    expect(startedBy(started, 'cmd-2')).toBeNull();
+    expect(startedBy({ ...started, type: 'session.attached' } as Envelope, 'cmd-1')).toBeNull();
   });
 
   it('sends a turn, and answers the id its refusal would name — S-34', () => {

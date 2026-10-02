@@ -3,6 +3,7 @@ import type { WorkspacePath } from '@domain/workspace';
 import { InvalidSessionTransitionError } from '../errors/invalid-session-transition.error';
 import { SessionClosedError } from '../errors/session-closed.error';
 import { SessionLockedError } from '../errors/session-locked.error';
+import { PromptQueue } from './prompt-queue.entity';
 import type { PermissionMode } from '../value-objects/permission-mode.value-object';
 import type { SessionId } from '../value-objects/session-id.value-object';
 import { canTransition } from '../value-objects/session-status.value-object';
@@ -52,6 +53,9 @@ export interface SessionOpening {
 export class Session {
   /** Whether an undo is putting files back right now. */
   private rewinding = false;
+
+  /** The prompts waiting for the running turn to end — the backend's queue (plan 08, D-14). */
+  readonly prompts = new PromptQueue();
 
   private constructor(
     readonly id: SessionId,
@@ -199,6 +203,7 @@ export class Session {
 
     this.currentStatus = 'closed';
     this.reason = reason;
+    this.prompts.drain();
   }
 
   /** Whether an undo is putting this session's files back right now. */

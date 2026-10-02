@@ -5,6 +5,7 @@ import type { Clock } from '@domain/shared';
 import {
   latestBaselines,
   planFor,
+  RewindPathUnknownError,
   SessionFileState,
   SessionId,
   undoPointNamed,
@@ -18,6 +19,7 @@ import type {
   UndoPoint,
 } from '@domain/session';
 import type { UndoDisk, UndoJournal, UndoReach } from './ports/undo.ports';
+import type { SessionChangeMemory } from './session-change-memory';
 import type { LiveSession, SessionRegistry } from './session-registry';
 
 /** How many undo points the preview answers: the newest ones. A long session has many turns. */
@@ -44,6 +46,9 @@ export interface RewindOutcome {
   readonly preserved: readonly { readonly path: string; readonly reason: PreservationReason }[];
   readonly unchanged: readonly { readonly path: string }[];
   readonly failed: readonly { readonly path: string }[];
+
+  /** Set when only one hunk of one file went back — `session.rejectChange` (plan 08, B-31). */
+  readonly hunkId?: string;
 }
 
 /** What undoing needs to be asked. */
@@ -51,6 +56,12 @@ export interface RewindFilesCommand {
   readonly sessionId: string;
   readonly promptId: string;
   readonly userId: UserId;
+
+  /**
+   * Only these files of what the point reaches — rejecting one file of what a session changed
+   * (plan 08, B-30). Absent is every file.
+   */
+  readonly paths?: readonly string[];
 }
 
 /**
@@ -103,11 +114,16 @@ export class ListUndoPointsUseCase {
  *   a path that fails is reported as failed, and the others still go back.
  */
 export class RewindFilesUseCase {
+  /**
+   * @param memory where a rejection of one file keeps what it replaced, so it can be undone
+   *   (plan 08, B-30) — absent, nothing is kept
+   */
   constructor(
     private readonly registry: SessionRegistry,
     private readonly planner: UndoPlanner,
     private readonly trail: RecordAuditEventUseCase,
     private readonly clock: Clock,
+    private readonly memory: SessionChangeMemory | null = null,
   ) {}
 
   /**
@@ -116,6 +132,7 @@ export class RewindFilesUseCase {
    * @throws {import('@domain/session').SessionLockedError} a turn is running, or another undo of
    *   this session is (S-43)
    * @throws {import('@domain/session').RewindTargetUnknownError} not a point of this session (S-61)
+   * @throws {RewindPathUnknownError} a path of `paths` the point does not reach (plan 08, S-136)
    * @throws whatever the trail threw — and then nothing on disk was touched
    */
   async execute(command: RewindFilesCommand): Promise<RewindOutcome> {
@@ -134,20 +151,17 @@ export class RewindFilesUseCase {
 
   private async rewind(live: LiveSession, command: RewindFilesCommand): Promise<RewindOutcome> {
     const point = undoPointNamed(await this.planner.pointsOf(live), command.promptId);
-    const [plan = []] = await this.planner.plansFor(live, [point]);
+    const [whole = []] = await this.planner.plansFor(live, [point]);
+    const plan = command.paths === undefined ? whole : only(whole, command.paths);
 
-    await this.trail.execute({
-      userId: command.userId,
-      kind: 'session.filesRewound',
-      subjectId: point.promptId,
-      subjectLabel: live.session.workspace.value,
-      details: {
-        sessionId: live.session.id.value,
-        claudeSessionId: live.conversation.claudeSessionId.value,
+    await recordFilesRewound(
+      { trail: this.trail, clock: this.clock },
+      { live, userId: command.userId, promptId: point.promptId },
+      {
         files: plan.map(toPreview),
+        ...(command.paths === undefined ? {} : { paths: command.paths }),
       },
-      at: this.clock.now(),
-    });
+    );
 
     const reverted: { path: string; action: 'restored' | 'deleted' }[] = [];
     const failed: { path: string }[] = [];
@@ -157,7 +171,7 @@ export class RewindFilesUseCase {
         continue;
       }
 
-      if (await this.planner.apply(live, verdict)) {
+      if (await this.revert(live, verdict, command.paths !== undefined)) {
         reverted.push({
           path: verdict.path,
           action: verdict.action === 'delete' ? 'deleted' : 'restored',
@@ -178,6 +192,32 @@ export class RewindFilesUseCase {
       ),
       failed,
     };
+  }
+
+  /**
+   * Puts one path back. A rejection of chosen files keeps what it replaces, for its undo: what is
+   * there now is what the session left, or the verdict would not be a revert.
+   */
+  private async revert(
+    live: LiveSession,
+    verdict: Extract<FileVerdict, { outcome: 'revert' }>,
+    rejecting: boolean,
+  ): Promise<boolean> {
+    const memory = rejecting ? this.memory : null;
+    const replaced = memory === null ? null : await this.planner.bytesAt(verdict.path);
+
+    if (!(await this.planner.apply(live, verdict))) {
+      return false;
+    }
+
+    memory?.rememberRejection(live.session, {
+      path: verdict.path,
+      promptId: verdict.checkpoint.promptId,
+      replaced,
+      left: verdict.action === 'delete' ? null : verdict.checkpoint.hash,
+    });
+
+    return true;
   }
 }
 
@@ -258,6 +298,12 @@ export class UndoPlanner {
     return true;
   }
 
+  /** What is at a path now, whole — `null` when it is not a regular file. */
+  async bytesAt(path: string): Promise<Uint8Array | null> {
+    const content = await this.disk.read(path, Number.MAX_SAFE_INTEGER);
+    return content.kind === 'file' ? content.bytes : null;
+  }
+
   /** The disk half of {@link apply}, run under the lock of the path. */
   private async putBack(
     verdict: Extract<FileVerdict, { outcome: 'revert' }>,
@@ -271,9 +317,54 @@ export class UndoPlanner {
   }
 }
 
+/**
+ * Writes `session.filesRewound` to the trail — before the disk is touched, by the undo and by every
+ * rejection alike (plan 08, B-30, B-31): the point, the session and the conversation, and what
+ * `details` adds — paths and hunks, never a byte of a file.
+ *
+ * @throws whatever the trail threw — and then the caller touches nothing
+ */
+export async function recordFilesRewound(
+  writing: { readonly trail: RecordAuditEventUseCase; readonly clock: Clock },
+  about: { readonly live: LiveSession; readonly userId: UserId; readonly promptId: string },
+  details: Readonly<Record<string, unknown>>,
+): Promise<void> {
+  const { live } = about;
+
+  await writing.trail.execute({
+    userId: about.userId,
+    kind: 'session.filesRewound',
+    subjectId: about.promptId,
+    subjectLabel: live.session.workspace.value,
+    details: {
+      sessionId: live.session.id.value,
+      claudeSessionId: live.conversation.claudeSessionId.value,
+      ...details,
+    },
+    at: writing.clock.now(),
+  });
+}
+
 /** What a live session reaches: itself, and the conversation it is. */
-function reachOf(live: LiveSession): UndoReach {
+export function reachOf(live: LiveSession): UndoReach {
   return { sessionId: live.session.id, claudeSessionId: live.conversation.claudeSessionId };
+}
+
+/**
+ * The verdicts of the chosen paths, in the order of the plan.
+ *
+ * @throws {RewindPathUnknownError} a path the plan does not reach — never silently skipped
+ */
+function only(plan: readonly FileVerdict[], paths: readonly string[]): FileVerdict[] {
+  const reached = new Set(plan.map((verdict) => verdict.path));
+  const unknown = paths.find((path) => !reached.has(path));
+
+  if (unknown !== undefined) {
+    throw new RewindPathUnknownError(unknown);
+  }
+
+  const chosen = new Set(paths);
+  return plan.filter((verdict) => chosen.has(verdict.path));
 }
 
 /** A verdict without the checkpoint behind it — what leaves this layer. */

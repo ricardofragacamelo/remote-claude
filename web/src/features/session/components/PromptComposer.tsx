@@ -34,6 +34,15 @@ export interface PromptComposerProps {
 
   /** Told of every change to what is being written, sent or not. */
   readonly onDraftChange?: ((text: string) => void) | undefined;
+
+  /**
+   * `Esc` in the box with nothing above it open — the menu and the dialogs keep their own `Esc`,
+   * which never reaches here (plan 08, B-40, S-183).
+   */
+  readonly onEscape?: (() => void) | undefined;
+
+  /** What the send button says — "Send again" while a prompt is being edited. Translated. */
+  readonly submitLabel?: string | undefined;
 }
 
 /**
@@ -56,6 +65,8 @@ export function PromptComposer({
   menu,
   draft = '',
   onDraftChange,
+  onEscape,
+  submitLabel,
 }: PromptComposerProps): React.JSX.Element {
   const { t } = useTranslation();
   const { register, handleSubmit, reset, setValue, setFocus, formState } = useForm<PromptForm>({
@@ -93,6 +104,11 @@ export function PromptComposer({
           className="min-h-24 rounded-lg border border-border bg-transparent p-2 text-sm"
           placeholder={t('session.composer.placeholder')}
           aria-invalid={formState.errors.text !== undefined}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && !event.defaultPrevented) {
+              onEscape?.();
+            }
+          }}
           {...register('text', {
             onChange: (event: { target: { value: string } }) => {
               onDraftChange?.(event.target.value);
@@ -103,7 +119,7 @@ export function PromptComposer({
         {error !== null && <ErrorState error={error} />}
 
         <Button type="submit" size="touch" disabled={disabled}>
-          {t('session.composer.send')}
+          {submitLabel ?? t('session.composer.send')}
         </Button>
       </form>
     </div>

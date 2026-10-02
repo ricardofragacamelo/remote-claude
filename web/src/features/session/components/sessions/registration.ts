@@ -2,6 +2,7 @@ import { MessagesSquare } from 'lucide-react';
 
 import { tabRestorers, workbenchViews } from '@/features/workbench';
 import { SESSIONS_VIEW_RESTORER } from '../../store/sessions-view-restorer';
+import { ActivityPermissionBadge } from '../panel/PermissionBadges';
 import { SessionsView } from './SessionsView';
 
 /** The id of the view in the activity bar — the place plan 06 held for it. */
@@ -23,6 +24,7 @@ export function registerSessionsView(): () => void {
       icon: MessagesSquare,
       component: SessionsView,
       placeholderKey: 'workbench.sessions.placeholder',
+      badge: ActivityPermissionBadge,
     }),
     tabRestorers.register(SESSIONS_VIEW_RESTORER as Parameters<typeof tabRestorers.register>[0]),
   ];

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 
 import { EditorLocation } from '@/features/editor';
+import { PanelCommands } from '@/features/session';
 import { FolderShell, Workbench } from '@/features/workbench';
 import { FolderGate } from '@/features/workspace';
 import { ClaudeSideBar } from './ClaudeSideBar';
@@ -91,6 +92,7 @@ export function WorkbenchRoute(): React.JSX.Element {
                 panelShown(folder.path, panel);
               }}
             />
+            <PanelCommands folder={folder.path} />
             <FolderShell folder={folder.path} claude={<ClaudeSideBar folder={folder.path} />} />
           </>
         )}

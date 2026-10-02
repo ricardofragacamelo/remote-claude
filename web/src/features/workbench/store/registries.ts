@@ -3,6 +3,7 @@ import { Files, MessagesSquare, Search } from 'lucide-react';
 import { createRegistry } from '@/shared/lib/registry';
 import type {
   EditorAreaEntry,
+  FolderTabBadgeEntry,
   FolderTabKeeper,
   PanelTabEntry,
   StatusItemEntry,
@@ -56,3 +57,6 @@ export const editorAreas = createRegistry<EditorAreaEntry>('editor areas');
 
 /** What features keep per folder tab that closing it would lose — asked before a tab closes. */
 export const folderTabKeepers = createRegistry<FolderTabKeeper>('folder tab keepers');
+
+/** What a folder tab says beside its name — Claude's questions waiting there (plan 08, B-42). */
+export const folderTabBadges = createRegistry<FolderTabBadgeEntry>('folder tab badges');

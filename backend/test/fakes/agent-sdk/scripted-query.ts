@@ -1,18 +1,21 @@
 import { randomUUID } from 'node:crypto';
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 import type {
   HookCallbackMatcher,
+  McpServerStatus,
+  ModelInfo,
   Options,
   Query,
+  SDKControlGetContextUsageResponse,
   SDKMessage,
   SDKUserMessage,
   SessionMessage,
   SlashCommand,
 } from '@anthropic-ai/claude-agent-sdk';
 
-import { loadCommands, loadFixture } from './fixture';
-import type { AgentSdkFixture } from './fixture';
+import { loadCommands, loadFixture, loadInstallation } from './fixture';
+import type { AgentSdkFixture, InstallationFixture } from './fixture';
 import { renumber } from './scripted-transcripts';
 import type { ScriptedTranscripts } from './scripted-transcripts';
 
@@ -77,6 +80,9 @@ export interface ScriptRecord {
   closes: number;
   /** How many times `supportedCommands()` was asked. */
   commandCalls: number;
+
+  /** How many times each question about the installation was asked. */
+  installationCalls: Record<keyof InstallationFixture, number>;
   /** The options the runner built, so a test can assert on what was sent to the SDK. */
   options: Options | null;
 }
@@ -115,6 +121,19 @@ export interface ScriptOptions {
    */
   readonly commands?: readonly SlashCommand[] | Error | 'hang';
 
+  /** The MCP servers of the session: none were configured where the installation was recorded. */
+  readonly mcpServers?: readonly McpServerStatus[];
+
+  /** A failure for the three questions about the installation — or a CLI that never answers them. */
+  readonly installationFails?: Error | 'hang';
+
+  /**
+   * The CLI refuses the point a fork starts from (`resumeDropsTurn`), as it does when the dropped
+   * range holds more than the turn: the first turn is an `error_during_execution` result, and the
+   * stream ends (plan 08, D-19).
+   */
+  readonly refuseFork?: boolean;
+
   /**
    * Performs the file writes the recording describes, under this directory instead of the
    * recording's `/workspace`, between `PreToolUse` and `PostToolUse` — where the real CLI writes.
@@ -140,6 +159,59 @@ export interface ScriptOptions {
    * first turn stays the recording byte for byte.
    */
   readonly transcripts?: ScriptedTranscripts;
+}
+
+/** The tools a replay performs on disk: the file tools of the recordings. */
+const PERFORMED_TOOLS: ReadonlySet<string> = new Set(['Write', 'Edit', 'MultiEdit']);
+
+/** One replacement of an `Edit`, or of a `MultiEdit`'s list. */
+interface RecordedEdit {
+  readonly old_string: string;
+  readonly new_string: string;
+  readonly replace_all?: boolean;
+}
+
+function editsOf(input: unknown): RecordedEdit[] {
+  const edits = (input as { edits?: unknown } | null)?.edits;
+  return Array.isArray(edits) ? (edits as RecordedEdit[]) : [];
+}
+
+/** What an edit leaves of `text`: each replacement, the first occurrence or every one. */
+function edited(toolName: string, input: unknown, text: string): string {
+  const edits = toolName === 'MultiEdit' ? editsOf(input) : [input as RecordedEdit];
+
+  return edits.reduce(
+    (current, edit) =>
+      edit.replace_all === true
+        ? current.split(edit.old_string).join(edit.new_string)
+        : current.replace(edit.old_string, () => edit.new_string),
+    text,
+  );
+}
+
+/**
+ * The result the CLI ends with when it refuses the point of a fork — the wording its documentation
+ * gives (`resumeDropsTurn`), the rest zeroed as on a startup failure.
+ */
+function forkRefusal(droppedTurn: string): SDKMessage {
+  return {
+    type: 'result',
+    subtype: 'error_during_execution',
+    duration_ms: 0,
+    duration_api_ms: 0,
+    is_error: true,
+    num_turns: 0,
+    stop_reason: null,
+    total_cost_usd: 0,
+    usage: {},
+    modelUsage: {},
+    permission_denials: [],
+    errors: [
+      `Resume rejected by --resume-drops-turn: entries past the point are not ${droppedTurn}'s`,
+    ],
+    uuid: randomUUID(),
+    session_id: 'scripted',
+  } as unknown as SDKMessage;
 }
 
 /** Whether two inputs are the same, whatever order their keys were written in. */
@@ -315,6 +387,9 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
   private iterator: AsyncIterator<SDKUserMessage> | null = null;
   private closed = false;
 
+  /** The stream ends once what is pending went out — the CLI that refused a fork exits. */
+  private ending = false;
+
   constructor(
     private readonly prompt: AsyncIterable<SDKUserMessage>,
     private readonly options: Options,
@@ -348,6 +423,9 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     const ready = this.pending.shift() ?? (await this.resumed()) ?? (await this.pastTheHooks());
     if (ready !== undefined) {
       return { value: ready, done: false };
+    }
+    if (this.ending) {
+      return { value: undefined, done: true };
     }
 
     const prompt = await this.nextPrompt();
@@ -425,6 +503,13 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     // Every turn opens with `UserPromptSubmit`, as the real SDK does. A fake that skipped it would
     // leave the checkpoint of the turn unopened, and the undo point unlabelled.
     this.record.turns.push(prompt);
+
+    if (this.script.refuseFork === true && this.options.resumeDropsTurn !== undefined) {
+      this.pending.push(forkRefusal(this.options.resumeDropsTurn));
+      this.ending = true;
+      return;
+    }
+
     await this.fire('UserPromptSubmit', { prompt, prompt_id: this.promptId });
 
     this.queueReplay(HOLD_TAG.test(prompt));
@@ -701,7 +786,12 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
   private performed(toolName: string, input: unknown): unknown {
     const root = this.writesRoot;
 
-    if (root === undefined || toolName !== 'Write' || typeof input !== 'object' || input === null) {
+    if (
+      root === undefined ||
+      !PERFORMED_TOOLS.has(toolName) ||
+      typeof input !== 'object' ||
+      input === null
+    ) {
       return input;
     }
 
@@ -717,9 +807,9 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     return root === 'cwd' ? this.options.cwd : root;
   }
 
-  /** What the CLI does between the two hooks of a `Write`, when this run performs writes. */
+  /** What the CLI does between the two hooks of a file tool, when this run performs writes. */
   private write(toolName: string, input: unknown): void {
-    if (this.writesRoot === undefined || toolName !== 'Write') {
+    if (this.writesRoot === undefined || !PERFORMED_TOOLS.has(toolName)) {
       return;
     }
 
@@ -728,9 +818,20 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
       content?: unknown;
     };
 
-    if (typeof target === 'string' && typeof content === 'string') {
-      writeFileSync(target, content, 'utf8');
+    if (typeof target !== 'string') {
+      return;
     }
+
+    if (toolName === 'Write' && typeof content === 'string') {
+      writeFileSync(target, content, 'utf8');
+      return;
+    }
+
+    writeFileSync(
+      target,
+      edited(toolName, input, existsSync(target) ? readFileSync(target, 'utf8') : ''),
+      'utf8',
+    );
   }
 
   /**
@@ -815,6 +916,42 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     return Promise.resolve([...(commands ?? loadCommands().commands)]);
   }
 
+  /**
+   * The installation's models, as recorded from a real one (`installation.json`).
+   *
+   * Answered with no prompt, like the commands: a control request of the subprocess.
+   */
+  supportedModels(): Promise<ModelInfo[]> {
+    return this.installation('models', () => loadInstallation().models);
+  }
+
+  /** The use of the context window, as recorded — or as the script says. */
+  getContextUsage(): Promise<SDKControlGetContextUsageResponse> {
+    return this.installation('contextUsage', () => loadInstallation().contextUsage);
+  }
+
+  /** The MCP servers: none were configured where the recording ran, so a script names them. */
+  mcpServerStatus(): Promise<McpServerStatus[]> {
+    return this.installation('mcpServers', () => [
+      ...(this.script.mcpServers ?? loadInstallation().mcpServers),
+    ]);
+  }
+
+  /** One answer about the installation, or the failure the script asks for. */
+  private installation<T>(what: keyof InstallationFixture, answer: () => T): Promise<T> {
+    this.record.installationCalls[what] += 1;
+    const failure = this.script.installationFails;
+
+    if (failure === 'hang') {
+      return new Promise<T>(() => undefined);
+    }
+    if (failure instanceof Error) {
+      return Promise.reject(failure);
+    }
+
+    return Promise.resolve(answer());
+  }
+
   close(): void {
     this.record.closes += 1;
     this.closed = true;
@@ -839,6 +976,7 @@ export function scriptedSdk(script: ScriptOptions = {}): {
     interrupts: 0,
     closes: 0,
     commandCalls: 0,
+    installationCalls: { models: 0, mcpServers: 0, contextUsage: 0 },
     options: null,
   };
 

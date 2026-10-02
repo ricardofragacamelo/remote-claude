@@ -1,5 +1,5 @@
 import { lazy, memo, Suspense, useDeferredValue } from 'react';
-import { ClipboardCopy } from 'lucide-react';
+import { ClipboardCopy, PencilLine } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -59,6 +59,16 @@ function Block({
   );
 }
 
+/** A prompt of the main conversation can be sent again — never a subagent's, never an answer. */
+function isResendable(message: StreamMessage, context: TimelineContext): boolean {
+  return (
+    message.role === 'user' &&
+    message.parentToolUseId === null &&
+    message.text !== '' &&
+    context.onEditPrompt !== undefined
+  );
+}
+
 /** A message is drawn again only when it changed, or the search arrived at it or left it. */
 function sameMessage(
   before: { readonly message: StreamMessage; readonly context: TimelineContext },
@@ -89,6 +99,7 @@ export const MessageItem = memo(function MessageItem({
   const { t } = useTranslation();
   const copy = useCopy(message.text);
   const current = context.current === message.messageId;
+  const resendable = isResendable(message, context);
 
   return (
     <li
@@ -110,6 +121,15 @@ export const MessageItem = memo(function MessageItem({
                   className="ml-auto"
                   onClick={() => {
                     copy.copy();
+                  }}
+                />
+              )}
+              {resendable && (
+                <IconButton
+                  icon={PencilLine}
+                  label={t('sessions.message.edit')}
+                  onClick={() => {
+                    context.onEditPrompt?.(message);
                   }}
                 />
               )}
@@ -141,6 +161,24 @@ export const MessageItem = memo(function MessageItem({
           >
             {t('sessions.message.copy')}
           </ContextMenuItem>
+          {resendable && (
+            <>
+              <ContextMenuItem
+                onSelect={() => {
+                  context.onEditPrompt?.(message);
+                }}
+              >
+                {t('sessions.message.edit')}
+              </ContextMenuItem>
+              <ContextMenuItem
+                onSelect={() => {
+                  context.onForkFrom?.(message);
+                }}
+              >
+                {t('sessions.message.forkFrom')}
+              </ContextMenuItem>
+            </>
+          )}
         </ContextMenuContent>
       </ContextMenu>
       <span role="status" className="sr-only">

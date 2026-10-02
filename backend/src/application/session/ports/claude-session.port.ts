@@ -1,4 +1,13 @@
-import type { PermissionMode, SessionCloseReason, SessionId, SlashCommand } from '@domain/session';
+import type {
+  ContextUse,
+  EffortLevel,
+  InstallationModel,
+  McpServer,
+  PermissionMode,
+  SessionCloseReason,
+  SessionId,
+  SlashCommand,
+} from '@domain/session';
 import type { ClaudeSessionId } from '@domain/transcript';
 import type { WorkspacePath } from '@domain/workspace';
 
@@ -57,11 +66,26 @@ export interface ClaudeSessionStart {
   /** Which conversation of Claude this session is — new, continued in place, or forked. */
   readonly conversation: SessionConversation;
 
+  /** How hard the model thinks, chosen when the session opens — `null` for its default (D-16). */
+  readonly effort?: EffortLevel | null;
+
+  /**
+   * Where a fork for an edit-and-resend starts (plan 08, D-19): the conversation is kept up to and
+   * including `keepUpTo`, and the turn of the prompt `dropsTurn` is the one discarded — or `null`.
+   */
+  readonly forkAt?: { readonly keepUpTo: string; readonly dropsTurn: string } | null;
+
   /** Called for every event the stream produced, in order. */
   onEvent(event: SessionEvent): void;
 
   /** Called once, when the stream ends — for any reason, including a crash. */
   onClosed(reason: SessionCloseReason): void;
+
+  /**
+   * The CLI refused the point a fork for an edit-and-resend starts from — deterministically, so it
+   * is never tried again (plan 08, D-19, S-164).
+   */
+  onForkRejected?(): void;
 }
 
 /**
@@ -106,6 +130,15 @@ export interface ClaudeSessionHandle {
    * @throws {import('@domain/session').ClaudeTimeoutError} the CLI did not answer in time
    */
   supportedCommands(): Promise<readonly SlashCommand[]>;
+
+  /** The installation's models — `supportedModels()`; no quota. @throws as {@link supportedCommands} */
+  supportedModels(): Promise<readonly InstallationModel[]>;
+
+  /** The use of the context window by category — `getContextUsage()`. @throws as {@link supportedCommands} */
+  contextUse(): Promise<ContextUse>;
+
+  /** The MCP servers, reduced — `mcpServerStatus()`. @throws as {@link supportedCommands} */
+  mcpServers(): Promise<readonly McpServer[]>;
 
   /**
    * Ends the session and releases its subprocess.

@@ -32,6 +32,10 @@ export interface ConversationProps {
 
   /** Brings the rest of the conversation, for a search of the whole of it (S-101). */
   onSearchEverything?(): void;
+
+  /** Edits a prompt to send it again, and forks from before one (plan 08, B-35). */
+  readonly onEditPrompt?: TimelineContext['onEditPrompt'];
+  readonly onForkFrom?: TimelineContext['onForkFrom'];
 }
 
 /**
@@ -53,6 +57,8 @@ export function Conversation({
   sessionId = null,
   conversationId = null,
   onSearchEverything,
+  onEditPrompt,
+  onForkFrom,
 }: ConversationProps): React.JSX.Element {
   const { t } = useTranslation();
   const container = useRef<HTMLDivElement>(null);
@@ -67,6 +73,8 @@ export function Conversation({
     conversation,
     current: search.found[search.at] ?? null,
     taskList,
+    onEditPrompt,
+    onForkFrom,
   };
 
   return (

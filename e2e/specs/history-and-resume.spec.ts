@@ -95,7 +95,8 @@ test(`${overflow.id} — ${overflow.title}`, async ({ page }) => {
     await expect(page.getByText('Reconnecting…').first()).toBeVisible();
 
     // ...while the session moves on past everything the buffer can hold.
-    let turns = 1;
+    // The opening turn of the session, and the one above.
+    let turns = 2;
     await pushPastSeq(producer, replayBufferSize(producer) + expected.overflowMargin, () => {
       turns += 1;
       prompt(producer, sessionId, expected.fixture);

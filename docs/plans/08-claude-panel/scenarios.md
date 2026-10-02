@@ -160,125 +160,125 @@ conteúdo hostil neutralizado na renderização.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-103 | Edit: o trecho antes/depois vem do input, e o arquivo inteiro quando há snapshot do turno e o disco ainda é o que a sessão deixou | eq | integração | — | B-25 | ⬜ |
-| S-104 | MultiEdit: cada edição vira um trecho, na ordem | eq | unit | — | B-25 | ⬜ |
-| S-105 | Write sobre arquivo existente: antes = snapshot; Write de arquivo novo: antes = ausente | eq | integração | — | B-25 | ⬜ |
-| S-106 | segundo Edit no mesmo arquivo no mesmo turno: só o trecho, com o lado anterior `unavailable` e o motivo | fron | integração | — | B-25 | ⬜ |
-| S-107 | arquivo acima do teto do snapshot → lado anterior `notRestorable`; o trecho continua | fron | integração | — | B-25 | ⬜ |
-| S-108 | `toolUseId` que a sessão não tem | err | integração | `TOOL_USE_NOT_FOUND` (novo) | B-25 | ⬜ |
-| S-109 | tool que não escreve arquivo (`Bash`, `Read`) | err | integração | `DIFF_NOT_APPLICABLE` (novo) | B-25 | ⬜ |
-| S-110 | sessão de outra pessoa / encerrada | err | integração | `FORBIDDEN`, `SESSION_NOT_FOUND` | B-25 | ⬜ |
-| S-111 | conteúdo binário | err | integração | `FILE_NOT_TEXT` (do 07) | B-25 | ⬜ |
-| S-112 | o log da borda tem caminho e tamanhos, nunca conteúdo | eq | integração | — | B-25 | ⬜ |
-| S-113 | as alterações listam cada arquivo que a sessão (e a conversa continuada in-place) criou, modificou ou apagou | eq | integração | — | B-26 | ⬜ |
-| S-114 | arquivo alterado à mão depois da sessão vem `modifiedOutside` | est | integração | — | B-26 | ⬜ |
-| S-115 | sessão que não mudou arquivo → lista vazia | fron | integração | — | B-26 | ⬜ |
-| S-116 | o arquivo da alteração traz antes da sessão, agora, os trechos e a `revision`; caminho que não é da sessão | err | integração | `NOT_FOUND` | B-26 | ⬜ |
-| S-117 | caminho que virou symlink para fora é recusado sem ler | err | integração | `WORKSPACE_NOT_ALLOWED` | B-26 | ⬜ |
-| S-118 | pedido durante um turno que escreve o mesmo arquivo devolve um estado coerente — antes ou depois, nunca metade | conc | integração | — | B-26 | ⬜ |
+| S-103 | Edit: o trecho antes/depois vem do input, e o arquivo inteiro quando há snapshot do turno e o disco ainda é o que a sessão deixou | eq | integração | — | B-25 | ✅ |
+| S-104 | MultiEdit: cada edição vira um trecho, na ordem | eq | unit | — | B-25 | ✅ |
+| S-105 | Write sobre arquivo existente: antes = snapshot; Write de arquivo novo: antes = ausente | eq | integração | — | B-25 | ✅ |
+| S-106 | segundo Edit no mesmo arquivo no mesmo turno: só o trecho, com o lado anterior `unavailable` e o motivo | fron | integração | — | B-25 | ✅ |
+| S-107 | arquivo acima do teto do snapshot → lado anterior `notRestorable`; o trecho continua | fron | integração | — | B-25 | ✅ |
+| S-108 | `toolUseId` que a sessão não tem | err | integração | `TOOL_USE_NOT_FOUND` (novo) | B-25 | ✅ |
+| S-109 | tool que não escreve arquivo (`Bash`, `Read`) | err | integração | `DIFF_NOT_APPLICABLE` (novo) | B-25 | ✅ |
+| S-110 | sessão de outra pessoa / encerrada | err | integração | `FORBIDDEN`, `SESSION_NOT_FOUND` | B-25 | ✅ |
+| S-111 | conteúdo binário | err | integração | `FILE_NOT_TEXT` (do 07) | B-25 | ✅ |
+| S-112 | o log da borda tem caminho e tamanhos, nunca conteúdo | eq | integração | — | B-25 | ✅ |
+| S-113 | as alterações listam cada arquivo que a sessão (e a conversa continuada in-place) criou, modificou ou apagou | eq | integração | — | B-26 | ✅ |
+| S-114 | arquivo alterado à mão depois da sessão vem `modifiedOutside` | est | integração | — | B-26 | ✅ |
+| S-115 | sessão que não mudou arquivo → lista vazia | fron | integração | — | B-26 | ✅ |
+| S-116 | o arquivo da alteração traz antes da sessão, agora, os trechos e a `revision`; caminho que não é da sessão | err | integração | `NOT_FOUND` | B-26 | ✅ |
+| S-117 | caminho que virou symlink para fora é recusado sem ler | err | integração | `WORKSPACE_NOT_ALLOWED` | B-26 | ✅ |
+| S-118 | pedido durante um turno que escreve o mesmo arquivo devolve um estado coerente — antes ou depois, nunca metade | conc | integração | — | B-26 | ✅ |
 
 ## Diffs na tela — B-27…B-29
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-119 | o card de Edit/Write mostra o diff inline, recolhido acima de *n* linhas | eq | integração | — | B-27 | ⬜ |
-| S-120 | "abrir diff" abre a aba de diff no editor da mesma aba de pasta; abrir de novo foca a mesma | idem | integração | — | B-27 | ⬜ |
-| S-121 | falha ao carregar o diff mostra o erro no card, e a conversa fica | err | integração | `SESSION_NOT_FOUND` | B-27 | ⬜ |
-| S-122 | a view "Alterações" lista os arquivos com +/−, e abre o diff contra antes da sessão | eq | integração | — | B-28 | ⬜ |
-| S-123 | a view se atualiza a cada `turn.completed` e `session.rewound` | est | integração | — | B-28 | ⬜ |
-| S-124 | `modifiedOutside` aparece com aviso, e diz que rejeitar vai preservar o arquivo | est | integração | — | B-28 | ⬜ |
-| S-125 | "aceitar" marca o arquivo como revisado e o tira da lista de pendentes; a marca sobrevive a trocar de aba e a recarregar | est | integração | — | B-28 | ⬜ |
-| S-126 | aceitar tudo e filtrar por pendentes/revisados | eq | integração | — | B-28 | ⬜ |
-| S-127 | a permissão de Edit mostra o diff contra o disco agora, antes de aprovar | eq | integração | — | B-29 | ⬜ |
-| S-128 | a permissão de Write de arquivo novo mostra tudo como acréscimo | eq | unit | — | B-29 | ⬜ |
-| S-129 | `old_string` que não existe no disco agora → a prévia diz que a edição não casa, sem inventar diff | fron | unit | — | B-29 | ⬜ |
-| S-130 | arquivo grande ou binário → prévia indisponível com o motivo, e o input exato continua à vista | err | integração | `FILE_TOO_LARGE`, `FILE_NOT_TEXT` (do 07) | B-29 | ⬜ |
-| S-131 | o disco muda entre a prévia e a aprovação → a prévia é relida ao focar e diz contra que momento foi calculada | conc | integração | — | B-29 | ⬜ |
+| S-119 | o card de Edit/Write mostra o diff inline, recolhido acima de *n* linhas | eq | integração | — | B-27 | ✅ |
+| S-120 | "abrir diff" abre a aba de diff no editor da mesma aba de pasta; abrir de novo foca a mesma | idem | integração | — | B-27 | ✅ |
+| S-121 | falha ao carregar o diff mostra o erro no card, e a conversa fica | err | integração | `SESSION_NOT_FOUND` | B-27 | ✅ |
+| S-122 | a view "Alterações" lista os arquivos com +/−, e abre o diff contra antes da sessão | eq | integração | — | B-28 | ✅ |
+| S-123 | a view se atualiza a cada `turn.completed` e `session.rewound` | est | integração | — | B-28 | ✅ |
+| S-124 | `modifiedOutside` aparece com aviso, e diz que rejeitar vai preservar o arquivo | est | integração | — | B-28 | ✅ |
+| S-125 | "aceitar" marca o arquivo como revisado e o tira da lista de pendentes; a marca sobrevive a trocar de aba e a recarregar | est | integração | — | B-28 | ✅ |
+| S-126 | aceitar tudo e filtrar por pendentes/revisados | eq | integração | — | B-28 | ✅ |
+| S-127 | a permissão de Edit mostra o diff contra o disco agora, antes de aprovar | eq | integração | — | B-29 | ✅ |
+| S-128 | a permissão de Write de arquivo novo mostra tudo como acréscimo | eq | unit | — | B-29 | ✅ |
+| S-129 | `old_string` que não existe no disco agora → a prévia diz que a edição não casa, sem inventar diff | fron | unit | — | B-29 | ✅ |
+| S-130 | arquivo grande ou binário → prévia indisponível com o motivo, e o input exato continua à vista | err | integração | `FILE_TOO_LARGE`, `FILE_NOT_TEXT` (do 07) | B-29 | ✅ |
+| S-131 | o disco muda entre a prévia e a aprovação → a prévia é relida ao focar e diz contra que momento foi calculada | conc | integração | — | B-29 | ✅ |
 
 ## Rejeitar por arquivo e por trecho — B-30, B-31
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-132 | rejeitar um arquivo devolve só ele ao estado de antes da sessão; os outros ficam | eq | integração | — | B-30 | ⬜ |
-| S-133 | arquivo alterado à mão → preservado (`modifiedOutside`), nada escrito | est | integração | — | B-30 | ⬜ |
-| S-134 | rejeitar com um turno em execução | conc | integração | `SESSION_LOCKED` | B-30 | ⬜ |
-| S-135 | rejeitar duas vezes: a segunda devolve `unchanged` | idem | integração | — | B-30 | ⬜ |
-| S-136 | caminho que a sessão não tocou | err | unit | `INVALID_INPUT` | B-30 | ⬜ |
-| S-137 | trilha indisponível → nada é tocado | err | unit | `INTERNAL_ERROR` | B-30 | ⬜ |
-| S-138 | rejeitar um trecho restaura só aquele trecho; o resto do arquivo, inclusive outros trechos da sessão, fica | eq | integração | — | B-31 | ⬜ |
-| S-139 | trecho cuja `revision` não é mais a do disco (o arquivo mudou) | conc | integração | `SESSION_CHANGE_STALE` (novo) | B-31 | ⬜ |
-| S-140 | trecho que toca o primeiro ou o último byte do arquivo, e arquivo sem quebra de linha final | fron | unit | — | B-31 | ⬜ |
-| S-141 | rejeitar o último trecho de um arquivo criado pela sessão o apaga, como o desfazer faria | est | integração | — | B-31 | ⬜ |
-| S-142 | rejeitar oferece desfazer enquanto o arquivo não mudar de novo; desfazer devolve exatamente o que estava | est | integração | — | B-31 | ⬜ |
-| S-143 | a escrita é atômica e entra na trilha antes do disco; falha no meio não deixa arquivo truncado | err | integração | `INTERNAL_ERROR` | B-31 | ⬜ |
-| S-144 | o mesmo trecho rejeitado duas vezes (reenvio) escreve uma vez | idem | integração | — | B-31 | ⬜ |
+| S-132 | rejeitar um arquivo devolve só ele ao estado de antes da sessão; os outros ficam | eq | integração | — | B-30 | ✅ |
+| S-133 | arquivo alterado à mão → preservado (`modifiedOutside`), nada escrito | est | integração | — | B-30 | ✅ |
+| S-134 | rejeitar com um turno em execução | conc | integração | `SESSION_LOCKED` | B-30 | ✅ |
+| S-135 | rejeitar duas vezes: a segunda devolve `unchanged` | idem | integração | — | B-30 | ✅ |
+| S-136 | caminho que a sessão não tocou | err | unit | `INVALID_INPUT` | B-30 | ✅ |
+| S-137 | trilha indisponível → nada é tocado | err | unit | `INTERNAL_ERROR` | B-30 | ✅ |
+| S-138 | rejeitar um trecho restaura só aquele trecho; o resto do arquivo, inclusive outros trechos da sessão, fica | eq | integração | — | B-31 | ✅ |
+| S-139 | trecho cuja `revision` não é mais a do disco (o arquivo mudou) | conc | integração | `SESSION_CHANGE_STALE` (novo) | B-31 | ✅ |
+| S-140 | trecho que toca o primeiro ou o último byte do arquivo, e arquivo sem quebra de linha final | fron | unit | — | B-31 | ✅ |
+| S-141 | rejeitar o último trecho de um arquivo criado pela sessão o apaga, como o desfazer faria | est | integração | — | B-31 | ✅ |
+| S-142 | rejeitar oferece desfazer enquanto o arquivo não mudar de novo; desfazer devolve exatamente o que estava | est | integração | — | B-31 | ✅ |
+| S-143 | a escrita é atômica e entra na trilha antes do disco; falha no meio não deixa arquivo truncado | err | integração | `INTERNAL_ERROR` | B-31 | ✅ |
+| S-144 | o mesmo trecho rejeitado duas vezes (reenvio) escreve uma vez | idem | integração | — | B-31 | ✅ |
 
 ## O painel na aba de pasta, a sessão no primeiro prompt, a fila e o reenviar — B-32…B-35
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-145 | o painel fica **dentro** da aba de pasta, na secondary side bar, visível ao mesmo tempo que o explorer e o editor (a partir de `md`) — não é uma tela separada | eq | integração | — | B-32 | ⬜ |
-| S-146 | o painel é da aba de pasta: conversa, rascunho e rolagem de uma aba não aparecem na outra | eq | integração | — | B-32 | ⬜ |
-| S-147 | alternar de aba e voltar preserva rascunho, contexto, conversa aberta e rolagem | est | integração | — | B-32 | ⬜ |
-| S-148 | a mesma sessão em duas abas de pasta (pasta e subpasta) usa um attach, as duas views ficam coerentes, e fechar uma não desanexa a outra | conc | integração | — | B-32 | ⬜ |
-| S-149 | fechar a aba de pasta não encerra a sessão, e diz isso; reabrir a pasta a mostra em execução | est | integração | — | B-32 | ⬜ |
-| S-150 | abas de conversa: abrir, alternar, reordenar e fechar — fechar a aba não encerra a sessão, e encerrar é ação separada | est | integração | — | B-32 | ⬜ |
-| S-151 | nova conversa não abre subprocesso até o primeiro prompt | eq | integração | — | B-33 | ⬜ |
-| S-152 | o primeiro prompt faz `session.start` com modelo/modo/esforço escolhidos, e depois `session.prompt` com o contexto | est | integração | — | B-33 | ⬜ |
-| S-153 | start recusado no teto mantém o texto e o contexto no rascunho | err | integração | `SESSION_LIMIT_REACHED` | B-33 | ⬜ |
-| S-154 | Enter duas vezes no rascunho abre uma sessão só | idem | integração | — | B-33 | ⬜ |
-| S-155 | fechar o rascunho não deixa nada vivo no backend | est | integração | — | B-33 | ⬜ |
-| S-156 | prompt enviado durante um turno aparece na fila, com posição, para todos que observam | eq | integração | — | B-34 | ⬜ |
-| S-157 | cancelar um prompt na fila o tira antes de chegar ao Claude | est | integração | — | B-34 | ⬜ |
-| S-158 | cancelar o que acabou de começar | conc | integração | `CONFLICT` | B-34 | ⬜ |
-| S-159 | cancelar duas vezes o mesmo: a segunda é `ack` sem efeito; id desconhecido é recusado | idem | integração | `QUEUED_PROMPT_NOT_FOUND` (novo) | B-34 | ⬜ |
-| S-160 | a fila roda na ordem de chegada, de clientes diferentes | conc | integração | — | B-34 | ⬜ |
-| S-161 | editar e reenviar um prompt anterior bifurca a conversa naquele ponto, num id novo, e a original continua legível | eq | integração | — | B-35 | ⬜ |
-| S-162 | reenviar oferece também desfazer os arquivos para antes daquele turno, desligado por padrão | est | integração | — | B-35 | ⬜ |
-| S-163 | ponto de fork que não é da conversa | err | unit | `INVALID_INPUT` | B-35 | ⬜ |
-| S-164 | o CLI recusa o ponto (`resumeDropsTurn`) → recusa traduzida e retomada simples oferecida, sem repetir o fork | err | integração | `SESSION_FORK_REJECTED` (novo) | B-35 | ⬜ |
-| S-165 | reenviar do primeiro prompt da conversa (fronteira do início) | fron | integração | — | B-35 | ⬜ |
+| S-145 | o painel fica **dentro** da aba de pasta, na secondary side bar, visível ao mesmo tempo que o explorer e o editor (a partir de `md`) — não é uma tela separada | eq | integração | — | B-32 | ✅ |
+| S-146 | o painel é da aba de pasta: conversa, rascunho e rolagem de uma aba não aparecem na outra | eq | integração | — | B-32 | ✅ |
+| S-147 | alternar de aba e voltar preserva rascunho, contexto, conversa aberta e rolagem | est | integração | — | B-32 | ✅ |
+| S-148 | a mesma sessão em duas abas de pasta (pasta e subpasta) usa um attach, as duas views ficam coerentes, e fechar uma não desanexa a outra | conc | integração | — | B-32 | ✅ |
+| S-149 | fechar a aba de pasta não encerra a sessão, e diz isso; reabrir a pasta a mostra em execução | est | integração | — | B-32 | ✅ |
+| S-150 | abas de conversa: abrir, alternar, reordenar e fechar — fechar a aba não encerra a sessão, e encerrar é ação separada | est | integração | — | B-32 | ✅ |
+| S-151 | nova conversa não abre subprocesso até o primeiro prompt | eq | integração | — | B-33 | ✅ |
+| S-152 | o primeiro prompt faz `session.start` com modelo/modo/esforço escolhidos, e depois `session.prompt` com o contexto | est | integração | — | B-33 | ✅ |
+| S-153 | start recusado no teto mantém o texto e o contexto no rascunho | err | integração | `SESSION_LIMIT_REACHED` | B-33 | ✅ |
+| S-154 | Enter duas vezes no rascunho abre uma sessão só | idem | integração | — | B-33 | ✅ |
+| S-155 | fechar o rascunho não deixa nada vivo no backend | est | integração | — | B-33 | ✅ |
+| S-156 | prompt enviado durante um turno aparece na fila, com posição, para todos que observam | eq | integração | — | B-34 | ✅ |
+| S-157 | cancelar um prompt na fila o tira antes de chegar ao Claude | est | integração | — | B-34 | ✅ |
+| S-158 | cancelar o que acabou de começar | conc | integração | `CONFLICT` | B-34 | ✅ |
+| S-159 | cancelar duas vezes o mesmo: a segunda é `ack` sem efeito; id desconhecido é recusado | idem | integração | `QUEUED_PROMPT_NOT_FOUND` (novo) | B-34 | ✅ |
+| S-160 | a fila roda na ordem de chegada, de clientes diferentes | conc | integração | — | B-34 | ✅ |
+| S-161 | editar e reenviar um prompt anterior bifurca a conversa naquele ponto, num id novo, e a original continua legível | eq | integração | — | B-35 | ✅ |
+| S-162 | reenviar oferece também desfazer os arquivos para antes daquele turno, desligado por padrão | est | integração | — | B-35 | ✅ |
+| S-163 | ponto de fork que não é da conversa | err | unit | `INVALID_INPUT` | B-35 | ✅ |
+| S-164 | o CLI recusa o ponto (`resumeDropsTurn`) → recusa traduzida e retomada simples oferecida, sem repetir o fork | err | integração | `SESSION_FORK_REJECTED` (novo) | B-35 | ✅ |
+| S-165 | reenviar do primeiro prompt da conversa (fronteira do início) | fron | integração | — | B-35 | ✅ |
 
 ## Modelo, modo, esforço, contexto, MCP e exportação — B-36…B-39
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-166 | a lista de modelos vem do `supportedModels()` da instalação, sem constante no código | eq | integração | — | B-36 | ⬜ |
-| S-167 | cache por versão do CLI e workspace: duas sessões juntas fazem uma chamada; versão nova recarrega | idem | integração | — | B-36 | ⬜ |
-| S-168 | lista indisponível → o seletor mostra o modelo atual e o composer segue | err | integração | `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT` | B-36 | ⬜ |
-| S-169 | trocar o modelo manda `session.setModel`, e o indicador reflete | est | integração | — | B-36 | ⬜ |
-| S-170 | o modo oferece padrão, aceitar edições e plan — nunca `bypassPermissions`; aceitar edições avisa que Edit/Write não pedirão aprovação | eq | integração | — | B-36 | ⬜ |
-| S-171 | esforço só aparece para modelo com `supportsEffort`, com os níveis dele; nível fora da lista | err | unit | `INVALID_INPUT` | B-36 | ⬜ |
-| S-172 | no rascunho sem catálogo em cache, o seletor oferece só o padrão da instalação | fron | integração | — | B-36 | ⬜ |
-| S-173 | o medidor mostra o uso da janela de contexto por categoria, e avisa perto do limite | eq | integração | — | B-37 | ⬜ |
-| S-174 | `/compact` pelo botão compacta, e a conversa mostra o marco `session.compacted` | est | integração | — | B-37 | ⬜ |
-| S-175 | uso de contexto indisponível → o medidor some com o motivo no tooltip, sem bloquear | err | integração | `CLAUDE_UNAVAILABLE` | B-37 | ⬜ |
-| S-176 | o indicador de MCP mostra cada servidor com o status (conectado, falhou, precisa auth, pendente, desligado) | eq | integração | — | B-38 | ⬜ |
-| S-177 | a resposta nunca traz `config` nem `error` cru do servidor | eq | integração | — | B-38 | ⬜ |
-| S-178 | sem servidores o indicador some; consulta que falha mostra erro compacto sem bloquear o chat | err | integração | `CLAUDE_UNAVAILABLE` | B-38 | ⬜ |
-| S-179 | sem a tela do plano 11, o indicador não oferece link morto | fron | integração | — | B-38 | ⬜ |
-| S-180 | exportar gera o markdown da conversa inteira (todas as páginas), com as tools compactas | eq | integração | — | B-39 | ⬜ |
-| S-181 | saídas de tool só entram com a opção ligada, desligada por padrão | est | integração | — | B-39 | ⬜ |
-| S-182 | falha ao carregar uma página no meio da exportação não baixa um arquivo pela metade | err | integração | `CLAUDE_UNAVAILABLE` | B-39 | ⬜ |
+| S-166 | a lista de modelos vem do `supportedModels()` da instalação, sem constante no código | eq | integração | — | B-36 | ✅ |
+| S-167 | cache por versão do CLI e workspace: duas sessões juntas fazem uma chamada; versão nova recarrega | idem | integração | — | B-36 | ✅ |
+| S-168 | lista indisponível → o seletor mostra o modelo atual e o composer segue | err | integração | `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT` | B-36 | ✅ |
+| S-169 | trocar o modelo manda `session.setModel`, e o indicador reflete | est | integração | — | B-36 | ✅ |
+| S-170 | o modo oferece padrão, aceitar edições e plan — nunca `bypassPermissions`; aceitar edições avisa que Edit/Write não pedirão aprovação | eq | integração | — | B-36 | ✅ |
+| S-171 | esforço só aparece para modelo com `supportsEffort`, com os níveis dele; nível fora da lista | err | unit | `INVALID_INPUT` | B-36 | ✅ |
+| S-172 | no rascunho sem catálogo em cache, o seletor oferece só o padrão da instalação | fron | integração | — | B-36 | ✅ |
+| S-173 | o medidor mostra o uso da janela de contexto por categoria, e avisa perto do limite | eq | integração | — | B-37 | ✅ |
+| S-174 | `/compact` pelo botão compacta, e a conversa mostra o marco `session.compacted` | est | integração | — | B-37 | ✅ |
+| S-175 | uso de contexto indisponível → o medidor some com o motivo no tooltip, sem bloquear | err | integração | `CLAUDE_UNAVAILABLE` | B-37 | ✅ |
+| S-176 | o indicador de MCP mostra cada servidor com o status (conectado, falhou, precisa auth, pendente, desligado) | eq | integração | — | B-38 | ✅ |
+| S-177 | a resposta nunca traz `config` nem `error` cru do servidor | eq | integração | — | B-38 | ✅ |
+| S-178 | sem servidores o indicador some; consulta que falha mostra erro compacto sem bloquear o chat | err | integração | `CLAUDE_UNAVAILABLE` | B-38 | ✅ |
+| S-179 | sem a tela do plano 11, o indicador não oferece link morto | fron | integração | — | B-38 | ✅ |
+| S-180 | exportar gera o markdown da conversa inteira (todas as páginas), com as tools compactas | eq | integração | — | B-39 | ✅ |
+| S-181 | saídas de tool só entram com a opção ligada, desligada por padrão | est | integração | — | B-39 | ✅ |
+| S-182 | falha ao carregar uma página no meio da exportação não baixa um arquivo pela metade | err | integração | `CLAUDE_UNAVAILABLE` | B-39 | ✅ |
 
 ## Teclado, status bar, badges e ajuda do painel — B-40…B-43
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-183 | Esc no composer com turno em execução interrompe; com menu ou diálogo aberto, Esc fecha o menu e não interrompe | est | integração | — | B-40 | ⬜ |
-| S-184 | Esc repetido manda um interrupt só; sem turno, não faz nada | idem | integração | — | B-40 | ⬜ |
-| S-185 | abrir painel, nova conversa, focar composer e interromper têm atalho, aparecem na command palette com ele e funcionam com o foco em qualquer parte da aba | eq | integração | — | B-40 | ⬜ |
-| S-186 | a status bar mostra status, modelo e custo da sessão ativa da aba ativa, e troca com a aba | eq | integração | — | B-41 | ⬜ |
-| S-187 | sem conversa ativa, o item da status bar some, sem vazio | fron | integração | — | B-41 | ⬜ |
-| S-188 | permissão com o painel escondido → badge na activity bar e aviso anunciado (`aria-live`) | est | integração | — | B-42 | ⬜ |
-| S-189 | permissão de sessão de aba inativa → badge na aba de pasta e aviso global; clicar leva à aba, à conversa e ao card | est | integração | — | B-42 | ⬜ |
-| S-190 | permissão resolvida noutro dispositivo tira o badge | conc | integração | — | B-42 | ⬜ |
-| S-191 | as sessões das abas inativas continuam anexadas; as dez que a instalação comporta cabem no `maxAttachedSessions` | fron | integração | — | B-42 | ⬜ |
-| S-192 | notificação do navegador só com a página escondida, só depois de a pessoa ligar, e sem o conteúdo do comando | eq | integração | — | B-42 | ⬜ |
-| S-193 | permissão do navegador negada → o painel diz como reativar e continua com o badge | err | integração | — | B-42 | ⬜ |
-| S-194 | a gaveta de ajuda do painel e da view "Alterações" explica modos, fila, reenviar, rejeitar e o que não é gravado, em en e pt-BR | eq | integração | — | B-43 | ⬜ |
-| S-195 | todo controle de ícone do painel tem tooltip e nome acessível; foco e teclado percorrem painel, cards e diff; axe sem violação | eq | integração | — | B-43 | ⬜ |
-| S-196 | estado vazio do painel ensina a primeira conversa, o `@`, o `/`, o arrastar e o atalho | eq | integração | — | B-43 | ⬜ |
+| S-183 | Esc no composer com turno em execução interrompe; com menu ou diálogo aberto, Esc fecha o menu e não interrompe | est | integração | — | B-40 | ✅ |
+| S-184 | Esc repetido manda um interrupt só; sem turno, não faz nada | idem | integração | — | B-40 | ✅ |
+| S-185 | abrir painel, nova conversa, focar composer e interromper têm atalho, aparecem na command palette com ele e funcionam com o foco em qualquer parte da aba | eq | integração | — | B-40 | ✅ |
+| S-186 | a status bar mostra status, modelo e custo da sessão ativa da aba ativa, e troca com a aba | eq | integração | — | B-41 | ✅ |
+| S-187 | sem conversa ativa, o item da status bar some, sem vazio | fron | integração | — | B-41 | ✅ |
+| S-188 | permissão com o painel escondido → badge na activity bar e aviso anunciado (`aria-live`) | est | integração | — | B-42 | ✅ |
+| S-189 | permissão de sessão de aba inativa → badge na aba de pasta e aviso global; clicar leva à aba, à conversa e ao card | est | integração | — | B-42 | ✅ |
+| S-190 | permissão resolvida noutro dispositivo tira o badge | conc | integração | — | B-42 | ✅ |
+| S-191 | as sessões das abas inativas continuam anexadas; as dez que a instalação comporta cabem no `maxAttachedSessions` | fron | integração | — | B-42 | ✅ |
+| S-192 | notificação do navegador só com a página escondida, só depois de a pessoa ligar, e sem o conteúdo do comando | eq | integração | — | B-42 | ✅ |
+| S-193 | permissão do navegador negada → o painel diz como reativar e continua com o badge | err | integração | — | B-42 | ✅ |
+| S-194 | a gaveta de ajuda do painel e da view "Alterações" explica modos, fila, reenviar, rejeitar e o que não é gravado, em en e pt-BR | eq | integração | — | B-43 | ✅ |
+| S-195 | todo controle de ícone do painel tem tooltip e nome acessível; foco e teclado percorrem painel, cards e diff; axe sem violação | eq | integração | — | B-43 | ✅ |
+| S-196 | estado vazio do painel ensina a primeira conversa, o `@`, o `/`, o arrastar e o atalho | eq | integração | — | B-43 | ✅ |
 
 ## Referências e anexos no backend — B-44, B-45
 

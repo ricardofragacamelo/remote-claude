@@ -1,4 +1,5 @@
 import type { UserId } from '@domain/auth';
+import type { ChainEntry } from '@domain/session';
 import type { ClaudeSessionId } from '@domain/transcript';
 
 /**
@@ -32,6 +33,15 @@ export interface ResumableConversationSource {
    * @throws {import('@domain/transcript').TranscriptTimeoutError} the SDK did not answer in time
    */
   find(id: ClaudeSessionId): Promise<ResumableConversation | null>;
+
+  /**
+   * The entries of the conversation, oldest first, each said to be a prompt or not — what an
+   * edit-and-resend chooses its fork point from (plan 08, D-19). Read through the SDK, never parsed;
+   * nothing a message said leaves `transcript`.
+   *
+   * @throws as {@link find}
+   */
+  chainOf(id: ClaudeSessionId): Promise<readonly ChainEntry[]>;
 }
 
 export const RESUMABLE_CONVERSATION_SOURCE = Symbol('ResumableConversationSource');

@@ -454,9 +454,17 @@ describe('the session screen, with the history under the stream — plan 04', ()
   });
 
   it('says why the history could not be read, keeps the stream, and tries again — S-17', async () => {
-    vi.spyOn(api, 'get')
-      .mockRejectedValueOnce(claudeUnavailable)
-      .mockResolvedValueOnce(aHistoryPage([said('m1', 'Read at last.')]));
+    // The history fails once, then reads; what the header reads is not this test's.
+    let reads = 0;
+    vi.spyOn(api, 'get').mockImplementation((path: string) => {
+      if (!path.endsWith('/messages')) {
+        return Promise.reject(new Error(`unexpected GET ${path}`));
+      }
+      reads += 1;
+      return reads === 1
+        ? Promise.reject(claudeUnavailable)
+        : Promise.resolve(aHistoryPage([said('m1', 'Read at last.')]));
+    });
     render(<SessionScreen sessionId={SESSION} />);
     live.connect();
 

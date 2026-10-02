@@ -67,19 +67,6 @@ describe('driving a session', () => {
     );
   });
 
-  it('opens a session on a workspace', () => {
-    const { result } = renderHook(() => useLiveSession(null));
-    connect();
-
-    act(() => {
-      result.current.start('/srv/projects/app');
-    });
-
-    expect(
-      sockets.latest.frames().find((frame) => frame['type'] === 'session.start'),
-    ).toMatchObject({ payload: { workspacePath: '/srv/projects/app' } });
-  });
-
   it('starts the conversation again when the replay has a gap', () => {
     // The server no longer holds what this client missed. Stitching a partial hole would produce
     // a view that looks whole and is not, which is worse than one that admits it has to reload.

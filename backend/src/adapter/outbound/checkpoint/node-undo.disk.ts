@@ -4,7 +4,7 @@ import type { Stats } from 'node:fs';
 import path from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
 
-import type { RestoredFile, UndoDisk } from '@application/session';
+import type { FileContent, RestoredFile, UndoDisk, WrittenFile } from '@application/session';
 import type { FileObservation, TurnFileCheckpoint } from '@domain/session';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { digestOf, isAbsent } from './file-facts';
@@ -45,14 +45,75 @@ export class NodeUndoDisk implements UndoDisk {
   }
 
   async restore(checkpoint: TurnFileCheckpoint): Promise<RestoredFile> {
-    const target = checkpoint.path;
+    let content: Buffer;
+
+    try {
+      content = await this.snapshotOf(checkpoint);
+    } catch (error) {
+      this.logger.warn(
+        { ...CONTEXT, path: checkpoint.path, action: 'restore', err: error },
+        'a file could not be put back — it is exactly as it was',
+      );
+      throw error;
+    }
+
+    const { mtime, sizeBytes } = await this.put(checkpoint.path, content, 'restored');
+    return { mtime, sizeBytes };
+  }
+
+  async write(filePath: string, content: Uint8Array): Promise<WrittenFile> {
+    return this.put(filePath, content, 'written');
+  }
+
+  async read(filePath: string, maxBytes: number): Promise<FileContent> {
+    const content = await this.readWithin(filePath, maxBytes);
+
+    // The path and the size, never the bytes: a file of somebody's repository is no log line.
+    this.logger.debug(
+      {
+        ...CONTEXT,
+        op: 'checkpoint.read',
+        path: filePath,
+        kind: content.kind,
+        sizeBytes: content.kind === 'file' ? content.bytes.byteLength : undefined,
+      },
+      'read a file the changes of a session reach',
+    );
+
+    return content;
+  }
+
+  /**
+   * The contents a checkpoint kept, verified against the hash taken with them.
+   *
+   * @throws when there is no blob, it cannot be read, or it is not what was snapshotted
+   */
+  async snapshotOf(checkpoint: TurnFileCheckpoint): Promise<Buffer> {
+    if (checkpoint.blobPath === null || checkpoint.hash === null) {
+      throw new Error(`no snapshot was kept for ${checkpoint.path}`);
+    }
+
+    const content = await readFile(checkpoint.blobPath);
+
+    if (digestOf(content) !== checkpoint.hash) {
+      throw new Error(`the snapshot of ${checkpoint.path} no longer matches its hash`);
+    }
+
+    return content;
+  }
+
+  /**
+   * Writes contents over a path: a temporary beside it, then a rename — never through a link.
+   *
+   * @throws when it cannot, and then the path is exactly as it was
+   */
+  private async put(target: string, content: Uint8Array, action: string): Promise<WrittenFile> {
     const temporary = path.join(
       path.dirname(target),
       `.${path.basename(target)}.rc-undo-${randomUUID()}`,
     );
 
     try {
-      const content = await this.snapshotOf(checkpoint);
       const current = await this.regularOrAbsent(target);
 
       // `wx`: the temporary is ours and new, never a file that happened to be there already.
@@ -64,15 +125,15 @@ export class NodeUndoDisk implements UndoDisk {
 
       const written = await stat(target);
       this.logger.debug(
-        { ...CONTEXT, path: target, action: 'restored', sizeBytes: written.size },
+        { ...CONTEXT, path: target, action, sizeBytes: written.size },
         'a file was put back the way it was before the turn',
       );
 
-      return { mtime: written.mtime, sizeBytes: written.size };
+      return { mtime: written.mtime, sizeBytes: written.size, hash: digestOf(content) };
     } catch (error) {
       await rm(temporary, { force: true });
       this.logger.warn(
-        { ...CONTEXT, path: target, action: 'restore', err: error },
+        { ...CONTEXT, path: target, action, err: error },
         'a file could not be put back — it is exactly as it was',
       );
       throw error;
@@ -98,8 +159,8 @@ export class NodeUndoDisk implements UndoDisk {
     }
   }
 
-  /** What is at the path, as {@link observe} reports it. */
-  private async look(filePath: string): Promise<FileObservation> {
+  /** What is at the path, as {@link read} reports it: the bytes, read once, when there are any. */
+  private async readWithin(filePath: string, maxBytes: number): Promise<FileContent> {
     if (!path.isAbsolute(filePath) || !(await resolvesToItself(path.dirname(filePath)))) {
       return { kind: 'unsafe' };
     }
@@ -115,26 +176,25 @@ export class NodeUndoDisk implements UndoDisk {
       return { kind: 'unsafe' };
     }
 
-    return { kind: 'file', hash: digestOf(await readFile(filePath)) };
+    if (stats.size > maxBytes) {
+      return { kind: 'tooLarge', sizeBytes: stats.size };
+    }
+
+    try {
+      const bytes = await readFile(filePath);
+      return { kind: 'file', bytes, hash: digestOf(bytes) };
+    } catch (error) {
+      return isAbsent(error) ? { kind: 'absent' } : { kind: 'unsafe' };
+    }
   }
 
-  /**
-   * The contents a checkpoint kept, verified against the hash taken with them.
-   *
-   * @throws when there is no blob, it cannot be read, or it is not what was snapshotted
-   */
-  private async snapshotOf(checkpoint: TurnFileCheckpoint): Promise<Buffer> {
-    if (checkpoint.blobPath === null || checkpoint.hash === null) {
-      throw new Error(`no snapshot was kept for ${checkpoint.path}`);
-    }
+  /** What is at the path, as {@link observe} reports it: read whole, to be hashed. */
+  private async look(filePath: string): Promise<FileObservation> {
+    const content = await this.readWithin(filePath, Number.MAX_SAFE_INTEGER);
 
-    const content = await readFile(checkpoint.blobPath);
-
-    if (digestOf(content) !== checkpoint.hash) {
-      throw new Error(`the snapshot of ${checkpoint.path} no longer matches its hash`);
-    }
-
-    return content;
+    return content.kind === 'file'
+      ? { kind: 'file', hash: content.hash }
+      : { kind: content.kind === 'absent' ? 'absent' : 'unsafe' };
   }
 
   /**

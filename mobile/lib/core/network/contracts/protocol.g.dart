@@ -23,6 +23,7 @@ const List<String> frameTypes = <String>[
   'session.interrupt',
   'session.prompt',
   'session.rejectChange',
+  'session.restoreChange',
   'session.rewindFiles',
   'session.setLocale',
   'session.setModel',
@@ -142,6 +143,12 @@ const String sessionRejectChangeKind = 'command';
 
 /// `type` of a session.rejectChange frame.
 const String sessionRejectChangeType = 'session.rejectChange';
+
+/// `kind` of a session.restoreChange frame.
+const String sessionRestoreChangeKind = 'command';
+
+/// `type` of a session.restoreChange frame.
+const String sessionRestoreChangeType = 'session.restoreChange';
 
 /// `kind` of a session.rewindFiles frame.
 const String sessionRewindFilesKind = 'command';
@@ -1223,6 +1230,35 @@ class SessionRejectChangePayload {
       'path': path,
       'hunkId': hunkId,
       'revision': revision,
+    };
+
+    return json;
+  }
+}
+
+/// Undoes the last rejection of a file — of one hunk (`session.rejectChange`) or of the whole file (`session.rewindFiles` with `paths`): the file gets back, byte for byte, what the rejection replaced. Only while the file is still exactly what the rejection left; otherwise `SESSION_CHANGE_STALE`. A file with no rejection to undo is `NOT_FOUND`. The same locks as an undo apply (`SESSION_LOCKED`), and the trail is written before the disk. The outcome arrives as `session.rewound`, with the file in `reverted`.
+class SessionRestoreChangePayload {
+  const SessionRestoreChangePayload({
+    required this.sessionId,
+    required this.path,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionRestoreChangePayload.fromJson(Map<String, Object?> json) => SessionRestoreChangePayload(
+        sessionId: json['sessionId']! as String,
+        path: json['path']! as String,
+      );
+
+  final String sessionId;
+
+  /// The file, as `GET /sessions/:sessionId/changes` named it.
+  final String path;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+      'path': path,
     };
 
     return json;

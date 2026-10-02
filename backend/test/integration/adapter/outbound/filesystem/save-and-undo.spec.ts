@@ -102,6 +102,9 @@ describe('a save and an undo of the same file', () => {
       observe: (target) => real.observe(target),
       remove: (target) => real.remove(target),
       restore: (checkpoint) => traced('undo', () => real.restore(checkpoint)),
+      read: (target, maxBytes) => real.read(target, maxBytes),
+      snapshotOf: (checkpoint) => real.snapshotOf(checkpoint),
+      write: (target, content) => real.write(target, content),
     };
 
     return new UndoPlanner(new InMemoryUndoJournal(), disk, new FixedClock(now), lock);

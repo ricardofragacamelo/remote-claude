@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { RecordAuditEventUseCase } from '@application/audit';
-import { SessionRegistry, StartSessionUseCase } from '@application/session';
+import { ModelCatalog, SessionRegistry, StartSessionUseCase } from '@application/session';
 import type {
   ClaudeSessionHandle,
   ClaudeSessionPort,
@@ -9,7 +9,13 @@ import type {
   SessionEvent,
 } from '@application/session';
 import { UserId } from '@domain/auth';
-import { SessionLimitReachedError, SessionNotFoundError } from '@domain/session';
+import {
+  EffortUnsupportedError,
+  ForkPointUnknownError,
+  SessionForkRejectedError,
+  SessionLimitReachedError,
+  SessionNotFoundError,
+} from '@domain/session';
 import type { Session } from '@domain/session';
 import { ClaudeSessionId, InvalidClaudeSessionIdError } from '@domain/transcript';
 import { WorkspaceNotAllowedError, WorkspacePath } from '@domain/workspace';
@@ -538,6 +544,190 @@ describe('StartSessionUseCase', () => {
       close();
 
       expect(broadcaster.events).toEqual([]);
+    });
+  });
+
+  describe('the queue of prompts — plan 08, D-14', () => {
+    it('sends the next prompt as its own turn when the turn ends, and says it left the queue — S-160', async () => {
+      const session = await start();
+      session.prompts.submit({ queueId: 'q1', text: 'first', promptedBy: 'web', preview: 'first' });
+      session.prompts.submit({
+        queueId: 'q2',
+        text: 'second',
+        promptedBy: 'mobile',
+        preview: 'second',
+      });
+
+      claude.emit({ type: 'turn.completed', payload: {} });
+
+      expect(claude.handle.prompts).toEqual(['second']);
+      expect(broadcaster.events.at(-1)?.event).toEqual({
+        type: 'prompt.dequeued',
+        payload: { queueId: 'q2', reason: 'started' },
+      });
+
+      claude.emit({ type: 'turn.completed', payload: {} });
+      expect(claude.handle.prompts).toEqual(['second']);
+      expect(session.prompts.turnOpen).toBe(false);
+    });
+
+    it('sends nothing when the session went before its turn ended', async () => {
+      const session = await start();
+      session.prompts.submit({ queueId: 'q1', text: 'first', promptedBy: 'web', preview: 'first' });
+      session.prompts.submit({
+        queueId: 'q2',
+        text: 'second',
+        promptedBy: 'web',
+        preview: 'second',
+      });
+      registry.remove(session.id);
+
+      claude.emit({ type: 'turn.completed', payload: {} });
+
+      expect(claude.handle.prompts).toEqual([]);
+    });
+  });
+
+  describe('effort — D-16', () => {
+    const effortOf = async (effort: 'low' | 'max', models: ModelCatalog | null) =>
+      new StartSessionUseCase(
+        workspaces,
+        registry,
+        claude,
+        broadcaster,
+        clock,
+        ids,
+        defaults,
+        { ids: new SequentialUuids(), origins },
+        { conversations, trail: new RecordAuditEventUseCase(trail, new SequentialIds()) },
+        models,
+      ).execute({
+        workspacePath: '/srv/projects/app',
+        model: null,
+        permissionMode: null,
+        resumeSessionId: null,
+        effort,
+        userId: owner,
+        openedFrom: 'web',
+      });
+
+    it('opens the session with the effort chosen in the draft', async () => {
+      await effortOf('low', null);
+
+      expect(claude.starts[0]?.effort).toBe('low');
+    });
+
+    it('refuses an effort the model is known not to take, before anything is spawned — S-171', async () => {
+      const catalog = new ModelCatalog();
+      const handle = new RecordingHandle();
+      handle.cliVersion = '2.1.277';
+      handle.offered = [
+        {
+          value: 'claude-sonnet-5',
+          resolvedModel: null,
+          displayName: 'Sonnet',
+          description: '',
+          supportsEffort: true,
+          supportedEffortLevels: ['low'],
+        },
+      ];
+      await catalog.modelsOf({
+        session: await start(),
+        handle,
+        conversation: {
+          claudeSessionId: ClaudeSessionId.create('6b41b192-a41b-46c2-b8d7-5098d8c825be'),
+          resumedFrom: null,
+        },
+      });
+      const before = claude.starts.length;
+
+      await expect(effortOf('max', catalog)).rejects.toThrow(EffortUnsupportedError);
+      expect(claude.starts).toHaveLength(before);
+      await expect(effortOf('low', catalog)).resolves.toBeDefined();
+    });
+  });
+
+  describe('edit and resend — D-19', () => {
+    const CONVERSATION = '11111111-1111-4111-8111-111111111111';
+    const fork = (forkAt: string) =>
+      build().execute({
+        workspacePath: '/srv/projects/app',
+        model: null,
+        permissionMode: null,
+        resumeSessionId: CONVERSATION,
+        forkAt,
+        userId: owner,
+        openedFrom: 'web',
+      });
+
+    beforeEach(() => {
+      conversations.add({
+        id: CONVERSATION,
+        openedBy: owner.value,
+        chain: [
+          { id: 'u1', isPrompt: true },
+          { id: 'a1', isPrompt: false },
+          { id: 'u2', isPrompt: true },
+        ],
+      });
+    });
+
+    it('forks before the prompt, under a new id, and enters the trail — S-161', async () => {
+      const started = await fork('u2');
+
+      expect(started.conversation.resumedFrom?.value).toBe(CONVERSATION);
+      expect(started.conversation.claudeSessionId.value).not.toBe(CONVERSATION);
+      expect(claude.starts[0]?.forkAt).toEqual({ keepUpTo: 'a1', dropsTurn: 'u2' });
+      expect(trail.kinds).toContain('session.forked');
+    });
+
+    it('is a fresh conversation from the first prompt — S-165', async () => {
+      const started = await fork('u1');
+
+      expect(started.conversation.resumedFrom).toBeNull();
+      expect(claude.starts[0]?.forkAt).toBeNull();
+    });
+
+    it('never joins the live session of the conversation: a fork is a new one', async () => {
+      await build().execute({
+        workspacePath: '/srv/projects/app',
+        model: null,
+        permissionMode: null,
+        resumeSessionId: CONVERSATION,
+        userId: owner,
+        openedFrom: 'web',
+      });
+
+      expect((await fork('u2')).joined).toBe(false);
+    });
+
+    it('refuses a point that is not a prompt, and a conversation that is not there — S-163', async () => {
+      await expect(fork('a1')).rejects.toThrow(ForkPointUnknownError);
+      await expect(
+        build().execute({
+          workspacePath: '/srv/projects/app',
+          model: null,
+          permissionMode: null,
+          resumeSessionId: '22222222-2222-4222-8222-222222222222',
+          forkAt: 'u1',
+          userId: owner,
+          openedFrom: 'web',
+        }),
+      ).rejects.toThrow(SessionNotFoundError);
+      expect(claude.starts).toHaveLength(0);
+    });
+
+    it('says the CLI refused the point, once — S-164', async () => {
+      const started = await fork('u2');
+
+      claude.starts[0]?.onForkRejected?.();
+
+      expect(broadcaster.errors).toEqual([
+        {
+          sessionId: started.session.id.value,
+          error: expect.any(SessionForkRejectedError) as unknown,
+        },
+      ]);
     });
   });
 });

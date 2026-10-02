@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-restore-change.json",
+  "title": "SessionRestoreChange",
+  "description": "Undoes the last rejection of a file — of one hunk (`session.rejectChange`) or of the whole file (`session.rewindFiles` with `paths`): the file gets back, byte for byte, what the rejection replaced. Only while the file is still exactly what the rejection left; otherwise `SESSION_CHANGE_STALE`. A file with no rejection to undo is `NOT_FOUND`. The same locks as an undo apply (`SESSION_LOCKED`), and the trail is written before the disk. The outcome arrives as `session.rewound`, with the file in `reverted`.",
+  "x-kind": "command",
+  "x-type": "session.restoreChange",
+  "type": "object",
+  "required": ["sessionId", "path"],
+  "properties": {
+    "sessionId": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string",
+      "description": "The file, as `GET /sessions/:sessionId/changes` named it."
+    }
+  }
+}

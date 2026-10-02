@@ -324,7 +324,7 @@ Dentro de cada aba de pasta, em `md+`, tudo ao mesmo tempo:
 | **activity bar** | as views da pasta: **Explorer**, **Busca**, **Sessões do Claude**; clicar na ativa recolhe a side bar | planos [07](../../plans/07-explorer-and-editor/README.md), [09](../../plans/09-search/README.md), [08](../../plans/08-claude-panel/README.md) |
 | **side bar** | a view ativa | quem registrou a view |
 | **área de editor** | os arquivos abertos | [plano 07](../../plans/07-explorer-and-editor/README.md) |
-| **secondary side bar** | **o chat do Claude, ao lado do editor** — nunca uma tela nem uma rota própria | [plano 08](../../plans/08-claude-panel/README.md); até lá, os componentes de sessão de hoje, presos à pasta da aba |
+| **secondary side bar** | **o painel do Claude, ao lado do editor** — nunca uma tela nem uma rota própria; abre e fecha (`Mod+Alt+B` e o botão do topo) sem perder nada, porque o estado do painel é da aba. Os comandos do painel (nova conversa, focar o prompt, interromper, próxima/anterior, alterações) vivem enquanto a aba está na tela, com o painel aberto ou não — focar o prompt é como um painel fechado abre | [plano 08](../../plans/08-claude-panel/README.md) (`ClaudePanel`, `PanelCommands`) |
 | **painel inferior** | abas registráveis | planos [08](../../plans/08-claude-panel/README.md) e [10](../../plans/10-integrated-terminal/README.md) |
 | **status bar** | itens da pasta à esquerda, do app à direita: conexão, pasta (um toque copia o caminho), idioma (troca por visitante), tema, sino de notificações (B-26) | registro |
 
@@ -431,14 +431,16 @@ e como aparece. Entrada não registrada **não aparece** — nem link, nem item,
 | Registro | O que cada entrada declara | Quem registra |
 |---|---|---|
 | navegação global | rota, ícone, rótulo, posição, badge | 06; 11 e 14 nas posições reservadas |
-| views da activity bar | id, ícone, rótulo, posição, badge, componente | 07 (Explorer), 08 (Sessões), 09 (Busca) |
+| views da activity bar | id, ícone, rótulo, posição, badge, componente — o badge é um componente que recebe a pasta | 07 (Explorer), 08 (Sessões: as perguntas esperando, anunciadas com o painel fechado), 09 (Busca) |
+| badges da aba de pasta | `folderTabBadges`: um componente que recebe a pasta e se desenha ao lado do nome da aba — ou não se desenha | 08 (as perguntas esperando nas sessões da pasta) |
 | abas do painel inferior | id, rótulo, componente | 08, 10 |
-| itens da status bar | lado, prioridade, componente | 06, e quem precisar |
+| itens da status bar | lado, prioridade, componente | 06, 08 (a sessão na tela: status, modelo e custo; as alterações), e quem precisar |
 | comandos e atalhos | ver [acima](#comandos-atalhos-e-a-paleta) | todos |
 | modos da paleta | prefixo, fonte | 06 (`>`), 09 |
 | seções de Configurações | id, rótulo, ícone, posição, componente e as **opções** que a busca acha — **nunca** do Claude: o registro recusa seção cujo id, rótulo ou opção fale de Claude, modelo, permission mode ou MCP | 06 (Aparência, Workspaces), 07 (Editor), 10 (Terminal) |
-| restauração da aba | chave, versão, ler e gravar o estado | 06 (layout), 07 (editores), 08 (conversa) |
+| restauração da aba | chave, versão, ler e gravar o estado | 06 (layout), 07 (editores), 08 (conversa, marcas de revisão das alterações) |
 | abas de editor por tipo | o que abre (arquivo, diff, prévia), como restaura | 07 (arquivo, diff); 08 e 09 abrem a aba de diff |
+| fontes de lado de diff | `diffSources`: o id da fonte e `read(folder, key)` — um lado `provided` da aba de diff que o editor lê sem saber de quem é; não sobrevive à recarga | 08 (`session`: o antes e o depois de uma tool, o antes da sessão) |
 | área de editor | o componente que preenche a área de editor da aba (`editorAreas`); sem entrada, o placeholder | 07 |
 | o que fechar a aba perderia | os arquivos com alteração não salva de uma pasta (`folderTabKeepers`), listados na confirmação de fechar a aba de pasta | 07 (editor) |
 | alvos de arraste para o Claude | aceita `application/x-remote-claude-files+json` | 08 — a fonte é o 07 (árvore e abas) |

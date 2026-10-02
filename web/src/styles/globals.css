@@ -45,6 +45,10 @@
   --color-statusbar: var(--statusbar);
   --color-statusbar-foreground: var(--statusbar-foreground);
   --color-tab-active: var(--tab-active);
+
+  /* The lines of a diff Claude made (plan 08, F3): faint enough that the text stays the subject. */
+  --color-diff-added: var(--diff-added);
+  --color-diff-removed: var(--diff-removed);
 }
 
 /*
@@ -123,6 +127,8 @@
   --statusbar: oklch(46% 0.15 262);
   --statusbar-foreground: oklch(99% 0 0);
   --tab-active: oklch(100% 0 0);
+  --diff-added: oklch(93% 0.06 150);
+  --diff-removed: oklch(93% 0.05 27);
 }
 
 .dark {
@@ -152,6 +158,8 @@
   --statusbar: oklch(40% 0.13 262);
   --statusbar-foreground: oklch(99% 0 0);
   --tab-active: oklch(17% 0.01 260);
+  --diff-added: oklch(32% 0.07 150);
+  --diff-removed: oklch(32% 0.07 27);
 }
 
 @layer base {

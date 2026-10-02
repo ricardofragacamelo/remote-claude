@@ -2,17 +2,22 @@ import type { RecordAuditEventUseCase } from '@application/audit';
 import type { Clock, IdGenerator } from '@domain/shared';
 import {
   ClaudeUnavailableError,
+  forkPointOf,
+  refuseUnsupportedEffort,
   resumeStrategyFor,
   Session,
+  SessionForkRejectedError,
   SessionId,
   SessionNotFoundError,
 } from '@domain/session';
 import type { PermissionMode, ResumeStrategy, SessionCloseReason } from '@domain/session';
 import { ClaudeSessionId } from '@domain/transcript';
 import type { WorkspacePath } from '@domain/workspace';
+import type { ModelCatalog } from './command-catalog';
 import type { StartSessionCommand } from './commands/start-session.command';
 import type {
   ClaudeSessionPort,
+  ClaudeSessionStart,
   SessionConversation,
   SessionEvent,
 } from './ports/claude-session.port';
@@ -97,6 +102,7 @@ export class StartSessionUseCase {
     private readonly defaults: SessionDefaults,
     private readonly provenance: SessionProvenance,
     private readonly resumption: SessionResumption,
+    private readonly models: ModelCatalog | null = null,
   ) {}
 
   /**
@@ -109,6 +115,7 @@ export class StartSessionUseCase {
    */
   async execute(command: StartSessionCommand): Promise<StartedSession> {
     const workspace = await this.workspaces.resolve(command.workspacePath, command.userId);
+    this.refuseUnsupportedEffort(command, workspace);
 
     if (command.resumeSessionId === null) {
       return this.launch(command, workspace, async (session) => ({
@@ -117,7 +124,77 @@ export class StartSessionUseCase {
       }));
     }
 
-    return this.resume(command, workspace, ClaudeSessionId.create(command.resumeSessionId));
+    const id = ClaudeSessionId.create(command.resumeSessionId);
+
+    return command.forkAt == null
+      ? this.resume(command, workspace, id)
+      : this.fork(command, workspace, id, command.forkAt);
+  }
+
+  /**
+   * An effort the model is known not to take is refused before anything is spawned (D-16, S-171).
+   * Known only from a list the installation gave for this workspace; with none, nothing is refused.
+   *
+   * @throws {import('@domain/session').EffortUnsupportedError}
+   */
+  private refuseUnsupportedEffort(command: StartSessionCommand, workspace: WorkspacePath): void {
+    const models = this.models?.latestFor(workspace.value) ?? null;
+
+    if (command.effort != null && models !== null) {
+      refuseUnsupportedEffort(models, command.model ?? this.defaults.model, command.effort);
+    }
+  }
+
+  /**
+   * Edit-and-resend (plan 08, D-19): a new conversation that continues `id` up to **before** the
+   * prompt `messageId`, always under a new id — the original stays as it was, readable. Forking from
+   * the first prompt keeps nothing, and is a fresh conversation.
+   *
+   * @throws {SessionNotFoundError} the conversation is not one the caller may continue here
+   * @throws {import('@domain/session').ForkPointUnknownError} `messageId` is not one of its prompts
+   */
+  private async fork(
+    command: StartSessionCommand,
+    workspace: WorkspacePath,
+    id: ClaudeSessionId,
+    messageId: string,
+  ): Promise<StartedSession> {
+    const { conversations, trail } = this.resumption;
+    const candidate = await conversations.find(id);
+
+    if (
+      candidate === null ||
+      resumeStrategyFor(candidate, { userId: command.userId, workspace }) === null
+    ) {
+      throw new SessionNotFoundError(id.value);
+    }
+
+    const point = forkPointOf(await conversations.chainOf(id), messageId);
+    const at =
+      point.kind === 'after' ? { keepUpTo: point.keepUpTo, dropsTurn: point.dropsTurn } : null;
+
+    return this.launch(
+      command,
+      workspace,
+      async (session) => {
+        const claudeSessionId = await this.recordOrigin(session);
+
+        if (at === null) {
+          return { claudeSessionId, resumedFrom: null };
+        }
+
+        await trail.execute({
+          userId: session.ownerId,
+          kind: 'session.forked',
+          subjectId: id.value,
+          subjectLabel: workspace.value,
+          at: session.openedAt,
+        });
+
+        return { claudeSessionId, resumedFrom: id };
+      },
+      at,
+    );
   }
 
   /** Joins what is live, joins what is starting, and only otherwise continues the conversation. */
@@ -204,6 +281,7 @@ export class StartSessionUseCase {
     command: StartSessionCommand,
     workspace: WorkspacePath,
     conversationFor: (session: Session) => Promise<SessionConversation>,
+    forkAt: ClaudeSessionStart['forkAt'] = null,
   ): Promise<StartedSession> {
     // Taken before anything is spawned, and given back in the `finally`. Checking the count and
     // only then awaiting a subprocess would let two starts both see room and both spawn, which is
@@ -229,11 +307,23 @@ export class StartSessionUseCase {
         model: command.model,
         permissionMode: session.permissionMode,
         conversation,
+        effort: command.effort ?? null,
+        forkAt,
         onEvent: (event) => {
           this.onEvent(session, event);
         },
         onClosed: (reason) => {
           this.onClosed(session, reason);
+        },
+        onForkRejected: () => {
+          // Said once, and not retried: the CLI refuses the same point the same way every time.
+          // The screen offers the plain resume instead (S-164).
+          this.broadcaster.publishError(
+            session.id,
+            new SessionForkRejectedError(
+              (conversation.resumedFrom ?? conversation.claudeSessionId).value,
+            ),
+          );
         },
       });
 
@@ -290,6 +380,29 @@ export class StartSessionUseCase {
         payload: { status: moved },
       });
     }
+
+    if (event.type === 'turn.completed') {
+      this.nextPrompt(session);
+    }
+  }
+
+  /**
+   * The turn ended: the next prompt of the queue goes to Claude as a turn of its own, and everybody
+   * watching is told it left the queue (plan 08, D-14, S-160).
+   */
+  private nextPrompt(session: Session): void {
+    const next = session.prompts.turnEnded();
+    const live = next === null ? null : this.registry.find(session.id);
+
+    if (next === null || live === null) {
+      return;
+    }
+
+    live.handle.prompt(next.text);
+    this.broadcaster.publish(session.id, {
+      type: 'prompt.dequeued',
+      payload: { queueId: next.queueId, reason: 'started' },
+    });
   }
 
   /** The stream ended, for whatever reason. The entry goes, and everybody watching is told. */

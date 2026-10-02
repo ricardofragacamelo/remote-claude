@@ -99,7 +99,7 @@ describe('the shell', () => {
     expect(
       await screen.findByRole('button', { name: t('workspace.welcome.openFolder') }),
     ).toBeVisible();
-    expect(screen.queryByRole('button', { name: t('session.starter.action') })).toBeNull();
+    expect(screen.queryByRole('group', { name: t('sessions.draft.choices') })).toBeNull();
     expect(screen.queryByRole('button', { name: t('diagnostics.ping.action') })).toBeNull();
     expect(screen.queryByText(t('devices.list.title'))).toBeNull();
     expect(screen.queryByRole('combobox')).toBeNull();

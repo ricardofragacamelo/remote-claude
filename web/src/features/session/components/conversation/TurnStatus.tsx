@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import type { SessionStatus } from '../../types/live-session';
+import { formatUsd } from '../../lib/money';
 
 /** The statuses that mean something is happening — the others are said by the session's own line. */
 const BUSY: ReadonlySet<SessionStatus> = new Set(['thinking', 'running', 'waitingPermission']);
@@ -26,11 +27,7 @@ export function TurnStatus({
   readonly turns: number;
 }): React.JSX.Element {
   const { t, i18n } = useTranslation();
-  const cost = new Intl.NumberFormat(i18n.language, {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 4,
-  }).format(Number(costUsd));
+  const cost = formatUsd(costUsd, i18n.language);
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-ui-xs text-muted-foreground">

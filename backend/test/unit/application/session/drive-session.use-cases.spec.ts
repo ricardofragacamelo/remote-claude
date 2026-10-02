@@ -31,6 +31,7 @@ import {
   SESSION_ID,
 } from '../../../support/builders/session.builder';
 import { RecordingBroadcaster } from '../../../support/fakes/recording-broadcaster';
+import { SequentialIds } from '../../../support/fakes/sequential-ids';
 
 const owner = UserId.create('auth|owner');
 const stranger = UserId.create('auth|stranger');
@@ -53,7 +54,10 @@ describe('the commands that drive a running session', () => {
 
   describe('prompt', () => {
     const prompter = (): PromptSessionUseCase =>
-      new PromptSessionUseCase(registry, new CommandCatalog());
+      new PromptSessionUseCase(registry, new CommandCatalog(), {
+        ids: new SequentialIds('01J0QUE0000000000000000'),
+        broadcaster,
+      });
 
     /**
      * A prompt as the gateway handles it: checked, and handed to the CLI once acknowledged — here, as
@@ -119,14 +123,37 @@ describe('the commands that drive a running session', () => {
       });
     });
 
-    it('queues a second prompt rather than refusing it — S-22', async () => {
-      // The SDK does this natively, it was measured, and it is what the Claude Code UI does.
-      // Rejecting a concurrent prompt with a conflict was our own policy and it was wrong.
+    it('queues a second prompt rather than refusing it, and says so to everybody — S-22, S-156', async () => {
+      // Held by the backend and not by the SDK, which folds a mid-turn prompt into the turn running
+      // (plan 08, D-14): it waits, visibly, and runs as a turn of its own.
       const prompt = prompter();
 
       await Promise.all([sent(prompt, 'first'), sent(prompt, 'second')]);
 
-      expect(handle.prompts).toEqual(['first', 'second']);
+      expect(handle.prompts).toEqual(['first']);
+      expect(broadcaster.events.map((entry) => entry.event)).toEqual([
+        {
+          type: 'prompt.queued',
+          payload: {
+            queueId: expect.stringMatching(/^q_/) as unknown,
+            position: 1,
+            promptedBy: 'web',
+            preview: 'second',
+          },
+        },
+      ]);
+      expect(session.prompts.turnEnded()?.text).toBe('second');
+    });
+
+    it('names the client that sent a queued prompt', async () => {
+      const prompt = prompter();
+      await sent(prompt, 'first');
+
+      await prompt.execute(SESSION_ID, 'from the phone', owner, 'mobile').then((send) => {
+        send();
+      });
+
+      expect(broadcaster.events[0]?.event.payload).toMatchObject({ promptedBy: 'mobile' });
     });
 
     it('preserves the order the prompts arrived in — S-23', async () => {
@@ -134,16 +161,19 @@ describe('the commands that drive a running session', () => {
 
       await Promise.all(['a', 'b', 'c'].map((text) => sent(prompt, text)));
 
-      expect(handle.prompts).toEqual(['a', 'b', 'c']);
+      expect(handle.prompts).toEqual(['a']);
+      expect([session.prompts.turnEnded()?.text, session.prompts.turnEnded()?.text]).toEqual([
+        'b',
+        'c',
+      ]);
     });
 
     it('refuses a session that is not running', async () => {
       await expect(
-        new PromptSessionUseCase(aRegistry([]).registry, new CommandCatalog()).execute(
-          SESSION_ID,
-          'x',
-          owner,
-        ),
+        new PromptSessionUseCase(aRegistry([]).registry, new CommandCatalog(), {
+          ids: new SequentialIds(),
+          broadcaster,
+        }).execute(SESSION_ID, 'x', owner),
       ).rejects.toThrow(SessionNotFoundError);
     });
 
@@ -232,7 +262,9 @@ describe('the commands that drive a running session', () => {
         release();
         await Promise.all([first, second]);
 
-        expect(handle.prompts).toEqual(['/init', 'and then this']);
+        // The command goes first and the prompt after it waits its turn, in the order they arrived.
+        expect(handle.prompts).toEqual(['/init']);
+        expect(session.prompts.turnEnded()?.text).toBe('and then this');
       });
 
       it('lets the prompt after a refused one through', async () => {

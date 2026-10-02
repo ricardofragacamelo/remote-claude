@@ -148,7 +148,7 @@ describe('closing folder tabs — plan 06, S-101, S-102, S-109', () => {
 
   it('forgets the state of a tab it closed: opened again, it starts over', async () => {
     const server = aTabServer([aTab(A), aTab(B)]);
-    folderTabStore(B).getState().setDraft('half a prompt');
+    folderTabStore(B).getState().showSession('S1');
     const { result } = mount(server.routes, A);
     await loaded(result, 2);
 
@@ -162,7 +162,7 @@ describe('closing folder tabs — plan 06, S-101, S-102, S-109', () => {
     await waitFor(() => {
       expect(server.paths()).toEqual([A]);
     });
-    expect(folderTabStore(B).getState().draft).toBe('');
+    expect(folderTabStore(B).getState().sessionId).toBeNull();
   });
 
   it('closes a tab that is not on screen without moving away from the one that is', async () => {

@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
-import { CircleHelp, PanelBottom, PanelLeft, Plus } from 'lucide-react';
+import { CircleHelp, PanelBottom, PanelLeft, PanelRight, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useScreenShortcuts, useShortcut } from '@/features/commands';
@@ -39,6 +39,7 @@ const SHORTCUTS = [
   'workbench.previousFolderTab',
   'workbench.toggleSideBar',
   'workbench.togglePanel',
+  'workbench.toggleSecondarySideBar',
 ] as const;
 
 /**
@@ -153,6 +154,7 @@ function LayoutToggles({ folder }: { readonly folder: string }): React.JSX.Eleme
   const tab = useFolderTab(folder);
   const sideBarKeys = useShortcut('workbench.toggleSideBar');
   const panelKeys = useShortcut('workbench.togglePanel');
+  const secondaryKeys = useShortcut('workbench.toggleSecondarySideBar');
 
   return (
     <>
@@ -169,6 +171,13 @@ function LayoutToggles({ folder }: { readonly folder: string }): React.JSX.Eleme
         aria-pressed={tab.panelOpen}
         aria-keyshortcuts={panelKeys?.aria}
         onClick={tab.togglePanel}
+      />
+      <IconButton
+        icon={PanelRight}
+        label={t('workbench.layout.secondary')}
+        aria-pressed={tab.secondaryOpen}
+        aria-keyshortcuts={secondaryKeys?.aria}
+        onClick={tab.toggleSecondary}
       />
     </>
   );

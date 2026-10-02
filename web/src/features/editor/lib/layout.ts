@@ -31,7 +31,9 @@ export function diffTabId(left: DiffSide, right: DiffSide): string {
 /** One side, as a tab id names it — a version of the history by its entry. */
 function sideId(side: DiffSide): string {
   const version = side.version === undefined ? '' : `@${side.version.entryId}`;
-  return `${side.source}:${side.path}${version}`;
+  const provided =
+    side.provided === undefined ? '' : `@${side.provided.source}:${side.provided.key}`;
+  return `${side.source}:${side.path}${version}${provided}`;
 }
 
 export function aFileTab(path: string, preview: boolean): FileTab {

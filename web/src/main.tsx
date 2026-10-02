@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider } from '@tanstack/react-router';
 
 import { registerExplorer } from '@/features/explorer';
-import { registerSessionsView } from '@/features/session';
+import { registerClaudeChanges, registerSessionsView } from '@/features/session';
 import { Providers } from './app/providers';
 import { router } from './app/router';
 import '@/styles/globals.css';
@@ -12,6 +12,7 @@ import '@/styles/globals.css';
 // what it kept the moment it is made (plan 07, B-24).
 registerExplorer();
 registerSessionsView();
+registerClaudeChanges();
 
 const container = document.querySelector('#root');
 

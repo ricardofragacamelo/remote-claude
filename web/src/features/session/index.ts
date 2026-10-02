@@ -1,9 +1,16 @@
 /** Public surface of the `session` feature. */
 export { ConversationReader } from './components/ConversationReader';
 export { registerSessionsView, SESSIONS_VIEW } from './components/sessions/registration';
+export { registerClaudeChanges } from './register-changes';
+export { ChangesView } from './components/changes/ChangesView';
+export { ClaudePanel } from './components/panel/ClaudePanel';
+export { PanelCommands } from './components/panel/PanelCommands';
+export { Notifiers } from './components/panel/Notifiers';
+export { usePanelSessions } from './hooks/usePanelTabs';
+export { useClaudePanel } from './hooks/useClaudePanel';
+export type { PanelPane } from './store/claude-panel.store';
+export { forgetClaudePanel } from './store/claude-panel.store';
 export { SessionScreen } from './components/SessionScreen';
-export { SessionStarter } from './components/SessionStarter';
-export { useSessionStarter } from './hooks/useSessionStarter';
 export { useLiveSession } from './hooks/useLiveSession';
 export { useSetPermissionMode } from './hooks/useSetPermissionMode';
 export { SESSION_LINK_GONE, useSessionLink } from './hooks/useSessionLink';

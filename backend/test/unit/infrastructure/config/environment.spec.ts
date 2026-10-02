@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import { ConfigurationError } from '@remote-claude/config';
@@ -507,5 +510,31 @@ describe('the pid file — plan 06, B-11', () => {
 
   it('refuses an empty value — off is the word, never a blank', () => {
     expect(() => loadConfig(withChange({ RC_PID_FILE: '' }))).toThrow(ConfigurationError);
+  });
+});
+
+describe('the configuration the repository ships — plan 08, B-42', () => {
+  /** What `.env.example` sets each name to — the file `pnpm dev` loads into the backend. */
+  function shipped(): Record<string, string> {
+    const file = fileURLToPath(new URL('../../../../../.env.example', import.meta.url));
+
+    return Object.fromEntries(
+      readFileSync(file, 'utf8')
+        .split('\n')
+        .flatMap((line) => {
+          const match = /^\s*([A-Z][A-Z0-9_]*)\s*=\s*(\S*)/.exec(line);
+          return match === null ? [] : [[match[1], match[2]]];
+        }),
+    );
+  }
+
+  it('attaches every session the installation can run, the tabs not on screen included — S-191', () => {
+    // The panel keeps the sessions of every folder tab attached (D-11): a ceiling of attachments
+    // below the ceiling of sessions would leave one of them deaf to its own questions.
+    const env = shipped();
+
+    expect(Number(env['RC_WS_MAX_ATTACHED_SESSIONS'])).toBeGreaterThanOrEqual(
+      Number(env['RC_SESSION_MAX_CONCURRENT']),
+    );
   });
 });

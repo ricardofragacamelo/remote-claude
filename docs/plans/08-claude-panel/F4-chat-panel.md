@@ -37,7 +37,7 @@ O composer e o conjunto de contexto são a [F5](F5-composer-and-context.md) — 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-32 — O painel na aba de pasta, e as conversas em abas 🔲
+### B-32 — O painel na aba de pasta, e as conversas em abas ✅
 
 Painel na secondary side bar, redimensionável, que abre e fecha sem perder estado. Conversas da pasta
 em abas do painel (abrir, alternar, reordenar, fechar); a lista completa é a view da F1. Fechar a aba de
@@ -47,7 +47,7 @@ Fechar a **aba de pasta** também não encerra — as sessões vivem no backend 
 em "em execução aqui". A mesma sessão aberta em duas abas de pasta (pasta e subpasta) usa **um**
 `session.attach` do `wsClient`, com as duas views coerentes; fechar uma não desanexa a outra.
 
-### B-33 — A sessão nasce no primeiro prompt 🔲
+### B-33 — A sessão nasce no primeiro prompt ✅
 
 Pela D-07: "nova conversa" é rascunho do cliente, sem subprocesso (~222 MB cada,
 [§8.5](../../discovery/01-descoberta-claude-agent-sdk.md#85--custo-de-recurso-por-sessão)). O primeiro
@@ -56,7 +56,7 @@ envio faz `session.start` na pasta da aba, com o modelo, o modo e o esforço esc
 D-09 manda dizer) mantém texto e contexto no rascunho. Enter repetido abre uma sessão só; fechar o
 rascunho não deixa nada no backend.
 
-### B-34 — A fila de prompts, visível e cancelável 🔲
+### B-34 — A fila de prompts, visível e cancelável ✅
 
 Pela D-14: o prompt que chega durante um turno fica na fila **do backend**, em ordem de chegada, de
 qualquer cliente; `prompt.queued`/`prompt.dequeued` chegam a todos os observadores, e o painel mostra a
@@ -66,7 +66,7 @@ cancelar de novo → `ack` sem efeito; id desconhecido → `QUEUED_PROMPT_NOT_FO
 desfazer em curso continua recusando prompt com `SESSION_LOCKED`
 ([desfazer](../../architecture/shared/05-websocket-protocol.md#desfazer-arquivos)).
 
-### B-35 — Editar e reenviar a partir de uma mensagem 🔲
+### B-35 — Editar e reenviar a partir de uma mensagem ✅
 
 Pela D-19: "editar" num prompt anterior abre o texto no composer; enviar faz `session.start {
 resumeSessionId, forkAt }`, que o backend traduz para `resume` + `resumeSessionAt` + `forkSession` +
@@ -77,7 +77,7 @@ continua legível no histórico. O reenviar oferece também desfazer os arquivos
 `SESSION_FORK_REJECTED`, com a retomada simples oferecida e sem repetir o fork — o SDK avisa que a
 recusa é determinística. "Bifurcar daqui" (sem editar) está no menu de contexto da mensagem.
 
-### B-36 — Modelo, modo e esforço da sessão 🔲
+### B-36 — Modelo, modo e esforço da sessão ✅
 
 No cabeçalho do composer:
 
@@ -97,7 +97,7 @@ No cabeçalho do composer:
 Os **padrões** (modelo, modo e esforço de uma sessão nova) são do
 [plano 11](../11-claude-settings/README.md); o seletor daqui é o da sessão.
 
-### B-37 — Medidor de contexto e `/compact` 🔲
+### B-37 — Medidor de contexto e `/compact` ✅
 
 `GET /sessions/:sessionId/context` (o `getContextUsage()` da sessão viva) alimenta um medidor compacto
 no painel — uso da janela por categoria (sistema, ferramentas, mensagens, memória), aviso perto do
@@ -105,7 +105,7 @@ limite —, relido a cada `turn.completed`. "Compactar" manda `/compact` como pr
 instalação, pelo fluxo normal), e a conversa mostra o marco do `session.compacted`. Uso indisponível →
 o medidor some com o motivo no tooltip.
 
-### B-38 — Status dos MCPs da sessão 🔲
+### B-38 — Status dos MCPs da sessão ✅
 
 `GET /sessions/:sessionId/mcp-servers` reduz o `mcpServerStatus()` a nome, status (conectado, falhou,
 precisa auth, pendente, desligado) e contagem de tools — **nunca** `config` (pode ter URL com token) nem
@@ -113,25 +113,25 @@ precisa auth, pendente, desligado) e contagem de tools — **nunca** `config` (p
 servidor é do [plano 11](../11-claude-settings/README.md): o indicador leva à tela dele quando ela
 existir, e até lá não oferece link morto.
 
-### B-39 — Exportar a conversa 🔲
+### B-39 — Exportar a conversa ✅
 
 Pela D-20: gerado **no cliente**, a partir das páginas do transcript que a pessoa já lê — todas, com a
 barra de progresso —, em markdown: mensagens, thinking recolhido, tools compactas com o input; saída de
 tool só com a opção ligada (desligada por padrão). Falha no meio não baixa arquivo pela metade.
 
-### B-40 — Teclado e atalhos 🔲
+### B-40 — Teclado e atalhos ✅
 
 Esc no composer com turno em execução manda `session.interrupt` — mas com menu, autocomplete ou diálogo
 aberto, Esc fecha o que está aberto e não interrompe. Esc repetido manda um interrupt só. Atalhos
 registrados no registro de comandos do plano 06, visíveis na command palette: abrir/fechar o painel,
 nova conversa, focar o composer, interromper, próxima/anterior conversa, abrir "Alterações".
 
-### B-41 — Status bar 🔲
+### B-41 — Status bar ✅
 
 Item da status bar da aba ativa: status da sessão ativa, modelo e custo da sessão (B-23); clicar foca o
 painel. Troca com a aba e com a conversa; sem conversa ativa, some.
 
-### B-42 — Permissão nunca se perde: badges e notificações 🔲
+### B-42 — Permissão nunca se perde: badges e notificações ✅
 
 Pedido de permissão com o painel escondido → badge na activity bar e aviso anunciado (`aria-live`).
 Pedido de sessão de **aba inativa** → badge **na aba de pasta** e aviso global; clicar leva à aba, à
@@ -143,7 +143,7 @@ Notificação do navegador pela D-21: ligada por ação explícita, só com a p�
 termina ou uma permissão é pedida, dizendo a pasta e o tipo — nunca o comando. Permissão do navegador
 negada → o painel explica como reativar e segue com o badge.
 
-### B-43 — Usabilidade e ajuda do painel e da view "Alterações" 🔲
+### B-43 — Usabilidade e ajuda do painel e da view "Alterações" ✅
 
 A gaveta de ajuda (screen frame do plano 06), em en e pt-BR, para quem nunca viu o produto: os modos e o
 que cada um deixa de perguntar; a fila; editar e reenviar (e que os arquivos não voltam sozinhos);

@@ -13,6 +13,7 @@ import { wsClient } from '@/shared/api/ws';
 import { installFakeWebSocket } from '../../support/fake-websocket';
 import type { InstalledWebSocket } from '../../support/fake-websocket';
 import { render, translator } from '../../support/render';
+import { draftOnScreen, typeIn } from '../../support/workbench';
 import { fakeWorkspaceApi, projects, refusal, scratch } from '../../support/workspace-api';
 import type { WorkspaceRoutes } from '../../support/workspace-api';
 
@@ -124,7 +125,9 @@ describe('the workbench of one folder — B-16', () => {
     await activeTab('app');
     connect();
 
-    await user.click(await screen.findByRole('button', { name: t('session.starter.action') }));
+    // The session is born of the first prompt of the draft (plan 08, D-07).
+    await typeIn(user, await screen.findByLabelText(t('session.composer.label')), 'hello');
+    await user.click(screen.getByRole('button', { name: t('session.composer.send') }));
 
     const start = sockets.latest.frames().find((frame) => frame['type'] === 'session.start');
     expect(start).toMatchObject({ payload: { workspacePath: APP } });
@@ -161,7 +164,7 @@ describe('the workbench of one folder — B-16', () => {
     });
 
     expect(await screen.findByText(t(key, { path: '/etc' }))).toBeVisible();
-    expect(screen.queryByRole('button', { name: t('session.starter.action') })).toBeNull();
+    expect(screen.queryByRole('group', { name: t('sessions.draft.choices') })).toBeNull();
     expect(api.post).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: t('workspace.folder.openOther') }));
@@ -221,7 +224,7 @@ describe('the workbench of one folder — B-16', () => {
     );
     expect(notice).toHaveTextContent(t('workspace.error.openFoldersLimitReached', { limit: 8 }));
     expect(await activeTab('app')).toBeVisible();
-    expect(screen.getByRole('button', { name: t('session.starter.action') })).toBeInTheDocument();
+    expect(await draftOnScreen()).toBeInTheDocument();
   });
 
   it('holds the place of the folder while it is being resolved', async () => {

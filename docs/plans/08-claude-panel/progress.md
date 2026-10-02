@@ -10,17 +10,17 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F0, F1 e F2 concluídas (implementadas juntas, a pedido do usuário, com o portão completo só ao fim da F2) — a F3 é a próxima
+**Fase corrente:** F3 e F4 concluídas (implementadas juntas, a pedido do usuário, com o portão completo só ao fim da F4) — a F5 é a próxima
 **Última atualização:** 2026-10-02
-**Validação:** `pnpm verify:full` de 2026-10-01 com os onze portões verdes (saída 0; e2e 88/88), depois dos ciclos 8–10; `pnpm test:e2e:mobile` 15/15 com o Dart regenerado
+**Validação:** `pnpm verify:full` de 2026-10-02 com os onze portões verdes (saída 0; e2e 88/88), depois dos ciclos 11–14
 **Bloqueios:** nenhum — a D-25 foi decidida pelo usuário (as duas formas da lista)
 
 ```
 F0 ████████████████████ 100%   ✅ concluída
 F1 ████████████████████ 100%   ✅ concluída
 F2 ████████████████████ 100%   ✅ concluída
-F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
-F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
+F3 ████████████████████ 100%   ✅ concluída
+F4 ████████████████████ 100%   ✅ concluída
 F5 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 ```
@@ -36,11 +36,11 @@ F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 | [F0](F0-contract.md) | B-01…B-06 | 6/6 | ✅ |
 | [F1](F1-sessions.md) | B-07…B-13 | 7/7 | ✅ |
 | [F2](F2-rendering.md) | B-14…B-24 | 11/11 | ✅ |
-| [F3](F3-diffs.md) | B-25…B-31 | 0/7 | 🔲 |
-| [F4](F4-chat-panel.md) | B-32…B-43 | 0/12 | 🔲 |
+| [F3](F3-diffs.md) | B-25…B-31 | 7/7 | ✅ |
+| [F4](F4-chat-panel.md) | B-32…B-43 | 12/12 | ✅ |
 | [F5](F5-composer-and-context.md) | B-44…B-52 | 0/9 | 🔲 |
 | [F6](F6-e2e.md) | B-53…B-58 | 0/6 | 🔲 |
-| **Total** | **B-01…B-58** | **24/58** | 🔄 |
+| **Total** | **B-01…B-58** | **43/58** | 🔄 |
 
 ---
 
@@ -48,7 +48,7 @@ F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 272 | 170 | 0 | 102 | 0 |
+| [Matriz](scenarios.md) | 272 | 76 | 0 | 196 | 0 |
 
 ---
 
@@ -80,6 +80,10 @@ Um registro por **ciclo**, conforme o
 | 8 | 2026-10-01 | F2 (B-20) | formatação (portão 1 do `verify:full`) | `task-list.ts` e `tool-labels.ts` escritos depois da última passada do Prettier | `prettier --write` nos dois; `verify:full` de novo do portão 1 | verde |
 | 9 | 2026-10-01 | F2 (B-20) | cobertura (portão 7 do `verify:full`) — S-58 do `run-e2e-local` | containers e volume parados de `remote-claude-e2e-*` e `remote-claude-spec-*`, deixados pelo `verify:full` anterior, interrompido no meio dos testes de integração dos scripts | os dois projetos órfãos removidos (containers, volumes, redes); nenhum código mudou; `verify:full` de novo do portão 1 | verde |
 | 10 | 2026-10-01 | F2 | e2e (portão 9) — 07·S-283, S-284, S-355; 04·S-46, S-47 | helpers do e2e descreviam a tela antiga: `claudeWrites` (fixture) esperava `Last turn cost`; `messagesOn` contava todo item da conversa, que agora lista também as tools e o fim de cada turno; o "Opened here" casava primeiro com a opção escondida do filtro da view | `claudeWrites` espera mais um resumo de turno; `messagesOn` conta só `li[data-message-id]` e `messagesIn` conta mensagens por id; a S-46 confere a descrição do leitor, que só ele tem (o "Opened here" aparece também na linha e no filtro da view, no mesmo painel). De passagem, a 02·S-53 comparava as duas linhas do tempo antes do `session.statusChanged` que segue o fim do turno chegar ao telefone — corrida antiga, agora espera as duas terem o mesmo tamanho | verde (`pnpm test:e2e` 88/88) |
+| 11 | 2026-10-02 | F3 | unit (portão 6 do `verify`) — `test/unit/contracts-guards.spec.mjs` | o teste que lista todo tipo de frame do contrato não tinha o `session.restoreChange`, comando novo da F3 | o tipo entrou na lista; nenhum código mudou; `verify` de novo do portão 1 | verde |
+| 12 | 2026-10-02 | F3 | cobertura do backend (portão 7 do `verify`) | `node-undo.disk.ts` com 89,18 % dos ramos (os de `read`/`write`, novos da F3) e o `audit-tool-invocation.recorder.ts` com 85,71 % (a memória das tools, nova da F3) | testes de integração do disco para os ramos de leitura e escrita, e unit do recorder; nenhum código mudou; `verify` de novo do portão 1 | verde |
+| 13 | 2026-10-02 | F4 | cobertura do backend (portão 7 do `verify:full`) | `installation-mapping.ts` e `transcript-module-conversation.source.ts` com 85,71 % dos ramos: o mapeamento só era exercido pelo runner, sem modelo sem níveis de esforço, categoria de tipo desconhecido nem servidor de status desconhecido; o `chainOf` de conversa que o store não tem não tinha teste | unit do mapeamento e o `chainOf` vazio; nenhum código mudou; `verify:full` de novo do portão 1 | verde |
+| 14 | 2026-10-02 | F4 | e2e (portão 9) — 04·S-46 | o `send` do e2e procurava o botão `Send` por nome parcial, e o "Editar e enviar de novo" da B-35, novo em cada prompt, também casa; os outros 87 passaram, já com a sessão nascendo do primeiro prompt do rascunho | o nome do botão passou a ser exato em todo o e2e; nenhum código do produto mudou; `verify:full` de novo do portão 1 | verde |
 
 ---
 
@@ -89,6 +93,25 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
+| 2026-10-02 | Atalhos do painel: `Mod+Alt+N` nova conversa, `Mod+Alt+L` focar o prompt, `Mod+Alt+I` interromper, `Mod+Alt+]`/`Mod+Alt+[` próxima e anterior, `Mod+Alt+G` alterações; abrir e fechar o painel é o `Mod+Alt+B` do workbench (`workbench.toggleSecondarySideBar`). Ficam no `PanelCommands`, ao lado da casca da aba, e não dentro do painel | o navegador guarda `Ctrl+N`/`Ctrl+Tab` (06 · D-16); o `Mod+Alt` não colide com o editor nem com a paleta. Dentro do painel os comandos sumiam com ele fechado — e "focar o prompt" é justamente como um painel fechado abre (S-185) | B-40; [web/03](../../architecture/web/03-ui-system.md) |
+| 2026-10-02 | O `ModelCatalog` (um `InstallationCache` por versão do CLI e workspace) responde o `GET …/models` **e** o `session.start` que traz `effort`: o esforço é recusado só quando o catálogo conhece o modelo e ele não aceita aquele nível; modelo que a lista não nomeia passa, e o CLI decide | a lista é descoberta, não fronteira (como o menu de comandos do plano 04); recusar um modelo por id completo que a lista nomeia só por alias seria recusar o que funciona | B-36, S-167, S-171 |
+| 2026-10-02 | Reenviar a partir do **primeiro** prompt da conversa abre uma conversa nova, sem `resume` — não há o que manter antes dele | o `resumeSessionAt` precisa de uma mensagem para guardar; o fork do começo é uma conversa vazia com o mesmo prompt (S-165) | B-35 |
+| 2026-10-02 | A fila de prompts vive no domínio (`PromptQueue` dentro de `Session`): `promptedBy` é o **tipo** de cliente (`web`·`mobile`), o `preview` tem 120 caracteres, e as últimas 200 saídas são lembradas para responder "cancelar de novo" com `ack` sem efeito | a fila é regra de negócio da sessão (D-14), testável sem Nest; lembrar todas as saídas cresceria sem fim | B-34, S-156…S-160; [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#a-fila-de-prompts) |
+| 2026-10-02 | Os avisos de pergunta em aba que ninguém olha e as notificações do navegador ouvem o socket por um método novo do `wsClient`, `onSessionFrame`, e não pelo `observe` | o `observe` só ouve o que **não** pertence a sessão anexada — e o painel mantém toda sessão anexada (D-11): pelo `observe`, nenhum aviso chegaria nunca | B-42, S-188…S-193; [web/04](../../architecture/web/04-state-and-data.md#wsclient--dono-do-socket-um-por-app) |
+| 2026-10-02 | A notificação do navegador guarda o "ligado" no armazenamento do visitante (`session.browserNotifications`), e qualquer valor que não seja `true` é desligado | ligar é ação explícita da pessoa (D-21); um valor estranho não pode ligar por ela | B-42, S-192 |
+| 2026-10-02 | O rascunho que o teto recusa recebe o texto de volta e remonta a caixa de prompt; o texto do rascunho mora no store do painel (`drafts`, por aba do painel), não mais no `draft` da aba de pasta, que saiu | o composer limpa ao enviar; sem devolver, a S-153 perdia o prompt. E um rascunho por conversa do painel substitui o único rascunho da aba | B-33, S-147, S-153 |
+| 2026-10-02 | O `SessionStarter` (o botão "Abrir sessão") e o `useSessionStarter` saíram; o e2e abre sessão pelo primeiro prompt do rascunho (`sendFirstPrompt`/`openFromDraft`), com uma gravação que só responde (`image-turn`) | a D-07 tirou o botão: a sessão nasce no primeiro prompt. A gravação de abertura não chama tool nem escreve arquivo, e responde uma palavra que nenhum cenário procura; os testes que contavam turnos passaram a contar o de abertura | B-33; `e2e/fixtures/workbench.ts` |
+| 2026-10-02 | A fixture `installation.json` (modelos, MCP e uso de contexto) foi gravada do CLI real pelo gravador estendido, sem gastar turno | o fake responde `supportedModels`/`getContextUsage`/`mcpServerStatus` com o que a instalação de verdade respondeu, como as outras gravações | B-36…B-38; `scripts/record-agent-sdk-fixtures.mjs` |
+| 2026-10-02 | S-191 verificado contra a configuração que o repositório traz: `RC_WS_MAX_ATTACHED_SESSIONS` do `.env.example` (16) cobre `RC_SESSION_MAX_CONCURRENT` (10), num teste do backend | uma regra no schema derrubaria a integração dos limites, que de propósito anexa menos do que roda; o que a S-191 pede é que a instalação padrão comporte as dez | B-42, S-191 |
+| 2026-10-02 | F3 e F4 implementadas juntas, a pedido do usuário: entre as fases só os portões básicos (`verify`, integração do que mudou), e o `verify:full` uma vez, ao fim da F4 | pedido explícito do usuário ("só rodar quality gate full depois que finalizar a F4") | F3, F4 |
+| 2026-10-02 | **Comando novo `session.restoreChange { sessionId, path }`** — o desfazer da rejeição (de trecho ou de arquivo) | a D-08 pede "desfazer em vez de confirmar", e nenhum comando da F0 desfazia: pela API de arquivos do plano 07, o arquivo voltaria mas a linha de base da sessão não, e ele passaria a aparecer como `modifiedOutside` — os trechos dele deixariam de se rejeitar. O backend guarda em memória, com a sessão viva, o que a última rejeição de cada arquivo substituiu, e devolve byte a byte enquanto o arquivo ainda é o que a rejeição deixou (`SESSION_CHANGE_STALE` se não; `NOT_FOUND` sem rejeição). Contrato nas três pontas (schema, TS e Dart gerados), o app não usa | B-31, S-142; [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#desfazer-arquivos) |
+| 2026-10-02 | Os caminhos das alterações (`changes`, `changes/file`, `rewindFiles.paths`, `rejectChange`, `restoreChange`, o diff de tool) são **absolutos**, como os do desfazer do plano 04 | o desfazer, o `session.rewound` e o journal já nomeiam absoluto; relativo à pasta da sessão seria um segundo jeito de nomear o mesmo arquivo, e uma sessão de subpasta muda a base. O web converte para relativo à pasta da aba na hora de mostrar e de abrir no editor | B-25…B-31; [backend/03](../../architecture/backend/03-modules.md#session) |
+| 2026-10-02 | O input das tools que o diff usa fica na `SessionChangeMemory` (aplicação, em memória, por objeto de sessão — some com ela), alimentada pelo recorder do `PreToolUse` depois que a trilha gravou | a trilha é só de escrita para os outros módulos (backend/03 · audit); um segundo store persistido seria o "depois" que a D-03 recusou. Teto de 2 000 invocações e 16 M caracteres de input por sessão: a que sai do teto responde `TOOL_USE_NOT_FOUND` | B-25 |
+| 2026-10-02 | A lista de alterações leva `revision` por arquivo, e a marca de "aceito" é do par caminho + `revision` | sem a versão, aceitar um arquivo e o Claude mudá-lo de novo deixaria a mudança nova escondida como revisada | B-28, S-125 |
+| 2026-10-02 | Arquivo que voltou a ser o que era antes da sessão sai da lista de alterações; `changes/file` dele responde com `kind: null` e sem trechos (não `404`) | o caminho continua sendo da sessão — o `404` é para o que ela nunca tocou | B-26 |
+| 2026-10-02 | O editor ganhou um lado de diff `provided` e o registro `diffSources` | a aba de diff do plano 07 lia só disco, buffer e histórico; o antes de uma tool e o antes da sessão vêm do backend da sessão, e o editor não pode conhecer sessão. Uma aba com lado `provided` não sobrevive à recarga, como a com `buffer` | B-27, B-28; [web/03](../../architecture/web/03-ui-system.md) |
+| 2026-10-02 | O `setup.ts` dos testes do web importa o store das sessões por caminho, não pelo barrel | o barrel da sessão passou a carregar o do editor, que registra a seção "Editor" das Configurações ao ser importado — todo teste do web a via, e o teste das seções padrão do plano 06 falhava | testes do web |
+| 2026-10-02 | O fake roteirizado executa também `Edit` e `MultiEdit` (antes só `Write`) | o diff e o rejeitar são sobre o disco; um replay que não editava nada não tinha o que mostrar | `test/fakes/agent-sdk` |
 | 2026-10-01 | O `tool.completed` das `Task*` leva o `taskId` estruturado | o `TaskCreate` só tem `id` no resultado; o `summary` é texto do CLI cortado em 200 caracteres, e a numeração continua entre sessões — nem o texto nem a ordem servem | B-20; [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) quando a B-20 for feita |
 | 2026-10-01 | D-25 revista e fechada: a lista de tarefas existe, escondida pelo CLI 2.1.268+ para modelos depois do Opus 4.7; `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` a liga, e o painel lê `TodoWrite` e `Task*` | o spike da F0 tinha gravado só com `claude-opus-5`; três fixtures novas mostram as duas formas e que o modelo não escolhe entre elas | B-20, S-85…S-87; [discovery §10.8](../../discovery/01-descoberta-claude-agent-sdk.md) |
 | 2026-10-01 | O padrão da lista de tarefas é a forma atual do CLI, as `Task*`: o backend não define `CLAUDE_CODE_ENABLE_TASKS`, e o `.env.example` documenta, comentada, a única troca possível (`0` → `TodoWrite`); o `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` fica fixo no código | pedido do usuário: usar a forma mais nova como padrão e deixar documentado o que for preciso | B-20, D-25, `.env.example` |

@@ -8,7 +8,7 @@ import type { Page, WebSocket as PageSocket, WebSocketRoute } from '@playwright/
 import { limitsStack } from './environment';
 import { openSignedIn } from './auth';
 import { attachFrom, closeSession } from './live-session';
-import { startButton, workbenchAddress } from './workbench';
+import { draftOf, workbenchAddress } from './workbench';
 import { E2eSocket } from './ws';
 import type { AuthenticatedUser } from './auth';
 import type { ScenarioUser } from '../scenarios';
@@ -105,10 +105,16 @@ export async function startScreen(
 ): Promise<void> {
   await openSignedIn(page, user, workbenchAddress(workspacePath), limitsStack().webUrl);
   await expect(page.getByText('Connected', { exact: true }).first()).toBeVisible();
-  await expect(startButton(page)).toBeVisible();
+  await expect(draftOf(page)).toBeVisible();
 }
 
-export { openedSessionOf, sessionLabelOf, startButton } from './workbench';
+export {
+  openedSessionOf,
+  openFromDraft,
+  sendFirstPrompt,
+  sessionLabelOf,
+  turnsEnded,
+} from './workbench';
 
 /**
  * Everything the page's sockets carried, both ways, recorded as it happened.

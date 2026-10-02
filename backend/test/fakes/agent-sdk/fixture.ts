@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import type { SDKMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type {
+  McpServerStatus,
+  ModelInfo,
+  SDKControlGetContextUsageResponse,
+  SDKMessage,
+  SlashCommand,
+} from '@anthropic-ai/claude-agent-sdk';
 
 /** One recorded run of the real Agent SDK. */
 export interface AgentSdkFixture {
@@ -50,4 +56,18 @@ export function loadCommands(): CommandCatalogueFixture {
   return JSON.parse(
     readFileSync(path.join(DIRECTORY, 'commands.json'), 'utf8'),
   ) as CommandCatalogueFixture;
+}
+
+/** What the installation said about itself before a first prompt (plan 08, B-36…B-38). */
+export interface InstallationFixture {
+  readonly models: ModelInfo[];
+  readonly mcpServers: McpServerStatus[];
+  readonly contextUsage: SDKControlGetContextUsageResponse;
+}
+
+/** The recorded installation — `pnpm fixtures:record installation`, which says nothing to the model. */
+export function loadInstallation(): InstallationFixture {
+  return JSON.parse(
+    readFileSync(path.join(DIRECTORY, 'installation.json'), 'utf8'),
+  ) as InstallationFixture;
 }

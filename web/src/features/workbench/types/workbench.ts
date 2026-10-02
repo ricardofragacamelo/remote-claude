@@ -52,6 +52,17 @@ export interface ViewEntry extends RegistryEntry {
 
   /** The key of what the side bar says while there is no component — named in full. */
   readonly placeholderKey: string;
+
+  /** What the view counts for the folder — Claude's questions waiting (plan 08, B-42). */
+  readonly badge?: ComponentType<FolderViewProps>;
+}
+
+/**
+ * Something said on a folder tab itself — a question of Claude waiting in a tab not on screen
+ * (plan 08, B-42). Rendered beside the folder's name; nothing at all when there is nothing to say.
+ */
+export interface FolderTabBadgeEntry extends RegistryEntry {
+  readonly component: ComponentType<FolderViewProps>;
 }
 
 /** A tab of the bottom panel — plans 08 and 10 register theirs. */

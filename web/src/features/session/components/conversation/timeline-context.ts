@@ -1,5 +1,5 @@
 import type { TaskList } from '../../lib/task-list';
-import type { Conversation } from '../../types/live-session';
+import type { Conversation, StreamMessage } from '../../types/live-session';
 
 /** What every row of a conversation needs to know about where it is drawn. */
 export interface TimelineContext {
@@ -20,4 +20,10 @@ export interface TimelineContext {
 
   /** The task list the conversation's tools made — which of their calls it read (B-20). */
   readonly taskList: TaskList;
+
+  /** Edits a prompt to send it again — a fork from before it (plan 08, B-35); absent reading. */
+  readonly onEditPrompt?: ((message: StreamMessage) => void) | undefined;
+
+  /** Forks from before a prompt and sends it again, unchanged (B-35). */
+  readonly onForkFrom?: ((message: StreamMessage) => void) | undefined;
 }

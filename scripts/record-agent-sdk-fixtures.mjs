@@ -328,6 +328,16 @@ const CATALOGUE = {
 };
 
 /**
+ * What the installation recording asks for — the models, the MCP servers and the use of the context
+ * window of an idle session (plan 08, B-36…B-38). Like the catalogue, it says nothing to the model:
+ * three control requests, answered from the initialisation of the subprocess.
+ */
+const INSTALLATION = {
+  name: 'installation',
+  why: 'what supportedModels(), mcpServerStatus() and getContextUsage({ detail: "summary" }) answer before the first prompt — the selectors and the meter of the panel',
+};
+
+/**
  * Writes a fixture the way `pnpm format:check` expects it.
  *
  * `JSON.stringify` expands every array, and Prettier folds the short ones back onto one line — a
@@ -682,6 +692,32 @@ async function record(query, scenario) {
  * @param {(params: unknown) => { supportedCommands(): Promise<unknown[]>, close(): void }} query
  */
 async function recordCatalogue(query) {
+  return idleSession(query, (session) => session.supportedCommands());
+}
+
+/**
+ * Asks an idle session for its models, its MCP servers and its context, saying nothing to the model.
+ *
+ * @param {(params: unknown) => { supportedModels(): Promise<unknown[]>, mcpServerStatus(): Promise<unknown[]>, getContextUsage(opts: unknown): Promise<unknown>, close(): void }} query
+ */
+async function recordInstallation(query) {
+  return idleSession(query, async (session) => ({
+    models: await session.supportedModels(),
+    mcpServers: await session.mcpServerStatus(),
+    contextUsage: await session.getContextUsage({ detail: 'summary' }),
+  }));
+}
+
+/**
+ * Opens a session that is never prompted, asks it `ask`, and closes it — the throwaway directory
+ * with it.
+ *
+ * @template T
+ * @param {(params: unknown) => any} query
+ * @param {(session: any) => Promise<T>} ask
+ * @returns {Promise<T>}
+ */
+async function idleSession(query, ask) {
   const workspace = makeWorkspace({});
   // An iterable whose first `next()` never settles: the CLI waits for a prompt that never comes.
   const idle = { [Symbol.asyncIterator]: () => ({ next: () => new Promise(() => undefined) }) };
@@ -698,7 +734,7 @@ async function recordCatalogue(query) {
   });
 
   try {
-    return await session.supportedCommands();
+    return await ask(session);
   } finally {
     session.close();
     fs.rmSync(workspace, { recursive: true, force: true });
@@ -838,6 +874,40 @@ async function writeCatalogue(query) {
 }
 
 /**
+ * Records what the installation answers about itself and writes it beside the turns.
+ *
+ * @param {(params: unknown) => any} query
+ */
+async function writeInstallation(query) {
+  info(`${bold(INSTALLATION.name)} — ${dim(INSTALLATION.why)}`);
+
+  let answers;
+  try {
+    answers = await recordInstallation(query);
+  } catch (error) {
+    fail(`${INSTALLATION.name} failed`, String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  const fixture = {
+    $comment:
+      'Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. ' +
+      'Do not edit by hand — re-record instead. See docs/plans/08-claude-panel/F4-chat-panel.md.',
+    name: INSTALLATION.name,
+    why: INSTALLATION.why,
+    recordedAt: new Date().toISOString().slice(0, 10),
+    sdkVersion: sdkVersion(),
+    counts: { models: answers.models.length, mcpServers: answers.mcpServers.length },
+    ...answers,
+  };
+
+  await writeFixture(path.join(FIXTURES_DIR, `${INSTALLATION.name}.json`), fixture);
+
+  ok(INSTALLATION.name, `${String(answers.models.length)} models`);
+}
+
+/**
  * Records one scenario and writes its fixture, or reports why it could not — which fails the run
  * without stopping the scenarios after it.
  *
@@ -902,6 +972,26 @@ async function recordScenario(query, scenario) {
   );
 }
 
+/**
+ * What this run records: the scenarios named, and the two answers about the installation — all of
+ * them when nothing is named.
+ *
+ * @param {readonly string[]} wanted
+ */
+function chosenRecordings(wanted) {
+  const all = wanted.length === 0;
+  const chosen = all ? SCENARIOS : SCENARIOS.filter((s) => wanted.includes(s.name));
+  const catalogue = all || wanted.includes(CATALOGUE.name);
+  const installation = all || wanted.includes(INSTALLATION.name);
+
+  if (chosen.length === 0 && !catalogue && !installation) {
+    const known = [...SCENARIOS.map((s) => s.name), CATALOGUE.name, INSTALLATION.name];
+    abort(`no scenario named ${wanted.join(', ')}; known: ${known.join(', ')}`);
+  }
+
+  return { chosen, catalogue, installation };
+}
+
 async function main() {
   if (process.argv.includes('--normalise')) {
     await normaliseCommitted();
@@ -910,14 +1000,7 @@ async function main() {
 
   title('Agent SDK — recording fixtures');
 
-  const wanted = process.argv.slice(2);
-  const chosen = wanted.length === 0 ? SCENARIOS : SCENARIOS.filter((s) => wanted.includes(s.name));
-  const catalogue = wanted.length === 0 || wanted.includes(CATALOGUE.name);
-
-  if (chosen.length === 0 && !catalogue) {
-    const known = [...SCENARIOS.map((s) => s.name), CATALOGUE.name];
-    abort(`no scenario named ${wanted.join(', ')}; known: ${known.join(', ')}`);
-  }
+  const { chosen, catalogue, installation } = chosenRecordings(process.argv.slice(2));
 
   if (!fs.existsSync(path.join(os.homedir(), '.claude', '.credentials.json'))) {
     abort('the Claude CLI is not logged in on this machine; run `claude` once and sign in');
@@ -940,6 +1023,10 @@ async function main() {
 
   if (catalogue) {
     await writeCatalogue(sdk.query);
+  }
+
+  if (installation) {
+    await writeInstallation(sdk.query);
   }
 
   if (chosen.some((s) => s.name === 'tool-turn')) {

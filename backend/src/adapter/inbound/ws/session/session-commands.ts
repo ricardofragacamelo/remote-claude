@@ -52,6 +52,12 @@ const attachment = z.union([
 /** What a prompt carries, as the backend reads it: an attachment of the contract, one by kind. */
 export type PromptAttachmentDto = z.infer<typeof attachment>;
 
+/**
+ * How many files one rejection may name. A rejection is of a file the person chose on screen; the
+ * whole session goes back without `paths`.
+ */
+const MAX_REJECTED_PATHS = 256;
+
 /** The payloads the session commands carry, as the contract declares them. */
 export const sessionSchemas = {
   session: z.object({ sessionId: z.string().min(1) }),
@@ -78,7 +84,19 @@ export const sessionSchemas = {
   model: z.object({ sessionId: z.string().min(1), model: z.string().min(1) }),
   mode: z.object({ sessionId: z.string().min(1), mode: z.enum(PERMISSION_MODES) }),
   locale: z.object({ locale: z.enum(['en', 'pt-BR']) }),
-  rewind: z.object({ sessionId: z.string().min(1), promptId: z.string().min(1).max(256) }),
+  rewind: z.object({
+    sessionId: z.string().min(1),
+    promptId: z.string().min(1).max(256),
+    paths: z.array(path).min(1).max(MAX_REJECTED_PATHS).optional(),
+  }),
+  rejectChange: z.object({
+    sessionId: z.string().min(1),
+    path,
+    hunkId: z.string().min(1).max(64),
+    revision: z.string().min(1).max(128),
+  }),
+  restoreChange: z.object({ sessionId: z.string().min(1), path }),
+  cancelQueued: z.object({ sessionId: z.string().min(1), queueId: z.string().min(1).max(128) }),
 };
 
 /** DI tokens of the session commands, one per `type` of the contract. */
@@ -92,4 +110,7 @@ export const SESSION_HANDLERS = {
   close: Symbol('session.close handler'),
   detach: Symbol('session.detach handler'),
   rewind: Symbol('session.rewindFiles handler'),
+  rejectChange: Symbol('session.rejectChange handler'),
+  restoreChange: Symbol('session.restoreChange handler'),
+  cancelQueuedPrompt: Symbol('session.cancelQueuedPrompt handler'),
 };

@@ -1,10 +1,18 @@
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorState } from '@/shared/components/ErrorState';
 import { Panel } from '@/shared/components/Panel';
 import { Button } from '@/shared/components/ui/button';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+
+import type { EditAndResend } from '../hooks/useEditAndResend';
 import { useLiveSession } from '../hooks/useLiveSession';
+import type { LiveSession } from '../hooks/useLiveSession';
+import type { SessionStatus } from '../types/live-session';
+import { EditBanner } from './panel/EditBanner';
+import { QueueList } from './panel/QueueList';
+import { SessionHeader } from './panel/SessionHeader';
 import { CommandMenu } from './CommandMenu';
 import { Conversation } from './Conversation';
 import { PromptComposer } from './PromptComposer';
@@ -28,6 +36,9 @@ export interface SessionScreenProps {
 
   /** The real path of the folder of the tab — what names of files of the answer open in. */
   readonly folder?: string | undefined;
+
+  /** Editing a prompt to send it again — the panel's, so it outlives a switch of tab (B-35). */
+  readonly edit?: EditAndResend | undefined;
 }
 
 /**
@@ -54,7 +65,8 @@ export function SessionScreen({
   onOpenHistory,
   draft,
   onDraftChange,
-  folder,
+  folder = '',
+  edit,
 }: SessionScreenProps): React.JSX.Element {
   const { t } = useTranslation();
   const session = useLiveSession(sessionId);
@@ -91,6 +103,53 @@ export function SessionScreen({
         onClose={session.close}
       />
 
+      {ending === null && (
+        <SessionHeader
+          folder={folder}
+          sessionId={sessionId}
+          conversationId={conversationId}
+          onCompact={() => {
+            session.prompt('/compact');
+          }}
+        />
+      )}
+
+      <HistoryState history={history} onOpenHistory={onOpenHistory} />
+
+      <Conversation
+        conversation={session}
+        isPartial={session.isPartial}
+        folder={folder}
+        sessionId={sessionId}
+        conversationId={conversationId}
+        onEditPrompt={edit?.begin}
+        onForkFrom={edit?.forkFrom}
+      />
+
+      <UndoPanel sessionId={sessionId} />
+
+      <QueueList sessionId={sessionId} />
+
+      {edit !== undefined && <EditArea edit={edit} />}
+
+      <Composer session={session} edit={edit} draft={draft} onDraftChange={onDraftChange} />
+    </Panel>
+  );
+}
+
+/** The part of the conversation the buffer does not hold: loading, failed, and the way to all of it. */
+function HistoryState({
+  history,
+  onOpenHistory,
+}: {
+  readonly history: LiveSession['history'];
+  readonly onOpenHistory: SessionScreenProps['onOpenHistory'];
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const conversationId = history.conversationId;
+
+  return (
+    <>
       {history.isLoading && (
         <Skeleton className="h-16 w-full" aria-label={t('session.history.loading')} />
       )}
@@ -109,30 +168,98 @@ export function SessionScreen({
           {t('session.history.open')}
         </Button>
       )}
-
-      <Conversation
-        conversation={session}
-        isPartial={session.isPartial}
-        folder={folder ?? ''}
-        sessionId={sessionId}
-        conversationId={conversationId}
-      />
-
-      <UndoPanel sessionId={sessionId} />
-
-      <PromptComposer
-        disabled={ending !== null}
-        onSubmit={session.prompt}
-        error={session.promptError}
-        draft={draft}
-        onDraftChange={onDraftChange}
-        // An ended session has no installation left to ask: the menu goes with it.
-        menu={
-          ending === null
-            ? (insert) => <CommandMenu sessionId={sessionId} onPick={insert} />
-            : undefined
-        }
-      />
-    </Panel>
+    </>
   );
+}
+
+/** What editing a prompt says, and why the fork was refused — with the plain resume offered. */
+function EditArea({ edit }: { readonly edit: EditAndResend }): React.JSX.Element {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <EditBanner edit={edit} />
+      {edit.error !== null && (
+        <div className="flex flex-col gap-2">
+          <ErrorState error={edit.error} />
+          {edit.canResumeInstead && (
+            <Button variant="outline" className="self-start" onClick={edit.resumeInstead}>
+              {t('sessions.edit.resumeInstead')}
+            </Button>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** The states in which a turn is running — what `Esc` interrupts (plan 08, B-40). */
+const RUNNING: ReadonlySet<SessionStatus> = new Set(['thinking', 'running', 'waitingPermission']);
+
+interface ComposerProps {
+  readonly session: LiveSession;
+  readonly edit: EditAndResend | undefined;
+  readonly draft: string | undefined;
+  readonly onDraftChange: ((text: string) => void) | undefined;
+}
+
+/**
+ * The prompt box of the session: a prompt, or — while one is edited — the edited prompt, sent as a
+ * fork. `Esc` in it interrupts the turn running, once (S-183, S-184).
+ */
+function Composer({ session, edit, draft, onDraftChange }: ComposerProps): React.JSX.Element {
+  const { t } = useTranslation();
+  const escape = useInterruptOnce(session);
+  const editing = editingIn(edit);
+
+  return (
+    <PromptComposer
+      key={editing?.messageId ?? 'prompt'}
+      disabled={isLocked(session, edit)}
+      onSubmit={editing?.send ?? session.prompt}
+      error={session.promptError}
+      draft={editing?.original ?? draft}
+      onDraftChange={editing === null ? onDraftChange : undefined}
+      onEscape={escape}
+      submitLabel={editing === null ? undefined : t('sessions.edit.send')}
+      menu={menuOf(session)}
+    />
+  );
+}
+
+/** Whether the box takes nothing now: the session ended, or an edited prompt is on its way. */
+function isLocked(session: LiveSession, edit: EditAndResend | undefined): boolean {
+  return session.ending !== null || edit?.isSending === true;
+}
+
+/** The prompt being edited, and the way to send it — `null` when none is. */
+function editingIn(
+  edit: EditAndResend | undefined,
+): { readonly messageId: string; readonly original: string; send(text: string): void } | null {
+  const editing = edit?.editing ?? null;
+
+  return edit === undefined || editing === null
+    ? null
+    : { messageId: editing.messageId, original: editing.original, send: edit.send };
+}
+
+/** `Esc` with a turn running interrupts it — once per turn, however often it is pressed (S-184). */
+function useInterruptOnce(session: LiveSession): () => void {
+  const interruptedIn = useRef<number | null>(null);
+
+  return () => {
+    if (RUNNING.has(session.status) && interruptedIn.current !== session.turns.length) {
+      interruptedIn.current = session.turns.length;
+      session.interrupt();
+    }
+  };
+}
+
+/** The slash commands of the installation — gone with an ended session, which has none to ask. */
+function menuOf(session: LiveSession): React.ComponentProps<typeof PromptComposer>['menu'] {
+  const sessionId = session.sessionId;
+
+  return session.ending === null && sessionId !== null
+    ? (insert) => <CommandMenu sessionId={sessionId} onPick={insert} />
+    : undefined;
 }

@@ -204,7 +204,7 @@ export function cardFor(page: Page, toolName: string): ReturnType<Page['getByRol
 /** Writes a prompt into the screen's box and sends it, the way a person does. */
 export async function send(page: Page, text: string): Promise<void> {
   await page.getByLabel('Prompt').fill(text);
-  await page.getByRole('button', { name: 'Send' }).click();
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
 }
 
 /**

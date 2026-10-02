@@ -74,4 +74,10 @@ describe('TranscriptModuleConversationSource', () => {
 
     expect(store.reads).toBe(0);
   });
+
+  it('answers no chain to fork from for an id the store does not hold — plan 08, S-163', async () => {
+    const { source } = build();
+
+    expect(await source.chainOf(ClaudeSessionId.create(conversationId(9)))).toEqual([]);
+  });
 });

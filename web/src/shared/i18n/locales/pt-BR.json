@@ -77,7 +77,9 @@
       "queuedPromptNotFound": "Esse prompt não está mais na fila.",
       "queuedPromptStarted": "Esse prompt já começou. Interrompa o turno para pará-lo.",
       "forkPointUnknown": "Essa mensagem não é um prompt desta conversa. Recarregue a conversa e tente de novo.",
-      "effortUnsupported": "{{model}} não aceita o nível de esforço {{level}}."
+      "effortUnsupported": "{{model}} não aceita o nível de esforço {{level}}.",
+      "changeNotFound": "{{path}} não está entre os arquivos que esta sessão alterou, ou não há rejeição dele para desfazer.",
+      "rewindPathUnknown": "{{path}} não é um arquivo que esta sessão alterou, por isso não pode ser rejeitado."
     },
     "status": {
       "starting": "Iniciando",
@@ -104,12 +106,6 @@
       "auditUnavailable": "não foi possível gravar a trilha de auditoria",
       "shutdown": "o backend foi desligado",
       "idleTimeout": "ficou ociosa por tempo demais — retome-a pelo histórico"
-    },
-    "starter": {
-      "title": "Abrir uma sessão",
-      "description": "O Claude roda nesta máquina, na pasta que você escolher acima.",
-      "action": "Abrir sessão",
-      "pending": "Abrindo…"
     },
     "screen": {
       "title": "Sessão",
@@ -277,6 +273,13 @@
     "files": {
       "deletedOne": "{{name}} foi apagado. Ele está guardado no histórico local.",
       "deletedMany": "{{count}} entradas foram apagadas. Elas estão guardadas no histórico local."
+    },
+    "changes": {
+      "rejectedFile": "{{name}} voltou a como estava antes da sessão.",
+      "rejectedHunk": "Uma alteração em {{name}} voltou a como estava antes da sessão."
+    },
+    "permission": {
+      "waiting": "O Claude está esperando por você em {{folder}}."
     }
   },
   "permission": {
@@ -355,6 +358,16 @@
     "planMode": {
       "default": "perguntando antes de cada edição",
       "acceptEdits": "aceitando edições sem perguntar"
+    },
+    "preview": {
+      "ambiguous": "A edição {{edit}} cita um texto que aparece mais de uma vez no arquivo agora: a edição do Claude será recusada se não disser qual.",
+      "at": "Prévia contra o arquivo como estava às {{when}}. Ela é lida de novo quando esta janela volta ao foco.",
+      "label": "O que esta alteração faria no arquivo",
+      "loading": "Lendo o arquivo para prever a alteração…",
+      "noMatch": "A edição {{edit}} cita um texto que não está no arquivo agora: a edição não vai casar, e o Claude será avisado.",
+      "outside": "O arquivo está fora da pasta desta aba, por isso não há prévia. O input exato está acima.",
+      "unavailable": "Sem prévia: {{reason}} O input exato está acima.",
+      "unchanged": "O arquivo já tem exatamente isto: nada mudaria."
     }
   },
   "audit": {
@@ -701,8 +714,9 @@
     },
     "claude": {
       "label": "Claude",
-      "newSession": "Iniciar uma nova sessão nesta pasta",
-      "backToStart": "Voltar para uma nova conversa"
+      "backToStart": "Voltar para uma nova conversa",
+      "showChanges": "O que a sessão alterou",
+      "showChat": "A conversa"
     },
     "mobile": {
       "label": "Visões desta pasta",
@@ -713,7 +727,8 @@
     },
     "layout": {
       "sideBar": "Mostrar ou ocultar a barra lateral",
-      "panel": "Mostrar ou ocultar o painel"
+      "panel": "Mostrar ou ocultar o painel",
+      "secondary": "Mostrar ou esconder o Claude"
     },
     "tabs": {
       "label": "Pastas abertas",
@@ -820,7 +835,8 @@
       "previousFolderTab": "Aba de pasta anterior",
       "goToFolderTab": "Aba de pasta {{place}}",
       "toggleSideBar": "Mostrar ou esconder a barra lateral",
-      "togglePanel": "Mostrar ou esconder o painel"
+      "togglePanel": "Mostrar ou esconder o painel",
+      "toggleSecondarySideBar": "Exibir: Mostrar ou esconder o Claude"
     },
     "notifications": {
       "show": "Mostrar notificações",
@@ -874,6 +890,16 @@
       "continueSelected": "Sessões do Claude: continuar aqui a conversa selecionada",
       "copySelectedId": "Sessões do Claude: copiar o id da conversa selecionada",
       "endSelected": "Sessões do Claude: encerrar a sessão selecionada"
+    },
+    "session": {
+      "showChanges": "Claude: Mostrar as alterações da sessão"
+    },
+    "claude": {
+      "newConversation": "Claude: Nova conversa",
+      "focusComposer": "Claude: Focar o prompt",
+      "interrupt": "Claude: Interromper o turno",
+      "nextConversation": "Claude: Próxima conversa",
+      "previousConversation": "Claude: Conversa anterior"
     }
   },
   "palette": {
@@ -1784,7 +1810,9 @@
     },
     "message": {
       "copy": "Copiar a mensagem",
-      "copied": "Mensagem copiada"
+      "copied": "Mensagem copiada",
+      "edit": "Editar e reenviar",
+      "forkFrom": "Bifurcar daqui — reenviar sem mudar, numa nova conversa"
     },
     "search": {
       "label": "Buscar na conversa",
@@ -1799,7 +1827,9 @@
       "thinking": "O Claude está pensando…",
       "running": "O Claude está rodando uma tool…",
       "waitingPermission": "O Claude está esperando você — responda a pergunta",
-      "cost": "Esta sessão custou {{cost}} desde que abriu, em {{turns}} turno(s)"
+      "cost": "Esta sessão custou {{cost}} desde que abriu, em {{turns}} turno(s)",
+      "item": "Claude: {{status}} · {{model}} · {{cost}} — abrir o painel",
+      "short": "{{status}} · {{cost}}"
     },
     "tasks": {
       "title": "Tarefas",
@@ -1812,6 +1842,187 @@
       "pending": "Pendente",
       "inProgress": "Em andamento",
       "completed": "Concluída"
+    },
+    "changeKind": {
+      "created": "Criado",
+      "deleted": "Apagado",
+      "modified": "Modificado"
+    },
+    "changes": {
+      "accept": "Aceitar — marcar como revisado",
+      "acceptAll": "Aceitar tudo",
+      "counts": "+{{added}} −{{removed}}",
+      "emptyDescription": "Quando o Claude criar, editar ou apagar um arquivo nesta sessão, ele aparece aqui, para revisar, aceitar ou rejeitar.",
+      "emptyTitle": "Nenhuma alteração ainda",
+      "filteredDescription": "Nenhum arquivo desta sessão casa com o filtro.",
+      "filteredTitle": "Nada aqui",
+      "hideHunks": "Esconder as alterações de {{path}}",
+      "hunksLoading": "Carregando as alterações do arquivo…",
+      "keep": "Manter as alterações",
+      "listLabel": "Arquivos que a sessão alterou",
+      "loading": "Carregando o que a sessão alterou…",
+      "modifiedOutside": "Alterado depois do Claude. Rejeitar o mantém exatamente como está.",
+      "noHunks": "O arquivo voltou a como estava antes da sessão.",
+      "openDiff": "Abrir o diff no editor",
+      "openDiffOf": "{{path}} ({{kind}}) — abrir o diff no editor",
+      "reject": "Rejeitar — devolver o arquivo a como estava antes da sessão",
+      "rejectAll": "Rejeitar tudo…",
+      "rejectAllConfirm": "Rejeitar tudo",
+      "rejectAllDescription": "Cada arquivo abaixo volta a como estava antes da sessão. Um arquivo alterado à mão depois do Claude fica como está.",
+      "rejectAllTitle": "Rejeitar as alterações em {{count}} arquivo(s)?",
+      "rejectHunk": "Rejeitar este trecho",
+      "reviewed": "Revisado",
+      "showAll": "Mostrar todos os arquivos",
+      "showHunks": "Mostrar as alterações de {{path}}",
+      "status": "{{pending}} a revisar",
+      "statusLabel": "Alterações da sessão: {{pending}} de {{count}} arquivo(s) a revisar. Abrir.",
+      "summary": "{{pending}} de {{count}} arquivo(s) a revisar",
+      "title": "Alterações",
+      "unaccept": "Marcar como não revisado",
+      "undoReject": "Desfazer"
+    },
+    "changesFilter": {
+      "all": "Todos",
+      "label": "Quais arquivos mostrar",
+      "pending": "A revisar",
+      "reviewed": "Revisados"
+    },
+    "diff": {
+      "after": "{{name}} como a tool deixou",
+      "before": "{{name}} antes da tool",
+      "beforeSession": "{{name}} antes da sessão",
+      "label": "Alterações em {{name}}",
+      "loading": "Carregando o diff…",
+      "now": "{{name}} agora",
+      "open": "Abrir diff",
+      "sideUnknown": "Este lado do diff não é mais conhecido. Abra de novo pela conversa."
+    },
+    "diffReason": {
+      "changedSince": "O arquivo mudou depois desta tool, por isso só o trecho que ela trocou aparece.",
+      "laterTouch": "Uma tool anterior do mesmo turno mudou este arquivo antes, por isso só o trecho que esta trocou aparece.",
+      "laterWrite": "Uma tool posterior da sessão mudou este arquivo de novo, por isso só o trecho que esta trocou aparece.",
+      "noSnapshot": "Nada foi guardado do arquivo antes desta tool, por isso só o trecho que ela trocou aparece.",
+      "tooLarge": "O arquivo era grande demais para guardar antes desta tool, por isso só o trecho que ela trocou aparece.",
+      "unknown": "Um lado deste diff não é conhecido.",
+      "unreadable": "O arquivo não pôde ser lido antes desta tool, por isso só o trecho que ela trocou aparece."
+    },
+    "badge": {
+      "announce": "O Claude está esperando por você em {{folder}}.",
+      "label": "{{count}} pergunta(s) esperando por você",
+      "open": "Mostrar"
+    },
+    "browserNotice": {
+      "denied": "O navegador recusou notificações para esta página. Permita de novo nas configurações do site no navegador (o ícone ao lado do endereço); os badges continuam avisando enquanto isso.",
+      "turnOff": "Parar de me notificar no navegador",
+      "turnOn": "Notificar no navegador quando o Claude terminar ou perguntar algo",
+      "permission": "O Claude está esperando por você em {{folder}}",
+      "turn": "O Claude terminou um turno em {{folder}}"
+    },
+    "context": {
+      "compact": "Compactar a conversa (/compact)",
+      "label": "Janela de contexto {{percentage}}% usada",
+      "near": "A conversa está perto do limite do contexto. Compactá-la a mantém andando.",
+      "percentage": "{{percentage}}%",
+      "tokens": "{{tokens}} tokens",
+      "unavailable": "O uso do contexto não pôde ser lido.",
+      "window": "{{total}} de {{max}} tokens",
+      "systemPrompt": "Prompt de sistema",
+      "systemTools": "Tools do sistema",
+      "mcpTools": "Tools de MCP",
+      "messages": "Mensagens",
+      "memoryFiles": "Arquivos de memória",
+      "skills": "Skills",
+      "freeSpace": "Espaço livre",
+      "buffer": "Reservado para compactação"
+    },
+    "draft": {
+      "choices": "Como a conversa começa",
+      "commands": "Digite / para os comandos e skills desta instalação.",
+      "defaultModel": "Os modelos desta instalação aparecem depois que uma sessão desta pasta rodou; até lá, usa-se o padrão da instalação.",
+      "description": "Nada roda até você enviar o primeiro prompt: então uma sessão do Claude abre nesta pasta, com o que você escolheu abaixo. {{shortcut}} traz você de volta a esta caixa.",
+      "drag": "Arraste um arquivo do explorer ou do editor para a caixa para falar dele.",
+      "mention": "Digite @ para apontar um arquivo ou uma pasta ao Claude.",
+      "starting": "Abrindo a sessão…",
+      "title": "Uma nova conversa"
+    },
+    "edit": {
+      "cancel": "Parar de editar",
+      "explain": "Você está editando um prompt: enviá-lo abre uma nova conversa a partir de antes dele. A conversa original fica como estava.",
+      "noUndo": "Nenhum arquivo alterado nesse turno ou depois pode ser devolvido daqui.",
+      "resumeInstead": "Retomar a conversa em vez disso",
+      "send": "Reenviar",
+      "undoFiles": "Devolver também os arquivos a como estavam antes daquele turno"
+    },
+    "effort": {
+      "default": "Esforço padrão",
+      "label": "Esforço",
+      "low": "Baixo",
+      "medium": "Médio",
+      "high": "Alto",
+      "xhigh": "Muito alto",
+      "max": "Máximo"
+    },
+    "export": {
+      "compacted": "A conversa foi compactada aqui.",
+      "failed": "A conversa não pôde ser exportada: {{reason}} Nada foi salvo.",
+      "open": "Exportar a conversa em Markdown",
+      "output": "Saída",
+      "outputsWarning": "Saídas podem trazer conteúdo de arquivos e segredos. Ficam de fora a não ser que você marque.",
+      "reading": "Lendo a conversa… {{pages}} página(s)",
+      "save": "Salvar em Markdown",
+      "thinking": "Pensamento",
+      "title": "Conversa {{conversationId}}",
+      "withOutputs": "Incluir as saídas das tools"
+    },
+    "header": {
+      "label": "Como esta conversa roda"
+    },
+    "mcp": {
+      "count": "MCP {{fine}}/{{count}}",
+      "line": "{{status}} · {{tools}}",
+      "summary": "{{fine}} de {{count}} servidor(es) MCP conectado(s)",
+      "tools": "{{count}} tool(s)",
+      "unavailable": "Status de MCP indisponível",
+      "connected": "Conectado",
+      "failed": "Falhou",
+      "needsAuth": "Precisa de login",
+      "pending": "Conectando",
+      "disabled": "Desligado"
+    },
+    "mode": {
+      "acceptEditsWarning": "O Claude vai editar e gravar arquivos sem perguntar — e sem a prévia da alteração.",
+      "label": "Modo",
+      "default": "Perguntar",
+      "defaultDescription": "O Claude pergunta antes de cada tool que precisa da sua palavra.",
+      "acceptEdits": "Aceitar edições",
+      "acceptEditsDescription": "O Claude edita e grava arquivos sem perguntar; ainda pergunta antes do resto.",
+      "plan": "Plan",
+      "planDescription": "O Claude planeja sem mudar nada, e pede que você aprove o plano."
+    },
+    "model": {
+      "default": "Padrão da instalação",
+      "label": "Modelo"
+    },
+    "queue": {
+      "cancel": "Tirar o prompt {{position}} da fila",
+      "description": "Estes rodam um depois do outro, como turnos próprios, quando o turno em execução terminar.",
+      "position": "#{{position}}",
+      "title": "Prompts na fila",
+      "fromWeb": "de um navegador",
+      "fromMobile": "do celular",
+      "fromOther": "de outro cliente"
+    },
+    "tabs": {
+      "close": "Fechar a aba",
+      "closeKeepsSession": "Fechar a aba — a sessão continua rodando",
+      "closeTab": "Fechar a aba",
+      "label": "Conversas desta pasta",
+      "moveLeft": "Mover para a esquerda",
+      "moveRight": "Mover para a direita",
+      "new": "Abrir uma nova conversa",
+      "session": "Conversa",
+      "draft": "Nova conversa",
+      "history": "Do histórico"
     }
   },
   "sessionsGroup": {
@@ -1834,6 +2045,39 @@
       "emptyDescription": "Comece uma no painel ao lado do editor: ela aparece aqui, assim como as começadas no editor ou num terminal.",
       "loadMore": "Carregar mais",
       "loadingMore": "Carregando…"
+    }
+  },
+  "diff": {
+    "hunks": {
+      "showAll": "Mostrar todas as {{count}} linhas"
+    },
+    "line": {
+      "added": "Acrescentada: ",
+      "removed": "Removida: "
+    }
+  },
+  "claudePanel": {
+    "help": {
+      "open": "Ajuda sobre o painel do Claude",
+      "what": "Cada aba do painel é uma conversa desta pasta: um rascunho que vira sessão no primeiro prompt, uma sessão em execução, ou uma conversa do histórico que você está lendo. Fechar a aba nunca encerra a sessão — ela continua no backend, e a view Sessões a lista.",
+      "states": "Enquanto carrega, um esqueleto guarda o lugar; o que falha diz por quê, com o jeito de tentar de novo; uma conversa vazia ensina como começar.",
+      "notRecorded": "A trilha de auditoria guarda cada tool que o Claude rodou e o input exato. Ela nunca guarda o conteúdo de arquivo nem as mensagens da conversa — essas ficam no store do próprio Claude, nesta máquina.",
+      "modesHeading": "Os modos",
+      "modes": "Padrão pergunta antes de cada tool que precisa da sua palavra. Aceitar edições deixa de perguntar antes de o Claude editar ou gravar arquivo — e a prévia da alteração no card vai junto. Plan faz o Claude planejar sem mudar nada, e pede que você aprove o plano. Pular todas as perguntas nunca é oferecido.",
+      "queueHeading": "A fila",
+      "queue": "Um prompt enviado enquanto o Claude trabalha espera acima da caixa de prompt, na ordem em que chegou de qualquer dispositivo seu, e roda como um turno próprio quando o turno termina. Até lá, qualquer dispositivo pode tirá-lo.",
+      "resendHeading": "Editar e reenviar",
+      "resend": "Editar um prompt o envia de novo numa conversa nova que continua de antes dele; a original fica como estava no histórico. Os arquivos não voltam sozinhos: marque o desfazer daquele turno para devolvê-los também.",
+      "reviewHeading": "Aceitar e rejeitar alterações",
+      "review": "Aceitar só marca o arquivo como revisado nesta aba — nada é gravado. Rejeitar devolve o arquivo, ou um trecho dele, a como estava antes da sessão, e oferece desfazer. Um arquivo que você alterou depois do Claude nunca é sobrescrito: rejeitá-lo o mantém como está.",
+      "contextHeading": "O contexto e o /compact",
+      "context": "O medidor mostra quão cheia está a janela de contexto da conversa, por categoria. Perto do limite, compactar resume a conversa até ali — o comando da instalação, enviado como prompt — e a conversa marca onde aconteceu.",
+      "noticesHeading": "Perguntas que podem passar despercebidas",
+      "notices": "Uma pergunta feita numa aba de pasta que não está na tela, ou com o painel fechado, aparece como badge na aba e na activity bar, e como aviso com o caminho até ela. Com as notificações do navegador ligadas, a página escondida também é avisada — a pasta e o que aconteceu, nunca o comando."
+    },
+    "screen": {
+      "title": "Claude",
+      "purpose": "Converse com o Claude sobre esta pasta: abra conversas, acompanhe e aprove o que ele faz e revise o que ele alterou."
     }
   }
 }

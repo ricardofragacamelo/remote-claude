@@ -2,11 +2,13 @@
 export { FolderShell } from './components/FolderShell';
 export { Workbench } from './components/Workbench';
 export { useFolderTab } from './hooks/useFolderTab';
+export { folderTabStore } from './store/folder-tab.store';
 export { useWorkbenchTarget } from './hooks/useWorkbenchTarget';
 export { forgetFolderTabs, tabRestorers } from './store/folder-tab.store';
 export type { TabRestorer } from './store/tab-state';
 export {
   editorAreas,
+  folderTabBadges,
   folderTabKeepers,
   panelTabs,
   statusBarItems,
@@ -15,6 +17,7 @@ export {
 export type {
   EditorAreaEntry,
   FolderTab,
+  FolderTabBadgeEntry,
   FolderTabKeeper,
   FolderViewProps,
   MobileView,

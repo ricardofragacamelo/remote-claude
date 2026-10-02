@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { openSignedIn } from '../fixtures/auth';
 import { workbenchSuite } from '../fixtures/folder-tree';
 import { violationsOn } from '../fixtures/page-checks';
-import { folderDialog, workbenchAddress } from '../fixtures/workbench';
+import { draftOf, folderDialog, workbenchAddress } from '../fixtures/workbench';
 import { scenario } from '../scenarios';
 
 /**
@@ -49,7 +49,7 @@ for (const theme of expected.themes) {
     await page.keyboard.press('Escape');
 
     await page.goto(workbenchAddress(folder));
-    await expect(page.getByRole('button', { name: 'Start session' })).toBeVisible();
+    await expect(draftOf(page)).toBeVisible();
     expect(await violationsOn(page, expected.tags), 'the workbench').toEqual([]);
 
     for (const screen of expected.screens) {

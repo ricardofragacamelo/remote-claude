@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react';
 import type { AppError } from '@/shared/api/errors';
 import { languageOf } from '../lib/languages';
 import { readFile, readVersion } from '../services/files.service';
+import { diffSources } from '../store/diff-sources';
 import { editorStoreOf } from '../store/editor.store';
-import type { DiffSide } from '../types/editor';
+import type { DiffSide, ProvidedSide } from '../types/editor';
 import { asAppError } from './documents';
 
 /** The two texts of a diff tab, once they are read. */
@@ -28,6 +29,10 @@ async function textOf(folder: string, side: DiffSide): Promise<string> {
     return readVersion(folder, side.version.entryId);
   }
 
+  if (side.source === 'provided' && side.provided !== undefined) {
+    return providedText(folder, side.provided);
+  }
+
   const model = editorStoreOf(folder).getState().docs[side.path]?.model;
 
   if (side.source === 'buffer' && model !== null && model !== undefined) {
@@ -36,6 +41,17 @@ async function textOf(folder: string, side: DiffSide): Promise<string> {
 
   const read = await readFile(folder, side.path);
   return read.kind === 'read' ? read.file.content : '';
+}
+
+/** A side another feature provides (plan 08), read by the source it names. */
+function providedText(folder: string, provided: ProvidedSide): Promise<string> {
+  const reader = diffSources.entries().find((entry) => entry.id === provided.source);
+
+  if (reader === undefined) {
+    return Promise.reject(new Error(`no diff source "${provided.source}" is registered`));
+  }
+
+  return reader.read(folder, provided.key);
 }
 
 /** The texts of a diff tab (B-38), read when the tab shows — and again when its sides change. */

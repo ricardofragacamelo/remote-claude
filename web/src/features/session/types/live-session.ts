@@ -83,6 +83,17 @@ export interface ToolExecution {
   readonly taskId: string | null;
 }
 
+/** A prompt waiting for the running turn to end — the backend's queue (plan 08, D-14). */
+export interface QueuedPrompt {
+  readonly queueId: string;
+
+  /** The kind of client that sent it — `web` or `mobile`. */
+  readonly promptedBy: string;
+
+  /** The start of what was typed. */
+  readonly preview: string;
+}
+
 /** The tokens a turn used, as the SDK reports them. */
 export interface TurnUsage {
   readonly input: number;

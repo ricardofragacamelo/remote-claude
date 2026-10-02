@@ -5,7 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { aLiveSocket, hubEvent } from '../../support/live-socket';
 import type { LiveSocket } from '../../support/live-socket';
 import { translator } from '../../support/render';
-import { openWorkbench, tabNamed, typeIn } from '../../support/workbench';
+import { startFromDraft } from '../../support/claude-panel';
+import { draftOnScreen, openWorkbench, tabNamed, typeIn } from '../../support/workbench';
 import { aTab, aTabServer, projects } from '../../support/workspace-api';
 
 const t = translator('en');
@@ -60,22 +61,7 @@ async function withASession(user: ReturnType<typeof userEvent.setup>) {
   const mounted = openWorkbench(A, aTabServer([aTab(A), aTab(B)]));
   live.connect();
 
-  await user.click(await screen.findByRole('button', { name: t('session.starter.action') }));
-  live.receive({
-    v: 1,
-    id: 'evt-1',
-    kind: 'event',
-    type: 'session.started',
-    ts: AT,
-    seq: 1,
-    payload: {
-      sessionId: SESSION,
-      workspacePath: A,
-      model: 'claude-sonnet-5',
-      permissionMode: 'default',
-    },
-  });
-  await within(claude()).findByText(t('session.screen.sessionLabel', { sessionId: SESSION }));
+  await startFromDraft(user, live, { id: SESSION, folder: A, text: 'first' });
 
   return mounted;
 }
@@ -85,7 +71,13 @@ describe('the chat with Claude, in the folder tab — plan 06, S-115', () => {
     const user = userEvent.setup();
     const mounted = await withASession(user);
 
-    expect(live.lastSent('session.start')).toMatchObject({ payload: { workspacePath: A } });
+    expect(live.lastSent('session.start')).toMatchObject({
+      payload: { workspacePath: A, permissionMode: 'default' },
+    });
+    // The first prompt goes once the session opened (plan 08, S-152).
+    expect(live.lastSent('session.prompt')).toMatchObject({
+      payload: { sessionId: SESSION, text: 'first' },
+    });
     // Still the tab of the folder: the chat never moves to a screen of its own.
     expect(mounted.path()).toBe('/workbench');
     expect(screen.getByRole('region', { name: t('workbench.editor.label') })).toBeVisible();
@@ -162,13 +154,16 @@ describe('the chat with Claude, in the folder tab — plan 06, S-115', () => {
     const user = userEvent.setup();
     await withASession(user);
 
-    await user.click(
-      within(claude()).getByRole('button', { name: t('workbench.claude.newSession') }),
-    );
+    await user.click(within(claude()).getByRole('button', { name: t('sessions.tabs.new') }));
 
+    expect(await draftOnScreen()).toBeVisible();
+    // The session goes on in its own tab of the panel.
     expect(
-      within(claude()).getByRole('button', { name: t('session.starter.action') }),
-    ).toBeVisible();
+      within(within(claude()).getByRole('list', { name: t('sessions.tabs.label') })).getAllByRole(
+        'listitem',
+      ),
+    ).toHaveLength(2);
+    expect(live.lastSent('session.close')).toBeUndefined();
   });
 });
 
@@ -183,7 +178,7 @@ describe('a session of a tab that is not on screen — plan 06, S-181, S-99, S-1
     await waitFor(() => {
       expect(mounted.search()).toEqual({ folder: B });
     });
-    await screen.findByRole('button', { name: t('session.starter.action') });
+    await draftOnScreen();
 
     // While B is on screen, A's session asks and speaks.
     live.receive(question('Bash'));
@@ -234,7 +229,7 @@ describe('a session of a tab that is not on screen — plan 06, S-181, S-99, S-1
     );
 
     await user.click(await tabNamed('b'));
-    expect(await screen.findByRole('button', { name: t('session.starter.action') })).toBeVisible();
+    expect(await draftOnScreen()).toBeVisible();
 
     await user.click(await tabNamed('a'));
     expect(await within(claude()).findByLabelText(t('session.composer.label'))).toHaveValue(
@@ -246,7 +241,7 @@ describe('a session of a tab that is not on screen — plan 06, S-181, S-99, S-1
     const user = userEvent.setup();
     await withASession(user);
     await user.click(await tabNamed('b'));
-    await screen.findByRole('button', { name: t('session.starter.action') });
+    await draftOnScreen();
 
     await user.click(
       screen.getByRole('button', { name: t('workbench.tabs.close', { name: 'a' }) }),

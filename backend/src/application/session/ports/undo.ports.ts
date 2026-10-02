@@ -24,6 +24,24 @@ export interface RestoredFile {
   readonly sizeBytes: number;
 }
 
+/** A file the undo wrote, measured — with the hash a baseline records. */
+export interface WrittenFile extends RestoredFile {
+  readonly hash: string;
+}
+
+/**
+ * The bytes at a path, as the diffs of a session may read them (plan 08, F3).
+ *
+ * `unsafe` is read **without reading**: a link, a hard link, anything but a regular file, or a
+ * directory that no longer resolves to itself — the same paths the undo will not write through
+ * (S-117). `tooLarge` is past the ceiling the caller gave, and was not read either.
+ */
+export type FileContent =
+  | { readonly kind: 'file'; readonly bytes: Uint8Array; readonly hash: string }
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'tooLarge'; readonly sizeBytes: number }
+  | { readonly kind: 'unsafe' };
+
 /**
  * The journal, as the undo reads it — and the one thing the undo writes back into it.
  *
@@ -70,6 +88,24 @@ export interface UndoDisk {
 
   /** Removes a file the undone turn created. @throws when it cannot, and then nothing changed */
   remove(path: string): Promise<void>;
+
+  /** The bytes at a path, in one read — before or after any atomic rename, never between. */
+  read(path: string, maxBytes: number): Promise<FileContent>;
+
+  /**
+   * The contents a checkpoint kept, verified against the hash taken with them.
+   *
+   * @throws when there is no blob, it cannot be read, or it is not what was snapshotted
+   */
+  snapshotOf(checkpoint: TurnFileCheckpoint): Promise<Uint8Array>;
+
+  /**
+   * Writes contents over a path — a hunk rejected, a rejection undone — the way {@link restore}
+   * does: atomically, and never through a link.
+   *
+   * @throws when it cannot, and then the path is exactly as it was
+   */
+  write(path: string, content: Uint8Array): Promise<WrittenFile>;
 }
 
 export const UNDO_JOURNAL = Symbol('UndoJournal');

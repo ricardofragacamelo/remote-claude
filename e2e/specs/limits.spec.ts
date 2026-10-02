@@ -10,11 +10,13 @@ import {
   endOnLimits,
   fillUntilRefused,
   limitsSocket,
+  openFromDraft,
   openedSessionOf,
+  sendFirstPrompt,
   sessionLabelOf,
-  startButton,
   startOn,
   startScreen,
+  turnsEnded,
 } from '../fixtures/limits';
 import { workspaceFor } from '../fixtures/live-session';
 import { endProviderSessions, shortenTokens } from '../fixtures/provider-admin';
@@ -43,9 +45,16 @@ const refused = scenario('limits-renewal-refused');
 
 const context = workspaceFor(ceiling.user);
 
-/** The refusal the screen shows, in the alert beside the starter. */
+/** The refusal the screen shows, in the alert of the draft. */
 function refusalOn(page: Page): ReturnType<Page['getByRole']> {
   return page.getByRole('alert');
+}
+
+/** The button that sends the draft's prompt — free again after a refusal, the prompt kept. */
+function sendOn(page: Page): ReturnType<Page['getByRole']> {
+  return page
+    .getByRole('complementary', { name: 'Claude' })
+    .getByRole('button', { name: 'Send', exact: true });
 }
 
 /** The status line of a connection that is up. */
@@ -74,11 +83,13 @@ async function withShortTokens(seconds: number, body: () => Promise<void>): Prom
   }
 }
 
-/** Opens a session from the start screen and answers its id, from the chat it stays in. */
+/**
+ * Opens a session from the draft of the start screen and answers its id, from the chat it stays in
+ * — its opening turn ended.
+ */
 async function openedFromTheScreen(page: Page, workspacePath: string): Promise<string> {
   await startScreen(page, ceiling.user, workspacePath);
-  await startButton(page).click();
-  return openedSessionOf(page);
+  return openFromDraft(page);
 }
 
 test.describe('the limits, on the screen', () => {
@@ -145,20 +156,20 @@ test.describe('the limits, on the screen', () => {
     expect(full.opened).toHaveLength(expected.ceiling);
     expect((full.refusal.payload as { code: string }).code).toBe(expected.code);
 
-    await startButton(page).click();
+    await sendFirstPrompt(page);
 
     // S-41: what happened, translated, with the trace — and a button that is free again rather than
-    // a "Starting…" that never ends.
+    // a "Starting…" that never ends, the prompt still in the box (plan 08, S-153).
     await expect(refusalOn(page).getByText(expected.refusal)).toBeVisible();
     await expect(refusalOn(page).getByText(/^Trace /)).toBeVisible();
-    await expect(startButton(page)).toBeEnabled();
+    await expect(sendOn(page)).toBeEnabled();
 
     // S-78: one ends, the slot is free, and the next attempt opens — the refusal gone with it.
     const [first = ''] = full.opened.splice(0, 1);
     opened.splice(opened.indexOf(first), 1);
     await endOnLimits(context().user, [first]);
 
-    await startButton(page).click();
+    await sendOn(page).click();
     opened.push(await openedSessionOf(page));
     await expect(refusalOn(page)).toBeHidden();
 
@@ -179,8 +190,8 @@ test.describe('the limits, on the screen', () => {
     const pages = await Promise.all([1, 2].map(async () => (await browser.newContext()).newPage()));
     await Promise.all(pages.map((page) => startScreen(page, lastSlot.user, context().workspace)));
 
-    // Both at once, through the button.
-    await Promise.all(pages.map((page) => startButton(page).click()));
+    // Both at once, through the first prompt of each draft.
+    await Promise.all(pages.map((page) => sendFirstPrompt(page)));
 
     /** Where one page stands: on the session it opened, told it was refused, or neither yet. */
     const stateOf = async (page: Page): Promise<'opened' | 'refused' | 'waiting'> => {
@@ -206,7 +217,7 @@ test.describe('the limits, on the screen', () => {
     opened.push(await openedSessionOf(winner));
 
     // The one that lost has its button free again.
-    await expect(startButton(loser)).toBeEnabled();
+    await expect(sendOn(loser)).toBeEnabled();
 
     await Promise.all(pages.map((page) => page.context().close()));
   });
@@ -219,9 +230,10 @@ test.describe('the limits, on the screen', () => {
     await expect(page.getByRole('button', { name: 'End session' })).toBeEnabled();
     await expect(page.getByText(/only what the server still had in memory/)).toHaveCount(0);
 
-    // One turn, so there is a conversation to go back to.
-    await send(page, `say something [fixture:${expected.fixture}]`);
-    await expect(page.getByText(/^This session has cost .+ over 1 turn\(s\)$/)).toBeVisible();
+    // One turn — the opening one, of the recording the scenario names — so there is a
+    // conversation to go back to.
+    expect(expected.fixture).toBe('text-turn');
+    await expect(turnsEnded(page, 1)).toBeVisible();
 
     // Then nothing — for longer than the TTL, plus the quarter of it the reaper may take to look.
     const ended = page.getByRole('status').filter({ hasText: expected.reason });
@@ -230,7 +242,7 @@ test.describe('the limits, on the screen', () => {
     // What only a live session can do is off. The screen says where to resume it — the history,
     // which the app has; the web's way there left with its route and comes back with plan 08
     // (plan 06, D-07, D-32).
-    await expect(page.getByRole('button', { name: 'Send' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'See the whole conversation' })).toHaveCount(0);
 
     opened.splice(opened.indexOf(sessionId), 1);
@@ -266,7 +278,7 @@ test.describe('the limits, on the screen', () => {
     // And the session is watched again, from where it was: a turn sent now is seen through.
     await expect(connectedOn(page)).toBeVisible();
     await send(page, 'say something [fixture:text-turn]');
-    await expect(page.getByText(/^This session has cost .+ over 1 turn\(s\)$/)).toBeVisible();
+    await expect(turnsEnded(page, 2)).toBeVisible();
   });
 
   test(`${expiry.id} — ${expiry.title}`, async ({ page }) => {
@@ -303,7 +315,7 @@ test.describe('the limits, on the screen', () => {
 
       // The turn carries on to its end, answered from the same screen.
       await card.getByRole('button', { name: 'Allow once' }).click();
-      await expect(page.getByText(/^This session has cost .+ over 1 turn\(s\)$/)).toBeVisible();
+      await expect(turnsEnded(page, 2)).toBeVisible();
 
       // And the person saw nothing: not one socket more across the expiry, nothing to reconnect,
       // nothing to sign in to, nothing refused.

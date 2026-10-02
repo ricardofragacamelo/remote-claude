@@ -20,7 +20,14 @@ import type {
 import type { Scheduler } from '@application/shared';
 import type { Clock } from '@domain/shared';
 import { ClaudeTimeoutError, ClaudeUnavailableError } from '@domain/session';
-import type { PermissionMode, SessionCloseReason, SlashCommand } from '@domain/session';
+import type {
+  ContextUse,
+  InstallationModel,
+  McpServer,
+  PermissionMode,
+  SessionCloseReason,
+  SlashCommand,
+} from '@domain/session';
 import type { Logger } from '@shared/logging/logger';
 import { currentTraceId, runWithTrace } from '@shared/logging/trace-context';
 import { withinDeadline } from './deadline';
@@ -29,6 +36,7 @@ import { SessionInputQueue } from './input-queue';
 import type { QueryFactory } from './query.factory';
 import { claudeEnvironment } from './claude-environment';
 import { markedEnvironment } from './process-marker';
+import { toContextUse, toInstallationModel, toMcpServer } from './installation-mapping';
 import { buildSdkOptions } from './sdk-options.factory';
 import type { SessionLimits } from './sdk-options.factory';
 import { SdkMessageMapper } from './sdk-message.mapper';
@@ -153,6 +161,8 @@ export class SessionRunner implements ClaudeSessionHandle {
         claudeSessionId: this.start.conversation.claudeSessionId.value,
         resumedFrom: this.start.conversation.resumedFrom?.value ?? null,
       },
+      effort: this.start.effort ?? null,
+      forkAt: this.start.forkAt ?? null,
       limits: this.deps.limits,
       abortController: this.abort,
       // The machine's environment without the backend's configuration, and the mark on top.
@@ -282,6 +292,49 @@ export class SessionRunner implements ClaudeSessionHandle {
    * `.claude/` brings commands of its own — and on the settings it was opened with.
    */
   async supportedCommands(): Promise<readonly SlashCommand[]> {
+    const listed = await this.control('list its slash commands', 'claude.commands', (query) =>
+      query.supportedCommands(),
+    );
+    return listed.map(toSlashCommand);
+  }
+
+  /** `supportedModels()`, under the same deadline — the selector of the panel (plan 08, B-36). */
+  async supportedModels(): Promise<readonly InstallationModel[]> {
+    const models = await this.control('list its models', 'claude.models', (query) =>
+      query.supportedModels(),
+    );
+    return models.map(toInstallationModel);
+  }
+
+  /** `getContextUsage()`, the summary that asks the model nothing (B-37). */
+  async contextUse(): Promise<ContextUse> {
+    return toContextUse(
+      await this.control('measure its context', 'claude.context', (query) =>
+        query.getContextUsage({ detail: 'summary' }),
+      ),
+    );
+  }
+
+  /** `mcpServerStatus()`, reduced — never the configuration nor the raw error (B-38). */
+  async mcpServers(): Promise<readonly McpServer[]> {
+    const servers = await this.control('list its MCP servers', 'claude.mcp', (query) =>
+      query.mcpServerStatus(),
+    );
+    return servers.map(toMcpServer);
+  }
+
+  /**
+   * A control request of this session's query — it says nothing to the model and costs no quota —
+   * under a deadline, logged with how long it took, and failing in our own terms.
+   *
+   * @throws {ClaudeUnavailableError} the CLI failed to answer, or the session is over
+   * @throws {ClaudeTimeoutError} the CLI did not answer in time
+   */
+  private async control<T>(
+    what: string,
+    op: string,
+    ask: (query: Query) => Promise<T>,
+  ): Promise<T> {
     const sessionId = this.start.sessionId.value;
     const query = this.query;
     const startedAt = Date.now();
@@ -291,40 +344,32 @@ export class SessionRunner implements ClaudeSessionHandle {
     }
 
     try {
-      const listed = await withinDeadline(
+      const answer = await withinDeadline(
         this.deps.scheduler,
         COMMANDS_TIMEOUT_MS,
-        query.supportedCommands(),
-        () => new ClaudeTimeoutError(sessionId, 'list its slash commands', COMMANDS_TIMEOUT_MS),
+        ask(query),
+        () => new ClaudeTimeoutError(sessionId, what, COMMANDS_TIMEOUT_MS),
       );
 
       this.deps.logger.debug(
         {
-          op: 'claude.commands',
+          op,
           layer: 'adapter',
           sessionId,
-          count: listed.length,
+          count: Array.isArray(answer) ? answer.length : undefined,
           cliVersion: this.cliVersion,
           durationMs: Date.now() - startedAt,
         },
-        'slash commands listed',
+        `the cli answered: ${what}`,
       );
 
-      return listed.map(toSlashCommand);
+      return answer;
     } catch (error) {
       const timedOut = error instanceof ClaudeTimeoutError;
 
       this.deps.logger.warn(
-        {
-          op: 'claude.commands',
-          layer: 'adapter',
-          sessionId,
-          durationMs: Date.now() - startedAt,
-          err: error,
-        },
-        timedOut
-          ? 'the cli did not list its commands in time'
-          : 'the cli failed to list its commands',
+        { op, layer: 'adapter', sessionId, durationMs: Date.now() - startedAt, err: error },
+        timedOut ? `the cli did not ${what} in time` : `the cli failed to ${what}`,
       );
 
       throw timedOut ? error : new ClaudeUnavailableError(sessionId);
@@ -398,6 +443,16 @@ export class SessionRunner implements ClaudeSessionHandle {
     }
 
     this.noteVersion(message);
+
+    if (isForkRefusal(message)) {
+      // The point an edit-and-resend forks from was refused, and it would be refused again: said
+      // once, and the session ends with its stream (D-19).
+      this.deps.logger.warn(
+        { op: 'claude.session.lifecycle', layer: 'adapter', sessionId, phase: 'forkRejected' },
+        'the cli refused the point of the fork',
+      );
+      this.start.onForkRejected?.();
+    }
 
     for (const event of mapped.events) {
       this.start.onEvent(event);
@@ -649,6 +704,18 @@ export class SessionRunner implements ClaudeSessionHandle {
 
     this.start.onClosed(reason);
   }
+}
+
+/** How the CLI words the refusal of a fork's point (`resumeDropsTurn`), at the start of an error. */
+const FORK_REFUSAL = 'Resume rejected by --resume-drops-turn:';
+
+/** Whether a message is the CLI refusing the point a fork starts from. */
+function isForkRefusal(message: SDKMessage): boolean {
+  return (
+    message.type === 'result' &&
+    message.subtype === 'error_during_execution' &&
+    message.errors.some((error) => error.startsWith(FORK_REFUSAL))
+  );
 }
 
 /** A command as the SDK describes it → ours. An absent list of aliases is an empty one. */

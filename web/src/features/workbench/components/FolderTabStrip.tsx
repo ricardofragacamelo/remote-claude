@@ -11,8 +11,10 @@ import {
   ContextMenuTrigger,
 } from '@/shared/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
+import { useRegistry } from '@/shared/hooks/useRegistry';
 import { cn } from '@/shared/lib/utils';
 import type { FolderTabs } from '../hooks/useFolderTabs';
+import { folderTabBadges } from '../store/registries';
 import { tabActionsOf } from '../hooks/useTabActions';
 import type { FolderTab } from '../types/workbench';
 
@@ -133,6 +135,7 @@ function FolderTabItem({
               >
                 <Icon className="size-3.5 shrink-0" aria-hidden />
                 <span className="truncate">{tab.name}</span>
+                <TabBadges folder={tab.path} />
                 {unavailable && (
                   <span className="sr-only">{t(`workbench.tabState.${tab.state}`)}</span>
                 )}
@@ -163,5 +166,18 @@ function FolderTabItem({
         }}
       />
     </li>
+  );
+}
+
+/** What the features say on a folder tab — a question of Claude waiting there, for one. */
+function TabBadges({ folder }: { readonly folder: string }): React.JSX.Element {
+  const badges = useRegistry(folderTabBadges);
+
+  return (
+    <>
+      {badges.map((entry) => (
+        <entry.component key={entry.id} folder={folder} />
+      ))}
+    </>
   );
 }

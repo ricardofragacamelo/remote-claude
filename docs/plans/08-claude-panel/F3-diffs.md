@@ -34,7 +34,7 @@ trilha antes do disco ([backend/04](../../architecture/backend/04-claude-integra
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-25 — `GET /sessions/:sessionId/tools/:toolUseId/diff` 🔲
+### B-25 — `GET /sessions/:sessionId/tools/:toolUseId/diff` ✅
 
 Para Edit, MultiEdit e Write de uma sessão viva do chamador:
 
@@ -51,7 +51,7 @@ com o motivo) ou `notRestorable` (acima do teto do snapshot). Recusas: `TOOL_USE
 lido pelo mesmo adaptador de disco do desfazer (`NodeUndoDisk`), que já recusa link. Log com caminho e
 tamanhos, nunca conteúdo.
 
-### B-26 — `GET /sessions/:sessionId/changes` e o arquivo da alteração 🔲
+### B-26 — `GET /sessions/:sessionId/changes` e o arquivo da alteração ✅
 
 A lista de arquivos que a sessão viva — e as sessões anteriores da **mesma** conversa, continuada
 in-place — criou, modificou ou apagou, com `+`/`−` e `modifiedOutside` (o disco não tem mais o hash que
@@ -64,13 +64,13 @@ um arquivo inteiro, antes ou depois do `rename` atômico.
 Sessão encerrada não tem alterações por aqui — a mesma política do desfazer (ver "Não entra" no
 [README](README.md#não-entra)).
 
-### B-27 — Diff inline no chat e aba de diff no editor 🔲
+### B-27 — Diff inline no chat e aba de diff no editor ✅
 
 O card de Edit/Write/MultiEdit mostra o diff inline (pela B-25), recolhido acima de *n* linhas. "Abrir
 diff" abre a **aba de diff** do editor do plano 07, na mesma aba de pasta — abrir de novo foca a mesma
 aba. Falha ao carregar mostra o erro traduzido no card e deixa o resto da conversa.
 
-### B-28 — A view "Alterações" da sessão, com aceitar 🔲
+### B-28 — A view "Alterações" da sessão, com aceitar ✅
 
 Uma view por sessão (no painel e acessível da status bar e da palette): arquivos com ícone de
 criado/modificado/apagado, `+`/`−`, e `modifiedOutside` com aviso de que rejeitar vai preservar o
@@ -81,7 +81,7 @@ arquivo. Clicar abre o diff contra antes da sessão na aba de diff. Atualiza a c
 e a recarregar (estado da aba de pasta), nunca escreve nada. Aceitar tudo; filtrar pendentes e
 revisados. O desfazer por turno do plano 04 (`UndoPanel`) continua ali, ao lado.
 
-### B-29 — O card de permissão mostra o diff antes de aprovar 🔲
+### B-29 — O card de permissão mostra o diff antes de aprovar ✅
 
 Para Edit/MultiEdit/Write pendentes, o card calcula a prévia **no cliente**: o input aplicado ao disco
 **agora**, lido pela API de arquivos do plano 07 — sem mudar o `permission.requested` nem o app (D-03).
@@ -90,7 +90,7 @@ Arquivo grande ou binário → prévia indisponível com o motivo, e o input exa
 regra da tela de permissão. A prévia diz contra que momento foi calculada e é relida ao ganhar foco
 (R-06). Em modo "aceitar edições" não há card — e o seletor de modo avisa isso (B-36).
 
-### B-30 — Rejeitar um arquivo 🔲
+### B-30 — Rejeitar um arquivo ✅
 
 `session.rewindFiles { sessionId, promptId, paths }` (D-08): o `promptId` é o do primeiro turno da
 sessão que tocou o caminho, e `paths` restringe o alcance. É o mesmo cálculo do desfazer: igual ao que
@@ -99,7 +99,7 @@ indisponível → nada tocado (`INTERNAL_ERROR`); turno em execução → `SESSI
 sessão não tocou → `INVALID_INPUT`. Rejeitar duas vezes devolve `unchanged`. O campo `paths` e o
 comando da B-31 já estão no contrato desde a [B-02](F0-contract.md), nas três pontas.
 
-### B-31 — Rejeitar um trecho, e desfazer a rejeição 🔲
+### B-31 — Rejeitar um trecho, e desfazer a rejeição ✅
 
 `session.rejectChange { sessionId, path, hunkId, revision }` (D-08). Só quando o disco ainda tem o
 hash que a sessão deixou — senão o arquivo é `modifiedOutside` e só se rejeita inteiro, preservando. A

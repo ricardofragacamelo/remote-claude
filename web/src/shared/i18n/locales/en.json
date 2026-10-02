@@ -77,7 +77,9 @@
       "queuedPromptNotFound": "That prompt is no longer in the queue.",
       "queuedPromptStarted": "That prompt has already started. Interrupt the turn to stop it.",
       "forkPointUnknown": "That message is not a prompt of this conversation. Reload the conversation and try again.",
-      "effortUnsupported": "{{model}} does not take the effort level {{level}}."
+      "effortUnsupported": "{{model}} does not take the effort level {{level}}.",
+      "changeNotFound": "{{path}} is not among the files this session changed, or there is no rejection of it left to undo.",
+      "rewindPathUnknown": "{{path}} is not a file this session changed, so it cannot be rejected."
     },
     "status": {
       "starting": "Starting",
@@ -104,12 +106,6 @@
       "auditUnavailable": "the audit trail could not be written",
       "shutdown": "the backend shut down",
       "idleTimeout": "it sat idle too long — resume it from the history"
-    },
-    "starter": {
-      "title": "Start a session",
-      "description": "Claude runs on this machine, in the folder you choose above.",
-      "action": "Start session",
-      "pending": "Starting…"
     },
     "screen": {
       "title": "Session",
@@ -277,6 +273,13 @@
     "files": {
       "deletedOne": "{{name}} was deleted. It is kept in the local history.",
       "deletedMany": "{{count}} entries were deleted. They are kept in the local history."
+    },
+    "changes": {
+      "rejectedFile": "{{name}} went back to how it was before the session.",
+      "rejectedHunk": "A change to {{name}} went back to how it was before the session."
+    },
+    "permission": {
+      "waiting": "Claude is waiting for you in {{folder}}."
     }
   },
   "permission": {
@@ -355,6 +358,16 @@
     "planMode": {
       "default": "asking before each edit",
       "acceptEdits": "accepting edits without asking"
+    },
+    "preview": {
+      "ambiguous": "Edit {{edit}} names text that appears more than once in the file now: Claude's edit will be refused unless it says which.",
+      "at": "Preview against the file as it was at {{when}}. It is read again when this window gets the focus back.",
+      "label": "What this change would do to the file",
+      "loading": "Reading the file to preview the change…",
+      "noMatch": "Edit {{edit}} names text that is not in the file now: the edit will not match, and Claude will be told so.",
+      "outside": "The file is outside the folder of this tab, so there is no preview. The exact input is above.",
+      "unavailable": "No preview: {{reason}} The exact input is above.",
+      "unchanged": "The file already holds exactly this: nothing would change."
     }
   },
   "audit": {
@@ -701,8 +714,9 @@
     },
     "claude": {
       "label": "Claude",
-      "newSession": "Start a new session in this folder",
-      "backToStart": "Back to a new conversation"
+      "backToStart": "Back to a new conversation",
+      "showChanges": "What the session changed",
+      "showChat": "The conversation"
     },
     "mobile": {
       "label": "Views of this folder",
@@ -713,7 +727,8 @@
     },
     "layout": {
       "sideBar": "Show or hide the side bar",
-      "panel": "Show or hide the panel"
+      "panel": "Show or hide the panel",
+      "secondary": "Show or hide Claude"
     },
     "tabs": {
       "label": "Open folders",
@@ -820,7 +835,8 @@
       "previousFolderTab": "Previous folder tab",
       "goToFolderTab": "Folder tab {{place}}",
       "toggleSideBar": "Show or hide the side bar",
-      "togglePanel": "Show or hide the panel"
+      "togglePanel": "Show or hide the panel",
+      "toggleSecondarySideBar": "View: Show or hide Claude"
     },
     "notifications": {
       "show": "Show notifications",
@@ -874,6 +890,16 @@
       "continueSelected": "Claude sessions: continue the selected conversation here",
       "copySelectedId": "Claude sessions: copy the id of the selected conversation",
       "endSelected": "Claude sessions: end the selected session"
+    },
+    "session": {
+      "showChanges": "Claude: Show the changes of the session"
+    },
+    "claude": {
+      "newConversation": "Claude: New conversation",
+      "focusComposer": "Claude: Focus the prompt",
+      "interrupt": "Claude: Interrupt the turn",
+      "nextConversation": "Claude: Next conversation",
+      "previousConversation": "Claude: Previous conversation"
     }
   },
   "palette": {
@@ -1784,7 +1810,9 @@
     },
     "message": {
       "copy": "Copy the message",
-      "copied": "Message copied"
+      "copied": "Message copied",
+      "edit": "Edit and send again",
+      "forkFrom": "Fork from here — send it again, unchanged, in a new conversation"
     },
     "search": {
       "label": "Search the conversation",
@@ -1799,7 +1827,9 @@
       "thinking": "Claude is thinking…",
       "running": "Claude is running a tool…",
       "waitingPermission": "Claude is waiting for you — answer the question",
-      "cost": "This session has cost {{cost}} since it opened, over {{turns}} turn(s)"
+      "cost": "This session has cost {{cost}} since it opened, over {{turns}} turn(s)",
+      "item": "Claude: {{status}} · {{model}} · {{cost}} — open the panel",
+      "short": "{{status}} · {{cost}}"
     },
     "tasks": {
       "title": "Tasks",
@@ -1812,6 +1842,187 @@
       "pending": "Pending",
       "inProgress": "In progress",
       "completed": "Completed"
+    },
+    "changeKind": {
+      "created": "Created",
+      "deleted": "Deleted",
+      "modified": "Modified"
+    },
+    "changes": {
+      "accept": "Accept — mark as reviewed",
+      "acceptAll": "Accept all",
+      "counts": "+{{added}} −{{removed}}",
+      "emptyDescription": "When Claude creates, edits or deletes a file in this session, it is listed here, to review, accept or reject.",
+      "emptyTitle": "No changes yet",
+      "filteredDescription": "No file of this session matches the filter.",
+      "filteredTitle": "Nothing here",
+      "hideHunks": "Hide the changes of {{path}}",
+      "hunksLoading": "Loading the changes of the file…",
+      "keep": "Keep the changes",
+      "listLabel": "Files the session changed",
+      "loading": "Loading what the session changed…",
+      "modifiedOutside": "Changed after Claude did. Rejecting it keeps it exactly as it is.",
+      "noHunks": "The file is back to how it was before the session.",
+      "openDiff": "Open the diff in the editor",
+      "openDiffOf": "{{path}} ({{kind}}) — open the diff in the editor",
+      "reject": "Reject — put the file back as it was before the session",
+      "rejectAll": "Reject all…",
+      "rejectAllConfirm": "Reject all",
+      "rejectAllDescription": "Every file below goes back to how it was before the session. A file changed by hand after Claude is kept as it is.",
+      "rejectAllTitle": "Reject the changes to {{count}} file(s)?",
+      "rejectHunk": "Reject this change",
+      "reviewed": "Reviewed",
+      "showAll": "Show all files",
+      "showHunks": "Show the changes of {{path}}",
+      "status": "{{pending}} to review",
+      "statusLabel": "Changes of the session: {{pending}} of {{count}} file(s) to review. Open them.",
+      "summary": "{{pending}} of {{count}} file(s) to review",
+      "title": "Changes",
+      "unaccept": "Mark as not reviewed",
+      "undoReject": "Undo"
+    },
+    "changesFilter": {
+      "all": "All",
+      "label": "Which files to show",
+      "pending": "To review",
+      "reviewed": "Reviewed"
+    },
+    "diff": {
+      "after": "{{name}} as the tool left it",
+      "before": "{{name}} before the tool",
+      "beforeSession": "{{name}} before the session",
+      "label": "Changes to {{name}}",
+      "loading": "Loading the diff…",
+      "now": "{{name}} now",
+      "open": "Open diff",
+      "sideUnknown": "This side of the diff is not known any more. Open it again from the conversation."
+    },
+    "diffReason": {
+      "changedSince": "The file changed since this tool ran, so only what the tool replaced is shown.",
+      "laterTouch": "An earlier tool of the same turn changed this file first, so only what this one replaced is shown.",
+      "laterWrite": "A later tool of the session changed this file again, so only what this one replaced is shown.",
+      "noSnapshot": "Nothing was kept of the file before this tool, so only what it replaced is shown.",
+      "tooLarge": "The file was too large to keep before this tool, so only what it replaced is shown.",
+      "unknown": "A side of this diff is not known.",
+      "unreadable": "The file could not be read before this tool, so only what it replaced is shown."
+    },
+    "badge": {
+      "announce": "Claude is waiting for you in {{folder}}.",
+      "label": "{{count}} question(s) waiting for you",
+      "open": "Show me"
+    },
+    "browserNotice": {
+      "denied": "The browser refused notifications for this page. Allow them again in the site settings of the browser (the icon beside the address); the badges go on telling you meanwhile.",
+      "turnOff": "Stop notifying me in the browser",
+      "turnOn": "Notify me in the browser when Claude finishes or asks something",
+      "permission": "Claude is waiting for you in {{folder}}",
+      "turn": "Claude finished a turn in {{folder}}"
+    },
+    "context": {
+      "compact": "Compact the conversation (/compact)",
+      "label": "Context window {{percentage}}% used",
+      "near": "The conversation is near the limit of its context. Compacting it keeps it going.",
+      "percentage": "{{percentage}}%",
+      "tokens": "{{tokens}} tokens",
+      "unavailable": "The use of the context could not be read.",
+      "window": "{{total}} of {{max}} tokens",
+      "systemPrompt": "System prompt",
+      "systemTools": "System tools",
+      "mcpTools": "MCP tools",
+      "messages": "Messages",
+      "memoryFiles": "Memory files",
+      "skills": "Skills",
+      "freeSpace": "Free space",
+      "buffer": "Reserved for compaction"
+    },
+    "draft": {
+      "choices": "How the conversation starts",
+      "commands": "Type / for the commands and skills of this installation.",
+      "defaultModel": "The models of this installation appear once a session of this folder has run; until then, the installation's default is used.",
+      "description": "Nothing runs until you send the first prompt: then a session of Claude opens in this folder, with what you chose below. {{shortcut}} brings you back to this box.",
+      "drag": "Drag a file from the explorer or the editor into the box to talk about it.",
+      "mention": "Type @ to point Claude at a file or a folder.",
+      "starting": "Opening the session…",
+      "title": "A new conversation"
+    },
+    "edit": {
+      "cancel": "Stop editing",
+      "explain": "You are editing a prompt: sending it starts a new conversation from before it. The original conversation stays as it was.",
+      "noUndo": "No file changed in or after that turn can be put back from here.",
+      "resumeInstead": "Resume the conversation instead",
+      "send": "Send again",
+      "undoFiles": "Also put the files back the way they were before that turn"
+    },
+    "effort": {
+      "default": "Default effort",
+      "label": "Effort",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "xhigh": "Extra high",
+      "max": "Maximum"
+    },
+    "export": {
+      "compacted": "The conversation was compacted here.",
+      "failed": "The conversation could not be exported: {{reason}} Nothing was saved.",
+      "open": "Export the conversation as Markdown",
+      "output": "Output",
+      "outputsWarning": "Outputs can carry the contents of files and secrets. They are off unless you tick this.",
+      "reading": "Reading the conversation… {{pages}} page(s)",
+      "save": "Save as Markdown",
+      "thinking": "Thinking",
+      "title": "Conversation {{conversationId}}",
+      "withOutputs": "Include the outputs of the tools"
+    },
+    "header": {
+      "label": "How this conversation runs"
+    },
+    "mcp": {
+      "count": "MCP {{fine}}/{{count}}",
+      "line": "{{status}} · {{tools}}",
+      "summary": "{{fine}} of {{count}} MCP server(s) connected",
+      "tools": "{{count}} tool(s)",
+      "unavailable": "MCP status unavailable",
+      "connected": "Connected",
+      "failed": "Failed",
+      "needsAuth": "Needs sign-in",
+      "pending": "Connecting",
+      "disabled": "Turned off"
+    },
+    "mode": {
+      "acceptEditsWarning": "Claude will edit and write files without asking you — and without the preview of the change.",
+      "label": "Mode",
+      "default": "Ask me",
+      "defaultDescription": "Claude asks before every tool that needs your word.",
+      "acceptEdits": "Accept edits",
+      "acceptEditsDescription": "Claude edits and writes files without asking; it still asks before anything else.",
+      "plan": "Plan",
+      "planDescription": "Claude plans without changing anything, and asks you to approve the plan."
+    },
+    "model": {
+      "default": "Installation default",
+      "label": "Model"
+    },
+    "queue": {
+      "cancel": "Take prompt {{position}} out of the queue",
+      "description": "These run one after the other, as their own turns, when the turn running ends.",
+      "position": "#{{position}}",
+      "title": "Waiting prompts",
+      "fromWeb": "from a browser",
+      "fromMobile": "from the phone",
+      "fromOther": "from another client"
+    },
+    "tabs": {
+      "close": "Close the tab",
+      "closeKeepsSession": "Close the tab — the session keeps running",
+      "closeTab": "Close the tab",
+      "label": "Conversations of this folder",
+      "moveLeft": "Move left",
+      "moveRight": "Move right",
+      "new": "Open a new conversation",
+      "session": "Conversation",
+      "draft": "New conversation",
+      "history": "From the history"
     }
   },
   "sessionsGroup": {
@@ -1834,6 +2045,39 @@
       "emptyDescription": "Start one in the panel beside the editor: it shows up here, and so do the ones begun in the editor or a terminal.",
       "loadMore": "Load more",
       "loadingMore": "Loading…"
+    }
+  },
+  "diff": {
+    "hunks": {
+      "showAll": "Show all {{count}} lines"
+    },
+    "line": {
+      "added": "Added: ",
+      "removed": "Removed: "
+    }
+  },
+  "claudePanel": {
+    "help": {
+      "open": "Help about the panel of Claude",
+      "what": "Each tab of the panel is a conversation of this folder: a draft that becomes a session with its first prompt, a session that is running, or a conversation of the history you are reading. Closing a tab never ends its session — it goes on in the backend, and the Sessions view lists it.",
+      "states": "While it loads, a placeholder holds its place; what fails says why, with the way to try again; an empty conversation teaches how to start one.",
+      "notRecorded": "The audit trail keeps every tool Claude ran and its exact input. It never keeps what a file says nor the messages of the conversation — those stay in Claude's own store, on this machine.",
+      "modesHeading": "The modes",
+      "modes": "Default asks you before every tool that needs your word. Accept edits stops asking before Claude edits or writes a file — and the preview of the change on the card is gone with it. Plan has Claude plan without changing anything, and asks you to approve the plan. Skipping every question is never offered.",
+      "queueHeading": "The queue",
+      "queue": "A prompt sent while Claude works waits above the prompt box, in the order it arrived from any of your devices, and runs as a turn of its own when the turn ends. Until then, any device can take it out.",
+      "resendHeading": "Editing and sending again",
+      "resend": "Editing a prompt sends it again in a new conversation that continues from before it; the original stays as it was in the history. The files do not go back on their own: tick the undo of that turn to put them back too.",
+      "reviewHeading": "Accepting and rejecting changes",
+      "review": "Accept only marks a file as reviewed in this tab — nothing is written. Reject puts a file, or one change in it, back the way it was before the session, and offers to undo that. A file you changed after Claude is never overwritten: rejecting it keeps it as it is.",
+      "contextHeading": "The context and /compact",
+      "context": "The meter shows how full the conversation's context window is, by category. Near the limit, compacting summarises the conversation so far — the command of the installation, sent as a prompt — and the conversation marks where it happened.",
+      "noticesHeading": "Questions you might miss",
+      "notices": "A question asked in a folder tab that is not on screen, or with the panel closed, shows as a badge on the tab and on the activity bar, and as a notice with the way to it. With the browser's notifications turned on, a hidden page is told too — the folder and what happened, never the command."
+    },
+    "screen": {
+      "title": "Claude",
+      "purpose": "Talk to Claude about this folder: start conversations, follow and approve what it does, and review what it changed."
     }
   }
 }

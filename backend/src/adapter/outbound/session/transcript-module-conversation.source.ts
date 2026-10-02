@@ -8,7 +8,8 @@ import type {
 } from '@application/session';
 import { TRANSCRIPT_STORE } from '@application/transcript';
 import type { TranscriptStore } from '@application/transcript';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ChainEntry } from '@domain/session';
+import type { ClaudeSessionId, TranscriptMessage } from '@domain/transcript';
 
 /**
  * `session` asking about a conversation it was told to continue.
@@ -35,4 +36,28 @@ export class TranscriptModuleConversationSource implements ResumableConversation
 
     return { id, cwd: session.cwd, openedBy: openers.get(id.value) };
   }
+
+  async chainOf(id: ClaudeSessionId): Promise<readonly ChainEntry[]> {
+    const session = await this.store.find(id);
+
+    return session === null
+      ? []
+      : (await this.store.messages(session)).map((message) => ({
+          id: message.id,
+          isPrompt: isPrompt(message),
+        }));
+  }
+}
+
+/**
+ * Whether a message of the transcript is a prompt somebody typed: a user message of the main
+ * conversation — not a tool's result, which is a user message too, nor one of a subagent.
+ */
+function isPrompt(message: TranscriptMessage): boolean {
+  return message.events.some(
+    (event) =>
+      event.type === 'message.completed' &&
+      event.payload['role'] === 'user' &&
+      event.payload['parentToolUseId'] === undefined,
+  );
 }

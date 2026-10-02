@@ -39,6 +39,7 @@ describe('what a reload gives a tab back — plan 06, S-134', () => {
       state: {
         view: 'search',
         sideBarOpen: true,
+        secondaryOpen: true,
         panelOpen: true,
         mobileView: 'claude',
         sizes: { ...INITIAL_LAYOUT, sideBar: 30 },
@@ -56,12 +57,12 @@ describe('what a reload gives a tab back — plan 06, S-134', () => {
     expect(folderTabStore(A).getState()).toMatchObject({ view: 'sessions', sideBarOpen: false });
   });
 
-  it('writes nothing for what it does not keep — a prompt being typed, a session picked', () => {
+  it('writes nothing for what it does not keep — a session picked, a link refused', () => {
     folderTabStore(A).getState().togglePanel();
     const setItem = vi.spyOn(Storage.prototype, 'setItem');
 
-    folderTabStore(A).getState().setDraft('half a prompt');
     folderTabStore(A).getState().showSession('ses_1');
+    folderTabStore(A).getState().refuseLink();
 
     expect(setItem).not.toHaveBeenCalled();
     setItem.mockRestore();
@@ -131,6 +132,7 @@ describe('what cannot be trusted — plan 06, S-135', () => {
       keptLayoutFrom({
         view: 7,
         sideBarOpen: 'no',
+        secondaryOpen: 'no',
         panelOpen: true,
         mobileView: 'tv',
         sizes: null,
@@ -138,6 +140,7 @@ describe('what cannot be trusted — plan 06, S-135', () => {
     ).toEqual({
       view: 'explorer',
       sideBarOpen: true,
+      secondaryOpen: true,
       panelOpen: true,
       mobileView: 'claude',
       sizes: INITIAL_LAYOUT,

@@ -168,7 +168,12 @@ describe('reading what an undo did', () => {
       preserved: [{ path: '/srv/app/b.ts', reason: 'modifiedOutside' }],
       unchanged: ['/srv/app/c.ts'],
       failed: [],
+      hunkId: null,
     });
+  });
+
+  it('says which hunk went back, when only one did — plan 08, S-138', () => {
+    expect(rewoundOf(event(aRewoundPayload({ hunkId: 'h-1' })))?.hunkId).toBe('h-1');
   });
 
   it('carries what could not be put back — S-44, S-62', () => {
@@ -185,6 +190,7 @@ describe('reading what an undo did', () => {
       preserved: [],
       unchanged: [],
       failed: [],
+      hunkId: null,
     });
   });
 

@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
+import { STATUS_BAR_ITEM } from '@/shared/components/StatusBarButton';
 import {
   EOL_NAMES,
   encodingChoices,
@@ -24,10 +25,6 @@ import { activeView } from '../hooks/views';
 import { LANGUAGES, PLAIN_TEXT, encodingName } from '../lib/languages';
 import type { ChoiceOption } from '../store/choice.store';
 import type { FileDocument } from '../types/editor';
-
-/** The classes of an item of the status bar: 44 px under `md`, the bar's own height above. */
-const ITEM =
-  'flex min-h-touch items-center gap-1 rounded-sm px-1 whitespace-nowrap hover:bg-statusbar-foreground/10 md:min-h-0';
 
 interface ChoiceItemProps {
   /** What the item shows — the value in use. */
@@ -45,7 +42,7 @@ function ChoiceItem({ text, label, groups }: ChoiceItemProps): React.JSX.Element
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <button type="button" aria-label={label} className={ITEM}>
+            <button type="button" aria-label={label} className={STATUS_BAR_ITEM}>
               {text}
             </button>
           </DropdownMenuTrigger>
@@ -166,7 +163,7 @@ export function EditorStatus({ tab }: StatusItemProps): React.JSX.Element | null
           <button
             type="button"
             aria-label={t('editor.status.goToLine', { position })}
-            className={ITEM}
+            className={STATUS_BAR_ITEM}
             onClick={() => {
               activeView(folder)?.goToLine();
             }}

@@ -9,10 +9,40 @@ import type { LineEnding, TextModel, TextPosition } from './code-editor';
 export interface DiffSide {
   /** Relative to the folder, POSIX. */
   readonly path: string;
-  readonly source: 'disk' | 'buffer' | 'history';
+  readonly source: 'disk' | 'buffer' | 'history' | 'provided';
 
   /** For `history`: the version shown, and when it was kept. */
   readonly version?: { readonly entryId: string; readonly at: string };
+
+  /**
+   * For `provided`: a text another feature knows how to read — what a session of Claude changed
+   * (plan 08, B-27) — named by the {@link DiffSource} that reads it and a key only it understands.
+   */
+  readonly provided?: ProvidedSide;
+}
+
+/** A side of a diff that a registered {@link DiffSource} reads. */
+export interface ProvidedSide {
+  /** The id of the source that reads it. */
+  readonly source: string;
+
+  /** What to read, in the source's own terms. */
+  readonly key: string;
+
+  /** What the side is called — a translation key named in full where the side is made. */
+  readonly labelKey: string;
+}
+
+/**
+ * Where a provided side of a diff is read from — registered by the feature that knows the text, so
+ * the editor shows Claude's changes without learning what a session is.
+ */
+export interface DiffSource {
+  readonly id: string;
+  readonly position: number;
+
+  /** The text of a side. @throws an `AppError`, which the tab shows */
+  read(folder: string, key: string): Promise<string>;
 }
 
 export interface OpenFileOptions {

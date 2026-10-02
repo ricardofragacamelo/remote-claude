@@ -19,6 +19,9 @@ export interface FolderTabUiState {
   readonly sideBarOpen: boolean;
   readonly panelOpen: boolean;
 
+  /** Whether the chat with Claude is on screen beside the editor (plan 08, B-32). */
+  readonly secondaryOpen: boolean;
+
   /** Under `md`, the one view on screen — Claude's until somebody picks another. */
   readonly mobileView: MobileView;
 
@@ -41,9 +44,6 @@ export interface FolderTabUiState {
   /** A link named a session that is not a live one of the caller's — the panel says so (B-12). */
   readonly linkRefused: boolean;
 
-  /** What was being written to Claude and not sent yet. */
-  readonly draft: string;
-
   /**
    * Picks a view of the activity bar — and picking the one already open closes the side bar, as the
    * editor people know does (plan 06, S-111).
@@ -54,6 +54,10 @@ export interface FolderTabUiState {
   showView(view: string): void;
   toggleSideBar(): void;
   togglePanel(): void;
+  toggleSecondary(): void;
+
+  /** Puts the chat with Claude on screen — beside the editor, or as the one view under `md`. */
+  showSecondary(): void;
   showMobile(view: MobileView): void;
 
   /** Keeps new sizes — each brought back inside its limits. */
@@ -66,7 +70,6 @@ export interface FolderTabUiState {
 
   /** The session a link named is not the caller's, or not live: the panel says so instead. */
   refuseLink(): void;
-  setDraft(text: string): void;
 }
 
 export type FolderTabStore = StoreApi<FolderTabUiState>;
@@ -76,13 +79,13 @@ function createFolderTabStore(): FolderTabStore {
     view: FIRST_VIEW,
     sideBarOpen: true,
     panelOpen: false,
+    secondaryOpen: true,
     mobileView: 'claude',
     sizes: INITIAL_LAYOUT,
     sessionId: null,
     conversationId: null,
     sessionFromLink: false,
     linkRefused: false,
-    draft: '',
 
     pickView: (view) => {
       set((state) =>
@@ -100,6 +103,12 @@ function createFolderTabStore(): FolderTabStore {
     togglePanel: () => {
       set((state) => ({ panelOpen: !state.panelOpen }));
     },
+    toggleSecondary: () => {
+      set((state) => ({ secondaryOpen: !state.secondaryOpen }));
+    },
+    showSecondary: () => {
+      set({ secondaryOpen: true, mobileView: 'claude' });
+    },
     showMobile: (mobileView) => {
       set({ mobileView });
     },
@@ -112,7 +121,6 @@ function createFolderTabStore(): FolderTabStore {
         conversationId: null,
         sessionFromLink: false,
         linkRefused: false,
-        draft: '',
       });
     },
     showConversation: (conversationId) => {
@@ -124,14 +132,10 @@ function createFolderTabStore(): FolderTabStore {
         conversationId: null,
         sessionFromLink: true,
         linkRefused: false,
-        draft: '',
       });
     },
     refuseLink: () => {
       set({ sessionId: null, sessionFromLink: false, linkRefused: true });
-    },
-    setDraft: (draft) => {
-      set({ draft });
     },
   }));
 }
@@ -139,7 +143,7 @@ function createFolderTabStore(): FolderTabStore {
 /** What a reload gives a tab back of the layout: the view, the parts open, and their sizes. */
 export type KeptLayout = Pick<
   FolderTabUiState,
-  'view' | 'sideBarOpen' | 'panelOpen' | 'mobileView' | 'sizes'
+  'view' | 'sideBarOpen' | 'panelOpen' | 'secondaryOpen' | 'mobileView' | 'sizes'
 >;
 
 function isMobileView(value: unknown): value is MobileView {
@@ -161,6 +165,7 @@ export function keptLayoutFrom(saved: unknown): KeptLayout | undefined {
     view: typeof record['view'] === 'string' ? record['view'] : FIRST_VIEW,
     sideBarOpen: typeof record['sideBarOpen'] === 'boolean' ? record['sideBarOpen'] : true,
     panelOpen: typeof record['panelOpen'] === 'boolean' ? record['panelOpen'] : false,
+    secondaryOpen: typeof record['secondaryOpen'] === 'boolean' ? record['secondaryOpen'] : true,
     mobileView: isMobileView(record['mobileView']) ? record['mobileView'] : 'claude',
     sizes: layoutFrom(record['sizes']),
   };
@@ -175,8 +180,9 @@ const LAYOUT: TabRestorer<KeptLayout> = {
   version: 1,
   parse: keptLayoutFrom,
   capture: (path) => {
-    const { view, sideBarOpen, panelOpen, mobileView, sizes } = folderTabStore(path).getState();
-    return { view, sideBarOpen, panelOpen, mobileView, sizes };
+    const { view, sideBarOpen, panelOpen, secondaryOpen, mobileView, sizes } =
+      folderTabStore(path).getState();
+    return { view, sideBarOpen, panelOpen, secondaryOpen, mobileView, sizes };
   },
   apply: (path, value) => {
     folderTabStore(path).setState(value);

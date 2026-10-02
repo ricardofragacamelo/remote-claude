@@ -1,4 +1,12 @@
-import { ChevronsLeft, ChevronsRight, Hash, PanelBottom, PanelLeft, X } from 'lucide-react';
+import {
+  ChevronsLeft,
+  ChevronsRight,
+  Hash,
+  PanelBottom,
+  PanelLeft,
+  PanelRight,
+  X,
+} from 'lucide-react';
 
 import { useCommands, useKeyContext } from '@/features/commands';
 import type { CommandDeclaration } from '@/features/commands';
@@ -101,6 +109,18 @@ export function useWorkbenchCommands(control: FolderTabs): void {
         layout().togglePanel();
       },
       keys: [{ key: 'Mod+J', context: 'workbench' }],
+    },
+    {
+      // The chat with Claude beside the editor, as the editor people know opens its secondary side
+      // bar (plan 08, B-40). Hidden, it keeps everything: its state is the tab's.
+      id: 'workbench.toggleSecondarySideBar',
+      labelKey: 'command.workbench.toggleSecondarySideBar',
+      category: 'view',
+      icon: PanelRight,
+      run: () => {
+        layout().toggleSecondary();
+      },
+      keys: [{ key: 'Mod+Alt+B', context: 'workbench' }],
     },
   ];
 

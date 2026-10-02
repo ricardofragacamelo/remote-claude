@@ -16,17 +16,52 @@ export const SESSION_COMMANDS = {
   rewindFiles: 'session.rewindFiles',
 } as const;
 
+/** What a draft opens its session with (plan 08, D-07): the model, the mode, the effort chosen. */
+export interface DraftStart {
+  readonly workspacePath: string;
+  readonly model: string | null;
+  readonly permissionMode: string;
+  readonly effort: string | null;
+}
+
 /**
- * Opens a session on a workspace.
+ * Opens the session of a draft, with what was chosen in it — the first prompt goes once it opened.
  *
- * The id is kept because a start can be refused — the machine at its ceiling
- * (`SESSION_LIMIT_REACHED`), a folder no longer allowed — and the refusal names the command it
- * refuses by that id, in `correlationId`. A screen that could not tell would wait for ever.
- *
- * @returns the id of the command frame, or `null` when the socket was not ready and nothing left
+ * @returns the id of the command frame — what its `session.started` and its refusal name — or `null`
  */
-export function startSession(client: WsClient, workspacePath: string): string | null {
-  return client.issue(SESSION_COMMANDS.start, { workspacePath });
+export function startDraft(client: WsClient, draft: DraftStart): string | null {
+  return client.issue(SESSION_COMMANDS.start, {
+    workspacePath: draft.workspacePath,
+    permissionMode: draft.permissionMode,
+    ...(draft.model === null ? {} : { model: draft.model }),
+    ...(draft.effort === null ? {} : { effort: draft.effort }),
+  });
+}
+
+/**
+ * Edit-and-resend (plan 08, D-19): a new conversation that continues `conversationId` up to before
+ * the prompt `messageId` — always a fork, never a truncation.
+ *
+ * @returns the id of the command frame, or `null`
+ */
+export function forkConversation(
+  client: WsClient,
+  workspacePath: string,
+  conversationId: string,
+  messageId: string,
+): string | null {
+  return client.issue(SESSION_COMMANDS.start, {
+    workspacePath,
+    resumeSessionId: conversationId,
+    forkAt: messageId,
+  });
+}
+
+/** The session a `session.started` caused by **this** command opened, or `null` for any other frame. */
+export function startedBy(frame: Envelope, commandId: string): string | null {
+  return frame.type === 'session.started' && frame.correlationId === commandId
+    ? readText(frame.payload ?? {}, 'sessionId')
+    : null;
 }
 
 /**

@@ -102,9 +102,49 @@ export function conversationOf(page: Page): ReturnType<Page['getByRole']> {
     .getByRole('list', { name: 'Conversation' });
 }
 
-/** The button that opens a session, in the chat beside the editor. */
-export function startButton(page: Page): ReturnType<Page['getByRole']> {
-  return page.getByRole('button', { name: 'Start session' });
+/**
+ * The draft of a new conversation, in the chat beside the editor — what a folder tab shows before it
+ * has a session (plan 08, D-07): nothing runs until its first prompt.
+ */
+export function draftOf(page: Page): ReturnType<Page['getByRole']> {
+  return page
+    .getByRole('complementary', { name: 'Claude' })
+    .getByRole('group', { name: 'How the conversation starts' });
+}
+
+/**
+ * The first prompt of a session a test opens: a recorded turn that only answers — no tool, no file,
+ * and a word ("red") no scenario looks for — so what the test does next starts from a session that
+ * ran one quiet turn.
+ */
+export const OPENING_PROMPT = 'say hello [fixture:image-turn]';
+
+/**
+ * Sends the first prompt of the draft — what opens the session (plan 08, D-07). The prompt stays in
+ * the box when the start is refused, so sending again is this same call.
+ */
+export async function sendFirstPrompt(page: Page, prompt: string = OPENING_PROMPT): Promise<void> {
+  const claude = page.getByRole('complementary', { name: 'Claude' });
+
+  await claude.getByLabel('Prompt').fill(prompt);
+  await claude.getByRole('button', { name: 'Send', exact: true }).click();
+}
+
+/** The line that says a session's turns ended — `turns` of them. */
+export function turnsEnded(page: Page, turns: number): ReturnType<Page['getByText']> {
+  return page.getByText(new RegExp(`^This session has cost .+ over ${String(turns)} turn\\(s\\)$`));
+}
+
+/**
+ * Opens a session from the draft and waits for its opening turn to end: a prompt sent next is a
+ * turn of its own, never one queued behind the opening (plan 08, D-14).
+ */
+export async function openFromDraft(page: Page): Promise<string> {
+  await sendFirstPrompt(page);
+  const sessionId = await openedSessionOf(page);
+  await expect(turnsEnded(page, 1)).toBeVisible();
+
+  return sessionId;
 }
 
 /** Where the chat beside the editor names the session it shows — once it shows one. */
@@ -128,8 +168,8 @@ export async function openedSessionOf(page: Page): Promise<string> {
 }
 
 /**
- * Signs in on the workbench of `folder` and starts a session there, the way a person does — and
- * answers the session it opened.
+ * Signs in on the workbench of `folder` and starts a session there, the way a person does — its
+ * first prompt, {@link OPENING_PROMPT} — and answers the session it opened, its opening turn ended.
  *
  * @param webUrl the web to open it on — the main one, unless a scenario needs the limits stack's
  */
@@ -141,9 +181,8 @@ export async function sessionInTab(
 ): Promise<string> {
   await openSignedIn(page, user, workbenchAddress(folder), webUrl);
   await expect(page.getByText('Connected', { exact: true }).first()).toBeVisible();
-  await startButton(page).click();
 
-  return openedSessionOf(page);
+  return openFromDraft(page);
 }
 
 /**

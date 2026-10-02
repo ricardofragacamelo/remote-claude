@@ -25,7 +25,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 05-hardening-operations  ████████████████████ 100%   ✅ concluído
 06-workbench             ████████████████████ 100%   ✅ concluído
 07-explorer-and-editor   ████████████████████ 100%   ✅ concluído
-08-claude-panel          ████████░░░░░░░░░░░░  41%   🔄 em andamento
+08-claude-panel          ███████████████░░░░░  74%   🔄 em andamento
 09-search                ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 10-integrated-terminal   ░░░░░░░░░░░░░░░░░░░░   0%   🔄 em andamento
 11-claude-settings       ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
@@ -53,7 +53,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [05 — Endurecimento e operação](05-hardening-operations/README.md) | 5/5 | 22/22 | 77/77 | 14/14 | ✅ |
 | [06 — Workbench](06-workbench/README.md) | 7/7 | 40/40 | 210/210 | 33/33 | ✅ |
 | [07 — Explorer e editor](07-explorer-and-editor/README.md) | 9/9 | 61/61 | 360/360 | 26/26 | ✅ |
-| [08 — Painel do Claude](08-claude-panel/README.md) | 3/7 | 24/58 | 102/272 | 25/25 | 🔄 |
+| [08 — Painel do Claude](08-claude-panel/README.md) | 5/7 | 43/58 | 196/272 | 25/25 | 🔄 |
 | [09 — Busca](09-search/README.md) | 0/4 | 0/24 | 0/171 | 8/8 | 🔲 |
 | [10 — Terminal integrado](10-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 13/13 | 🔄 |
 | [11 — Configuração do Claude](11-claude-settings/README.md) | 0/5 | 0/47 | 0/213 | 22/22 | 🔲 |
@@ -63,7 +63,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [15 — Dispositivos](15-devices/README.md) | 0/4 | 0/28 | 0/118 | 0/12 | 🔲 |
 | [16 — Logs e diagnóstico](16-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 2/16 | 🔲 |
 | [17 — Distribuição](17-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/8 | 🔲 |
-| **Total** | **55/100** | **328/647** | **1253/2743** | **223/303** | 🔄 |
+| **Total** | **57/100** | **347/647** | **1347/2743** | **223/303** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 

@@ -39,6 +39,36 @@ export type {
   PreservationReason,
   UndoPoint,
 } from './services/rewind-plan';
+export {
+  DIFF_CONTEXT_LINES,
+  MAX_EDIT_DISTANCE,
+  hunksBetween,
+  lineCounts,
+  lineTokens,
+  snippetHunk,
+  withHunkReverted,
+} from './services/line-diff';
+export type { DiffHunk, DiffLine } from './services/line-diff';
+export {
+  DIFFABLE_TOOLS,
+  diffablePathOf,
+  fileChangeOf,
+  firstCheckpoints,
+  isDiffableTool,
+  toolDiffOf,
+} from './services/session-diff';
+export { isAsLeft } from './services/file-state';
+export type {
+  ChangeKind,
+  DiffableTool,
+  DiffAfter,
+  DiffBefore,
+  DiskText,
+  FileChange,
+  SnapshotText,
+  ToolDiff,
+  ToolDiffFacts,
+} from './services/session-diff';
 export { AttachmentNotFoundError } from './errors/attachment-not-found.error';
 export { AttachmentTypeUnsupportedError } from './errors/attachment-type-unsupported.error';
 export { DiffNotApplicableError } from './errors/diff-not-applicable.error';
@@ -47,6 +77,8 @@ export { ForkPointUnknownError } from './errors/fork-point-unknown.error';
 export { QueuedPromptNotFoundError } from './errors/queued-prompt-not-found.error';
 export { QueuedPromptStartedError } from './errors/queued-prompt-started.error';
 export { SessionChangeStaleError } from './errors/session-change-stale.error';
+export { SessionChangeNotFoundError } from './errors/session-change-not-found.error';
+export { RewindPathUnknownError } from './errors/rewind-path-unknown.error';
 export { SessionForkRejectedError } from './errors/session-fork-rejected.error';
 export { ToolUseNotFoundError } from './errors/tool-use-not-found.error';
 export { ClaudeTimeoutError } from './errors/claude-timeout.error';
@@ -61,3 +93,27 @@ export { RewindTargetUnknownError } from './errors/rewind-target-unknown.error';
 export { SessionLockedError } from './errors/session-locked.error';
 export { SessionNotFoundError } from './errors/session-not-found.error';
 export { UnknownCommandError } from './errors/unknown-command.error';
+export {
+  PromptQueue,
+  previewOf,
+  QUEUE_PREVIEW_LENGTH,
+  REMEMBERED_DEPARTURES,
+} from './entities/prompt-queue.entity';
+export type { Cancellation, QueuedPrompt, Submission } from './entities/prompt-queue.entity';
+export {
+  categoryIdOf,
+  EFFORT_LEVELS,
+  forkPointOf,
+  refuseUnsupportedEffort,
+} from './services/installation';
+export type {
+  ChainEntry,
+  ContextCategory,
+  ContextKind,
+  ContextUse,
+  EffortLevel,
+  ForkPoint,
+  InstallationModel,
+  McpServer,
+  McpStatus,
+} from './services/installation';

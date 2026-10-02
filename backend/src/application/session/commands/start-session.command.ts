@@ -1,5 +1,5 @@
 import type { UserId } from '@domain/auth';
-import type { PermissionMode, SessionClient } from '@domain/session';
+import type { EffortLevel, PermissionMode, SessionClient } from '@domain/session';
 
 /**
  * Input of `StartSessionUseCase`.
@@ -20,6 +20,16 @@ export interface StartSessionCommand {
    * history lists it under and what the SDK finds its file by.
    */
   readonly resumeSessionId: string | null;
+
+  /**
+   * The prompt of `resumeSessionId` to send again, edited: the conversation forks from **before** it,
+   * always under a new id (plan 08, D-19) — or `null` (or absent, as before plan 08) for a plain
+   * resume.
+   */
+  readonly forkAt?: string | null;
+
+  /** How hard the model thinks — chosen in the draft, for the life of the session (D-16). */
+  readonly effort?: EffortLevel | null;
 
   readonly userId: UserId;
 

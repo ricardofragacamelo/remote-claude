@@ -56,7 +56,8 @@ describe('the command menu', () => {
       'aria-expanded',
       'false',
     );
-    expect(get).not.toHaveBeenCalled();
+    // The header reads what it shows; the menu of commands is read only once it is opened.
+    expect(get.mock.calls.filter(([path]) => path === PATH)).toEqual([]);
   });
 
   it('lists what the installation offers, suggested on top — S-29', async () => {

@@ -1,4 +1,13 @@
-import type { RestoredFile, UndoDisk, UndoJournal, UndoReach } from '@application/session';
+import { createHash } from 'node:crypto';
+
+import type {
+  FileContent,
+  RestoredFile,
+  UndoDisk,
+  UndoJournal,
+  UndoReach,
+  WrittenFile,
+} from '@application/session';
 import type { FileObservation, SessionFileState, TurnFileCheckpoint } from '@domain/session';
 
 /** The journal the undo reads, in memory: whatever the test put in, filtered as the real one is. */
@@ -50,6 +59,13 @@ function reaches(
 /** A disk of paths → hashes, which records what the undo did to it and can be told to fail. */
 export class FakeUndoDisk implements UndoDisk {
   readonly files = new Map<string, FileObservation>();
+
+  /** The bytes of a path, for a test about contents; a path without them reads as empty. */
+  readonly contents = new Map<string, Uint8Array>();
+
+  /** The bytes of each snapshot, by blob path. */
+  readonly snapshots = new Map<string, Uint8Array>();
+  readonly written: string[] = [];
   readonly restored: string[] = [];
   readonly removed: string[] = [];
   readonly failing = new Set<string>();
@@ -81,6 +97,63 @@ export class FakeUndoDisk implements UndoDisk {
 
     this.removed.push(path);
     this.files.set(path, { kind: 'absent' });
+    this.contents.delete(path);
     return Promise.resolve();
   }
+
+  async read(path: string, maxBytes: number): Promise<FileContent> {
+    await this.held;
+    const observed = this.files.get(path) ?? { kind: 'absent' };
+
+    if (observed.kind !== 'file') {
+      return observed;
+    }
+
+    const bytes = this.contents.get(path) ?? new Uint8Array();
+
+    return bytes.byteLength > maxBytes
+      ? { kind: 'tooLarge', sizeBytes: bytes.byteLength }
+      : { kind: 'file', bytes, hash: observed.hash };
+  }
+
+  snapshotOf(checkpoint: TurnFileCheckpoint): Promise<Uint8Array> {
+    const bytes =
+      checkpoint.blobPath === null ? undefined : this.snapshots.get(checkpoint.blobPath);
+
+    return bytes === undefined
+      ? Promise.reject(new Error(`no snapshot for ${checkpoint.path}`))
+      : Promise.resolve(bytes);
+  }
+
+  write(path: string, content: Uint8Array): Promise<WrittenFile> {
+    if (this.failing.has(path)) {
+      return Promise.reject(new Error('the disk said no'));
+    }
+
+    const hash = hashOf(content);
+    this.written.push(path);
+    this.files.set(path, { kind: 'file', hash });
+    this.contents.set(path, content);
+    return Promise.resolve({
+      mtime: new Date('2026-09-26T12:30:00.000Z'),
+      sizeBytes: content.byteLength,
+      hash,
+    });
+  }
+
+  /** Puts a text at a path, with the hash the real disk would give it. */
+  put(path: string, text: string): string {
+    const bytes = new TextEncoder().encode(text);
+    const hash = hashOf(bytes);
+    this.files.set(path, { kind: 'file', hash });
+    this.contents.set(path, bytes);
+    return hash;
+  }
+}
+
+/** SHA-256 in hex, as the real disk hashes. */
+export function hashOf(content: Uint8Array | string): string {
+  return createHash('sha256')
+    .update(typeof content === 'string' ? new TextEncoder().encode(content) : content)
+    .digest('hex');
 }

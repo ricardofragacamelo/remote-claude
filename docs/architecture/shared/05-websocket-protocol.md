@@ -125,6 +125,7 @@ Regras:
 | `session.setLocale` | `{ locale }` | muda o idioma da connection |
 | `session.rewindFiles` | `{ sessionId, promptId, paths? }` | devolve os arquivos que a sessão escreveu ao estado de **antes** de um turno — com `paths`, só esses (rejeitar um arquivo) — ver [Desfazer arquivos](#desfazer-arquivos) |
 | `session.rejectChange` | `{ sessionId, path, hunkId, revision }` | devolve **um trecho** do que a sessão mudou num arquivo ao estado de antes da sessão — ver [Desfazer arquivos](#desfazer-arquivos) |
+| `session.restoreChange` | `{ sessionId, path }` | desfaz a última rejeição de um arquivo (de um trecho ou do arquivo inteiro), enquanto o arquivo ainda é o que a rejeição deixou — ver [Desfazer arquivos](#desfazer-arquivos) |
 | `workspace.watch` | `{ workspacePath }` | passa a acompanhar as mudanças no disco de uma pasta aberta — ver [A pasta assistida](#a-pasta-assistida--workspace) |
 | `workspace.unwatch` | `{ watchId }` | para de acompanhar; idempotente |
 | `permission.extend` | `{ requestId }` | estende o prazo do pedido pendente. O cliente **não** escolha o número: incremento e teto vêm da configuração do backend |
@@ -161,7 +162,7 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `session.closed` | `{ sessionId, reason }` — `closedByUser`·`completed`·`failed`·`auditUnavailable`·`shutdown`·`idleTimeout` | fim do generator · TTL de ociosa (`idleTimeout`) · shutdown |
 | `diag.pong` | `{ sessionId, pingedAt, pingCount, nonce }` | resposta do `diag.ping` |
 | `permission.extended` | `{ requestId, expiresAt, remainingExtensions }` | derivado do `permission.extend` |
-| `session.rewound` | `{ promptId, reverted[], preserved[], unchanged[], failed[], hunkId? }` | derivado do `session.rewindFiles` e do `session.rejectChange` (com `hunkId`) |
+| `session.rewound` | `{ promptId, reverted[], preserved[], unchanged[], failed[], hunkId? }` | derivado do `session.rewindFiles`, do `session.rejectChange` (com `hunkId`) e do `session.restoreChange` |
 | `session.compacted` | `{ trigger, preTokens? }` — `trigger`: `manual`·`auto` | `system:compact_boundary` |
 | `prompt.queued` | `{ queueId, position, promptedBy, preview }` | a fila do backend |
 | `prompt.dequeued` | `{ queueId, reason }` — `started`·`cancelled` | a fila do backend |
@@ -287,7 +288,11 @@ um prompt entregue ao SDK não se tira mais ([08 · D-14](../../plans/08-claude-
   (`prompt.dequeued` com `reason: cancelled`). O que já começou é `CONFLICT`
   (`session.error.queuedPromptStarted`); o que a fila não tem é `QUEUED_PROMPT_NOT_FOUND`.
 - A ordem é a de chegada; tirar um prompt sobe os de trás uma posição.
-- `preview` é o começo do texto, cortado no backend — o prompt inteiro é do turno, quando ele roda.
+- `preview` é o começo do texto (120 caracteres), cortado no backend — o prompt inteiro é do turno,
+  quando ele roda. `promptedBy` é o **tipo** de cliente que mandou (`web`·`mobile`), nunca quem: a fila é
+  de uma sessão de um dono só.
+- Cancelar de novo o que já saiu por cancelamento é `ack` sem efeito; a sessão que fecha leva a fila
+  junto, sem `prompt.dequeued`.
 
 ---
 
@@ -492,7 +497,23 @@ calculados no backend entre o snapshot de antes da sessão e o disco **agora**
 (`GET /sessions/:sessionId/changes/file`), e só quando o disco ainda tem o que a sessão deixou — senão o
 arquivo é `modifiedOutside` e só se rejeita inteiro, preservando-o. `revision` é o hash do disco no
 cálculo: mudou, `SESSION_CHANGE_STALE` (`409`). O resultado é o mesmo `session.rewound`, com `hunkId`,
-e as mesmas travas (`SESSION_LOCKED`) e a mesma trilha antes do disco.
+e as mesmas travas (`SESSION_LOCKED`) e a mesma trilha antes do disco. O mesmo trecho reenviado com a
+mesma `revision`, já aplicado, responde `unchanged` e não escreve de novo. Rejeitar o último trecho de um
+arquivo que a sessão criou o apaga. A rejeição passa a ser a linha de base da sessão — o arquivo continua
+"como a sessão deixou", e outros trechos dele ainda se rejeitam.
+
+**Desfazer uma rejeição é `session.restoreChange { sessionId, path }`** — o "desfazer em vez de
+confirmar" da [08 · D-08](../../plans/08-claude-panel/decisions.md#d-08--rejeitar-por-arquivo-e-por-trecho).
+A rejeição (de trecho ou de arquivo, pelo `session.rewindFiles` com `paths`) guarda em memória, com a
+sessão viva, o conteúdo que substituiu; desfazer o devolve, byte a byte, enquanto o arquivo ainda tem o
+hash que a rejeição deixou — senão `SESSION_CHANGE_STALE`; sem rejeição a desfazer, `NOT_FOUND`
+(`session.error.changeNotFound`). Mesmas travas, trilha antes do disco (`session.filesRewound` com
+`details.restoredRejection`), e o resultado é um `session.rewound` com o arquivo em `reverted`.
+
+Os caminhos das alterações são **absolutos**, como os do desfazer: é o que o `session.rewindFiles` com
+`paths`, o `session.rejectChange` e o `session.restoreChange` recebem, e o que
+`GET /sessions/:sessionId/changes` devolve. Caminho de `paths` que o ponto não alcança é recusado com
+`INVALID_INPUT` (`session.error.rewindPathUnknown`) — nunca ignorado em silêncio.
 
 Motivos de `preserved`: `modifiedOutside` (alguém alterou depois da sessão), `notRestorable`
 (grande demais ou ilegível para snapshot), `unsafePath` (virou link, deixou de ser arquivo regular,
