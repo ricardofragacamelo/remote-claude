@@ -1,7 +1,13 @@
 import { Files, MessagesSquare, Search } from 'lucide-react';
 
 import { createRegistry } from '@/shared/lib/registry';
-import type { PanelTabEntry, StatusItemEntry, ViewEntry } from '../types/workbench';
+import type {
+  EditorAreaEntry,
+  FolderTabKeeper,
+  PanelTabEntry,
+  StatusItemEntry,
+  ViewEntry,
+} from '../types/workbench';
 
 /**
  * The places of the activity bar, held by plan 06 until the plan that fills each registers it:
@@ -44,3 +50,9 @@ export const panelTabs = createRegistry<PanelTabEntry>('panel tabs');
 
 /** The items of the status bar besides the shell's own. */
 export const statusBarItems = createRegistry<StatusItemEntry>('status bar items');
+
+/** What fills the editor area — the editor of plan 07 registers itself at load. */
+export const editorAreas = createRegistry<EditorAreaEntry>('editor areas');
+
+/** What features keep per folder tab that closing it would lose — asked before a tab closes. */
+export const folderTabKeepers = createRegistry<FolderTabKeeper>('folder tab keepers');

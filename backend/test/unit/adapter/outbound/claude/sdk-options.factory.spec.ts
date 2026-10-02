@@ -25,6 +25,20 @@ describe('buildSdkOptions', () => {
     expect(buildSdkOptions(input()).env).toEqual({
       PATH: '/usr/bin',
       REMOTE_CLAUDE_OWNER: 'remote-claude-backend',
+      CLAUDE_CODE_ENABLE_TODO_TOOLS: '1',
+    });
+  });
+
+  it('turns the task list on for every model, and leaves which tool keeps it to the environment — plan 08, D-25', () => {
+    const env = buildSdkOptions(
+      input({
+        environment: { CLAUDE_CODE_ENABLE_TODO_TOOLS: '0', CLAUDE_CODE_ENABLE_TASKS: '0' },
+      }),
+    ).env;
+
+    expect(env).toMatchObject({
+      CLAUDE_CODE_ENABLE_TODO_TOOLS: '1',
+      CLAUDE_CODE_ENABLE_TASKS: '0',
     });
   });
 
@@ -132,6 +146,13 @@ describe('buildSdkOptions', () => {
       );
 
       expect(options).toMatchObject({ resume: SOURCE, forkSession: true, sessionId: NEW });
+    });
+  });
+
+  it('asks for summarised thinking and the text of subagents — plan 08, D-17 and D-15', () => {
+    expect(buildSdkOptions(input())).toMatchObject({
+      thinking: { type: 'adaptive', display: 'summarized' },
+      forwardSubagentText: true,
     });
   });
 });

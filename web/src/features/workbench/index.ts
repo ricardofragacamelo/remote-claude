@@ -5,9 +5,17 @@ export { useFolderTab } from './hooks/useFolderTab';
 export { useWorkbenchTarget } from './hooks/useWorkbenchTarget';
 export { forgetFolderTabs, tabRestorers } from './store/folder-tab.store';
 export type { TabRestorer } from './store/tab-state';
-export { panelTabs, statusBarItems, workbenchViews } from './store/registries';
+export {
+  editorAreas,
+  folderTabKeepers,
+  panelTabs,
+  statusBarItems,
+  workbenchViews,
+} from './store/registries';
 export type {
+  EditorAreaEntry,
   FolderTab,
+  FolderTabKeeper,
   FolderViewProps,
   MobileView,
   PanelTabEntry,

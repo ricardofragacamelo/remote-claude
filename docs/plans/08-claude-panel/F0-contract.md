@@ -35,7 +35,7 @@ Tudo o que entra é **campo opcional ou tipo novo**: `v` não sobe
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — `session.prompt.attachments`: arquivo, pasta, trecho, anexo enviado e texto de provedor 🔲
+### B-01 — `session.prompt.attachments`: arquivo, pasta, trecho, anexo enviado e texto de provedor ✅
 
 O campo **já existe** no schema (`{ path, mediaType? }`) e hoje ninguém o envia: o backend não o lê
 e o web não o manda (verificado — só os tipos gerados o citam). Ele evolui para uma união por `kind`:
@@ -55,7 +55,7 @@ com `because`; `maxItems` e o teto de `content` também. `kind` ausente continua
 O `text` existe para o `@terminal` do [plano 10](../10-integrated-terminal/README.md), que registra o
 provedor quando o terminal existir: o contrato não depende do plano 10 existir.
 
-### B-02 — Stream e comandos: thinking, subagents, compactação, fila, fork, esforço, rejeitar 🔲
+### B-02 — Stream e comandos: thinking, subagents, compactação, fila, fork, esforço, rejeitar ✅
 
 Campos e tipos novos, cada um com a decisão que o molda:
 
@@ -75,7 +75,7 @@ histórico lido pelo transcript sai das **mesmas** funções do mapper, então t
 aparecem iguais vivos e recarregados ([backend/03](../../architecture/backend/03-modules.md#transcript)).
 Nesta fase só o contrato e os guards; o comportamento é das fases seguintes.
 
-### B-03 — Os endpoints de leitura, documentados 🔲
+### B-03 — Os endpoints de leitura, documentados ✅
 
 Tudo HTTP de leitura, porque é pergunta com resposta
 ([05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#slash-commands)). Entra em
@@ -101,7 +101,7 @@ A D-05, se decidir por subpastas, **atualiza** a regra "nunca `listSessions({})`
 o motivo e a cerca que continua valendo (o `cwd` dentro da pasta aberta). Os endpoints novos entram
 nos limites do [plano 05](../05-hardening-operations/README.md) (nota para ele, não edição).
 
-### B-04 — Códigos novos no catálogo 🔲
+### B-04 — Códigos novos no catálogo ✅
 
 Entram em [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio)
 **antes** do código, com `messageKey` en/pt-BR:
@@ -121,7 +121,7 @@ que já começou), `session.error.forkPointUnknown` e `session.error.effortUnsup
 (`INVALID_INPUT`). Os `FILE_*` são do [plano 07](../07-explorer-and-editor/README.md); se o nome final
 de lá for outro, este plano usa o de lá.
 
-### B-05 — Padrões de UI do painel, escritos antes das telas 🔲
+### B-05 — Padrões de UI do painel, escritos antes das telas ✅
 
 Em [web/03-ui-system](../../architecture/web/03-ui-system.md#stream-de-mensagens), a seção de stream
 de mensagens cresce para o painel: markdown como **conteúdo não confiável** (sem HTML cru, sem imagem
@@ -134,7 +134,7 @@ o estado do painel é **por aba de pasta** (store chaveado pela pasta, nunca glo
 conversa não tem sessão, a lista de sessões é polling com invalidação por evento, e o que a aba
 inativa mantém anexado.
 
-### B-06 — Fixtures gravadas para o fake 🔲
+### B-06 — Fixtures gravadas para o fake ✅
 
 O fake roteirizado **não** é escrito à mão
 ([06-testing-strategy](../../architecture/shared/06-testing-strategy.md#e2e--o-sistema-inteiro-pela-porta-do-usuário)).

@@ -12,11 +12,20 @@
       "type": "string",
       "description": "The SDK's id for this invocation. It is what ties started, progress and completed together."
     },
-    "toolName": { "type": "string" },
-    "input": { "type": "object", "description": "The exact input the tool was called with." },
+    "toolName": {
+      "type": "string"
+    },
+    "input": {
+      "type": "object",
+      "description": "The exact input the tool was called with."
+    },
     "title": {
       "type": "string",
       "description": "A short human label for the invocation, already derived by the backend."
+    },
+    "parentToolUseId": {
+      "type": "string",
+      "description": "Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation."
     }
   }
 }

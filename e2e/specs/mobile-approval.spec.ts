@@ -179,6 +179,10 @@ test(`${sameStream.id} — ${sameStream.title}`, async () => {
 
   await web.waitFor((frame) => frame.type === 'turn.completed', 30_000);
   await mobile.waitFor((frame) => frame.type === 'turn.completed', 30_000);
+  // The status that follows the end of the turn may still be on its way to one of the two.
+  await expect
+    .poll(() => timelineOf(mobile, sessionId).length)
+    .toBe(timelineOf(web, sessionId).length);
 
   // The same events, with the same numbers, in the same order — the phone got the first ones by
   // replay and the rest live, and it cannot tell the difference. Neither can anybody reading it.

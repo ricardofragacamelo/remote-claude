@@ -32,9 +32,32 @@ export class InMemoryTranscriptStore implements TranscriptStore {
     return Promise.resolve(this.byDirectory.get(directory) ?? []);
   }
 
+  /** How many times the whole store was listed. */
+  wholeListings = 0;
+
+  listAll(): Promise<readonly TranscriptSession[]> {
+    this.wholeListings += 1;
+    return Promise.resolve([...this.byDirectory.values()].flat());
+  }
+
   find(id: ClaudeSessionId): Promise<TranscriptSession | null> {
     const session = [...this.byDirectory.values()].flat().find((each) => each.id.equals(id));
     return Promise.resolve(session ?? null);
+  }
+
+  private readonly subagentsByTool = new Map<string, readonly TranscriptMessage[]>();
+
+  /** Files the messages of the subagent the tool `toolUseId` of `sessionId` opened. */
+  addSubagent(sessionId: string, toolUseId: string, messages: readonly TranscriptMessage[]): this {
+    this.subagentsByTool.set(`${sessionId}/${toolUseId}`, messages);
+    return this;
+  }
+
+  subagentMessages(
+    session: TranscriptSession,
+    toolUseId: string,
+  ): Promise<readonly TranscriptMessage[] | null> {
+    return Promise.resolve(this.subagentsByTool.get(`${session.id.value}/${toolUseId}`) ?? null);
   }
 
   messages(session: TranscriptSession): Promise<readonly TranscriptMessage[]> {

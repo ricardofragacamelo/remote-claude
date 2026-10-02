@@ -28,6 +28,19 @@ export interface FolderTabUiState {
   /** The session the Claude side bar shows, or `null` for "start one". */
   readonly sessionId: string | null;
 
+  /**
+   * A conversation of the history the side bar shows **read only**, with the way to continue it — or
+   * `null`. Never beside a session: the panel shows one thing, and `showSession` and
+   * `showConversation` each clear the other (plan 08, B-10).
+   */
+  readonly conversationId: string | null;
+
+  /** The session on the panel came from a link, and is still to be found among the caller's. */
+  readonly sessionFromLink: boolean;
+
+  /** A link named a session that is not a live one of the caller's — the panel says so (B-12). */
+  readonly linkRefused: boolean;
+
   /** What was being written to Claude and not sent yet. */
   readonly draft: string;
 
@@ -46,6 +59,13 @@ export interface FolderTabUiState {
   /** Keeps new sizes — each brought back inside its limits. */
   resize(sizes: Partial<WorkbenchLayout>): void;
   showSession(sessionId: string | null): void;
+  showConversation(conversationId: string | null): void;
+
+  /** Puts on the panel a session a link named — to be checked before it is trusted. */
+  openLinkedSession(sessionId: string): void;
+
+  /** The session a link named is not the caller's, or not live: the panel says so instead. */
+  refuseLink(): void;
   setDraft(text: string): void;
 }
 
@@ -59,6 +79,9 @@ function createFolderTabStore(): FolderTabStore {
     mobileView: 'claude',
     sizes: INITIAL_LAYOUT,
     sessionId: null,
+    conversationId: null,
+    sessionFromLink: false,
+    linkRefused: false,
     draft: '',
 
     pickView: (view) => {
@@ -84,7 +107,28 @@ function createFolderTabStore(): FolderTabStore {
       set((state) => ({ sizes: layoutFrom({ ...state.sizes, ...sizes }) }));
     },
     showSession: (sessionId) => {
-      set({ sessionId, draft: '' });
+      set({
+        sessionId,
+        conversationId: null,
+        sessionFromLink: false,
+        linkRefused: false,
+        draft: '',
+      });
+    },
+    showConversation: (conversationId) => {
+      set({ conversationId, sessionId: null, sessionFromLink: false, linkRefused: false });
+    },
+    openLinkedSession: (sessionId) => {
+      set({
+        sessionId,
+        conversationId: null,
+        sessionFromLink: true,
+        linkRefused: false,
+        draft: '',
+      });
+    },
+    refuseLink: () => {
+      set({ sessionId: null, sessionFromLink: false, linkRefused: true });
     },
     setDraft: (draft) => {
       set({ draft });
@@ -173,6 +217,7 @@ export function folderTabStore(path: string): FolderTabStore {
 export function forgetFolderTab(path: string): void {
   forgetTab(path);
   stores.delete(path);
+  letGo(path);
 }
 
 /**
@@ -182,10 +227,22 @@ export function forgetFolderTab(path: string): void {
 export function forgetFolderTabs(): void {
   forgetTabs({ kept: true });
   stores.clear();
+  letGo(null);
 }
 
 /** Lets go of every tab's state in memory and keeps what is saved — what a reload of the page does. */
 export function releaseFolderTabs(): void {
   forgetTabs({ kept: false });
   stores.clear();
+  letGo(null);
+}
+
+/**
+ * Tells every part a tab keeps that its state in memory goes — one folder's, or every one's for
+ * `null` — so a part with a store of its own (the Explorer's, plan 07) does not outlive the tab.
+ */
+function letGo(path: string | null): void {
+  for (const restorer of tabRestorers.entries()) {
+    restorer.forget?.(path);
+  }
 }

@@ -20,7 +20,16 @@ export interface PermissionQueue {
   /** Milliseconds left on each card, recomputed on a tick the hook owns. */
   readonly remainingMs: Readonly<Record<string, number>>;
 
-  answer(request: PermissionRequest, decision: PermissionDecision, scope: PermissionScope): void;
+  /**
+   * @param reason why it was refused, when the person said — "keep planning, and…" (plan 08,
+   *   B-22). A refusal without one carries the screen's own.
+   */
+  answer(
+    request: PermissionRequest,
+    decision: PermissionDecision,
+    scope: PermissionScope,
+    reason?: string,
+  ): void;
   extend(request: PermissionRequest): void;
 }
 
@@ -79,7 +88,12 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
   }, [pending, now, expire]);
 
   const answer = useCallback(
-    (request: PermissionRequest, decision: PermissionDecision, scope: PermissionScope) => {
+    (
+      request: PermissionRequest,
+      decision: PermissionDecision,
+      scope: PermissionScope,
+      reason?: string,
+    ) => {
       if (request.isAnswering) {
         return;
       }
@@ -93,7 +107,7 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
         scope,
         // The contract requires a reason on a refusal: it goes into the trail and back to Claude
         // as a message, which is how the agent learns to propose something else.
-        reason: decision === 'deny' ? REFUSED_HERE : null,
+        reason: decision === 'deny' ? refusalReason(reason) : null,
       });
 
       if (!left) {
@@ -121,3 +135,9 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
 
 /** What a screen with no session reads: an empty queue, attached to nothing. */
 const DETACHED = createPermissionQueueStore();
+
+/** The reason a refusal carries: what the person wrote, or the screen's own when they wrote nothing. */
+function refusalReason(written: string | undefined): string {
+  const said = written?.trim() ?? '';
+  return said === '' ? REFUSED_HERE : said;
+}

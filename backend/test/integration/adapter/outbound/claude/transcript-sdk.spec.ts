@@ -6,7 +6,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { realTranscriptSdk } from '@adapter/outbound/claude/transcript-sdk';
 
 /**
- * The three reads of the **real** Agent SDK, against a store that is ours.
+ * The reads of the **real** Agent SDK, against a store that is ours.
  *
  * `CLAUDE_CONFIG_DIR` points the SDK at an empty directory made for this suite, so nothing of the
  * machine's own history is read — the store of whoever runs the suite holds projects nobody
@@ -42,5 +42,13 @@ describe('the Agent SDK`s reads of the store', () => {
 
   it('answers the messages of an id that names nothing as `[]` — the collision S-56 resolves', async () => {
     await expect(realTranscriptSdk.getSessionMessages(absent)).resolves.toEqual([]);
+  });
+
+  it('lists no subagent of an id that names nothing — plan 08, B-21', async () => {
+    await expect(realTranscriptSdk.listSubagents(absent)).resolves.toEqual([]);
+  });
+
+  it('answers the messages of a subagent nobody ran as `[]`', async () => {
+    await expect(realTranscriptSdk.getSubagentMessages(absent, 'agent-0')).resolves.toEqual([]);
   });
 });

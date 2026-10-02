@@ -74,6 +74,7 @@ function toEvents(message: SDKMessage, mapper: SdkMessageMapper): MappedMessage 
           // The SDK reports elapsed time, not output. Sending the client an empty chunk would be
           // a lie about there being new content; the elapsed reading is what it actually has.
           chunk: `${message.tool_name} · ${String(message.elapsed_time_seconds)}s`,
+          ...parentOf(message.parent_tool_use_id),
         },
       });
 
@@ -110,20 +111,41 @@ function fromSystem(message: Extract<SDKMessage, { type: 'system' }>): MappedMes
       return NOTHING;
 
     case 'compact_boundary':
-      // The conversation was compacted. Nothing was lost for the user, but the session paused to
-      // do it, so it is reported as a status rather than swallowed.
-      return events({ type: 'session.statusChanged', payload: { status: 'thinking' } });
+      // The conversation was compacted: what came before is a summary now. Said on its own, so a
+      // client keeping the turns on screen can mark the point (plan 08, B-02).
+      return events({
+        type: 'session.compacted',
+        payload: {
+          trigger: message.compact_metadata.trigger,
+          preTokens: message.compact_metadata.pre_tokens,
+        },
+      });
 
     case 'api_retry':
       return events({ type: 'session.statusChanged', payload: { status: 'thinking' } });
 
-    case 'status':
-      return NOTHING;
-
     default:
-      return { events: [], unknown: describe(message) };
+      return QUIET_SYSTEM_SUBTYPES.has(message.subtype)
+        ? NOTHING
+        : { events: [], unknown: describe(message) };
   }
 }
+
+/**
+ * Real messages of the SDK — the CLI's own status, a counter of thinking, the lifecycle of a
+ * subagent or a background task — that carry nothing for the timeline the contract does not already
+ * say: the subagent's own messages and its tool are what the client draws. Known, so they cost no
+ * warning (measured in plan 08, discovery §10).
+ */
+const QUIET_SYSTEM_SUBTYPES: ReadonlySet<string> = new Set([
+  'status',
+  'thinking_tokens',
+  'task_started',
+  'task_progress',
+  'task_updated',
+  'task_notification',
+  'background_tasks_changed',
+]);
 
 /**
  * A streaming fragment of the assistant's answer.
@@ -153,17 +175,53 @@ function fromStreamEvent(
     return NOTHING;
   }
 
-  if (event.type !== 'content_block_delta' || event.delta.type !== 'text_delta') {
-    // Thinking deltas, block starts and stops: real events of the SDK that carry no text for the
-    // timeline. Dropping them is a decision, not a gap.
+  const fragment = fragmentOf(event);
+  const messageId = mapper.streamingMessageId;
+
+  if (fragment === null || messageId === null) {
+    // Block starts and stops, signatures, the input of a tool as it is typed: real events of the
+    // SDK that carry nothing for the timeline. Dropping them is a decision, not a gap.
     return NOTHING;
   }
 
-  const messageId = mapper.streamingMessageId;
+  return events({
+    type: 'message.delta',
+    payload: {
+      messageId,
+      delta: fragment.text,
+      // Thinking was dropped here until plan 08 (D-17): it is shown now, folded, and so it travels
+      // as a block of its own kind. Text keeps the shape it always had.
+      ...(fragment.thinking ? { blockType: 'thinking' } : {}),
+      ...parentOf(message.parent_tool_use_id),
+    },
+  });
+}
 
-  return messageId === null
-    ? NOTHING
-    : events({ type: 'message.delta', payload: { messageId, delta: event.delta.text } });
+/** The text a streaming event adds, and whether it is thinking — or `null` for one that adds none. */
+function fragmentOf(
+  event: Extract<SDKMessage, { type: 'stream_event' }>['event'],
+): { readonly text: string; readonly thinking: boolean } | null {
+  if (event.type !== 'content_block_delta') {
+    return null;
+  }
+
+  if (event.delta.type === 'text_delta') {
+    return { text: event.delta.text, thinking: false };
+  }
+
+  return event.delta.type === 'thinking_delta' && event.delta.thinking !== ''
+    ? { text: event.delta.thinking, thinking: true }
+    : null;
+}
+
+/**
+ * The subagent an event belongs to, as the contract carries it — nothing for the main conversation.
+ *
+ * Absent rather than `null`: a field the contract makes optional is left out, and every event of the
+ * main conversation keeps the shape it had before subagents were forwarded (plan 08, D-15).
+ */
+function parentOf(parent: string | null | undefined): { readonly parentToolUseId?: string } {
+  return typeof parent === 'string' && parent !== '' ? { parentToolUseId: parent } : {};
 }
 
 /**
@@ -174,12 +232,32 @@ function fromStreamEvent(
  * block among them also opens a tool.
  */
 function fromAssistant(message: Extract<SDKMessage, { type: 'assistant' }>): MappedMessage {
-  return assistantEvents(message.message.id, message.message.content);
+  return assistantEvents({
+    messageId: message.message.id,
+    content: message.message.content,
+    parent: message.parent_tool_use_id,
+  });
+}
+
+/** A message of the conversation as both readers see it: the live stream, and the transcript. */
+interface ReadMessage {
+  readonly messageId: string;
+  readonly content: unknown;
+
+  /** The tool that opened the subagent it is of — absent on the main conversation. */
+  readonly parent: string | null | undefined;
+
+  /**
+   * The structured result of the tool a `tool_result` answers — live only: the transcript the SDK
+   * reads back has none (measured, plan 08, B-20).
+   */
+  readonly result?: unknown;
 }
 
 /** The events of an assistant message, from its id and its content — live or read back. */
-function assistantEvents(messageId: string, content: unknown): MappedMessage {
+function assistantEvents({ messageId, content, parent }: ReadMessage): MappedMessage {
   const blocks = asArray(content);
+  const subagent = parentOf(parent);
 
   const started = blocks
     .filter((block) => block.type === 'tool_use')
@@ -189,6 +267,7 @@ function assistantEvents(messageId: string, content: unknown): MappedMessage {
         toolUseId: String(block.id ?? ''),
         toolName: String(block.name ?? ''),
         input: isPlainObject(block.input) ? block.input : {},
+        ...subagent,
       },
     }));
 
@@ -199,6 +278,7 @@ function assistantEvents(messageId: string, content: unknown): MappedMessage {
         messageId,
         role: 'assistant',
         content: blocks.map(toContentBlock),
+        ...subagent,
       },
     },
     ...started,
@@ -212,13 +292,19 @@ function assistantEvents(messageId: string, content: unknown): MappedMessage {
  * the client can show what was sent from the other device.
  */
 function fromUser(message: Extract<SDKMessage, { type: 'user' }>): MappedMessage {
-  return userEvents(message.uuid ?? '', message.message.content);
+  return userEvents({
+    messageId: message.uuid ?? '',
+    content: message.message.content,
+    parent: message.parent_tool_use_id,
+    result: message.tool_use_result,
+  });
 }
 
 /** The events of a user message, from its id and its content — live or read back. */
-function userEvents(messageId: string, content: unknown): MappedMessage {
+function userEvents({ messageId, content, parent, result }: ReadMessage): MappedMessage {
   const blocks = asArray(content);
   const results = blocks.filter((block) => block.type === 'tool_result');
+  const subagent = parentOf(parent);
 
   if (results.length === 0) {
     return events({
@@ -227,6 +313,7 @@ function userEvents(messageId: string, content: unknown): MappedMessage {
         messageId,
         role: 'user',
         content: blocks.map(toContentBlock),
+        ...subagent,
       },
     });
   }
@@ -238,9 +325,43 @@ function userEvents(messageId: string, content: unknown): MappedMessage {
         toolUseId: String(block.tool_use_id ?? ''),
         status: block.is_error === true ? 'failed' : 'succeeded',
         summary: summarise(block.content),
+        ...taskOf(results.length === 1 ? result : undefined, block.content),
+        ...subagent,
       },
     })),
   );
+}
+
+/** How the CLI words the result of a `TaskCreate` — the only place the history keeps its id. */
+const TASK_CREATED = /^Task #(\S+) created successfully/;
+
+/**
+ * The task of the list a `TaskCreate` made or a `TaskUpdate` changed, as `{ taskId }` — or nothing,
+ * for every other tool (plan 08, B-20).
+ *
+ * Live, from the structured result: `{ task: { id } }` from a creation, `{ taskId }` from an update.
+ * The transcript the SDK reads back has no structured result, and there the id of a new task is only
+ * in the text of the result — read from the whole of it, never from the cut `summary`. One message
+ * of the CLI carries one result, so a message with several is read by its text only.
+ */
+function taskOf(result: unknown, content: unknown): { readonly taskId?: string } {
+  if (isPlainObject(result)) {
+    const task = result['task'];
+    const id = isPlainObject(task) ? task['id'] : result['taskId'];
+    if (typeof id === 'string') {
+      return { taskId: id };
+    }
+  }
+
+  const created = TASK_CREATED.exec(resultText(content));
+  return created === null ? {} : { taskId: String(created[1]) };
+}
+
+/** The text of a `tool_result`, which is a string or a list of text blocks. */
+function resultText(content: unknown): string {
+  return asArray(content)
+    .map((block) => (typeof block.text === 'string' ? block.text : ''))
+    .join('');
 }
 
 /** The end of a turn, with what it cost. */
@@ -276,13 +397,18 @@ export function historicalEvents(message: SessionMessage): readonly SessionEvent
     case 'assistant':
       // The API's message id, exactly as the live `assistant` message carries it — that is the
       // key the client already accumulated deltas under.
-      return assistantEvents(
-        typeof body['id'] === 'string' ? body['id'] : message.uuid,
-        body['content'],
-      ).events;
+      return assistantEvents({
+        messageId: typeof body['id'] === 'string' ? body['id'] : message.uuid,
+        content: body['content'],
+        parent: message.parent_tool_use_id,
+      }).events;
 
     case 'user':
-      return userEvents(message.uuid, body['content']).events;
+      return userEvents({
+        messageId: message.uuid,
+        content: body['content'],
+        parent: message.parent_tool_use_id,
+      }).events;
 
     default:
       return [];
@@ -306,15 +432,24 @@ function describe(message: unknown): string {
   return subtype === undefined ? type : `${type}:${String(subtype)}`;
 }
 
-/** A content block of our contract: the kind, plus the two fields the contract names. */
+/**
+ * A content block of our contract: the kind, plus the fields the contract names.
+ *
+ * Thinking goes in a field of its own, never in `text`, so a client that joins the text of every
+ * block never shows it as the answer. Its signature never travels: it is the API's, and nothing a
+ * client can read. A thinking the model sent empty — omitted, which is the default display — keeps
+ * its block and no text: it says the model thought, and nothing it thought (plan 08, D-17).
+ */
 function toContentBlock(block: Record<string, unknown>): Record<string, unknown> {
   const type = String(block['type'] ?? 'unknown');
   const text = block['text'];
+  const thinking = block['thinking'];
   const toolUseId = block['id'] ?? block['tool_use_id'];
 
   return {
     type,
     ...(typeof text === 'string' ? { text } : {}),
+    ...(type === 'thinking' && typeof thinking === 'string' && thinking !== '' ? { thinking } : {}),
     ...(typeof toolUseId === 'string' ? { toolUseId } : {}),
   };
 }

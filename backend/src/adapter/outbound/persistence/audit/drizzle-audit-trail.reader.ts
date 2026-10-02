@@ -15,6 +15,7 @@ import type { PersistenceContext } from '@infra/database/persistence-context';
 import { auditEntries } from '@infra/database/schema';
 import { runLogged } from '../query-logging';
 import { toEntity } from './audit-entry.mapper';
+import { keysetPage } from './keyset-page';
 
 /**
  * `audit_entries`, read — by the query of the trail, and by nothing else.
@@ -47,13 +48,11 @@ export class DrizzleAuditTrailReader implements AuditTrailReader {
         .limit(request.limit + 1),
     );
 
-    const kept = rows.slice(0, request.limit);
-    const last = kept.at(-1);
-
-    return {
-      records: kept.map((row) => ({ seq: row.seq, entry: toEntity(row), traceId: row.traceId })),
-      nextCursor: rows.length > request.limit && last !== undefined ? last.seq : null,
-    };
+    return keysetPage(rows, request.limit, (row) => ({
+      seq: row.seq,
+      entry: toEntity(row),
+      traceId: row.traceId,
+    }));
   }
 
   /**

@@ -14,7 +14,8 @@ Voltar para o [índice do backend](README.md).
 | Módulo | Responsabilidade | Não é responsável por |
 |---|---|---|
 | `auth` | Identidade: validação de token OIDC, usuário local, device | Emitir credencial (quem emite é o provedor) · autorizar tool (é `permission`) |
-| `workspace` | Diretórios: allowlist, validação, listagem, metadados de git | Rodar nada dentro deles |
+| `workspace` | Diretórios: allowlist, validação, listagem, metadados de git | Rodar nada dentro deles · ler ou escrever arquivo (é `files`) |
+| `files` | Os arquivos da pasta aberta: árvore, conteúdo com `ETag`, e a escrita da pessoa — salvar, criar, mover, copiar, apagar —, na trilha antes do disco | Decidir a fronteira (pergunta ao `workspace`) · a escrita do Claude (é `session`, sob `canUseTool`) |
 | `session` | Ciclo de vida da sessão do Claude: start, prompt, interrupt, close, streaming | Persistir transcript histórico |
 | `permission` | Requests de permissão, regras persistidas, resolução, timeout | Executar a tool · registrar a trilha (é `audit`) |
 | `transcript` | Histórico: listar sessões, carregar mensagens, retomar | Sessão viva |
@@ -47,10 +48,18 @@ comando arbitrário na máquina do usuário, a trilha precisa sobreviver à falh
      │
      ▼
  workspace ◄──── session ────► permission ────► notification
-                    │              │
-                    ▼              ▼
-                transcript       audit ◄──── (todos escrevem)
+     ▲              │              │
+     │              ▼              ▼
+   files        transcript       audit ◄──── (todos escrevem)
+     ▲                                ▲
+     └─ session.fileStateRecorded     └──── files escreve
+        workspace.allowlistReloaded
+        (barramento, sem import)
 ```
+
+`files` **não tem seta para `session`** nem para `transcript` — a regra `files-never-reaches-session`
+do `dependency-cruiser` a recusa: o que o Claude escreveu chega pelo barramento interno, e a trava
+por caminho que os dois usam vem da plataforma por porta (`PATH_LOCK`).
 
 Regras:
 
@@ -163,6 +172,10 @@ O backend é **Resource Server** OIDC: valida token, nunca emite. Não existe se
   ([06 · D-21](../../plans/06-workbench/decisions.md#d-21--o-teto-de-recentes-e-o-recente-de-uma-aba-aberta)).
   Tirar dos recentes uma pasta com a aba aberta mantém a aba e a tira da lista; fechar a aba de uma
   pasta que já saiu da lista a esquece de vez.
+- **Uma subpasta aberta é uma fronteira mais estreita que a raiz.** Aberta numa aba, ela é o limite
+  de tudo o que o `files` lê e escreve ali: um caminho que sobe acima dela é recusado com `403`,
+  mesmo que caia dentro da mesma raiz da allowlist ([07 · D-11](../../plans/07-explorer-and-editor/decisions.md#d-11--a-raiz-do-explorer-é-a-pasta-aberta)).
+  O `workspace` resolve a pasta; quem aplica a fronteira mais estreita é o `files`.
 - **Erros:** `WORKSPACE_NOT_ALLOWED`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`,
   `WORKSPACE_DIRECTORY_UNREADABLE`, `OPEN_FOLDERS_LIMIT_REACHED`, `FORBIDDEN`, `CONFLICT`
 - **Nota:** esta é a primeira linha de defesa do sistema. A regra é pura, sem I/O, e tem
@@ -194,6 +207,214 @@ caminho.
 de arquivos que torna o pedido impossível. `OPEN_FOLDERS_LIMIT_REACHED` é `409`: conflito com o
 estado atual, que fechar uma aba resolve. Os endpoints novos entram sob os limites HTTP do
 [plano 05](../../plans/05-hardening-operations/README.md) quando ele os estender ao HTTP.
+
+### `files`
+
+O explorer e o editor do [plano 07](../../plans/07-explorer-and-editor/README.md), e o ator novo que
+eles trazem: **a pessoa escrevendo no disco pela web** ([ADR-015](../shared/00-decisions.md#adr-015--o-humano-escreve-no-disco-pela-web)).
+Módulo próprio, e não extensão do `workspace`: conteúdo, versão, escrita atômica, criar, remover e
+observar são linguagem e invariantes próprias, e a primeira linha de defesa continua pequena e pura
+([07 · D-01](../../plans/07-explorer-and-editor/decisions.md#d-01--módulo-novo-ou-extensão-do-workspace)).
+
+- **Valor:** `FilePath` — a pasta aberta (já resolvida pelo `workspace`) e um caminho relativo
+  POSIX; `''` é a própria pasta. Recusa **antes de qualquer I/O** caminho absoluto, NUL e `\`
+  (`400`, todos os motivos em `details[]`) e `..` que escapa (`403`). `Etag` — sha256 dos bytes,
+  forte; `If-Match` compara forte (`W/…` nunca casa), `If-None-Match` compara fraco.
+- **A fronteira no disco, a cada operação:** a pasta passa pelo `ResolveWorkspaceUseCase` a cada
+  pedido (porta `FolderResolver`), nunca em cache; o `realpath` do que se toca — ou da pasta
+  existente mais próxima, para o que ainda não existe — precisa ficar dentro da pasta aberta; o que
+  se abre é aberto com `O_NOFOLLOW` e conferido **no descritor** (`/proc/self/fd/<fd>`), o que pega a
+  troca de um diretório intermediário por symlink entre checar e abrir. Symlink só é seguido quando
+  o alvo fica dentro; laço é `422` `symlinkLoop`. A conferência no descritor é Linux-only; sem `/proc`
+  resta a do `realpath` (gap do [plano 17](../../plans/17-distribution/README.md)).
+- **Leitura:** do **mesmo descritor**, até o teto mais um byte — nunca `stat` e depois leitura;
+  binário por NUL nos primeiros 8 KB; encoding só pelo que é certo (BOM, UTF-8 válido) ou pelo que o
+  cliente pede ("reabrir com encoding"), nunca um palpite; FIFO aberto com `O_NONBLOCK` e recusado.
+- **Escrita atômica:** temporário `.<nome>.rc-<ulid>.tmp` no **mesmo diretório** do alvo real,
+  `fsync`, modo do original preservado, descritor do temporário conferido, versão conferida de novo
+  logo antes do `rename`. Temporário órfão sai na próxima escrita naquele diretório. Arquivo com
+  hard link (`nlink > 1`) é escrito **no lugar**, de uma cópia ao lado, para não quebrar o link em
+  silêncio. O servidor não normaliza fim de linha.
+- **Mover sem sobrescrever:** arquivo por `link` + `unlink` (o `link` falha se o nome existe,
+  atomicamente); pasta por conferência + `rename` sob a trava dos dois caminhos; `EXDEV` é `422`
+  `crossDevice`, nunca cópia + remoção implícita ([07 · D-12](../../plans/07-explorer-and-editor/decisions.md#d-12--mover-sem-sobrescrever)).
+- **A trilha antes do disco** (`FileTrail`): `file.created`, `file.written`, `file.moved`,
+  `file.copied`, `file.deleted` em `audit_events`, com caminho real (sujeito) e relativo (rótulo),
+  tamanhos, hashes, origem e destino, contagem, `sensitive` — nunca conteúdo. Trilha fora → `503`
+  com `Retry-After` e nada no disco; disco que recusa depois → `file.failed` apontando o fato.
+  Leitura fica fora da trilha e dentro do log.
+- **A trava por caminho real** (`PathLock`, da plataforma): o salvar, o criar, o mover, o copiar e o
+  apagar da pessoa e a restauração do desfazer de uma sessão escrevem sob ela, e se serializam.
+- **A origem `claude`:** o hook `PostToolUse` publica `session.fileStateRecorded { path, hash, at }`
+  no barramento, e o `files` guarda as escritas recentes (`ClaudeWrites`) para o watcher rotular a
+  mudança — sem importar `session`.
+- **A pasta assistida** ([07 · F3](../../plans/07-explorer-and-editor/F3-file-watch.md)): porta
+  `FolderWatcher`, adapter sobre `chokidar` ([07 · D-08](../../plans/07-explorer-and-editor/decisions.md#d-08--a-implementação-do-watcher),
+  escolhido pela medida). `.git` e os não assistidos da D-10 (`UNWATCHED_PATHS`, constante do
+  domínio) ficam de fora **antes** de gastar watch, e os arquivos laterais do save atômico não são
+  mudança. O limite do sistema é dito: na subida, `WATCH_UNAVAILABLE` com `retryAfterSeconds` e nada
+  retido; depois dela, `workspace.watchStopped { reason: systemLimit }`.
+  - **`FolderWatches`** (o registro): **um watcher por `realpath`** com contagem de assinaturas; uma
+    subpasta de pasta já assistida pega carona no watcher dela, com os caminhos relativos a si — a
+    não ser que esteja sob um não assistido da mãe (`node_modules/x` aberto como aba), que ganha o
+    seu. Autoriza pelo `FolderResolver`; teto por connection (`WATCH_LIMIT_REACHED`); `watch`
+    repetido na mesma connection devolve o mesmo `watchId`; `unwatch` desconhecido é `ack`.
+  - **Liberar é por toda saída**, na mesma rotina que fecha o watcher com a última assinatura:
+    `unwatch`; a connection que sai do `ConnectionRegistry` por qualquer motivo — queda, heartbeat,
+    revogação do device (`4401`), envio que falhou (`onRemoved`, ouvido por `ConnectionWatchRelease`,
+    sem ramo no gateway); o shutdown (`GracefulShutdown`, junto dos sockets); a recarga da allowlist
+    (`workspace.allowlistReloaded` no barramento → `revalidate()` pelo `FolderResolver` →
+    `allowlistChanged`); a pasta apagada (`folderDeleted`). `openWatchers` é a contagem que a tela de
+    saúde do [plano 16](../../plans/16-logs-and-diagnostics/README.md) lê.
+  - **A janela** (`RC_FILES_WATCH_WINDOW_MS`): as mudanças cruas se dobram no domínio
+    (`foldInto`) — rajada num arquivo é um `changed`, criado e apagado é nada, apagado e recriado é
+    `changed`, rename é `deleted` + `created` — e saem por assinatura, cortadas no teto por evento
+    (`RC_FILES_WATCH_MAX_CHANGES`, `overflow: true`). Uma janela entrega depois da anterior.
+  - **Quem mudou** (`ChangeOrigins`, regra pura `originOf`): o caminho casa com uma marca recente de
+    `ClaudeWrites` ou de `UserWrites` — alimentada pelos use cases de escrita da pessoa depois do
+    disco (salvar, criar, mover, copiar, apagar, com o que cada um deixou) — e vale o **hash final**,
+    lido só quando há marca com conteúdo para comparar; nada casa → `external`. Rótulo, nunca decisão.
+- **Exporta** o `SaveFileUseCase` — o substituir em lote do [plano 09](../../plans/09-search/README.md)
+  e a edição de `CLAUDE.md` do [plano 11](../../plans/11-claude-settings/README.md) escrevem por ele,
+  e herdam `ETag`, trilha e atomicidade — e o `FolderWatches`, que o gateway (`workspace.watch` e
+  `workspace.unwatch`, em `adapter/inbound/ws/files/`) e o shutdown usam.
+- **Tetos configurados** (`RC_FILES_*`): entradas por nível da árvore (5 000), limiar do modo leve
+  (1 MB), teto de edição (10 MB), entradas e bytes de uma cópia, e até onde a contagem de um apagar
+  vai; do watcher, a janela (200 ms), mudanças por evento (500), pastas por connection (16) e quantos
+  bytes um socket acumula antes de as mudanças virarem um `overflow` devido (1 MB). O corpo das rotas `/files` tem parser próprio, com o dobro do teto de edição — o resto da API
+  continua no limite global. O `multipart` do upload não passa por parser nenhum: é lido em stream.
+- **Prévia e transferência** ([07 · F7](../../plans/07-explorer-and-editor/F7-previews-and-transfer.md),
+  [D-16](../../plans/07-explorer-and-editor/decisions.md#d-16--download-sem-token-na-url-e-os-tetos),
+  [D-18](../../plans/07-explorer-and-editor/decisions.md#d-18--servir-conteúdo-do-usuário-para-prévia)):
+  - **`raw`** passa pela mesma contenção da leitura (realpath + descritor). O `ETag` é o mesmo sha256
+    do `content`, do que o descritor tem — guardado num cache em memória pela identidade do arquivo
+    (`dev`, `ino`, tamanho, `mtime` e `ctime` em nanossegundos), para a paginação não reler o
+    arquivo inteiro a cada página — limitado (o menos usado sai primeiro), e sem guardar o hash de
+    um arquivo cujo `ctime` tem menos de 2 s, porque duas escritas no mesmo tique do relógio do
+    sistema de arquivos deixam a mesma identidade com bytes diferentes (o "racy git"). O `Content-Type` vem **do conteúdo**, nunca da extensão: assinatura
+    dos primeiros bytes (PNG, JPEG, GIF, WebP, BMP, ICO, PDF), `<svg` num texto, texto UTF-8 sem NUL
+    → `text/plain; charset=utf-8`, o resto `application/octet-stream` — **nunca** `text/html`.
+    `X-Content-Type-Options: nosniff` e `Content-Security-Policy: sandbox` **sempre**;
+    `Content-Disposition: inline` só para a lista de prévia (imagem raster, SVG, PDF, texto), e
+    `attachment` para o resto e para todo `download=true`. Um intervalo em `Range` → `206`; mais de
+    um é ignorado (RFC 9110 permite) e vale o corpo inteiro; o que começa depois do fim → `416` com
+    `Content-Range: bytes */<tamanho>`; `If-Match` que não casa → `412` — é como a paginação percebe
+    o arquivo mudando entre páginas. Corpo sem `Range`, ou intervalo, acima do teto de download →
+    `413`. Prévia e página são **leitura**: fora da trilha, no log. `download=true` é **baixar**:
+    `file.downloaded` antes do primeiro byte (`details`: bytes, hash, o intervalo, `archive: false`),
+    e trilha fora → `503`, nada sai.
+  - **`archive`** é um zip em stream de um ou mais `path` (a seleção), com os nomes relativos à pasta
+    comum mais funda deles. O percurso nunca segue link para pasta, deixa de fora link para fora da
+    pasta ou quebrado, FIFO, socket, device, nome que não é UTF-8 e, abaixo do que foi selecionado,
+    os escondidos da [D-10](../../plans/07-explorer-and-editor/decisions.md#d-10--exclusões-padrão-e-teto-da-árvore);
+    link para arquivo dentro da pasta entra com o conteúdo do alvo. Entradas e bytes são medidos
+    **antes do primeiro byte** (`413`, `params.measure`), e cada item selecionado grava o seu
+    `file.downloaded` antes dele. Cliente que aborta destrói o stream e fecha os descritores; falha
+    depois do primeiro byte corta a conexão — o zip fica inválido, nunca um zip válido incompleto.
+  - **`upload`** é `multipart` lido em stream (`busboy`), nunca o corpo inteiro em memória: primeiro os
+    campos (`folder`, `directory`, `manifest`, `confirmSensitive`), depois as partes `file` na ordem
+    do manifesto. O manifesto (`[{ path, size, onConflict, ifMatch? }]`, `path` relativo a
+    `directory`) é validado **inteiro antes do primeiro byte gravado**: cada segmento pela regra do
+    nome (`FilePath.naming`, e mais o nome reservado do Windows — `CON`, `PRN`, `AUX`, `NUL`,
+    `COM1`…`COM9`, `LPT1`…`LPT9` —, `400` com todos os motivos de todos os itens), e os tetos por
+    arquivo, por itens e pela soma (`413`). Cada arquivo vai por um temporário e `link` (`O_EXCL`),
+    como o criar: conexão que cai no meio não deixa arquivo parcial; parte com mais bytes que os
+    declarados é cortada e recusada. O conflito é por item — `fail` (aquele `409`, os outros
+    seguem), `replace` com o `If-Match` do existente (`428` sem, `412` diferente; pela escrita
+    atômica), `keepBoth` (`nome copy.ext`, `nome copy 2.ext`…, cada tentativa com `O_EXCL`). As
+    subpastas de uma pasta enviada são criadas pela fronteira, uma a uma. Cada item grava
+    `file.created` (ou `file.written`, no `replace`) com `source: upload` antes do disco: os bytes
+    esperam num temporário nosso — ao lado do destino, ou na pasta existente mais próxima acima dele,
+    para as subpastas só nascerem depois da trilha —, e o fato leva o hash deles. Trilha fora antes
+    de qualquer item gravado → `503` inteiro; depois, os itens que faltam falham com ela, sem
+    tentar. Parte que não traz os bytes declarados — a mais, cortada; a menos, a conexão que caiu —
+    é `400` `INVALID_INPUT` daquele item (`files.error.uploadSizeMismatch`, `params.declared`,
+    `params.received`), e nada dela fica. Os `path` da resposta (e do `preflight`) são relativos à
+    pasta aberta, como em toda rota, e vêm na ordem do manifesto. Um symlink não chega pelo
+    navegador: o que chega é arquivo comum.
+  - **`limits`** diz ao cliente os tetos antes de ele começar: editar, baixar, compactar, enviar e
+    guardar no histórico.
+- **Histórico local** ([07 · F8](../../plans/07-explorer-and-editor/F8-local-history.md),
+  [D-17](../../plans/07-explorer-and-editor/decisions.md#d-17--o-histórico-local),
+  [ADR-015](../shared/00-decisions.md#adr-015--o-humano-escreve-no-disco-pela-web)):
+  - **O que entra:** a versão que uma escrita da pessoa vai perder, **antes** dela — salvar (`save`),
+    apagar com `keepInHistory` (`delete`: cada arquivo e cada pasta de um apagamento, sob o mesmo
+    `batchId`), restaurar (`restore`) e upload com substituição (`upload`). Escrita do Claude não
+    entra: ela tem o store do desfazer da sessão. Mover nunca sobrescreve
+    ([D-12](../../plans/07-explorer-and-editor/decisions.md#d-12--mover-sem-sobrescrever)), então não
+    há versão perdida por mover; o histórico é **por caminho**, e não segue um arquivo renomeado.
+  - **Onde:** metadado em `file_history_entries` ([backend/05](05-persistence.md#o-histórico-local)),
+    conteúdo em blob **endereçado por sha256** no disco do backend (`RC_FILES_HISTORY_DIR`,
+    `<2 primeiros hex>/<sha256>`, escrito por temporário + `rename` e nunca reescrito) — o mesmo
+    conteúdo guardado dez vezes é um blob. Acima do teto de snapshot a entrada existe, com
+    `kept: tooLarge` e sem blob, e diz por quê.
+  - **Teto e purga:** por arquivo (entradas), total (bytes dos blobs distintos) e por idade, por um
+    job no molde do `SnapshotPurgeJob`, sob advisory lock **exclusivo** — duas purgas não perdem
+    nem duplicam; guardar toma o mesmo lock **compartilhado** enquanto grava o blob e a linha, para a
+    varredura nunca apagar um blob recém-escrito que a linha ainda vai citar.
+  - **Falha** do histórico não impede salvar (`warn` no log, e a resposta diz
+    `history.kept: false`), mas impede o apagar com `keepInHistory`: nada é apagado, e o cliente
+    volta ao segundo passo definitivo da [D-06](../../plans/07-explorer-and-editor/decisions.md#d-06--apagar-definitivo-ou-lixeira).
+  - **Quem vê:** quem alcança, **agora**, a pasta em que a entrada está — revalidada a cada pedido. A
+    entrada de fora da pasta pedida é `404` `HISTORY_ENTRY_NOT_FOUND`, igual à que não existe. O
+    autor vai com a entrada (`author.self`, `author.id`): o servidor só conhece o `sub` de quem
+    escreveu.
+  - **Restaurar** é uma escrita comum: com `If-Match` substitui o atual (`412` se ele mudou —
+    inclusive pelo Claude), sem ele recria o apagado (`409` se o caminho foi ocupado); guarda antes
+    o atual; `file.restored` antes do disco; restaurar o que o disco já tem é `200` sem escrita.
+  - **Detalhes da implementação** (B-56…B-58): o cursor das páginas é o `seq` da tabela; `GET
+    /files/history` sem `path` lista tudo sob a pasta; o `hash` de cada entrada vai na forma de
+    `ETag` (`"<sha256>"`), para o cliente comparar direto com o do arquivo atual. O apagar com
+    `keepInHistory` percorre a pasta pelo `FolderDisk` (nunca por link) e **não guarda** — logo não
+    apaga — o que não saberia recriar: link, FIFO/device, nome que não é UTF-8 ou com `\`
+    (`notKept: unavailable`; num link apagado sozinho, `428` com `why: unavailable`); depois de
+    guardar, confere de novo (o hash do arquivo, ou tipo·caminho·tamanho·`mtime` de cada entrada da
+    pasta) e, se mudou, esquece o lote e responde `412`; trilha fora (`503`) também esquece o lote.
+    O `file.deleted` desse apagar leva `keptBatchId`; o `file.restored` leva `entryId`, `entryKind`,
+    `reason`, `sizeBytes`, `hashBefore`, `hashAfter`, `replaced` e `sensitive`. Na restauração,
+    `If-Match: *` vale como ausente (nunca sobrescreve às cegas), uma entrada de pasta ignora o
+    `If-Match` e responde `etag` e `size` `null`. A purga (`FileHistoryPurgeJob`) roda um minuto
+    depois da subida e a cada dez, na ordem idade → por caminho → total → varredura dos blobs que
+    nenhuma linha nomeia (e dos temporários que sobraram).
+
+#### As rotas HTTP do `files`
+
+Toda rota nomeia a **pasta da aba** (`folder`, absoluta, mesma regra das rotas do `workspace`) e um
+caminho **relativo** a ela; caminho viaja em search ou corpo, nunca como segmento. Bearer em todas.
+
+| Rota | Resposta | Recusas |
+|---|---|---|
+| `GET /files/tree?folder=&path=` | `{ folder, path, entries[{ name, path, kind, size, mtime, hidden, unreadableName, outside, targetKind }], truncated }` — um nível; pastas primeiro, depois nome sem caixa e com números em ordem natural; `kind` é `file`·`directory`·`symlink`·`other`; `hidden` **marca** o que a [D-10](../../plans/07-explorer-and-editor/decisions.md#d-10--exclusões-padrão-e-teto-da-árvore) esconde, não omite; `outside: true` no link que sai da pasta (e `targetKind: null`), `targetKind: missing` no quebrado | `400`, `401`, `403`, `404` `FILE_NOT_FOUND`/`WORKSPACE_NOT_FOUND`, `422` `WORKSPACE_NOT_A_DIRECTORY`/`WORKSPACE_DIRECTORY_UNREADABLE`/`FILE_OPERATION_INVALID` |
+| `GET /files/content?folder=&path=&encoding=` | `{ path, content, etag, encoding, bom, eol, size, mtime, largeFile }` e o `ETag` no cabeçalho; `If-None-Match` com a versão atual → `304` sem corpo | `400`, `401`, `403`, `404`, `413` `FILE_TOO_LARGE`, `415` `FILE_NOT_TEXT`, `422` `FILE_NOT_A_FILE`/`FILE_ACCESS_DENIED`/`FILE_OPERATION_INVALID` |
+| `PUT /files/content` `{ folder, path, content, encoding?, bom?, confirmSensitive? }` + `If-Match` | `200` `{ path, etag, size, history }` e o `ETag`; `history` é `{ kept: true, entryId }`, `{ kept: false, reason: tooLarge·unavailable }`, ou `null` quando nada foi escrito — o reenvio do que o disco já tem é `200` sem escrita | `400`, `401`, `403`, `412` `FILE_CHANGED` (com o `ETag` atual), `413` `FILE_TOO_LARGE`/`PAYLOAD_TOO_LARGE`, `422` `FILE_NOT_A_FILE`/`FILE_NOT_ENCODABLE`/`FILE_ACCESS_DENIED`, `428` `PRECONDITION_REQUIRED`, `503`, `507` |
+| `POST /files` `{ folder, path, kind, content?, encoding?, bom?, confirmSensitive? }` | `201` `{ path, etag }` com `Location` e, num arquivo, o `ETag`; cria as pastas acima que faltam | `400`, `401`, `403`, `409` `FILE_EXISTS` (com o `ETag` do existente), `413`, `422`, `428`, `503`, `507` |
+| `POST /files/move` `{ folder, from, to, ifMatch?, confirmSensitive? }` | `200` `{ path, etag }` | `400`, `401`, `403`, `404`, `409` `FILE_EXISTS`, `412`, `422` `FILE_OPERATION_INVALID` (`intoItself`·`openFolder`·`crossDevice`), `428`, `503` |
+| `POST /files/copy` `{ folder, from, to }` | `201` `{ path, etag }` com `Location`; link copiado como link | as de mover, e `413` acima do teto de cópia (`params.measure`: `entries`·`bytes`), `507` |
+| `DELETE /files?folder=&path=&recursive=&expectedEntries=&confirmSensitive=` + `If-Match` opcional | `204` | `400`, `401`, `403`, `404`, `409` `DIRECTORY_NOT_EMPTY` (`params.entryCount`, `params.entryCountCapped`), `412` (contagem mudou, ou `If-Match`), `422` `openFolder`, `428` (`expectedEntriesMissing`, `sensitiveFile`), `503` |
+| `DELETE /files?…&keepInHistory=true` | `200` `{ kept: { batchId, entries[{ id, path, entryKind }] } }` — o que saiu está no histórico, e o cliente oferece **Desfazer** em vez de confirmar; a pasta inteira vai sem a contagem | as de cima, e: o que não cabe no histórico não é apagado — arquivo `428` (`params.reason: notKept`, `params.why: tooLarge·unavailable`), pasta `409` `DIRECTORY_NOT_EMPTY` com a contagem **e** `params.notKept` (`tooMany`·`tooLarge`·`unavailable`); o cliente volta ao segundo passo definitivo (a rota de cima) |
+| `GET /files/limits` | `{ maxEditBytes, largeFileBytes, downloadMaxBytes, archiveMaxEntries, uploadMaxBytes, uploadMaxEntries, uploadMaxTotalBytes, historyMaxFileBytes }` | `401` |
+| `GET /files/raw?folder=&path=&download=` + `Range` e `If-Match` opcionais | `200` com os bytes, ou `206` com `Content-Range`; `ETag`, `Accept-Ranges: bytes`, `Content-Type` pelo conteúdo, `nosniff`, `CSP: sandbox`, `Content-Disposition` | `400`, `401`, `403`, `404`, `412` `FILE_CHANGED` (a versão mudou entre páginas), `413` `FILE_TOO_LARGE` (acima do teto de download), `416` `RANGE_NOT_SATISFIABLE`, `422` `FILE_NOT_A_FILE`/`FILE_ACCESS_DENIED`, `503` (só com `download=true`) |
+| `GET /files/archive?folder=&path=…` (`path` repetido: a seleção) | `200` `application/zip` em stream, `Content-Disposition: attachment` | `400`, `401`, `403`, `404`, `413` `FILE_TOO_LARGE` (`params.measure`: `entries`·`bytes`, antes do primeiro byte), `422`, `503` |
+| `POST /files/upload/preflight` `{ folder, directory, items[{ path, size }] }` | `200` `{ items[{ path, existing: { kind, etag } \| null }] }` — o conflito de cada item **antes** de enviar | `400` (todos os motivos de todos os itens), `401`, `403`, `404`, `413`, `422` |
+| `POST /files/upload` `multipart`: `folder`, `directory`, `manifest`, `confirmSensitive`, e as partes `file` | `200` `{ items[{ path, status: created·replaced·renamed, etag }] }` — o `replaced` leva também `history`, como o salvar (`{ kept: true, entryId }` ou `{ kept: false, reason: tooLarge·unavailable }`): a versão substituída vai para o histórico local antes da trilha, e a falha dele não impede a substituição; **`207`** quando algum item falhou — aquele com `{ path, status: failed, error: { code, messageKey, params } }`, os outros como acima | `400` (manifesto, nome), `401`, `403`, `404`, `413` (por arquivo, por itens, pela soma — antes do primeiro byte), `422`, `428` (`sensitiveFile`), `503` |
+| `GET /files/history?folder=&path=&reason=&cursor=&limit=` | `{ entries[{ id, path, entryKind, reason, kept, sizeBytes, hash, author: { self, id }, at, batchId }], nextCursor }`, mais novas primeiro; sem `path`, tudo sob a pasta; `path` relativo à pasta pedida e `hash` na forma de `ETag`; `reason`: `save`·`delete`·`restore`·`upload`; `kept`: `yes`·`tooLarge` | `400`, `401`, `403`, `404` `WORKSPACE_NOT_FOUND` |
+| `GET /files/history?folder=&deleted=true&cursor=&limit=` | as mesmas entradas: a última `delete` de cada caminho da pasta que **não existe mais** — os apagados recentemente | as mesmas |
+| `GET /files/history/:entryId/content?folder=&encoding=` | o corpo de `GET /files/content`, com a versão guardada | `401`, `403`, `404` `HISTORY_ENTRY_NOT_FOUND`, `415` `FILE_NOT_TEXT`, `422` `FILE_NOT_A_FILE` (entrada de pasta) |
+| `POST /files/history/:entryId/restore` `{ folder, confirmSensitive? }` + `If-Match` opcional | `200` `{ path, etag, size, written, history }` — `etag` `null` numa pasta | `400`, `401`, `403`, `404` `HISTORY_ENTRY_NOT_FOUND`, `409` `FILE_EXISTS` (sem `If-Match`, caminho ocupado), `412` `FILE_CHANGED`, `428` (`sensitiveFile`), `503`, `507` |
+
+O `If-Match` é **obrigatório** só no salvar; mover e apagar o aceitam opcional, porque a árvore não
+carrega hash ([07 · D-03](../../plans/07-explorer-and-editor/decisions.md#d-03--a-semântica-de-concorrência)).
+No `raw` ele é o que a paginação manda a partir da segunda página; no restaurar, a presença dele
+diz se o atual é substituído ou se o apagado é recriado.
+Os limites de taxa do [plano 05](../../plans/05-hardening-operations/README.md) valem quando ele os
+estender ao HTTP.
+
+- **Erros:** `FILE_NOT_FOUND`, `FILE_EXISTS`, `DIRECTORY_NOT_EMPTY`, `FILE_CHANGED`,
+  `PRECONDITION_REQUIRED`, `FILE_TOO_LARGE`, `FILE_NOT_TEXT`, `FILE_NOT_A_FILE`,
+  `FILE_OPERATION_INVALID`, `FILE_NOT_ENCODABLE`, `FILE_ACCESS_DENIED`, `STORAGE_FULL`,
+  `WATCH_LIMIT_REACHED`, `WATCH_UNAVAILABLE`, `RANGE_NOT_SATISFIABLE`, `HISTORY_ENTRY_NOT_FOUND`, e os reusados `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`,
+  `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`, `WORKSPACE_DIRECTORY_UNREADABLE`,
+  `INVALID_INPUT`, `SERVICE_UNAVAILABLE` — ver o [catálogo](../shared/04-errors-and-http.md#catálogo-de-erros-de-domínio).
 
 ### `session`
 
@@ -240,10 +461,75 @@ estado atual, que fechar uma aba resolve. Os endpoints novos entram sob os limit
   (Bearer): o menu e a prévia do desfazer. `400` para id malformado, `403`/`404` para sessão de
   outra pessoa / que não está viva, e — só no menu — `502`/`504` quando o CLI falha ou não responde.
   Formato em [05-websocket-protocol](../shared/05-websocket-protocol.md#slash-commands)
+- **HTTP do painel do Claude** ([plano 08 · B-03](../../plans/08-claude-panel/F0-contract.md#b-03--os-endpoints-de-leitura-documentados-)).
+  Tudo leitura, tudo Bearer, e as recusas comuns a todo `/sessions/:sessionId/…` são as de cima:
+  `400` para id malformado, `403`/`404` para sessão viva de outra pessoa / que não está viva. Os limites
+  do [plano 05](../../plans/05-hardening-operations/README.md) valem para cada um (nota para ele).
+
+  **`GET /sessions?workspacePath=`** — as sessões **vivas** do chamador na pasta e nas subpastas (F1).
+  O registro é filtrado por **dono** (sessão de outra pessoa não aparece, nem como contagem) e por
+  **contenção**: o `cwd` da sessão está na pasta pedida ou abaixo dela, comparado no realpath e por
+  segmento (`/repo-old` não está em `/repo`) — regra pura de domínio (`live-session-listing`). A pasta
+  passa antes pelo `ResolveWorkspaceUseCase`, com a mesma ordem de recusas do resto do módulo.
+
+  | Status | Quando |
+  |---|---|
+  | `200` `{ sessions: [...] }` | cada sessão com `sessionId`, `claudeSessionId`, `resumedFrom`, `workspacePath`, `status`, `model`, `permissionMode`, `startedAt`, `openedFrom` (`web`·`mobile`) e `pendingPermissions`; lista vazia é resposta |
+  | `400` `INVALID_INPUT` | `workspacePath` ausente ou relativo |
+  | `403` `WORKSPACE_NOT_ALLOWED` / `FORBIDDEN` | fora de toda raiz / raiz de outra pessoa |
+  | `404` `WORKSPACE_NOT_FOUND` · `422` `WORKSPACE_NOT_A_DIRECTORY` | a pasta não existe / é arquivo |
+
+  **`GET /sessions/:sessionId/tools/:toolUseId/diff`** — antes e depois de um `Edit`, `MultiEdit` ou
+  `Write` (F3), do input da tool e do snapshot que o desfazer já guarda
+  ([08 · D-03](../../plans/08-claude-panel/decisions.md#d-03--de-onde-vem-o-diff)). `before.state` diz o
+  que se sabe do lado anterior: `content`, `absent` (arquivo novo), `unavailable` (segundo toque no mesmo
+  turno, sem snapshot intermediário — com o motivo) ou `notRestorable` (acima do teto do snapshot).
+
+  | Status | Quando |
+  |---|---|
+  | `200` `{ path, before: { state, content? }, after: { content? }, hunks: [...] }` | o diff, com o caminho relativo à pasta |
+  | `404` `TOOL_USE_NOT_FOUND` | `toolUseId` que a sessão não tem |
+  | `422` `DIFF_NOT_APPLICABLE` | tool que não escreve arquivo (`Bash`, `Read`) |
+  | `415` `FILE_NOT_TEXT` | conteúdo binário |
+
+  **`GET /sessions/:sessionId/changes`** — os arquivos que a sessão (e a conversa continuada in-place)
+  criou, modificou ou apagou, contra **antes da sessão** (F3): `path`, `kind` (`created`·`modified`·
+  `deleted`), `modifiedOutside`, `added`, `removed`. `200` com lista vazia quando a sessão não mudou nada.
+
+  **`GET /sessions/:sessionId/changes/file?path=`** — um arquivo dessas alterações: o antes da sessão,
+  o agora, os trechos com `hunkId` e a `revision` (o hash do disco no cálculo) que o
+  `session.rejectChange` confere (F3). `404` `NOT_FOUND` para caminho que não é da sessão; `403`
+  `WORKSPACE_NOT_ALLOWED` para caminho que virou symlink para fora, recusado **sem ler**.
+
+  **`GET /sessions/:sessionId/models`** — o `supportedModels()` da instalação, pelo catálogo do plano 04
+  (F4): `value`, `displayName`, `description`, `supportsEffort`, `supportedEffortLevels`. `502`/`504`
+  quando o CLI falha ou não responde — o seletor continua mostrando o modelo atual.
+
+  **`GET /sessions/:sessionId/mcp-servers`** — o `mcpServerStatus()` **reduzido** a `name`, `status`
+  (`connected`·`failed`·`needs-auth`·`pending`) e `toolCount` (F4). **Nunca** `config` nem `error` cru:
+  podem carregar segredo e caminho. `502`/`504` como acima.
+
+  **`GET /sessions/:sessionId/context`** — o `getContextUsage({ detail: 'summary' })` por categoria, e o
+  total contra a janela do modelo (F4). `502`/`504` como acima.
+
+  **`GET /sessions/:sessionId/commands`** ganha `origin` por item — `builtin`·`project`·`user`·`system`
+  — e a regra de colisão do SDK (F5); **`GET /catalog?workspacePath=`** responde comandos, skills e
+  modelos **sem sessão viva**, do catálogo por versão do CLI e pasta, e sem cache abre uma `query()`
+  efêmera que só pergunta — conta no teto enquanto dura, uma por vez por chave
+  ([08 · D-13](../../plans/08-claude-panel/decisions.md#d-13--o-catálogo-antes-da-sessão)) (F5).
+
+  **`POST /sessions/:sessionId/attachments`** — o anexo do prompt, imagem ou texto (F5,
+  [08 · D-02](../../plans/08-claude-panel/decisions.md#d-02--imagem-no-prompt) e D-22): `201`
+  `{ attachmentId, mediaType, size }`; `413` `PAYLOAD_TOO_LARGE` acima de 5 MB; `415`
+  `ATTACHMENT_TYPE_UNSUPPORTED` fora de PNG/JPEG/GIF/WebP e texto. Vive fora do workspace, da trilha e do
+  log (só tipo, tamanho e hash), e morre com a sessão ou no TTL.
 - **Erros:** `SESSION_NOT_FOUND`, `SESSION_LOCKED`,
   `SESSION_LIMIT_REACHED`, `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT`, `INVALID_INPUT`
-  (`session.error.unknownCommand`, `session.error.rewindTargetUnknown`), `INTERNAL_ERROR`
-  (`session.error.rewindIncomplete`)
+  (`session.error.unknownCommand`, `session.error.rewindTargetUnknown`,
+  `session.error.forkPointUnknown`, `session.error.effortUnsupported`), `INTERNAL_ERROR`
+  (`session.error.rewindIncomplete`), `CONFLICT` (`session.error.queuedPromptStarted`),
+  `SESSION_CHANGE_STALE`, `SESSION_FORK_REJECTED`, `QUEUED_PROMPT_NOT_FOUND`, `TOOL_USE_NOT_FOUND`,
+  `DIFF_NOT_APPLICABLE`, `ATTACHMENT_NOT_FOUND`, `ATTACHMENT_TYPE_UNSUPPORTED`
 - Ver [04-claude-integration.md](04-claude-integration.md).
 
 ### `permission`
@@ -340,9 +626,15 @@ estado atual, que fechar uma aba resolve. Os endpoints novos entram sob os limit
   faça parser do JSONL na mão; o formato é interno do Claude Code.
 - **Consequência importante:** as sessões criadas fora aparecem aqui. É feature, e precisa ser
   tratada como tal na UI (mostrar a origem).
-- **A listagem é por workspace da allowlist**, um `listSessions({ dir })` por vez — nunca
-  `listSessions({})`. A mesma cerca que vale para executar vale para ler: o store tem
-  transcript de todo projeto da máquina, inclusive os que ninguém liberou.
+- **A listagem é por workspace da allowlist**, um `listSessions({ dir })` por vez. A mesma cerca que
+  vale para executar vale para ler: o store tem transcript de todo projeto da máquina, inclusive os
+  que ninguém liberou. **A única exceção é o filtro "incluir subpastas"** da view de sessões
+  ([08 · D-05](../../plans/08-claude-panel/decisions.md#d-05--a-lista-casa-subpastas)): o SDK não desce
+  a subdiretórios, então `includeSubfolders=true` pede `listSessions({})` — o store inteiro, 281 ms
+  medidos para 298 sessões —, com cache curto chaveado pelo `lastModified` máximo, e **filtra pelo
+  `cwd` dentro da pasta aberta**, que já passou pela allowlist. A cerca continua sendo o `cwd`, como
+  em todo o resto: o que mudou é de onde a lista vem, não o que ela admite. Sem o filtro, nunca
+  `listSessions({})`.
 - **`includeWorktrees: false`, e o filtro é sobre o `cwd` devolvido.** O default do SDK é
   `true`, e o worktree de um repositório liberado é outro caminho em disco — fora da entrada da
   allowlist. Sessão **sem `cwd` é excluída**, por falha fechada: não há como provar de onde é.
@@ -393,7 +685,15 @@ estado atual, que fechar uma aba resolve. Os endpoints novos entram sob os limit
 
   A sessão tem `sessionId` (o id da conversa no store do Claude — o que `session.start` aceita como
   `resumeSessionId`), `summary`, `origin` (`ours`/`external`), `cwd`, `gitBranch`, `createdAt` e
-  `lastModified`. O cursor é keyset sobre `(lastModified, sessionId)` descendente: conversa escrita
+  `lastModified`.
+
+  O [plano 08](../../plans/08-claude-panel/F1-sessions.md) acrescenta, por conversa, a **`activity`** —
+  `liveHere` (tem sessão viva **do chamador**: aberta, retomada ou o fork que a continua, com
+  `liveSessionId`), `activeElsewhere` (conversa **externa** cujo `lastModified` está dentro da janela
+  configurada, padrão 120 s — calculada com o relógio do backend, nunca "aberta no VS Code"; a nossa
+  nunca é, porque sabemos se está viva) ou `idle` — e `writtenAgoSeconds`. E o parâmetro
+  `includeSubfolders` (padrão `false`), pela exceção acima. O que é vivo pergunta-se pela porta que o
+  `session` oferece; o `transcript` não importa o registro. O cursor é keyset sobre `(lastModified, sessionId)` descendente: conversa escrita
   entre duas páginas sobe, acima da janela já lida — não repete, e não faz pular nenhuma.
 - **HTTP — `GET /transcripts/:sessionId/messages`** (Bearer). `cursor` (id de mensagem) e `limit`
   de 1 a 100 (default 25), **pela cauda**.
@@ -408,7 +708,14 @@ estado atual, que fechar uma aba resolve. Os endpoints novos entram sob os limit
   `events` são frames do contrato vivo **sem o envelope** — `{ type, payload }` de
   `message.completed`, `tool.started` e `tool.completed`, produzidos pelas **mesmas** funções do
   `sdk-message.mapper` que servem o stream, e com os mesmos ids. É o que deixa o cliente recarregar
-  depois de um `gap` com um redutor só.
+  depois de um `gap` com um redutor só — e o que faz thinking e subagent aparecerem iguais vivos e
+  recarregados (plano 08).
+- **HTTP — `GET /transcripts/:sessionId/subagents/:agentId/messages`** (Bearer,
+  [plano 08 · B-21](../../plans/08-claude-panel/F2-rendering.md)). O transcript de um subagent da
+  conversa, pela cauda, pelas funções do SDK (`listSubagents`/`getSubagentMessages`), com as mesmas
+  regras de leitura da conversa: a mesma cerca, a mesma paginação, o mesmo cache, e `404` `NOT_FOUND`
+  para conversa ou subagent que o chamador não lê — igual ao que não existe. `400` para ids
+  malformados; `502`/`504` como acima.
 - **Erros:** `NOT_FOUND` (`transcript.error.notFound`), `INVALID_INPUT`
   (`transcript.error.invalidSessionId`, `transcript.error.cursorStale`), `CLAUDE_UNAVAILABLE`
   (`transcript.error.claudeUnavailable`), `CLAUDE_TIMEOUT` (`transcript.error.claudeTimeout`).
@@ -493,7 +800,9 @@ estado atual, que fechar uma aba resolve. Os endpoints novos entram sob os limit
   [08-authentication](../shared/08-authentication.md#logging) manda registrar moram em
   `audit_events` — e com eles conceder e revogar uma regra de permissão (`permission.ruleGranted`,
   `permission.ruleRevoked`), que é autorização antecipada do mesmo peso — e retomar uma conversa
-  (`session.resumed`, `session.forked`) —, tabela irmã com a mesma disciplina: `seq` que ordena enquanto `at` filtra, ULID
+  (`session.resumed`, `session.forked`), desfazer arquivos (`session.filesRewound`) e a escrita da
+  pessoa nos arquivos (`file.created`, `file.written`, `file.moved`, `file.copied`, `file.deleted`,
+  `file.failed` — [ADR-015](../shared/00-decisions.md#adr-015--o-humano-escreve-no-disco-pela-web)) —, tabela irmã com a mesma disciplina: `seq` que ordena enquanto `at` filtra, ULID
   cunhado pelo domínio, e trigger que recusa `UPDATE` sempre e `DELETE` dentro do piso de 90 dias.
   Alargar a primeira com colunas anuláveis transformaria cada `NOT NULL` dela em talvez, justo na
   tabela cuja razão de existir é poder ser confiada.
@@ -518,9 +827,19 @@ estado atual, que fechar uma aba resolve. Os endpoints novos entram sob os limit
   Como a consulta é sempre escopada por quem pergunta, "trilha de outro" é o **filtro pela sessão de
   outra pessoa** — a sessão cujas entradas são todas de outro usuário. Sessão sem nenhuma entrada é
   página vazia: nada diz de quem ela é ([03 · D-17](../../plans/03-rules-and-audit/decisions.md#d-17--a-trilha-de-outro-é-a-sessão-de-outro)).
-- **A leitura é um módulo Nest à parte** (`AuditQueryModule`), com porta própria
-  (`AuditTrailReader`) e o controller: nenhum módulo que escreve na trilha recebe como lê-la, e o
-  `AuditModule` continua exportando só os dois use cases de escrita.
+- **A leitura é um módulo Nest à parte** (`AuditQueryModule`), com portas próprias
+  (`AuditTrailReader`, `AuditEventReader`) e os controllers: nenhum módulo que escreve na trilha
+  recebe como lê-la, e o `AuditModule` continua exportando só os dois use cases de escrita.
+- **HTTP — `GET /audit-events`** (Bearer) — os fatos de conta, e entre eles a escrita da pessoa nos
+  arquivos (`file.*`, [07 · D-13](../../plans/07-explorer-and-editor/decisions.md#d-13--onde-os-fatos-de-arquivo-aparecem-na-trilha)).
+  Filtrado **sempre** por quem pergunta — não há pedido que aponte para os fatos de outro, e por isso
+  não há `403`: quem não tem fatos recebe página vazia. `kind` é prefixo (`file.` são todos os de
+  arquivo; `file.written`, só os salvamentos), letras e pontos apenas; `cursor` opaco e `limit` de 1 a
+  100 (default 50); keyset descendente sobre `seq`, no índice `(user_id, seq DESC)` que a tabela já
+  tem. `200` `{ events[{ id, kind, subjectId, subjectLabel, details, at }], nextCursor }`, `400`
+  `INVALID_INPUT` para cursor, `limit` ou `kind` fora do formato. O redesenho da tela é do
+  [plano 12](../../plans/12-audit-explained/README.md), que absorve esta leitura em vez de escrever
+  outra.
 - **HTTP — `GET /audit-entries`** (Bearer). Filtros opcionais `sessionId`, `toolName`, `decision`
   (`recorded`/`allowed`/`denied`), `from` (incluído) e `to` (excluído), em ISO 8601 com offset;
   `cursor` opaco e `limit` de 1 a 100 (default 50).

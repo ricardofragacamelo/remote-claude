@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -15,6 +16,19 @@ export interface ScreenShortcut {
   readonly description: string;
 }
 
+/**
+ * A part of a screen's help besides the four fixed ones — what only that screen has, written with
+ * values only known at run time (the ceilings of the server, plan 07 · B-53).
+ */
+export interface HelpExtra {
+  /** The anchor: `help-<id>`. */
+  readonly id: string;
+
+  /** Translated. */
+  readonly heading: string;
+  readonly body: ReactNode;
+}
+
 export interface HelpPanelProps {
   /** The screen's title, already translated. */
   readonly title: string;
@@ -25,6 +39,12 @@ export interface HelpPanelProps {
 
   /** Where the heading's id comes from, so the panel is labelled by it. */
   readonly headingId: string;
+
+  /** What its close button does — closing the help of the screen, unless the host says otherwise. */
+  onClose?(): void;
+
+  /** Parts of its own, after the three written ones and before the shortcuts. */
+  readonly extra?: readonly HelpExtra[];
 }
 
 /** The anchor of one part — what a "learn more" of a control scrolls to. */
@@ -56,6 +76,8 @@ export function HelpPanel({
   help,
   shortcuts,
   headingId,
+  onClose,
+  extra = [],
 }: HelpPanelProps): React.JSX.Element {
   const { t } = useTranslation();
   const section = useHelpPanel((state) => state.section);
@@ -83,7 +105,7 @@ export function HelpPanel({
           icon={X}
           label={t('help.panel.close')}
           onClick={() => {
-            setOpen(false);
+            (onClose ?? (() => setOpen(false)))();
           }}
         />
       </div>
@@ -97,6 +119,11 @@ export function HelpPanel({
       <Part section="notRecorded" heading={t('help.section.notRecorded')}>
         <p>{t(keyOf(help, 'notRecorded'))}</p>
       </Part>
+      {extra.map((part) => (
+        <PartFrame key={part.id} id={`help-${part.id}`} heading={part.heading}>
+          {part.body}
+        </PartFrame>
+      ))}
       <Part section="shortcuts" heading={t('help.section.shortcuts')}>
         {shortcuts.length === 0 ? (
           <p>{t('help.shortcuts.none')}</p>
@@ -127,8 +154,23 @@ interface PartProps {
 
 /** One part of the help, with its anchor. */
 function Part({ section, heading, children }: PartProps): React.JSX.Element {
-  const id = helpAnchor(section);
+  return (
+    <PartFrame id={helpAnchor(section)} heading={heading}>
+      {children}
+    </PartFrame>
+  );
+}
 
+/** The frame of a part: a section labelled by its heading, reachable by its anchor. */
+function PartFrame({
+  id,
+  heading,
+  children,
+}: {
+  readonly id: string;
+  readonly heading: string;
+  readonly children: ReactNode;
+}): React.JSX.Element {
   return (
     <section
       id={id}

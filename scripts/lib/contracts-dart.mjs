@@ -11,12 +11,17 @@
  * value added after it shipped, and a closed enum would throw on it.
  */
 
-import { BANNER, docComment as comment } from './contracts-emit.mjs';
+import {
+  BANNER,
+  boundedFields,
+  conditionPhrase,
+  docComment as comment,
+} from './contracts-emit.mjs';
 /**
  * @param {import('./contracts-model.mjs').TypeRef} type
  * @returns {string}
  */
-function typeExpression(type) {
+function dartTypeOf(type) {
   switch (type.kind) {
     case 'string':
     case 'enum':
@@ -30,7 +35,7 @@ function typeExpression(type) {
     case 'const':
       return typeof type.value === 'string' ? 'String' : 'int';
     case 'array':
-      return `List<${typeExpression(type.items)}>`;
+      return `List<${dartTypeOf(type.items)}>`;
     case 'object':
       return type.name;
   }
@@ -44,7 +49,7 @@ function typeExpression(type) {
  */
 function readExpression(field) {
   const raw = `json['${field.name}']`;
-  const dart = typeExpression(field.type);
+  const dart = dartTypeOf(field.type);
 
   if (field.type.kind === 'object') {
     return field.required
@@ -56,8 +61,8 @@ function readExpression(field) {
     const items = field.type.items;
     const element =
       items.kind === 'object'
-        ? `${typeExpression(items)}.fromJson(item! as Map<String, Object?>)`
-        : `item! as ${typeExpression(items)}`;
+        ? `${dartTypeOf(items)}.fromJson(item! as Map<String, Object?>)`
+        : `item! as ${dartTypeOf(items)}`;
     const mapped = `(${raw}! as List<Object?>).map((item) => ${element}).toList(growable: false)`;
 
     return field.required ? mapped : `${raw} == null ? null : ${mapped}`;
@@ -135,8 +140,8 @@ function emitConditionals(declaration) {
 
   for (const conditional of declaration.conditionals) {
     lines.push(
-      `/// \`${conditional.field}\` is also required when \`${conditional.whenField}\` is`,
-      `/// \`${String(conditional.equals)}\` — ${conditional.because}.`,
+      `/// \`${conditional.field}\` is also required when \`${conditional.whenField}\``,
+      `/// ${conditionPhrase(conditional)} — ${conditional.because}.`,
     );
   }
 
@@ -148,17 +153,89 @@ function emitConditionals(declaration) {
       declaration.fields.find((candidate) => candidate.name === conditional.field)
     );
     const refusal = shapeRefusal(field.type);
-    const expected =
-      typeof conditional.equals === 'string'
-        ? `'${conditional.equals}'`
-        : String(conditional.equals);
 
     lines.push(
-      `  if (json['${conditional.whenField}'] == ${expected} && json['${conditional.field}'] ${refusal}) {`,
+      `  if (${dartTrigger(conditional)} && json['${conditional.field}'] ${refusal}) {`,
       '    return false;',
       '  }',
       '',
     );
+  }
+
+  lines.push('  return true;', '}');
+
+  return [lines.join('\n'), ''];
+}
+
+/**
+ * When a rule fires, in Dart: the deciding field equal to the value, or missing, or there.
+ *
+ * @param {import('./contracts-model.mjs').Conditional} conditional
+ * @returns {string}
+ */
+function dartTrigger(conditional) {
+  const decides = `json['${conditional.whenField}']`;
+
+  if (conditional.presence !== null) {
+    return `${decides} ${conditional.presence === 'absent' ? '==' : '!='} null`;
+  }
+  return typeof conditional.equals === 'string'
+    ? `${decides} == '${conditional.equals}'`
+    : `${decides} == ${String(conditional.equals)}`;
+}
+
+/** The type a bound applies to, and the comparison that breaks it. */
+const LIMIT_REFUSALS = {
+  maxItems: {
+    type: 'List<Object?>',
+    broken: (/** @type {string} */ value, /** @type {number} */ bound) =>
+      `${value}.length > ${String(bound)}`,
+  },
+  maxLength: {
+    type: 'String',
+    broken: (/** @type {string} */ value, /** @type {number} */ bound) =>
+      `${value}.length > ${String(bound)}`,
+  },
+  minimum: {
+    type: 'int',
+    broken: (/** @type {string} */ value, /** @type {number} */ bound) =>
+      `${value} < ${String(bound)}`,
+  },
+};
+
+/**
+ * The bounds of one declaration, as a predicate over a decoded map — the Dart half of what the
+ * TypeScript guard checks with `withinMaxItems`, `withinMaxLength` and `atLeast`.
+ *
+ * A field that is absent, or of another shape, passes: whether it may be absent is the conditional
+ * predicate's question, and its shape the class's.
+ *
+ * @param {import('./contracts-model.mjs').Interface} declaration
+ * @returns {string[]} empty when no field of the declaration is bounded
+ */
+function emitLimits(declaration) {
+  const bounded = boundedFields(declaration);
+  if (bounded.length === 0) {
+    return [];
+  }
+
+  const lines = [
+    `/// Whether [json] keeps within the bounds the schema gives [${declaration.name}].`,
+    `bool ${camelCase(declaration.name)}LimitsHold(Map<String, Object?> json) {`,
+  ];
+
+  for (const field of bounded) {
+    for (const [keyword, bound] of Object.entries(field.limits)) {
+      const refusal = LIMIT_REFUSALS[/** @type {keyof typeof LIMIT_REFUSALS} */ (keyword)];
+      const value = `(json['${field.name}']! as ${refusal.type})`;
+
+      lines.push(
+        `  if (json['${field.name}'] is ${refusal.type} && ${refusal.broken(value, bound)}) {`,
+        '    return false;',
+        '  }',
+        '',
+      );
+    }
   }
 
   lines.push('  return true;', '}');
@@ -191,7 +268,7 @@ function emitClass(declaration) {
 
   for (const field of declaration.fields) {
     lines.push(...comment(field.description, '  ', 'line'));
-    lines.push(`  final ${typeExpression(field.type)}${field.required ? '' : '?'} ${field.name};`);
+    lines.push(`  final ${dartTypeOf(field.type)}${field.required ? '' : '?'} ${field.name};`);
     lines.push('');
   }
 
@@ -258,6 +335,7 @@ export function emitDart(model) {
       emitClass(declaration),
       '',
       ...emitConditionals(declaration),
+      ...emitLimits(declaration),
     ]),
   ];
 

@@ -19,7 +19,27 @@ import { StubPermissionGate } from '../../../../support/fakes/stub-permission-ga
 const DIRECTORY = path.join(import.meta.dirname, '../../../../fakes/agent-sdk/fixtures');
 
 /** The recordings of a turn that used tools — the ones the asymmetry is about. */
-const TOOL_TURNS = ['tool-turn', 'init-turn'];
+const TOOL_TURNS = ['tool-turn', 'init-turn', 'edit-turn', 'plan-turn'];
+
+/**
+ * The single-prompt recordings of plan 08 (B-06) whose replay the panel's tests drive — S-11. Each
+ * one is replayed and has to fire and ask exactly what the real SDK did, including the ones no human
+ * is asked about (`reference-turn` reads, `task-subagent-turn` delegates).
+ */
+const PANEL_TURNS = [
+  'edit-turn',
+  'reference-turn',
+  'mention-turn',
+  'task-subagent-turn',
+  'plan-turn',
+  'thinking-turn',
+  'thinking-summarized-turn',
+  'image-turn',
+  'long-tool-turn',
+  'todo-write-turn',
+  'task-tools-turn',
+  'task-tools-listed-model-turn',
+];
 
 /** How many `tool_use` blocks the model emitted in a recording. */
 function toolUsesIn(name: string): number {
@@ -82,7 +102,7 @@ describe('the recorded fixtures of the Agent SDK', () => {
       },
     );
 
-    it.each(TOOL_TURNS)(
+    it.each([...new Set([...TOOL_TURNS, ...PANEL_TURNS])])(
       '%s: the replay fires and asks exactly what the recording did',
       async (name) => {
         const fixture = loadFixture(name);

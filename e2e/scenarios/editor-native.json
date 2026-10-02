@@ -1,0 +1,14 @@
+{
+  "id": "07·S-243…S-246",
+  "title": "the editor's own find and replace, go to line, and undo across a save and a reload — Monaco, in a browser",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "findLabel": "Find",
+    "replaceLabel": "Replace",
+    "regexToggle": "Use Regular Expression",
+    "caseToggle": "Match Case",
+    "wordToggle": "Match Whole Word",
+    "selectionToggle": "Find in Selection",
+    "replaceAll": "Replace All"
+  }
+}

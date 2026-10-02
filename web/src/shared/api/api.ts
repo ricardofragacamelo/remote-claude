@@ -9,6 +9,12 @@ export const REQUEST_TIMEOUT_MS = 15_000;
 /** Requests are retried once, and never for a failure repeating them cannot fix. */
 export const MAX_ATTEMPTS = 2;
 
+/**
+ * The deadline of a transfer — a download of a file or a zip, an upload. Its ceiling is hundreds of
+ * megabytes (07 · D-16), which no fifteen seconds carry over a phone's network; it still has one.
+ */
+export const TRANSFER_TIMEOUT_MS = 30 * 60_000;
+
 /** How the client gets a credential, and what it does when one has expired. */
 export interface Credentials {
   /** The access token to send, or `null` while nobody is signed in. */
@@ -26,6 +32,12 @@ export interface RequestOptions {
   readonly signal?: AbortSignal;
 
   /**
+   * Headers of the request itself — the preconditions of a file's version (`If-Match`,
+   * `If-None-Match`). Transport headers (credential, trace, language) are the client's and win.
+   */
+  readonly headers?: Readonly<Record<string, string>>;
+
+  /**
    * Whether a `401` may be answered by renewing and trying again. Defaults to true.
    *
    * The sign-in calls set it to false, and they are the only ones that have to: renewal is itself
@@ -34,6 +46,45 @@ export interface RequestOptions {
    * nothing in the log.
    */
   readonly renewable?: boolean;
+
+  /** What the response may be — JSON unless a caller reads bytes. */
+  readonly accept?: string;
+}
+
+/** What a read of bytes may name: the preconditions and the range, the signal, the language. */
+export type BytesOptions = Pick<RequestOptions, 'headers' | 'locale' | 'signal'>;
+
+/**
+ * The bytes of a response — a file as it is on disk, a zip — and the headers that say what they are
+ * (`ETag`, `Content-Range`, `Content-Type`, `Content-Disposition`).
+ */
+export interface BytesResponse {
+  readonly status: number;
+  readonly blob: Blob;
+  header(name: string): string | null;
+}
+
+/** What an upload may name besides its form. */
+export interface UploadOptions {
+  readonly locale?: string;
+
+  /** Aborts the upload — the person cancelled it. */
+  readonly signal?: AbortSignal;
+
+  /** Told as the body leaves: the bytes sent so far, of how many. */
+  onProgress?(loaded: number, total: number): void;
+}
+
+/** What an upload answered: a `2xx` and its body — `207` is one, with a result per item. */
+export interface UploadResponse<T> {
+  readonly status: number;
+  readonly body: T;
+}
+
+/** What one attempt of an upload received. */
+interface FormReply {
+  readonly status: number;
+  readonly text: string;
 }
 
 /** Anonymous access: no token, and nothing to renew. */
@@ -59,6 +110,8 @@ export class ApiClient {
     // "Illegal invocation" before a single byte leaves the machine. The arrow keeps the global as
     // the receiver, and keeps the lookup late enough for a test to stand in for it.
     private readonly http: typeof fetch = (input, init) => globalThis.fetch(input, init),
+    // An upload is the one request that reports its progress, and only XMLHttpRequest does that.
+    private readonly xhr: () => XMLHttpRequest = () => new XMLHttpRequest(),
   ) {}
 
   /** Swaps in the credential source once authentication is wired up. */
@@ -87,6 +140,98 @@ export class ApiClient {
    *   `Response` or a `TypeError`, because then every caller would have to know about both
    */
   async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+    const { response, traceId } = await this.exchange(path, options);
+
+    // `304`: the version the caller named in `If-None-Match` is the current one — nothing to read.
+    if (response.status === 304) {
+      return undefined as T;
+    }
+
+    if (!response.ok) {
+      throw toAppError(await readBody(response), traceId);
+    }
+
+    return response.status === 204 ? (undefined as T) : ((await readBody(response)) as T);
+  }
+
+  /**
+   * Reads the bytes of a response — a file for a preview or a download, a page of it by `Range`, a
+   * zip — with the credential in the `Authorization` header like every other request: never in the
+   * URL, so a `<img src>` or a link never needs one (07 · D-16). `206` is an answer like `200`.
+   *
+   * @throws {import('./errors').AppError} as {@link request} does — `412`, `413`, `416` with the
+   *   envelope's `code` and `params`
+   */
+  async bytes(path: string, options: BytesOptions = {}): Promise<BytesResponse> {
+    const deadline = AbortSignal.timeout(TRANSFER_TIMEOUT_MS);
+    const signal =
+      options.signal === undefined ? deadline : AbortSignal.any([options.signal, deadline]);
+    const { response, traceId } = await this.exchange(path, { ...options, accept: '*/*', signal });
+
+    if (!response.ok) {
+      throw toAppError(await readBody(response), traceId);
+    }
+
+    try {
+      const blob = await response.blob();
+      return { status: response.status, blob, header: (name) => response.headers.get(name) };
+    } catch (error) {
+      // The connection dropped in the middle of the body: what arrived is not the file.
+      logger.warn({ op: 'http.response', url: path, traceId, err: String(error) }, 'body cut');
+      throw toTransportError(traceId);
+    }
+  }
+
+  /**
+   * Sends a form — the files of an upload — and reports how much of it left (`onProgress`), which
+   * `fetch` cannot. The same transport as every request: the credential in the header, the trace,
+   * the language, one renewal on a `401`, both edges logged, the envelope as an `AppError`.
+   *
+   * @throws {import('./errors').AppError} the server's refusal; `NETWORK_UNREACHABLE` when the
+   *   connection failed, timed out or was aborted by `signal`
+   */
+  async upload<T>(
+    path: string,
+    form: FormData,
+    options: UploadOptions = {},
+  ): Promise<UploadResponse<T>> {
+    const traceId = newTraceId();
+    const startedAt = Date.now();
+
+    logger.debug({ op: 'http.request', method: 'POST', url: path, traceId }, 'http request');
+
+    let reply = await this.sendForm(path, form, options, traceId);
+
+    if (reply.status === 401 && (await this.credentials.renew()) !== null) {
+      reply = await this.sendForm(path, form, options, traceId);
+    }
+
+    logger.debug(
+      {
+        op: 'http.response',
+        method: 'POST',
+        url: path,
+        traceId,
+        httpStatus: reply.status,
+        durationMs: Date.now() - startedAt,
+      },
+      'http response',
+    );
+
+    const body = parseBody(reply.text);
+
+    if (reply.status < 200 || reply.status >= 300) {
+      throw toAppError(body, traceId);
+    }
+
+    return { status: reply.status, body: body as T };
+  }
+
+  /** One request and its answer, logged at both edges. */
+  private async exchange(
+    path: string,
+    options: RequestOptions,
+  ): Promise<{ response: Response; traceId: string }> {
     const traceId = newTraceId();
     const method = options.method ?? 'GET';
     const startedAt = Date.now();
@@ -107,11 +252,65 @@ export class ApiClient {
       'http response',
     );
 
-    if (!response.ok) {
-      throw toAppError(await readBody(response), traceId);
-    }
+    return { response, traceId };
+  }
 
-    return response.status === 204 ? (undefined as T) : ((await readBody(response)) as T);
+  /** The headers every request carries — the credential, the trace, the language. */
+  private transportHeaders(traceId: string, locale: string | undefined): Record<string, string> {
+    const token = this.credentials.accessToken();
+
+    return {
+      'x-trace-id': traceId,
+      'accept-language': locale ?? 'en',
+      ...(token === null ? {} : { authorization: `Bearer ${token}` }),
+    };
+  }
+
+  /** One attempt of an upload, by XMLHttpRequest — the one way to hear the body leave. */
+  private sendForm(
+    path: string,
+    form: FormData,
+    options: UploadOptions,
+    traceId: string,
+  ): Promise<FormReply> {
+    return new Promise((resolve, reject) => {
+      const request = this.xhr();
+      const failed = (why: string) => () => {
+        logger.warn({ op: 'http.response', url: path, traceId, err: why }, 'http failed');
+        reject(toTransportError(traceId));
+      };
+
+      request.open('POST', `${this.baseUrl}${path}`);
+      request.withCredentials = true;
+      request.timeout = TRANSFER_TIMEOUT_MS;
+
+      for (const [name, value] of Object.entries({
+        accept: 'application/json',
+        ...this.transportHeaders(traceId, options.locale),
+      })) {
+        request.setRequestHeader(name, value);
+      }
+
+      request.upload.onprogress = (event) => {
+        options.onProgress?.(event.loaded, event.total);
+      };
+      request.onload = () => {
+        resolve({ status: request.status, text: request.responseText });
+      };
+      request.onerror = failed('error');
+      request.ontimeout = failed('timeout');
+      request.onabort = failed('aborted');
+
+      if (options.signal?.aborted === true) {
+        failed('aborted')();
+        return;
+      }
+
+      options.signal?.addEventListener('abort', () => {
+        request.abort();
+      });
+      request.send(form);
+    });
   }
 
   /**
@@ -142,16 +341,12 @@ export class ApiClient {
   }
 
   private async send(path: string, options: RequestOptions, traceId: string): Promise<Response> {
-    const token = this.credentials.accessToken();
     const headers: Record<string, string> = {
-      accept: 'application/json',
-      'x-trace-id': traceId,
-      'accept-language': options.locale ?? 'en',
+      ...options.headers,
+      accept: options.accept ?? 'application/json',
+      ...this.transportHeaders(traceId, options.locale),
     };
 
-    if (token !== null) {
-      headers['authorization'] = `Bearer ${token}`;
-    }
     if (options.body !== undefined) {
       headers['content-type'] = 'application/json';
     }
@@ -173,8 +368,11 @@ export class ApiClient {
 
 /** The body, whatever shape it turned out to have. */
 async function readBody(response: Response): Promise<unknown> {
-  const text = await response.text();
+  return parseBody(await response.text());
+}
 
+/** A body's text as JSON — or nothing, for an empty one or one that is not JSON. */
+function parseBody(text: string): unknown {
   if (text === '') {
     return undefined;
   }

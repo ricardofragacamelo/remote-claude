@@ -221,7 +221,7 @@ test.describe('the limits, on the screen', () => {
 
     // One turn, so there is a conversation to go back to.
     await send(page, `say something [fixture:${expected.fixture}]`);
-    await expect(page.getByText(/^Last turn cost/)).toBeVisible();
+    await expect(page.getByText(/^This session has cost .+ over 1 turn\(s\)$/)).toBeVisible();
 
     // Then nothing — for longer than the TTL, plus the quarter of it the reaper may take to look.
     const ended = page.getByRole('status').filter({ hasText: expected.reason });
@@ -266,7 +266,7 @@ test.describe('the limits, on the screen', () => {
     // And the session is watched again, from where it was: a turn sent now is seen through.
     await expect(connectedOn(page)).toBeVisible();
     await send(page, 'say something [fixture:text-turn]');
-    await expect(page.getByText(/^Last turn cost/)).toBeVisible();
+    await expect(page.getByText(/^This session has cost .+ over 1 turn\(s\)$/)).toBeVisible();
   });
 
   test(`${expiry.id} — ${expiry.title}`, async ({ page }) => {
@@ -303,7 +303,7 @@ test.describe('the limits, on the screen', () => {
 
       // The turn carries on to its end, answered from the same screen.
       await card.getByRole('button', { name: 'Allow once' }).click();
-      await expect(page.getByText(/^Last turn cost/)).toBeVisible();
+      await expect(page.getByText(/^This session has cost .+ over 1 turn\(s\)$/)).toBeVisible();
 
       // And the person saw nothing: not one socket more across the expiry, nothing to reconnect,
       // nothing to sign in to, nothing refused.

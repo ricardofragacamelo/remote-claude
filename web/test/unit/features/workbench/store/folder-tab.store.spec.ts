@@ -81,6 +81,38 @@ describe('the state of a folder tab', () => {
     expect(tab.getState().sessionId).toBeNull();
   });
 
+  it('shows a conversation read only, never beside a session — plan 08, B-10', () => {
+    const tab = folderTabStore(A);
+    tab.getState().showSession('S1');
+
+    tab.getState().showConversation('C1');
+    expect(tab.getState()).toMatchObject({ conversationId: 'C1', sessionId: null });
+
+    tab.getState().showSession('S2');
+    expect(tab.getState()).toMatchObject({ conversationId: null, sessionId: 'S2' });
+  });
+
+  it('takes a session from a link to be checked, and says so when it is not live — B-12', () => {
+    const tab = folderTabStore(A);
+
+    tab.getState().openLinkedSession('S9');
+    expect(tab.getState()).toMatchObject({
+      sessionId: 'S9',
+      sessionFromLink: true,
+      linkRefused: false,
+    });
+
+    tab.getState().refuseLink();
+    expect(tab.getState()).toMatchObject({
+      sessionId: null,
+      sessionFromLink: false,
+      linkRefused: true,
+    });
+
+    tab.getState().showConversation(null);
+    expect(tab.getState().linkRefused).toBe(false);
+  });
+
   it('starts over once the tab is closed, and all of them on a sign-out', () => {
     folderTabStore(A).getState().setDraft('x');
     folderTabStore(B).getState().setDraft('y');

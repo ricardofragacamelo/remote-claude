@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
 import { ErrorState } from '@/shared/components/ErrorState';
+import { PathList } from '@/shared/components/PathList';
 import { Button } from '@/shared/components/ui/button';
+import { useRegistry } from '@/shared/hooks/useRegistry';
 import { folderName } from '@/shared/lib/folder-name';
 import {
   Dialog,
@@ -12,6 +14,7 @@ import {
   DialogTitle,
 } from '@/shared/components/ui/dialog';
 import type { FolderTabs } from '../hooks/useFolderTabs';
+import { folderTabKeepers } from '../store/registries';
 
 export interface CloseFoldersDialogProps {
   readonly control: FolderTabs;
@@ -25,11 +28,21 @@ export interface CloseFoldersDialogProps {
  * The way out is where the focus starts, not the closing — it is the first button, and the dialog
  * focuses its first: an Enter pressed out of habit keeps the tabs
  * (docs/architecture/web/03-ui-system.md#acessibilidade--não-é-opcional).
+ *
+ * What closing would lose is listed by name: the files with unsaved changes the features that keep
+ * something per tab report — the editor's buffers, which never reach the browser's storage
+ * ([07 · D-14](../../../../../docs/plans/07-explorer-and-editor/decisions.md#d-14--rascunho-não-salvo-e-a-recarga)).
  */
 export function CloseFoldersDialog({ control }: CloseFoldersDialogProps): React.JSX.Element {
   const { t } = useTranslation();
+  const keepers = useRegistry(folderTabKeepers);
   const closing = control.closing ?? [];
   const names = closing.map(folderName);
+  const unsaved = closing.flatMap((folder) =>
+    keepers.flatMap((keeper) =>
+      keeper.unsaved(folder).map((path) => (closing.length > 1 ? `${folder}/${path}` : path)),
+    ),
+  );
 
   return (
     <Dialog
@@ -54,13 +67,14 @@ export function CloseFoldersDialog({ control }: CloseFoldersDialogProps): React.
         </DialogHeader>
 
         {closing.length > 1 && (
-          <ul className="flex flex-col gap-1 text-ui" aria-label={t('workbench.close.listLabel')}>
-            {closing.map((path) => (
-              <li key={path} className="font-code text-ui-sm break-all">
-                {path}
-              </li>
-            ))}
-          </ul>
+          <PathList label={t('workbench.close.listLabel')} paths={closing} className="text-ui" />
+        )}
+
+        {unsaved.length > 0 && (
+          <div role="alert" className="flex flex-col gap-1 text-ui">
+            <p>{t('workbench.close.unsaved')}</p>
+            <PathList label={t('workbench.close.unsavedLabel')} paths={unsaved} />
+          </div>
         )}
 
         {control.failure !== null && <ErrorState error={control.failure} />}

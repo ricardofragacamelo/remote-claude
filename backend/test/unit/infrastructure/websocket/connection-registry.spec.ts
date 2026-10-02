@@ -22,6 +22,21 @@ describe('ConnectionRegistry', () => {
     expect(connection.attached.size).toBe(0);
   });
 
+  it('tells who listens that a connection left — once, however often it is removed', () => {
+    const removed: string[] = [];
+    const stop = registry.onRemoved((id) => removed.push(id));
+    registry.register('c1', socket());
+
+    registry.remove('c1');
+    registry.remove('c1');
+    registry.remove('never-there');
+    stop();
+    registry.register('c2', socket());
+    registry.remove('c2');
+
+    expect(removed).toEqual(['c1']);
+  });
+
   it('finds a connection by id', () => {
     registry.register('c1', socket());
 

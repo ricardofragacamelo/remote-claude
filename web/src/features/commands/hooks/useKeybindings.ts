@@ -51,26 +51,44 @@ export function bindingFor(
   return matching.find((binding) => binding.context !== 'global') ?? matching[0];
 }
 
+/** A key that is only a modifier: pressed on its way to a chord, never a chord of its own. */
+const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta']);
+
+/**
+ * Whether a chord begins a sequence some live binding has — `Ctrl+K` of `Ctrl+K S` — for a press
+ * at `target`.
+ */
+function startsSequence(
+  bindings: readonly Keybinding[],
+  chord: string,
+  mac: boolean,
+  target: EventTarget | null,
+): boolean {
+  return bindings.some(
+    (binding) =>
+      isKeyContextActive(binding.context) &&
+      chordOf(binding, mac).startsWith(`${chord} `) &&
+      (!isEditable(target) || binding.allowInInput === true),
+  );
+}
+
 /**
  * Runs the command a key press is bound to — once, for the whole app.
  *
  * - With the focus in a text field, only a binding that allows it fires: the palette's (S-120).
  * - Inside a dialog, none does.
  * - A command that is not available now does not run, and the key is left to the browser (S-121).
+ * - A sequence (`Ctrl+K S`, plan 07) waits for its next chord after the first: that one goes to no
+ *   one else, and whatever comes next ends the wait, bound or not — as the editor people know does.
  */
 export function useKeybindings(registry: CommandRegistry = commandRegistry): void {
   const { t } = useTranslation();
 
   useEffect(() => {
     const mac = onMac();
+    let pending: string | null = null;
 
-    const listen = (event: KeyboardEvent): void => {
-      if (event.defaultPrevented || event.isComposing || inDialog(event.target)) {
-        return;
-      }
-
-      const binding = bindingFor(registry.bindings(), chordOfEvent(event), mac);
-
+    const run = (event: KeyboardEvent, binding: Keybinding | undefined): void => {
       if (binding === undefined || (isEditable(event.target) && binding.allowInInput !== true)) {
         return;
       }
@@ -83,6 +101,34 @@ export function useKeybindings(registry: CommandRegistry = commandRegistry): voi
 
       event.preventDefault();
       void executeCommand(binding.command, t, registry);
+    };
+
+    const listen = (event: KeyboardEvent): void => {
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        inDialog(event.target) ||
+        MODIFIER_KEYS.has(event.key)
+      ) {
+        return;
+      }
+
+      const chord = chordOfEvent(event);
+      const sequence = pending === null ? chord : `${pending} ${chord}`;
+      const binding = bindingFor(registry.bindings(), sequence, mac);
+
+      if (
+        pending === null &&
+        binding === undefined &&
+        startsSequence(registry.bindings(), chord, mac, event.target)
+      ) {
+        pending = chord;
+        event.preventDefault();
+        return;
+      }
+
+      pending = null;
+      run(event, binding);
     };
 
     document.addEventListener('keydown', listen);

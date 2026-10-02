@@ -62,9 +62,10 @@ export interface Command {
 
 /**
  * Where a shortcut applies. `global` is everywhere; `workbench` only while the workbench is on
- * screen, and wins over `global` there.
+ * screen, and wins over `global` there; `explorer` only while the focus is in the tree of the
+ * Explorer (plan 07, B-26) — `Delete`, `F2` and `Ctrl+C` there act on files, and nowhere else.
  */
-export const KEY_CONTEXTS = ['global', 'workbench'] as const;
+export const KEY_CONTEXTS = ['global', 'workbench', 'explorer'] as const;
 
 export type KeyContext = (typeof KEY_CONTEXTS)[number];
 
@@ -74,7 +75,8 @@ export interface Keybinding {
 
   /**
    * The chord, `+`-separated, the key last: `Mod+Shift+P`, `Alt+1`, `Ctrl+Alt+PageDown`. `Mod` is
-   * `Ctrl` — and `Cmd` on a Mac.
+   * `Ctrl` — and `Cmd` on a Mac. A sequence is its chords separated by a space: `Mod+K S` is
+   * `Ctrl+K`, then `S`.
    */
   readonly key: string;
 

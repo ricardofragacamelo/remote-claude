@@ -25,6 +25,12 @@ export interface TabRestorer<T = unknown> extends RegistryEntry {
 
   /** Told whenever what it keeps changed. Answers the way to stop. */
   subscribe(path: string, listener: () => void): () => void;
+
+  /**
+   * Drops what it holds in memory of a folder's tab — closed, or `null` for every tab: a sign-out,
+   * a reload. Only a part with a store of its own needs it; what was kept is the workbench's to drop.
+   */
+  forget?(path: string | null): void;
 }
 
 /** Where every tab's kept state lives, by the folder's **real** path. */

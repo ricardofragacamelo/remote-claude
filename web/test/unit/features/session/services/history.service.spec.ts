@@ -46,6 +46,10 @@ describe('fetchHistoryPage — plan 04, B-07', () => {
         cwd: WORKSPACE,
         gitBranch: null,
         lastModified: WRITTEN,
+        // A backend that does not say what it is doing reads as history: nothing is promised live.
+        activity: 'idle',
+        liveSessionId: null,
+        writtenAgoSeconds: null,
       },
       events: [said('m1', 'hi')],
       nextCursor: 'm0',
@@ -99,5 +103,33 @@ describe('toConversationSummary', () => {
     ['an origin nobody said', aConversationDto({ origin: 'vscode' })],
   ])('refuses one with %s', (_case, value) => {
     expect(toConversationSummary(value)).toBeNull();
+  });
+});
+
+describe('what a conversation is doing — plan 08, B-08', () => {
+  it('reads the activity, the live session and how long ago it was written', async () => {
+    vi.spyOn(api, 'get').mockResolvedValue(
+      aHistoryPage([], {
+        session: aConversationDto({
+          activity: 'liveHere',
+          liveSessionId: 'live-1',
+          writtenAgoSeconds: 12,
+        }),
+      }),
+    );
+
+    expect((await fetchHistoryPage(OURS, null)).conversation).toMatchObject({
+      activity: 'liveHere',
+      liveSessionId: 'live-1',
+      writtenAgoSeconds: 12,
+    });
+  });
+
+  it('reads an activity it does not know as idle', async () => {
+    vi.spyOn(api, 'get').mockResolvedValue(
+      aHistoryPage([], { session: aConversationDto({ activity: 'dreaming' }) }),
+    );
+
+    expect((await fetchHistoryPage(OURS, null)).conversation.activity).toBe('idle');
   });
 });

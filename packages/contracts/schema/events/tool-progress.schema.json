@@ -8,7 +8,16 @@
   "type": "object",
   "required": ["toolUseId", "chunk"],
   "properties": {
-    "toolUseId": { "type": "string" },
-    "chunk": { "type": "string", "description": "This fragment of the output, and only this one." }
+    "toolUseId": {
+      "type": "string"
+    },
+    "chunk": {
+      "type": "string",
+      "description": "This fragment of the output, and only this one."
+    },
+    "parentToolUseId": {
+      "type": "string",
+      "description": "Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation."
+    }
   }
 }

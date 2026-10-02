@@ -21,7 +21,7 @@ tinha um arquivo novo (S-110).
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-11 — Salvar: atômico, com `If-Match` 🔲
+### B-11 — Salvar: atômico, com `If-Match` ✅
 
 `PUT /files/content` pela [D-03](decisions.md#d-03--a-semântica-de-concorrência): sem `If-Match` (ou
 com `*`) → `428`; hash atual diferente → `412` com o `ETag` atual — inclusive quando o arquivo foi
@@ -45,7 +45,7 @@ senão `428` (`reason: sensitiveFile`); o fato na trilha leva `sensitive: true`.
 O use case de escrita é **exportado** pelo módulo: o substituir em lote do plano 09 e a edição de
 `CLAUDE.md` do plano 11 escrevem por ele, e herdam `ETag`, trilha e atomicidade.
 
-### B-12 — Criar arquivo e pasta 🔲
+### B-12 — Criar arquivo e pasta ✅
 
 `POST /files { folder, path, kind, content?, encoding? }`: `O_EXCL` no disco — dois creates juntos,
 um `201` e um `409` —, pais intermediários criados (`a/b/c.ts`), `201` com `Location` e `ETag`. O
@@ -54,7 +54,7 @@ não sabe que era um modelo, e não precisa ([D-19](decisions.md#d-19--de-onde-v
 vazio, `.`, `..`, NUL ou segmento acima de 255 bytes → `400` com todos os motivos. O `409` carrega o
 `ETag` do existente: é por ele que a web reconhece o próprio reenvio.
 
-### B-13 — Renomear e mover 🔲
+### B-13 — Renomear e mover ✅
 
 `POST /files/move { folder, from, to, ifMatch? }`, **sem sobrescrever** pela
 [D-12](decisions.md#d-12--mover-sem-sobrescrever) — o `rename` do Linux sobrescreve em silêncio, e é
@@ -63,14 +63,14 @@ destino fora da pasta (`403`) e `EXDEV` (`422`, `reason: crossDevice` — nunca 
 implícita). Renomear só a caixa funciona. `If-Match` opcional: a web o manda quando tem o `ETag` (a
 aba aberta), e é o que torna seguro o "desfazer renomear" da B-27.
 
-### B-14 — Copiar e duplicar 🔲
+### B-14 — Copiar e duplicar ✅
 
 `POST /files/copy { folder, from, to }`: arquivo e pasta recursiva; symlink é copiado **como link**,
 nunca seguido; destino existente → `409`; pasta acima do teto de cópia (entradas ou bytes) é recusada
 **antes** de começar; falha no meio remove o destino parcial. "Duplicar" é a web escolhendo o nome
 (`nome copy.ext`, `nome copy 2.ext`) por uma função pura.
 
-### B-15 — Apagar 🔲
+### B-15 — Apagar ✅
 
 `DELETE /files?folder=&path=`. Pela [D-06](decisions.md#d-06--apagar-definitivo-ou-lixeira), até a
 F8: pasta não vazia sem `recursive` → `409` `DIRECTORY_NOT_EMPTY` com a contagem (capada); com
@@ -78,7 +78,7 @@ F8: pasta não vazia sem `recursive` → `409` `DIRECTORY_NOT_EMPTY` com a conta
 o alvo, mesmo fora da pasta, fica —, e o recursivo não atravessa link. A própria pasta aberta não se
 apaga por aqui. O que não existe é `404`, que a web trata como feito quando é o reenvio dela.
 
-### B-16 — A escrita humana na trilha 🔲
+### B-16 — A escrita humana na trilha ✅
 
 Pela [D-02](decisions.md#d-02--a-escrita-humana-na-trilha): migration versionada nova acrescentando
 ao CHECK de `audit_events.kind` os `file.created`, `file.written`, `file.moved`, `file.copied`,
@@ -88,7 +88,7 @@ origem/destino, contagem, `sensitive` — **nunca conteúdo**. Gravado antes do 
 indisponível → `503` `SERVICE_UNAVAILABLE` com `Retry-After`, e nada no disco; disco que falha depois
 do registro → `file.failed` apontando o primeiro. Reenvio idempotente (S-66) não grava segundo fato.
 
-### B-17 — Ler os fatos de arquivo 🔲
+### B-17 — Ler os fatos de arquivo ✅
 
 Pela [D-13](decisions.md#d-13--onde-os-fatos-de-arquivo-aparecem-na-trilha): `GET /audit-events` no
 `AuditQueryModule`, filtrado sempre por quem pergunta, `kind` por prefixo, cursor keyset por `seq`
@@ -96,7 +96,7 @@ descendente — a mesma disciplina de `GET /audit-entries` ([backend/03](../../a
 Documentado no `backend/03`. O redesenho da tela é do [plano 12](../12-audit-explained/README.md); se
 ele chegar antes, esta task vira consumo do endpoint dele.
 
-### B-18 — A escrita humana e a sessão viva 🔲
+### B-18 — A escrita humana e a sessão viva ✅
 
 Duas coisas, uma razão cada:
 

@@ -7,6 +7,16 @@
   "x-type": "session.start",
   "type": "object",
   "required": ["workspacePath"],
+  "x-required-when": [
+    {
+      "field": "resumeSessionId",
+      "when": {
+        "field": "forkAt",
+        "present": true
+      },
+      "because": "a fork point is a message of a conversation, and only a resumed conversation has one"
+    }
+  ],
   "properties": {
     "workspacePath": {
       "type": "string",
@@ -21,9 +31,18 @@
       "enum": ["default", "acceptEdits", "bypassPermissions", "plan"],
       "description": "Permission mode to open with. Absent means the server default."
     },
+    "effort": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "xhigh", "max"],
+      "description": "How much effort the model puts in, for the whole session. Absent is the installation's default. Chosen before the session exists, because changing it on a live one (`applyFlagSettings`) restarts the CLI's query and drops its hooks — measured in plan 08, D-16. A level the model does not take is `INVALID_INPUT` (`session.error.effortUnsupported`). An enum read as a string, so a level added later does not break a client."
+    },
     "resumeSessionId": {
       "type": "string",
       "description": "Session of the Agent SDK to resume instead of starting fresh."
+    },
+    "forkAt": {
+      "type": "string",
+      "description": "Edit and resend: the `messageId` of the user prompt to rewrite. The conversation `resumeSessionId` names continues from **just before** it, always in a new id — the original stays as it was (plan 08, D-19). A point the conversation does not have is `INVALID_INPUT` (`session.error.forkPointUnknown`); one the CLI refuses is `SESSION_FORK_REJECTED`."
     }
   }
 }

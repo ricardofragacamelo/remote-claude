@@ -101,11 +101,21 @@ describe('the transcript transport shapes', () => {
 
   it('flattens a page into the events of its messages, oldest first — B-03', () => {
     const dto = toTranscriptPageDto({
-      session: { ...aTranscriptSession(), origin: 'external' },
+      session: {
+        ...aTranscriptSession(),
+        origin: 'external',
+        activity: { activity: 'activeElsewhere', liveSessionId: null, writtenAgoSeconds: 30 },
+      },
       page: { items: someMessages(2), next: 'm1' },
     });
 
     expect(dto.events.map((event) => event.payload['messageId'])).toEqual(['m1', 'm2']);
     expect(dto.nextCursor).toBe('m1');
+    // Plan 08, B-08: the panel reading one conversation knows, too, whether it is active elsewhere.
+    expect(dto.session).toMatchObject({
+      activity: 'activeElsewhere',
+      liveSessionId: null,
+      writtenAgoSeconds: 30,
+    });
   });
 });

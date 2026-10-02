@@ -74,9 +74,22 @@ function canonical(chord: Chord): string {
   return [...heldIn(chord).map((modifier) => modifier.word), chord.key].join('+');
 }
 
-/** The chord a binding means on one platform. */
+/**
+ * The chords of a binding as it is written for one platform — one, or a sequence separated by a
+ * space: `Mod+K S` is `Mod+K`, let go, then `S`.
+ */
+function partsOf(binding: Pick<Keybinding, 'key' | 'mac'>, mac: boolean): readonly string[] {
+  return (mac ? (binding.mac ?? binding.key) : binding.key).split(' ');
+}
+
+/**
+ * The chord a binding means on one platform — a sequence is its chords in order, separated by a
+ * space (`Ctrl+K S`).
+ */
 export function chordOf(binding: Pick<Keybinding, 'key' | 'mac'>, mac: boolean): string {
-  return canonical(parse(mac ? (binding.mac ?? binding.key) : binding.key, mac));
+  return partsOf(binding, mac)
+    .map((part) => canonical(parse(part, mac)))
+    .join(' ');
 }
 
 /**
@@ -123,11 +136,14 @@ const RESERVED: Readonly<Record<'other' | 'mac', readonly string[]>> = {
 
 /** The platform whose browser keeps the chord a binding means there, if any. */
 export function reservedIn(binding: Pick<Keybinding, 'key' | 'mac'>): 'other' | 'mac' | null {
-  if (RESERVED.other.includes(chordOf(binding, false))) {
+  // A sequence starts with its first chord: a browser that keeps that one never lets it begin.
+  const first = (mac: boolean): string => chordOf(binding, mac).split(' ')[0] ?? '';
+
+  if (RESERVED.other.includes(first(false))) {
     return 'other';
   }
 
-  return RESERVED.mac.includes(chordOf(binding, true)) ? 'mac' : null;
+  return RESERVED.mac.includes(first(true)) ? 'mac' : null;
 }
 
 /** How a key is written for a person, and for `aria-keyshortcuts`. */
@@ -146,14 +162,23 @@ export function shortcutLabel(
   binding: Pick<Keybinding, 'key' | 'mac'>,
   mac: boolean,
 ): ShortcutLabel {
-  const chord = parse(mac ? (binding.mac ?? binding.key) : binding.key, mac);
-  const key = KEY_LABELS[chord.key] ?? { label: chord.key, aria: chord.key };
-  const held = heldIn(chord);
+  const chords = partsOf(binding, mac).map((part) => {
+    const chord = parse(part, mac);
+    const key = KEY_LABELS[chord.key] ?? { label: chord.key, aria: chord.key };
+    const held = heldIn(chord);
+
+    return {
+      label: mac
+        ? [...held.map((modifier) => modifier.symbol), key.label].join('')
+        : [...held.map((modifier) => modifier.word), key.label].join('+'),
+      aria: [...held.map((modifier) => modifier.aria), key.aria].join('+'),
+    };
+  });
 
   return {
-    label: mac
-      ? [...held.map((modifier) => modifier.symbol), key.label].join('')
-      : [...held.map((modifier) => modifier.word), key.label].join('+'),
-    aria: [...held.map((modifier) => modifier.aria), key.aria].join('+'),
+    label: chords.map((chord) => chord.label).join(' '),
+    // `aria-keyshortcuts` separates **alternatives** with a space and has no way to say "then": a
+    // sequence is announced by its label only, never as two shortcuts it is not.
+    aria: chords.length === 1 ? (chords[0]?.aria ?? '') : '',
   };
 }

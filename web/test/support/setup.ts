@@ -6,6 +6,14 @@ import { toHaveNoViolations } from 'jest-axe';
 import { toast } from 'sonner';
 
 import { usePalette } from '@/features/commands';
+import { createPlainEngine } from '@/features/editor/lib/plain-engine';
+import { setEngineLoader } from '@/features/editor/lib/engine-loader';
+import { forgetEditor } from '@/features/editor/store/editor.store';
+import {
+  DEFAULT_PREFERENCES,
+  useEditorPreferences,
+} from '@/features/editor/store/preferences.store';
+import { useEditorUi } from '@/features/editor/store/ui.store';
 import { useNotifications } from '@/features/notifications';
 import { usePingStore } from '@/features/diagnostics';
 import { forgetPermissionQueues } from '@/features/permission';
@@ -17,6 +25,7 @@ import { useDensity } from '@/shared/hooks/useDensity';
 import { useTheme } from '@/shared/hooks/useTheme';
 import { forgetLiveSessions } from '@/features/session';
 import { useOwnedSessionsStore } from '@/features/session/store/owned-sessions.store';
+import { forgetSessionsView } from '@/features/session/store/sessions-view.store';
 
 expect.extend(matchers);
 // Accessibility is checked on every main screen, and a violation breaks the build: this product
@@ -60,6 +69,11 @@ if (typeof Element.prototype.setPointerCapture !== 'function') {
 // (plan 05, cycle 18).
 configure({ asyncUtilTimeout: 5_000 });
 
+// Monaco needs a real browser — layout, workers, the clipboard — and is exercised end to end. In
+// jsdom the editor runs on the other adapter of the same port, the simplified mode's, which a
+// contract test holds to the same behaviour (plan 07, S-208).
+setEngineLoader('monaco', () => Promise.resolve(createPlainEngine()));
+
 afterEach(() => {
   cleanup();
 
@@ -76,6 +90,7 @@ afterEach(() => {
   // What a visitor keeps — the theme, the language, the help left open, each tab's state and sizes —
   // is this browser's, and a test is a browser of its own (plan 06, B-17…B-21).
   forgetFolderTabs();
+  forgetSessionsView(null);
   localStorage.clear();
   useTheme.setState({ preference: 'system', theme: 'light' });
   useLocale.setState({ locale: 'en', picked: false });
@@ -85,6 +100,12 @@ afterEach(() => {
 
   // And the services of the shell, which live as long as the page (plan 06, F4).
   usePalette.getState().close();
+
+  // And the editor's, which lives as long as the page too (plan 07, F5).
+  forgetEditor(null);
+  setEngineLoader('monaco', () => Promise.resolve(createPlainEngine()));
+  useEditorPreferences.setState({ preferences: DEFAULT_PREFERENCES });
+  useEditorUi.setState({ mounted: [], helpOpen: false });
   useFolderDialog.setState({ open: false, startAt: null, routes: null });
   useNotifications.setState({ pending: [], outbox: null, centerOpen: false, doNotDisturb: false });
   toast.dismiss();

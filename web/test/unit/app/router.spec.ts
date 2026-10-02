@@ -142,7 +142,14 @@ describe('the settings, one section at a time — plan 06, S-142', () => {
     expect(landed.params).toEqual({ section: 'workspaces' });
   });
 
-  it.each(['/settings', '/settings/editor', '/settings/claude'])(
+  it('keeps /settings/editor, the section the editor registers at load — plan 07, B-39', async () => {
+    const landed = await land('/settings/editor');
+
+    expect(landed.params).toEqual({ section: 'editor' });
+  });
+
+  // `/settings/terminal` is plan 10's, not installed yet; `/settings/editor` is plan 07's, and is.
+  it.each(['/settings', '/settings/terminal', '/settings/claude'])(
     'sends %s, which names no section here, to the first one — without an error',
     async (href) => {
       const landed = await land(href);
@@ -236,5 +243,68 @@ describe('the folder of the workbench, read from the URL — plan 06, S-04', () 
     ['a list', { folder: ['/srv/a'] }],
   ])('names no folder when it is %s', (_case, search) => {
     expect(readWorkbenchSearch(search)).toEqual({});
+  });
+});
+
+describe('the active file of the workbench, in the URL — plan 07, S-10, S-216', () => {
+  it.each(['src/main.ts', 'a b/ç#1%.ts', '../climbs/out'])(
+    'takes %j through its own address and back, exactly — the server decides what it may name',
+    (file) => {
+      const address = workbenchLocation({ folder: '/srv/app', file });
+
+      expect(readWorkbenchSearch(defaultParseSearch(address.slice('/workbench'.length)))).toEqual({
+        folder: '/srv/app',
+        file,
+      });
+    },
+  );
+
+  it('names no file that is empty or not text, and none without a folder', () => {
+    expect(readWorkbenchSearch({ folder: '/srv/app', file: '' })).toEqual({ folder: '/srv/app' });
+    expect(readWorkbenchSearch(defaultParseSearch('?folder=%2Fsrv&file=123'))).toEqual({
+      folder: '/srv',
+    });
+    expect(readWorkbenchSearch({ file: 'a.ts' })).toEqual({});
+  });
+
+  it('keeps the file a link names on the route of the workbench', async () => {
+    const landed = await land(workbenchLocation({ folder: '/srv/projects/app', file: 'src/a.ts' }));
+
+    expect(landed.search).toMatchObject({ folder: '/srv/projects/app', file: 'src/a.ts' });
+  });
+});
+
+describe('what the panel of Claude shows, in the URL — plan 08, D-24', () => {
+  it('takes a session through its own address and back', () => {
+    const address = workbenchLocation({ folder: '/srv/app', file: 'a.ts', session: 'S1' });
+
+    expect(readWorkbenchSearch(defaultParseSearch(address.slice('/workbench'.length)))).toEqual({
+      folder: '/srv/app',
+      file: 'a.ts',
+      session: 'S1',
+    });
+  });
+
+  it('takes a conversation through its own address and back', () => {
+    const address = workbenchLocation({ folder: '/srv/app', conversation: 'C1' });
+
+    expect(readWorkbenchSearch(defaultParseSearch(address.slice('/workbench'.length)))).toEqual({
+      folder: '/srv/app',
+      conversation: 'C1',
+    });
+  });
+
+  it('keeps the session when a link names both: the panel shows one thing', () => {
+    expect(readWorkbenchSearch({ folder: '/srv/app', session: 'S1', conversation: 'C1' })).toEqual({
+      folder: '/srv/app',
+      session: 'S1',
+    });
+  });
+
+  it('names neither without a folder, nor one that is empty', () => {
+    expect(readWorkbenchSearch({ session: 'S1' })).toEqual({});
+    expect(readWorkbenchSearch({ folder: '/srv/app', session: '', conversation: '' })).toEqual({
+      folder: '/srv/app',
+    });
   });
 });

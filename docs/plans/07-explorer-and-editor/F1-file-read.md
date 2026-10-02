@@ -20,7 +20,7 @@ depois escrever — fora da pasta que o usuário abriu.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-07 — `FilePath`: o caminho dentro da pasta aberta 🔲
+### B-07 — `FilePath`: o caminho dentro da pasta aberta ✅
 
 Value object em `domain/files/`, puro, com a mesma exigência de cobertura da regra do `workspace`
 ([backend/03](../../architecture/backend/03-modules.md#workspace)): recebe a pasta (já resolvida pela
@@ -40,7 +40,7 @@ A contenção de verdade é no adapter, **a cada operação**:
 Pasta que saiu da allowlist numa recarga, ou que sumiu do disco, é recusada na próxima operação —
 não existe cache de "já conferi esta pasta".
 
-### B-08 — A árvore, um nível por vez 🔲
+### B-08 — A árvore, um nível por vez ✅
 
 Port `FileTreeReader` em `application/files/ports/` e adapter sobre `fs.opendir` + `lstat` em
 `adapter/outbound/filesystem/`. Um nível: nome, `kind` (`file`, `directory`, `symlink` com
@@ -53,7 +53,7 @@ Entrada que some entre o `readdir` e o `lstat` é omitida sem erro — o Claude 
 todo. Nome que não é UTF-8 válido (Linux aceita bytes) volta marcado `unreadableName` e não é
 operável: o Node não o devolve de forma que dê para reenviar.
 
-### B-09 — A leitura do conteúdo 🔲
+### B-09 — A leitura do conteúdo ✅
 
 Pela [D-04](decisions.md#d-04--teto-de-tamanho-e-encoding): lê **do mesmo descritor** com limite de
 `teto + 1` bytes (nunca `stat` e depois leitura); binário por NUL nos primeiros 8 KB; encoding por BOM
@@ -67,7 +67,7 @@ leve.
 durante o rename atômico de outro processo nunca mistura versão e hash. `If-None-Match` com o `ETag`
 atual → `304` sem corpo: é o que torna barato revalidar as abas ao reativar uma aba de pasta.
 
-### B-10 — As rotas e o log 🔲
+### B-10 — As rotas e o log ✅
 
 Controller em `adapter/inbound/http/files/`: validação da query com todos os campos inválidos em
 `details[]`, Bearer obrigatório, mapeamento pelo filtro de exceção existente. Log de I/O em `debug`

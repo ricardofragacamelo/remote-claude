@@ -142,6 +142,20 @@ export default {
       to: { dependencyTypes: ['npm'], path: 'node_modules/(openid-client|oidc-client)/' },
     },
     {
+      name: 'files-never-reaches-session',
+      comment:
+        'The `files` module talks to `workspace` through a port and to `audit` by writing, and to ' +
+        '`session` and `transcript` not at all: what Claude wrote reaches it as ' +
+        '`session.fileStateRecorded` on the internal bus. An import here would draw the arrow ' +
+        'files → session that the catalogue leaves out, and close a cycle through `workspace`. See ' +
+        'docs/architecture/backend/03-modules.md#files and plan 07, D-01 and S-08.',
+      severity: 'error',
+      from: {
+        path: '^src/(domain/files|application/files|adapter/inbound/http/files|adapter/inbound/ws/files|adapter/outbound/files|adapter/outbound/filesystem/(node-folder-disk|folder-|atomic-file|chokidar-folder))',
+      },
+      to: { path: '^src/(domain|application)/(session|transcript)/' },
+    },
+    {
       name: 'no-test-in-src',
       comment: 'Tests mirror the source from test/; they never sit beside it.',
       severity: 'error',

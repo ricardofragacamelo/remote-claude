@@ -144,6 +144,34 @@ export function testEnvironment(
   process.env['RC_CHECKPOINT_DIR'] = mkdtempSync(path.join(tmpdir(), 'rc-checkpoints-'));
   process.env['RC_CHECKPOINT_MAX_FILE_BYTES'] = '5242880';
   process.env['RC_CHECKPOINT_MAX_STORE_BYTES'] = '524288000';
+  // The product's numbers, except the editing ceiling: small, so a suite can cross it without
+  // writing ten megabytes — and the light-mode threshold under it.
+  process.env['RC_FILES_TREE_MAX_ENTRIES'] = '5000';
+  process.env['RC_FILES_LARGE_FILE_BYTES'] = '16384';
+  process.env['RC_FILES_MAX_EDIT_BYTES'] = '65536';
+  process.env['RC_FILES_COPY_MAX_ENTRIES'] = '10000';
+  process.env['RC_FILES_COPY_MAX_BYTES'] = '104857600';
+  process.env['RC_FILES_DELETE_COUNT_CAP'] = '10000';
+  // The product's watcher numbers, the window shortened so a suite waits a fifth as long for it.
+  process.env['RC_FILES_WATCH_WINDOW_MS'] = '40';
+  process.env['RC_FILES_WATCH_MAX_CHANGES'] = '500';
+  process.env['RC_FILES_WATCH_MAX_PER_CONNECTION'] = '16';
+  process.env['RC_FILES_WATCH_MAX_BUFFERED_BYTES'] = '1048576';
+  // Transfer ceilings small enough for a suite to cross each one without moving megabytes: the
+  // download above the editing ceiling, so a file too big to edit can still be downloaded.
+  process.env['RC_FILES_DOWNLOAD_MAX_BYTES'] = '262144';
+  process.env['RC_FILES_ARCHIVE_MAX_ENTRIES'] = '200';
+  process.env['RC_FILES_UPLOAD_MAX_BYTES'] = '65536';
+  process.env['RC_FILES_UPLOAD_MAX_ENTRIES'] = '50';
+  process.env['RC_FILES_UPLOAD_MAX_TOTAL_BYTES'] = '262144';
+  // The local history in a folder of the suite's own, the snapshot ceiling at the editing one.
+  process.env['RC_FILES_HISTORY_DIR'] = mkdtempSync(path.join(tmpdir(), 'rc-file-history-'));
+  process.env['RC_FILES_HISTORY_MAX_FILE_BYTES'] = '65536';
+  process.env['RC_FILES_HISTORY_MAX_PER_FILE'] = '50';
+  process.env['RC_FILES_HISTORY_MAX_STORE_BYTES'] = '536870912';
+  process.env['RC_FILES_HISTORY_RETENTION_DAYS'] = '30';
+  process.env['RC_FILES_HISTORY_MAX_BATCH_ENTRIES'] = '1000';
+  process.env['RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS'] = '120';
   process.env['RC_AUDIT_RETENTION_DAYS'] = '90';
   // On, and a day long: the first run is a minute after boot, which no suite waits for — the suites
   // about the purge drive it directly, at the instant they choose.

@@ -1,0 +1,3171 @@
+{
+  "$comment": "Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. Do not edit by hand — re-record instead. See docs/plans/01-live-session/F2-session-runtime.md.",
+  "name": "edit-turn",
+  "why": "Edit twice on one file in one turn, Write over an existing file and Write of a new one — what the diffs of plan 08 (F3) are computed from",
+  "prompt": "Use the Edit tool to change 'hello' to 'hi' in app.js. Then use the Edit tool again on app.js to change console.log to console.info. Then use the Write tool to overwrite config.json with exactly {\"debug\": true} and a newline. Then use the Write tool to create notes.txt containing the single line: done. Use no other tool and do not ask me anything.",
+  "recordedAt": "2026-10-01",
+  "sdkVersion": "0.3.277",
+  "counts": { "messages": 213, "preToolUse": 6, "canUseTool": 4 },
+  "preToolUse": [
+    { "toolName": "Read", "toolUseId": "toolu_01AVHCLU5javEkKZ4BWWq6nx", "effort": "high" },
+    { "toolName": "Read", "toolUseId": "toolu_01CqdSXsBQpJSLhyKiEY21MF", "effort": "high" },
+    { "toolName": "Edit", "toolUseId": "toolu_012EkVwEeFqAQ8zT3cffZAbG", "effort": "high" },
+    { "toolName": "Write", "toolUseId": "toolu_01YJXctSzDxFbQQD7iLse5Qd", "effort": "high" },
+    { "toolName": "Write", "toolUseId": "toolu_012Xaytu1wtQvZW4GQrzv3WX", "effort": "high" },
+    { "toolName": "Edit", "toolUseId": "toolu_01DRkcPdqgtB63ZjpwT7TVeq", "effort": "high" }
+  ],
+  "canUseTool": [
+    {
+      "toolName": "Edit",
+      "input": {
+        "file_path": "/workspace/app.js",
+        "old_string": "const greeting = 'hello';",
+        "new_string": "const greeting = 'hi';",
+        "replace_all": false
+      }
+    },
+    {
+      "toolName": "Write",
+      "input": { "file_path": "/workspace/config.json", "content": "{\"debug\": true}\n" }
+    },
+    { "toolName": "Write", "input": { "file_path": "/workspace/notes.txt", "content": "done\n" } },
+    {
+      "toolName": "Edit",
+      "input": {
+        "file_path": "/workspace/app.js",
+        "old_string": "console.log(greeting);",
+        "new_string": "console.info(greeting);",
+        "replace_all": false
+      }
+    }
+  ],
+  "stderr": [],
+  "messages": [
+    {
+      "type": "system",
+      "subtype": "init",
+      "cwd": "/workspace",
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "tools": [
+        "Task",
+        "AskUserQuestion",
+        "Bash",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DesignSync",
+        "Edit",
+        "EnterPlanMode",
+        "EnterWorktree",
+        "ExitPlanMode",
+        "ExitWorktree",
+        "ListAgents",
+        "Monitor",
+        "NotebookEdit",
+        "PushNotification",
+        "Read",
+        "RemoteTrigger",
+        "ReportFindings",
+        "ScheduleWakeup",
+        "SendMessage",
+        "ShareOnboardingGuide",
+        "Skill",
+        "TaskStop",
+        "ToolSearch",
+        "WebFetch",
+        "WebSearch",
+        "Workflow",
+        "Write"
+      ],
+      "mcp_servers": [],
+      "model": "claude-opus-5[1m]",
+      "permissionMode": "default",
+      "slash_commands": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator",
+        "advisor",
+        "agents",
+        "auto-mode-setup",
+        "autocompact",
+        "clear",
+        "color",
+        "compact",
+        "config",
+        "output-style",
+        "context",
+        "effort",
+        "fast",
+        "heapdump",
+        "init",
+        "mcp",
+        "import",
+        "model",
+        "__remote-workflow",
+        "workflow-launch-exec",
+        "reload-plugins",
+        "reload-skills",
+        "rename",
+        "security-review",
+        "usage-credits",
+        "extra-usage",
+        "usage",
+        "insights",
+        "recap",
+        "skill-doctor",
+        "goal",
+        "design-consent",
+        "design-revoke",
+        "list-agents",
+        "team-onboarding"
+      ],
+      "terminal_slash_commands": ["doctor", "color", "reload-plugins"],
+      "apiKeySource": "none",
+      "claude_code_version": "2.1.277",
+      "output_style": "default",
+      "agents": ["claude", "Explore", "general-purpose", "Plan", "statusline-setup"],
+      "skills": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator"
+      ],
+      "plugins": [{ "name": "agents-md", "path": "builtin", "source": "agents-md@builtin" }],
+      "capabilities": ["interrupt_receipt_v1", "interrupt_cancel_queued_v1", "msg_lifecycle_v1"],
+      "analytics_disabled": false,
+      "product_feedback_disabled": false,
+      "uuid": "22c44dbc-224a-452d-87a1-0fa16296b420",
+      "memory_paths": { "auto": "/home/user/.claude/projects/-workspace/memory/" },
+      "messaging_socket_path": "/run/user/1000/cc-socks/1974046.sock",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required"
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "a19c9b25-7ada-48e5-84c4-21fa1cd61f93"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011Cfc8kAfCn8Aku86FHHeSK",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 15307,
+            "cache_read_input_tokens": 0,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 15307
+            },
+            "output_tokens": 1,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "fa92eedb-65b3-41d2-88aa-542b65cb4cd1",
+      "ttft_ms": 780
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": { "type": "text", "text": "" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "51e06441-4a68-4f90-9640-d39eb8adb78e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "I" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "de1e3108-a079-43c2-9054-fe0bd4f7574e"
+    },
+    {
+      "type": "rate_limit_event",
+      "rate_limit_info": {
+        "status": "allowed",
+        "resetsAt": 1790889600,
+        "rateLimitType": "five_hour",
+        "overageStatus": "rejected",
+        "overageDisabledReason": "member_zero_credit_limit",
+        "isUsingOverage": false,
+        "unifiedWindows": {
+          "five_hour": { "utilization": 0.84, "resetsAt": 1790889600 },
+          "seven_day": { "utilization": 0.14, "resetsAt": 1791478800 }
+        }
+      },
+      "uuid": "2ec81047-a6b6-46fb-84c4-d4b5502006f5",
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " need" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "634e1338-2d84-480b-a0ee-7e7e52080e9f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " to" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "a596fae8-1b16-4a19-877b-513d2bf96550"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " read the files" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "9405020a-0551-426e-b8ff-118436b3227a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " first" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "53c5ed96-e1a5-4bea-a12d-068a1d0d0d83"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " —" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "12d8f105-a25d-4f40-bdad-5ada14371d89"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " the" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "d85f20a3-9b14-4daa-846f-5fbfea08b0a5"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " Edit tool requires it" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "bef73017-4c87-4954-8915-1108121c2b83"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": ". Let me check" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "92cab5d3-4175-4ced-8117-a6d47a95a0e5"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " what" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "465b2d12-760b-459e-84e7-ad7285110712"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "'s there" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "7be3c3d3-d316-430b-8ffb-4bfc0d956933"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "." }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "3f1d9b33-0451-4777-8f99-79e014a32448"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8kAfCn8Aku86FHHeSK",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "I need to read the files first — the Edit tool requires it. Let me check what's there."
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 15307,
+          "cache_read_input_tokens": 0,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 15307 },
+          "output_tokens": 1,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "76096a43-b31d-41c6-be5e-30b3d6263881",
+      "timestamp": "2026-10-01T20:17:47.627Z",
+      "request_id": "req_011Cfc8kADevxpmSbe2QCLsV"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "c12e6888-baa6-43f1-8521-f8919ac2ed2c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 1,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01AVHCLU5javEkKZ4BWWq6nx",
+          "name": "Read",
+          "input": {},
+          "caller": { "type": "direct" }
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "b1595006-cecb-4965-8d4e-2f4fcbd2c0c3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "d056f632-6617-4ddc-969d-328a6aed754e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"file_path\": \"/t" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "f26b20ad-f059-43c4-9503-113386af6f9c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "mp/rc" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "93efccda-efa1-4b25-a6ca-97ea073c12f7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "-fixture-s" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "c33dd853-55c6-4108-a15e-8f4bb1c2f9f1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "4P" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "0e6593b5-1bb1-455c-9769-9467bfcf689d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "xE" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "95797e63-44f7-428f-9275-9312ad1580b7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "b/app.js" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "25e10225-dc5d-408a-9826-cc00c92ec32a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "297ab6d1-9c43-4d47-a39d-f61f3fb82371"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8kAfCn8Aku86FHHeSK",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01AVHCLU5javEkKZ4BWWq6nx",
+            "name": "Read",
+            "input": { "file_path": "/workspace/app.js" },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 15307,
+          "cache_read_input_tokens": 0,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 15307 },
+          "output_tokens": 1,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "f0af7068-ec8b-49c4-8573-b00c27be6c10",
+      "timestamp": "2026-10-01T20:17:48.281Z",
+      "request_id": "req_011Cfc8kADevxpmSbe2QCLsV",
+      "wire_tool_inputs": { "toolu_01AVHCLU5javEkKZ4BWWq6nx": { "file_path": "/workspace/app.js" } }
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 1 },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "22488457-bb32-4964-88ea-e3ea84706661"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 2,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01CqdSXsBQpJSLhyKiEY21MF",
+          "name": "Read",
+          "input": {},
+          "caller": { "type": "direct" }
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "26a4ffa8-7140-4f32-8a33-071486348c9b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "48abb749-58a1-4436-9149-69cb262bdd7f"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_01AVHCLU5javEkKZ4BWWq6nx",
+            "type": "tool_result",
+            "content": "1\tconst greeting = 'hello';\n2\tconsole.log(greeting);\n3\t"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "73afcc11-656d-4e18-8ca3-6d09ee34a45b",
+      "timestamp": "2026-10-01T20:17:48.322Z",
+      "tool_use_result": {
+        "type": "text",
+        "file": {
+          "filePath": "/workspace/app.js",
+          "content": "const greeting = 'hello';\nconsole.log(greeting);\n",
+          "numLines": 3,
+          "startLine": 1,
+          "totalLines": 3
+        }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"file_path\": \"/tmp/rc" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "a529562a-0e71-4d95-8255-2ec5ec27eed5"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "-fixture-s4P" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "f931503d-921c-4e40-95e3-0e7157f17af3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "xEb/config.json" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "01fbc36a-c42d-4f3d-827d-fe9a628640d2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "7ac1cb53-5c2b-4990-8ff6-b219bb8661fe"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8kAfCn8Aku86FHHeSK",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01CqdSXsBQpJSLhyKiEY21MF",
+            "name": "Read",
+            "input": { "file_path": "/workspace/config.json" },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 15307,
+          "cache_read_input_tokens": 0,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 15307 },
+          "output_tokens": 1,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "9d8b396b-085d-461c-a5fc-5baa1e098948",
+      "timestamp": "2026-10-01T20:17:48.720Z",
+      "request_id": "req_011Cfc8kADevxpmSbe2QCLsV",
+      "wire_tool_inputs": {
+        "toolu_01CqdSXsBQpJSLhyKiEY21MF": { "file_path": "/workspace/config.json" }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 2 },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "7321f620-e974-4482-b0ab-62112f7b2f90"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 15307,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 162,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 162,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 15307,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 15307
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "6042bd3d-74dd-41fd-9c40-1d7906cdab0f"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "5e554b6b-9c23-47b2-bdda-1e9ea7f1ffe2"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_01CqdSXsBQpJSLhyKiEY21MF",
+            "type": "tool_result",
+            "content": "1\t{\"debug\": false}\n2\t"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "38d0502c-d11f-45f2-834b-873a86cf77c0",
+      "timestamp": "2026-10-01T20:17:48.751Z",
+      "tool_use_result": {
+        "type": "text",
+        "file": {
+          "filePath": "/workspace/config.json",
+          "content": "{\"debug\": false}\n",
+          "numLines": 2,
+          "startLine": 1,
+          "totalLines": 2
+        }
+      }
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "a5f79ddd-fad5-42df-a568-1e05dd00e22b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011Cfc8kMgE5REf4ifuEjbCn",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 2395,
+            "cache_read_input_tokens": 15307,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2395 },
+            "output_tokens": 3,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "89c1b7cd-985b-493b-b277-97793b301d0d",
+      "ttft_ms": 709
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": { "type": "thinking", "thinking": "", "signature": "" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "7f1c6682-9e76-4a44-b6fa-dce213e43c38"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 50,
+      "estimated_tokens_delta": 50,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "77175da2-c124-4de6-8613-772649315d33"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": "", "estimated_tokens": 50 }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "eadf3321-f88d-46d5-8246-56f32ca0af50"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 100,
+      "estimated_tokens_delta": 50,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "ea21a1bb-2338-412d-b75c-7349c4d0127c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": "", "estimated_tokens": 50 }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "f892900d-ff1a-4892-bd21-8d7760cc2211"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 200,
+      "estimated_tokens_delta": 100,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "787ff44a-5832-4b9a-9b74-3c6cd3ca564f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": "", "estimated_tokens": 100 }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "ac90fa83-62cd-4bca-9051-85ada711bbde"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 250,
+      "estimated_tokens_delta": 50,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "754b085f-daaf-4ca2-b920-178d5759ce95"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": "", "estimated_tokens": 50 }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "b27c6aa1-5283-4b43-a0bc-9c90aed89595"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 350,
+      "estimated_tokens_delta": 100,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "6cfefafe-867f-42cf-aff1-176a4b5ebc89"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": "", "estimated_tokens": 100 }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "c823d6c6-efae-44b4-9d57-3bd7b41c676f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": "", "estimated_tokens": null }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "daf1c333-667a-4072-a534-e0bc66dd7b4d"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 362,
+      "estimated_tokens_delta": 12,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "a5799ff6-b204-4fc2-951a-aeb1efd29728"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "signature_delta",
+          "signature": "CAISngsKmQIIEhgCKkBStLRo+m+Imr6nJwcWyblOqAFQXWWBUFBjukO4uuQIov+xHKT1g/54g2QABhDrLZtliAUWFbPJUUnlR1KptNiiMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ5NjZjNTdhMy04M2I1LTRhNWMtYjU2NC03Nzg4MmQ3NjJmMjhyEFUcqGZrxDNyfNKdebXgBi6IAQGaAQ8KDWNsYXVkZS1vcHVzLTWoAfP/+tUGsAEC2gFeChZwcmVmaXhfYmVmb3JlX2Jsb2NrX3YxEiBompR7dnrKWmV0HmzchiQMD58uuoTB9mxONzkpHLxzdzIgwsATyGqckuIvlm89hhd2j4t6RMkCrcwJe/oeCYr7Th9IAxIMHuUwhx2nf1TGaWxRGgyTdRpsEmDL0lm71REiMHUZytXpSV6DBLUQeXkHZhMVzGxEweok6QbHqweaVUEObzMAQzdKhXuoBmCiUlTCiyqxCBtijhm73Ulh7ogoUERbeaJShSCOnHexwnMBX63kqLKNtLAb+/yUOwtR53s2xWpgm0bJs0Q76VHperXp/7h/pGjpML4T8zO/VsxEzr9RJGEk19NvM8wXbrN2Q0892BdTtUra9ShGpL2GM5nv7Oo0ZUK/DpYb/FLJphgOd9M7I68X8CONkIWKDSgvoe0fwCpfpWvuhkuv6mONsXdAqOY4E7+12AvqP5sL9EUBtV2HO6uAbx18ERCXQjx7cvcA/qtWOCaosXj6x/j0q8A7CRfI70S+XolA+dTE7mNQOXkiMwMeeMzch41wBb9xj/5LL6rbCcRPmM2KuhGbtu4AghCllBmLyFdTn33PvNnPbmbAP6sq3tgqqlovPAplXKPu0wxnt9GwyhRu6i3oD8BA8k5yuGpfC1FgJjpE9hh/jtOamSpBSlh5Fn1QVfOUEmKFulWmeEbR863290EBM//18cqtbrAnvlai8sCBdZi+jtPEdXsMwkVxuKnxdvtWyry04VSjUl/Rm2YJDDID91JduEy+agXD3T+qYvnkv81917Q+tWeI+5NC00mUtz28ImUEusn3EUbs+SGhIR6XKcwEeCQqiFxuoDK9om8ipzCv2pnSGcL8jP83+h/GwWdg1KbVPyYNdaSrwzKYidDSKcWCfwkYV4Rt5aN4SAVzEIpFJeegYHMrnJt1bkA64L7v9Dl7jFnfdyM5n9qZ1cmF2dLBqQlZdoJ6p3jHSeAiMzrR5ZoxtaDlS6Lynr2Cvva1C7emzKcx8bf8aVjQNS5o+ZWKd4q68Ij66dd3GOgjlwDC7DNfVuXQZsC201wavd7/g16hUV+zyTUUcWEPnWiJIY7jBpwlXzV/jWntXET1wGPTCAv/fiTynpuZXEK5cK90FmVaXmGSplmgfW3r+a/n9bCn8us8zPKavKjlaVXRM+C+4CzQMcg2zjAKn6Rn6xmHpHlvT5VY191PAK1m4kJSm21gxRWg756s0DWnrnRUJGzpynNZb6JD9Y5Ww2H3tNKo1FhNx25jVajpNYim7JXL3vNx53CCpvC8GpqKIEDXZC4xNwXClipDqtbD+smtFo7PCv2MYPy10XdvLpkZwGXY2Tnuqix4/hMWRoA7Qdn/bmKlK8ucfeqLwaEZ5LOUFPz/9BC9idQQSXiHAe8/4Xr82tHARDaydp053ewjpK2CWYs5LsCRBdvOIvpCjuPCTEp2geWHTXrUwLjex7FWMWBcc6qrWBgnmTHIBm7MWqhsotBx/RQ0ibee3r4mGlmQQnuRmI2wSZE9ipURn1i0LeGVj2JFQVCsY06hpAHWi520jqSShCAlDuDNjJq2uBAlmbZ71HkNkVUTVG4/ym34CmUOSPkUiogXYsQwIc5NctoHKXJ+D8mAdujM8ngPPoxIxSHqaNUotIBZNHW49ZkSLvRMVm7ruXsZlD6CGAE="
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "e8d9680d-e9f2-422b-88a6-b4a8911e6607"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8kMgE5REf4ifuEjbCn",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "",
+            "signature": "CAISngsKmQIIEhgCKkBStLRo+m+Imr6nJwcWyblOqAFQXWWBUFBjukO4uuQIov+xHKT1g/54g2QABhDrLZtliAUWFbPJUUnlR1KptNiiMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ5NjZjNTdhMy04M2I1LTRhNWMtYjU2NC03Nzg4MmQ3NjJmMjhyEFUcqGZrxDNyfNKdebXgBi6IAQGaAQ8KDWNsYXVkZS1vcHVzLTWoAfP/+tUGsAEC2gFeChZwcmVmaXhfYmVmb3JlX2Jsb2NrX3YxEiBompR7dnrKWmV0HmzchiQMD58uuoTB9mxONzkpHLxzdzIgwsATyGqckuIvlm89hhd2j4t6RMkCrcwJe/oeCYr7Th9IAxIMHuUwhx2nf1TGaWxRGgyTdRpsEmDL0lm71REiMHUZytXpSV6DBLUQeXkHZhMVzGxEweok6QbHqweaVUEObzMAQzdKhXuoBmCiUlTCiyqxCBtijhm73Ulh7ogoUERbeaJShSCOnHexwnMBX63kqLKNtLAb+/yUOwtR53s2xWpgm0bJs0Q76VHperXp/7h/pGjpML4T8zO/VsxEzr9RJGEk19NvM8wXbrN2Q0892BdTtUra9ShGpL2GM5nv7Oo0ZUK/DpYb/FLJphgOd9M7I68X8CONkIWKDSgvoe0fwCpfpWvuhkuv6mONsXdAqOY4E7+12AvqP5sL9EUBtV2HO6uAbx18ERCXQjx7cvcA/qtWOCaosXj6x/j0q8A7CRfI70S+XolA+dTE7mNQOXkiMwMeeMzch41wBb9xj/5LL6rbCcRPmM2KuhGbtu4AghCllBmLyFdTn33PvNnPbmbAP6sq3tgqqlovPAplXKPu0wxnt9GwyhRu6i3oD8BA8k5yuGpfC1FgJjpE9hh/jtOamSpBSlh5Fn1QVfOUEmKFulWmeEbR863290EBM//18cqtbrAnvlai8sCBdZi+jtPEdXsMwkVxuKnxdvtWyry04VSjUl/Rm2YJDDID91JduEy+agXD3T+qYvnkv81917Q+tWeI+5NC00mUtz28ImUEusn3EUbs+SGhIR6XKcwEeCQqiFxuoDK9om8ipzCv2pnSGcL8jP83+h/GwWdg1KbVPyYNdaSrwzKYidDSKcWCfwkYV4Rt5aN4SAVzEIpFJeegYHMrnJt1bkA64L7v9Dl7jFnfdyM5n9qZ1cmF2dLBqQlZdoJ6p3jHSeAiMzrR5ZoxtaDlS6Lynr2Cvva1C7emzKcx8bf8aVjQNS5o+ZWKd4q68Ij66dd3GOgjlwDC7DNfVuXQZsC201wavd7/g16hUV+zyTUUcWEPnWiJIY7jBpwlXzV/jWntXET1wGPTCAv/fiTynpuZXEK5cK90FmVaXmGSplmgfW3r+a/n9bCn8us8zPKavKjlaVXRM+C+4CzQMcg2zjAKn6Rn6xmHpHlvT5VY191PAK1m4kJSm21gxRWg756s0DWnrnRUJGzpynNZb6JD9Y5Ww2H3tNKo1FhNx25jVajpNYim7JXL3vNx53CCpvC8GpqKIEDXZC4xNwXClipDqtbD+smtFo7PCv2MYPy10XdvLpkZwGXY2Tnuqix4/hMWRoA7Qdn/bmKlK8ucfeqLwaEZ5LOUFPz/9BC9idQQSXiHAe8/4Xr82tHARDaydp053ewjpK2CWYs5LsCRBdvOIvpCjuPCTEp2geWHTXrUwLjex7FWMWBcc6qrWBgnmTHIBm7MWqhsotBx/RQ0ibee3r4mGlmQQnuRmI2wSZE9ipURn1i0LeGVj2JFQVCsY06hpAHWi520jqSShCAlDuDNjJq2uBAlmbZ71HkNkVUTVG4/ym34CmUOSPkUiogXYsQwIc5NctoHKXJ+D8mAdujM8ngPPoxIxSHqaNUotIBZNHW49ZkSLvRMVm7ruXsZlD6CGAE="
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2395,
+          "cache_read_input_tokens": 15307,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2395 },
+          "output_tokens": 3,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "be93412a-b500-422a-bc62-0a6eea24fc80",
+      "timestamp": "2026-10-01T20:17:55.423Z",
+      "request_id": "req_011Cfc8kMHffMrh1pjMrTUg3"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "29d44741-68b1-45f3-92a3-4f840a5205f3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 1,
+        "content_block": { "type": "text", "text": "" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "a66a6769-c1a5-4f4a-98be-f59847e2ab8f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": "The" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "604872b6-700b-4b3b-8c3b-d0d95bdae2c2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " MCP server instructions that" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "711cc8e3-7490-44db-8941-910b0c826944"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " just" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "1a35f57b-5046-4dc0-82b4-fc0da883ad9d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " lo" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "9a423dc1-7a4b-4925-8e2a-ddae3610a63f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": "aded ask me to create" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "789ab20f-4542-4308-af61-4c23d1968d24"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " a" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "104c6266-fa2f-44f9-8c7e-644eba134f5f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " Claude do" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "dd3ec9dd-6f72-441e-a7cb-4a48bff24c20"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": "c in" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "9054fcb8-c3d8-42fc-b06f-df12533659df"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " some" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "55ad6a1f-e195-4ae6-af11-0b9fca492ead"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " situ" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "6155b6f5-caea-4a23-bbbe-74bab857c221"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": "ations;" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "8d5a122b-f6b8-4d80-b343-cc303b67189b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " I'm " }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "1a104b27-f996-4820-821e-5f323a368aa3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": "ignoring that" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "b5319ddc-07b8-4029-8ed3-9390755d54d5"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": ", since you told" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "07a1a704-2507-4af6-833f-2782e6906380"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " me to use no t" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "159a7a3a-75d4-473c-bc80-518fac9a8dce"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": "ools other than" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "5b77d5d2-3d9c-46ae-9798-4dfcd69777c3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " Edit and Write." }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "052cbc99-584e-4d58-9dd5-f99ca4c54479"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8kMgE5REf4ifuEjbCn",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "The MCP server instructions that just loaded ask me to create a Claude doc in some situations; I'm ignoring that, since you told me to use no tools other than Edit and Write."
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2395,
+          "cache_read_input_tokens": 15307,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2395 },
+          "output_tokens": 3,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "37f140d7-43e3-4afa-a10c-4de1cf513e80",
+      "timestamp": "2026-10-01T20:17:56.490Z",
+      "request_id": "req_011Cfc8kMHffMrh1pjMrTUg3"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 1 },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "c230fde2-8bde-4457-be8b-6e3201020ed7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 2,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_012EkVwEeFqAQ8zT3cffZAbG",
+          "name": "Edit",
+          "input": {},
+          "caller": { "type": "direct" }
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "393bcf7e-689b-44ae-b98c-385626ae8445"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "de7b8223-e86a-49c9-a99f-f0db0d8b2a87"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"file_path\": \"/" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "dc92d00d-dc2f-4a4e-8332-ab1dbbaa476e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "tmp/r" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "c694c115-1dbb-42b2-8b40-a1c51195d907"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "c-fixture-s" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "c697268b-3716-4fc2-8876-831b8827e6cb"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "4P" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "3a8c5749-4c82-41ca-a09b-b9da35c19ff1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "xE" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "99c7dd4e-3749-412e-847a-e27009c5d78c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "b/app.js" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "d976def3-75fb-47cf-9d51-1263e8e6303e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "\", \"old_string\": \"const" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "9f7f74f6-7660-4635-bbbe-7b1c291e134d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": " greeting = 'hello" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "daabd186-c2d6-416c-ba77-469f676e078d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "';" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "459feae0-dfb3-4310-993f-87b5280e3953"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "\", \"new_string\": \"const" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "edf31439-2c72-4df7-8b0b-e828c0b13978"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": " greeting = 'hi" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "44a4b52e-6d98-4e51-842a-176a46171fbe"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "';" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "956d1478-32d6-4c73-b600-2f311b560741"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 2,
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "c6cc14cf-0398-4ee7-b81a-f86765950bc5"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8kMgE5REf4ifuEjbCn",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_012EkVwEeFqAQ8zT3cffZAbG",
+            "name": "Edit",
+            "input": {
+              "replace_all": false,
+              "file_path": "/workspace/app.js",
+              "old_string": "const greeting = 'hello';",
+              "new_string": "const greeting = 'hi';"
+            },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2395,
+          "cache_read_input_tokens": 15307,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2395 },
+          "output_tokens": 3,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "956db8f9-aee4-4e20-9756-c91eaec72a7b",
+      "timestamp": "2026-10-01T20:17:57.598Z",
+      "request_id": "req_011Cfc8kMHffMrh1pjMrTUg3",
+      "wire_tool_inputs": {
+        "toolu_012EkVwEeFqAQ8zT3cffZAbG": {
+          "file_path": "/workspace/app.js",
+          "old_string": "const greeting = 'hello';",
+          "new_string": "const greeting = 'hi';"
+        }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 2 },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "fb48a83b-9bd6-43af-a215-e6960232d49c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 3,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01YJXctSzDxFbQQD7iLse5Qd",
+          "name": "Write",
+          "input": {},
+          "caller": { "type": "direct" }
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "abfd6a39-aa48-4588-919d-b73104467eef"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 3,
+        "delta": { "type": "input_json_delta", "partial_json": "" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "3b3e5136-85e6-4de8-a0b8-a455a7a5750d"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_012EkVwEeFqAQ8zT3cffZAbG",
+            "type": "tool_result",
+            "content": "The file /workspace/app.js has been updated successfully. (file state is current in your context — no need to Read it back)"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "ea202980-5a7f-45b9-9701-4e981c948f18",
+      "timestamp": "2026-10-01T20:17:57.627Z",
+      "tool_use_result": {
+        "filePath": "/workspace/app.js",
+        "oldString": "const greeting = 'hello';",
+        "newString": "const greeting = 'hi';",
+        "originalFile": "const greeting = 'hello';\nconsole.log(greeting);\n",
+        "structuredPatch": [
+          {
+            "oldStart": 1,
+            "oldLines": 2,
+            "newStart": 1,
+            "newLines": 2,
+            "lines": [
+              "-const greeting = 'hello';",
+              "+const greeting = 'hi';",
+              " console.log(greeting);"
+            ]
+          }
+        ],
+        "userModified": false,
+        "replaceAll": false
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 3,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"file_path\": \"/tm" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "e51996be-6bab-4ba1-a0c6-073575ddba70"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 3,
+        "delta": { "type": "input_json_delta", "partial_json": "p/rc-fixture" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "77fcf494-7f5c-40b1-a39b-89bcf998b016"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 3,
+        "delta": { "type": "input_json_delta", "partial_json": "-s4PxEb/" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "d8f01794-b7b2-426c-8071-f1613616b7a7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 3,
+        "delta": { "type": "input_json_delta", "partial_json": "config.json" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "8038e2f1-1170-464b-988f-fe0f5ae84d67"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 3,
+        "delta": { "type": "input_json_delta", "partial_json": "\", \"content\": \"{" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "dc2409e8-cb7d-4013-ae94-07447d5bb4f9"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 3,
+        "delta": { "type": "input_json_delta", "partial_json": "\\\"debug\\\": true}\\n" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "348e7a1f-7327-4c82-b9d8-2664b7e4d5a3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 3,
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "88cf93fc-6f5b-432c-836a-28ff3416e58c"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8kMgE5REf4ifuEjbCn",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01YJXctSzDxFbQQD7iLse5Qd",
+            "name": "Write",
+            "input": { "file_path": "/workspace/config.json", "content": "{\"debug\": true}\n" },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2395,
+          "cache_read_input_tokens": 15307,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2395 },
+          "output_tokens": 3,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "594c0ccb-b026-4b6b-a537-f4509e17fc72",
+      "timestamp": "2026-10-01T20:17:58.311Z",
+      "request_id": "req_011Cfc8kMHffMrh1pjMrTUg3",
+      "wire_tool_inputs": {
+        "toolu_01YJXctSzDxFbQQD7iLse5Qd": {
+          "file_path": "/workspace/config.json",
+          "content": "{\"debug\": true}\n"
+        }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 3 },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "0b9e2f60-5dd7-4d93-8390-ec5ca9372736"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 4,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_012Xaytu1wtQvZW4GQrzv3WX",
+          "name": "Write",
+          "input": {},
+          "caller": { "type": "direct" }
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "df0888f1-6c73-4651-9c2e-1efeccedf23c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 4,
+        "delta": { "type": "input_json_delta", "partial_json": "" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "a7d547ab-56d8-469c-9185-a38547f5c6c3"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_01YJXctSzDxFbQQD7iLse5Qd",
+            "type": "tool_result",
+            "content": "The file /workspace/config.json has been updated successfully. (file state is current in your context — no need to Read it back)"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "750d3f4e-c15d-4c6a-b18c-fdd6d610098f",
+      "timestamp": "2026-10-01T20:17:58.335Z",
+      "tool_use_result": {
+        "type": "update",
+        "filePath": "/workspace/config.json",
+        "content": "{\"debug\": true}\n",
+        "structuredPatch": [
+          {
+            "oldStart": 1,
+            "oldLines": 1,
+            "newStart": 1,
+            "newLines": 1,
+            "lines": ["-{\"debug\": false}", "+{\"debug\": true}"]
+          }
+        ],
+        "originalFile": "{\"debug\": false}\n",
+        "userModified": false
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 4,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"file_path\": \"/tmp/" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "255612e2-3502-4c1b-a7c8-cba383333b78"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 4,
+        "delta": { "type": "input_json_delta", "partial_json": "rc-fixture-s" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "86640ee6-4b30-4f28-b7f8-b6d9e410d089"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 4,
+        "delta": { "type": "input_json_delta", "partial_json": "4PxEb/notes" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "31d256a8-c2b2-4259-abcf-578345c03f7f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 4,
+        "delta": { "type": "input_json_delta", "partial_json": ".txt" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "2fb259ab-e1d2-406b-9476-fa180c9dc79b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 4,
+        "delta": { "type": "input_json_delta", "partial_json": "\", \"content\": \"done" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "a911134f-5764-48dd-a638-0662bb3cf58a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 4,
+        "delta": { "type": "input_json_delta", "partial_json": "\\n" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "b0218709-77cf-40c0-9f45-a9fbd300b772"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 4,
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "e22f74a9-78da-46bc-952e-5836d8c395e9"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8kMgE5REf4ifuEjbCn",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_012Xaytu1wtQvZW4GQrzv3WX",
+            "name": "Write",
+            "input": { "file_path": "/workspace/notes.txt", "content": "done\n" },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2395,
+          "cache_read_input_tokens": 15307,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2395 },
+          "output_tokens": 3,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "892f3dad-1fec-41e7-8167-6fb92e5bb4b4",
+      "timestamp": "2026-10-01T20:17:58.925Z",
+      "request_id": "req_011Cfc8kMHffMrh1pjMrTUg3",
+      "wire_tool_inputs": {
+        "toolu_012Xaytu1wtQvZW4GQrzv3WX": {
+          "file_path": "/workspace/notes.txt",
+          "content": "done\n"
+        }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 4 },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "22e3bdb5-ff49-4b6e-911e-e4e90049fd47"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2395,
+          "cache_read_input_tokens": 15307,
+          "output_tokens": 757,
+          "output_tokens_details": { "thinking_tokens": 382 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 757,
+              "cache_read_input_tokens": 15307,
+              "cache_creation_input_tokens": 2395,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 2395
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "a13cb6a9-5d25-4e36-b23b-8013f04d131b"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "481740be-2d6f-4885-bccf-de1ee7ce3af9"
+    },
+    {
+      "type": "rate_limit_event",
+      "rate_limit_info": {
+        "status": "allowed",
+        "resetsAt": 1790889600,
+        "rateLimitType": "five_hour",
+        "overageStatus": "rejected",
+        "overageDisabledReason": "member_zero_credit_limit",
+        "isUsingOverage": false,
+        "unifiedWindows": {
+          "five_hour": { "utilization": 0.85, "resetsAt": 1790889600 },
+          "seven_day": { "utilization": 0.14, "resetsAt": 1791478800 }
+        }
+      },
+      "uuid": "f858a661-556e-4499-87bb-c8d64062b880",
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_012Xaytu1wtQvZW4GQrzv3WX",
+            "type": "tool_result",
+            "content": "File created successfully at: /workspace/notes.txt (file state is current in your context — no need to Read it back)"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "80366e3c-b7ca-49e5-b91c-70822bb2820c",
+      "timestamp": "2026-10-01T20:17:58.951Z",
+      "tool_use_result": {
+        "type": "create",
+        "filePath": "/workspace/notes.txt",
+        "content": "done\n",
+        "structuredPatch": [],
+        "originalFile": null,
+        "userModified": false
+      }
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "a3497710-7bcf-4b56-bebd-6d2204bf5000"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011Cfc8m77QPhWjD3pRnW7fs",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 1006,
+            "cache_read_input_tokens": 17702,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 1006 },
+            "output_tokens": 17,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "a5e2ee09-a6cb-4688-9080-f628791a7462",
+      "ttft_ms": 782
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01DRkcPdqgtB63ZjpwT7TVeq",
+          "name": "Edit",
+          "input": {},
+          "caller": { "type": "direct" }
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "f13e1960-dc61-4477-8757-76f569225774"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "8d0188ca-e65f-458f-90b3-70bbd4f46a0e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"file_path\": \"/tmp" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "ec6cc0ee-96a0-4269-a9e0-c19e4dc55e63"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "/rc-fixture-" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "1fa37556-265e-408e-89c4-9b46b4c6733a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "s4PxEb/app" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "8b298886-bc43-4e10-827a-e238afd3613d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": ".js" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "c12909f1-910a-438e-be77-bb43901ef999"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\", \"old_string\": \"console.log(greeting"
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "3f177f36-c492-4368-a6f2-718fc35d3f91"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": ");" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "1b922d09-34cb-4964-82bb-252b72905c26"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\", \"new_string\": \"console.info(greeting"
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "c22a887b-cbda-4200-ad2b-7d669d5f0cc8"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": ");" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "824efef2-a855-4fea-b76a-aa6a65c40c5e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "4b670d8f-fd3b-4607-9e19-b1403a12f995"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8m77QPhWjD3pRnW7fs",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01DRkcPdqgtB63ZjpwT7TVeq",
+            "name": "Edit",
+            "input": {
+              "replace_all": false,
+              "file_path": "/workspace/app.js",
+              "old_string": "console.log(greeting);",
+              "new_string": "console.info(greeting);"
+            },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 1006,
+          "cache_read_input_tokens": 17702,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 1006 },
+          "output_tokens": 17,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "66f9cd3f-f8ef-49b8-9a5b-0a7967ec7b42",
+      "timestamp": "2026-10-01T20:18:00.637Z",
+      "request_id": "req_011Cfc8m6jq6PEjqcGoax3nT",
+      "wire_tool_inputs": {
+        "toolu_01DRkcPdqgtB63ZjpwT7TVeq": {
+          "file_path": "/workspace/app.js",
+          "old_string": "console.log(greeting);",
+          "new_string": "console.info(greeting);"
+        }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "a5570e50-fa83-42bc-861e-a896aa221f52"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 1006,
+          "cache_read_input_tokens": 17702,
+          "output_tokens": 130,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 130,
+              "cache_read_input_tokens": 17702,
+              "cache_creation_input_tokens": 1006,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1006
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "4d69c77f-a64e-4778-8abe-9028fde6e815"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "7edebf7a-a164-447f-a634-4e99e7500fdf"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_01DRkcPdqgtB63ZjpwT7TVeq",
+            "type": "tool_result",
+            "content": "The file /workspace/app.js has been updated successfully. (file state is current in your context — no need to Read it back)"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "e102a467-ef4c-4ad4-880e-3889544e516e",
+      "timestamp": "2026-10-01T20:18:00.664Z",
+      "tool_use_result": {
+        "filePath": "/workspace/app.js",
+        "oldString": "console.log(greeting);",
+        "newString": "console.info(greeting);",
+        "originalFile": "const greeting = 'hi';\nconsole.log(greeting);\n",
+        "structuredPatch": [
+          {
+            "oldStart": 1,
+            "oldLines": 2,
+            "newStart": 1,
+            "newLines": 2,
+            "lines": [
+              " const greeting = 'hi';",
+              "-console.log(greeting);",
+              "+console.info(greeting);"
+            ]
+          }
+        ],
+        "userModified": false,
+        "replaceAll": false
+      }
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "f235ec66-5c4b-48df-8a51-ac634605387d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011Cfc8mEPwspbEF5wAUaVW8",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 208,
+            "cache_read_input_tokens": 18708,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 208 },
+            "output_tokens": 1,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "0f121150-09a6-41b5-b78b-7d903d72377a",
+      "ttft_ms": 627
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": { "type": "text", "text": "" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "9a56752d-65ce-4e59-96e3-f369790657af"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "All" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "d6aa108b-91fc-4c77-9de2-547146da9876"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " four ed" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "6b4258fa-9236-4f61-9a96-97bcee518e3e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "its are done:\n\n-" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "7f3f8741-7b80-4725-89b2-b7ec76f1ad82"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " **app.js** — `'" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "44a1f020-c9bc-4e0c-bec8-39a083c28db3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "hello'` → `'h" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "0ae434cc-e1a8-405e-b432-ebbe80afbab6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "i'`, then" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "5322e565-495f-4c92-9419-03083ee72ed1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " `console.log` → `console" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "f757e679-189a-4900-8d09-58881bc48ef8"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": ".info`\n- **config." }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "1c3de838-415f-480d-93e8-61bb182ea4df"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "json** — overwritten with" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "540b24fd-a750-4a47-b56f-adb519c67c78"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " `{\"debug\": true}" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "46791e9c-7ddc-4872-9db4-92226f321567"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "` + newline\n- **not" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "674fdea0-4fe1-4c3b-8f58-d966e53536e6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "es.txt** — created with" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "8965a118-eba0-4102-b856-314ae60328c2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " the" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "3f09c9ee-5b79-427c-8962-c5d6ddcd6d82"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " single line `done`\n\nTwo" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "ed964f90-1f28-4cea-8b54-aad4066c3aca"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " notes on things I did out" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "f2f5be82-6879-4228-831c-dd5a6df7fedc"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "side the liter" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "cf6ffb9c-0c3f-4a34-92ad-7bd24a5856f0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "al instruct" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "8e1c1248-cafe-4e90-8f95-888bf78d089a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ions:\n\n1" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "7b8a3cfd-6bad-4d62-93dc-b02b005c0a18"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": ". I used" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "7532f504-32e8-43de-9244-72b721f33b63"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " Read on app" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "addc34cb-c14f-4061-b25f-30fc813cacdf"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": ".js and config.json first" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "5790128a-04b1-4450-85f9-bec6fc67531f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": ". The Edit tool ref" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "3f7a00ff-0cca-43fb-b907-8e25c8fae676"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "uses to run on" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "ccfe88f0-bfc1-44ee-b85f-191f409d1509"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " a file not" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "00d2191e-2f67-42dc-8b2c-9bb9924cdb82"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " read in the session" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "a9b42674-11d3-4f79-8654-89beb733bc98"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": ", and Write refuses to" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "d9840a61-ae26-4e32-bb6e-4a9cdf90c8f2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " overwrite an un" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "4e00068c-b0be-4e4c-b037-b37228fa0d43"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "read existing file," }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "58e7c65e-dc7c-4278-80ce-6e2afd79ab2d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " so the" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "77b4e4ac-812a-4659-88c8-cd639fc3bb48"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " task" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "edab956e-737c-4bae-93b7-ecfe02b1077a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " was" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "c38df908-c190-495b-8614-716ff081b3a9"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "n't executable without it" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "a2fd71ea-e945-4651-be21-7dccdfd9e04d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": ". notes.txt was new" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "256838e5-ed33-4fdb-bd1a-e7ed1f974e59"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": ", so no read" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "354518ff-0731-49e1-858a-f8efe8d157ff"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " was needed there" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "bc3f7239-0bca-4a9e-ad08-b8b0cd90a15f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": ".\n2. Part" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "c8f31bcc-ba0c-44ce-86ff-929682c5608a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "way through," }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "7fcc96ad-4616-4982-be55-5e49f87c60a8"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " an" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "70e9a5a5-57c5-4e70-a3a4-439f7511709b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " MCP server lo" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "7b8dc119-a315-4d62-bab0-8c32b696730a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "aded inst" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "dab90f67-dbc3-4f36-abb1-2c5404229bae"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ructions direct" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "1e4fb3e8-b064-491c-b952-5b70ef6a1a3d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ing me to create a Claude" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "ac01b019-f72c-478b-b8ba-8cb9d6b384ab"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " do" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "993b3cdb-e206-4227-bfd6-8d4ab7ce0a6e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "c as the first t" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "389e223a-f705-4b98-a4e9-10551e6aad70"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ool call of a" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "561ca7fc-fbcc-4cde-8b17-d405c3f71d72"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " turn. That" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "4b896daf-a607-49eb-ae82-dd9359b1b58a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "'s t" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "04d57e52-8d55-4a3d-bab0-dc69ce7445bb"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ool-" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "500d4bed-2a49-4e90-acf5-defc45f286c3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "del" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "0ce31ad2-7abe-415a-aa73-05bbefadae27"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ivered content, not a request" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "d5c216a9-0f06-4485-8714-cf8142fadd7f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " from you, and it conflic" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "8c923130-7023-4c60-8437-acb52946a30b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ts with your const" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "f990a6af-9672-4f2b-aac9-1f4f77fc9073"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "raint — so I ignored" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "e240dad9-4906-4b80-b0be-5754540f7853"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " it. Flagging it so" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "b02a7d37-d283-4f77-878c-b8635aac3263"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " you know" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "afdd94f3-b69a-466f-bc22-dadaf1c8a089"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " the" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "569649b7-1755-4d49-a135-355d1d9bb5ff"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " inst" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "e1c4f775-1c54-480e-981e-6800c4c778dc"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ruction ar" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "11d256d1-6ec6-405c-95dc-85695b75df02"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "rived r" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "231ec4d9-43eb-4291-b806-a1a7920acc26"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ather than sil" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "39429038-fad3-4ddc-8259-0690e297cc7a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ently d" }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "dc714705-6c0f-435f-93d8-8df8c64b0fc5"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ropping it." }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "f885f87f-f48f-420d-a39f-87455ba4d364"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8mEPwspbEF5wAUaVW8",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "All four edits are done:\n\n- **app.js** — `'hello'` → `'hi'`, then `console.log` → `console.info`\n- **config.json** — overwritten with `{\"debug\": true}` + newline\n- **notes.txt** — created with the single line `done`\n\nTwo notes on things I did outside the literal instructions:\n\n1. I used Read on app.js and config.json first. The Edit tool refuses to run on a file not read in the session, and Write refuses to overwrite an unread existing file, so the task wasn't executable without it. notes.txt was new, so no read was needed there.\n2. Partway through, an MCP server loaded instructions directing me to create a Claude doc as the first tool call of a turn. That's tool-delivered content, not a request from you, and it conflicts with your constraint — so I ignored it. Flagging it so you know the instruction arrived rather than silently dropping it."
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 208,
+          "cache_read_input_tokens": 18708,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 208 },
+          "output_tokens": 1,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "uuid": "de553ea9-9e83-41e5-aecb-e075624df262",
+      "timestamp": "2026-10-01T20:18:04.977Z",
+      "request_id": "req_011Cfc8mE1tLQx5rut8LP9hX"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "e9ad5975-fa12-4e9c-9298-70a79682538d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 208,
+          "cache_read_input_tokens": 18708,
+          "output_tokens": 288,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 288,
+              "cache_read_input_tokens": 18708,
+              "cache_creation_input_tokens": 208,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 208
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "84448c1b-c8f7-4d84-b7c4-25aa7d84723e"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "parent_tool_use_id": null,
+      "uuid": "dd33f6d0-cdad-4d01-b25c-5e9361611b84"
+    },
+    {
+      "duration_api_ms": 19857,
+      "stop_reason": "end_turn",
+      "session_id": "9098b28c-343e-46c5-bb3c-84a821048506",
+      "total_cost_usd": 0.2495365,
+      "usage": {
+        "input_tokens": 8,
+        "cache_creation_input_tokens": 18916,
+        "cache_read_input_tokens": 51717,
+        "output_tokens": 1337,
+        "output_tokens_details": { "thinking_tokens": 382 },
+        "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+        "service_tier": "standard",
+        "cache_creation": { "ephemeral_1h_input_tokens": 18916, "ephemeral_5m_input_tokens": 0 },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 288,
+            "cache_read_input_tokens": 18708,
+            "cache_creation_input_tokens": 208,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 208 },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "modelUsage": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 983,
+          "outputTokens": 14,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.001053,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-haiku-4-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 8,
+          "outputTokens": 1337,
+          "cacheReadInputTokens": 51717,
+          "cacheCreationInputTokens": 18916,
+          "webSearchRequests": 0,
+          "costUSD": 0.24848349999999997,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 64000,
+          "thinkingTokens": 382,
+          "canonicalModel": "claude-opus-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "permission_denials": [],
+      "terminal_reason": "completed",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required",
+      "subagent_stats": {
+        "spawned": 0,
+        "requested": { "background": 0, "foreground": 0, "unset": 0 },
+        "started_in_background": 0,
+        "max_depth": 0,
+        "spawned_by_subagents": 0,
+        "completed": 0,
+        "failed": 0,
+        "killed": { "parent": 0, "user": 0, "system": 0 },
+        "refused": { "depth_limit": 0, "concurrency_limit": 0, "budget": 0 },
+        "by_type": {}
+      },
+      "is_error": false,
+      "num_turns": 7,
+      "subtype": "success",
+      "api_error_status": null,
+      "result": "All four edits are done:\n\n- **app.js** — `'hello'` → `'hi'`, then `console.log` → `console.info`\n- **config.json** — overwritten with `{\"debug\": true}` + newline\n- **notes.txt** — created with the single line `done`\n\nTwo notes on things I did outside the literal instructions:\n\n1. I used Read on app.js and config.json first. The Edit tool refuses to run on a file not read in the session, and Write refuses to overwrite an unread existing file, so the task wasn't executable without it. notes.txt was new, so no read was needed there.\n2. Partway through, an MCP server loaded instructions directing me to create a Claude doc as the first tool call of a turn. That's tool-delivered content, not a request from you, and it conflicts with your constraint — so I ignored it. Flagging it so you know the instruction arrived rather than silently dropping it.",
+      "ttft_ms": 1898,
+      "type": "result",
+      "duration_ms": 19267,
+      "uuid": "49fe2f98-b15c-4288-a221-f4448f23eeb6",
+      "ttft_stream_ms": 1152,
+      "time_to_request_ms": 373,
+      "first_content_frame_ms": 1153,
+      "queued_turn_count": 0,
+      "result_index": 0
+    }
+  ]
+}

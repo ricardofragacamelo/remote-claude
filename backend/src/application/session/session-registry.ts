@@ -39,6 +39,18 @@ export interface LiveSession {
 export class SessionRegistry implements SessionConversations {
   private readonly live = new Map<string, LiveSession>();
 
+  /**
+   * Sessions whose conversation is known and whose subprocess is not up yet.
+   *
+   * Listed as `starting` (plan 08, S-23) — a session somebody just opened should not vanish from the
+   * list for the half second it takes to spawn — and never twice: {@link add} moves it to the live
+   * ones, and a start that failed takes it out with {@link withdraw}.
+   */
+  private readonly starting = new Map<
+    string,
+    { readonly session: Session; readonly conversation: SessionConversation }
+  >();
+
   /** Reservations taken before a subprocess exists, so two starts cannot both pass the limit. */
   private reserved = 0;
 
@@ -81,7 +93,27 @@ export class SessionRegistry implements SessionConversations {
 
   /** Puts a started session in. */
   add(entry: LiveSession): void {
+    this.starting.delete(entry.session.id.value);
     this.live.set(entry.session.id.value, entry);
+  }
+
+  /** Says that a session is starting, with the conversation it is: listed, not yet drivable. */
+  announce(session: Session, conversation: SessionConversation): void {
+    this.starting.set(session.id.value, { session, conversation });
+  }
+
+  /** Takes back a start that never became a session. Withdrawing one that started is a no-op. */
+  withdraw(id: SessionId): void {
+    this.starting.delete(id.value);
+  }
+
+  /**
+   * Every session a list may show — the live ones and the ones starting — with its conversation.
+   *
+   * Only for reading: a starting session has no handle yet, and nothing may drive it.
+   */
+  listed(): readonly { readonly session: Session; readonly conversation: SessionConversation }[] {
+    return [...this.live.values(), ...this.starting.values()];
   }
 
   /** The session, or `null` when no live session has that id. */

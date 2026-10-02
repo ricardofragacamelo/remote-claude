@@ -433,6 +433,100 @@ registros), [web/04 · Estado de aba de pasta](../web/04-state-and-data.md#estad
 relativiza o "não varre disco" do módulo `workspace` — um nível, sob demanda, dentro da allowlist
 ([backend/03 · workspace](../backend/03-modules.md#workspace)).
 
+## ADR-015 — O humano escreve no disco pela web
+
+**Status:** aceita · 2026-09-30 · aberta pelo [plano 07 · B-01](../../plans/07-explorer-and-editor/F0-contract.md#b-01--adr-015-o-humano-escreve-no-disco-pela-web-),
+sobre as decisões do usuário de 2026-09-28 ([07 · decisões](../../plans/07-explorer-and-editor/decisions.md))
+
+Até o plano 07, quem escrevia no disco do usuário era **o Claude**, sob o `canUseTool` e com o hook
+`PreToolUse` registrando ([ADR-011](#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse)).
+O explorer e o editor trazem um ator novo sobre a mesma máquina: **a pessoa**, salvando, criando,
+renomeando, movendo, copiando e apagando arquivos da pasta aberta pela web. A pergunta "quem mudou
+este arquivo?" passa a ter uma resposta que a trilha precisa saber dar.
+
+**A decisão:**
+
+- **a fronteira é a allowlist e a pasta aberta**, conferidas no servidor **a cada operação**: a
+  pasta pela mesma regra do `ResolveWorkspaceUseCase` (lida a cada uso, nunca em cache); o caminho
+  relativo pela regra pura do `FilePath`, antes de qualquer I/O; e de novo no disco — o `realpath`
+  do que se toca precisa ficar dentro da pasta, e o que se abre é conferido **no descritor**
+  (`/proc/self/fd`), o que pega a troca de um diretório por symlink entre checar e abrir. Subpasta
+  aberta é fronteira mais estreita que a raiz: um `path` que sobe acima dela é recusado mesmo dentro
+  da mesma raiz ([07 · D-05](../../plans/07-explorer-and-editor/decisions.md#d-05--symlinks-e-hard-links),
+  [D-11](../../plans/07-explorer-and-editor/decisions.md#d-11--a-raiz-do-explorer-é-a-pasta-aberta));
+- **toda escrita vai para a trilha antes do disco**, sem conteúdo — caminho real e relativo,
+  tamanhos, hashes antes e depois, origem e destino, contagem, `sensitive`. Trilha que não grava é
+  escrita que não acontece (`503` com `Retry-After`); disco que falha depois do registro deixa um
+  `file.failed` apontando o fato, para a trilha nunca afirmar uma escrita que não houve.
+  **Leitura não vai para a trilha** — o volume seria o de cada clique na árvore, e o que a pessoa
+  lê na própria máquina não é o risco que a trilha existe para cobrir; vai para o log de I/O em
+  `debug`, com caminho e bytes e **nunca** o conteúdo ([07 · D-02](../../plans/07-explorer-and-editor/decisions.md#d-02--a-escrita-humana-na-trilha));
+- **concorrência por conteúdo**: `ETag` forte (sha256 dos bytes lidos) e `If-Match` obrigatório no
+  salvar — sem ele, ou com `*`, é `428`; versão diferente, inclusive arquivo apagado, é `412` com a
+  versão atual; o reenvio idêntico depois de resposta perdida é `200` sem segunda escrita
+  ([07 · D-03](../../plans/07-explorer-and-editor/decisions.md#d-03--a-semântica-de-concorrência));
+- **a relação com o desfazer** ([ADR-013](#adr-013--o-desfazer-não-usa-rewindfiles-o-store-de-checkpoint-é-nosso)):
+  para o desfazer de uma sessão, a escrita humana é **alteração manual** — muda o hash, o estado que
+  a sessão deixou diverge, e o desfazer a preserva (`modifiedOutside`). Isso é cenário provado
+  (plano 07, S-124), não acidente. O salvar humano e a restauração do desfazer escrevem pelo mesmo
+  processo e se serializam por uma **trava por caminho real**, fornecida pela plataforma aos dois
+  módulos (S-125); escritor de fora do processo — o CLI do Claude escreve direto no disco — não passa
+  por ela, e a janela residual está no [R-01 do plano 07](../../plans/07-explorer-and-editor/README.md#riscos-e-decisões-em-aberto);
+- **os arquivos que mudam o que o Claude pode fazer** (`.claude/settings.json`,
+  `.claude/settings.local.json`, `.mcp.json`) são editáveis com segundo passo explícito, e o fato
+  na trilha leva `sensitive: true` ([07 · D-15](../../plans/07-explorer-and-editor/decisions.md#d-15--arquivos-que-mudam-a-permissão));
+- **o editor é construído no web**, pela mesma razão da [ADR-014](#adr-014--o-web-vira-um-workbench-construído-em-react)
+  de não embutir o VS Code, e **sem inteligência de linguagem** — completar, diagnóstico, formatador,
+  símbolos e depurador ficam fora, decisão do usuário de 2026-09-26: o editor tem realce de sintaxe
+  e nada que execute código do projeto.
+
+**O que esta decisão não é:** um caminho para o Claude escrever fora do `canUseTool` — o módulo
+`files` não tem seta para `session` e só ouve, pelo barramento interno, o que o Claude escreveu
+(`session.fileStateRecorded`), para rotular a origem de uma mudança. Nem um terminal: a pessoa
+escreve arquivos, não executa nada.
+
+**Consequências:** módulo `files` no catálogo, com `files → workspace` por porta e `files → audit`
+escrevendo ([backend/03 · files](../backend/03-modules.md#files)); seis kinds `file.*` em
+`audit_events` por migration nova ([backend/05](../backend/05-persistence.md#os-fatos-de-conta));
+os códigos novos no [catálogo](04-errors-and-http.md#catálogo-de-erros-de-domínio); o stream de
+mudança no [protocolo](05-websocket-protocol.md#a-pasta-assistida--workspace).
+
+**Baixar é leitura que entra na trilha** (plano 07 · F7): `file.downloaded` antes do primeiro byte de
+um `download=true` ou de um zip, porque tira conteúdo da máquina — que é o que a trilha existe para
+contar. A prévia e a página do hexadecimal continuam leitura, fora dela, como abrir no editor.
+
+### O histórico local — o backend passa a guardar conteúdo da pessoa
+
+**Acrescentado em 2026-10-01** pelo [plano 07 · B-55](../../plans/07-explorer-and-editor/F8-local-history.md#b-55--o-contrato-do-histórico-e-a-adr-),
+sobre a [D-17](../../plans/07-explorer-and-editor/decisions.md#d-17--o-histórico-local).
+
+Até aqui o backend nunca guardava conteúdo de arquivo da pessoa: o `files` lia e escrevia o disco da
+pasta aberta, e o que ficava era trilha sem conteúdo. O histórico local muda isso, de propósito, e
+com a mesma disciplina do store de snapshots do desfazer
+([ADR-013](#adr-013--o-desfazer-não-usa-rewindfiles-o-store-de-checkpoint-é-nosso)):
+
+- **o quê:** a versão que uma escrita da pessoa vai **perder** — salvar, apagar, restaurar, upload
+  com substituição —, guardada **antes** da escrita. A escrita do Claude não entra: ela já tem o
+  store do desfazer da sessão, e duas cópias do mesmo fato divergem;
+- **onde:** o metadado em tabela (caminho, hash, tamanho, motivo, quem, quando — nenhuma coluna de
+  conteúdo) e o conteúdo em blob no disco do backend, **endereçado por hash**, fora da pasta aberta
+  e fora do Postgres — o banco não cresce com o repositório de ninguém
+  ([backend/05](../backend/05-persistence.md#o-histórico-local));
+- **teto e retenção:** por arquivo, total e por idade, configurados (50 versões, 512 MB, 30 dias),
+  com purga por job; arquivo acima do teto de snapshot não entra, e a entrada diz por quê;
+- **quem vê:** quem alcança **agora** a pasta da entrada, revalidada a cada pedido — a versão foi
+  escrita por alguém com acesso àquela raiz, e quem a alcança hoje já lê o arquivo atual. O autor de
+  cada versão fica à vista;
+- **por quê:** é a rede de segurança da pessoa, como o desfazer é a das escritas do Claude, e é o que
+  troca a confirmação do apagar por um **Desfazer** — o princípio do produto
+  ([D-06](../../plans/07-explorer-and-editor/decisions.md#d-06--apagar-definitivo-ou-lixeira));
+- **e quando falha:** o histórico é conforto, a trilha é garantia. A falha dele não impede salvar
+  (a tela avisa que aquela versão não entrou), mas impede o apagar sem confirmação — nunca se apaga
+  achando que há volta.
+
+Restaurar é escrita comum: `If-Match` do atual, o atual guardado antes, `file.restored` na trilha
+antes do disco.
+
 ## ADR-017 — Existe um terminal, fora do modelo de permissão, com travas
 
 **Status:** aceita · 2026-09-26 · decisão do usuário ([10 · D-01](../../plans/10-integrated-terminal/decisions.md)),

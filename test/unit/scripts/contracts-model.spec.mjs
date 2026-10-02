@@ -334,7 +334,13 @@ describe('buildModel with a conditional requirement', () => {
     const model = buildModel(withRule(seqOnEvent), []);
 
     expect(model.envelope.conditionals).toEqual([
-      { field: 'seq', whenField: 'kind', equals: 'event', because: 'replay is built on it' },
+      {
+        field: 'seq',
+        whenField: 'kind',
+        equals: 'event',
+        presence: null,
+        because: 'replay is built on it',
+      },
     ]);
   });
 
@@ -411,6 +417,103 @@ describe('buildModel with a conditional requirement', () => {
   it('names the offending file when it refuses one', () => {
     expect(() => buildModel(withRule({ ...seqOnEvent, field: 'nowhere' }), [])).toThrow(
       /envelope\.schema\.json/,
+    );
+  });
+
+  it('reads a rule that fires on the deciding field being absent', () => {
+    const model = buildModel(
+      withRule({ ...seqOnEvent, when: { field: 'kind', absent: true } }),
+      [],
+    );
+
+    expect(model.envelope.conditionals[0]).toMatchObject({ equals: null, presence: 'absent' });
+  });
+
+  it('reads a rule that fires on the deciding field being present', () => {
+    const model = buildModel(
+      withRule({ ...seqOnEvent, when: { field: 'kind', present: true } }),
+      [],
+    );
+
+    expect(model.envelope.conditionals[0]).toMatchObject({ equals: null, presence: 'present' });
+  });
+
+  it.each([
+    ['absent: false, which says nothing', { field: 'kind', absent: false }],
+    ['present: false, which says nothing', { field: 'kind', present: false }],
+    ['absent beside equals — two triggers', { field: 'kind', absent: true, equals: 'event' }],
+    ['absent beside present — two triggers', { field: 'kind', absent: true, present: true }],
+  ])('refuses a presence rule with %s', (_case, when) => {
+    expect(() => buildModel(withRule({ ...seqOnEvent, when }), [])).toThrow(
+      /takes one of `equals`, `absent: true` or `present: true`/,
+    );
+  });
+});
+
+/**
+ * The bounds a field may declare — `maxItems`, `maxLength`, `minimum` — read off the schema so that
+ * a ceiling is written once for three languages (plan 08, B-01).
+ */
+describe('buildModel with bounds', () => {
+  /** @param {Record<string, unknown>} property */
+  const withProperty = (property) =>
+    buildModel(envelope(), [
+      message({
+        title: 'Thing',
+        'x-kind': 'command',
+        'x-type': 'thing.do',
+        type: 'object',
+        properties: { bounded: property },
+      }),
+    ]);
+
+  /** @param {Record<string, unknown>} property */
+  const limitsOf = (property) =>
+    withProperty(property)
+      .interfaces.at(-1)
+      ?.fields.find((field) => field.name === 'bounded')?.limits;
+
+  it('reads maxItems on an array', () => {
+    expect(limitsOf({ type: 'array', maxItems: 20, items: { type: 'string' } })).toEqual({
+      maxItems: 20,
+    });
+  });
+
+  it('reads maxLength on a string', () => {
+    expect(limitsOf({ type: 'string', maxLength: 200 })).toEqual({ maxLength: 200 });
+  });
+
+  it('reads minimum on an integer, including zero', () => {
+    expect(limitsOf({ type: 'integer', minimum: 0 })).toEqual({ minimum: 0 });
+  });
+
+  it('gives a field with no bound an empty set, never undefined', () => {
+    expect(limitsOf({ type: 'string' })).toEqual({});
+  });
+
+  it.each([
+    ['maxLength', 'integer', { type: 'integer', maxLength: 3 }],
+    ['maxItems', 'string', { type: 'string', maxItems: 3 }],
+    ['minimum', 'string', { type: 'string', minimum: 1 }],
+  ])('refuses %s on a %s, where it would mean nothing', (keyword, _type, property) => {
+    expect(() => withProperty(property)).toThrow(
+      new RegExp(`\`${keyword}\` of \`ThingPayload\\.bounded\` bounds only`),
+    );
+  });
+
+  it.each([
+    ['a negative bound', -1],
+    ['a fractional bound', 1.5],
+    ['a bound that is not a number', '20'],
+  ])('refuses %s', (_case, bound) => {
+    expect(() => withProperty({ type: 'string', maxLength: bound })).toThrow(
+      /is not a non-negative integer/,
+    );
+  });
+
+  it('refuses a bound on the items of an array, which no guard would ever check', () => {
+    expect(() => withProperty({ type: 'array', items: { type: 'string', maxLength: 3 } })).toThrow(
+      /`maxLength` on the items of `ThingPayloadBounded` is never checked/,
     );
   });
 });

@@ -4,12 +4,17 @@ import { EmptyState } from '@/shared/components/EmptyState';
 import { Panel } from '@/shared/components/Panel';
 import { usePermissionQueue } from '../hooks/usePermissionQueue';
 import { PermissionCard } from './PermissionCard';
+import { PlanApprovalCard } from './PlanApprovalCard';
+import type { PlanMode } from './PlanApprovalCard';
 
 export interface PermissionQueuePanelProps {
   readonly sessionId: string | null;
 
   /** Opens the rules screen — one of the two ways in to it that D-04 requires. */
   onOpenRules?: () => void;
+
+  /** A plan was approved, to go on in this mode (plan 08, B-22). */
+  onPlanApproved?: (mode: PlanMode) => void;
 }
 
 /**
@@ -21,6 +26,7 @@ export interface PermissionQueuePanelProps {
 export function PermissionQueuePanel({
   sessionId,
   onOpenRules,
+  onPlanApproved,
 }: PermissionQueuePanelProps): React.JSX.Element {
   const { t } = useTranslation();
   const { pending, settled, remainingMs, answer, extend } = usePermissionQueue(sessionId);
@@ -28,6 +34,7 @@ export function PermissionQueuePanel({
 
   return (
     <Panel title={t('permission.queue.title')} description={t('permission.queue.description')}>
+      <span id={`permission-queue-${sessionId ?? 'none'}`} />
       {pending.length === 0 && (
         <EmptyState
           title={t('permission.queue.emptyTitle')}
@@ -37,16 +44,28 @@ export function PermissionQueuePanel({
 
       {pending.length > 0 && (
         <ul className="flex flex-col gap-3" aria-label={t('permission.queue.title')}>
-          {pending.map((request) => (
-            <PermissionCard
-              key={request.requestId}
-              request={request}
-              remainingMs={remainingMs[request.requestId] ?? 0}
-              onAnswer={answer}
-              onExtend={extend}
-              onOpenRules={onOpenRules}
-            />
-          ))}
+          {pending.map((request) => {
+            const left = remainingMs[request.requestId] ?? 0;
+
+            return request.toolName === 'ExitPlanMode' ? (
+              <PlanApprovalCard
+                key={request.requestId}
+                request={request}
+                remainingMs={left}
+                onAnswer={answer}
+                onApproved={onPlanApproved}
+              />
+            ) : (
+              <PermissionCard
+                key={request.requestId}
+                request={request}
+                remainingMs={left}
+                onAnswer={answer}
+                onExtend={extend}
+                onOpenRules={onOpenRules}
+              />
+            );
+          })}
         </ul>
       )}
 

@@ -34,6 +34,19 @@ function setUp(initial = one) {
 }
 
 describe('AllowlistReloadSignal — plan 06, B-11', () => {
+  it('announces what a reload changed, for whoever holds a folder it allowed — plan 07, S-143', () => {
+    const { allowlist, write, log } = setUp(two);
+    const announced: unknown[] = [];
+    const signal = new AllowlistReloadSignal(allowlist, log.logger, new EventEmitter(), (change) =>
+      announced.push(change),
+    );
+    write(one);
+
+    signal.reload();
+
+    expect(announced).toEqual([{ added: [], removed: ['/srv/other'] }]);
+  });
+
   it('listens to SIGHUP once the application is up, and reloads on it — S-62', () => {
     const { signal, signals, allowlist, write, log } = setUp();
     signal.onApplicationBootstrap();

@@ -122,3 +122,20 @@ describe('the platform', () => {
     expect(onMac()).toBe(false);
   });
 });
+
+describe('a sequence of chords — plan 07, B-34 (`Ctrl+K S`)', () => {
+  it('is its chords in order, each spelled one way, for each platform', () => {
+    expect(chordOf({ key: 'Mod+K S' }, false)).toBe('Ctrl+K S');
+    expect(chordOf({ key: 'Mod+K Shift+Mod+L' }, true)).toBe('Meta+K Shift+Meta+L');
+  });
+
+  it('is kept by the browser when its first chord is', () => {
+    expect(reservedIn({ key: 'Ctrl+W S' })).toBe('other');
+    expect(reservedIn({ key: 'Mod+K Ctrl+W' })).toBeNull();
+  });
+
+  it('is written chord after chord, and announced by its label alone', () => {
+    expect(shortcutLabel({ key: 'Mod+K S' }, false)).toEqual({ label: 'Ctrl+K S', aria: '' });
+    expect(shortcutLabel({ key: 'Mod+K S' }, true)).toEqual({ label: '⌘K S', aria: '' });
+  });
+});

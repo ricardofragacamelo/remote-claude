@@ -21,7 +21,7 @@ export const auditEvents = pgTable(
     id: text('id').primaryKey(),
     userId: text('user_id').notNull(),
     kind: text('kind').notNull(),
-    /** What the event is about — the device id, or the permission rule id. */
+    /** What the event is about — the device id, the permission rule id, or a file's real path. */
     subjectId: text('subject_id').notNull(),
     /** Recognisable label of the subject, so the trail reads without a second query. */
     subjectLabel: text('subject_label').notNull(),
@@ -40,7 +40,7 @@ export const auditEvents = pgTable(
     index('audit_events_at_idx').on(table.at),
     check(
       'audit_events_kind_known',
-      sql`${table.kind} IN ('device.registered', 'device.approved', 'device.revoked', 'device.expired', 'permission.ruleGranted', 'permission.ruleRevoked', 'session.resumed', 'session.forked', 'session.filesRewound')`,
+      sql`${table.kind} IN ('device.registered', 'device.approved', 'device.revoked', 'device.expired', 'permission.ruleGranted', 'permission.ruleRevoked', 'session.resumed', 'session.forked', 'session.filesRewound', 'file.created', 'file.written', 'file.moved', 'file.copied', 'file.deleted', 'file.failed', 'file.downloaded', 'file.restored')`,
     ),
   ],
 );

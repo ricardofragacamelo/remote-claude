@@ -26,6 +26,7 @@ import {
   CONVERSATION_ID,
   SESSION_ID,
 } from '../../../support/builders/session.builder';
+import { InMemoryPathLock } from '@shared/concurrency/in-memory-path-lock';
 import { FixedClock } from '../../../support/fakes/fixed-clock';
 import { FakeUndoDisk, InMemoryUndoJournal } from '../../../support/fakes/in-memory-undo';
 import { RecordingAuditEvents } from '../../../support/fakes/recording-audit-events';
@@ -86,7 +87,7 @@ describe('undoing what a session wrote', () => {
     events = new RecordingAuditEvents();
 
     const clock = new FixedClock(now);
-    const planner = new UndoPlanner(journal, disk, clock);
+    const planner = new UndoPlanner(journal, disk, clock, new InMemoryPathLock());
     listing = new ListUndoPointsUseCase(registry, planner);
     rewind = new RewindFilesUseCase(
       registry,

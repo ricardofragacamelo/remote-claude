@@ -224,6 +224,117 @@ void main() {
       }
     });
 
+    test('B-05 · a frame of another stream is no event of a session, whatever its seq', () {
+      // The watch of a folder numbers its own stream; read as an unknown event of a session, its
+      // seq would move the resume point of the session past events it never sent.
+      for (final String type in <String>['workspace.filesChanged', 'workspace.watchStopped']) {
+        expect(
+          read(
+            frame(
+              kind: 'event',
+              type: type,
+              seq: 500,
+              payload: <String, Object?>{'watchId': 'w-1', 'changes': <Object?>[]},
+            ),
+          ),
+          isNull,
+          reason: type,
+        );
+      }
+    });
+
+    test(
+      'plan 08 · thinking and a subagent are not the answer, and still move the resume point',
+      () {
+        // The web panel folds thinking and nests a subagent (B-02); this app shows neither, and a
+        // thinking fragment read as the answer would put the model's reasoning in the reply.
+        final List<String> notTheAnswer = <String>[
+          frame(
+            kind: 'event',
+            type: 'message.delta',
+            seq: 21,
+            payload: <String, Object?>{'messageId': 'm', 'delta': 'hm', 'blockType': 'thinking'},
+          ),
+          frame(
+            kind: 'event',
+            type: 'message.delta',
+            seq: 21,
+            payload: <String, Object?>{'messageId': 'm', 'delta': 'x', 'parentToolUseId': 'task'},
+          ),
+          frame(
+            kind: 'event',
+            type: 'message.completed',
+            seq: 21,
+            payload: <String, Object?>{
+              'messageId': 'm',
+              'role': 'assistant',
+              'content': <Object?>[],
+              'parentToolUseId': 'task',
+            },
+          ),
+        ];
+
+        for (final String line in notTheAnswer) {
+          final SessionEvent? event = read(line);
+
+          expect(event, isA<UnreadEvent>(), reason: line);
+          expect(event!.seq, 21, reason: line);
+        }
+      },
+    );
+
+    test('plan 08 · a delta that names its block as text is the answer', () {
+      final SessionEvent? event = read(
+        frame(
+          kind: 'event',
+          type: 'message.delta',
+          seq: 3,
+          payload: <String, Object?>{'messageId': 'm', 'delta': 'hi', 'blockType': 'text'},
+        ),
+      );
+
+      expect(event, isA<MessageFragment>());
+    });
+
+    test('plan 08 · a finished message keeps its thinking out of the text', () {
+      final SessionEvent? event = read(
+        frame(
+          kind: 'event',
+          type: 'message.completed',
+          seq: 4,
+          payload: <String, Object?>{
+            'messageId': 'm',
+            'role': 'assistant',
+            'content': <Object?>[
+              <String, Object?>{'type': 'thinking', 'thinking': 'let me see'},
+              <String, Object?>{'type': 'redacted_thinking'},
+              <String, Object?>{'type': 'text', 'text': 'Done.'},
+            ],
+          },
+        ),
+      );
+
+      expect((event! as MessageFinished).text, 'Done.');
+    });
+
+    test('plan 08 · the events of the panel are unread here, with their seq', () {
+      for (final (String type, Map<String, Object?> payload) in <(String, Map<String, Object?>)>[
+        ('session.compacted', <String, Object?>{'trigger': 'auto'}),
+        (
+          'prompt.queued',
+          <String, Object?>{'queueId': 'q', 'position': 1, 'promptedBy': 'u', 'preview': 'p'},
+        ),
+        ('prompt.dequeued', <String, Object?>{'queueId': 'q', 'reason': 'started'}),
+      ]) {
+        final SessionEvent? event = read(
+          frame(kind: 'event', type: type, seq: 30, payload: payload),
+        );
+
+        expect(event, isA<UnreadEvent>(), reason: type);
+        expect(event!.seq, 30, reason: type);
+      }
+    });
+
     test('a frame with no seq is not part of the history at all', () {
       // A question is asked, not recorded: it belongs to the permission queue.
       expect(

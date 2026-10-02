@@ -13,6 +13,7 @@
     "doctor": "node scripts/doctor.mjs",
     "allowlist": "node scripts/allowlist.mjs",
     "dev": "exec node scripts/start-local.mjs",
+    "dev:mobile": "exec node scripts/run-mobile-local.mjs",
     "clean": "node scripts/clean.mjs",
     "db": "node scripts/db.mjs",
     "docs:check": "node scripts/docs-check.mjs",
@@ -30,13 +31,13 @@
     "format": "prettier --write . && node scripts/mobile.mjs format",
     "format:check": "prettier --check . && node scripts/mobile.mjs format:check",
     "test:unit": "vitest run test/unit && pnpm -r --if-present test:unit && node scripts/mobile.mjs test:unit && node scripts/mobile.mjs test:native",
-    "test:integration": "vitest run test/integration && pnpm -r --if-present test:integration && node scripts/mobile.mjs test:widget",
+    "test:integration": "vitest run test/integration && pnpm -r --workspace-concurrency=1 --if-present test:integration && node scripts/mobile.mjs test:widget",
     "test:e2e": "node scripts/run-e2e-local.mjs",
     "test:e2e:mobile": "node scripts/run-e2e-local.mjs --mobile",
     "test:e2e:mobile:push": "node scripts/run-e2e-local.mjs --mobile --push",
     "test:e2e:live": "node scripts/run-smoke-live.mjs",
     "test:e2e:live:report": "node scripts/report-smoke-live.mjs",
-    "test:coverage": "vitest run --coverage && pnpm -r --if-present test:coverage && node scripts/mobile.mjs coverage",
+    "test:coverage": "vitest run --coverage && pnpm -r --workspace-concurrency=1 --if-present test:coverage && node scripts/mobile.mjs coverage",
     "check:contracts-i18n": "node scripts/contracts.mjs --check && node scripts/i18n-check.mjs",
     "verify": "node scripts/verify.mjs",
     "verify:full": "node scripts/verify-full.mjs"
@@ -66,6 +67,7 @@
   "pnpm": {
     "overrides": {
       "multer": ">=2.4.0",
+      "dompurify": ">=3.4.16",
       "brace-expansion@1": "^1.1.21",
       "brace-expansion@2": "^2.1.7",
       "brace-expansion@5": "^5.0.12",

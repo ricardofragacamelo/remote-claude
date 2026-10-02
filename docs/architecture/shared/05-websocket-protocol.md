@@ -33,7 +33,7 @@ Todo frame, nos dois sentidos, tem esta forma:
   "traceId": "9f2c1e5a-...",
   "sessionId": "sess_...",    // quando aplicável
   "correlationId": "01J...",  // id do frame que originou este
-  "seq": 1421,                // só em event: sequência monotônica por sessão
+  "seq": 1421,                // só em event: monotônica por stream — sessão ou assinatura
   "payload": { }
 }
 ```
@@ -113,16 +113,20 @@ Regras:
 | `connection.authenticate` | `{ token, locale, client }` | handshake |
 | `connection.reauthenticate` | `{ token }` | renova a credencial sem reabrir o socket |
 | `diag.ping` | `{ sessionId?, nonce }` | diagnóstico do gateway: atravessa as camadas sem tocar no Agent SDK. Sem `sessionId`, abre uma sessão |
-| `session.start` | `{ workspacePath, model?, permissionMode?, resumeSessionId? }` | abre sessão — ou continua uma conversa do histórico, com `resumeSessionId` (ver [Retomada](#retomada)) |
+| `session.start` | `{ workspacePath, model?, permissionMode?, effort?, resumeSessionId?, forkAt? }` | abre sessão — ou continua uma conversa do histórico, com `resumeSessionId` (ver [Retomada](#retomada)); com `forkAt`, continua a partir de **antes** daquele prompt, sempre num id novo — o editar e reenviar ([08 · D-19](../../plans/08-claude-panel/decisions.md#d-19--editar-e-reenviar)) |
 | `session.attach` | `{ sessionId }` | observa sessão existente |
 | `session.detach` | `{ sessionId }` | para de observar |
-| `session.prompt` | `{ sessionId, text, attachments? }` | envia um turno |
+| `session.prompt` | `{ sessionId, text, attachments? }` | envia um turno — ver [O contexto do prompt](#o-contexto-do-prompt--attachments) |
+| `session.cancelQueuedPrompt` | `{ sessionId, queueId }` | tira da fila um prompt que ainda não começou — ver [A fila de prompts](#a-fila-de-prompts) |
 | `session.interrupt` | `{ sessionId }` | `query.interrupt()` |
 | `session.setPermissionMode` | `{ sessionId, mode }` | troca o modo em execução |
 | `session.setModel` | `{ sessionId, model }` | troca o modelo em execução |
 | `session.close` | `{ sessionId }` | encerra e libera o subprocesso |
 | `session.setLocale` | `{ locale }` | muda o idioma da connection |
-| `session.rewindFiles` | `{ sessionId, promptId }` | devolve os arquivos que a sessão escreveu ao estado de **antes** de um turno — ver [Desfazer arquivos](#desfazer-arquivos) |
+| `session.rewindFiles` | `{ sessionId, promptId, paths? }` | devolve os arquivos que a sessão escreveu ao estado de **antes** de um turno — com `paths`, só esses (rejeitar um arquivo) — ver [Desfazer arquivos](#desfazer-arquivos) |
+| `session.rejectChange` | `{ sessionId, path, hunkId, revision }` | devolve **um trecho** do que a sessão mudou num arquivo ao estado de antes da sessão — ver [Desfazer arquivos](#desfazer-arquivos) |
+| `workspace.watch` | `{ workspacePath }` | passa a acompanhar as mudanças no disco de uma pasta aberta — ver [A pasta assistida](#a-pasta-assistida--workspace) |
+| `workspace.unwatch` | `{ watchId }` | para de acompanhar; idempotente |
 | `permission.extend` | `{ requestId }` | estende o prazo do pedido pendente. O cliente **não** escolha o número: incremento e teto vêm da configuração do backend |
 | `permission.resolve` | *(é `response`, não command — ver abaixo)* | |
 
@@ -130,7 +134,7 @@ Todo comando recebe `ack` ou `error`. `ack` significa **aceito**, não **conclu�
 resultado chega como `event`. O ack genérico é `command.accepted { command }`; `session.attach`
 responde `session.attached { sessionId, replayed, oldestAvailableSeq, gap, claudeSessionId?, resumedFrom? }`
 — e `session.start` também, quando retoma uma conversa que **já está viva** para o chamador
-(ver [Retomada](#retomada)).
+(ver [Retomada](#retomada)); `workspace.watch` responde `workspace.watching { watchId, workspacePath }`.
 
 **Ordem garantida:** o `ack` sai antes de qualquer frame causado pelo comando. Um cliente nunca vê
 o resultado antes de saber que o comando foi aceito.
@@ -146,21 +150,30 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 |---|---|---|
 | `session.started` | `{ sessionId, workspacePath, model, permissionMode, claudeSessionId, resumedFrom? }` | `system:init` |
 | `session.statusChanged` | `{ status }` — `idle`·`thinking`·`running`·`waitingPermission`·`closed` | derivado |
-| `message.delta` | `{ messageId, delta }` | `stream_event` |
-| `message.completed` | `{ messageId, role, content[], promptedBy? }` | `assistant` / `user` |
-| `tool.started` | `{ toolUseId, toolName, input, title? }` | `assistant` (tool_use) |
-| `tool.progress` | `{ toolUseId, chunk }` | `tool_progress` |
-| `tool.completed` | `{ toolUseId, status, summary? }` — `succeeded`·`failed`·`denied` | `user` (tool_result) |
+| `message.delta` | `{ messageId, delta, blockType?, parentToolUseId? }` — `blockType`: `text`·`thinking` | `stream_event` |
+| `message.completed` | `{ messageId, role, content[], promptedBy?, parentToolUseId? }` | `assistant` / `user` |
+| `tool.started` | `{ toolUseId, toolName, input, title?, parentToolUseId? }` | `assistant` (tool_use) |
+| `tool.progress` | `{ toolUseId, chunk, parentToolUseId? }` | `tool_progress` |
+| `tool.completed` | `{ toolUseId, status, summary?, parentToolUseId?, taskId? }` — `succeeded`·`failed`·`denied`; `taskId` só de `TaskCreate`/`TaskUpdate` (a lista de tarefas, plano 08) | `user` (tool_result) |
 | `permission.requested` | ver abaixo | `canUseTool` |
 | `permission.resolved` | `{ requestId, decision, auto, resolvedBy?, resolvedFrom? }` | derivado |
 | `turn.completed` | `{ turnId, usage, costUsd, durationMs, promptedBy? }` | `result` |
 | `session.closed` | `{ sessionId, reason }` — `closedByUser`·`completed`·`failed`·`auditUnavailable`·`shutdown`·`idleTimeout` | fim do generator · TTL de ociosa (`idleTimeout`) · shutdown |
 | `diag.pong` | `{ sessionId, pingedAt, pingCount, nonce }` | resposta do `diag.ping` |
 | `permission.extended` | `{ requestId, expiresAt, remainingExtensions }` | derivado do `permission.extend` |
-| `session.rewound` | `{ promptId, reverted[], preserved[], unchanged[], failed[] }` | derivado do `session.rewindFiles` |
+| `session.rewound` | `{ promptId, reverted[], preserved[], unchanged[], failed[], hunkId? }` | derivado do `session.rewindFiles` e do `session.rejectChange` (com `hunkId`) |
+| `session.compacted` | `{ trigger, preTokens? }` — `trigger`: `manual`·`auto` | `system:compact_boundary` |
+| `prompt.queued` | `{ queueId, position, promptedBy, preview }` | a fila do backend |
+| `prompt.dequeued` | `{ queueId, reason }` — `started`·`cancelled` | a fila do backend |
+| `workspace.filesChanged` | `{ watchId, changes[{ path, kind, origin? }], overflow? }` — `kind`: `created`·`changed`·`deleted`; `origin`: `claude`·`user`·`external` | o watcher da pasta assistida |
+| `workspace.watchStopped` | `{ watchId, reason }` — `allowlistChanged`·`folderDeleted`·`systemLimit` | o watcher da pasta assistida |
 | `error` | envelope de erro | qualquer falha |
 
-**`seq` é obrigatório em todo `event`**, monotônico por sessão. É o que viabiliza o replay.
+**`seq` é obrigatório em todo `event`**, monotônico **por stream** — uma sessão, ou uma assinatura
+(a pasta assistida; o terminal do [plano 10](../../plans/10-integrated-terminal/README.md) reusa a
+regra). Numa sessão é o que viabiliza o replay; numa assinatura **não há replay**. Um cliente nunca
+mistura dois streams: o `seq` de uma assinatura não move o ponto de retomada de sessão nenhuma
+([07 · D-07](../../plans/07-explorer-and-editor/decisions.md#d-07--o-transporte-da-mudança-e-o-seq-do-stream)).
 
 ### Dois ids: a sessão viva e a conversa
 
@@ -200,6 +213,81 @@ O nosso é o único que existe, e por isso o contrato carrega **só o comando**:
 - teto atingido responde `error`, e a UI mostra que não há mais extensão;
 - as duas pontas podem estender o mesmo pedido: a operação é idempotente por `requestId`, e o
   `remainingExtensions` é o que a UI usa para não prometer o que não existe.
+
+### Thinking e subagents
+
+Dois campos opcionais, e nenhum muda o que um cliente antigo entende do resto
+([08 · B-02](../../plans/08-claude-panel/F0-contract.md)):
+
+- **`blockType: 'thinking'`** num `message.delta` diz que o fragmento é o raciocínio do modelo, não a
+  resposta; ausente é `text`. No `message.completed`, o bloco é `{ type: 'thinking', thinking }` — o
+  texto num campo **próprio**, nunca em `text`, para que um cliente que junta o `text` de cada bloco
+  nunca o mostre como resposta — e `{ type: 'redacted_thinking' }` diz que houve raciocínio sem dizer
+  qual. O web o mostra recolhido ([08 · D-17](../../plans/08-claude-panel/decisions.md#d-17--thinking));
+  o app o descarta, e o `seq` dele anda do mesmo jeito. No log, só o tamanho.
+- **`parentToolUseId`** em `message.*` e `tool.*` diz que o evento vem de um **subagent**: o
+  `toolUseId` do `Task`/`Agent` que o abriu. O cliente o aninha ali; ausente é a conversa principal
+  ([08 · D-15](../../plans/08-claude-panel/decisions.md#d-15--subagents-o-que-encaminhar)).
+
+Um build anterior a estes campos mostraria o fragmento de thinking como texto enquanto ele chega — o
+`message.completed` o corrige. Nenhum build publicado é anterior a eles (o
+[plano 17](../../plans/17-distribution/README.md) não começou), e os dois clientes deste repositório
+passam a lê-los na mesma entrega.
+
+### A lista de tarefas — `TodoWrite` e `Task*`
+
+Não há evento de lista: ela é **lida das tools** que o Claude chama, pelo nome — nunca pelo modelo
+([plano 08 · D-25](../../plans/08-claude-panel/decisions.md#d-25--a-lista-de-tarefas-todowrite-ou-task)).
+O backend abre o SDK com `CLAUDE_CODE_ENABLE_TODO_TOOLS=1`, e o CLI oferece uma de duas formas:
+
+- `TodoWrite` — cada `tool.started` traz a lista **inteira** no `input.todos`;
+- `TaskCreate`/`TaskUpdate` — incrementais. O `id` de uma tarefa nova só existe no resultado, e por
+  isso o `tool.completed` delas leva o **`taskId`**: ao vivo, do resultado estruturado do SDK; no
+  histórico, que o SDK devolve sem ele, do texto completo do resultado. `TaskGet` e `TaskList` só leem.
+
+O cliente reduz as chamadas em ordem; uma chamada fora do formato, ou um `TaskUpdate` de um `taskId`
+que a lista não tem, é uma tool como outra qualquer.
+
+### O contexto do prompt — `attachments`
+
+`session.prompt.attachments` é uma união por `kind`, com até **20** itens (`maxItems` do schema):
+
+| `kind` | Campos | O que é |
+|---|---|---|
+| `file` — ou ausente, como era antes | `path`, `range?` `{ startLine, endLine }` | um arquivo, ou linhas dele, **dentro da pasta da sessão** |
+| `folder` | `path` | uma pasta dentro da pasta da sessão |
+| `upload` | `attachmentId` | o que `POST /sessions/:sessionId/attachments` respondeu: imagem, ou texto arrastado do desktop |
+| `text` | `source` (`terminal`), `label` (≤ 200), `content` (≤ 16 384) | o que um provedor do cliente tem e a pessoa já vê — o terminal do [plano 10](../../plans/10-integrated-terminal/README.md) |
+
+- **Arquivo e pasta são referência, nunca conteúdo.** O backend os confere na pasta da sessão — tudo
+  ou nada — e compõe a referência num formato delimitado; o Claude os lê pelo `Read`, que o hook
+  `PreToolUse` grava na trilha. Conteúdo colado no prompt seria leitura de arquivo que a trilha nunca
+  viu ([08 · D-01](../../plans/08-claude-panel/decisions.md#d-01--como-a-menção-chega-ao-claude)).
+- **`text` é a exceção declarada**: vai delimitado e rotulado pela origem, com teto — nunca como se a
+  pessoa tivesse digitado.
+- `range` conta linhas a partir de 1 (`minimum` do schema); `endLine` antes de `startLine` é recusado
+  pelo backend com `INVALID_INPUT` — ordem entre dois campos não é limite de um.
+- A imagem **não** viaja no frame: o frame tem 64 KB, e um print de tela não cabe
+  ([08 · D-02](../../plans/08-claude-panel/decisions.md#d-02--imagem-no-prompt)).
+
+### A fila de prompts
+
+O prompt que chega durante um turno fica **no backend** até o turno terminar, e só então vai ao SDK —
+um prompt entregue ao SDK não se tira mais ([08 · D-14](../../plans/08-claude-panel/decisions.md#d-14--a-fila-de-prompts)):
+
+```
+→ command  session.prompt         { sessionId, text: "e os testes?" }
+← ack      command.accepted
+← event    prompt.queued          { queueId: "q_01J…", position: 1, promptedBy, preview: "e os testes?" }
+   … o turno em curso termina …
+← event    prompt.dequeued        { queueId: "q_01J…", reason: "started" }
+```
+
+- Todo observador vê a mesma fila, e qualquer um tira um prompt dela com `session.cancelQueuedPrompt`
+  (`prompt.dequeued` com `reason: cancelled`). O que já começou é `CONFLICT`
+  (`session.error.queuedPromptStarted`); o que a fila não tem é `QUEUED_PROMPT_NOT_FOUND`.
+- A ordem é a de chegada; tirar um prompt sobe os de trás uma posição.
+- `preview` é o começo do texto, cortado no backend — o prompt inteiro é do turno, quando ele roda.
 
 ---
 
@@ -305,6 +393,8 @@ da conversa — ela é procurada **dentro** desse workspace, e é por ele que o 
 | Situação | Resposta |
 |---|---|
 | a conversa pode ser continuada | `command.accepted` e depois `session.started` de uma sessão **nova** — `seq` recomeça em 1 —, com `claudeSessionId` e `resumedFrom` |
+| `forkAt` que não é prompt da conversa | `error` `INVALID_INPUT` (`session.error.forkPointUnknown`) |
+| o CLI recusou o ponto de fork | `error` `SESSION_FORK_REJECTED` (`409`) — a tela oferece a retomada simples, sem repetir o fork |
 | a conversa já está **viva para o chamador** (em sessão aberta ou retomada por ele) | `session.attached { sessionId, replayed: 0, gap: false, claudeSessionId, resumedFrom? }` da sessão viva — **retomar o que está vivo é attach**, nunca um segundo subprocesso. A conexão já fica anexada; a tela que segue faz o próprio `session.attach` para o replay |
 | duas retomadas da mesma conversa chegam juntas | uma `query()` só: a primeira abre, a segunda recebe o `session.attached` |
 | workspace fora da allowlist | `error` `WORKSPACE_NOT_ALLOWED` (`403`) |
@@ -392,10 +482,61 @@ ao snapshot do primeiro desses turnos que o tocou.
 recusado com `SESSION_LOCKED` (`reason: rewindRunning`) — um turno que começasse ali leria um disco
 pela metade ([plano 05 · B-27](../../plans/05-hardening-operations/F0-limits.md)).
 
+**Rejeitar um arquivo é o desfazer com `paths`.** `session.rewindFiles { sessionId, promptId, paths }`
+faz o mesmo cálculo, só para os caminhos pedidos — o `UndoPlanner` já decide cada um sozinho, então
+filtrar é reusar o mesmo cálculo, com as mesmas garantias; caminho que o desfazer não alcança
+simplesmente não é tocado ([08 · D-08](../../plans/08-claude-panel/decisions.md#d-08--rejeitar-por-arquivo-e-por-trecho)).
+
+**Rejeitar um trecho é `session.rejectChange { sessionId, path, hunkId, revision }`.** Os trechos são
+calculados no backend entre o snapshot de antes da sessão e o disco **agora**
+(`GET /sessions/:sessionId/changes/file`), e só quando o disco ainda tem o que a sessão deixou — senão o
+arquivo é `modifiedOutside` e só se rejeita inteiro, preservando-o. `revision` é o hash do disco no
+cálculo: mudou, `SESSION_CHANGE_STALE` (`409`). O resultado é o mesmo `session.rewound`, com `hunkId`,
+e as mesmas travas (`SESSION_LOCKED`) e a mesma trilha antes do disco.
+
 Motivos de `preserved`: `modifiedOutside` (alguém alterou depois da sessão), `notRestorable`
 (grande demais ou ilegível para snapshot), `unsafePath` (virou link, deixou de ser arquivo regular,
 ou o diretório deixou de resolver) e `noBaseline` (nada registra como a sessão o deixou). Ver
 [backend/04 — Desfazer arquivos](../backend/04-claude-integration.md#desfazer-arquivos--o-store-é-nosso).
+
+---
+
+## A pasta assistida — `workspace.*`
+
+O explorer e o editor precisam saber quando o disco muda — o Claude escreve o tempo todo. A mudança
+chega por **assinatura** no socket que já existe ([07 · D-07](../../plans/07-explorer-and-editor/decisions.md#d-07--o-transporte-da-mudança-e-o-seq-do-stream)):
+
+```
+→ command  workspace.watch     { workspacePath: "/srv/projects/app" }
+← ack      workspace.watching  { watchId: "w_01J…", workspacePath: "/srv/projects/app" }
+← event    workspace.filesChanged  seq 1  { watchId, changes: [{ path: "src/a.ts", kind: "changed", origin: "claude" }] }
+← event    workspace.filesChanged  seq 2  { … }
+```
+
+- **`seq` é do `watchId`**, começa em 1 e não tem relação com sessão nenhuma. O frame não leva
+  `sessionId`. O `workspace.watchStopped` é o último frame do stream e leva o `seq` seguinte.
+- **O `ack` vem antes de tudo.** Nada do `watchId` chega antes do `workspace.watching`; o que mudou
+  antes dele o cliente vê ao carregar a árvore.
+- **Mesmo cliente, mesma pasta:** um segundo `workspace.watch` da mesma connection para a mesma pasta
+  (pelo caminho real) devolve o **mesmo** `watchId` — um único `unwatch` o encerra.
+- **Sem replay.** O que importa depois de uma queda é o disco **agora**, que uma recarga dá melhor
+  que mil eventos reencaminhados: a reconexão refaz o `workspace.watch` (novo `watchId`, `seq` do 1)
+  e recarrega a árvore por HTTP.
+- **`origin` rotula, não decide**: é o que o servidor consegue dizer de quem mudou — uma escrita do
+  Claude (ouvida pelo barramento interno, `session.fileStateRecorded`), da pessoa pelas rotas de
+  `files`, ou outra coisa. Ausente quando não sabe.
+- **`overflow: true`** é "mudou mais do que o evento carrega": o cliente recarrega em vez de remendar.
+  Também é o que recebe uma connection que ficou para trás (o socket acumulou demais): as mudanças
+  que não couberam viram um `overflow` só, quando ela alcança.
+- **Cliente que nunca pede, ignora.** O app Flutter não tem explorer nem editor; recebe os tipos
+  gerados e, se um frame `workspace.*` chegar, o descarta sem deixar o `seq` dele tocar o ponto de
+  retomada da sessão aberta (plano 07, B-05).
+- Os limites do [plano 05](../../plans/05-hardening-operations/README.md) valem para os comandos
+  novos; o teto de assinaturas por connection é `WATCH_LIMIT_REACHED`, e o sistema que recusa mais
+  watches é `WATCH_UNAVAILABLE` com `retryAfterSeconds`.
+
+O comportamento do watcher — o que é assistido, a coalescência, a liberação garantida — é da
+[F3 do plano 07](../../plans/07-explorer-and-editor/F3-file-watch.md); este é o contrato.
 
 ---
 
@@ -467,7 +608,8 @@ N connections podem observar 1 sessão. Todas recebem **todos** os eventos.
 | Ação | Quem pode |
 |---|---|
 | Observar eventos | toda connection com `session.attach` |
-| Enviar prompt | qualquer uma — um prompt que chega durante um turno é **enfileirado** e roda em seguida, como faz a UI do Claude Code ([R-02](../../plans/00-bootstrap/progress.md#decisões-tomadas-durante-a-execução)) |
+| Enviar prompt | qualquer uma — um prompt que chega durante um turno é **enfileirado** e roda em seguida, como faz a UI do Claude Code ([R-02](../../plans/00-bootstrap/progress.md#decisões-tomadas-durante-a-execução)); a fila é do backend, e todas veem a mesma ([A fila de prompts](#a-fila-de-prompts)) |
+| Tirar prompt da fila | qualquer uma — `session.cancelQueuedPrompt` |
 | Responder permissão | qualquer uma — vale a primeira |
 | Interromper | qualquer uma |
 | Fechar sessão | apenas o dono da sessão |
@@ -503,6 +645,8 @@ Duas regras do contrato não são "este campo é obrigatório", e sim "este camp
 | envelope | `seq` é obrigatório quando `kind` é `event` | replay é construído sobre `seq`; evento sem ele é um buraco que ninguém detecta depois |
 | `permission.resolve` | `reason` é obrigatório quando `decision` é `deny` | a razão vai para a auditoria e volta ao Claude como mensagem |
 | `permission.resolved` | `resolvedBy` é obrigatório quando `auto` é `false` | decisão que um humano tomou tem autor; só a negação automática não tem |
+| `session.prompt.attachments[]` | `path` quando `kind` é `file`, `folder` **ou ausente**; `attachmentId` quando é `upload`; `source`, `label` e `content` quando é `text` | cada tipo de contexto se nomeia de um jeito; o ausente é o anexo de arquivo que existia antes dos tipos |
+| `session.start` | `resumeSessionId` é obrigatório quando `forkAt` está **presente** | um ponto de fork é uma mensagem de uma conversa, e só a retomada tem uma |
 
 Elas vivem **no schema**, na extensão `x-required-when`, e o gerador as emite nos dois alvos — em
 TypeScript como uma cláusula dentro do guard, em Dart como um predicado ao lado da classe:
@@ -515,7 +659,19 @@ TypeScript como uma cláusula dentro do guard, em Dart como um predicado ao lado
 ]
 ```
 
-O `because` é obrigatório: regra que ninguém consegue revisar é regra que ninguém mantém.
+O gatilho é `equals` (um valor), `absent: true` (o campo que decide está ausente) ou
+`present: true` (está presente) — um dos três, nunca dois. O `because` é obrigatório: regra que
+ninguém consegue revisar é regra que ninguém mantém.
+
+### Limites de campo
+
+Três limites também vivem no schema, pelo mesmo motivo — `maxItems` (lista), `maxLength` (texto) e
+`minimum` (inteiro) — e o gerador recusa um limite que o tipo não honraria (`maxLength` num inteiro) ou
+que nenhum guard conferiria (um limite nos itens de uma lista de escalares). Em TypeScript, cada um é
+uma cláusula do guard (`withinMaxItems`, `withinMaxLength`, `atLeast`) e uma constante exportada
+(`SESSION_PROMPT_PAYLOAD_LIMITS`, …) que o validador do backend lê em vez de repetir o número; em Dart,
+um predicado `…LimitsHold` ao lado da classe. Campo ausente passa: se ele pode faltar é pergunta do
+obrigatório e do condicional.
 
 **Por que não validar isso em cada ponta.** Uma regra escrita à mão em três linguagens é uma
 regra que vale em duas delas — e a que fica para trás é sempre a que ninguém compila junto. O

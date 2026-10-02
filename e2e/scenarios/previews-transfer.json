@@ -1,0 +1,32 @@
+{
+  "id": "07·S-325…S-327, S-360",
+  "title": "previews and transfer through the user's door: a markdown file with a relative image previewed to the side and followed as it is typed; a file dropped from the desktop onto a folder of the tree and the folder downloaded as a zip; a binary file in hexadecimal; Upload files here… and Download from the context menu and the palette, keyboard only",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "markdown": "notes.md",
+    "markdownText": "# Notes\n\n![the logo](img/logo.png)\n",
+    "heading": "Notes",
+    "imagePath": "img/logo.png",
+    "imageAlt": "the logo",
+    "pngBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    "typedLive": "Typed before saving",
+    "folder": "inbox",
+    "kept": { "name": "kept.txt", "content": "already here\n" },
+    "dropped": { "name": "dropped.txt", "content": "from the desktop\n" },
+    "picked": { "name": "picked.txt", "content": "picked from the dialog\n" },
+    "report": { "name": "report.txt", "content": "a report\n" },
+    "binary": "data.bin",
+    "bytes": [0, 255, 16, 65, 66, 67, 10, 127, 1, 2, 3, 4, 5, 6, 7, 8, 72, 105, 33, 0],
+    "hexTitle": "{{path}} is a binary file — shown in hexadecimal, read-only",
+    "rows": [
+      {
+        "offset": "00000000",
+        "hex": "00 ff 10 41 42 43 0a 7f 01 02 03 04 05 06 07 08",
+        "text": "...ABC.........."
+      },
+      { "offset": "00000010", "hex": "48 69 21 00", "text": "Hi!." }
+    ],
+    "uploadFiles": "Upload files here…",
+    "download": "Download"
+  }
+}

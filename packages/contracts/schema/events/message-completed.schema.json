@@ -8,8 +8,13 @@
   "type": "object",
   "required": ["messageId", "role", "content"],
   "properties": {
-    "messageId": { "type": "string" },
-    "role": { "type": "string", "enum": ["assistant", "user"] },
+    "messageId": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["assistant", "user"]
+    },
     "promptedBy": {
       "type": "string",
       "description": "Who sent it, on a `user` message. It is what lets the UI say \"you sent this from your phone\" instead of showing an authorless turn."
@@ -23,12 +28,25 @@
         "properties": {
           "type": {
             "type": "string",
-            "description": "Block kind — `text`, `tool_use`, `tool_result` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped."
+            "description": "Block kind — `text`, `thinking`, `redacted_thinking`, `tool_use`, `tool_result` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped."
           },
-          "text": { "type": "string" },
-          "toolUseId": { "type": "string" }
+          "text": {
+            "type": "string",
+            "description": "The text of a `text` block."
+          },
+          "thinking": {
+            "type": "string",
+            "description": "What the model thought, on a `thinking` block — in a field of its own and not in `text`, so a client that joins the `text` of every block never shows it as the answer. A `redacted_thinking` block has neither: it says the model thought, and nothing it thought."
+          },
+          "toolUseId": {
+            "type": "string"
+          }
         }
       }
+    },
+    "parentToolUseId": {
+      "type": "string",
+      "description": "Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation."
     }
   }
 }

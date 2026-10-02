@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/acks/workspace-watching.json",
+  "title": "WorkspaceWatching",
+  "description": "Answer to `workspace.watch`: the subscription exists, and the changes of the folder will arrive as `workspace.filesChanged` with this `watchId`.",
+  "x-kind": "ack",
+  "x-type": "workspace.watching",
+  "type": "object",
+  "required": ["watchId", "workspacePath"],
+  "properties": {
+    "watchId": {
+      "type": "string",
+      "description": "The subscription. Its events carry it, and `seq` is monotonic per `watchId`, from 1."
+    },
+    "workspacePath": {
+      "type": "string",
+      "description": "The real path of the folder being followed."
+    }
+  }
+}

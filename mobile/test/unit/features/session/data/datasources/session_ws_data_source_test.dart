@@ -108,6 +108,57 @@ void main() {
     expect(seen, isEmpty);
   });
 
+  test(
+    'S-04 · the changes of a watched folder reach no session, and leave the stream open',
+    () async {
+      await ready();
+      int applied = 3;
+      repository.follow('ses-1', () => applied);
+      final List<SessionUpdate> seen = <SessionUpdate>[];
+      final StreamSubscription<SessionUpdate> subscription = repository.updates.listen(seen.add);
+      addTearDown(subscription.cancel);
+
+      socket().deliver(
+        frame(
+          kind: 'event',
+          type: 'workspace.filesChanged',
+          seq: 500,
+          payload: <String, Object?>{
+            'watchId': 'w-1',
+            'changes': <Object?>[
+              <String, Object?>{'path': 'a.ts', 'kind': 'changed'},
+            ],
+          },
+        ),
+      );
+      socket().deliver(
+        frame(
+          kind: 'event',
+          type: 'workspace.watchStopped',
+          seq: 501,
+          payload: <String, Object?>{'watchId': 'w-1', 'reason': 'systemLimit'},
+        ),
+      );
+      await settle();
+
+      expect(seen, isEmpty);
+
+      // The session's own events still arrive, and a reconnection resumes from its own seq.
+      socket().deliver(diagPong(sessionId: 'ses-1', seq: 4));
+      await settle();
+      expect(seen.single, isA<EventReceived>());
+
+      applied = 4;
+      await socket().drop(1006);
+      await settle();
+      client.connect();
+      await settle();
+      socket().deliver(connectionReady());
+      await settle();
+      expect(socket().sent.last, contains('"resumeFromSeq":4'));
+    },
+  );
+
   test('a ping leaves as a command with the nonce', () async {
     await ready();
 

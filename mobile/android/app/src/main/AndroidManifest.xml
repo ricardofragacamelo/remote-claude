@@ -9,11 +9,15 @@
         android:label="remote_claude"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- No `android:taskAffinity=""` here, although Flutter's template writes it: with it the
+             login never comes back. The provider's redirect reaches AppAuth's receiver, which hands
+             it to a management activity in a task of its own — one that never saw the request —
+             and AppAuth drops it ("No stored state"). flutter_appauth's README, "No Redirect to app
+             after login"; test/unit/android-manifest.spec.mjs keeps it out. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"

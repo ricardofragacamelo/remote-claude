@@ -252,12 +252,41 @@ describe('the SDK message mapper', () => {
       });
     });
 
-    it.each([
-      ['a compaction', { type: 'system', subtype: 'compact_boundary', compact_metadata: {} }],
-      ['an API retry', { type: 'system', subtype: 'api_retry', attempt: 1 }],
-    ])('reads %s as a status change rather than an error', (_case, shape) => {
-      expect(typesOf(shape)).toEqual(['session.statusChanged']);
+    it('reads an API retry as a status change rather than an error', () => {
+      expect(typesOf({ type: 'system', subtype: 'api_retry', attempt: 1 })).toEqual([
+        'session.statusChanged',
+      ]);
     });
+
+    it('reads a compaction as an event of its own, with what triggered it — plan 08, B-02', () => {
+      const mapped = toEvents(
+        message({
+          type: 'system',
+          subtype: 'compact_boundary',
+          compact_metadata: { trigger: 'manual', pre_tokens: 15212, post_tokens: 3021 },
+        }),
+      );
+
+      expect(mapped.events).toEqual([
+        { type: 'session.compacted', payload: { trigger: 'manual', preTokens: 15212 } },
+      ]);
+    });
+
+    it.each([
+      'thinking_tokens',
+      'task_started',
+      'task_progress',
+      'task_updated',
+      'task_notification',
+      'background_tasks_changed',
+    ])(
+      'knows `system:%s` and draws nothing of it, without a warning — plan 08, discovery §10',
+      (subtype) => {
+        const mapped = toEvents(message({ type: 'system', subtype }));
+
+        expect(mapped).toEqual({ events: [], unknown: null });
+      },
+    );
 
     it.each([
       ['a plain status message', { type: 'system', subtype: 'status', status: {} }],
@@ -266,6 +295,114 @@ describe('the SDK message mapper', () => {
       // A rate limit is a notice, not a transition. Publishing it as `idle` — which this used to
       // do — told a client the session had stopped while the model was mid-answer.
       expect(typesOf(shape)).toEqual([]);
+    });
+  });
+
+  /** Plan 08, B-02 and B-19 — thinking, and the subagent an event belongs to. */
+  describe('thinking and subagents', () => {
+    const delta = (deltaShape: Record<string, unknown>, parent: string | null = null) =>
+      message({
+        type: 'stream_event',
+        uuid: 'u',
+        parent_tool_use_id: parent,
+        event: { type: 'content_block_delta', index: 0, delta: deltaShape },
+      });
+
+    it('streams thinking as fragments of its own kind, and text as it always was', () => {
+      const mapper = new SdkMessageMapper();
+      mapper.read(messageStart('msg-1'));
+
+      expect(mapper.read(delta({ type: 'thinking_delta', thinking: 'Adding' })).events).toEqual([
+        {
+          type: 'message.delta',
+          payload: { messageId: 'msg-1', delta: 'Adding', blockType: 'thinking' },
+        },
+      ]);
+      expect(mapper.read(delta({ type: 'text_delta', text: '17:22' })).events).toEqual([
+        { type: 'message.delta', payload: { messageId: 'msg-1', delta: '17:22' } },
+      ]);
+    });
+
+    it('sends no fragment for an empty thinking, a signature or a tool input being typed', () => {
+      const mapper = new SdkMessageMapper();
+      mapper.read(messageStart('msg-1'));
+
+      for (const shape of [
+        { type: 'thinking_delta', thinking: '' },
+        { type: 'signature_delta', signature: 'abc' },
+        { type: 'input_json_delta', partial_json: '{"a"' },
+      ]) {
+        expect(mapper.read(delta(shape)).events).toEqual([]);
+      }
+    });
+
+    it('carries the thinking of a finished message in a field of its own, never in text', () => {
+      const mapped = toEvents(
+        message({
+          type: 'assistant',
+          message: {
+            id: 'msg-1',
+            content: [
+              { type: 'thinking', thinking: 'Adding 14:35 and 2:47', signature: 'secret' },
+              { type: 'thinking', thinking: '', signature: 'omitted' },
+              { type: 'redacted_thinking', data: 'opaque' },
+            ],
+          },
+        }),
+      );
+
+      expect(mapped.events[0]?.payload['content']).toEqual([
+        { type: 'thinking', thinking: 'Adding 14:35 and 2:47' },
+        { type: 'thinking' },
+        { type: 'redacted_thinking' },
+      ]);
+    });
+
+    it('names the tool that opened a subagent on everything of it — D-15', () => {
+      const parent = 'toolu_task';
+      const assistant = toEvents(
+        message({
+          type: 'assistant',
+          parent_tool_use_id: parent,
+          message: { id: 'm', content: [{ type: 'tool_use', id: 't1', name: 'Read', input: {} }] },
+        }),
+      );
+      const user = toEvents(
+        message({
+          type: 'user',
+          uuid: 'u1',
+          parent_tool_use_id: parent,
+          message: { content: [{ type: 'tool_result', tool_use_id: 't1', content: 'x' }] },
+        }),
+      );
+      const progress = toEvents(
+        message({
+          type: 'tool_progress',
+          tool_use_id: 't1',
+          tool_name: 'Read',
+          parent_tool_use_id: parent,
+          elapsed_time_seconds: 1,
+        }),
+      );
+      const fragment = new SdkMessageMapper();
+      fragment.read(messageStart('m'));
+
+      for (const event of [
+        ...assistant.events,
+        ...user.events,
+        ...progress.events,
+        ...fragment.read(delta({ type: 'text_delta', text: 'hi' }, parent)).events,
+      ]) {
+        expect(event.payload['parentToolUseId'], event.type).toBe(parent);
+      }
+    });
+
+    it('leaves the field out on the main conversation, as the contract had it', () => {
+      const mapped = toEvents(
+        message({ type: 'assistant', parent_tool_use_id: null, message: { id: 'm', content: [] } }),
+      );
+
+      expect(Object.keys(mapped.events[0]?.payload ?? {})).not.toContain('parentToolUseId');
     });
   });
 
@@ -489,14 +626,62 @@ describe('the SDK message mapper', () => {
       expect(completed).toHaveLength(started.length);
     });
 
-    it('leaves nothing of a real run unmapped', () => {
+    it.each([
+      'tool-turn',
+      'edit-turn',
+      'thinking-turn',
+      'thinking-summarized-turn',
+      'task-subagent-turn',
+      'compact-turn',
+      'plan-turn',
+      'long-tool-turn',
+    ])('leaves nothing of the real run %s unmapped', (name) => {
       // If this fails after an SDK upgrade it is doing its job: something new appeared, and the
       // table has to learn about it. The session would have survived either way.
-      const unknown = loadFixture('tool-turn')
+      const unknown = loadFixture(name)
         .messages.map((m) => toEvents(m).unknown)
         .filter((variant) => variant !== null);
 
       expect(unknown).toEqual([]);
+    });
+
+    it('streams the summarised thinking of a real run, and finishes it as a block — D-17', () => {
+      const mapper = new SdkMessageMapper();
+      const events = loadFixture('thinking-summarized-turn').messages.flatMap(
+        (m) => mapper.read(m).events,
+      );
+      const thinking = events.filter((event) => event.payload['blockType'] === 'thinking');
+      const blocks = events
+        .filter((event) => event.type === 'message.completed')
+        .flatMap((event) => event.payload['content'] as { type: string; thinking?: string }[]);
+
+      expect(thinking.length).toBeGreaterThan(1);
+      expect(blocks.find((block) => block.type === 'thinking')?.thinking).toMatch(/\w/);
+    });
+
+    it('nests what the subagent of a real run said under the tool that opened it — D-15', () => {
+      const mapper = new SdkMessageMapper();
+      const events = loadFixture('task-subagent-turn').messages.flatMap(
+        (m) => mapper.read(m).events,
+      );
+      const agent = events.find(
+        (event) => event.type === 'tool.started' && event.payload['toolName'] === 'Agent',
+      );
+      const nested = events.filter((event) => event.payload['parentToolUseId'] !== undefined);
+
+      expect(nested.length).toBeGreaterThan(0);
+      expect(new Set(nested.map((event) => event.payload['parentToolUseId']))).toEqual(
+        new Set([agent?.payload['toolUseId']]),
+      );
+    });
+
+    it('marks the compaction of a real `/compact`', () => {
+      const mapper = new SdkMessageMapper();
+      const types = loadFixture('compact-turn').messages.flatMap((m) =>
+        mapper.read(m).events.map((event) => event.type),
+      );
+
+      expect(types).toContain('session.compacted');
     });
 
     it('never lets an `SDKMessage` through as an event payload', () => {

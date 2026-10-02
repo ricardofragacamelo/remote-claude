@@ -24,6 +24,7 @@ export function openWorkbench(
   folder: string,
   server: TabServer,
   extra: WorkspaceRoutes = {},
+  search: { readonly session?: string; readonly conversation?: string } = {},
 ): MountedApp & { api: ReturnType<typeof fakeWorkspaceApi> } {
   useAuthStore.setState({ status: 'unknown', session: null });
   vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
@@ -37,7 +38,7 @@ export function openWorkbench(
     ...extra,
   });
 
-  return { ...mountApp(workbenchLocation({ folder })), api };
+  return { ...mountApp(workbenchLocation({ folder, ...search })), api };
 }
 
 /** The strip of folder tabs. */

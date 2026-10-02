@@ -3,6 +3,7 @@ export { auditEntries } from './audit.schema';
 export { auditEvents } from './audit-events.schema';
 export { auditPurges } from './audit-purges.schema';
 export { devices } from './auth.schema';
+export { fileHistoryEntries } from './file-history.schema';
 export { notifications } from './notifications.schema';
 export { diagSessions } from './diag.schema';
 export { permissionRequests } from './permission.schema';

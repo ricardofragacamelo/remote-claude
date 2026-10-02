@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-cancel-queued-prompt.json",
+  "title": "SessionCancelQueuedPrompt",
+  "description": "Takes a prompt out of the session's queue before it starts. Any watcher may, as any may send one. The outcome is `prompt.dequeued` with `reason: cancelled`, for everybody watching. A prompt that already started is `CONFLICT` (`session.error.queuedPromptStarted`); one the queue never had is `QUEUED_PROMPT_NOT_FOUND`.",
+  "x-kind": "command",
+  "x-type": "session.cancelQueuedPrompt",
+  "type": "object",
+  "required": ["sessionId", "queueId"],
+  "properties": {
+    "sessionId": {
+      "type": "string"
+    },
+    "queueId": {
+      "type": "string",
+      "description": "What `prompt.queued` named the prompt."
+    }
+  }
+}

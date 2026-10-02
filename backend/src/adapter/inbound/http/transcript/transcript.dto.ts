@@ -1,10 +1,11 @@
 import { z } from 'zod';
 
-import type { TranscriptPage } from '@application/transcript';
+import type { ListedTranscript, TranscriptPage } from '@application/transcript';
 import type {
   Page,
   SessionListCursor,
   TranscriptEvent,
+  TranscriptMessage,
   VisibleTranscriptSession,
 } from '@domain/transcript';
 
@@ -40,12 +41,21 @@ export const listTranscriptsSchema = z.object({
   workspacePath: z.string().min(1).max(4096),
   cursor: z.string().regex(SESSION_CURSOR).optional(),
   limit,
+  // A query string has no booleans: the two words, and nothing else, so `?includeSubfolders=yes`
+  // is a 400 rather than a guess (plan 08, D-05).
+  includeSubfolders: z.enum(['true', 'false']).optional(),
 });
 
 export type ListTranscriptsQueryDto = z.infer<typeof listTranscriptsSchema>;
 
 /** The conversation a page is asked of: a UUID, or not a conversation this server can name. */
 export const transcriptIdSchema = z.string().regex(UUID);
+
+/**
+ * The tool a subagent hangs off — an id the SDK minted (`toolu_…`), short and plain. Anything else is
+ * not one this server can name.
+ */
+export const subagentToolSchema = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
 
 /** What `GET /transcripts/:sessionId/messages` may be asked. The cursor is a message id. */
 export const readTranscriptSchema = z.object({
@@ -77,9 +87,21 @@ export interface TranscriptSessionDto {
   readonly lastModified: string;
 }
 
+/** A conversation of the listing: the conversation, and what it is doing now (plan 08, B-08). */
+export interface ListedTranscriptDto extends TranscriptSessionDto {
+  /** `liveHere` · `activeElsewhere` · `idle` — the last an estimate, said to be one. */
+  readonly activity: string;
+
+  /** The caller's live session that holds it, when it is `liveHere`. */
+  readonly liveSessionId: string | null;
+
+  /** How long ago it was last written, in whole seconds. */
+  readonly writtenAgoSeconds: number;
+}
+
 /** A page of the listing. An object, so the next cursor has somewhere to go. */
 export interface TranscriptListDto {
-  readonly sessions: readonly TranscriptSessionDto[];
+  readonly sessions: readonly ListedTranscriptDto[];
 
   /** Opaque to the client: send it back as `cursor` for the next page. `null` on the last one. */
   readonly nextCursor: string | null;
@@ -94,7 +116,7 @@ export interface TranscriptListDto {
  * page after it, by `nextCursor`, is what came before.
  */
 export interface TranscriptPageDto {
-  readonly session: TranscriptSessionDto;
+  readonly session: ListedTranscriptDto;
   readonly events: readonly TranscriptEvent[];
   readonly nextCursor: string | null;
 }
@@ -114,11 +136,21 @@ export function toTranscriptSessionDto(session: VisibleTranscriptSession): Trans
 }
 
 /** The transport shape of a page of the listing. */
+/** A conversation of the listing or of a page, with what it is doing now. */
+function toListedTranscriptDto(session: ListedTranscript): ListedTranscriptDto {
+  return {
+    ...toTranscriptSessionDto(session),
+    activity: session.activity.activity,
+    liveSessionId: session.activity.liveSessionId,
+    writtenAgoSeconds: session.activity.writtenAgoSeconds,
+  };
+}
+
 export function toTranscriptListDto(
-  page: Page<VisibleTranscriptSession, SessionListCursor>,
+  page: Page<ListedTranscript, SessionListCursor>,
 ): TranscriptListDto {
   return {
-    sessions: page.items.map(toTranscriptSessionDto),
+    sessions: page.items.map(toListedTranscriptDto),
     nextCursor: page.next === null ? null : `${String(page.next.lastModified)}.${page.next.id}`,
   };
 }
@@ -126,8 +158,19 @@ export function toTranscriptListDto(
 /** The transport shape of a page of a conversation. */
 export function toTranscriptPageDto({ session, page }: TranscriptPage): TranscriptPageDto {
   return {
-    session: toTranscriptSessionDto(session),
+    session: toListedTranscriptDto(session),
     events: page.items.flatMap((message) => message.events),
     nextCursor: page.next,
   };
+}
+
+/** A page of what a subagent said: the events of its messages, and the cursor of the page before. */
+export interface SubagentPageDto {
+  readonly events: readonly TranscriptEvent[];
+  readonly nextCursor: string | null;
+}
+
+/** The transport shape of a page of a subagent. */
+export function toSubagentPageDto(page: Page<TranscriptMessage, string>): SubagentPageDto {
+  return { events: page.items.flatMap((message) => message.events), nextCursor: page.next };
 }

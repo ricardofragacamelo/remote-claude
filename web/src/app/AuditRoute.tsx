@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
-import { AUDIT_DECISIONS, AuditTrail } from '@/features/audit';
+import { AUDIT_DECISIONS, AuditTrail, FileFacts } from '@/features/audit';
 import type { AuditDecision, AuditFilters } from '@/features/audit';
 import { ScreenFrame } from '@/shared/components/ScreenFrame';
 import { useShellShortcuts } from './screen-shortcuts';
@@ -79,7 +79,11 @@ export function AuditRoute(): React.JSX.Element {
       help="audit.help"
       shortcuts={shortcuts}
     >
-      <AuditTrail filters={filters} onFilter={filter} onOpenRule={openRule} />
+      <div className="flex flex-col gap-8">
+        <AuditTrail filters={filters} onFilter={filter} onOpenRule={openRule} />
+        {/* The person's own writes to their files (plan 07, B-29) — failing on its own. */}
+        <FileFacts />
+      </div>
     </ScreenFrame>
   );
 }

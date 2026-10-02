@@ -26,9 +26,13 @@ const isWindows = process.platform === 'win32';
  * @param {string} command
  * @param {readonly string[]} args
  * @param {{ cwd?: string, env?: NodeJS.ProcessEnv,
- *           stdio?: import('node:child_process').StdioOptions }} [options] `stdio` defaults to
+ *           stdio?: import('node:child_process').StdioOptions,
+ *           foreground?: boolean }} [options] `stdio` defaults to
  *   `inherit`, so a dev server reports to the terminal it was started from; the suite pipes
- *   instead, because there the output is what is being asserted on
+ *   instead, because there the output is what is being asserted on. `foreground` keeps the child
+ *   in this terminal's process group, for one that reads the keyboard — `flutter run` and its hot
+ *   reload: a process outside the foreground group that reads the terminal is stopped by the
+ *   kernel. It then gets the Ctrl+C too, and `kill` still reaches it, alone
  * @returns {ChildProcess}
  */
 export function startProc(command, args, options = {}) {
@@ -36,7 +40,7 @@ export function startProc(command, args, options = {}) {
     stdio: options.stdio ?? 'inherit',
     // Own process group on POSIX, so the whole tree can be signalled at once. On Windows there
     // is no process group to detach into, and `shell` is what makes `pnpm` resolvable.
-    detached: !isWindows,
+    detached: !isWindows && options.foreground !== true,
     shell: isWindows,
     ...spawnLocation(options),
   });

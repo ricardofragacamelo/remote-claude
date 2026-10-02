@@ -8,6 +8,20 @@ export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 100;
 
 /**
+ * Where a page of a trail starts and how long it is — both trails page the same way.
+ *
+ * The cursor is opaque to the client and is a `seq` here: digits, no sign, no leading zero —
+ * anything else is a cursor this server never handed out.
+ */
+export const pageQuery = {
+  cursor: z
+    .string()
+    .regex(/^[1-9]\d{0,14}$/)
+    .optional(),
+  limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+};
+
+/**
  * What `GET /audit-entries` may be asked. Every filter is optional; the owner never is, and it is
  * not a parameter — it is the caller.
  *
@@ -23,11 +37,7 @@ export const auditTrailQuerySchema = z
     from: z.iso.datetime({ offset: true }).optional(),
     /** Exclusive. */
     to: z.iso.datetime({ offset: true }).optional(),
-    cursor: z
-      .string()
-      .regex(/^[1-9]\d{0,14}$/)
-      .optional(),
-    limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+    ...pageQuery,
   })
   // A window that ends before it starts is a client's mistake, and an empty page would hide it.
   // Compared as instants and not as strings: two offsets make the text order lie.

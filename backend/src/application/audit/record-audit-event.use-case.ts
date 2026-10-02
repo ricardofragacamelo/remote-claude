@@ -20,7 +20,15 @@ export class RecordAuditEventUseCase {
     private readonly ids: IdGenerator,
   ) {}
 
-  async execute(command: RecordAuditEventCommand): Promise<void> {
-    await this.events.append(AuditEvent.record({ ...command, id: this.ids.next() }));
+  /**
+   * @returns the id of the event — what a later fact points at, such as the `file.failed` that says
+   *   the disk refused a write this one recorded
+   */
+  async execute(command: RecordAuditEventCommand): Promise<string> {
+    const id = this.ids.next();
+
+    await this.events.append(AuditEvent.record({ ...command, id }));
+
+    return id;
   }
 }

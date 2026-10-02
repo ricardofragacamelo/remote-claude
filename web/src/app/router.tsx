@@ -59,10 +59,19 @@ const workbenchRoute = createRoute({
   getParentRoute: () => frameRoute,
   path: '/workbench',
   // Always a string, empty when the link names no folder. Returned even then: the router keeps the
-  // keys a validation leaves out, so a dropped `?folder=123` would come back as the number.
-  validateSearch: (search: Readonly<Record<string, unknown>>) => ({
-    folder: readWorkbenchSearch(search).folder ?? '',
-  }),
+  // keys a validation leaves out, so a dropped `?folder=123` would come back as the number. The
+  // active file of the editor (plan 07) goes along when the link names one.
+  validateSearch: (
+    search: Readonly<Record<string, unknown>>,
+  ): {
+    folder: string;
+    file?: string | undefined;
+    session?: string | undefined;
+    conversation?: string | undefined;
+  } => {
+    const { folder = '', file, session, conversation } = readWorkbenchSearch(search);
+    return { folder, file, session, conversation };
+  },
   beforeLoad: ({ search }) => {
     if (search.folder === '') {
       throw redirect({ to: '/', replace: true });

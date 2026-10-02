@@ -24,6 +24,7 @@ import { complexityVerdict } from './lib/dart-metrics.mjs';
 import { commandExists, run, runAttached } from './lib/exec.mjs';
 import { parseViolations } from './lib/import-lint.mjs';
 import { checkCoverage, readReport, reportPathOf } from './lib/lcov.mjs';
+import { ANDROID_PACKAGE, pubspecVersion } from './lib/mobile-local.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { dartDefines } from './lib/stack.mjs';
 import { bold, dim, fail, fatal, hint, info, line, ok, title } from './lib/ui.mjs';
@@ -48,9 +49,6 @@ export const COVERAGE_EXCLUSIONS = [
 ];
 
 const mobileDir = path.join(repoRoot, 'mobile');
-
-/** The Android application id, as `mobile/android/app/build.gradle.kts` declares it. */
-const ANDROID_PACKAGE = 'com.remoteclaude.remote_claude';
 
 /**
  * Runs a Dart or Flutter command inside the module.
@@ -287,7 +285,7 @@ function coverage() {
 function sharedScenario() {
   const directory = path.join(repoRoot, 'e2e/scenarios');
   const manifest = path.join(mobileDir, 'pubspec.yaml');
-  const version = /^version:\s*(\S+)/m.exec(fs.readFileSync(manifest, 'utf8'))?.[1];
+  const version = pubspecVersion(fs.readFileSync(manifest, 'utf8'));
 
   const names = fs
     .readdirSync(directory)
@@ -309,7 +307,7 @@ function sharedScenario() {
         ]),
       ),
     ),
-    appVersion: version ?? '0.0.0',
+    appVersion: version,
   };
 }
 

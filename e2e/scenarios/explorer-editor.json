@@ -1,0 +1,26 @@
+{
+  "id": "07·S-280…S-290",
+  "title": "the explorer and the editor through the user's door: the file cycle down to the disk and the audit trail, the scripted Claude writing the open file, folder tabs, groups, the phone, axe and a link that climbs out",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "tool-turn",
+    "claudeFile": "summary.md",
+    "claudeWrote": "The project has two goals: safety and speed.\n",
+    "before": "the version from before the turn\n",
+    "keptBecause": "Changed outside the session afterwards, so it is kept.",
+    "nothingToUndo": "Nothing here would change: every file is already the way it was, or stays as it is.",
+    "template": "Markdown document",
+    "acts": { "created": "Created", "moved": "Moved", "deleted": "Deleted" },
+    "changedByClaude": "Claude changed summary.md on disk, and you have unsaved changes here.",
+    "conflictTitle": "summary.md changed on disk",
+    "diffTab": "summary.md ↔ summary.md",
+    "phone": { "width": 360, "height": 740 },
+    "tags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+    "themes": ["light", "dark"],
+    "climbing": "../x",
+    "refusedTitle": "{{path}} cannot be opened",
+    "refused": "This installation does not allow",
+    "keptNotice": "{{name}} was deleted. It is kept in the local history.",
+    "notKeptBecause": "{{path}} is larger than the local history keeps."
+  }
+}

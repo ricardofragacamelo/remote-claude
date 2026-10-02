@@ -401,6 +401,23 @@ describe('WsClient', () => {
       expect(seen).toHaveLength(1);
     });
 
+    it('tells who listens that a session began or ended, watched or not — plan 08, D-10', () => {
+      const heard: string[] = [];
+      const socket = connectAndReady();
+      client.attach('s1', { onEvent: () => undefined, onGap: () => undefined, lastSeq: () => 0 });
+      const stop = client.onSessionLifecycle((frame) =>
+        heard.push(`${frame.type}:${String(frame.sessionId)}`),
+      );
+
+      socket.receive(serverFrame({ sessionId: 'brand-new', seq: 1, type: 'session.started' }));
+      socket.receive(serverFrame({ sessionId: 's1', seq: 2, type: 'session.closed' }));
+      socket.receive(serverFrame({ sessionId: 's1', seq: 3, type: 'message.delta' }));
+      stop();
+      socket.receive(serverFrame({ sessionId: 's1', seq: 4, type: 'session.closed' }));
+
+      expect(heard).toEqual(['session.started:brand-new', 'session.closed:s1']);
+    });
+
     it('stops offering once the observer unsubscribes', () => {
       const seen: Envelope[] = [];
       const socket = connectAndReady();
@@ -568,6 +585,24 @@ describe('WsClient', () => {
       );
 
       expect(seen).toMatchObject([{ kind: 'error', correlationId: 'cmd-1' }]);
+    });
+
+    it('offers the answer to a folder watch to the observers — 07 · B-28', () => {
+      const seen: Envelope[] = [];
+      const socket = connectAndReady();
+      client.observe((frame) => seen.push(frame));
+
+      socket.receive(
+        serverFrame({
+          kind: 'ack',
+          type: 'workspace.watching',
+          correlationId: 'cmd-1',
+          payload: { watchId: 'w1', workspacePath: '/r/app' },
+        }),
+      );
+      socket.receive(serverFrame({ kind: 'ack', type: 'command.accepted', payload: {} }));
+
+      expect(seen).toMatchObject([{ type: 'workspace.watching', correlationId: 'cmd-1' }]);
     });
 
     it('sends a command once the connection is ready', () => {

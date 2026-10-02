@@ -61,6 +61,15 @@ describe('the notification catalogue — plan 06, S-174', () => {
     ).toEqual([]);
   });
 
+  it('admits the delete the local history kept, by name or by count — plan 07, B-58', () => {
+    expect(problemsOf('notification.files.deletedOne', { name: 'a.ts' })).toEqual([]);
+    expect(problemsOf('notification.files.deletedMany', { count: 3 })).toEqual([]);
+    expect(problemsOf('notification.files.deletedOne', { path: 'src/a.ts' })).toEqual([
+      { field: 'params.path', rule: 'unexpected' },
+      { field: 'params.name', rule: 'missing' },
+    ]);
+  });
+
   it('names every key once', () => {
     const keys = NOTIFICATION_CATALOGUE.map((kind) => kind.messageKey);
 

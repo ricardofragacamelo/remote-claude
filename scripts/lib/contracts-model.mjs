@@ -10,6 +10,18 @@
 /** Keywords a message schema may carry beyond the subset below. */
 const METADATA = new Set(['$schema', '$id', 'title', 'description', 'x-kind', 'x-type']);
 
+/**
+ * The bounds the subset understands, and the one declared type each of them may bound.
+ *
+ * A limit on any other type would be read and then mean nothing — `maxLength` on an integer, say —
+ * which is exactly what the generator refuses rather than emits.
+ */
+const LIMIT_KEYWORDS_OF_TYPE = new Map([
+  ['maxItems', 'array'],
+  ['maxLength', 'string'],
+  ['minimum', 'integer'],
+]);
+
 /** Keywords the subset understands. */
 const SUPPORTED = new Set([
   'type',
@@ -19,6 +31,7 @@ const SUPPORTED = new Set([
   'enum',
   'const',
   'x-required-when',
+  ...LIMIT_KEYWORDS_OF_TYPE.keys(),
 ]);
 
 /** The `kind` values the envelope allows; a message declaring anything else is rejected. */
@@ -62,6 +75,16 @@ export class ContractError extends Error {
  * @property {boolean} required
  * @property {string} description
  * @property {TypeRef} type
+ * @property {Limits} limits the bounds the schema gives the field; empty when it gives none
+ */
+
+/**
+ * The bounds of one field — how many items, how many characters, the least value.
+ *
+ * They live in the schema for the reason `x-required-when` does: a ceiling written by hand in each
+ * end is a ceiling that holds in two of them. An absent bound is no bound.
+ *
+ * @typedef {{ readonly maxItems?: number, readonly maxLength?: number, readonly minimum?: number }} Limits
  */
 
 /**
@@ -75,7 +98,11 @@ export class ContractError extends Error {
  * @typedef {object} Conditional
  * @property {string} field the field that becomes required
  * @property {string} whenField the field that decides
- * @property {string | boolean} equals the value of `whenField` that makes `field` required
+ * @property {string | boolean | null} equals the value of `whenField` that makes `field`
+ *   required, or `null` when it is the presence or absence of `whenField` that does
+ * @property {'absent' | 'present' | null} presence set when the rule fires on `whenField` being
+ *   missing — a field that existed before the one that now decides, and keeps its old meaning — or
+ *   on it being there at all — a field that only makes sense beside another
  * @property {string} because why the rule exists, carried into the generated comment
  */
 
@@ -196,6 +223,12 @@ function resolveArray(source, name, schema, collected) {
   if (typeof items !== 'object' || items === null) {
     throw new ContractError(source, `\`${name}\` is an array without \`items\``);
   }
+  // A bound on the items themselves would be read and checked nowhere: a guard checks fields, and
+  // an item of a scalar array is not one. Bounding the array, or a field of an object item, is.
+  const bounded = [...LIMIT_KEYWORDS_OF_TYPE.keys()].find((keyword) => keyword in items);
+  if (bounded !== undefined) {
+    throw new ContractError(source, `\`${bounded}\` on the items of \`${name}\` is never checked`);
+  }
   return {
     kind: 'array',
     items: resolveType(
@@ -260,10 +293,10 @@ function toConditionals(source, name, schema, required, properties) {
     const when = /** @type {Record<string, unknown>} */ (rule['when'] ?? {});
 
     const field = conditionalField(source, name, rule['field'], required, properties);
-    const { whenField, equals } = conditionalTrigger(source, name, when, properties);
+    const { whenField, equals, presence } = conditionalTrigger(source, name, when, properties);
     const because = conditionalReason(source, name, rule['because']);
 
-    return { field, whenField, equals, because };
+    return { field, whenField, equals, presence, because };
   });
 }
 
@@ -294,13 +327,14 @@ function conditionalField(source, name, field, required, properties) {
 }
 
 /**
- * The `when` of an `x-required-when` rule: a declared field, compared with a string or a boolean.
+ * The `when` of an `x-required-when` rule: a declared field, compared with a string or a boolean —
+ * or, with `absent: true` or `present: true`, the field being missing or being there.
  *
  * @param {string} source
  * @param {string} name
  * @param {Record<string, unknown>} when
  * @param {Record<string, unknown>} properties
- * @returns {Pick<Conditional, 'whenField' | 'equals'>}
+ * @returns {Pick<Conditional, 'whenField' | 'equals' | 'presence'>}
  */
 function conditionalTrigger(source, name, when, properties) {
   const whenField = when['field'];
@@ -312,13 +346,74 @@ function conditionalTrigger(source, name, when, properties) {
       `\`x-required-when\` of \`${name}\` decides on \`${String(whenField)}\`, which is never declared`,
     );
   }
+  if (when['absent'] !== undefined || when['present'] !== undefined) {
+    return presenceTrigger(source, name, whenField, when);
+  }
   if (typeof equals !== 'string' && typeof equals !== 'boolean') {
     throw new ContractError(
       source,
       `\`x-required-when\` of \`${name}\` compares \`${whenField}\` with something that is not a string or a boolean`,
     );
   }
-  return { whenField, equals };
+  return { whenField, equals, presence: null };
+}
+
+/**
+ * A `when` that fires on the deciding field being missing (`absent: true`) or being there
+ * (`present: true`), with nothing to compare.
+ *
+ * `absent: false` would be a rule that says nothing, and two triggers in one rule would leave one
+ * of them silently winning — both are refused.
+ *
+ * @param {string} source
+ * @param {string} name
+ * @param {string} whenField
+ * @param {Record<string, unknown>} when
+ * @returns {Pick<Conditional, 'whenField' | 'equals' | 'presence'>}
+ */
+function presenceTrigger(source, name, whenField, when) {
+  const triggers = ['absent', 'present', 'equals'].filter((key) => when[key] !== undefined);
+  const presence = /** @type {'absent' | 'present'} */ (triggers[0]);
+
+  if (triggers.length !== 1 || when[presence] !== true) {
+    throw new ContractError(
+      source,
+      `\`x-required-when\` of \`${name}\` on \`${whenField}\` takes one of \`equals\`, \`absent: true\` or \`present: true\``,
+    );
+  }
+  return { whenField, equals: null, presence };
+}
+
+/**
+ * The bounds a property declares, refusing one its type cannot honour.
+ *
+ * @param {string} source
+ * @param {string} name the field, for the message
+ * @param {Record<string, unknown>} property
+ * @returns {Limits}
+ */
+function toLimits(source, name, property) {
+  /** @type {Record<string, number>} */
+  const limits = {};
+
+  for (const [keyword, bounded] of LIMIT_KEYWORDS_OF_TYPE) {
+    const value = property[keyword];
+    if (value === undefined) {
+      continue;
+    }
+    if (property['type'] !== bounded) {
+      throw new ContractError(source, `\`${keyword}\` of \`${name}\` bounds only a ${bounded}`);
+    }
+    if (!Number.isInteger(value) || /** @type {number} */ (value) < 0) {
+      throw new ContractError(
+        source,
+        `\`${keyword}\` of \`${name}\` is not a non-negative integer`,
+      );
+    }
+    limits[keyword] = /** @type {number} */ (value);
+  }
+
+  return limits;
 }
 
 /**
@@ -369,6 +464,7 @@ function toInterface(source, name, schema, collected) {
       required: required.has(field),
       description: String(property['description'] ?? ''),
       type: resolveType(source, `${name}${pascalCase(field)}`, property, collected),
+      limits: toLimits(source, `${name}.${field}`, property),
     })),
   };
 }

@@ -1,4 +1,5 @@
 import type { PaletteMode } from '../types/command';
+import { folded } from '@/shared/lib/folded';
 
 /** The mode the palette is in, and what was typed after its prefix. */
 export interface ModeMatch {
@@ -33,14 +34,6 @@ export function modeFor(
   return matched === undefined
     ? null
     : { mode: matched.mode, query: value.slice(matched.prefix.length).trim() };
-}
-
-/** Text as a search compares it: no case, no accents — "abrir" finds "Abrir", "ação" finds "acao". */
-function folded(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLocaleLowerCase();
 }
 
 /**

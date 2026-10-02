@@ -1,14 +1,8 @@
 import type { UserId } from '@domain/auth';
-import { pageFromTail, TranscriptNotFoundError, transcriptOriginFor } from '@domain/transcript';
-import type {
-  ClaudeSessionId,
-  Page,
-  TranscriptMessage,
-  VisibleTranscriptSession,
-} from '@domain/transcript';
-import type { WorkspaceAllowlistSource } from '@application/workspace';
-import type { TranscriptOriginSource } from './ports/transcript-origin.source';
+import { pageFromTail, TranscriptNotFoundError } from '@domain/transcript';
+import type { ClaudeSessionId, Page, TranscriptMessage } from '@domain/transcript';
 import type { TranscriptStore } from './ports/transcript-store.port';
+import type { ListedTranscript, TranscriptAudience } from './transcript-audience';
 
 /** Which page of which conversation, for whom. */
 export interface ReadTranscriptQuery {
@@ -23,7 +17,8 @@ export interface ReadTranscriptQuery {
 
 /** A page of a conversation, and the conversation it is a page of. */
 export interface TranscriptPage {
-  readonly session: VisibleTranscriptSession;
+  /** The conversation, with what it is doing now — the panel asks before forking one that is active. */
+  readonly session: ListedTranscript;
   readonly page: Page<TranscriptMessage, string>;
 }
 
@@ -38,9 +33,8 @@ export interface TranscriptPage {
  */
 export class ReadTranscriptUseCase {
   constructor(
-    private readonly allowlist: WorkspaceAllowlistSource,
     private readonly store: TranscriptStore,
-    private readonly origins: TranscriptOriginSource,
+    private readonly audience: TranscriptAudience,
   ) {}
 
   /**
@@ -48,28 +42,42 @@ export class ReadTranscriptUseCase {
    * @throws {import('@domain/transcript').TranscriptCursorStaleError} the cursor's message is gone
    */
   async execute(query: ReadTranscriptQuery): Promise<TranscriptPage> {
-    const session = await this.store.find(query.sessionId);
-
-    if (session === null) {
-      throw new TranscriptNotFoundError(query.sessionId.value);
-    }
-
-    const openers = await this.origins.openersOf([session.id]);
-    const origin = transcriptOriginFor(session, {
-      allowlist: this.allowlist.current(),
-      userId: query.userId,
-      openedBy: openers.get(session.id.value),
-    });
-
-    if (origin === null) {
-      throw new TranscriptNotFoundError(query.sessionId.value);
-    }
-
+    const session = await this.visible(query);
     const messages = await this.store.messages(session);
 
-    return {
-      session: { ...session, origin },
-      page: pageFromTail(session.id.value, messages, query.before, query.limit),
-    };
+    return { session, page: pageFromTail(session.id.value, messages, query.before, query.limit) };
+  }
+
+  /**
+   * One page of what a subagent of the conversation said, from the tail — loaded when its tool is
+   * unfolded in the panel (plan 08, B-21). The conversation is fenced exactly as it is read: a
+   * subagent of a conversation this caller does not read is as absent as one that never was (S-91).
+   *
+   * @throws {TranscriptNotFoundError} no such conversation, not this caller's, or no subagent of
+   *   that tool in it
+   */
+  async subagent(
+    query: ReadTranscriptQuery & { readonly toolUseId: string },
+  ): Promise<Page<TranscriptMessage, string>> {
+    const session = await this.visible(query);
+    const messages = await this.store.subagentMessages(session, query.toolUseId);
+
+    if (messages === null) {
+      throw new TranscriptNotFoundError(query.sessionId.value);
+    }
+
+    return pageFromTail(session.id.value, messages, query.before, query.limit);
+  }
+
+  /** The conversation, when it exists and this caller may read it — the same answer otherwise. */
+  private async visible(query: ReadTranscriptQuery): Promise<ListedTranscript> {
+    const session = await this.store.find(query.sessionId);
+    const [shown] = session === null ? [] : await this.audience.shown([session], query.userId);
+
+    if (shown === undefined) {
+      throw new TranscriptNotFoundError(query.sessionId.value);
+    }
+
+    return shown;
   }
 }

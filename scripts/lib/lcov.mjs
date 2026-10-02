@@ -143,3 +143,114 @@ export function readReport(file) {
 export function reportPathOf(moduleDir) {
   return path.join(moduleDir, 'coverage', 'lcov.info');
 }
+
+/**
+ * @typedef {object} CoverageGaps
+ * @property {string} file path as the report spells it
+ * @property {number[]} lines lines never hit
+ * @property {{ name: string, line: number }[]} functions functions never called
+ * @property {number[]} branches lines with a branch never taken
+ */
+
+/**
+ * What a report says was never run, file by file — the lines, the functions and the branches a test
+ * still has to reach. Only files with a gap are returned.
+ *
+ * Reads `DA`, `FN`/`FNDA` and `BRDA`, which Vitest's v8 report carries; Dart's carries only `DA`.
+ *
+ * @param {string} report contents of an `lcov.info`
+ * @returns {CoverageGaps[]}
+ */
+export function gapsOf(report) {
+  /** @type {CoverageGaps[]} */
+  const files = [];
+  /** @type {{ file: string, lines: number[], fnLine: Map<string, number>, missed: Set<string>, branches: Set<number> } | null} */
+  let current = null;
+
+  for (const raw of report.split('\n')) {
+    const entry = raw.trim();
+    const [tag = '', rest = ''] = splitOnce(entry, ':');
+
+    if (tag === 'SF') {
+      current = {
+        file: rest,
+        lines: [],
+        fnLine: new Map(),
+        missed: new Set(),
+        branches: new Set(),
+      };
+    } else if (current !== null) {
+      readGap(current, tag, rest.split(','));
+
+      if (entry === 'end_of_record') {
+        const gaps = {
+          file: current.file,
+          lines: current.lines,
+          functions: [...current.missed].map((name) => ({
+            name,
+            line: current?.fnLine.get(name) ?? 0,
+          })),
+          branches: [...current.branches].sort((left, right) => left - right),
+        };
+        if (gaps.lines.length + gaps.functions.length + gaps.branches.length > 0) {
+          files.push(gaps);
+        }
+        current = null;
+      }
+    }
+  }
+
+  return files;
+}
+
+/**
+ * @param {string} text
+ * @param {string} separator
+ * @returns {[string, string]}
+ */
+function splitOnce(text, separator) {
+  const at = text.indexOf(separator);
+  return at === -1 ? [text, ''] : [text.slice(0, at), text.slice(at + 1)];
+}
+
+/**
+ * One record of a file, into what is missing from it.
+ *
+ * @param {{ lines: number[], fnLine: Map<string, number>, missed: Set<string>, branches: Set<number> }} gaps
+ * @param {string} tag
+ * @param {string[]} fields
+ */
+function readGap(gaps, tag, fields) {
+  if (tag === 'DA' && Number(fields[1]) === 0) {
+    gaps.lines.push(Number(fields[0]));
+  } else if (tag === 'FN') {
+    gaps.fnLine.set(fields.slice(1).join(','), Number(fields[0]));
+  } else if (tag === 'FNDA' && Number(fields[0]) === 0) {
+    gaps.missed.add(fields.slice(1).join(','));
+  } else if (tag === 'BRDA' && (fields[3] === '-' || Number(fields[3]) === 0)) {
+    gaps.branches.add(Number(fields[0]));
+  }
+}
+
+/**
+ * Consecutive numbers as ranges — `3-5, 9` — which is how a person reads a list of lines.
+ *
+ * @param {readonly number[]} numbers ascending
+ * @returns {string}
+ */
+export function asRanges(numbers) {
+  /** @type {string[]} */
+  const ranges = [];
+
+  for (let index = 0; index < numbers.length; index += 1) {
+    const start = numbers[index];
+    let end = start;
+    while (numbers[index + 1] === (end ?? 0) + 1) {
+      index += 1;
+      end = numbers[index];
+    }
+    ranges.push(start === end ? String(start) : `${String(start)}-${String(end)}`);
+  }
+
+  return ranges.join(', ');
+}

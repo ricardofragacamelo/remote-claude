@@ -48,6 +48,28 @@ const complete: RawEnvironment = {
   RC_CHECKPOINT_MAX_STORE_BYTES: '524288000',
   RC_AUDIT_RETENTION_DAYS: '90',
   RC_AUDIT_PURGE_INTERVAL_MS: '86400000',
+  RC_FILES_TREE_MAX_ENTRIES: '5000',
+  RC_FILES_LARGE_FILE_BYTES: '1048576',
+  RC_FILES_MAX_EDIT_BYTES: '10485760',
+  RC_FILES_COPY_MAX_ENTRIES: '10000',
+  RC_FILES_COPY_MAX_BYTES: '104857600',
+  RC_FILES_DELETE_COUNT_CAP: '10000',
+  RC_FILES_WATCH_WINDOW_MS: '200',
+  RC_FILES_WATCH_MAX_CHANGES: '500',
+  RC_FILES_WATCH_MAX_PER_CONNECTION: '16',
+  RC_FILES_WATCH_MAX_BUFFERED_BYTES: '1048576',
+  RC_FILES_DOWNLOAD_MAX_BYTES: '209715200',
+  RC_FILES_ARCHIVE_MAX_ENTRIES: '10000',
+  RC_FILES_UPLOAD_MAX_BYTES: '104857600',
+  RC_FILES_UPLOAD_MAX_ENTRIES: '1000',
+  RC_FILES_UPLOAD_MAX_TOTAL_BYTES: '524288000',
+  RC_FILES_HISTORY_DIR: '/var/lib/remote-claude/file-history',
+  RC_FILES_HISTORY_MAX_FILE_BYTES: '10485760',
+  RC_FILES_HISTORY_MAX_PER_FILE: '50',
+  RC_FILES_HISTORY_MAX_STORE_BYTES: '536870912',
+  RC_FILES_HISTORY_RETENTION_DAYS: '30',
+  RC_FILES_HISTORY_MAX_BATCH_ENTRIES: '1000',
+  RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS: '120',
 };
 
 /** The complete environment, with one variable changed or removed. */
@@ -93,6 +115,38 @@ describe('loadConfig', () => {
         maxFileBytes: 5_242_880,
         maxStoreBytes: 524_288_000,
       },
+      files: {
+        treeEntries: 5_000,
+        largeFileBytes: 1_048_576,
+        maxEditBytes: 10_485_760,
+        copyEntries: 10_000,
+        copyBytes: 104_857_600,
+        deleteCountCap: 10_000,
+        // Twice the editing ceiling, and room for the folder, the path and the flags.
+        requestBodyBytes: 2 * 10_485_760 + 64 * 1024,
+        watch: {
+          windowMs: 200,
+          maxChangesPerEvent: 500,
+          maxPerConnection: 16,
+          maxBufferedBytes: 1_048_576,
+        },
+        transfer: {
+          downloadMaxBytes: 209_715_200,
+          archiveMaxEntries: 10_000,
+          uploadMaxBytes: 104_857_600,
+          uploadMaxEntries: 1_000,
+          uploadMaxTotalBytes: 524_288_000,
+        },
+        history: {
+          directory: '/var/lib/remote-claude/file-history',
+          maxFileBytes: 10_485_760,
+          maxPerFile: 50,
+          maxStoreBytes: 536_870_912,
+          retentionDays: 30,
+          maxBatchEntries: 1_000,
+        },
+      },
+      transcript: { activeWindowMs: 120_000 },
       oidc: {
         issuer: 'http://localhost:8180/realms/remote-claude',
         audience: 'https://api.remote-claude.local',
@@ -135,6 +189,28 @@ describe('loadConfig', () => {
     'RC_CHECKPOINT_MAX_STORE_BYTES',
     'RC_AUDIT_RETENTION_DAYS',
     'RC_AUDIT_PURGE_INTERVAL_MS',
+    'RC_FILES_TREE_MAX_ENTRIES',
+    'RC_FILES_LARGE_FILE_BYTES',
+    'RC_FILES_MAX_EDIT_BYTES',
+    'RC_FILES_COPY_MAX_ENTRIES',
+    'RC_FILES_COPY_MAX_BYTES',
+    'RC_FILES_DELETE_COUNT_CAP',
+    'RC_FILES_WATCH_WINDOW_MS',
+    'RC_FILES_WATCH_MAX_CHANGES',
+    'RC_FILES_WATCH_MAX_PER_CONNECTION',
+    'RC_FILES_WATCH_MAX_BUFFERED_BYTES',
+    'RC_FILES_DOWNLOAD_MAX_BYTES',
+    'RC_FILES_ARCHIVE_MAX_ENTRIES',
+    'RC_FILES_UPLOAD_MAX_BYTES',
+    'RC_FILES_UPLOAD_MAX_ENTRIES',
+    'RC_FILES_UPLOAD_MAX_TOTAL_BYTES',
+    'RC_FILES_HISTORY_DIR',
+    'RC_FILES_HISTORY_MAX_FILE_BYTES',
+    'RC_FILES_HISTORY_MAX_PER_FILE',
+    'RC_FILES_HISTORY_MAX_STORE_BYTES',
+    'RC_FILES_HISTORY_RETENTION_DAYS',
+    'RC_FILES_HISTORY_MAX_BATCH_ENTRIES',
+    'RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS',
   ] as const)('refuses to produce a configuration when %s is missing', (variable) => {
     expect(() => loadConfig(withChange({ [variable]: undefined }))).toThrow(ConfigurationError);
   });
@@ -167,11 +243,60 @@ describe('loadConfig', () => {
     ['RC_CHECKPOINT_MAX_STORE_BYTES', '-1'],
     ['RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS', '0'],
     ['RC_PERMISSION_RULE_MAX_LIFETIME_MS', '0'],
+    ['RC_FILES_TREE_MAX_ENTRIES', '0'],
+    ['RC_FILES_LARGE_FILE_BYTES', '0'],
+    ['RC_FILES_MAX_EDIT_BYTES', '0'],
+    ['RC_FILES_COPY_MAX_ENTRIES', '0'],
+    ['RC_FILES_COPY_MAX_BYTES', '0'],
+    ['RC_FILES_DELETE_COUNT_CAP', '0'],
+    ['RC_FILES_WATCH_WINDOW_MS', '0'],
+    ['RC_FILES_WATCH_WINDOW_MS', '10001'],
+    ['RC_FILES_WATCH_MAX_CHANGES', '0'],
+    ['RC_FILES_WATCH_MAX_PER_CONNECTION', '0'],
+    ['RC_FILES_WATCH_MAX_BUFFERED_BYTES', '0'],
+    ['RC_FILES_DOWNLOAD_MAX_BYTES', '0'],
+    ['RC_FILES_ARCHIVE_MAX_ENTRIES', '0'],
+    ['RC_FILES_UPLOAD_MAX_BYTES', '0'],
+    ['RC_FILES_UPLOAD_MAX_ENTRIES', '0'],
+    ['RC_FILES_UPLOAD_MAX_TOTAL_BYTES', '0'],
+    ['RC_FILES_HISTORY_MAX_FILE_BYTES', '0'],
+    ['RC_FILES_HISTORY_MAX_PER_FILE', '0'],
+    ['RC_FILES_HISTORY_MAX_STORE_BYTES', '0'],
+    ['RC_FILES_HISTORY_RETENTION_DAYS', '0'],
+    ['RC_FILES_HISTORY_MAX_BATCH_ENTRIES', '0'],
+    ['RC_FILES_HISTORY_DIR', ''],
+    ['RC_FILES_HISTORY_RETENTION_DAYS', '36501'],
+    ['RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS', '0'],
+    ['RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS', '86401'],
   ] as const)('refuses %s set to %s', (variable, value) => {
     expect(() => loadConfig(withChange({ [variable]: value }))).toThrow(ConfigurationError);
   });
 
   describe('the capacity of the machine — D-01', () => {
+    it('refuses a light mode of the editor no file can reach, and names it — plan 07, D-04', () => {
+      expect.assertions(2);
+
+      try {
+        loadConfig(withChange({ RC_FILES_LARGE_FILE_BYTES: '20', RC_FILES_MAX_EDIT_BYTES: '10' }));
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConfigurationError);
+        expect(String(error)).toContain('RC_FILES_LARGE_FILE_BYTES');
+      }
+    });
+
+    it('refuses an upload ceiling per file above the whole upload, and names it — plan 07, D-16', () => {
+      expect.assertions(2);
+
+      try {
+        loadConfig(
+          withChange({ RC_FILES_UPLOAD_MAX_BYTES: '20', RC_FILES_UPLOAD_MAX_TOTAL_BYTES: '10' }),
+        );
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConfigurationError);
+        expect(String(error)).toContain('RC_FILES_UPLOAD_MAX_BYTES');
+      }
+    });
+
     it('refuses a floor above the ceiling, and names the floor', () => {
       expect.assertions(2);
 

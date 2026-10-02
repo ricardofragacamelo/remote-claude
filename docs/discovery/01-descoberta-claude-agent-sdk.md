@@ -484,6 +484,9 @@ ser configurável e derivado da RAM da máquina, não um número fixo.
 
 ### 8.6 — Segundo prompt durante um turno é enfileirado pelo SDK
 
+> **Revisto em 2026-10-01** ([§10.4](#104--prompt-no-meio-do-turno-é-fundido-ao-turno-em-curso-d-14-revê-86)):
+> no SDK 0.3.277 o prompt entregue no meio do turno é **fundido** a ele. A fila passou ao backend.
+
 Medido: prompt enviado 1,5 s após o primeiro, com o turno em execução. O `push` foi aceito
 sem erro, e o resultado foram **dois turnos sequenciais** (`RESULT #1`, depois `RESULT #2`),
 cada um com sua resposta correta.
@@ -682,16 +685,138 @@ Scripts em `scratchpad/sdkprobe/`: `measure-store.mjs`, `probe-pagination.mjs`,
 
 ---
 
+## 10 — Quarta rodada de spikes (2026-10-01)
+
+Feita para a F0 do [plano 08](../plans/08-claude-panel/F0-contract.md) — os spikes das D-01, D-02, D-06,
+D-14, D-15, D-16 e D-17, e as fixtures que o fake roteirizado do painel reproduz. Não há script de spike
+à parte: os cenários são do `pnpm fixtures:record`, e cada medida está no fixture que a gravou
+(`backend/test/fakes/agent-sdk/fixtures/`). CLI **2.1.277**, SDK **0.3.277**, modelo padrão
+`claude-opus-5[1m]`.
+
+### 10.0 — Gravado de dentro de uma sessão do Claude Code, o CLI vira filho dela
+
+A primeira gravação herdou as variáveis da sessão do Claude Code que a disparou
+(`CLAUDE_CODE_ENTRYPOINT=claude-vscode`, `CLAUDE_CODE_SESSION_ID`, o socket de mensagens,
+`CLAUDE_CODE_ENABLE_TASKS`…): o CLI se apresentou como `claude-vscode`, trouxe as tools e os MCPs
+daquele host e aplicou as guardas de `Bash` dele (`sleep 40` bloqueado). O gravador agora tira
+`CLAUDE_CODE_*`, `CLAUDECODE`, `CLAUDE_PID`, `CLAUDE_EFFORT`, `CLAUDE_AGENT_SDK_VERSION` e
+`MCP_CONNECTION_NONBLOCKING` do ambiente, e a segunda gravação saiu com `entrypoint` ausente.
+**O backend tem o mesmo risco:** `claudeEnvironment` tira só a configuração dele, então um backend
+iniciado de dentro de uma sessão do Claude Code passa essas variáveis a todo subprocesso.
+
+### 10.1 — `@caminho` no streaming input é expandido pelo CLI, sem `Read` (D-01, R-10)
+
+`Summarise @notes.md in one line.` → resposta correta sobre o conteúdo, **0** `PreToolUse`, **0**
+tool (`mention-turn`). O CLI leu o arquivo por conta própria e o pôs no contexto: leitura de arquivo
+que a trilha nunca viu. Já `<reference path="notes.md" lines="1-2" />` levou a um `Read` sob o hook
+(`reference-turn`).
+
+**Consequência:** a referência que o backend compõe usa o formato delimitado, e **nunca** `@`. E o
+problema não espera o painel: hoje, qualquer prompt com `@arquivo` digitado lê o arquivo sem trilha.
+O composer da [F5](../plans/08-claude-panel/F5-composer-and-context.md) transforma `@` em chip, mas o
+texto livre continua chegando ao CLI — a B-44 precisa neutralizar o `@caminho` do texto antes do
+`session.prompt` (a forma, a decidir lá).
+
+### 10.2 — Bloco `image` no `SDKUserMessage` é aceito (D-02)
+
+Um PNG 16×16 vermelho em base64, num bloco `image` ao lado do texto: o modelo respondeu `red`
+(`image-turn`). O upload HTTP da D-02 fica de pé.
+
+### 10.3 — `applyFlagSettings` no meio da sessão reinicia a query e perde os hooks (D-16)
+
+`applyFlagSettings({ effortLevel: 'low' })` entre dois turnos: o segundo turno chegou com um `init`
+novo, o `Bash` dele foi negado ("The user doesn't want to take this action right now") e **nenhum**
+`PreToolUse` disparou (`effort-turn`, reproduzido nas duas gravações). Trocar esforço na sessão viva
+desliga a trilha. **Consequência:** sem `session.setEffort`; o esforço é escolhido no rascunho e vai no
+`session.start` (`Options.effort`). O hook informa o esforço do turno (`effort.level`: `high` por
+padrão).
+
+### 10.4 — Prompt no meio do turno é fundido ao turno em curso (D-14, revê §8.6)
+
+O segundo prompt, entregue ao SDK enquanto o primeiro turno rodava um `Bash`, **não** virou turno
+próprio: houve um `result` só, com `first.\n\nsecond.` (`queue-turn`). É o contrário do que o §8.6
+mediu no SDK 0.3.270. **Consequência:** segurar o prompt no backend até o `result` (a D-14) é o que
+mantém "roda em seguida, como turno próprio" — e a fila passa a ser visível e cancelável.
+
+### 10.5 — Um `Bash` de 40 s deixa o transcript 40 s sem escrita (D-06)
+
+Com o comando em primeiro plano, o arquivo do transcript ficou **40 188 ms** sem mudar
+(`long-tool-turn`, `transcript.longestSilenceMs`). A janela padrão de 120 s cobre tool de até dois
+minutos; uma mais longa faz uma conversa ativa parecer parada — o rótulo "escrita há *n* min" diz
+exatamente isso, e a retomada não depende dele (externa é sempre fork).
+
+### 10.6 — Subagent com `forwardSubagentText` (D-15)
+
+O tool é `Agent` (não `Task`). Com `forwardSubagentText: true`, o texto e as tools do subagent chegam
+como `assistant`/`user` com `parent_tool_use_id` — **sem** `stream_event` (o subagent não tem delta) —,
+mais `system:task_started`, `task_progress`, `task_updated` e `task_notification`. Um subagent que lê
+um arquivo custou 66 mensagens no total, 5 dele: o ring buffer de 1000 não está em risco.
+
+### 10.7 — Thinking vem omitido por padrão; `display: 'summarized'` o traz (D-17)
+
+Sem opção de thinking, o modelo padrão manda o bloco `thinking` com o texto **vazio** e a assinatura
+(`thinking-turn`): a tela só pode dizer que houve raciocínio. Com
+`thinking: { type: 'adaptive', display: 'summarized' }` o bloco e os `thinking_delta` trazem o texto
+resumido (`thinking-summarized-turn`). Vários `system:thinking_tokens` acompanham os deltas.
+
+### 10.8 — A lista de tarefas depende do modelo, e uma variável a liga (B-20, D-25)
+
+Desde o CLI 2.1.268, as tools de lista de tarefas só são oferecidas a Claude 3.x, Opus 4.0–4.7,
+Sonnet 4.0–4.6 e Haiku 4.5. Com qualquer outro modelo — o `claude-opus-5` das gravações —, elas somem
+das tools e das deferidas do `ToolSearch` (`todo-turn`); `settings: { todoFeatureEnabled: true }` só
+liga o painel do terminal e não muda isso (`todo-enabled-turn`). Duas variáveis de ambiente do CLI
+decidem o que aparece:
+
+| `CLAUDE_CODE_ENABLE_TODO_TOOLS` | `CLAUDE_CODE_ENABLE_TASKS` | Tools | Fixture |
+|---|---|---|---|
+| ausente | — | nenhuma (modelo fora da lista) | `todo-turn` |
+| `1` | ausente | `TaskCreate`, `TaskGet`, `TaskUpdate`, `TaskList` | `task-tools-turn` |
+| `1` | `0` | `TodoWrite` | `todo-write-turn` |
+| ausente, modelo da lista (`claude-haiku-4-5`) | ausente | `TaskCreate`, `TaskGet`, `TaskUpdate`, `TaskList` | `task-tools-listed-model-turn` |
+
+O modelo decide **se** há lista; **qual** tool a mantém só o `CLAUDE_CODE_ENABLE_TASKS` decide, igual
+para todo modelo. Um `--tools`/`--allowedTools` que nomeie uma delas também liga — mas o produto não usa
+`allowedTools` (aprova sem perguntar). As quatro `Task*` e o `TodoWrite` são **deferidas**: o modelo
+as carrega pelo `ToolSearch` antes da primeira chamada. Nenhuma passa pelo `canUseTool`, só pelo
+`PreToolUse`.
+
+- **`TodoWrite`** manda a lista **inteira** a cada chamada (`todos` com `content`, `status`,
+  `activeForm`); o resultado traz `oldTodos` e `newTodos`.
+- **`Task*`** são **incrementais**: `TaskCreate` (`subject`, `description`, `activeForm`) devolve o
+  `id`; `TaskUpdate` muda pelo `taskId` (`status`, inclusive `deleted`, e dependências
+  `addBlocks`/`addBlockedBy`), com `statusChange` no resultado. Cada tarefa fica em disco, em
+  `~/.claude/tasks/<session_id>/<id>.json`, e há os hooks `TaskCreated` e `TaskCompleted`.
+
+### 10.9 — O resto do que o painel desenha
+
+- **Edit e Write** (`edit-turn`): o CLI lê antes de editar; dois `Edit` no mesmo arquivo no mesmo turno,
+  `Write` sobre existente e `Write` de novo — os quatro passam pelo `canUseTool`. **`MultiEdit` não
+  existe** nesta versão.
+- **Modo plan** (`plan-turn`): o `ExitPlanMode` chega ao `canUseTool` com `{ plan, planFilePath }` — a
+  premissa da B-22 vale. O `AskUserQuestion` também passa por ele.
+- **`/compact`** (`compact-turn`): `system:status` `compacting`, um `init` novo, o
+  `system:compact_boundary` com `{ trigger: 'manual', pre_tokens, post_tokens, duration_ms }` — 30 s —,
+  o resumo como mensagem `user` de texto e um `result` com `num_turns: 0`.
+- Subtipos de `system` novos para o mapper: `thinking_tokens`, `task_*`, `background_tasks_changed`, e
+  `status` com `requesting`/`compacting`.
+
+### Como reproduzir
+
+`pnpm fixtures:record <cenário>` — os cenários e o porquê de cada um estão em
+`scripts/record-agent-sdk-fixtures.mjs`; a medida da D-06 sai em `transcript` no fixture.
+
+---
+
 ## Versões verificadas
 
 | Item | Versão |
 |---|---|
-| `@anthropic-ai/claude-agent-sdk` | 0.3.270 na descoberta · **0.3.273** na rodada de 2026-09-16 |
+| `@anthropic-ai/claude-agent-sdk` | 0.3.270 na descoberta · **0.3.273** na rodada de 2026-09-16 · **0.3.277** na de 2026-10-01 (CLI embutido 2.1.277) |
 | Claude Code CLI (PATH) | 2.1.226 — e **2.1.273** na extensão do VSCode: há dois binários na máquina |
 | Node | v24.16.0 |
 | npm | 11.13.0 |
 | Flutter / Dart | presentes em `~/middleware/flutter/flutter/bin` |
-| Data da descoberta | 2026-09-13 · terceira rodada de spikes em 2026-09-16 |
+| Data da descoberta | 2026-09-13 · terceira rodada de spikes em 2026-09-16 · quarta em 2026-10-01 |
 
 Fontes: `sdk.d.ts` (9221 linhas) e `README.md` do pacote, inspecionados localmente.
 Doc oficial: <https://platform.claude.com/docs/en/agent-sdk/overview>

@@ -12,6 +12,18 @@
       "type": "string",
       "description": "What the fragments of one message are grouped by."
     },
-    "delta": { "type": "string", "description": "The text of this fragment, and only of this one." }
+    "delta": {
+      "type": "string",
+      "description": "The text of this fragment, and only of this one."
+    },
+    "blockType": {
+      "type": "string",
+      "enum": ["text", "thinking"],
+      "description": "What the fragment is part of: the answer, or Claude's thinking before it. Absent reads as `text`. An enum read as a string, so a block kind added later is not a crash."
+    },
+    "parentToolUseId": {
+      "type": "string",
+      "description": "Set when the fragment comes from a subagent: the `toolUseId` of the `Task` that opened it. The client nests it there instead of in the conversation."
+    }
   }
 }

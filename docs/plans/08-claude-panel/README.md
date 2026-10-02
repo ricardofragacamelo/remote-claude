@@ -111,9 +111,9 @@ conclusão. A ordem é dependência, não preferência — uma fase só começa 
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Contrato](F0-contract.md) | o contrato do painel nas três pontas, os documentos normativos e as fixtures | B-01…B-06 | 🔲 |
-| F1 | [Sessões da pasta](F1-sessions.md) | a view com as vivas, as ativas em outro lugar e o histórico da pasta, e o `attach`/retomar/fork a partir dela | B-07…B-13 | 🔲 |
-| F2 | [Renderização](F2-rendering.md) | a conversa legível como na extensão: markdown, código, tools, thinking, tarefas, subagents, plano, turno | B-14…B-24 | 🔲 |
+| F0 | [Contrato](F0-contract.md) | o contrato do painel nas três pontas, os documentos normativos e as fixtures | B-01…B-06 | ✅ |
+| F1 | [Sessões da pasta](F1-sessions.md) | a view com as vivas, as ativas em outro lugar e o histórico da pasta, e o `attach`/retomar/fork a partir dela | B-07…B-13 | ✅ |
+| F2 | [Renderização](F2-rendering.md) | a conversa legível como na extensão: markdown, código, tools, thinking, tarefas, subagents, plano, turno | B-14…B-24 | ✅ |
 | F3 | [Diffs](F3-diffs.md) | o que o Claude mudou, visto antes de aprovar, no chat, no editor e por sessão — aceito ou rejeitado por arquivo e por trecho | B-25…B-31 | 🔲 |
 | F4 | [Painel de chat](F4-chat-panel.md) | o painel dentro da aba de pasta, com conversas, fila, reenviar, seletores, contexto, MCP, atalhos, badges e ajuda | B-32…B-43 | 🔲 |
 | F5 | [Composer e contexto](F5-composer-and-context.md) | escolher o contexto do prompt com `@`, arrastar e `/`, com autocomplete, em chips | B-44…B-52 | 🔲 |

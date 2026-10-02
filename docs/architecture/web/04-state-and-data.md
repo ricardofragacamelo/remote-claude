@@ -188,6 +188,33 @@ Os dois são **dado do servidor**, lidos por TanStack Query só quando o painel 
   seria confirmação com informação velha. O resultado do último desfazer (`lastRewind`) vive no
   store do stream, porque chega como evento com `seq`.
 
+### O painel do Claude dentro da aba
+
+O [plano 08](../../plans/08-claude-panel/README.md) põe o chat na aba de pasta, e o estado dele segue a
+regra da aba (08 · B-05):
+
+- **o estado do painel é da aba de pasta** — as conversas abertas em abas do painel, a conversa ativa,
+  o rascunho, o conjunto de contexto, a rolagem e os filtros da view Sessões vivem num store **chaveado
+  pela pasta real**, nunca global. Duas abas mostram listas diferentes, e o filtro de uma não aparece
+  na outra;
+- **o rascunho não tem sessão.** "Nova conversa" é estado do cliente: modelo, modo, esforço, texto e
+  contexto escolhidos ali, e nenhum subprocesso. A sessão nasce no **primeiro envio**
+  (`session.start` e, no `session.started`, o `session.prompt`); recusa no teto mantém o rascunho inteiro
+  ([08 · D-07](../../plans/08-claude-panel/decisions.md#d-07--a-sessão-nasce-no-primeiro-prompt));
+- **as sessões vivem no backend**: fechar a aba do painel ou a aba de pasta **não** as encerra — encerrar
+  é um comando. A conversa aberta é registrada no `tabRestorers` e volta ao recarregar;
+- **a lista de sessões é polling, com invalidação por evento** — 10 s pelo TanStack Query com a view
+  visível, parado com a view escondida ou a aba inativa, e invalidada na hora por `session.started` e
+  `session.closed` das sessões que o cliente já observa; nenhum stream novo
+  ([08 · D-10](../../plans/08-claude-panel/decisions.md#d-10--a-lista-de-sessões-se-atualiza-como)).
+  Resposta velha não sobrescreve a nova; reativar a aba recarrega uma vez;
+- **a aba inativa continua anexada** às sessões dela — permissão só chega a quem está anexado — e
+  suspende o que é da tela: o polling da lista e a renderização
+  ([08 · D-11](../../plans/08-claude-panel/decisions.md#d-11--o-que-a-aba-inativa-mantém));
+- **um redutor só** para o stream e para o histórico: thinking, subagents, tarefas e tools chegam pelas
+  mesmas funções nos dois, e a timeline guarda a **ordem** em que mensagens e tools aconteceram — não
+  duas listas separadas.
+
 ## A fila de permissão
 
 É o estado mais delicado do front. Regras:
@@ -234,6 +261,39 @@ O estado guardado de uma aba volta quando o store dela nasce, antes de ela apare
 descarta; ler o conjunto de abas descarta o de pasta que não está mais aberta; sair descarta o de
 todas.
 
+### O explorer e o editor dentro da aba
+
+O [plano 07](../../plans/07-explorer-and-editor/README.md) preenche a view Explorer e a área de
+editor que o 06 reservou, e **tudo o que nasce lá é da aba de pasta** — um store por aba, pela mesma
+fábrica, nunca um global de "arquivo aberto" ([07 · B-06](../../plans/07-explorer-and-editor/F0-contract.md#b-06--o-estado-do-explorer-e-do-editor-por-aba-de-pasta-)):
+
+| O quê | Onde | Restaurado na recarga? |
+|---|---|---|
+| a árvore expandida, a seleção, "mostrar ocultos" | o store da aba | sim — só caminhos, pela restauração da aba |
+| a pilha de desfazer de operações de arquivo (renomear, mover, apagar) | o store da aba | não: o desfazer vale para o que se fez **nesta** página |
+| as abas e os grupos de editor, a ordem, a aba ativa de cada grupo | o store da aba | sim — só caminhos |
+| os **buffers sujos** | memória do store da aba | **nunca**: conteúdo de arquivo não vai ao navegador ([07 · D-14](../../plans/07-explorer-and-editor/decisions.md#d-14--rascunho-não-salvo-e-a-recarga)); recarregar ou fechar com buffer sujo pede confirmação (`beforeunload`) |
+| o `ETag` de cada aba de editor | o store da aba | não: é revalidado com `If-None-Match` ao reativar a aba de pasta |
+| os arquivos recentes da pasta | o store da aba | sim — só caminhos |
+
+**A URL leva o arquivo ativo da aba ativa:** `/workbench?folder=<pasta>&file=<caminho relativo>`.
+Colar o link noutro navegador abre a pasta com aquele arquivo ativo; um `file` que sobe acima da
+pasta (`../x`) abre a aba com a árvore e um erro traduzido no lugar do editor — a fronteira é do
+servidor, a URL só pede. O par `readWorkbenchSearch`/`workbenchLocation` ganha o campo; o resto
+(abas abertas, grupos) vem da restauração da aba, nunca da URL.
+
+**Pontos de extensão que outros planos consomem:** a **aba de diff** (o 08 abre nela as alterações
+do Claude; o 09, a prévia do substituir); o comando **"Adicionar ao contexto do Claude"** e o tipo do
+arraste (`application/x-remote-claude-files+json`, com `scopeDragPayload` em `shared/` —
+[07 · D-20](../../plans/07-explorer-and-editor/decisions.md#d-20--o-que-se-arrasta-para-o-claude)), que
+só aparecem com um consumidor registrado; e as **ações de arquivo** no menu **Arquivo** e na command
+palette do 06, registradas por comando com rótulo traduzido.
+
+**O que a aba ouve do disco:** a pasta ativa assina `workspace.watch` e recebe
+`workspace.filesChanged` — um stream com `seq` **próprio**, sem replay: reconectar refaz a assinatura
+e recarrega a árvore ([05 · A pasta assistida](../shared/05-websocket-protocol.md#a-pasta-assistida--workspace)).
+A aba inativa não gasta watcher.
+
 **Todo acesso a `localStorage` é envolvido em `try/catch`.** Navegador privado, cota cheia ou
 armazenamento bloqueado lançam — e a resposta é o default, nunca uma tela quebrada. Estado
 corrompido ou de versão antiga também cai no default, sem erro. A URL vence o que estava salvo.
@@ -247,6 +307,7 @@ link em outro dispositivo reproduz a tela?** Se não, o estado está no lugar er
 
 ```
 /workbench?folder=%2Fhome%2Fu%2Fprojects%2Fremote-claude
+/workbench?folder=%2Fhome%2Fu%2Fprojects%2Fremote-claude&file=src%2Fmain.tsx
 /audit?decision=allowed&toolName=Bash
 ```
 
@@ -264,7 +325,7 @@ mapa; as fases dele o constroem, e o router o testa.
 | Rota | Tela |
 |---|---|
 | `/` | a aba ativa, se há abas abertas — o endereço é **substituído** pelo dela —; sem abas, a boas-vindas ([D-07](../../plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)). Espera o conjunto de abas antes de decidir; conjunto que não se pôde ler abre a boas-vindas |
-| `/workbench?folder=<path>` | o workbench, com a pasta ativa na search; `folder` ausente cai na boas-vindas, não num erro |
+| `/workbench?folder=<path>&file=<relativo>` | o workbench, com a pasta ativa na search; `folder` ausente cai na boas-vindas, não num erro. `file` é o arquivo ativo da aba (plano 07), relativo à pasta |
 | `/audit?…`, `/rules`, `/rules/$ruleId` | Auditoria e Regras, com os deep links de hoje intactos |
 | `/devices` | Dispositivos |
 | `/diagnostics` | Logs e diagnóstico |

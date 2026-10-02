@@ -20,14 +20,14 @@ delas. Fechar o núcleo aqui, com `verify:full` verde, é o que deixa o painel d
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-43 — O ciclo de arquivo pela porta do usuário 🔲
+### B-43 — O ciclo de arquivo pela porta do usuário ✅
 
 Playwright, em `e2e/specs/`, sobre uma pasta de fixture gerada por execução (como o `smoke-live` do
 plano 04 faz com o `/init`): abrir a pasta → árvore → abrir arquivo → editar → Ctrl+S → **o disco** tem
 o conteúdo (a fixture lê o arquivo, não a tela); criar de modelo, renomear e apagar → os três fatos
 na Auditoria; apagar pasta pelo diálogo com a contagem.
 
-### B-44 — O Claude roteirizado no mesmo arquivo 🔲
+### B-44 — O Claude roteirizado no mesmo arquivo ✅
 
 Com o Claude roteirizado do e2e (`backend/test/e2e/scripted-main.ts`): ele escreve no arquivo aberto
 e **limpo** → o editor recarrega; no arquivo aberto e **sujo** → salvar dá conflito → comparar →
@@ -35,14 +35,14 @@ sobrescrever; e depois, desfazer o turno do Claude **preserva** a edição human
 [ADR-013](../../architecture/shared/00-decisions.md#adr-013--o-desfazer-não-usa-rewindfiles-o-store-de-checkpoint-é-nosso)
 atravessando os dois planos.
 
-### B-45 — Abas de pasta, grupos, celular e acessibilidade 🔲
+### B-45 — Abas de pasta, grupos, celular e acessibilidade ✅
 
 Duas abas de pasta (pasta e subpasta): alternar sem perder estado, fechar uma sem afetar a outra,
 recarga restaura; dois grupos lado a lado com o mesmo arquivo; viewport de celular com o modo
 simplificado e sem scroll horizontal; axe no explorer e no editor; link com `file=../x` → erro
 traduzido.
 
-### B-46 — O app, o contrato e o fechamento do núcleo 🔲
+### B-46 — O app, o contrato e o fechamento do núcleo ✅
 
 `pnpm test:e2e:mobile` verde com o contrato novo (o app ignora `workspace.*`), `contracts:check` e
 `i18n:check` verdes, e `pnpm verify:full` saindo com 0 — com os daemons do Gradle parados antes, que é

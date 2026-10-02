@@ -1,6 +1,6 @@
 {
   "id": "04·S-46",
-  "title": "a session that ended is continued from its history screen, and the conversation goes on in the same file",
+  "title": "a session that ended is continued from the Sessions view of its folder, and the conversation goes on in the same file",
   "user": {
     "username": "dev",
     "password": "dev"

@@ -599,3 +599,144 @@ describe('the TypeScript guards, however many fields they check', () => {
     ).toContain('  return true;\n}');
   });
 });
+
+/**
+ * A rule that fires on presence or absence, and the bounds of a field — what plan 08 needed for the
+ * attachments of a prompt (B-01) and the fork point of a resume (B-02).
+ */
+const boundedModel = buildModel(envelope, [
+  {
+    source: 'commands/bounded.schema.json',
+    schema: {
+      title: 'Bounded',
+      'x-kind': 'command',
+      'x-type': 'bounded.do',
+      type: 'object',
+      'x-required-when': [
+        {
+          field: 'path',
+          when: { field: 'kind', absent: true },
+          because: 'an untyped item is the old file item',
+        },
+        {
+          field: 'resumeId',
+          when: { field: 'forkAt', present: true },
+          because: 'a fork point belongs to a resumed conversation',
+        },
+      ],
+      properties: {
+        kind: { type: 'string', enum: ['file', 'text'] },
+        path: { type: 'string' },
+        forkAt: { type: 'string' },
+        resumeId: { type: 'string' },
+        items: { type: 'array', maxItems: 20, items: { type: 'string' } },
+        label: { type: 'string', maxLength: 200 },
+        line: { type: 'integer', minimum: 1 },
+      },
+    },
+  },
+]);
+const boundedTypeScript = emitTypeScript(boundedModel);
+const boundedDart = emitDart(boundedModel);
+
+describe('a presence rule, in both languages', () => {
+  it('fires on absence in TypeScript', () => {
+    expect(boundedTypeScript).toContain(
+      "requiredWhen(record['kind'] === undefined, typeof record['path'] === 'string'),",
+    );
+  });
+
+  it('fires on presence in TypeScript', () => {
+    expect(boundedTypeScript).toContain(
+      "requiredWhen(record['forkAt'] !== undefined, typeof record['resumeId'] === 'string'),",
+    );
+  });
+
+  it('says so in the TypeScript doc comment', () => {
+    expect(boundedTypeScript).toContain(
+      '`path` is also required when `kind` is absent — an untyped item is the old file item.',
+    );
+    expect(boundedTypeScript).toContain('`resumeId` is also required when `forkAt` is present');
+  });
+
+  it('fires on absence and on presence in Dart', () => {
+    expect(boundedDart).toContain("if (json['kind'] == null && json['path'] is! String) {");
+    expect(boundedDart).toContain("if (json['forkAt'] != null && json['resumeId'] is! String) {");
+  });
+});
+
+describe('the bounds of a field, in TypeScript', () => {
+  it('checks each bound in the guard, through its helper', () => {
+    expect(boundedTypeScript).toContain("    withinMaxItems(record['items'], 20),");
+    expect(boundedTypeScript).toContain("    withinMaxLength(record['label'], 200),");
+    expect(boundedTypeScript).toContain("    atLeast(record['line'], 1),");
+  });
+
+  it('emits the helpers that are called, and only those', () => {
+    expect(boundedTypeScript).toContain('function withinMaxItems(value: unknown, max: number)');
+    expect(typescript).not.toContain('function withinMaxItems(');
+    expect(typescript).not.toContain('function atLeast(');
+  });
+
+  it('exports the bounds as a constant a validator of its own can read', () => {
+    expect(boundedTypeScript).toContain('export const BOUNDED_PAYLOAD_LIMITS = {');
+    expect(boundedTypeScript).toContain('  items: { maxItems: 20 },');
+    expect(boundedTypeScript).toContain('  label: { maxLength: 200 },');
+    expect(boundedTypeScript).toContain('  line: { minimum: 1 },');
+  });
+
+  it('exports no constant for a declaration with no bound', () => {
+    expect(typescript).not.toContain('_LIMITS = {');
+  });
+});
+
+describe('the bounds of a field, in Dart', () => {
+  it('emits a predicate named after the declaration', () => {
+    expect(boundedDart).toContain('bool boundedPayloadLimitsHold(Map<String, Object?> json) {');
+  });
+
+  it('refuses a list longer than its bound, a string longer than its bound and a number under it', () => {
+    expect(boundedDart).toContain(
+      "if (json['items'] is List<Object?> && (json['items']! as List<Object?>).length > 20) {",
+    );
+    expect(boundedDart).toContain(
+      "if (json['label'] is String && (json['label']! as String).length > 200) {",
+    );
+    expect(boundedDart).toContain("if (json['line'] is int && (json['line']! as int) < 1) {");
+  });
+
+  it('emits no predicate for a declaration with no bound', () => {
+    expect(dart).not.toContain('LimitsHold');
+  });
+});
+
+/**
+ * The emitted helpers, run as the guards run them: a field that is absent or of another shape is
+ * the required and shape checks' to refuse, never the bound's.
+ */
+describe('the bound helpers, at runtime', () => {
+  /** @param {string} name */
+  const helper = (name) => {
+    const source = new RegExp(
+      `function ${name}\\(value: unknown, (?:max|min): number\\): boolean \\{\\n  return (.*);\\n\\}`,
+    ).exec(boundedTypeScript)?.[1];
+    return /** @type {(value: unknown, bound: number) => boolean} */ (
+      new Function('value', name === 'atLeast' ? 'min' : 'max', `return ${String(source)};`)
+    );
+  };
+
+  it.each([
+    ['withinMaxItems', ['a', 'b'], 2, true],
+    ['withinMaxItems', ['a', 'b', 'c'], 2, false],
+    ['withinMaxItems', undefined, 2, true],
+    ['withinMaxLength', 'ab', 2, true],
+    ['withinMaxLength', 'abc', 2, false],
+    ['withinMaxLength', 7, 2, true],
+    ['atLeast', 1, 1, true],
+    ['atLeast', 0, 1, false],
+    ['atLeast', -3, 1, false],
+    ['atLeast', 'one', 1, true],
+  ])('%s(%j, %d) is %s', (name, value, bound, expected) => {
+    expect(helper(name)(value, bound)).toBe(expected);
+  });
+});

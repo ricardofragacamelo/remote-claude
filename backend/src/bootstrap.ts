@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { WsAdapter } from '@nestjs/platform-ws';
 import cookieParser from 'cookie-parser';
+import { json } from 'express';
 import { ShutdownSignal } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 
@@ -84,6 +85,18 @@ export function configureApp(app: INestApplication): number {
   app.useLogger(new NestLoggerBridge(logger));
   app.useWebSocketAdapter(new WsAdapter(app));
   app.use(cookieParser());
+  // Before Nest's own parser, which then finds the body read and leaves it: a file's contents need
+  // a ceiling of their own, and raising the global one would raise it for every route
+  // (plan 07, D-04). Wrapped under a name of its own: Nest skips registering its parser when a
+  // middleware called `jsonParser` is already on the stack, and every other route would lose its
+  // body.
+  const filesJson = json({ limit: config.files.requestBodyBytes });
+  app.use(
+    '/files',
+    function filesBodyParser(request: unknown, response: unknown, next: () => void) {
+      filesJson(request as never, response as never, next);
+    },
+  );
   app.enableCors({ origin: config.webOrigin, credentials: true });
   app.enableShutdownHooks([...SHUTDOWN_SIGNALS]);
 

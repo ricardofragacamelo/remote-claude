@@ -1,13 +1,20 @@
 import { Module } from '@nestjs/common';
 
-import { AUDIT_TRAIL_READER, QueryAuditTrailUseCase } from '@application/audit';
-import type { AuditTrailReader } from '@application/audit';
+import {
+  AUDIT_EVENT_READER,
+  AUDIT_TRAIL_READER,
+  QueryAuditEventsUseCase,
+  QueryAuditTrailUseCase,
+} from '@application/audit';
+import type { AuditEventReader, AuditTrailReader } from '@application/audit';
 import { AuditController } from '@adapter/inbound/http/audit/audit.controller';
+import { AuditEventsController } from '@adapter/inbound/http/audit/audit-events.controller';
+import { DrizzleAuditEventReader } from '@adapter/outbound/persistence/audit/drizzle-audit-event.reader';
 import { DrizzleAuditTrailReader } from '@adapter/outbound/persistence/audit/drizzle-audit-trail.reader';
 import { AuthModule } from './auth.module';
 
 /**
- * The read side of `audit`: the query of the trail, and nothing else.
+ * The read side of `audit`: the query of the trail and of the account facts, and nothing else.
  *
  * A module of its own rather than more providers in {@link import('./audit.module').AuditModule},
  * for two reasons that are the same rule seen twice:
@@ -21,9 +28,15 @@ import { AuthModule } from './auth.module';
  */
 @Module({
   imports: [AuthModule],
-  controllers: [AuditController],
+  controllers: [AuditController, AuditEventsController],
   providers: [
     { provide: AUDIT_TRAIL_READER, useClass: DrizzleAuditTrailReader },
+    { provide: AUDIT_EVENT_READER, useClass: DrizzleAuditEventReader },
+    {
+      provide: QueryAuditEventsUseCase,
+      inject: [AUDIT_EVENT_READER],
+      useFactory: (reader: AuditEventReader) => new QueryAuditEventsUseCase(reader),
+    },
     {
       provide: QueryAuditTrailUseCase,
       inject: [AUDIT_TRAIL_READER],

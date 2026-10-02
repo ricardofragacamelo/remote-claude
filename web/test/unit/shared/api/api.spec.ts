@@ -234,6 +234,25 @@ describe('ApiClient', () => {
 
     expect(headersOf(http)['authorization']).toBe('Bearer later');
   });
+
+  it('sends the preconditions a caller names, and keeps its own headers over them', async () => {
+    const client = new ApiClient(BASE, anonymous, http as unknown as typeof fetch);
+
+    await client.put('/files/content', {}, { headers: { 'if-match': '"v1"', accept: 'x/y' } });
+
+    expect(headersOf(http)['if-match']).toBe('"v1"');
+    expect(headersOf(http)['accept']).toBe('application/json');
+  });
+
+  it('answers nothing for a 304 — the version named is the current one (plan 07, D-03)', async () => {
+    http.mockResolvedValue(new Response(null, { status: 304 }));
+
+    await expect(
+      new ApiClient(BASE, anonymous, http as unknown as typeof fetch).get('/files/content', {
+        headers: { 'if-none-match': '"v1"' },
+      }),
+    ).resolves.toBeUndefined();
+  });
 });
 
 describe('the transport it reaches for when nobody injected one', () => {

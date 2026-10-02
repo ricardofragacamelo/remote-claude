@@ -9,6 +9,7 @@ import { CommandMenu } from './CommandMenu';
 import { Conversation } from './Conversation';
 import { PromptComposer } from './PromptComposer';
 import { SessionControls } from './SessionControls';
+import { TurnStatus } from './conversation/TurnStatus';
 import { UndoPanel } from './UndoPanel';
 
 export interface SessionScreenProps {
@@ -24,6 +25,9 @@ export interface SessionScreenProps {
   /** What was being written in the prompt box — kept by whoever hosts the screen. */
   readonly draft?: string | undefined;
   readonly onDraftChange?: ((text: string) => void) | undefined;
+
+  /** The real path of the folder of the tab — what names of files of the answer open in. */
+  readonly folder?: string | undefined;
 }
 
 /**
@@ -50,6 +54,7 @@ export function SessionScreen({
   onOpenHistory,
   draft,
   onDraftChange,
+  folder,
 }: SessionScreenProps): React.JSX.Element {
   const { t } = useTranslation();
   const session = useLiveSession(sessionId);
@@ -71,6 +76,13 @@ export function SessionScreen({
           })}
         </p>
       )}
+
+      <TurnStatus
+        sessionId={sessionId}
+        status={session.status}
+        costUsd={session.costUsd}
+        turns={session.turns.length}
+      />
 
       <SessionControls
         status={session.status}
@@ -99,19 +111,12 @@ export function SessionScreen({
       )}
 
       <Conversation
-        messages={session.messages}
-        tools={session.tools}
+        conversation={session}
         isPartial={session.isPartial}
+        folder={folder ?? ''}
+        sessionId={sessionId}
+        conversationId={conversationId}
       />
-
-      {session.lastTurn !== null && (
-        <p className="text-xs opacity-70">
-          {t('session.screen.turn', {
-            cost: session.lastTurn.costUsd,
-            ms: session.lastTurn.durationMs,
-          })}
-        </p>
-      )}
 
       <UndoPanel sessionId={sessionId} />
 

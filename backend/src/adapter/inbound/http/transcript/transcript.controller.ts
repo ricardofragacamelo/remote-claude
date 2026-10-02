@@ -9,7 +9,9 @@ import {
   DEFAULT_PAGE_SIZE,
   listTranscriptsSchema,
   readTranscriptSchema,
+  subagentToolSchema,
   toSessionListCursor,
+  toSubagentPageDto,
   toTranscriptListDto,
   toTranscriptPageDto,
   transcriptIdSchema,
@@ -17,6 +19,7 @@ import {
 import type {
   ListTranscriptsQueryDto,
   ReadTranscriptQueryDto,
+  SubagentPageDto,
   TranscriptListDto,
   TranscriptPageDto,
 } from './transcript.dto';
@@ -51,6 +54,7 @@ export class TranscriptController {
     const page = await this.listing.execute({
       userId,
       workspacePath: query.workspacePath,
+      includeSubfolders: query.includeSubfolders === 'true',
       after: toSessionListCursor(query.cursor),
       limit: query.limit ?? DEFAULT_PAGE_SIZE,
     });
@@ -73,5 +77,28 @@ export class TranscriptController {
     });
 
     return toTranscriptPageDto(page);
+  }
+
+  /**
+   * One page of what a subagent said, by the tool that opened it — from the latest message back
+   * (plan 08, B-21). `404` for a subagent the conversation does not have, and for a conversation the
+   * caller does not read, alike.
+   */
+  @Get(':sessionId/subagents/:toolUseId/messages')
+  async readSubagent(
+    @Param('sessionId', new ZodPipe(transcriptIdSchema)) sessionId: string,
+    @Param('toolUseId', new ZodPipe(subagentToolSchema)) toolUseId: string,
+    @Query(new ZodPipe(readTranscriptSchema)) query: ReadTranscriptQueryDto,
+    @CurrentUser() userId: UserId,
+  ): Promise<SubagentPageDto> {
+    const page = await this.reading.subagent({
+      userId,
+      sessionId: ClaudeSessionId.create(sessionId),
+      toolUseId,
+      before: query.cursor ?? null,
+      limit: query.limit ?? DEFAULT_PAGE_SIZE,
+    });
+
+    return toSubagentPageDto(page);
   }
 }

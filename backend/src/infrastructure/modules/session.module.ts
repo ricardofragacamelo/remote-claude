@@ -3,6 +3,9 @@ import { Module } from '@nestjs/common';
 import {
   CLAUDE_SESSION_ID_GENERATOR,
   CLAUDE_SESSION_PORT,
+  FOLDER_LOCATOR,
+  ListLiveSessionsUseCase,
+  PENDING_PERMISSIONS,
   CloseSessionUseCase,
   CommandCatalog,
   InterruptSessionUseCase,
@@ -17,6 +20,7 @@ import {
   SessionEnder,
   ShutdownSessionsUseCase,
   SESSION_BROADCASTER,
+  SESSION_FILE_EVENTS,
   SESSION_FILE_JOURNAL,
   SESSION_ORIGIN_REPOSITORY,
   RESUMABLE_CONVERSATION_SOURCE,
@@ -30,6 +34,8 @@ import {
 } from '@application/session';
 import type {
   ClaudeSessionPort,
+  FolderLocator,
+  PendingPermissions,
   UndoDisk,
   UndoJournal,
   ResumableConversationSource,
@@ -37,20 +43,18 @@ import type {
   SessionOriginRepository,
   WorkspaceResolver,
 } from '@application/session';
-import { CLOCK, ID_GENERATOR } from '@application/shared';
+import { CLOCK, ID_GENERATOR, PATH_LOCK } from '@application/shared';
+import type { PathLock } from '@application/shared';
 import type { Clock, IdGenerator } from '@domain/shared';
 import { ContractCommandHandler } from '@adapter/inbound/ws/contract-command.gateway-handler';
 import { SessionController } from '@adapter/inbound/http/session/session.controller';
+import { LiveSessionsController } from '@adapter/inbound/http/session/live-sessions.controller';
+import { RegistryPendingPermissions } from '@adapter/outbound/session/registry-pending-permissions';
 import { SessionRewindHandler } from '@adapter/inbound/ws/session/session-rewind.gateway-handler';
 import { NodeUndoDisk } from '@adapter/outbound/checkpoint/node-undo.disk';
 import { JournalUndoStore } from '@adapter/outbound/session/journal-undo.store';
 import { SnapshotPurgeJob } from '../jobs/snapshot-purge.job';
 import { SessionReaperJob } from '../jobs/session-reaper.job';
-import {
-  MACHINE_MEMORY,
-  machineMemoryBytes,
-  sessionRegistryFor,
-} from '../lifecycle/session-capacity';
 import { PermissionBridge } from '@adapter/outbound/claude/permission-bridge';
 import {
   RecordDecisionOnResolved,
@@ -67,6 +71,7 @@ import { DrizzleSessionFileRepository } from '@adapter/outbound/persistence/sess
 import { TranscriptModuleConversationSource } from '@adapter/outbound/session/transcript-module-conversation.source';
 import { AuditToolInvocationRecorder } from '@adapter/outbound/session/audit-tool-invocation.recorder';
 import { DiskSessionFileJournal } from '@adapter/outbound/session/disk-session-file.journal';
+import { EmitterSessionFileEvents } from '@adapter/outbound/session/emitter-session-file.events';
 import { HubSessionBroadcaster } from '@adapter/outbound/session/hub-session.broadcaster';
 import { RegistrySessionOwnership } from '@adapter/outbound/session/registry-session.ownership';
 import { WorkspaceModuleResolver } from '@adapter/outbound/session/workspace-module.resolver';
@@ -81,6 +86,7 @@ import { AuthModule } from './auth.module';
 import { PermissionModule } from './permission.module';
 import { WebsocketModule } from './websocket.module';
 import { SessionOriginModule } from './session-origin.module';
+import { SessionRegistryModule } from './session-registry.module';
 import { TranscriptModule } from './transcript.module';
 import { WorkspaceModule } from './workspace.module';
 
@@ -97,11 +103,12 @@ import { WorkspaceModule } from './workspace.module';
     AuthModule,
     PermissionModule,
     SessionOriginModule,
+    SessionRegistryModule,
     TranscriptModule,
     WorkspaceModule,
     WebsocketModule,
   ],
-  controllers: [SessionController],
+  controllers: [SessionController, LiveSessionsController],
   providers: [
     { provide: QUERY_FACTORY, useValue: realQueryFactory },
     { provide: BUNDLED_CLI_VERSION, useFactory: () => bundledCliVersion() },
@@ -121,6 +128,7 @@ import { WorkspaceModule } from './workspace.module';
           maxStoreBytes: config.checkpoints.maxStoreBytes,
         }),
     },
+    { provide: SESSION_FILE_EVENTS, useClass: EmitterSessionFileEvents },
     { provide: SESSION_FILE_JOURNAL, useClass: DiskSessionFileJournal },
     // The undo: the journal read by conversation, the disk written atomically and never through a
     // link, and the planner the preview and the undo share so they can never disagree.
@@ -128,9 +136,9 @@ import { WorkspaceModule } from './workspace.module';
     { provide: UNDO_DISK, useClass: NodeUndoDisk },
     {
       provide: UndoPlanner,
-      inject: [UNDO_JOURNAL, UNDO_DISK, CLOCK],
-      useFactory: (journal: UndoJournal, disk: UndoDisk, clock: Clock) =>
-        new UndoPlanner(journal, disk, clock),
+      inject: [UNDO_JOURNAL, UNDO_DISK, CLOCK, PATH_LOCK],
+      useFactory: (journal: UndoJournal, disk: UndoDisk, clock: Clock, lock: PathLock) =>
+        new UndoPlanner(journal, disk, clock, lock),
     },
     {
       provide: ListUndoPointsUseCase,
@@ -179,17 +187,20 @@ import { WorkspaceModule } from './workspace.module';
     RecordDecisionOnResolved,
     { provide: CLAUDE_SESSION_PORT, useClass: AgentSdkClaudeSessionAdapter },
     { provide: SESSION_BROADCASTER, useClass: HubSessionBroadcaster },
-    { provide: WORKSPACE_RESOLVER, useClass: WorkspaceModuleResolver },
-    RegistrySessionOwnership,
-    // Read once, at boot: the capacity is derived from it (D-01), and a suite that needs a small
-    // machine replaces this one number rather than the whole registry.
-    { provide: MACHINE_MEMORY, useFactory: () => machineMemoryBytes() },
+    WorkspaceModuleResolver,
+    { provide: WORKSPACE_RESOLVER, useExisting: WorkspaceModuleResolver },
+    { provide: FOLDER_LOCATOR, useExisting: WorkspaceModuleResolver },
+    { provide: PENDING_PERMISSIONS, useClass: RegistryPendingPermissions },
     {
-      provide: SessionRegistry,
-      inject: [APP_CONFIG, MACHINE_MEMORY, CLOCK, LOGGER],
-      useFactory: (config: AppConfig, memoryBytes: number, clock: Clock, logger: Logger) =>
-        sessionRegistryFor(config, memoryBytes, clock, logger),
+      provide: ListLiveSessionsUseCase,
+      inject: [FOLDER_LOCATOR, SessionRegistry, PENDING_PERMISSIONS],
+      useFactory: (
+        folders: FolderLocator,
+        registry: SessionRegistry,
+        pending: PendingPermissions,
+      ) => new ListLiveSessionsUseCase(folders, registry, pending),
     },
+    RegistrySessionOwnership,
     {
       provide: SessionEnder,
       inject: [SessionRegistry, SESSION_BROADCASTER],
@@ -371,7 +382,7 @@ import { WorkspaceModule } from './workspace.module';
   exports: [
     ...Object.values(SESSION_HANDLERS),
     RegistrySessionOwnership,
-    SessionRegistry,
+    SessionRegistryModule,
     ShutdownSessionsUseCase,
     SessionReaperJob,
   ],

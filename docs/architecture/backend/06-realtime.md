@@ -21,6 +21,9 @@ src/infrastructure/websocket/
 
 src/adapter/inbound/ws/<domínio>/
 └── <domínio>.gateway-handler.ts   traduz comando → use case
+
+src/adapter/inbound/ws/files/
+└── socket-watch.sinks.ts      o stream de uma assinatura de pasta: seq por watchId, sem buffer
 ```
 
 **O gateway não contém regra.** Ele autentica, valida o frame, encontra o handler e chama o
@@ -67,6 +70,31 @@ Regras:
   segurar o loop do Agent SDK. Falha de envio → remove a connection e loga `warn`.
 - Backpressure: se a fila de uma connection passa do limite, ela é desconectada com `1013`.
   O cliente reconecta e faz replay. É preferível a estourar memória do servidor.
+
+### O stream de uma assinatura — `workspace.*`
+
+Uma pasta assistida não é sessão, e o seu stream não passa pelo `SessionHub.publish`
+([07 · D-07](../../plans/07-explorer-and-editor/decisions.md#d-07--o-transporte-da-mudança-e-o-seq-do-stream)):
+
+```
+FolderWatches (application/files) — janela fechada, mudanças dobradas e rotuladas
+        │
+        ▼  uma por assinatura
+   SocketWatchSink (adapter/inbound/ws/files)
+        ├─► seq do watchId, de 1 — sem sessionId no frame
+        ├─► sem EventBuffer: não há replay, a reconexão refaz o watch
+        └─► hub.deliver para a connection dona do watchId
+```
+
+- **Nada antes do ack.** O sink nasce retido; o gateway manda `workspace.watching` e só então o
+  solta (`publish` do outcome). Mudança vista antes disso é descartada — o cliente carrega a árvore
+  depois do ack —, e um `watchStopped` anterior espera a soltura.
+- **Connection lenta não é esperada.** Acima de `RC_FILES_WATCH_MAX_BUFFERED_BYTES` no socket
+  (`bufferedAmount`), o que iria sai como **um** `overflow: true` devido, mandado quando ela alcança
+  (olha de novo a cada 250 ms). O watcher entrega às outras enquanto isso; o desconectar com `1013`
+  das sessões não vale aqui, porque o cliente se recupera com uma recarga, não com um replay.
+- **A saída da connection solta as assinaturas.** O `ConnectionRegistry.onRemoved` avisa, uma vez,
+  qualquer que tenha sido a saída — e o `files` libera; o gateway não sabe que pastas existem.
 
 ---
 
@@ -170,7 +198,8 @@ mostrar "aprovado no celular há 2 min" — e para a auditoria.
 
 1. Para de aceitar conexão nova.
 2. Emite `session.closed { reason: 'shutdown' }` para todas as sessões.
-3. Fecha os sockets com `1001` (cliente reconecta com backoff).
+3. Fecha os sockets com `1001` (cliente reconecta com backoff) — e, com eles, todo watcher de pasta
+   (`FolderWatches.closeAll`): nenhum watch de inotify sobrevive aos sockets.
 4. `query.close()` em **toda** sessão viva.
 5. Drena o pool do banco.
 

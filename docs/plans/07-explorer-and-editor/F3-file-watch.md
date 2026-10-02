@@ -20,7 +20,7 @@ usuário, que disputa o mesmo limite, para de ver mudanças. Por isso a fase com
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-19 — Medir e escolher o watcher 🔲
+### B-19 — Medir e escolher o watcher ✅
 
 O spike da [D-08](decisions.md#d-08--a-implementação-do-watcher): `fs.watch` recursivo, `chokidar` e
 `@parcel/watcher` num clone deste repositório com `pnpm install` feito, contando watches consumidos e
@@ -29,7 +29,10 @@ resultado vai para a D-08, com os números; o critério é "diretório não assi
 watch" e "no limite, erro explícito". O script do spike fica em `scripts/` se for rodado de novo
 (regra 10 do [AGENTS.md](../../../AGENTS.md)).
 
-### B-20 — O adapter do watcher 🔲
+**Feito (2026-10-01):** `scripts/watcher-spike.mjs`; escolhido o `chokidar` v5 — os números estão na
+[D-08](decisions.md#d-08--a-implementação-do-watcher).
+
+### B-20 — O adapter do watcher ✅
 
 Port `FolderWatcher` e adapter da biblioteca escolhida. Não assiste `.git/` nem a lista de não
 assistidos da [D-10](decisions.md#d-10--exclusões-padrão-e-teto-da-árvore) (`node_modules`…).
@@ -38,7 +41,7 @@ vira nada; rename vira `deleted` + `created` (sem rastrear identidade — a web 
 mudanças que o teto por evento → `overflow: true`, e o cliente recarrega. Limite do sistema esgotado
 → `WATCH_UNAVAILABLE`, nunca silêncio.
 
-### B-21 — O registro de assinaturas 🔲
+### B-21 — O registro de assinaturas ✅
 
 Um watcher por `realpath` de pasta, com **refcount** de assinaturas; subpasta de pasta já assistida
 reusa o watcher da mãe, entregando caminhos relativos à subpasta — é o caso das duas abas de pasta
@@ -55,7 +58,7 @@ unwatch desconhecido é `ack`.
 - mil ciclos watch/unwatch devolvem watchers, listeners e memória ao inicial (S-145) — e a tela de
   saúde do [plano 16](../16-logs-and-diagnostics/README.md) lê a contagem de watchers abertos daqui.
 
-### B-22 — Quem mudou: a origem 🔲
+### B-22 — Quem mudou: a origem ✅
 
 Função pura: caminho + hash que casam com um `session.fileStateRecorded` recente → `claude`; com uma
 escrita nossa recente (registro de curta duração alimentado pela F2) → `user`; senão `external`.
@@ -63,7 +66,7 @@ Escritas do Claude e do humano no mesmo arquivo dentro da janela → vale o hash
 origem inventada. A origem é **rótulo para a UI** ("o Claude alterou este arquivo"), opcional no
 contrato, e não decide nada — nem segurança, nem conflito, que é sempre o `ETag`.
 
-### B-23 — O handler e o stream 🔲
+### B-23 — O handler e o stream ✅
 
 `adapter/inbound/ws/files/`: traduz `workspace.watch`/`unwatch` nos use cases, e publica pelo fan-out
 existente ([backend/06](../../architecture/backend/06-realtime.md#fan-out)) com `seq` **por `watchId`**,

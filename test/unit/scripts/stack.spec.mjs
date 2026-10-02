@@ -10,6 +10,7 @@ import {
   LIMITS_STACK,
   MOBILE_REDIRECT_URL,
   dartDefines,
+  defineArgs,
   realPushEnvironment,
   PORT_VARIABLES,
   PROJECT_NAME,
@@ -553,6 +554,21 @@ describe('dartDefines', () => {
 
     expect(argv).not.toContain('RC_API_URL=undefined');
     expect(argv).toContain('RC_API_URL=');
+  });
+});
+
+describe('defineArgs', () => {
+  it('passes each value as the flag and then NAME=value, spaces and all', () => {
+    expect(defineArgs({ RC_A: 'one', RC_SCOPES: 'openid profile' })).toEqual([
+      '--dart-define',
+      'RC_A=one',
+      '--dart-define',
+      'RC_SCOPES=openid profile',
+    ]);
+  });
+
+  it('answers nothing for no values', () => {
+    expect(defineArgs({})).toEqual([]);
   });
 });
 

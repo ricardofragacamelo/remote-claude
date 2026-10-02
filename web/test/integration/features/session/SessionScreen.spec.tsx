@@ -7,7 +7,7 @@ import { forgetLiveSessions, liveSessionStoreOf, SessionScreen } from '@/feature
 import { api } from '@/shared/api/api';
 import { setAccessToken } from '@/shared/api/credentials';
 import { wsClient } from '@/shared/api/ws';
-import { render, translator } from '../../../support/render';
+import { render, renderRouted, translator } from '../../../support/render';
 import { installFakeWebSocket } from '../../../support/fake-websocket';
 import type { InstalledWebSocket } from '../../../support/fake-websocket';
 import { aHistoryPage, claudeUnavailable, said } from '../../../support/history';
@@ -95,10 +95,12 @@ describe('the session screen', () => {
     expect(screen.getByText('Looking at it.')).toBeInTheDocument();
   });
 
-  it('shows the exact command of a tool, never a summary of it — S-35', () => {
-    // Somebody is watching this run on their own machine; truncating the command hides the one
-    // thing that would have made them stop it.
-    render(<SessionScreen sessionId={SESSION} />);
+  it('shows a tool as one line, and its exact command a click away — S-35, plan 08 S-74', async () => {
+    // Somebody is watching this run on their own machine: the line may be short, but the whole
+    // command is in its accessible name, and unfolding it shows the input exactly.
+    const user = userEvent.setup();
+    renderRouted(<SessionScreen sessionId={SESSION} />);
+    await screen.findByRole('textbox');
     connect();
 
     receive(
@@ -107,17 +109,27 @@ describe('the session screen', () => {
         toolName: 'Bash',
         input: { command: 'rm -rf build/ && echo done' },
       }),
-      event('tool.progress', 2, { toolUseId: 't1', chunk: 'done\n' }),
+      event('tool.progress', 2, { toolUseId: 't1', chunk: 'Bash · 3s' }),
     );
 
-    expect(screen.getByText('rm -rf build/ && echo done')).toBeInTheDocument();
-    expect(screen.getByText('done')).toBeInTheDocument();
-    expect(screen.getByText(t('session.toolStatus.running'))).toBeInTheDocument();
+    const line = screen.getByRole('button', {
+      name: t('sessions.toolRow.label', {
+        tool: t('sessions.tool.bash', { command: 'rm -rf build/ && echo done' }),
+        status: t('session.toolStatus.running'),
+      }),
+    });
+    expect(line).toHaveTextContent('Bash · 3s');
+
+    await user.click(line);
+    expect(screen.getByLabelText(t('sessions.toolRow.input'))).toHaveTextContent(
+      '"command": "rm -rf build/ && echo done"',
+    );
   });
 
-  it('shows the whole input when nothing in it names the invocation', () => {
-    // "We could not summarise it" is not a reason to show less: what executes is what is shown.
-    render(<SessionScreen sessionId={SESSION} />);
+  it('names a tool this build does not know by its name, and shows its whole input — S-73', async () => {
+    const user = userEvent.setup();
+    renderRouted(<SessionScreen sessionId={SESSION} />);
+    await screen.findByRole('textbox');
     connect();
 
     receive(
@@ -128,21 +140,14 @@ describe('the session screen', () => {
       }),
     );
 
+    await user.click(screen.getByRole('button', { name: /McpDoSomething/ }));
     expect(screen.getByText(/"anything": "at all"/)).toBeInTheDocument();
   });
 
-  it('shows a tool with no input at all without a blank box', () => {
-    render(<SessionScreen sessionId={SESSION} />);
-    connect();
-
-    receive(event('tool.started', 1, { toolUseId: 't1', toolName: 'Task', input: {} }));
-
-    expect(screen.getByText('Task')).toBeInTheDocument();
-    expect(screen.queryByText('{}')).not.toBeInTheDocument();
-  });
-
-  it('shows what a finished tool reported about itself', () => {
-    render(<SessionScreen sessionId={SESSION} />);
+  it('says how a finished tool ended, by word and with what it reported — S-75', async () => {
+    const user = userEvent.setup();
+    renderRouted(<SessionScreen sessionId={SESSION} />);
+    await screen.findByRole('textbox');
     connect();
 
     receive(
@@ -150,8 +155,26 @@ describe('the session screen', () => {
       event('tool.completed', 2, { toolUseId: 't1', status: 'failed', summary: 'exit 1' }),
     );
 
+    await user.click(screen.getByRole('button', { name: /Bash: ls/ }));
     expect(screen.getByText('exit 1')).toBeInTheDocument();
     expect(screen.getByText(t('session.toolStatus.failed'))).toBeInTheDocument();
+  });
+
+  it('says why a tool was refused', async () => {
+    const user = userEvent.setup();
+    renderRouted(<SessionScreen sessionId={SESSION} />);
+    await screen.findByRole('textbox');
+    connect();
+
+    receive(
+      event('tool.started', 1, { toolUseId: 't1', toolName: 'Bash', input: { command: 'rm x' } }),
+      event('tool.completed', 2, { toolUseId: 't1', status: 'denied', summary: 'not today' }),
+    );
+
+    await user.click(screen.getByRole('button', { name: /Bash: rm x/ }));
+    expect(
+      screen.getByText(t('sessions.toolRow.denied', { reason: 'not today' })),
+    ).toBeInTheDocument();
   });
 
   it('reports the status the server publishes', () => {
@@ -265,9 +288,11 @@ describe('the session screen', () => {
 
       expect(screen.getByRole('note')).toHaveTextContent(t('session.screen.partial'));
       expect(screen.getByText('what the buffer still had')).toBeInTheDocument();
-      expect(screen.getByRole('status')).toHaveTextContent(
-        t('session.screen.ended', { reason: t('session.closeReason.closedByUser'), at: AT }),
-      );
+      expect(
+        screen.getByText(
+          t('session.screen.ended', { reason: t('session.closeReason.closedByUser'), at: AT }),
+        ),
+      ).toBeInTheDocument();
     });
 
     it('shows only the terminal state when the buffer is gone — S-97', () => {
@@ -309,21 +334,41 @@ describe('the session screen', () => {
     expect(sockets.latest.frames().some((sent) => sent['type'] === 'session.interrupt')).toBe(true);
   });
 
-  it('reports what the last turn cost', () => {
+  it('reports what each turn cost, and what the session has cost since it opened — S-97, S-99', () => {
     render(<SessionScreen sessionId={SESSION} />);
     connect();
 
     receive(
       event('turn.completed', 1, {
         turnId: 'turn-1',
-        usage: {},
+        usage: { input_tokens: 1200, output_tokens: 34, cache_read_input_tokens: 5000 },
         costUsd: '0.0123',
         durationMs: 2_400,
+      }),
+      event('turn.completed', 2, {
+        turnId: 'turn-2',
+        usage: {},
+        costUsd: '0.0100',
+        durationMs: 900,
       }),
     );
 
     expect(
-      screen.getByText(t('session.screen.turn', { cost: '0.0123', ms: 2_400 })),
+      screen.getByText(
+        t('sessions.turn.summary', {
+          cost: '$0.0123',
+          seconds: '2.4',
+          input: '1,200',
+          output: '34',
+          cache: '5,000',
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(t('sessions.turn.noUsage', { cost: '$0.01', seconds: '0.9' })),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(t('sessions.status.cost', { cost: '$0.0223', turns: 2 })),
     ).toBeInTheDocument();
   });
 

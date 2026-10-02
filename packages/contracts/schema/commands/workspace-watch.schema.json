@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/workspace-watch.json",
+  "title": "WorkspaceWatch",
+  "description": "Starts following the changes on disk of an open folder, for the explorer and the editor. Answered with `workspace.watching`, which names the subscription; the changes then arrive as `workspace.filesChanged`, with a `seq` of their own that starts at 1. There is **no replay**: after a reconnect the client watches again — a new `watchId`, `seq` from 1 — and reloads the tree, because what matters after a drop is the disk as it is now. Refused with `INVALID_INPUT` (every invalid field in `details[]`), with the refusals of the folder (`WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`), with `WATCH_LIMIT_REACHED` past the ceiling of the connection and with `WATCH_UNAVAILABLE` when the system refuses another watch.",
+  "x-kind": "command",
+  "x-type": "workspace.watch",
+  "type": "object",
+  "required": ["workspacePath"],
+  "properties": {
+    "workspacePath": {
+      "type": "string",
+      "description": "The open folder, absolute — the same value `session.start` takes, and the `folder` of the HTTP routes of the files."
+    }
+  }
+}

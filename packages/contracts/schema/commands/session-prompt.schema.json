@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/commands/session-prompt.json",
   "title": "SessionPrompt",
-  "description": "Sends one turn. A prompt that arrives while a turn is running is **queued** and runs next, the way the Claude Code UI does it — it is never refused.",
+  "description": "Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way the Claude Code UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`).",
   "x-kind": "command",
   "x-type": "session.prompt",
   "type": "object",
@@ -12,13 +12,89 @@
     "text": { "type": "string", "description": "What the user typed." },
     "attachments": {
       "type": "array",
-      "description": "Files carried with the prompt.",
+      "maxItems": 20,
+      "description": "The context of the prompt, chosen with `@`, a drag or the editor: files, folders, ranges of lines, an uploaded attachment, or text a provider of the client holds (the terminal). A file or a folder is a **reference** — the backend checks it inside the session's folder, all or nothing, and Claude reads it through `Read`, which the trail records; its content never travels here (plan 08, D-01).",
       "items": {
         "type": "object",
-        "required": ["path"],
+        "x-required-when": [
+          {
+            "field": "path",
+            "when": { "field": "kind", "absent": true },
+            "because": "an attachment without a kind is the file attachment that existed before kinds did, and a file is named by its path"
+          },
+          {
+            "field": "path",
+            "when": { "field": "kind", "equals": "file" },
+            "because": "a file is named by its path inside the session's folder"
+          },
+          {
+            "field": "path",
+            "when": { "field": "kind", "equals": "folder" },
+            "because": "a folder is named by its path inside the session's folder"
+          },
+          {
+            "field": "attachmentId",
+            "when": { "field": "kind", "equals": "upload" },
+            "because": "an uploaded attachment travels over HTTP, and the prompt carries only the id the upload answered"
+          },
+          {
+            "field": "source",
+            "when": { "field": "kind", "equals": "text" },
+            "because": "text a provider holds goes to Claude labelled with where it came from, never as if the user had typed it"
+          },
+          {
+            "field": "label",
+            "when": { "field": "kind", "equals": "text" },
+            "because": "the label is what the delimited block is introduced by, and what the chip showed"
+          },
+          {
+            "field": "content",
+            "when": { "field": "kind", "equals": "text" },
+            "because": "text that is not on disk has nothing to be read from, so it travels itself"
+          }
+        ],
         "properties": {
-          "path": { "type": "string", "description": "Path inside the session's workspace." },
-          "mediaType": { "type": "string" }
+          "kind": {
+            "type": "string",
+            "enum": ["file", "folder", "upload", "text"],
+            "description": "What the attachment is. Absent reads as `file`, which is what keeps the field that existed before compatible — and `v` where it is."
+          },
+          "path": {
+            "type": "string",
+            "description": "Path inside the session's folder, relative or absolute, for a `file` or a `folder`."
+          },
+          "mediaType": {
+            "type": "string",
+            "description": "The type of the file, when the client knows it. Informative: the backend decides nothing by it."
+          },
+          "range": {
+            "type": "object",
+            "description": "The lines of a `file` the prompt is about, inclusive and counted from 1. `endLine` before `startLine` is refused by the backend — an order between two fields is not a bound of one.",
+            "required": ["startLine", "endLine"],
+            "properties": {
+              "startLine": { "type": "integer", "minimum": 1 },
+              "endLine": { "type": "integer", "minimum": 1 }
+            }
+          },
+          "attachmentId": {
+            "type": "string",
+            "description": "What `POST /sessions/:sessionId/attachments` answered, for an `upload`: an image, or a text file dropped from the desktop. Unknown, expired or of another session is `ATTACHMENT_NOT_FOUND`."
+          },
+          "source": {
+            "type": "string",
+            "enum": ["terminal"],
+            "description": "The provider that holds the `text` — the integrated terminal of plan 10, when it exists. An enum read as a string, so a provider added later does not break a client already published."
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "How the `text` is introduced to Claude and shown on the chip: \"terminal: bash\"."
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 16384,
+            "description": "The text itself, for a `text`. Bounded so that even at four bytes a character it fits the 64 KB frame beside the rest of the prompt."
+          }
         }
       }
     }

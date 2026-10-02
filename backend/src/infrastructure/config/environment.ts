@@ -5,6 +5,7 @@ import { parseEnvironment } from '@remote-claude/config';
 import { AUDIT_RETENTION_FLOOR_DAYS } from '@domain/audit';
 import { PERMISSION_MODES } from '@domain/session';
 import type { PermissionMode } from '@domain/session';
+import type { FileLimits, HistoryLimits, TransferLimits, WatchSettings } from '@application/files';
 
 /**
  * Every variable the backend reads, with what it is for.
@@ -64,6 +65,9 @@ export const SESSION_IDLE_TTL_FLOOR_MS = 1_000;
  */
 const pidFile = z.union([z.literal('off'), z.string().min(1)]);
 
+/** What a `/files` request carries beside a file's contents — the folder, the path, the flags. */
+const REQUEST_ENVELOPE_BYTES = 64 * 1024;
+
 export const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']),
@@ -105,6 +109,38 @@ export const environmentSchema = z.object({
   // it in silence. A floor that a variable can lower is not a floor.
   RC_AUDIT_RETENTION_DAYS: z.coerce.number().int().min(AUDIT_RETENTION_FLOOR_DAYS).max(36_500),
   RC_AUDIT_PURGE_INTERVAL_MS: purgeInterval,
+  // The ceilings of the explorer and the editor (plan 07, D-04 and D-10): provisional numbers
+  // until they are measured, which is why they are here and not constants.
+  RC_FILES_TREE_MAX_ENTRIES: z.coerce.number().int().min(1),
+  RC_FILES_LARGE_FILE_BYTES: z.coerce.number().int().min(1),
+  RC_FILES_MAX_EDIT_BYTES: z.coerce.number().int().min(1),
+  RC_FILES_COPY_MAX_ENTRIES: z.coerce.number().int().min(1),
+  RC_FILES_COPY_MAX_BYTES: z.coerce.number().int().min(1),
+  RC_FILES_DELETE_COUNT_CAP: z.coerce.number().int().min(1),
+  // The watcher of the open folder (plan 07, B-20, B-21, B-23): how long changes gather, how many
+  // one event carries, how many folders one connection follows, and how far behind a socket may
+  // fall before its events turn into one `overflow`.
+  RC_FILES_WATCH_WINDOW_MS: z.coerce.number().int().min(1).max(10_000),
+  RC_FILES_WATCH_MAX_CHANGES: z.coerce.number().int().min(1),
+  RC_FILES_WATCH_MAX_PER_CONNECTION: z.coerce.number().int().min(1),
+  RC_FILES_WATCH_MAX_BUFFERED_BYTES: z.coerce.number().int().min(1),
+  // Previews and transfer (plan 07, D-16): what one download, one zip and one upload may carry —
+  // provisional until the blob a phone's browser holds is measured.
+  RC_FILES_DOWNLOAD_MAX_BYTES: z.coerce.number().int().min(1),
+  RC_FILES_ARCHIVE_MAX_ENTRIES: z.coerce.number().int().min(1),
+  RC_FILES_UPLOAD_MAX_BYTES: z.coerce.number().int().min(1),
+  RC_FILES_UPLOAD_MAX_ENTRIES: z.coerce.number().int().min(1),
+  RC_FILES_UPLOAD_MAX_TOTAL_BYTES: z.coerce.number().int().min(1),
+  // The local history (plan 07, D-17): where the versions live, and how much of them is kept.
+  RC_FILES_HISTORY_DIR: z.string().min(1),
+  RC_FILES_HISTORY_MAX_FILE_BYTES: z.coerce.number().int().min(1),
+  RC_FILES_HISTORY_MAX_PER_FILE: z.coerce.number().int().min(1),
+  RC_FILES_HISTORY_MAX_STORE_BYTES: z.coerce.number().int().min(1),
+  RC_FILES_HISTORY_RETENTION_DAYS: z.coerce.number().int().min(1).max(36_500),
+  RC_FILES_HISTORY_MAX_BATCH_ENTRIES: z.coerce.number().int().min(1),
+  // How recently a conversation begun elsewhere has to have been written to read as active there
+  // (plan 08, D-06): an estimate, measured against how long one tool leaves the transcript unwritten.
+  RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS: z.coerce.number().int().min(1).max(86_400),
 });
 
 /**
@@ -126,6 +162,16 @@ const consistentEnvironment = environmentSchema
   .refine((env) => env.RC_SESSION_MIN_CONCURRENT <= env.RC_SESSION_MAX_CONCURRENT, {
     path: ['RC_SESSION_MIN_CONCURRENT'],
     message: 'must not be greater than RC_SESSION_MAX_CONCURRENT',
+  })
+  // A light-mode threshold above the editing ceiling would be a mode no file can ever reach.
+  .refine((env) => env.RC_FILES_LARGE_FILE_BYTES <= env.RC_FILES_MAX_EDIT_BYTES, {
+    path: ['RC_FILES_LARGE_FILE_BYTES'],
+    message: 'must not be greater than RC_FILES_MAX_EDIT_BYTES',
+  })
+  // One file above the ceiling of the whole upload could never be sent, whatever came with it.
+  .refine((env) => env.RC_FILES_UPLOAD_MAX_BYTES <= env.RC_FILES_UPLOAD_MAX_TOTAL_BYTES, {
+    path: ['RC_FILES_UPLOAD_MAX_BYTES'],
+    message: 'must not be greater than RC_FILES_UPLOAD_MAX_TOTAL_BYTES',
   });
 
 /** The shape the schema accepts, before validation. */
@@ -235,6 +281,41 @@ export interface AppConfig {
     readonly maxStoreBytes: number;
   };
 
+  /** The ceilings of the explorer and the editor (plan 07). */
+  readonly files: FileLimits & {
+    /**
+     * The largest body a route under `/files` accepts: twice the editing ceiling, which is what the
+     * JSON of a file at the ceiling takes with its quotes and backslashes escaped. Above it the body
+     * parser answers `413` `PAYLOAD_TOO_LARGE`; between it and the ceiling, the save does
+     * (`FILE_TOO_LARGE`).
+     */
+    readonly requestBodyBytes: number;
+
+    /** The watcher of the open folder: its window and ceilings (plan 07, B-20…B-23). */
+    readonly watch: WatchSettings & {
+      /** Past this many bytes waiting on a socket, its changes are owed as one `overflow`. */
+      readonly maxBufferedBytes: number;
+    };
+
+    /** Previews, downloads and uploads (plan 07, F7 · D-16). */
+    readonly transfer: TransferLimits;
+
+    /** The local history: where its versions live, and how many are kept (plan 07, F8 · D-17). */
+    readonly history: HistoryLimits & { readonly directory: string };
+  };
+
+  /** What the history says about each conversation beyond what the SDK reports (plan 08, B-08). */
+  readonly transcript: {
+    /**
+     * How recently a conversation begun elsewhere was written for it to read as `activeElsewhere`.
+     *
+     * A heuristic and said to be one: a transcript written seconds ago almost certainly has a writer,
+     * and one silent for minutes may still have one running a long tool — 40 s of `Bash` left the
+     * file 40 s unwritten, measured (D-06).
+     */
+    readonly activeWindowMs: number;
+  };
+
   readonly oidc: {
     readonly issuer: string;
     readonly audience: string;
@@ -307,6 +388,37 @@ export function loadConfig(source: RawEnvironment): AppConfig {
       maxFileBytes: env.RC_CHECKPOINT_MAX_FILE_BYTES,
       maxStoreBytes: env.RC_CHECKPOINT_MAX_STORE_BYTES,
     },
+    files: {
+      treeEntries: env.RC_FILES_TREE_MAX_ENTRIES,
+      largeFileBytes: env.RC_FILES_LARGE_FILE_BYTES,
+      maxEditBytes: env.RC_FILES_MAX_EDIT_BYTES,
+      copyEntries: env.RC_FILES_COPY_MAX_ENTRIES,
+      copyBytes: env.RC_FILES_COPY_MAX_BYTES,
+      deleteCountCap: env.RC_FILES_DELETE_COUNT_CAP,
+      requestBodyBytes: 2 * env.RC_FILES_MAX_EDIT_BYTES + REQUEST_ENVELOPE_BYTES,
+      watch: {
+        windowMs: env.RC_FILES_WATCH_WINDOW_MS,
+        maxChangesPerEvent: env.RC_FILES_WATCH_MAX_CHANGES,
+        maxPerConnection: env.RC_FILES_WATCH_MAX_PER_CONNECTION,
+        maxBufferedBytes: env.RC_FILES_WATCH_MAX_BUFFERED_BYTES,
+      },
+      transfer: {
+        downloadMaxBytes: env.RC_FILES_DOWNLOAD_MAX_BYTES,
+        archiveMaxEntries: env.RC_FILES_ARCHIVE_MAX_ENTRIES,
+        uploadMaxBytes: env.RC_FILES_UPLOAD_MAX_BYTES,
+        uploadMaxEntries: env.RC_FILES_UPLOAD_MAX_ENTRIES,
+        uploadMaxTotalBytes: env.RC_FILES_UPLOAD_MAX_TOTAL_BYTES,
+      },
+      history: {
+        directory: resolve(env.RC_FILES_HISTORY_DIR),
+        maxFileBytes: env.RC_FILES_HISTORY_MAX_FILE_BYTES,
+        maxPerFile: env.RC_FILES_HISTORY_MAX_PER_FILE,
+        maxStoreBytes: env.RC_FILES_HISTORY_MAX_STORE_BYTES,
+        retentionDays: env.RC_FILES_HISTORY_RETENTION_DAYS,
+        maxBatchEntries: env.RC_FILES_HISTORY_MAX_BATCH_ENTRIES,
+      },
+    },
+    transcript: { activeWindowMs: env.RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS * 1_000 },
     oidc: {
       issuer: env.OIDC_ISSUER,
       audience: env.OIDC_AUDIENCE,

@@ -1,10 +1,11 @@
 import fs from 'node:fs';
 
 import { expect, test } from '@playwright/test';
-import type { Locator, Page } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 
 import { openSignedIn } from '../fixtures/auth';
 import { workbenchSuite } from '../fixtures/folder-tree';
+import { scrollsSideways } from '../fixtures/page-checks';
 import { onWorkbenchOf, workbenchAddress } from '../fixtures/workbench';
 import { scenario } from '../scenarios';
 
@@ -25,11 +26,6 @@ const expected = phone.expect as {
 test.use({ viewport: expected.viewport, isMobile: true, hasTouch: true });
 
 const suite = workbenchSuite(phone.user);
-
-/** Whether the page scrolls sideways — what a phone must never do. */
-function scrollsSideways(page: Page): Promise<boolean> {
-  return page.locator('html').evaluate((html) => html.scrollWidth > html.clientWidth);
-}
 
 /** Asserts a target is big enough for a finger. */
 async function expectTouchable(target: Locator): Promise<void> {

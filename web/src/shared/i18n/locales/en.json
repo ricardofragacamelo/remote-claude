@@ -67,7 +67,17 @@
       "locked": "A turn is running, or another undo of this session is in progress. Wait for it to finish and try again.",
       "rewindTargetUnknown": "That is not a point this session can go back to. Reload the list and choose again.",
       "rewindIncomplete": "The undo stopped short: {{failed}} file(s) could not be put back, and each of them was left exactly as it was.",
-      "invalidTransition": "The session could not change state. This is a fault on our side; try again."
+      "invalidTransition": "The session could not change state. This is a fault on our side; try again.",
+      "attachmentNotFound": "That attachment is no longer available to this session. Attach it again and send.",
+      "attachmentTypeUnsupported": "Attachments of type {{mediaType}} cannot go with a prompt. Images must be PNG, JPEG, GIF or WebP, and files must be text.",
+      "toolUseNotFound": "This session has no record of that tool call.",
+      "diffNotApplicable": "{{toolName}} does not write files, so there is no change to show.",
+      "changeStale": "{{path}} changed after the changes were listed. Reload them and choose again.",
+      "forkRejected": "Claude could not continue the conversation from that message. Resume the conversation instead, and edit from there.",
+      "queuedPromptNotFound": "That prompt is no longer in the queue.",
+      "queuedPromptStarted": "That prompt has already started. Interrupt the turn to stop it.",
+      "forkPointUnknown": "That message is not a prompt of this conversation. Reload the conversation and try again.",
+      "effortUnsupported": "{{model}} does not take the effort level {{level}}."
     },
     "status": {
       "starting": "Starting",
@@ -105,12 +115,10 @@
       "title": "Session",
       "sessionLabel": "Session {{sessionId}}",
       "conversation": "Conversation",
-      "tools": "Tools",
       "emptyTitle": "Nothing yet",
       "emptyDescription": "Send a prompt below to start the conversation.",
       "partial": "This is only what the server still had in memory, not the whole conversation.",
-      "ended": "This session ended at {{at}} because {{reason}}.",
-      "turn": "Last turn cost {{cost}} and took {{ms}} ms."
+      "ended": "This session ended at {{at}} because {{reason}}."
     },
     "composer": {
       "label": "Prompt",
@@ -225,6 +233,30 @@
       "placeholder": "Type to narrow the recent folders"
     }
   },
+  "files": {
+    "error": {
+      "invalidPath": "That is not a usable path inside the open folder.",
+      "unknownEncoding": "This machine does not know the encoding {{encoding}}.",
+      "notFound": "{{path}} is not in the folder any more.",
+      "exists": "{{path}} already exists. Nothing was overwritten.",
+      "directoryNotEmpty": "{{path}} holds {{entryCount}} items. Deleting it deletes all of them.",
+      "changed": "{{path}} changed on disk since you opened it — Claude may have written to it. Nothing was overwritten.",
+      "preconditionRequired": "{{path}} needs a confirmation before it is changed.",
+      "tooLarge": "{{path}} is larger than this editor opens ({{limit}} at most).",
+      "rangeNotSatisfiable": "That part of {{path}} is past its end — the file changed, or is shorter.",
+      "uploadSizeMismatch": "{{path}} did not arrive whole — {{received}} of {{declared}} bytes. Nothing of it was kept.",
+      "notText": "{{path}} is not text this editor can show.",
+      "notAFile": "{{path}} is not a file.",
+      "operationInvalid": "That cannot be done with {{path}}.",
+      "notEncodable": "Some characters cannot be written in {{encoding}}. Nothing was saved.",
+      "accessDenied": "This machine does not let remote-claude change {{path}}. Check its permissions.",
+      "storageFull": "The disk is full. {{path}} was left as it was.",
+      "trailUnavailable": "The audit trail is unavailable, so nothing was written. Try again in a moment.",
+      "watchLimitReached": "This window already follows {{limit}} folders. Close one first.",
+      "watchUnavailable": "This machine cannot follow more folders right now. Try again in a moment.",
+      "historyEntryNotFound": "That version is not in the local history any more."
+    }
+  },
   "notification": {
     "error": {
       "rejected": "That notification could not be kept."
@@ -241,6 +273,10 @@
     },
     "folder": {
       "notAllowed": "{{folder}} is no longer allowed on this machine. Its tab stays, but nothing opens in it."
+    },
+    "files": {
+      "deletedOne": "{{name}} was deleted. It is kept in the local history.",
+      "deletedMany": "{{count}} entries were deleted. They are kept in the local history."
     }
   },
   "permission": {
@@ -307,6 +343,18 @@
       "back": "Go back",
       "confirm": "Allow and stop asking",
       "openRules": "See your rules"
+    },
+    "plan": {
+      "label": "The plan Claude proposes",
+      "title": "Approve the plan?",
+      "modeLegend": "Once approved, go on",
+      "approve": "Approve the plan",
+      "commentLabel": "Or say what to change, and keep planning",
+      "keepPlanning": "Keep planning"
+    },
+    "planMode": {
+      "default": "asking before each edit",
+      "acceptEdits": "accepting edits without asking"
     }
   },
   "audit": {
@@ -372,6 +420,28 @@
       "what": "The trail of every tool Claude asked to run, and how each was decided: by a rule you granted, by a person, or by nobody in time. The filters live in the address, so a filtered trail is a link you can keep or share.",
       "states": "An entry a rule decided opens that rule, even after it was revoked. An entry nobody answered in time was refused. Loading more adds the next page; a failure there keeps what is already on screen, with the reason beside it.",
       "notRecorded": "The trail keeps the exact input of each tool, never the content of a file a tool read: for a read it keeps the path and the size. It records decisions, not the conversation."
+    },
+    "files": {
+      "title": "Files",
+      "description": "What you did to the files of your open folders from this app — newest first. The contents of a file are never kept here.",
+      "loading": "Loading what you did to your files…",
+      "emptyTitle": "Nothing yet",
+      "emptyDescription": "When you create, save, rename, move, copy or delete a file from the Explorer or the editor, it shows here.",
+      "loadMore": "Load older file actions",
+      "loadingMore": "Loading older file actions…",
+      "row": "{{act}} {{path}} at {{at}}",
+      "fromTo": "{{from}} → {{to}}",
+      "byYou": "By you, from this app"
+    },
+    "fileAct": {
+      "created": "Created",
+      "written": "Saved",
+      "moved": "Moved",
+      "copied": "Copied",
+      "deleted": "Deleted",
+      "failed": "Failed on disk",
+      "downloaded": "Downloaded",
+      "restored": "Restored from the local history"
     }
   },
   "devices": {
@@ -480,16 +550,7 @@
       "cursorStale": "This conversation changed while you were reading it. Reload it from the latest messages."
     },
     "list": {
-      "title": "Conversations",
-      "description": "Everything said in this folder — here, in the editor or in a terminal — most recently written first.",
-      "loading": "Loading the conversations of this folder…",
-      "emptyTitle": "No conversation in this folder yet",
-      "emptyDescription": "Start a session here, or talk to Claude in this folder from the editor: the conversation shows up in this list.",
-      "loadMore": "Load more",
-      "loadingMore": "Loading…",
-      "untitled": "Untitled conversation",
-      "lastModified": "Last written {{at}}",
-      "lastModifiedOnBranch": "Last written {{at}}, on {{branch}}"
+      "untitled": "Untitled conversation"
     }
   },
   "history": {
@@ -507,7 +568,9 @@
       "loadEarlier": "Load earlier messages",
       "loadingEarlier": "Loading earlier messages…",
       "emptyTitle": "Nothing was said in this conversation",
-      "emptyDescription": "Continue it to say the first thing."
+      "emptyDescription": "Continue it to say the first thing.",
+      "close": "Close this conversation",
+      "activeElsewhereNote": "Something else wrote this conversation a moment ago — the editor or a terminal may have it open. Continuing it here makes a copy, and the two will diverge."
     }
   },
   "commands": {
@@ -638,7 +701,8 @@
     },
     "claude": {
       "label": "Claude",
-      "newSession": "Start a new session in this folder"
+      "newSession": "Start a new session in this folder",
+      "backToStart": "Back to a new conversation"
     },
     "mobile": {
       "label": "Views of this folder",
@@ -666,7 +730,9 @@
       "listLabel": "Folders to close",
       "keep": "Keep open",
       "confirm": "Close",
-      "pending": "Closing…"
+      "pending": "Closing…",
+      "unsaved": "These files have unsaved changes, which closing drops:",
+      "unsavedLabel": "Files with unsaved changes"
     },
     "explorer": {
       "label": "Explorer",
@@ -678,7 +744,7 @@
     },
     "sessions": {
       "label": "Claude sessions",
-      "placeholder": "The sessions and conversations of this folder will be listed here. Until then, the chat beside the editor holds the session of this tab."
+      "placeholder": "The sessions and conversations of this folder will be listed here."
     },
     "tabState": {
       "notAllowed": "No longer allowed",
@@ -767,6 +833,47 @@
     },
     "help": {
       "show": "Help for this screen"
+    },
+    "editor": {
+      "save": "Save",
+      "saveAs": "Save as…",
+      "saveAll": "Save all",
+      "revert": "Revert file",
+      "compareWithSaved": "Compare with the saved file",
+      "openRecentFile": "Open recent file",
+      "closeTab": "Close editor",
+      "closeOthers": "Close other editors",
+      "closeSaved": "Close saved editors",
+      "closeAll": "Close all editors",
+      "reopenClosed": "Reopen closed editor",
+      "openToSide": "Open to the side",
+      "focusNextGroup": "Focus the next editor group",
+      "focusPreviousGroup": "Focus the previous editor group",
+      "find": "Find",
+      "replace": "Replace",
+      "goToLine": "Go to line…",
+      "undo": "Undo",
+      "redo": "Redo",
+      "changeEol": "Change line endings",
+      "changeLanguage": "Change the language of the highlighting",
+      "convertIndentation": "Convert indentation",
+      "reopenWithEncoding": "Reopen with encoding…",
+      "saveWithEncoding": "Save with encoding…",
+      "addToClaude": "Add to Claude's context",
+      "revealInExplorer": "Reveal the active file in the Explorer",
+      "showHelp": "Help for the editor",
+      "openPreview": "Open preview",
+      "openPreviewToSide": "Open preview to the side",
+      "togglePreview": "Toggle between the editor and the preview"
+    },
+    "sessions": {
+      "refresh": "Claude sessions: refresh",
+      "toggleSubfolders": "Claude sessions: include or leave out the folders below",
+      "help": "Claude sessions: help",
+      "openSelected": "Claude sessions: open the selected row",
+      "continueSelected": "Claude sessions: continue the selected conversation here",
+      "copySelectedId": "Claude sessions: copy the id of the selected conversation",
+      "endSelected": "Claude sessions: end the selected session"
     }
   },
   "palette": {
@@ -874,7 +981,8 @@
     },
     "section": {
       "appearance": "Appearance",
-      "workspaces": "Workspaces"
+      "workspaces": "Workspaces",
+      "editor": "Editor"
     },
     "sections": {
       "label": "Sections"
@@ -938,6 +1046,794 @@
       "documentation": "Documentation",
       "newTab": "(opens in a new tab)",
       "license": "The repository does not declare a license."
+    }
+  },
+  "explorer": {
+    "screen": {
+      "title": "Explorer",
+      "purpose": "The files and folders of the folder this tab has open — open, create, rename, move, copy and delete them."
+    },
+    "help": {
+      "what": "The tree shows the folder this tab has open, one level at a time: a folder is read when you open it. Click a file to preview it in the editor, double-click or press Enter to keep it open. Everything you do here — create, rename, move, copy, delete — is done on the disk of this machine, in this folder only, and is written to the audit trail before it happens. An entry with the arrow-out-of-a-box icon is a link that leads outside this folder: it is shown so you know it is there, and it never opens. An entry with a question mark has a name that is not valid text: it is shown, and nothing can be done to it from here.",
+      "states": "While a folder is read, its rows show it loading. A folder that could not be read says why, and Enter on it tries again. A folder with more entries than the tree lists says so: filter by name to find the rest. Changes on disk — Claude writing, you in another program — appear by themselves; when this machine cannot follow the folder, a warning says so and a button reads it again by hand. Ctrl+Z, with the focus in the tree, undoes the last rename, move, new file or folder, or copy of this tab, as long as nothing changed it since — if Claude wrote to the file after, the undo is refused and says why. Undo lasts only while this page is open.",
+      "notRecorded": "Hidden entries (.git, .svn, .hg, .DS_Store, Thumbs.db) are left out unless you show them; folders like node_modules, dist, build, .venv and target are shown but not followed, so a change inside them appears when you open or reload them. Deleting keeps what it takes in the local history first and does not ask: a notification says what went, with Undo. What the history cannot keep — too large, too many entries, or the history unavailable — is deleted only for good, after asking, with how much goes and why there is no undo. What you read is not written to the audit trail; what you change is, with the path and never the contents.",
+      "transferHeading": "Uploading and downloading",
+      "transfer": "Drag files or folders from your desktop onto a folder of the tree to upload them there — a folder keeps its structure. Without a mouse, use Upload files here… or Upload folder here… (Alt+U, Alt+Shift+U). Files already there are shown before anything is sent: replace, keep both or skip each one. Download (Alt+Shift+D) saves a file, or a folder or everything selected as one zip.",
+      "transferLimits": "Limits of this machine: each file uploaded up to {{uploadFile}}, at most {{uploadEntries}} files and {{uploadTotal}} in one upload; a download up to {{download}}, and a zip of at most {{archiveEntries}} entries.",
+      "transferUnknown": "The limits of this machine could not be read right now; the server still checks them.",
+      "transferAbove": "Above a limit, nothing moves: the upload or the download is refused before it starts, saying the limit — it is never cut half-way. Downloads are recorded in the audit trail, with the path and never the contents."
+    },
+    "tree": {
+      "label": "Files",
+      "loading": "Loading…",
+      "loadingFolder": "Loading the folder…",
+      "levelFailed": "Could not read this folder: {{reason}} Press Enter to try again.",
+      "truncated": "This folder has more entries than the tree lists. Filter by name to find the others.",
+      "outsideLink": "A link that leads outside the open folder. It is never opened from here.",
+      "unreadableName": "This name is not valid text, so nothing can be done to it from here."
+    },
+    "toolbar": {
+      "label": "Explorer actions",
+      "options": "More options",
+      "sort": "Sort by"
+    },
+    "filter": {
+      "label": "Filter by name",
+      "placeholder": "Filter by name",
+      "noMatch": "Nothing in the folders read so far is called \"{{filter}}\". Open more folders, or clear the filter."
+    },
+    "empty": {
+      "title": "This folder is empty",
+      "description": "Create the first file or folder here, or start one from a template."
+    },
+    "error": {
+      "backToStart": "Back to the start page"
+    },
+    "action": {
+      "newFile": "New file",
+      "newFolder": "New folder",
+      "newFromTemplate": "New file from template…",
+      "newFromFile": "New file from this file",
+      "open": "Open",
+      "openToSide": "Open to the side",
+      "compareSelected": "Compare selected",
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "duplicate": "Duplicate",
+      "moveTo": "Move to…",
+      "rename": "Rename",
+      "delete": "Delete",
+      "undo": "Undo the last file operation",
+      "copyPath": "Copy path",
+      "copyRelativePath": "Copy relative path",
+      "addToContext": "Add to Claude's context",
+      "refresh": "Reload the tree",
+      "collapseAll": "Collapse all folders",
+      "showHidden": "Show hidden entries",
+      "hideHidden": "Hide hidden entries",
+      "filter": "Filter the tree by name",
+      "compact": "Show single folders together",
+      "expandCompact": "Show single folders apart",
+      "sortByName": "Sort by name",
+      "sortByType": "Sort by type",
+      "sortByModified": "Sort by last modified",
+      "help": "Help for the Explorer",
+      "reveal": "Reveal in the Explorer",
+      "focus": "Show the Explorer",
+      "openPreview": "Open preview",
+      "uploadFiles": "Upload files here…",
+      "uploadFolder": "Upload folder here…",
+      "download": "Download"
+    },
+    "menu": {
+      "label": "File actions"
+    },
+    "name": {
+      "newFile": "Name of the new file",
+      "newFolder": "Name of the new folder",
+      "rename": "New name for {{name}}",
+      "empty": "Type a name.",
+      "reserved": "\".\" and \"..\" are not names.",
+      "separator": "A name cannot hold / or \\.",
+      "control": "A name cannot hold invisible control characters.",
+      "tooLong": "That name is too long for this disk.",
+      "exists": "There is already an entry with this name here."
+    },
+    "delete": {
+      "titleOne": "Delete {{path}} for good?",
+      "titleMany": "Delete these {{count}} entries for good?",
+      "countTitle": "These hold more than themselves",
+      "forGood": "The local history cannot keep this, so this delete has no undo: what goes, goes for good.",
+      "listLabel": "What will be deleted",
+      "countLabel": "What goes with it",
+      "holds": "{{path}} holds {{count}} entries, and all of them go too.",
+      "holdsAtLeast": "{{path}} holds at least {{count}} entries, and all of them go too.",
+      "sensitive": "{{path}} changes what Claude may do without asking you.",
+      "keep": "Keep them",
+      "confirm": "Delete for good",
+      "pending": "Deleting…",
+      "undo": "Undo",
+      "whyTooLarge": "{{path}} is larger than the local history keeps.",
+      "whyTooMany": "{{path}} holds more entries than the local history keeps at once.",
+      "whyUnavailable": "{{path}} could not be kept: the local history is not available right now."
+    },
+    "move": {
+      "title": "Move {{count}} entries to…",
+      "description": "Pick the folder they go into. Nothing that is already there is overwritten.",
+      "destination": "Destination folder",
+      "openFolder": "The open folder itself",
+      "cancel": "Cancel",
+      "confirm": "Move"
+    },
+    "template": {
+      "title": "New file from template",
+      "description": "Pick what the new file starts with. You name it next, with the extension already there.",
+      "listLabel": "Templates",
+      "cancel": "Cancel",
+      "markdown": "Markdown document",
+      "json": "JSON file",
+      "typescript": "TypeScript module",
+      "test": "Test file",
+      "gitignore": "Git ignore list",
+      "editorconfig": "Editor settings (.editorconfig)",
+      "claude": "Instructions for Claude (CLAUDE.md)"
+    },
+    "sensitive": {
+      "title": "This changes what Claude may do",
+      "description": "These files decide what Claude can do on this machine without asking you. Change them only if you mean to.",
+      "listLabel": "Files that change what Claude may do",
+      "cancel": "Leave them as they are",
+      "confirm": "Change them"
+    },
+    "outcome": {
+      "description": "What went, and what did not and why.",
+      "listLabel": "Each entry",
+      "done": "Done.",
+      "close": "Close",
+      "failed": "The operation did not go through",
+      "deleteFailed": "Some entries were not deleted",
+      "pasteFailed": "Some entries were not pasted",
+      "duplicateFailed": "Some entries were not duplicated",
+      "moveFailed": "Some entries were not moved",
+      "undoFailed": "The undo did not go through",
+      "undoDeleteFailed": "Some entries were not brought back",
+      "uploadFailed": "Some files were not uploaded",
+      "downloadFailed": "The download did not happen",
+      "uploadNotKept": "Uploaded — some replaced versions were not kept",
+      "notKeptTooLarge": "Replaced. The version it replaced is larger than the local history keeps, so it was not kept there.",
+      "notKeptUnavailable": "Replaced. The local history was unavailable, so the version it replaced was not kept there."
+    },
+    "undo": {
+      "changed": "{{path}} changed after the operation — Claude may have written to it — so undoing it would lose that. Nothing was undone.",
+      "notEmpty": "{{path}} has something in it now, so undoing would delete more than was made. Nothing was undone.",
+      "gone": "{{path}} is not there any more, so there is nothing to undo.",
+      "taken": "Something else now has the name {{path}} had. Nothing was overwritten."
+    },
+    "invalid": {
+      "intoItself": "{{path}} cannot go inside itself.",
+      "openFolder": "The open folder itself cannot be changed from inside it.",
+      "crossDevice": "{{path}} is on another disk; moving it there is not done here.",
+      "symlinkLoop": "{{path}} is a link that leads back to itself."
+    },
+    "done": {
+      "created": "{{name}} created.",
+      "renamed": "Renamed to {{name}}.",
+      "moved": "Entries moved: {{count}}.",
+      "copied": "Entries copied: {{count}}.",
+      "deleted": "Entries deleted: {{count}}.",
+      "undone": "Undone.",
+      "copiedAside": "Entries copied, ready to paste: {{count}}.",
+      "cutAside": "Entries cut, ready to paste: {{count}}.",
+      "pathCopied": "Path copied.",
+      "copyFailed": "The browser did not let the path be copied. Select it and copy it by hand.",
+      "restored": "Entries brought back: {{count}}.",
+      "uploaded": "Files uploaded: {{count}}.",
+      "uploadCancelled": "Upload cancelled. Files that had arrived whole stay; none is left half-written.",
+      "uploadSkipped": "Every file was skipped. Nothing was uploaded.",
+      "downloaded": "{{name}} downloaded."
+    },
+    "context": {
+      "added": "Entries added to Claude's context: {{count}}.",
+      "excluded": "Entries left out because nothing can be done to them: {{count}}."
+    },
+    "watch": {
+      "notFollowed": "The tree does not update by itself until it is read again.",
+      "reload": "Reload the tree",
+      "limitReached": "This window already follows as many folders as it can. Close a folder tab first.",
+      "systemLimit": "This machine stopped following this folder: it ran out of watchers.",
+      "refused": "This folder cannot be followed right now.",
+      "folderDeleted": "The open folder was deleted from the disk.",
+      "allowlistChanged": "This installation no longer allows the open folder."
+    },
+    "status": {
+      "short": "Not following",
+      "notFollowed": "The Explorer is not following the changes of this folder. Show the Explorer."
+    },
+    "transfer": {
+      "fileTooLarge": "{{path}} has {{size}}, and a file uploaded can have at most {{limit}}. Nothing was sent.",
+      "tooManyFiles": "That is {{size}} files, and one upload takes at most {{limit}}. Nothing was sent.",
+      "uploadTooLarge": "That is {{size}} in all, and one upload takes at most {{limit}}. Nothing was sent.",
+      "downloadTooLarge": "{{path}} is past the download limit of {{limit}}, so it was not downloaded. Download a smaller part of it.",
+      "archiveTooManyEntries": "{{path}} has more than {{limit}} entries, the most a zip can hold, so it was not downloaded. Download a smaller part of it."
+    },
+    "upload": {
+      "conflictsTitle": "Files already there: {{count}}",
+      "conflictsDescription": "Of the {{count}} files you are uploading, these already exist where they would go. Choose for each one before anything is sent.",
+      "conflictsLabel": "Files already there",
+      "replace": "Replace",
+      "keepBoth": "Keep both",
+      "skip": "Skip",
+      "cancel": "Cancel the upload",
+      "send": "Upload",
+      "progressLabel": "Upload in progress",
+      "sending": "Uploading {{count}} files…",
+      "cancelSending": "Cancel the upload",
+      "fileProgress": "{{path}}: {{percent}}%"
+    }
+  },
+  "editor": {
+    "screen": {
+      "title": "Editor",
+      "purpose": "The files of this folder, open in tabs, beside the chat with Claude."
+    },
+    "help": {
+      "open": "Help for the editor",
+      "what": "The editor shows the files of this folder in tabs. A single click in the Explorer opens a file as a preview — its tab in italics, replaced by the next preview until you edit it or double-click it. A tab with unsaved changes shows a dot where its close button was. Open a file to the side to see two (or three) groups at once; the same file in two groups is one buffer, edited in both. Ctrl+S saves the active file, Ctrl+K S saves every one, and Ctrl+Shift+T reopens the last tab closed. Find and replace (Ctrl+F, Ctrl+H) and go to line (Ctrl+G) are the editor's own.",
+      "states": "A save names the version of the file you opened. If the disk changed since — Claude, probably, wrote to it — the save is refused and you choose: compare the two, overwrite on purpose, or reload and drop your changes; nothing is overwritten on its own. When a file changes on disk under a clean tab, the tab reloads and keeps your place; under a tab with unsaved changes, a warning says who changed it and offers the same three choices. A file deleted on disk is marked, and saving it offers to recreate it. Large files open in light mode — no minimap, no folding, no highlighting — binary files open in a hexadecimal view and files above the editing limit in a paged reading, both read-only; a file this machine does not let the server read opens a page that says why instead of the editor.",
+      "notRecorded": "Unsaved changes live only in this page: they are never kept in the browser, so reloading or closing the page asks first. Your saves are recorded in the audit trail, without their content; opening and reading a file is not recorded. Previews, the hexadecimal view and the paged reading only read the file: they are not recorded either.",
+      "previewsHeading": "Previews, binary files and large files",
+      "previews": "Open preview (Ctrl+Shift+V), or open it to the side (Ctrl+K V), to see a file rendered: markdown, images, SVG and PDF; the eye button of the tab switches between the file and its preview. The preview of a markdown file follows what you type, before you save. Images and PDFs open as their preview; a PDF is drawn page by page by the viewer of this app, never the browser's own. A link to a file of this folder opens it in the editor; images on the internet are not loaded — they become links.",
+      "previewsHtml": "HTML is never run in a preview — not in markdown, not an .html file, not a script inside an SVG. A page shown here would run with your session, inside this app; so markdown keeps its text and drops its tags, an .html file is shown as its source, and an SVG is drawn as a picture, which runs nothing.",
+      "paged": "A binary file opens in a hexadecimal view, and a text above the editing limit opens as pages of text; both are read-only and read a page at a time. If the file changes on disk while you read it, the view says so and starts over on the new version — it never mixes pages of two versions."
+    },
+    "load": {
+      "failed": "The editor could not be loaded. Check the connection and try again — the rest of the tab keeps working."
+    },
+    "view": {
+      "label": "Editor of {{name}}"
+    },
+    "group": {
+      "label": "Group {{place}}",
+      "empty": "No file is open in this group.",
+      "selector": "Editor groups"
+    },
+    "strip": {
+      "label": "Open files of group {{place}}",
+      "list": "All open files of this group ({{count}})",
+      "openToSide": "Open to the side",
+      "togglePreview": "Preview"
+    },
+    "tab": {
+      "close": "Close {{name}}",
+      "closeDirty": "Close {{name}} — it has unsaved changes",
+      "preview": "Preview",
+      "pinned": "Pinned",
+      "dirty": "Unsaved changes",
+      "deleted": "Deleted on disk",
+      "light": "Light mode: a large file",
+      "diffName": "{{left}} ↔ {{right}}",
+      "previewName": "Preview {{name}}"
+    },
+    "tabMenu": {
+      "close": "Close",
+      "closeOthers": "Close the others",
+      "closeRight": "Close to the right",
+      "closeSaved": "Close the saved ones",
+      "closeAll": "Close all",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "moveLeft": "Move left",
+      "moveRight": "Move right",
+      "openToSide": "Open to the side",
+      "compareWithSaved": "Compare with the saved file",
+      "reveal": "Reveal in the Explorer",
+      "addToClaude": "Add to Claude's context"
+    },
+    "breadcrumb": {
+      "label": "Where the file of group {{place}} is",
+      "step": "{{name}} — show what is beside it",
+      "up": "Up one folder",
+      "loading": "Reading the folder…"
+    },
+    "empty": {
+      "title": "No file open",
+      "description": "Open a file from the Explorer, make a new one, or go back to one you opened here before.",
+      "openFromTree": "Open from the Explorer",
+      "newFile": "New file…",
+      "recent": "Opened recently"
+    },
+    "newFile": {
+      "title": "New file",
+      "description": "An empty file at this path of the folder, opened in the editor. Nothing that is there is overwritten.",
+      "path": "Path inside the folder",
+      "create": "Create",
+      "cancel": "Cancel"
+    },
+    "placeholder": {
+      "encodingTitle": "{{path}} is not UTF-8",
+      "encoding": "The text was not decoded, so nothing is shown that could be saved back wrong. Reopen it with the encoding it was written in.",
+      "reopenWithEncoding": "Reopen with encoding…",
+      "deniedTitle": "{{path}} cannot be opened",
+      "unopenedTitle": "{{path}} did not open"
+    },
+    "light": {
+      "notice": "Large file: opened in light mode, without the minimap, folding or highlighting."
+    },
+    "deleted": {
+      "notice": "{{path}} was deleted on disk. Your text is still here; saving offers to create the file again."
+    },
+    "external": {
+      "claude": "Claude changed {{path}} on disk, and you have unsaved changes here.",
+      "other": "{{path}} was changed outside the editor, and you have unsaved changes here.",
+      "compare": "Compare",
+      "reload": "Reload from disk",
+      "keep": "Keep mine"
+    },
+    "conflict": {
+      "title": "{{name}} changed on disk",
+      "description": "It changed since you opened it — probably Claude wrote to it. Saving now would overwrite that work, so nothing was saved.",
+      "compare": "Compare",
+      "reload": "Reload and drop my changes",
+      "overwrite": "Overwrite the file on disk",
+      "resolve": "Decide…"
+    },
+    "saveError": {
+      "dismiss": "Dismiss"
+    },
+    "sensitive": {
+      "title": "Save {{path}}?",
+      "claudeSettings": "This file holds the project's settings for Claude: the commands it may run without asking, and the hooks that run in its sessions.",
+      "claudeLocalSettings": "This file holds your own settings for Claude in this project: the commands it may run without asking, and the hooks that run in its sessions.",
+      "mcpServers": "This file lists the MCP servers Claude starts in this project — programs that run on this machine.",
+      "warning": "Saving it changes what Claude can do without asking you.",
+      "confirm": "Save anyway",
+      "cancel": "Don't save"
+    },
+    "recreate": {
+      "title": "{{name}} was deleted on disk",
+      "description": "Create {{path}} again with the text in the editor?",
+      "confirm": "Create it again",
+      "cancel": "Leave it deleted"
+    },
+    "close": {
+      "titleOne": "Save the changes to {{name}}?",
+      "titleMany": "Save the changes to {{count}} files?",
+      "description": "Closing without saving drops the changes. They are not kept anywhere else.",
+      "listLabel": "Files with unsaved changes",
+      "save": "Save",
+      "discard": "Don't save",
+      "cancel": "Cancel"
+    },
+    "saveAs": {
+      "title": "Save as",
+      "description": "Write the text of the editor at another path of this folder. The file you opened stays as it is on disk.",
+      "path": "Path inside the folder",
+      "save": "Save",
+      "saveSensitive": "Save anyway",
+      "replace": "Replace it",
+      "cancel": "Cancel",
+      "taken": "{{path}} already exists. Replacing it overwrites the version that is there now."
+    },
+    "saveAll": {
+      "title": "Save all",
+      "summary": "Saved {{saved}} of {{total}} files",
+      "saved": "Saved",
+      "needsAnswer": "Waiting for your answer",
+      "dismiss": "Dismiss the report"
+    },
+    "encoding": {
+      "dirty": "Save or revert {{path}} before reopening it with another encoding."
+    },
+    "claude": {
+      "addSelection": "Add selection to chat",
+      "added": "{{path}} was added to Claude's context.",
+      "unavailable": "Nothing takes files into Claude's context right now."
+    },
+    "diff": {
+      "disk": "{{name}} on disk",
+      "buffer": "{{name}} in the editor",
+      "versus": "↔",
+      "readOnly": "Read only",
+      "label": "Differences between {{left}} and {{right}}",
+      "history": "{{name}} as of {{when}}"
+    },
+    "status": {
+      "label": "The active file",
+      "position": "Ln {{line}}, Col {{column}}",
+      "selection": "({{count}} selected)",
+      "goToLine": "{{position}} — go to line",
+      "spaces": "Spaces: {{size}}",
+      "tabs": "Tab size: {{size}}",
+      "indentation": "Indentation: {{value}} — convert",
+      "encoding": "Encoding: {{value}} — reopen or save with another",
+      "eol": "Line endings: {{value}} — convert",
+      "language": "Language: {{value}} — change the highlighting"
+    },
+    "choice": {
+      "placeholder": "Pick one…",
+      "none": "Nothing matches.",
+      "eol": "Line endings",
+      "language": "Language of the highlighting",
+      "indentation": "Indentation",
+      "reopenEncoding": "Reopen with encoding",
+      "saveEncoding": "Save with encoding"
+    },
+    "indentation": {
+      "toSpaces": "Convert indentation to spaces",
+      "toTabs": "Convert indentation to tabs"
+    },
+    "language": {
+      "plaintext": "Plain text"
+    },
+    "recent": {
+      "empty": "No file was opened in this folder yet.",
+      "placeholder": "Find a file opened recently…"
+    },
+    "openEditors": {
+      "label": "Open editors"
+    },
+    "settings": {
+      "font": "Font",
+      "fontDescription": "The typeface of the editor.",
+      "fontCode": "The app's code font",
+      "fontBrowser": "The browser's monospace",
+      "fontSize": "Font size",
+      "fontSizeDescription": "The size of the text in the editor.",
+      "zoom": "Zoom",
+      "zoomDescription": "Makes the text of the editor larger or smaller, over the font size.",
+      "tabSize": "Tab size",
+      "tabSizeDescription": "How wide a tab is, for files that do not say it themselves.",
+      "insertSpaces": "Indent with spaces",
+      "insertSpacesDescription": "The Tab key inserts spaces instead of a tab, for files that do not say it themselves.",
+      "wordWrap": "Word wrap",
+      "wordWrapDescription": "Long lines wrap at the edge of the editor instead of scrolling sideways.",
+      "minimap": "Minimap",
+      "minimapDescription": "A small view of the whole file beside the editor. Large files never show it.",
+      "autoSave": "Auto-save",
+      "autoSaveDescription": "Saves on its own. It never overwrites a file that changed on disk, and never saves a file that changes what Claude can do.",
+      "autoSaveOff": "Off",
+      "autoSaveAfterDelay": "A second after typing",
+      "autoSaveOnFocusChange": "When the editor loses the focus",
+      "trimTrailingWhitespace": "Trim trailing whitespace on save",
+      "trimTrailingWhitespaceDescription": "Removes the spaces and tabs at the end of each line when the file is saved.",
+      "insertFinalNewline": "Insert a final newline on save",
+      "insertFinalNewlineDescription": "Ends the file with a line break when it is saved without one.",
+      "on": "On",
+      "off": "Off",
+      "pixels": "{{value}} px",
+      "percent": "{{value}}%",
+      "columns": "{{value}} columns"
+    },
+    "history": {
+      "tooLarge": "Saved. The version this save replaced was not kept in the local history: it is larger than the history keeps.",
+      "unavailable": "Saved. The version this save replaced was not kept in the local history, which is not available right now.",
+      "dismiss": "Got it"
+    },
+    "paged": {
+      "hexTitle": "{{path}} is a binary file — shown in hexadecimal, read-only",
+      "hex": "The editor opens text. This view reads the file a page at a time, as you reach it, and nothing in it can be changed.",
+      "textTitle": "{{path}} is too large to edit — shown read-only, page by page",
+      "text": "It has {{size}}, and the editor opens at most {{limit}}. Each page is read from the disk as you reach it; nothing here can be changed.",
+      "controls": "Pages of {{path}}",
+      "first": "First page",
+      "previous": "Previous page",
+      "next": "Next page",
+      "last": "Last page",
+      "page": "Page {{page}} of {{pages}}",
+      "tableLabel": "Bytes {{from}} to {{to}} of {{path}}",
+      "offset": "Offset",
+      "bytes": "Bytes ({{bytes}} per row)",
+      "ascii": "Text",
+      "textLabel": "Page {{page}} of {{path}}",
+      "empty": "{{path}} is empty: it has no bytes to show.",
+      "changed": "{{path}} changed on disk while you read it. The pages read before were dropped, and this one is the new version.",
+      "dismiss": "Dismiss"
+    },
+    "preview": {
+      "label": "Preview of {{name}}",
+      "none": "{{name}} has no preview. Open it in the editor.",
+      "broken": "{{name}} could not be shown: it is not an image this browser can draw, or it is damaged.",
+      "htmlSource": "HTML is shown as its source. A preview never runs a page: its scripts would run inside this app, with your session.",
+      "sourceLabel": "Source of {{name}}",
+      "pdfLoadFailed": "The PDF viewer did not load. Check the connection and try again.",
+      "pdfBroken": "{{name}} could not be read as a PDF — it may be damaged.",
+      "pdfPages": "Pages of {{name}}",
+      "pdfPrevious": "Previous page",
+      "pdfNext": "Next page",
+      "pdfPage": "Page {{page}} of {{pages}}",
+      "pdfPageFailed": "Page {{page}} could not be drawn.",
+      "pdfCanvas": "Page {{page}} of {{name}}",
+      "tooLarge": "{{path}} is past the download limit of {{limit}}, so it is not previewed. Open it in the hexadecimal view, which reads it a page at a time."
+    }
+  },
+  "fileHistory": {
+    "screen": {
+      "title": "Timeline",
+      "purpose": "The versions of the active file this machine kept before you overwrote or deleted them — compare them, and bring one back."
+    },
+    "help": {
+      "what": "The Timeline is this machine's local history of the files you change from here. Before a save, a delete, a restore or an upload would lose a version of a file, that version is kept — on this machine, outside the folder. Compare a version with the file as it is now, or pick one and compare it with another; restore one to put it back. \"Recently deleted\" lists what was deleted from this folder and no longer exists, and brings it back where it was. Deleting what the history can keep does not ask first: a notification says what went, with Undo.",
+      "states": "Each version says why it was kept, who wrote it — you, or another person who can reach this folder — and when, newest first; filter by reason to see only some. A file larger than the history keeps is listed without its content: it says so, and cannot be compared or restored. A file with no version yet has no history: it starts with the first save, delete or upload that would lose something. Restoring asks first only when the file has unsaved changes, which it discards; the version it replaces is kept first. If the file changed since you opened it — Claude may have written to it — the restore is refused and says so.",
+      "notRecorded": "This is not git, and it is not Claude's undo. Nothing here is a commit or a branch, and what Claude writes is not kept here: Claude's changes are undone from its session. The history follows a path, not a renamed file. A version's content never goes to the audit trail; only that a file was restored does.",
+      "size": "{{megabytes}} MB",
+      "sizeUnknown": "the size this installation sets",
+      "limitsHeading": "What it keeps, and for how long",
+      "limits": "A version is kept only for a file up to {{size}}. The history keeps a limited number of versions, for a limited time and in a limited space, as this installation sets them — by default 50 versions of each file, 512 MB in all, for 30 days — and the oldest go first."
+    },
+    "timeline": {
+      "title": "Timeline",
+      "noFile": "Open a file in the editor to see the versions kept of it.",
+      "of": "Versions of {{path}}",
+      "ofGone": "Versions of {{path}}, which no longer exists",
+      "loading": "Loading the versions…",
+      "listLabel": "Versions of {{path}}",
+      "more": "Show older",
+      "loadingMore": "Loading…",
+      "modes": "What the Timeline lists",
+      "thisFile": "This file",
+      "recentlyDeleted": "Recently deleted"
+    },
+    "empty": {
+      "title": "No version kept yet",
+      "filtered": "No version kept for this reason",
+      "description": "A version is kept the moment you would lose it here: before a save, a delete, a restore or an upload over the file — the history of this file starts with the first of those. Claude's writes are not kept here: they are undone from its session."
+    },
+    "filter": {
+      "label": "Show the versions kept before",
+      "all": "All",
+      "save": "Saves",
+      "delete": "Deletes",
+      "restore": "Restores",
+      "upload": "Uploads"
+    },
+    "reason": {
+      "save": "Before a save",
+      "delete": "Before a delete",
+      "restore": "Before a restore",
+      "upload": "Before an upload"
+    },
+    "version": {
+      "byAt": "{{who}} · {{when}}",
+      "tooLarge": "Too large to keep: the history records that it happened, not its content."
+    },
+    "author": {
+      "self": "You",
+      "other": "Another person ({{id}})"
+    },
+    "action": {
+      "help": "Help for the Timeline",
+      "compareWithCurrent": "Compare the version of {{when}} with the file now",
+      "selectForCompare": "Pick the version of {{when}} to compare with another",
+      "compareWithSelected": "Compare the version of {{when}} with the one picked",
+      "restore": "Restore the version of {{when}}",
+      "showVersions": "Show the versions of {{path}}",
+      "restoreDeleted": "Restore {{path}}"
+    },
+    "deleted": {
+      "loading": "Loading what was deleted…",
+      "listLabel": "Deleted recently",
+      "emptyTitle": "Nothing deleted recently",
+      "emptyDescription": "What is deleted from this folder while the local history can keep it appears here, until it is purged — and can be brought back where it was.",
+      "byAt": "Deleted by {{who}} · {{when}}"
+    },
+    "restore": {
+      "title": "Restore {{path}} to the version of {{when}}?",
+      "discards": "{{path}} has unsaved changes in the editor, and restoring discards them. The version on disk is kept in the history first.",
+      "replaces": "The version of {{path}} there now is kept in the history first, so you can restore it back.",
+      "sensitive": "{{path}} changes what Claude may do without asking you.",
+      "cancel": "Keep it as it is",
+      "confirm": "Restore",
+      "done": "{{path}} restored to the version of {{when}}.",
+      "changed": "{{path}} changed since you opened it — Claude may have written to it — so nothing was restored. Look at the file now, and try again.",
+      "taken": "Something now has the path {{path}}, so nothing was restored over it.",
+      "dismiss": "Dismiss"
+    },
+    "command": {
+      "showTimeline": "Show the Timeline of the active file",
+      "showRecentlyDeleted": "Show the files deleted recently",
+      "help": "Help for the Timeline"
+    }
+  },
+  "markdown": {
+    "image": {
+      "remote": "Remote image, not loaded: {{name}}"
+    }
+  },
+  "sessions": {
+    "screen": {
+      "title": "Claude sessions",
+      "purpose": "What Claude is doing in this folder: the sessions running here, the conversations something else is writing now, and the history of the folder."
+    },
+    "filtered": {
+      "title": "Nothing matches the filter",
+      "description": "No session or conversation of this folder matches what you searched for or the origin you chose.",
+      "clear": "Clear the filter"
+    },
+    "action": {
+      "open": "Open in the panel",
+      "read": "Read in the panel",
+      "continue": "Continue here",
+      "fork": "Continue here, as a copy",
+      "copyId": "Copy the conversation id",
+      "end": "End the session"
+    },
+    "fork": {
+      "title": "Continue a conversation that is being written now?",
+      "description": "Something else — the editor or a terminal — wrote this conversation a moment ago. Continuing it here makes a copy under a new id; the other one keeps going on its own, and the two will diverge.",
+      "cancel": "Cancel",
+      "confirm": "Continue as a copy"
+    },
+    "limit": {
+      "note": "The ceiling of sessions is this installation's, not yours: every person's sessions count. Wait {{seconds}} s and try again, or end one of your sessions — the ones of this folder are under \"Running here\"; the others are in the tabs of their folders."
+    },
+    "help": {
+      "what": "This view lists what Claude does in the folder of the tab. \"Running here\" are your sessions open now, in this folder or below it. \"Active elsewhere\" are conversations of this folder that something other than this app wrote a moment ago. \"History\" is everything else said in this folder.",
+      "states": "Each group loads, fails and empties on its own: when the history cannot be read, what runs here is still listed. The lists refresh every few seconds while the view is on screen, and at once when a session of yours begins or ends.",
+      "notRecorded": "Reading a conversation changes nothing, and nothing is deleted from here: the history is Claude's own, shared with the editor.",
+      "groupsHeading": "The three groups",
+      "groups": "Pressing a running session shows it in the panel beside the editor. Pressing a conversation opens it in the panel to read, with the button that continues it.",
+      "originHeading": "Opened here, or begun elsewhere",
+      "origin": "\"Opened here\" means this app opened it for you — it says so because it keeps a record of every conversation it opens. Everything else began in the editor or a terminal of this machine; nothing tells which one.",
+      "forkHeading": "Why continuing one begun elsewhere makes a new id",
+      "fork": "A conversation begun elsewhere is continued as a copy, under a new id, so this app never writes into a file the editor may be writing. The editor will not see the answers given here.",
+      "elsewhereHeading": "\"Active elsewhere\" is an estimate",
+      "elsewhere": "Nothing tells this app that an editor has a conversation open. What it knows is when the conversation was last written: written within the last two minutes, it is listed as active. A long tool can leave it unwritten for minutes while it is still running.",
+      "limitHeading": "The ceiling of sessions",
+      "limit": "Each session is a process of Claude on this machine, and the machine holds only so many. The ceiling is the installation's: when it is reached, end a session of yours or wait for one to finish."
+    },
+    "originOption": {
+      "all": "All",
+      "ours": "Opened here",
+      "external": "Begun elsewhere"
+    },
+    "sortOption": {
+      "recent": "Most recent",
+      "name": "Name"
+    },
+    "view": {
+      "search": "Search the sessions of this folder",
+      "searchPlaceholder": "Search by title",
+      "refresh": "Refresh the lists",
+      "subfoldersOn": "Showing the conversations of the folders below too — show only this folder's",
+      "subfoldersOff": "Showing only this folder's conversations — include the folders below",
+      "help": "Help about Claude sessions",
+      "origin": "Origin",
+      "sort": "Order"
+    },
+    "openedFrom": {
+      "web": "Opened in a browser",
+      "mobile": "Opened on a phone"
+    },
+    "rowOrigin": {
+      "ours": "Opened here",
+      "external": "Begun elsewhere — the editor or a terminal"
+    },
+    "row": {
+      "actions": "More actions",
+      "untitledSession": "Untitled session",
+      "openSession": "Open the session {{title}}",
+      "openConversation": "Read the conversation {{title}}",
+      "pending": "{{count}} waiting for you",
+      "writtenAgo": "Written {{when}}",
+      "lastWritten": "Last written {{when}}",
+      "liveDetails": "{{status}} · {{model}} · {{since}}",
+      "originOnBranch": "{{origin}} · {{branch}}"
+    },
+    "code": {
+      "copy": "Copy the code",
+      "insert": "Insert at the cursor of the editor",
+      "insertNoEditor": "Open a file in the editor of this tab to insert the code there",
+      "insertNotLoaded": "The file of the editor is still loading",
+      "copied": "Code copied",
+      "copyFailed": "The browser did not let the code be copied: select it and copy it by hand"
+    },
+    "thinking": {
+      "live": "Thinking…",
+      "hidden": "Thought — the model did not show it",
+      "done": "Thought",
+      "took": "Thought for {{seconds}} s",
+      "nothingShown": "The model thought here and did not show what it thought."
+    },
+    "output": {
+      "showAll": "Show all the output ({{count}} characters) — only the end is shown"
+    },
+    "toolRow": {
+      "label": "{{tool}} — {{status}}. Show the exact input",
+      "input": "The exact input",
+      "denied": "Refused: {{reason}}",
+      "trail": "See it in the audit trail"
+    },
+    "tool": {
+      "read": "Read {{path}}",
+      "edit": "Edit {{path}} (+{{added}} −{{removed}})",
+      "multiEdit": "Edit {{path}} (several changes)",
+      "write": "Write {{path}} ({{lines}} lines)",
+      "notebookEdit": "Edit the notebook {{path}}",
+      "bash": "Bash: {{command}}",
+      "grep": "Search for “{{pattern}}”",
+      "grepIn": "Search for “{{pattern}}” in {{path}}",
+      "glob": "Find files {{pattern}}",
+      "webFetch": "Fetch {{host}}",
+      "webSearch": "Search the web for “{{query}}”",
+      "agent": "Subagent ({{type}}): {{description}}",
+      "exitPlan": "Present the plan",
+      "other": "{{name}}",
+      "mcp": "{{server}} · {{tool}}",
+      "todoWrite": "Updated the task list ({{count}} tasks)",
+      "taskCreate": "Added a task: {{subject}}",
+      "taskUpdate": "Changed task #{{id}}",
+      "taskGet": "Read task #{{id}}",
+      "taskList": "Read the task list"
+    },
+    "subagent": {
+      "loading": "Loading what the subagent said…",
+      "nothing": "The history keeps nothing the subagent said.",
+      "label": "What the subagent said"
+    },
+    "turn": {
+      "summary": "Turn: {{cost}} · {{seconds}} s · {{input}} in, {{output}} out, {{cache}} cache",
+      "noUsage": "Turn ended: {{cost}} · {{seconds}} s · no token count, it was interrupted"
+    },
+    "compacted": {
+      "label": "The conversation was compacted",
+      "manual": "Compacted on request: what came before is a summary now",
+      "auto": "Compacted on its own, the context was full: what came before is a summary now",
+      "manualTokens": "Compacted on request: {{tokens}} tokens before are a summary now",
+      "autoTokens": "Compacted on its own, the context was full: {{tokens}} tokens before are a summary now"
+    },
+    "message": {
+      "copy": "Copy the message",
+      "copied": "Message copied"
+    },
+    "search": {
+      "label": "Search the conversation",
+      "none": "Nothing found in what is loaded",
+      "position": "{{at}} of {{count}}",
+      "previous": "Previous match",
+      "next": "Next match",
+      "everything": "Search the whole conversation",
+      "close": "Close the search"
+    },
+    "status": {
+      "thinking": "Claude is thinking…",
+      "running": "Claude is running a tool…",
+      "waitingPermission": "Claude is waiting for you — answer the question",
+      "cost": "This session has cost {{cost}} since it opened, over {{turns}} turn(s)"
+    },
+    "tasks": {
+      "title": "Tasks",
+      "label": "The task list Claude keeps for this conversation",
+      "count": "{{done}} of {{total}} done",
+      "was": "was {{state}}",
+      "state": "{{state}}: "
+    },
+    "taskStatus": {
+      "pending": "Pending",
+      "inProgress": "In progress",
+      "completed": "Completed"
+    }
+  },
+  "sessionsGroup": {
+    "running": {
+      "title": "Running here",
+      "loading": "Loading the sessions running in this folder…",
+      "emptyTitle": "Nothing is running in this folder",
+      "emptyDescription": "Start a conversation in the panel beside the editor, or continue one from the history below."
+    },
+    "elsewhere": {
+      "title": "Active elsewhere",
+      "loading": "Loading the conversations of this folder…",
+      "emptyTitle": "Nothing seems to be writing a conversation of this folder now",
+      "emptyDescription": "A conversation begun in the editor or a terminal shows up here while it is being written."
+    },
+    "history": {
+      "title": "History",
+      "loading": "Loading the history of this folder…",
+      "emptyTitle": "No conversation in this folder yet",
+      "emptyDescription": "Start one in the panel beside the editor: it shows up here, and so do the ones begun in the editor or a terminal.",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…"
     }
   }
 }

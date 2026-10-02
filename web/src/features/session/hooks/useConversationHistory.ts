@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { AppError } from '@/shared/api/errors';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
@@ -29,6 +29,9 @@ export interface ConversationHistory {
   readonly earlierError: AppError | null;
 
   loadEarlier(): void;
+
+  /** Reads every earlier page, one after the other — what a search of the whole conversation needs. */
+  loadEverything(): void;
   reload(): void;
 }
 
@@ -52,6 +55,15 @@ export function useConversationHistory(conversationId: string): ConversationHist
   });
 
   const { pages } = history;
+  const [everything, setEverything] = useState(false);
+  const { hasMore, isLoadingMore, moreError, loadMore } = history;
+
+  // One page after the other while everything was asked for; a failure stops it, and says so.
+  useEffect(() => {
+    if (everything && hasMore && !isLoadingMore && moreError === null) {
+      loadMore();
+    }
+  }, [everything, hasMore, isLoadingMore, loadMore, moreError]);
 
   const conversation = useMemo(
     () =>
@@ -70,6 +82,9 @@ export function useConversationHistory(conversationId: string): ConversationHist
     isLoadingEarlier: history.isLoadingMore,
     earlierError: history.moreError,
     loadEarlier: history.loadMore,
+    loadEverything: () => {
+      setEverything(true);
+    },
     reload: history.reload,
   };
 }

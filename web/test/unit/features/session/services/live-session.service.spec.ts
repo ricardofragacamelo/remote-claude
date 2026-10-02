@@ -5,6 +5,7 @@ import type { Envelope } from '@remote-claude/contracts';
 import {
   closeSession,
   conversationFrom,
+  readEvent,
   conversationOfStart,
   interruptSession,
   refusalOf,
@@ -314,13 +315,17 @@ describe('the history, through the live reducer — plan 04, B-03', () => {
   });
 
   it('keeps a message the history has whole over fragments of it still streaming live', () => {
-    const live = conversationFrom([]);
-    const streaming = {
-      ...live,
-      messages: [{ messageId: 'm1', role: 'assistant' as const, text: 'hal', isComplete: false }],
-    };
+    const streaming = readEvent(conversationFrom([]), {
+      v: 1,
+      id: 'e1',
+      kind: 'event',
+      type: 'message.delta',
+      ts: '2026-10-01T00:00:00.000Z',
+      seq: 1,
+      payload: { messageId: 'm1', delta: 'hal' },
+    });
 
-    expect(withHistory(streaming, [said('m1', 'whole')]).messages).toEqual([
+    expect(withHistory(streaming, [said('m1', 'whole')]).messages).toMatchObject([
       { messageId: 'm1', role: 'assistant', text: 'whole', isComplete: true },
     ]);
   });

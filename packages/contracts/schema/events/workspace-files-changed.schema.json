@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/workspace-files-changed.json",
+  "title": "WorkspaceFilesChanged",
+  "description": "What changed on disk in a folder being followed, coalesced. The frame's `seq` belongs to the subscription, not to any session: monotonic per `watchId`, from 1, and never replayed. A client that is not following this `watchId` — the mobile app never asks to — ignores it, and never lets its `seq` move the resume point of a session.",
+  "x-kind": "event",
+  "x-type": "workspace.filesChanged",
+  "type": "object",
+  "required": ["watchId", "changes"],
+  "properties": {
+    "watchId": { "type": "string" },
+    "changes": {
+      "type": "array",
+      "description": "Each path that changed, relative to the folder, with what happened to it.",
+      "items": {
+        "type": "object",
+        "required": ["path", "kind"],
+        "properties": {
+          "path": { "type": "string", "description": "Relative to the folder, POSIX." },
+          "kind": { "type": "string", "enum": ["created", "changed", "deleted"] },
+          "origin": {
+            "type": "string",
+            "enum": ["claude", "user", "external"],
+            "description": "Who changed it, as far as the server can tell: a write of Claude's, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say."
+          }
+        }
+      }
+    },
+    "overflow": {
+      "type": "boolean",
+      "description": "More changed than the event carries: the client reloads what it shows instead of patching it."
+    }
+  }
+}

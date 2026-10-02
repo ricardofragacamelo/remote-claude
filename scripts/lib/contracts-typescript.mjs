@@ -8,7 +8,12 @@
  * (docs/architecture/shared/05-websocket-protocol.md#versionamento-e-geração-de-tipos).
  */
 
-import { BANNER, docComment as comment } from './contracts-emit.mjs';
+import {
+  BANNER,
+  boundedFields,
+  conditionPhrase,
+  docComment as comment,
+} from './contracts-emit.mjs';
 /**
  * @param {import('./contracts-model.mjs').TypeRef} type
  * @returns {string}
@@ -75,6 +80,33 @@ const GUARD_HELPERS = [
     ],
   },
   {
+    name: 'withinMaxItems',
+    source: [
+      "/** Whether a list, when it is one, holds at most `max` items. Anything else is the shape check's to refuse. */",
+      'function withinMaxItems(value: unknown, max: number): boolean {',
+      '  return !Array.isArray(value) || value.length <= max;',
+      '}',
+    ],
+  },
+  {
+    name: 'withinMaxLength',
+    source: [
+      '/** Whether a string, when it is one, is at most `max` characters long. */',
+      'function withinMaxLength(value: unknown, max: number): boolean {',
+      "  return typeof value !== 'string' || value.length <= max;",
+      '}',
+    ],
+  },
+  {
+    name: 'atLeast',
+    source: [
+      '/** Whether a number, when it is one, is at least `min`. */',
+      'function atLeast(value: unknown, min: number): boolean {',
+      "  return typeof value !== 'number' || value >= min;",
+      '}',
+    ],
+  },
+  {
     name: 'requiredWhen',
     source: [
       '/** Whether a conditional requirement holds: when it `applies`, its field has to be `present`. */',
@@ -130,11 +162,79 @@ function conditionalCheck(declaration, conditional) {
     declaration.fields.find((candidate) => candidate.name === conditional.field)
   );
 
-  const decides = `record['${conditional.whenField}']`;
-  const expected =
-    typeof conditional.equals === 'string' ? `'${conditional.equals}'` : String(conditional.equals);
+  return `requiredWhen(${triggerExpression(conditional)}, ${String(fieldCheck(field))})`;
+}
 
-  return `requiredWhen(${decides} === ${expected}, ${String(fieldCheck(field))})`;
+/**
+ * When a rule fires: the deciding field equal to the value — quoted when it is a string —, or the
+ * field missing, or there.
+ *
+ * @param {import('./contracts-model.mjs').Conditional} conditional
+ * @returns {string}
+ */
+function triggerExpression(conditional) {
+  const decides = `record['${conditional.whenField}']`;
+
+  if (conditional.presence !== null) {
+    return `${decides} ${conditional.presence === 'absent' ? '===' : '!=='} undefined`;
+  }
+  return typeof conditional.equals === 'string'
+    ? `${decides} === '${conditional.equals}'`
+    : `${decides} === ${String(conditional.equals)}`;
+}
+
+/** The helper each bound is checked with. */
+const LIMIT_HELPERS = {
+  maxItems: 'withinMaxItems',
+  maxLength: 'withinMaxLength',
+  minimum: 'atLeast',
+};
+
+/**
+ * The runtime checks of the bounds of one field, one per bound. A field that is absent passes —
+ * whether it may be absent is the required and conditional checks' question, not this one's.
+ *
+ * @param {import('./contracts-model.mjs').Field} field
+ * @returns {string[]}
+ */
+function limitChecks(field) {
+  return Object.entries(field.limits).map(
+    ([keyword, bound]) =>
+      `${LIMIT_HELPERS[/** @type {keyof typeof LIMIT_HELPERS} */ (keyword)]}(record['${field.name}'], ${String(bound)})`,
+  );
+}
+
+/**
+ * The bounds of a declaration as a constant, so a validator of its own — the backend's, which has to
+ * answer every invalid field and not only the first — reads the number from here instead of
+ * repeating it.
+ *
+ * @param {import('./contracts-model.mjs').Interface} declaration
+ * @returns {string[]} empty when no field of the declaration is bounded
+ */
+function emitLimits(declaration) {
+  const bounded = boundedFields(declaration);
+  if (bounded.length === 0) {
+    return [];
+  }
+
+  return [
+    `/** The bounds the schema gives the fields of {@link ${declaration.name}}. */`,
+    `export const ${screamingSnake(declaration.name)}_LIMITS = {`,
+    ...bounded.map(
+      (field) =>
+        `  ${field.name}: { ${Object.entries(field.limits)
+          .map(([keyword, bound]) => `${keyword}: ${String(bound)}`)
+          .join(', ')} },`,
+    ),
+    '} as const;',
+    '',
+  ];
+}
+
+/** @param {string} text e.g. `SessionPromptPayload` @returns {string} e.g. `SESSION_PROMPT_PAYLOAD` */
+function screamingSnake(text) {
+  return text.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
 }
 
 /**
@@ -148,6 +248,7 @@ function emitGuard(declaration) {
       .map((field) => fieldCheck(field))
       .filter((check) => check !== null),
     ...declaration.conditionals.map((conditional) => conditionalCheck(declaration, conditional)),
+    ...declaration.fields.flatMap(limitChecks),
   ];
 
   const lines = [
@@ -155,7 +256,7 @@ function emitGuard(declaration) {
     ` * Whether \`value\` carries every required field of {@link ${declaration.name}}. Unknown fields are accepted.`,
     ...declaration.conditionals.flatMap((conditional) => [
       ' *',
-      ` * \`${conditional.field}\` is also required when \`${conditional.whenField}\` is \`${String(conditional.equals)}\` — ${conditional.because}.`,
+      ` * \`${conditional.field}\` is also required when \`${conditional.whenField}\` ${conditionPhrase(conditional)} — ${conditional.because}.`,
     ]),
     ' */',
     `export function is${declaration.name}(value: unknown): value is ${declaration.name} {`,
@@ -228,6 +329,7 @@ export function emitTypeScript(model) {
     `] as const;`,
     '',
     ...declarations.flatMap((declaration) => [emitInterface(declaration), '']),
+    ...declarations.flatMap(emitLimits),
     ...GUARD_HELPERS.filter((helper) =>
       guards.some((guard) => guard.includes(`${helper.name}(`)),
     ).flatMap((helper) => [...helper.source, '']),

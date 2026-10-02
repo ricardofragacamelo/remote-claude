@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import { callApi } from '../fixtures/api';
-import { cardFor, scratchFolders, send } from '../fixtures/history';
+import { cardFor, confirmationOfTheOnlyPoint, scratchFolders, send } from '../fixtures/history';
 import { attachFrom, closeSession, connected, workspaceFor } from '../fixtures/live-session';
 import { closeTab, sessionInTab } from '../fixtures/workbench';
 import type { E2eSocket } from '../fixtures/ws';
@@ -55,9 +55,9 @@ function idle(page: Page): ReturnType<Page['getByText']> {
   return page.getByText('Idle', { exact: true });
 }
 
-/** Waits for the first turn to end, as the screen says it: its cost, and the session idle again. */
+/** Waits for the first turn to end, as the screen says it: what the session has cost over it, and the session idle again. */
 async function firstTurnEnded(page: Page): Promise<void> {
-  await expect(page.getByText(/^Last turn cost/)).toBeVisible();
+  await expect(page.getByText(/^This session has cost .+ over 1 turn\(s\)$/)).toBeVisible();
   await expect(idle(page)).toBeVisible();
 }
 
@@ -66,17 +66,6 @@ async function writingTurn(page: Page, fixture: string): Promise<void> {
   await send(page, `do the work [fixture:${fixture}]`);
   await cardFor(page, 'Write').getByRole('button', { name: 'Allow once' }).click();
   await firstTurnEnded(page);
-}
-
-/** Opens the undo panel and the confirmation of its only point. */
-async function confirmationOfTheOnlyPoint(page: Page): Promise<ReturnType<Page['getByRole']>> {
-  await page.getByRole('button', { name: 'Undo file changes' }).click();
-  await page
-    .getByRole('list', { name: 'Undo points' })
-    .getByRole('button', { name: /do the work/ })
-    .click();
-
-  return page.getByRole('group', { name: 'Undo these file changes?' });
 }
 
 test(`${init.id} — ${init.title}`, async ({ page }) => {

@@ -50,6 +50,18 @@ Gerado não se edita à mão.
 Não há `.env` em runtime: os valores entram por `--dart-define`, e falta de qualquer um deles
 **impede o app de subir** — de propósito.
 
+Para rodar contra a stack local, use o script — ele lê os valores do `.env` do repositório,
+liga o emulador, faz o `adb reverse` e limpa tudo na saída
+([README, `pnpm dev:mobile`](../README.md#o-app-mobile-local--pnpm-devmobile)):
+
+```bash
+pnpm dev            # em um terminal: a stack
+pnpm dev:mobile     # em outro: o app, com hot reload
+```
+
+À mão, o mesmo `flutter run` fica assim (com `adb reverse tcp:3000 tcp:3000` e
+`adb reverse tcp:8180 tcp:8180` feitos antes, para o `localhost` do aparelho chegar à máquina):
+
 ```bash
 flutter run \
   --dart-define=RC_API_URL=http://localhost:3000 \
@@ -57,6 +69,6 @@ flutter run \
   --dart-define=RC_OIDC_ISSUER=http://localhost:8180/realms/remote-claude \
   --dart-define=RC_OIDC_CLIENT_ID=remote-claude-mobile \
   --dart-define="RC_OIDC_SCOPES=openid profile email offline_access" \
-  --dart-define=RC_OIDC_REDIRECT_URL=com.remoteclaude://callback \
+  --dart-define=RC_OIDC_REDIRECT_URL=br.com.remoteclaude.app://oauth/callback \
   --dart-define=RC_APP_VERSION=0.0.1
 ```

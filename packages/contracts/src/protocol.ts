@@ -9,20 +9,25 @@ export const FRAME_TYPES = [
   'command.accepted',
   'connection.ready',
   'session.attached',
+  'workspace.watching',
   'connection.authenticate',
   'connection.reauthenticate',
   'diag.ping',
   'permission.extend',
   'session.attach',
+  'session.cancelQueuedPrompt',
   'session.close',
   'session.detach',
   'session.interrupt',
   'session.prompt',
+  'session.rejectChange',
   'session.rewindFiles',
   'session.setLocale',
   'session.setModel',
   'session.setPermissionMode',
   'session.start',
+  'workspace.unwatch',
+  'workspace.watch',
   'diag.pong',
   'error',
   'message.completed',
@@ -30,7 +35,10 @@ export const FRAME_TYPES = [
   'permission.extended',
   'permission.requested',
   'permission.resolved',
+  'prompt.dequeued',
+  'prompt.queued',
   'session.closed',
+  'session.compacted',
   'session.rewound',
   'session.started',
   'session.statusChanged',
@@ -38,6 +46,8 @@ export const FRAME_TYPES = [
   'tool.progress',
   'tool.started',
   'turn.completed',
+  'workspace.filesChanged',
+  'workspace.watchStopped',
   'permission.resolve',
 ] as const;
 
@@ -59,7 +69,7 @@ export interface Envelope {
   readonly correlationId?: string;
   /** Session the frame belongs to, when it belongs to one. It is what fan-out routes on, and what ties the many traces of a conversation together. */
   readonly sessionId?: string;
-  /** Monotonic per session, on events only. This is what makes replay after a reconnect possible. */
+  /** Monotonic per stream, on events only — a stream is a session, or a subscription such as a watch of a folder. On a session it is what makes replay after a reconnect possible; a subscription has no replay, and a reconnect subscribes again from 1. */
   readonly seq?: number;
   /** Contents, defined per `type`. */
   readonly payload?: Readonly<Record<string, unknown>>;
@@ -103,6 +113,14 @@ export interface SessionAttachedPayload {
   readonly claudeSessionId?: string;
   /** The conversation this session continues, when it is a resume. Present on the ack a `session.start` answers with when the conversation it asked to resume was already live for the caller: resuming what is live is an attach, never a second subprocess. */
   readonly resumedFrom?: string;
+}
+
+/** Answer to `workspace.watch`: the subscription exists, and the changes of the folder will arrive as `workspace.filesChanged` with this `watchId`. */
+export interface WorkspaceWatchingPayload {
+  /** The subscription. Its events carry it, and `seq` is monotonic per `watchId`, from 1. */
+  readonly watchId: string;
+  /** The real path of the folder being followed. */
+  readonly workspacePath: string;
 }
 
 /** Who is connecting, for diagnostics and for the deprecation window. */
@@ -167,6 +185,13 @@ export interface SessionAttachPayload {
   readonly resumeFromSeq?: number;
 }
 
+/** Takes a prompt out of the session's queue before it starts. Any watcher may, as any may send one. The outcome is `prompt.dequeued` with `reason: cancelled`, for everybody watching. A prompt that already started is `CONFLICT` (`session.error.queuedPromptStarted`); one the queue never had is `QUEUED_PROMPT_NOT_FOUND`. */
+export interface SessionCancelQueuedPromptPayload {
+  readonly sessionId: string;
+  /** What `prompt.queued` named the prompt. */
+  readonly queueId: string;
+}
+
 /** Ends the session and releases its subprocess. Unlike every other command of the session, only the owner may send it. */
 export interface SessionClosePayload {
   readonly sessionId: string;
@@ -183,19 +208,49 @@ export interface SessionInterruptPayload {
   readonly sessionId: string;
 }
 
-export interface SessionPromptPayloadAttachmentsItem {
-  /** Path inside the session's workspace. */
-  readonly path: string;
-  readonly mediaType?: string;
+/** The lines of a `file` the prompt is about, inclusive and counted from 1. `endLine` before `startLine` is refused by the backend — an order between two fields is not a bound of one. */
+export interface SessionPromptPayloadAttachmentsItemRange {
+  readonly startLine: number;
+  readonly endLine: number;
 }
 
-/** Sends one turn. A prompt that arrives while a turn is running is **queued** and runs next, the way the Claude Code UI does it — it is never refused. */
+export interface SessionPromptPayloadAttachmentsItem {
+  /** What the attachment is. Absent reads as `file`, which is what keeps the field that existed before compatible — and `v` where it is. */
+  readonly kind?: 'file' | 'folder' | 'upload' | 'text';
+  /** Path inside the session's folder, relative or absolute, for a `file` or a `folder`. */
+  readonly path?: string;
+  /** The type of the file, when the client knows it. Informative: the backend decides nothing by it. */
+  readonly mediaType?: string;
+  /** The lines of a `file` the prompt is about, inclusive and counted from 1. `endLine` before `startLine` is refused by the backend — an order between two fields is not a bound of one. */
+  readonly range?: SessionPromptPayloadAttachmentsItemRange;
+  /** What `POST /sessions/:sessionId/attachments` answered, for an `upload`: an image, or a text file dropped from the desktop. Unknown, expired or of another session is `ATTACHMENT_NOT_FOUND`. */
+  readonly attachmentId?: string;
+  /** The provider that holds the `text` — the integrated terminal of plan 10, when it exists. An enum read as a string, so a provider added later does not break a client already published. */
+  readonly source?: 'terminal';
+  /** How the `text` is introduced to Claude and shown on the chip: "terminal: bash". */
+  readonly label?: string;
+  /** The text itself, for a `text`. Bounded so that even at four bytes a character it fits the 64 KB frame beside the rest of the prompt. */
+  readonly content?: string;
+}
+
+/** Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way the Claude Code UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`). */
 export interface SessionPromptPayload {
   readonly sessionId: string;
   /** What the user typed. */
   readonly text: string;
-  /** Files carried with the prompt. */
+  /** The context of the prompt, chosen with `@`, a drag or the editor: files, folders, ranges of lines, an uploaded attachment, or text a provider of the client holds (the terminal). A file or a folder is a **reference** — the backend checks it inside the session's folder, all or nothing, and Claude reads it through `Read`, which the trail records; its content never travels here (plan 08, D-01). */
   readonly attachments?: readonly SessionPromptPayloadAttachmentsItem[];
+}
+
+/** Puts one hunk of what a session changed in a file back the way it was before the session. Only while the disk still has what the session left — otherwise the file is `modifiedOutside` and is rejected whole, preserving it, by `session.rewindFiles` with `paths`. The outcome arrives as `session.rewound`, with `hunkId`. A `revision` that is no longer the disk's is `SESSION_CHANGE_STALE`; the same locks as an undo apply (`SESSION_LOCKED`). */
+export interface SessionRejectChangePayload {
+  readonly sessionId: string;
+  /** The file, as `GET /sessions/:sessionId/changes` named it. */
+  readonly path: string;
+  /** The hunk, as `GET /sessions/:sessionId/changes/file` named it. */
+  readonly hunkId: string;
+  /** The `revision` the hunks were computed against — the hash of the disk then. It is what keeps a hunk from being applied to a file that moved under it. */
+  readonly revision: string;
 }
 
 /** Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not `rewindFiles()` of the SDK: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`. */
@@ -203,6 +258,8 @@ export interface SessionRewindFilesPayload {
   readonly sessionId: string;
   /** The turn to go back to, as `GET /sessions/:sessionId/checkpoints` names it — the `prompt_id` the hooks carry, never a message id of the transcript. */
   readonly promptId: string;
+  /** Only these files, of everything the undo would touch — rejecting one file of what a session changed. Absent is every file. A path the undo does not reach is simply not touched; the outcome says what happened to each one it did. */
+  readonly paths?: readonly string[];
 }
 
 /** Changes the language of **this connection**, not of the user. A phone in Portuguese and a browser in English watch the same session at the same time. */
@@ -233,8 +290,24 @@ export interface SessionStartPayload {
   readonly model?: string;
   /** Permission mode to open with. Absent means the server default. */
   readonly permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+  /** How much effort the model puts in, for the whole session. Absent is the installation's default. Chosen before the session exists, because changing it on a live one (`applyFlagSettings`) restarts the CLI's query and drops its hooks — measured in plan 08, D-16. A level the model does not take is `INVALID_INPUT` (`session.error.effortUnsupported`). An enum read as a string, so a level added later does not break a client. */
+  readonly effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
   /** Session of the Agent SDK to resume instead of starting fresh. */
   readonly resumeSessionId?: string;
+  /** Edit and resend: the `messageId` of the user prompt to rewrite. The conversation `resumeSessionId` names continues from **just before** it, always in a new id — the original stays as it was (plan 08, D-19). A point the conversation does not have is `INVALID_INPUT` (`session.error.forkPointUnknown`); one the CLI refuses is `SESSION_FORK_REJECTED`. */
+  readonly forkAt?: string;
+}
+
+/** Stops following a folder. Idempotent: a subscription that already ended — or never was this connection's — is acknowledged all the same, because a client that unwatches as it closes a tab races its own reconnection. */
+export interface WorkspaceUnwatchPayload {
+  /** The subscription, as `workspace.watching` named it. */
+  readonly watchId: string;
+}
+
+/** Starts following the changes on disk of an open folder, for the explorer and the editor. Answered with `workspace.watching`, which names the subscription; the changes then arrive as `workspace.filesChanged`, with a `seq` of their own that starts at 1. There is **no replay**: after a reconnect the client watches again — a new `watchId`, `seq` from 1 — and reloads the tree, because what matters after a drop is the disk as it is now. Refused with `INVALID_INPUT` (every invalid field in `details[]`), with the refusals of the folder (`WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`), with `WATCH_LIMIT_REACHED` past the ceiling of the connection and with `WATCH_UNAVAILABLE` when the system refuses another watch. */
+export interface WorkspaceWatchPayload {
+  /** The open folder, absolute — the same value `session.start` takes, and the `folder` of the HTTP routes of the files. */
+  readonly workspacePath: string;
 }
 
 /** Result of `diag.ping`, carrying the `seq` the hub assigned. Like every event it is fanned out to every connection observing the session, not only to the one that asked. */
@@ -270,9 +343,12 @@ export interface ErrorPayload {
 }
 
 export interface MessageCompletedPayloadContentItem {
-  /** Block kind — `text`, `tool_use`, `tool_result` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped. */
+  /** Block kind — `text`, `thinking`, `redacted_thinking`, `tool_use`, `tool_result` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped. */
   readonly type: string;
+  /** The text of a `text` block. */
   readonly text?: string;
+  /** What the model thought, on a `thinking` block — in a field of its own and not in `text`, so a client that joins the `text` of every block never shows it as the answer. A `redacted_thinking` block has neither: it says the model thought, and nothing it thought. */
+  readonly thinking?: string;
   readonly toolUseId?: string;
 }
 
@@ -284,6 +360,8 @@ export interface MessageCompletedPayload {
   readonly promptedBy?: string;
   /** The blocks of the message, in order. */
   readonly content: readonly MessageCompletedPayloadContentItem[];
+  /** Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation. */
+  readonly parentToolUseId?: string;
 }
 
 /** A fragment of the assistant's answer, from the SDK's `stream_event`. The client accumulates by `messageId`; it never concatenates blindly in arrival order. */
@@ -292,6 +370,10 @@ export interface MessageDeltaPayload {
   readonly messageId: string;
   /** The text of this fragment, and only of this one. */
   readonly delta: string;
+  /** What the fragment is part of: the answer, or Claude's thinking before it. Absent reads as `text`. An enum read as a string, so a block kind added later is not a crash. */
+  readonly blockType?: 'text' | 'thinking';
+  /** Set when the fragment comes from a subagent: the `toolUseId` of the `Task` that opened it. The client nests it there instead of in the conversation. */
+  readonly parentToolUseId?: string;
 }
 
 /** The deadline of a pending request moved. Fanned out to every connection, because the phone and the browser are looking at the same countdown. */
@@ -350,11 +432,38 @@ export interface PermissionResolvedPayload {
   readonly resolvedFrom?: 'web' | 'mobile';
 }
 
+/** A prompt left the queue: it started, or somebody took it out. The positions of the ones behind it move up by one. */
+export interface PromptDequeuedPayload {
+  readonly queueId: string;
+  /** `started` — the turn it asked for began; `cancelled` — somebody took it out before that. */
+  readonly reason: 'started' | 'cancelled';
+}
+
+/** A prompt is waiting for the running turn to end. The queue is the backend's, not the SDK's — a prompt handed to the SDK cannot be taken back (plan 08, D-14) — so every watcher sees the same queue, and any of them can take one out with `session.cancelQueuedPrompt`. */
+export interface PromptQueuedPayload {
+  /** What `session.cancelQueuedPrompt` names it by. */
+  readonly queueId: string;
+  /** Its place in the queue, from 1. */
+  readonly position: number;
+  /** Who sent it. */
+  readonly promptedBy: string;
+  /** The start of what was typed, for the row of the queue. Cut by the backend; the whole prompt is the turn's, when it runs. */
+  readonly preview: string;
+}
+
 /** The session ended and its subprocess is gone. The replay buffer **survives** this event — opening a closed session shows the terminal state plus whatever the ring still holds, labelled as partial. */
 export interface SessionClosedPayload {
   readonly sessionId: string;
   /** Why it ended. `auditUnavailable` is the second consecutive audit write failure — a session that cannot be recorded does not keep running. `idleTimeout` is the installation reclaiming a session nobody used for longer than its TTL; the conversation is still in the history and can be resumed. */
   readonly reason: 'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown' | 'idleTimeout';
+}
+
+/** The conversation was compacted: what came before is now a summary Claude carries forward. Said on its own rather than as a status, because a client that keeps the turns on screen has to mark the point — and the context meter drops there. */
+export interface SessionCompactedPayload {
+  /** `manual` — somebody sent `/compact`; `auto` — the context was full and Claude compacted it. */
+  readonly trigger: 'manual' | 'auto';
+  /** How many tokens the context held before, when the SDK says. */
+  readonly preTokens?: number;
 }
 
 export interface SessionRewoundPayloadRevertedItem {
@@ -389,6 +498,8 @@ export interface SessionRewoundPayload {
   readonly unchanged: readonly SessionRewoundPayloadUnchangedItem[];
   /** Paths the undo tried to put back and could not. Each is left exactly as it was: restoring writes a temporary file beside it and renames it over. */
   readonly failed: readonly SessionRewoundPayloadFailedItem[];
+  /** Set when only one hunk went back (`session.rejectChange`): the file is the one path of `reverted`, and the rest of what the session changed in it stays. */
+  readonly hunkId?: string;
 }
 
 /** The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` — an SDKMessage is never emitted raw (ADR-006). */
@@ -417,6 +528,10 @@ export interface ToolCompletedPayload {
   readonly status: 'succeeded' | 'failed' | 'denied';
   /** A short result for the timeline. The full output is the transcript's job, not this event's. */
   readonly summary?: string;
+  /** Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation. */
+  readonly parentToolUseId?: string;
+  /** The task of the list a `TaskCreate` made or a `TaskUpdate` changed — taken from the tool's structured result live, and from its result in the history. Absent for every other tool. The `summary` is the CLI's text, cut, and never carries it reliably (plan 08, B-20). */
+  readonly taskId?: string;
 }
 
 /** Output of a tool while it is still running, from the SDK's `tool_progress`. */
@@ -424,6 +539,8 @@ export interface ToolProgressPayload {
   readonly toolUseId: string;
   /** This fragment of the output, and only this one. */
   readonly chunk: string;
+  /** Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation. */
+  readonly parentToolUseId?: string;
 }
 
 /** A tool invocation began. Emitted for **every** tool, including the ones no human was asked about — the audit trail is anchored on the same hook, for exactly that reason (ADR-011). */
@@ -435,6 +552,8 @@ export interface ToolStartedPayload {
   readonly input: Readonly<Record<string, unknown>>;
   /** A short human label for the invocation, already derived by the backend. */
   readonly title?: string;
+  /** Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation. */
+  readonly parentToolUseId?: string;
 }
 
 /** A turn finished, from the SDK's `result`. It is what closes the turn in the UI and what carries its cost. */
@@ -449,6 +568,30 @@ export interface TurnCompletedPayload {
   readonly durationMs: number;
 }
 
+export interface WorkspaceFilesChangedPayloadChangesItem {
+  /** Relative to the folder, POSIX. */
+  readonly path: string;
+  readonly kind: 'created' | 'changed' | 'deleted';
+  /** Who changed it, as far as the server can tell: a write of Claude's, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say. */
+  readonly origin?: 'claude' | 'user' | 'external';
+}
+
+/** What changed on disk in a folder being followed, coalesced. The frame's `seq` belongs to the subscription, not to any session: monotonic per `watchId`, from 1, and never replayed. A client that is not following this `watchId` — the mobile app never asks to — ignores it, and never lets its `seq` move the resume point of a session. */
+export interface WorkspaceFilesChangedPayload {
+  readonly watchId: string;
+  /** Each path that changed, relative to the folder, with what happened to it. */
+  readonly changes: readonly WorkspaceFilesChangedPayloadChangesItem[];
+  /** More changed than the event carries: the client reloads what it shows instead of patching it. */
+  readonly overflow?: boolean;
+}
+
+/** A subscription ended without the client asking: nothing more arrives for this `watchId`. The client says so where the folder is shown, and watches again only when the reason allows. */
+export interface WorkspaceWatchStoppedPayload {
+  readonly watchId: string;
+  /** `allowlistChanged` — the folder left the allowlist in a reload; `folderDeleted` — the folder is gone from the disk; `systemLimit` — the operating system stopped delivering changes. */
+  readonly reason: 'allowlistChanged' | 'folderDeleted' | 'systemLimit';
+}
+
 /** The answer to `permission.requested`, carrying its `id` in `correlationId`. Resolving the same `requestId` twice is a silent ack and **one** execution, never an error and never a double run — several clients watch one session, and a client may resend after reconnecting. */
 export interface PermissionResolvePayload {
   /** The request being answered. Idempotency keys on it, so resending after a reconnect costs nothing. */
@@ -461,9 +604,41 @@ export interface PermissionResolvePayload {
   readonly reason?: string;
 }
 
+/** The bounds the schema gives the fields of {@link SessionPromptPayloadAttachmentsItemRange}. */
+export const SESSION_PROMPT_PAYLOAD_ATTACHMENTS_ITEM_RANGE_LIMITS = {
+  startLine: { minimum: 1 },
+  endLine: { minimum: 1 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SessionPromptPayloadAttachmentsItem}. */
+export const SESSION_PROMPT_PAYLOAD_ATTACHMENTS_ITEM_LIMITS = {
+  label: { maxLength: 200 },
+  content: { maxLength: 16384 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SessionPromptPayload}. */
+export const SESSION_PROMPT_PAYLOAD_LIMITS = {
+  attachments: { maxItems: 20 },
+} as const;
+
 /** Whether `value` is an object and not `null` — the one case `typeof` alone gets wrong. */
 function isNonNullObject(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null;
+}
+
+/** Whether a list, when it is one, holds at most `max` items. Anything else is the shape check's to refuse. */
+function withinMaxItems(value: unknown, max: number): boolean {
+  return !Array.isArray(value) || value.length <= max;
+}
+
+/** Whether a string, when it is one, is at most `max` characters long. */
+function withinMaxLength(value: unknown, max: number): boolean {
+  return typeof value !== 'string' || value.length <= max;
+}
+
+/** Whether a number, when it is one, is at least `min`. */
+function atLeast(value: unknown, min: number): boolean {
+  return typeof value !== 'number' || value >= min;
 }
 
 /** Whether a conditional requirement holds: when it `applies`, its field has to be `present`. */
@@ -558,6 +733,22 @@ export function isSessionAttachedPayload(value: unknown): value is SessionAttach
     typeof record['replayed'] === 'number',
     typeof record['oldestAvailableSeq'] === 'number',
     typeof record['gap'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link WorkspaceWatchingPayload}. Unknown fields are accepted.
+ */
+export function isWorkspaceWatchingPayload(value: unknown): value is WorkspaceWatchingPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['watchId'] === 'string',
+    typeof record['workspacePath'] === 'string',
   ].every(Boolean);
 }
 
@@ -673,6 +864,22 @@ export function isSessionAttachPayload(value: unknown): value is SessionAttachPa
 }
 
 /**
+ * Whether `value` carries every required field of {@link SessionCancelQueuedPromptPayload}. Unknown fields are accepted.
+ */
+export function isSessionCancelQueuedPromptPayload(value: unknown): value is SessionCancelQueuedPromptPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['queueId'] === 'string',
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link SessionClosePayload}. Unknown fields are accepted.
  */
 export function isSessionClosePayload(value: unknown): value is SessionClosePayload {
@@ -718,7 +925,39 @@ export function isSessionInterruptPayload(value: unknown): value is SessionInter
 }
 
 /**
+ * Whether `value` carries every required field of {@link SessionPromptPayloadAttachmentsItemRange}. Unknown fields are accepted.
+ */
+export function isSessionPromptPayloadAttachmentsItemRange(value: unknown): value is SessionPromptPayloadAttachmentsItemRange {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['startLine'] === 'number',
+    typeof record['endLine'] === 'number',
+    atLeast(record['startLine'], 1),
+    atLeast(record['endLine'], 1),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link SessionPromptPayloadAttachmentsItem}. Unknown fields are accepted.
+ *
+ * `path` is also required when `kind` is absent — an attachment without a kind is the file attachment that existed before kinds did, and a file is named by its path.
+ *
+ * `path` is also required when `kind` is `file` — a file is named by its path inside the session's folder.
+ *
+ * `path` is also required when `kind` is `folder` — a folder is named by its path inside the session's folder.
+ *
+ * `attachmentId` is also required when `kind` is `upload` — an uploaded attachment travels over HTTP, and the prompt carries only the id the upload answered.
+ *
+ * `source` is also required when `kind` is `text` — text a provider holds goes to Claude labelled with where it came from, never as if the user had typed it.
+ *
+ * `label` is also required when `kind` is `text` — the label is what the delimited block is introduced by, and what the chip showed.
+ *
+ * `content` is also required when `kind` is `text` — text that is not on disk has nothing to be read from, so it travels itself.
  */
 export function isSessionPromptPayloadAttachmentsItem(value: unknown): value is SessionPromptPayloadAttachmentsItem {
   if (typeof value !== 'object' || value === null) {
@@ -728,7 +967,15 @@ export function isSessionPromptPayloadAttachmentsItem(value: unknown): value is 
   const record = value as Readonly<Record<string, unknown>>;
 
   return [
-    typeof record['path'] === 'string',
+    requiredWhen(record['kind'] === undefined, typeof record['path'] === 'string'),
+    requiredWhen(record['kind'] === 'file', typeof record['path'] === 'string'),
+    requiredWhen(record['kind'] === 'folder', typeof record['path'] === 'string'),
+    requiredWhen(record['kind'] === 'upload', typeof record['attachmentId'] === 'string'),
+    requiredWhen(record['kind'] === 'text', typeof record['source'] === 'string'),
+    requiredWhen(record['kind'] === 'text', typeof record['label'] === 'string'),
+    requiredWhen(record['kind'] === 'text', typeof record['content'] === 'string'),
+    withinMaxLength(record['label'], 200),
+    withinMaxLength(record['content'], 16384),
   ].every(Boolean);
 }
 
@@ -745,6 +992,25 @@ export function isSessionPromptPayload(value: unknown): value is SessionPromptPa
   return [
     typeof record['sessionId'] === 'string',
     typeof record['text'] === 'string',
+    withinMaxItems(record['attachments'], 20),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionRejectChangePayload}. Unknown fields are accepted.
+ */
+export function isSessionRejectChangePayload(value: unknown): value is SessionRejectChangePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['path'] === 'string',
+    typeof record['hunkId'] === 'string',
+    typeof record['revision'] === 'string',
   ].every(Boolean);
 }
 
@@ -813,8 +1079,41 @@ export function isSessionSetPermissionModePayload(value: unknown): value is Sess
 
 /**
  * Whether `value` carries every required field of {@link SessionStartPayload}. Unknown fields are accepted.
+ *
+ * `resumeSessionId` is also required when `forkAt` is present — a fork point is a message of a conversation, and only a resumed conversation has one.
  */
 export function isSessionStartPayload(value: unknown): value is SessionStartPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['workspacePath'] === 'string',
+    requiredWhen(record['forkAt'] !== undefined, typeof record['resumeSessionId'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link WorkspaceUnwatchPayload}. Unknown fields are accepted.
+ */
+export function isWorkspaceUnwatchPayload(value: unknown): value is WorkspaceUnwatchPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['watchId'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link WorkspaceWatchPayload}. Unknown fields are accepted.
+ */
+export function isWorkspaceWatchPayload(value: unknown): value is WorkspaceWatchPayload {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -1001,6 +1300,40 @@ export function isPermissionResolvedPayload(value: unknown): value is Permission
 }
 
 /**
+ * Whether `value` carries every required field of {@link PromptDequeuedPayload}. Unknown fields are accepted.
+ */
+export function isPromptDequeuedPayload(value: unknown): value is PromptDequeuedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['queueId'] === 'string',
+    typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PromptQueuedPayload}. Unknown fields are accepted.
+ */
+export function isPromptQueuedPayload(value: unknown): value is PromptQueuedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['queueId'] === 'string',
+    typeof record['position'] === 'number',
+    typeof record['promptedBy'] === 'string',
+    typeof record['preview'] === 'string',
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link SessionClosedPayload}. Unknown fields are accepted.
  */
 export function isSessionClosedPayload(value: unknown): value is SessionClosedPayload {
@@ -1013,6 +1346,21 @@ export function isSessionClosedPayload(value: unknown): value is SessionClosedPa
   return [
     typeof record['sessionId'] === 'string',
     typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionCompactedPayload}. Unknown fields are accepted.
+ */
+export function isSessionCompactedPayload(value: unknown): value is SessionCompactedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['trigger'] === 'string',
   ].every(Boolean);
 }
 
@@ -1199,6 +1547,54 @@ export function isTurnCompletedPayload(value: unknown): value is TurnCompletedPa
 }
 
 /**
+ * Whether `value` carries every required field of {@link WorkspaceFilesChangedPayloadChangesItem}. Unknown fields are accepted.
+ */
+export function isWorkspaceFilesChangedPayloadChangesItem(value: unknown): value is WorkspaceFilesChangedPayloadChangesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    typeof record['kind'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link WorkspaceFilesChangedPayload}. Unknown fields are accepted.
+ */
+export function isWorkspaceFilesChangedPayload(value: unknown): value is WorkspaceFilesChangedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['watchId'] === 'string',
+    Array.isArray(record['changes']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link WorkspaceWatchStoppedPayload}. Unknown fields are accepted.
+ */
+export function isWorkspaceWatchStoppedPayload(value: unknown): value is WorkspaceWatchStoppedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['watchId'] === 'string',
+    typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link PermissionResolvePayload}. Unknown fields are accepted.
  *
  * `reason` is also required when `decision` is `deny` — the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from.
@@ -1274,6 +1670,26 @@ export function isSessionAttachedFrame(value: unknown): value is SessionAttached
     value.kind === 'ack' &&
     value.type === 'session.attached' &&
     isSessionAttachedPayload(value.payload)
+  );
+}
+
+/** Answer to `workspace.watch`: the subscription exists, and the changes of the folder will arrive as `workspace.filesChanged` with this `watchId`. */
+export interface WorkspaceWatchingFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'ack';
+  readonly type: 'workspace.watching';
+  readonly payload: WorkspaceWatchingPayload;
+}
+
+/** Whether `value` is a {@link WorkspaceWatchingFrame}. */
+export function isWorkspaceWatchingFrame(value: unknown): value is WorkspaceWatchingFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'ack' &&
+    value.type === 'workspace.watching' &&
+    isWorkspaceWatchingPayload(value.payload)
   );
 }
 
@@ -1377,6 +1793,26 @@ export function isSessionAttachFrame(value: unknown): value is SessionAttachFram
   );
 }
 
+/** Takes a prompt out of the session's queue before it starts. Any watcher may, as any may send one. The outcome is `prompt.dequeued` with `reason: cancelled`, for everybody watching. A prompt that already started is `CONFLICT` (`session.error.queuedPromptStarted`); one the queue never had is `QUEUED_PROMPT_NOT_FOUND`. */
+export interface SessionCancelQueuedPromptFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.cancelQueuedPrompt';
+  readonly payload: SessionCancelQueuedPromptPayload;
+}
+
+/** Whether `value` is a {@link SessionCancelQueuedPromptFrame}. */
+export function isSessionCancelQueuedPromptFrame(value: unknown): value is SessionCancelQueuedPromptFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.cancelQueuedPrompt' &&
+    isSessionCancelQueuedPromptPayload(value.payload)
+  );
+}
+
 /** Ends the session and releases its subprocess. Unlike every other command of the session, only the owner may send it. */
 export interface SessionCloseFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'command';
@@ -1437,7 +1873,7 @@ export function isSessionInterruptFrame(value: unknown): value is SessionInterru
   );
 }
 
-/** Sends one turn. A prompt that arrives while a turn is running is **queued** and runs next, the way the Claude Code UI does it — it is never refused. */
+/** Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way the Claude Code UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`). */
 export interface SessionPromptFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'command';
   readonly type: 'session.prompt';
@@ -1454,6 +1890,26 @@ export function isSessionPromptFrame(value: unknown): value is SessionPromptFram
     value.kind === 'command' &&
     value.type === 'session.prompt' &&
     isSessionPromptPayload(value.payload)
+  );
+}
+
+/** Puts one hunk of what a session changed in a file back the way it was before the session. Only while the disk still has what the session left — otherwise the file is `modifiedOutside` and is rejected whole, preserving it, by `session.rewindFiles` with `paths`. The outcome arrives as `session.rewound`, with `hunkId`. A `revision` that is no longer the disk's is `SESSION_CHANGE_STALE`; the same locks as an undo apply (`SESSION_LOCKED`). */
+export interface SessionRejectChangeFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.rejectChange';
+  readonly payload: SessionRejectChangePayload;
+}
+
+/** Whether `value` is a {@link SessionRejectChangeFrame}. */
+export function isSessionRejectChangeFrame(value: unknown): value is SessionRejectChangeFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.rejectChange' &&
+    isSessionRejectChangePayload(value.payload)
   );
 }
 
@@ -1554,6 +2010,46 @@ export function isSessionStartFrame(value: unknown): value is SessionStartFrame 
     value.kind === 'command' &&
     value.type === 'session.start' &&
     isSessionStartPayload(value.payload)
+  );
+}
+
+/** Stops following a folder. Idempotent: a subscription that already ended — or never was this connection's — is acknowledged all the same, because a client that unwatches as it closes a tab races its own reconnection. */
+export interface WorkspaceUnwatchFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'workspace.unwatch';
+  readonly payload: WorkspaceUnwatchPayload;
+}
+
+/** Whether `value` is a {@link WorkspaceUnwatchFrame}. */
+export function isWorkspaceUnwatchFrame(value: unknown): value is WorkspaceUnwatchFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'workspace.unwatch' &&
+    isWorkspaceUnwatchPayload(value.payload)
+  );
+}
+
+/** Starts following the changes on disk of an open folder, for the explorer and the editor. Answered with `workspace.watching`, which names the subscription; the changes then arrive as `workspace.filesChanged`, with a `seq` of their own that starts at 1. There is **no replay**: after a reconnect the client watches again — a new `watchId`, `seq` from 1 — and reloads the tree, because what matters after a drop is the disk as it is now. Refused with `INVALID_INPUT` (every invalid field in `details[]`), with the refusals of the folder (`WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`), with `WATCH_LIMIT_REACHED` past the ceiling of the connection and with `WATCH_UNAVAILABLE` when the system refuses another watch. */
+export interface WorkspaceWatchFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'workspace.watch';
+  readonly payload: WorkspaceWatchPayload;
+}
+
+/** Whether `value` is a {@link WorkspaceWatchFrame}. */
+export function isWorkspaceWatchFrame(value: unknown): value is WorkspaceWatchFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'workspace.watch' &&
+    isWorkspaceWatchPayload(value.payload)
   );
 }
 
@@ -1697,6 +2193,46 @@ export function isPermissionResolvedFrame(value: unknown): value is PermissionRe
   );
 }
 
+/** A prompt left the queue: it started, or somebody took it out. The positions of the ones behind it move up by one. */
+export interface PromptDequeuedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'prompt.dequeued';
+  readonly payload: PromptDequeuedPayload;
+}
+
+/** Whether `value` is a {@link PromptDequeuedFrame}. */
+export function isPromptDequeuedFrame(value: unknown): value is PromptDequeuedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'prompt.dequeued' &&
+    isPromptDequeuedPayload(value.payload)
+  );
+}
+
+/** A prompt is waiting for the running turn to end. The queue is the backend's, not the SDK's — a prompt handed to the SDK cannot be taken back (plan 08, D-14) — so every watcher sees the same queue, and any of them can take one out with `session.cancelQueuedPrompt`. */
+export interface PromptQueuedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'prompt.queued';
+  readonly payload: PromptQueuedPayload;
+}
+
+/** Whether `value` is a {@link PromptQueuedFrame}. */
+export function isPromptQueuedFrame(value: unknown): value is PromptQueuedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'prompt.queued' &&
+    isPromptQueuedPayload(value.payload)
+  );
+}
+
 /** The session ended and its subprocess is gone. The replay buffer **survives** this event — opening a closed session shows the terminal state plus whatever the ring still holds, labelled as partial. */
 export interface SessionClosedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'event';
@@ -1714,6 +2250,26 @@ export function isSessionClosedFrame(value: unknown): value is SessionClosedFram
     value.kind === 'event' &&
     value.type === 'session.closed' &&
     isSessionClosedPayload(value.payload)
+  );
+}
+
+/** The conversation was compacted: what came before is now a summary Claude carries forward. Said on its own rather than as a status, because a client that keeps the turns on screen has to mark the point — and the context meter drops there. */
+export interface SessionCompactedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'session.compacted';
+  readonly payload: SessionCompactedPayload;
+}
+
+/** Whether `value` is a {@link SessionCompactedFrame}. */
+export function isSessionCompactedFrame(value: unknown): value is SessionCompactedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'session.compacted' &&
+    isSessionCompactedPayload(value.payload)
   );
 }
 
@@ -1854,6 +2410,46 @@ export function isTurnCompletedFrame(value: unknown): value is TurnCompletedFram
     value.kind === 'event' &&
     value.type === 'turn.completed' &&
     isTurnCompletedPayload(value.payload)
+  );
+}
+
+/** What changed on disk in a folder being followed, coalesced. The frame's `seq` belongs to the subscription, not to any session: monotonic per `watchId`, from 1, and never replayed. A client that is not following this `watchId` — the mobile app never asks to — ignores it, and never lets its `seq` move the resume point of a session. */
+export interface WorkspaceFilesChangedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'workspace.filesChanged';
+  readonly payload: WorkspaceFilesChangedPayload;
+}
+
+/** Whether `value` is a {@link WorkspaceFilesChangedFrame}. */
+export function isWorkspaceFilesChangedFrame(value: unknown): value is WorkspaceFilesChangedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'workspace.filesChanged' &&
+    isWorkspaceFilesChangedPayload(value.payload)
+  );
+}
+
+/** A subscription ended without the client asking: nothing more arrives for this `watchId`. The client says so where the folder is shown, and watches again only when the reason allows. */
+export interface WorkspaceWatchStoppedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'workspace.watchStopped';
+  readonly payload: WorkspaceWatchStoppedPayload;
+}
+
+/** Whether `value` is a {@link WorkspaceWatchStoppedFrame}. */
+export function isWorkspaceWatchStoppedFrame(value: unknown): value is WorkspaceWatchStoppedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'workspace.watchStopped' &&
+    isWorkspaceWatchStoppedPayload(value.payload)
   );
 }
 

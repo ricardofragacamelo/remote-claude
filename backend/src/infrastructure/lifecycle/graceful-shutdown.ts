@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { OnModuleDestroy } from '@nestjs/common';
 
+import { FolderWatches } from '@application/files';
 import { ShutdownSessionsUseCase } from '@application/session';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { AppGateway } from '../websocket/app.gateway';
@@ -10,7 +11,9 @@ import { AppGateway } from '../websocket/app.gateway';
  *
  * 1. stop accepting connections;
  * 2. `session.closed { reason: 'shutdown' }` to every session;
- * 3. every socket closed with `1001`, which a client answers by reconnecting with backoff;
+ * 3. every socket closed with `1001`, which a client answers by reconnecting with backoff — and
+ *    every folder watcher closed with them, so no inotify watch outlives the process's sockets
+ *    (plan 07, S-146);
  * 4. `query.close()` on **every** live session — skipping it leaves CLI processes orphaned on the
  *    user's machine;
  * 5. the database pool drained — which is `DatabaseLifecycle.onApplicationShutdown`, and Nest runs
@@ -31,6 +34,7 @@ export class GracefulShutdown implements OnModuleDestroy {
     @Inject(AppGateway) private readonly gateway: AppGateway,
     @Inject(ShutdownSessionsUseCase) private readonly sessions: ShutdownSessionsUseCase,
     @Inject(LOGGER) private readonly logger: Logger,
+    @Inject(FolderWatches) private readonly watches: Pick<FolderWatches, 'closeAll'>,
   ) {}
 
   onModuleDestroy(): Promise<void> {
@@ -49,9 +53,10 @@ export class GracefulShutdown implements OnModuleDestroy {
     this.gateway.stopAccepting();
     const announced = this.sessions.announce();
     const sockets = this.gateway.closeAll();
+    const watchers = await this.watches.closeAll();
     const { closed, failed } = await this.sessions.release();
 
-    const line = { ...context, announced, sockets, closed, failed };
+    const line = { ...context, announced, sockets, watchers, closed, failed };
     if (failed > 0) {
       // The entry is gone either way; the boot sweep of the next start is what catches a
       // subprocess that refused to close (B-03).

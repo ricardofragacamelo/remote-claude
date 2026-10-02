@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 
-import { CLOCK, ID_GENERATOR, SCHEDULER } from '@application/shared';
+import { CLOCK, ID_GENERATOR, PATH_LOCK, SCHEDULER } from '@application/shared';
+import { InMemoryPathLock } from '@shared/concurrency/in-memory-path-lock';
 import { UlidGenerator } from '@shared/ids/ulid-generator';
 import { createRootLogger, LOGGER } from '@shared/logging/logger';
 import type { AppConfig } from '../config/environment';
@@ -10,7 +11,9 @@ import { SystemScheduler } from '@shared/time/system-scheduler';
 import { processEnvironment } from '../config/process-environment';
 
 /**
- * Configuration, clock, scheduler, identity and logging — the five things everything else needs.
+ * Configuration, clock, scheduler, identity and logging — the five things everything else needs —
+ * and the lock two modules write files under: one instance, here, because the person's save
+ * (`files`) and the undo's restore (`session`) have to wait for **each other** (plan 07, B-18).
  *
  * The configuration factory is what makes an invalid environment fatal: it throws, Nest fails to
  * build the container, and the process never reaches a state where it serves requests with a
@@ -23,6 +26,7 @@ import { processEnvironment } from '../config/process-environment';
     { provide: CLOCK, useClass: SystemClock },
     { provide: SCHEDULER, useClass: SystemScheduler },
     { provide: ID_GENERATOR, useClass: UlidGenerator },
+    { provide: PATH_LOCK, useClass: InMemoryPathLock },
     {
       provide: LOGGER,
       inject: [APP_CONFIG],
@@ -30,6 +34,6 @@ import { processEnvironment } from '../config/process-environment';
         createRootLogger({ level: config.logLevel, service: 'backend' }),
     },
   ],
-  exports: [APP_CONFIG, CLOCK, ID_GENERATOR, LOGGER, SCHEDULER],
+  exports: [APP_CONFIG, CLOCK, ID_GENERATOR, LOGGER, PATH_LOCK, SCHEDULER],
 })
 export class PlatformModule {}

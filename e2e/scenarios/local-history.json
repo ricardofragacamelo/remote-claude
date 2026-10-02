@@ -1,0 +1,24 @@
+{
+  "id": "07·S-353…S-355",
+  "title": "the local history through the user's door: three saves are three versions in the Timeline, compared and restored down to the disk; a delete undone from its notification, both facts in the Audit; a restore over what the scripted Claude wrote is refused",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "file": "notes.txt",
+    "first": "alpha\n",
+    "typed": ["beta", " gamma", " delta"],
+    "reason": "Before a save",
+    "restoredReason": "Before a restore",
+    "author": "You",
+    "deletedStem": "gone",
+    "deletedContent": "kept in the history\n",
+    "deletedNotice": "{{name}} was deleted. It is kept in the local history.",
+    "undo": "Undo",
+    "acts": { "deleted": "Deleted", "restored": "Restored from the local history" },
+    "fixture": "tool-turn",
+    "claudeFile": "summary.md",
+    "claudeWrote": "The project has two goals: safety and speed.\n",
+    "before": "the version from before the turn\n",
+    "changedByClaude": "Claude changed summary.md on disk, and you have unsaved changes here.",
+    "refused": "summary.md changed since you opened it — Claude may have written to it — so nothing was restored. Look at the file now, and try again."
+  }
+}

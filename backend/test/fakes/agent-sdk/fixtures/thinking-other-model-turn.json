@@ -1,0 +1,805 @@
+{
+  "$comment": "Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. Do not edit by hand — re-record instead. See docs/plans/01-live-session/F2-session-runtime.md.",
+  "name": "thinking-other-model-turn",
+  "why": "D-17 — the same summarized thinking asked of a model older than adaptive thinking: whether the option is harmless there",
+  "prompt": "Reply with exactly the word: pong. Do not use any tool.",
+  "options": {
+    "model": "claude-haiku-4-5",
+    "thinking": { "type": "adaptive", "display": "summarized" }
+  },
+  "recordedAt": "2026-10-01",
+  "sdkVersion": "0.3.277",
+  "counts": { "messages": 47, "preToolUse": 0, "canUseTool": 0 },
+  "preToolUse": [],
+  "canUseTool": [],
+  "stderr": [],
+  "messages": [
+    {
+      "type": "system",
+      "subtype": "init",
+      "cwd": "/workspace",
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "tools": [
+        "Task",
+        "AskUserQuestion",
+        "Bash",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DesignSync",
+        "Edit",
+        "EnterPlanMode",
+        "EnterWorktree",
+        "ExitPlanMode",
+        "ExitWorktree",
+        "ListAgents",
+        "Monitor",
+        "NotebookEdit",
+        "PushNotification",
+        "Read",
+        "RemoteTrigger",
+        "ReportFindings",
+        "ScheduleWakeup",
+        "SendMessage",
+        "ShareOnboardingGuide",
+        "Skill",
+        "TaskCreate",
+        "TaskGet",
+        "TaskList",
+        "TaskStop",
+        "TaskUpdate",
+        "ToolSearch",
+        "WebFetch",
+        "WebSearch",
+        "Workflow",
+        "Write"
+      ],
+      "mcp_servers": [],
+      "model": "claude-haiku-4-5",
+      "permissionMode": "default",
+      "slash_commands": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator",
+        "advisor",
+        "agents",
+        "auto-mode-setup",
+        "autocompact",
+        "clear",
+        "color",
+        "compact",
+        "config",
+        "output-style",
+        "context",
+        "effort",
+        "fast",
+        "heapdump",
+        "init",
+        "mcp",
+        "import",
+        "model",
+        "__remote-workflow",
+        "workflow-launch-exec",
+        "reload-plugins",
+        "reload-skills",
+        "rename",
+        "security-review",
+        "usage-credits",
+        "extra-usage",
+        "usage",
+        "insights",
+        "recap",
+        "skill-doctor",
+        "goal",
+        "design-consent",
+        "design-revoke",
+        "list-agents",
+        "team-onboarding"
+      ],
+      "terminal_slash_commands": ["doctor", "color", "reload-plugins"],
+      "apiKeySource": "none",
+      "claude_code_version": "2.1.277",
+      "output_style": "default",
+      "agents": ["claude", "Explore", "general-purpose", "Plan", "statusline-setup"],
+      "skills": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator"
+      ],
+      "plugins": [{ "name": "agents-md", "path": "builtin", "source": "agents-md@builtin" }],
+      "capabilities": ["interrupt_receipt_v1", "interrupt_cancel_queued_v1", "msg_lifecycle_v1"],
+      "analytics_disabled": false,
+      "product_feedback_disabled": false,
+      "uuid": "cccd9267-0008-4f63-804b-180b5bb9c637",
+      "memory_paths": { "auto": "/home/user/.claude/projects/-workspace/memory/" },
+      "messaging_socket_path": "/run/user/1000/cc-socks/2170476.sock",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required"
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "6e1d4aec-b194-4a81-9a92-9d7947a7e15b"
+    },
+    {
+      "type": "rate_limit_event",
+      "rate_limit_info": {
+        "status": "allowed",
+        "resetsAt": 1790910000,
+        "rateLimitType": "five_hour",
+        "overageStatus": "rejected",
+        "overageDisabledReason": "member_zero_credit_limit",
+        "isUsingOverage": false,
+        "unifiedWindows": {
+          "five_hour": { "utilization": 0.1, "resetsAt": 1790910000 },
+          "seven_day": { "utilization": 0.18, "resetsAt": 1791478800 }
+        }
+      },
+      "uuid": "6b7e2efa-f170-4565-a9cd-270b778c8251",
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-haiku-4-5-20251001",
+          "id": "msg_011CfcJ35oGEfoGcr71XmvYC",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 10,
+            "cache_creation_input_tokens": 15771,
+            "cache_read_input_tokens": 0,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 15771
+            },
+            "output_tokens": 6,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "70413640-ce4b-4b71-8b00-44afd7fc5cb0",
+      "ttft_ms": 1534
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": { "type": "thinking", "thinking": "", "signature": "" }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "a8a41e67-a7d1-4d71-a3b2-c9e655d54157"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 6,
+      "estimated_tokens_delta": 6,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "ae7d4e1e-ebfd-4deb-b2bf-8e5da78c5456"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "thinking_delta",
+          "thinking": "The user is asking me to",
+          "estimated_tokens": null
+        }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "839db2df-f7ef-40fd-a3be-0e35948fb19d"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 8,
+      "estimated_tokens_delta": 2,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "8d971931-6b52-42ad-bff2-38b66048f155"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": " reply", "estimated_tokens": null }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "83942edf-4139-4570-968b-bfed89e4d198"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 12,
+      "estimated_tokens_delta": 4,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "34e21d38-4026-4e01-b271-526a1d999462"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": " with exactly", "estimated_tokens": null }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "6c817bbe-5fde-4219-9c00-2029799f0be9"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 16,
+      "estimated_tokens_delta": 4,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "9eff32ee-f749-4af0-aaea-a33437b129ae"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "thinking_delta",
+          "thinking": " the word \"pong\"",
+          "estimated_tokens": null
+        }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "73e76d68-071f-44e0-9cc9-bf594df21c94"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 17,
+      "estimated_tokens_delta": 1,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "aa87ef1d-a88f-43cf-88d1-9d0241e0306b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": " and", "estimated_tokens": null }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "75358fff-d7ed-4fbe-8798-3f0f47ead7e6"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 20,
+      "estimated_tokens_delta": 3,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "e2041ae5-58b0-44a0-8a7e-3521af6efb10"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": " explicitly", "estimated_tokens": null }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "40e245af-702e-4932-ae58-8fb7028890ac"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 22,
+      "estimated_tokens_delta": 2,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "c871090c-2db6-4551-aa81-fdd75531a16f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": " states", "estimated_tokens": null }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "0bbfd773-ad46-43c3-88c8-7239c3069713"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 28,
+      "estimated_tokens_delta": 6,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "edbde8d3-06f8-4708-8356-4e0eaf7ae497"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "thinking_delta",
+          "thinking": " \"Do not use any tool",
+          "estimated_tokens": null
+        }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "0dc6fa04-3798-4542-b7a5-b42c19ef5b30"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 29,
+      "estimated_tokens_delta": 1,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "e2da1944-905d-4d2a-a596-65afc5e721c3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": ".\"", "estimated_tokens": null }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "43d68edf-458b-4ecb-acb8-1c3c4b90660b"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 34,
+      "estimated_tokens_delta": 5,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "7b34b803-6454-4b5d-b1c8-e079fdb23454"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "thinking_delta",
+          "thinking": "\n\nThis is a simple",
+          "estimated_tokens": null
+        }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "9c2dc5c1-cff6-4ffc-ba62-01798d79e806"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 37,
+      "estimated_tokens_delta": 3,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "218b17e6-540c-4c88-82ab-6b76b2f80724"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": " request.", "estimated_tokens": null }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "e5cf4f9b-4245-4a16-a17b-07e130d9316b"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 40,
+      "estimated_tokens_delta": 3,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "8e33f761-2ec9-490c-a4e6-d064e592bc31"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": " I should", "estimated_tokens": null }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "02b78e91-4b68-476b-981f-f6028e53a5d0"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 46,
+      "estimated_tokens_delta": 6,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "907dfe78-a88d-4bca-b070-7a6d33e328f2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "thinking_delta",
+          "thinking": " just respond with the",
+          "estimated_tokens": null
+        }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "40b67494-f66c-4714-a86f-e4a14ebf199b"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 50,
+      "estimated_tokens_delta": 4,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "b84faf83-b719-4ac3-becc-8d509c2b519c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "thinking_delta",
+          "thinking": " word \"pong\" and",
+          "estimated_tokens": null
+        }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "6ed1c862-a944-4e68-8466-951e39505169"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 54,
+      "estimated_tokens_delta": 4,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "7e143258-a99b-462e-9790-7a7ea5bb8010"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "thinking_delta",
+          "thinking": " nothing else.",
+          "estimated_tokens": null
+        }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "60935e2a-c1b8-4fc2-9d43-ea6ac4280612"
+    },
+    {
+      "type": "system",
+      "subtype": "thinking_tokens",
+      "estimated_tokens": 127,
+      "estimated_tokens_delta": 73,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "08d56072-95eb-41d9-8e66-4b599b382819"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "signature_delta",
+          "signature": "EvQDCtABCBIYAipA8bLMSxtSre1Ewh5LEGiwCVipaW+qUmV/9A3k/VPboWMrbXsjZYJu48y9mBltVwecmYwY5rTL7RPjOccshyr5qTIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okOTY2YzU3YTMtODNiNS00YTVjLWI1NjQtNzc4ODJkNzYyZjI4chBVHKhma8QzcnzSnXm14AYuiAEBmgEbChljbGF1ZGUtaGFpa3UtNC01LTIwMjUxMDAxqAH6uPvVBrABAhIM9RH41pbRKo2kSPNTGgyf+qGOlg+z1Ml0VKwiMHzd/avmj/hPCcNzO9wz9mW8AA23IZBG3Rgfbn6FKp+gsUr+uWJXL9ZYLNot/P8FPirQAVu8vq5pYWUkMztHhWPowag5ri3T5wbad9yES3ZpnqY65QSGxE6YCWMhHwmBzTIehtXs6u+v8eu5ArOHXJNgZCo87oUHTRWhDvgF59HsfLrHxxqDl0WOa6X682hgvWWynSC42zc35IiOMUdLlADcUyGw60UC/zYhXMWuC6Q5U5YjlVBiYQ5dIYL6DNesujBQyTTOalvEcFMn1wK471gJHTn53YZl0RdleIAuU+mW2yu8pFKeuVVhIEXHOUytQ+5eKzljaC5vC5gWoB2dqPORv54YAQ=="
+        }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "c6d450b3-4d7d-4b98-9281-a435fe8d8f20"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-haiku-4-5-20251001",
+        "id": "msg_011CfcJ35oGEfoGcr71XmvYC",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "The user is asking me to reply with exactly the word \"pong\" and explicitly states \"Do not use any tool.\"\n\nThis is a simple request. I should just respond with the word \"pong\" and nothing else.",
+            "signature": "EvQDCtABCBIYAipA8bLMSxtSre1Ewh5LEGiwCVipaW+qUmV/9A3k/VPboWMrbXsjZYJu48y9mBltVwecmYwY5rTL7RPjOccshyr5qTIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okOTY2YzU3YTMtODNiNS00YTVjLWI1NjQtNzc4ODJkNzYyZjI4chBVHKhma8QzcnzSnXm14AYuiAEBmgEbChljbGF1ZGUtaGFpa3UtNC01LTIwMjUxMDAxqAH6uPvVBrABAhIM9RH41pbRKo2kSPNTGgyf+qGOlg+z1Ml0VKwiMHzd/avmj/hPCcNzO9wz9mW8AA23IZBG3Rgfbn6FKp+gsUr+uWJXL9ZYLNot/P8FPirQAVu8vq5pYWUkMztHhWPowag5ri3T5wbad9yES3ZpnqY65QSGxE6YCWMhHwmBzTIehtXs6u+v8eu5ArOHXJNgZCo87oUHTRWhDvgF59HsfLrHxxqDl0WOa6X682hgvWWynSC42zc35IiOMUdLlADcUyGw60UC/zYhXMWuC6Q5U5YjlVBiYQ5dIYL6DNesujBQyTTOalvEcFMn1wK471gJHTn53YZl0RdleIAuU+mW2yu8pFKeuVVhIEXHOUytQ+5eKzljaC5vC5gWoB2dqPORv54YAQ=="
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 15771,
+          "cache_read_input_tokens": 0,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 15771 },
+          "output_tokens": 6,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "9ff168fe-35ca-4583-88a3-e6144957a734",
+      "timestamp": "2026-10-01T22:19:38.846Z",
+      "request_id": "req_011CfcJ35LjafLt1dcdyEwGW"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "d08e56d5-20e9-41b9-9e98-69899f37f3ca"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 1,
+        "content_block": { "type": "text", "text": "" }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "c7328566-e94f-4415-bf86-70e0c7cc0515"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": "p" }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "d046f61c-3e0b-4c29-ab53-1f713598ccac"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": "ong" }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "34177f6a-f17c-4a35-9664-7ac9186e2304"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-haiku-4-5-20251001",
+        "id": "msg_011CfcJ35oGEfoGcr71XmvYC",
+        "type": "message",
+        "role": "assistant",
+        "content": [{ "type": "text", "text": "pong" }],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 15771,
+          "cache_read_input_tokens": 0,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 15771 },
+          "output_tokens": 6,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "uuid": "f3521ea6-cc4e-4406-b4a1-b70d8092e922",
+      "timestamp": "2026-10-01T22:19:38.864Z",
+      "request_id": "req_011CfcJ35LjafLt1dcdyEwGW"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 1 },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "6cf1cd6b-96e0-459b-892c-e68a11a2f624"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 15771,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 60,
+          "output_tokens_details": { "thinking_tokens": 52 },
+          "iterations": [
+            {
+              "input_tokens": 10,
+              "output_tokens": 60,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 15771,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 15771
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "61636670-3dd1-4917-bd99-4cba54feeae7"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "parent_tool_use_id": null,
+      "uuid": "b76341e6-10d5-4f3b-bf12-89b357dc1a6f"
+    },
+    {
+      "duration_api_ms": 2844,
+      "stop_reason": "end_turn",
+      "session_id": "8ed6cd0e-ed81-474f-91ea-10ccba1c4d7a",
+      "total_cost_usd": 0.032819,
+      "usage": {
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 15771,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 60,
+        "output_tokens_details": { "thinking_tokens": 52 },
+        "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+        "service_tier": "standard",
+        "cache_creation": { "ephemeral_1h_input_tokens": 15771, "ephemeral_5m_input_tokens": 0 },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 10,
+            "output_tokens": 60,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 15771,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 15771
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "modelUsage": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 907,
+          "outputTokens": 12,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.0009670000000000001,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-haiku-4-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        },
+        "claude-haiku-4-5": {
+          "inputTokens": 10,
+          "outputTokens": 60,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 15771,
+          "webSearchRequests": 0,
+          "costUSD": 0.031852,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 52,
+          "canonicalModel": "claude-haiku-4-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "permission_denials": [],
+      "terminal_reason": "completed",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required",
+      "subagent_stats": {
+        "spawned": 0,
+        "requested": { "background": 0, "foreground": 0, "unset": 0 },
+        "started_in_background": 0,
+        "max_depth": 0,
+        "spawned_by_subagents": 0,
+        "completed": 0,
+        "failed": 0,
+        "killed": { "parent": 0, "user": 0, "system": 0 },
+        "refused": { "depth_limit": 0, "concurrency_limit": 0, "budget": 0 },
+        "by_type": {}
+      },
+      "is_error": false,
+      "num_turns": 1,
+      "subtype": "success",
+      "api_error_status": null,
+      "result": "pong",
+      "ttft_ms": 2145,
+      "type": "result",
+      "duration_ms": 2198,
+      "uuid": "2e94c6e8-ef58-42a3-8d9d-03cf25981363",
+      "ttft_stream_ms": 1790,
+      "time_to_request_ms": 256,
+      "first_content_frame_ms": 1790,
+      "queued_turn_count": 0,
+      "result_index": 0
+    }
+  ]
+}

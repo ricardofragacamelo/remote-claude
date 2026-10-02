@@ -122,6 +122,12 @@ O portão 12 **não existe hoje**: o Sonar foi adiado ([D-07 do plano 05](../../
 Fica na tabela como ausente declarado, não como verde. A complexidade, que era dele, foi para o
 portão 2 ([D-10 do plano 05](../../plans/05-hardening-operations/decisions.md#d-10--complexidade-sem-o-sonar)).
 
+**Cobertura e integração rodam uma ponta por vez** (`pnpm -r --workspace-concurrency=1`). Cada
+suíte já usa todos os núcleos; o backend e o web juntos disputam a máquina até os testes que dependem
+de tempo — o WebSocket real do backend, a renderização pesada do web — passarem do timeout sem erro
+nenhum no código ([07 · ciclos 13 e 14](../../plans/07-explorer-and-editor/progress.md#histórico-de-validação)).
+Mais lento, e o vermelho volta a significar defeito.
+
 **Leia a saída.** Comando que "rodou" mas cuja saída não foi lida não conta como portão
 executado. Exit code 0 é o mínimo, não a evidência.
 

@@ -2,19 +2,38 @@ import { Module } from '@nestjs/common';
 
 import { WS_COMMAND_HANDLERS } from '@adapter/inbound/ws/ws-command';
 import type { WsCommandHandler } from '@adapter/inbound/ws/ws-command';
+import { FolderWatches } from '@application/files';
 import { AttachSessionUseCase, SessionRegistry } from '@application/session';
+import { SCHEDULER } from '@application/shared';
+import type { Scheduler } from '@application/shared';
 import { DIAG_HANDLERS } from '@adapter/inbound/ws/diag/diag-commands';
 import { PERMISSION_HANDLERS } from '@adapter/inbound/ws/permission/permission-commands';
 import { DiagSessionOwnership } from '@adapter/outbound/diag/diag-session.ownership';
 import { RegistrySessionOwnership } from '@adapter/outbound/session/registry-session.ownership';
 import { SessionAttachHandler } from '@adapter/inbound/ws/session/session-attach.gateway-handler';
 import { SESSION_HANDLERS } from '@adapter/inbound/ws/session/session-commands';
+import { ConnectionWatchRelease } from '@adapter/inbound/ws/files/connection-watch.release';
+import { SocketWatchSinks } from '@adapter/inbound/ws/files/socket-watch.sinks';
+import {
+  WorkspaceWatchHandler,
+  workspaceUnwatchHandler,
+} from '@adapter/inbound/ws/files/workspace-watch.gateway-handler';
+import { LOGGER, type Logger } from '@shared/logging/logger';
+import { APP_CONFIG } from '../config/environment';
+import type { AppConfig } from '../config/environment';
 import { AppGateway } from '../websocket/app.gateway';
+import { ConnectionRegistry } from '../websocket/connection-registry';
+import { FrameBuilder } from '../websocket/frame-builder';
+import { SessionHub } from '../websocket/session-hub';
 import { AuthModule } from './auth.module';
 import { DiagModule } from './diag.module';
+import { FilesModule } from './files.module';
 import { PermissionModule } from './permission.module';
 import { SessionModule } from './session.module';
 import { WebsocketModule } from './websocket.module';
+
+/** DI token of `workspace.unwatch`, a plain contract command. */
+const FILES_UNWATCH_HANDLER = Symbol('workspace.unwatch handler');
 
 /**
  * The gateway, and the table of commands it routes over.
@@ -27,10 +46,12 @@ const HANDLERS = [
   SessionAttachHandler,
   ...Object.values(SESSION_HANDLERS),
   ...Object.values(PERMISSION_HANDLERS),
+  WorkspaceWatchHandler,
+  FILES_UNWATCH_HANDLER,
 ];
 
 @Module({
-  imports: [AuthModule, DiagModule, PermissionModule, SessionModule, WebsocketModule],
+  imports: [AuthModule, DiagModule, FilesModule, PermissionModule, SessionModule, WebsocketModule],
   providers: [
     {
       // Composed here, where both kinds of session are already in scope: `session.attach` asks
@@ -45,6 +66,47 @@ const HANDLERS = [
       ) => new AttachSessionUseCase([live, diag], registry),
     },
     SessionAttachHandler,
+    {
+      // The stream of a watched folder: one sink per `watchId`, numbering its own `seq` and
+      // owing an overflow to a socket that fell behind (plan 07, B-23).
+      provide: SocketWatchSinks,
+      inject: [ConnectionRegistry, FrameBuilder, SessionHub, SCHEDULER, LOGGER, APP_CONFIG],
+      useFactory: (
+        registry: ConnectionRegistry,
+        frames: FrameBuilder,
+        hub: SessionHub,
+        scheduler: Scheduler,
+        logger: Logger,
+        config: AppConfig,
+      ) =>
+        new SocketWatchSinks({
+          registry,
+          frames,
+          hub,
+          scheduler,
+          logger,
+          maxBufferedBytes: config.files.watch.maxBufferedBytes,
+        }),
+    },
+    {
+      provide: WorkspaceWatchHandler,
+      inject: [FolderWatches, SocketWatchSinks, LOGGER],
+      useFactory: (watches: FolderWatches, sinks: SocketWatchSinks, logger: Logger) =>
+        new WorkspaceWatchHandler(watches, sinks, logger),
+    },
+    {
+      provide: FILES_UNWATCH_HANDLER,
+      inject: [FolderWatches, LOGGER],
+      useFactory: (watches: FolderWatches, logger: Logger) =>
+        workspaceUnwatchHandler(watches, logger),
+    },
+    {
+      // A socket that goes takes its watched folders with it, whatever closed it (S-142, S-147).
+      provide: ConnectionWatchRelease,
+      inject: [ConnectionRegistry, FolderWatches, LOGGER],
+      useFactory: (registry: ConnectionRegistry, watches: FolderWatches, logger: Logger) =>
+        new ConnectionWatchRelease(registry, watches, logger),
+    },
     {
       provide: WS_COMMAND_HANDLERS,
       inject: [...HANDLERS],

@@ -54,6 +54,12 @@ export interface WorkspaceRoutes {
   open?: (path: string) => Answer<OpenFolderDto>;
   close?: (path: string) => Answer<undefined>;
   order?: (paths: readonly string[]) => Answer<undefined>;
+
+  /**
+   * Any other `GET`, by its whole path — the lists of the Sessions view, a page of a conversation
+   * (plan 08). `undefined` for a path it does not answer, which then never answers.
+   */
+  other?: (path: string) => Answer<unknown> | undefined;
 }
 
 /** Folder tabs the server keeps, changed by what the screen asks — for the specs of the tabs. */
@@ -188,7 +194,7 @@ export function fakeWorkspaceApi(routes: WorkspaceRoutes) {
     if (route === '/workspaces/open-folders') {
       return value(routes.openFolders).then((folders) => ({ folders }));
     }
-    return never();
+    return value(routes.other?.(path));
   });
 
   const post = vi

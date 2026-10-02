@@ -4,9 +4,17 @@ import { SquarePen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { PermissionQueuePanel } from '@/features/permission';
-import { SessionScreen, SessionStarter } from '@/features/session';
+import {
+  ConversationReader,
+  SESSION_LINK_GONE,
+  SessionScreen,
+  SessionStarter,
+  useSetPermissionMode,
+} from '@/features/session';
 import { useFolderTab } from '@/features/workbench';
+import { ErrorState } from '@/shared/components/ErrorState';
 import { IconButton } from '@/shared/components/IconButton';
+import { Button } from '@/shared/components/ui/button';
 
 export interface ClaudeSideBarProps {
   /** The real path of the folder of the tab — where a session is born. */
@@ -22,14 +30,15 @@ export interface ClaudeSideBarProps {
  * session is **born in this folder** and stays on screen here; the questions come first, because a
  * question is what the session is waiting on.
  *
- * There is no way from here to the whole of the conversation until the Sessions view of plan 08: the
- * history left the web with its routes ([06 · D-07](../../../docs/plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)).
+ * A conversation of the history opened from the Sessions view (plan 08, B-10) is read here, with the
+ * way to continue it; continued, the panel shows the session it became.
  */
 export function ClaudeSideBar({ folder }: ClaudeSideBarProps): React.JSX.Element {
   const { t } = useTranslation();
   const tab = useFolderTab(folder);
   const navigate = useNavigate();
-  const { showSession } = tab;
+  const { showSession, showConversation } = tab;
+  const setMode = useSetPermissionMode(tab.sessionId);
 
   const started = useCallback(
     (sessionId: string) => {
@@ -43,6 +52,35 @@ export function ClaudeSideBar({ folder }: ClaudeSideBarProps): React.JSX.Element
   const openRules = useCallback(() => {
     void navigate({ to: '/rules' });
   }, [navigate]);
+
+  if (tab.linkRefused) {
+    return (
+      <div className="flex flex-col gap-3">
+        <ErrorState error={SESSION_LINK_GONE} />
+        <Button
+          variant="outline"
+          className="self-start"
+          onClick={() => {
+            showSession(null);
+          }}
+        >
+          {t('workbench.claude.backToStart')}
+        </Button>
+      </div>
+    );
+  }
+
+  if (tab.conversationId !== null) {
+    return (
+      <ConversationReader
+        conversationId={tab.conversationId}
+        onResumed={started}
+        onClose={() => {
+          showConversation(null);
+        }}
+      />
+    );
+  }
 
   if (tab.sessionId === null) {
     return <SessionStarter workspacePath={folder} onStarted={started} />;
@@ -59,8 +97,17 @@ export function ClaudeSideBar({ folder }: ClaudeSideBarProps): React.JSX.Element
           }}
         />
       </div>
-      <PermissionQueuePanel sessionId={tab.sessionId} onOpenRules={openRules} />
-      <SessionScreen sessionId={tab.sessionId} draft={tab.draft} onDraftChange={tab.setDraft} />
+      <PermissionQueuePanel
+        sessionId={tab.sessionId}
+        onOpenRules={openRules}
+        onPlanApproved={setMode}
+      />
+      <SessionScreen
+        sessionId={tab.sessionId}
+        draft={tab.draft}
+        onDraftChange={tab.setDraft}
+        folder={folder}
+      />
     </>
   );
 }

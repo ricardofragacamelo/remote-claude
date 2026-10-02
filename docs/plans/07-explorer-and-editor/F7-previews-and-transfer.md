@@ -22,7 +22,7 @@ isso vem depois do núcleo verde, com contrato e decisões próprios
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-47 — O contrato de prévia e transferência 🔲
+### B-47 — O contrato de prévia e transferência ✅
 
 No `backend/03` (seção `files`), com os status: `GET /files/raw?folder=&path=` (bytes crus, `Range`
 → `206`, `416` fora do arquivo, `ETag`, cabeçalhos de segurança da D-18, `attachment` fora da lista de
@@ -32,7 +32,7 @@ antes do primeiro byte) e `POST /files/upload` (multipart, resultado por item, `
 na tabela de status, com chaves; `file.downloaded` no CHECK da trilha (migration versionada nova) e
 `source: upload` no `file.created`.
 
-### B-48 — Conteúdo cru e arquivo compactado 🔲
+### B-48 — Conteúdo cru e arquivo compactado ✅
 
 `raw` sobre a mesma contenção da F1 (realpath + descritor), `Content-Type` pelo conteúdo,
 `X-Content-Type-Options: nosniff` e `Content-Security-Policy: sandbox` **sempre**; HTML e SVG nunca
@@ -41,7 +41,7 @@ recusando antes do primeiro byte o que passa do teto; cliente que aborta para o 
 descritores. Baixar é leitura, mas tira conteúdo da máquina: `file.downloaded` antes do primeiro
 byte, e trilha indisponível → nada sai ([D-02](decisions.md#d-02--a-escrita-humana-na-trilha)).
 
-### B-49 — Upload 🔲
+### B-49 — Upload ✅
 
 Multipart em stream (nunca o corpo inteiro em memória), cada arquivo por um temporário e `O_EXCL`
 como o criar da B-12: conexão que cai no meio não deixa arquivo parcial; nome com `../` ou `/` é
@@ -54,7 +54,7 @@ segmento passa pela mesma validação do nome (nada de `..`, absoluto, NUL nem n
 Windows); as subpastas são criadas no destino, e o teto conta a soma e o número de itens, não só cada
 arquivo. Symlink vindo do navegador não existe como tal — chega como arquivo comum, e é tratado assim.
 
-### B-50 — Prévias 🔲
+### B-50 — Prévias ✅
 
 "Abrir prévia" e "prévia ao lado" (palette, menu e atalho), e a alternância editor/prévia na aba:
 
@@ -66,14 +66,14 @@ arquivo. Symlink vindo do navegador não existe como tal — chega como arquivo 
 - **PDF** pelo pdf.js servido pelo nosso build, paginado — nunca o visualizador embutido do navegador;
 - imagem corrompida → placeholder traduzido.
 
-### B-51 — Hexadecimal e leitura paginada 🔲
+### B-51 — Hexadecimal e leitura paginada ✅
 
 Binário abre em hexadecimal **somente leitura**, paginado pelo `Range` do `raw`; texto acima do teto
 de edição abre paginado, somente leitura, dizendo por quê — é o terceiro degrau do modo arquivo
 grande da [D-04](decisions.md#d-04--teto-de-tamanho-e-encoding). Arquivo que muda durante a paginação
 (o `ETag` do `raw` mudou) → aviso e recarga, nunca páginas de duas versões.
 
-### B-52 — Upload e download na web 🔲
+### B-52 — Upload e download na web ✅
 
 Arrastar do desktop para uma pasta da árvore (e o botão "Enviar arquivos…", que é a alternativa por
 teclado) com progresso por arquivo e cancelar; conflito mostrado **antes** de enviar, com Substituir
@@ -86,13 +86,13 @@ desktop, ou "Enviar pasta…" com o seletor de diretório do navegador), com a e
 **baixar a seleção** — vários arquivos e pastas marcados no explorer num zip só; e **Enviar arquivos
 aqui…** / **Baixar** no menu de contexto da árvore e na palette, sobre a pasta ou o item clicado.
 
-### B-53 — Usabilidade e ajuda de prévias e transferência 🔲
+### B-53 — Usabilidade e ajuda de prévias e transferência ✅
 
 Na ajuda do explorer e do editor, em en e pt-BR: o que é pré-visualizado, por que HTML não roda na
 prévia, quais são os tetos de upload e download e o que acontece acima deles. Tooltips, atalhos na
 palette, e axe sem violação nas prévias, no hexadecimal e no diálogo de conflito de upload.
 
-### B-54 — E2e de prévia e transferência 🔲
+### B-54 — E2e de prévia e transferência ✅
 
 Markdown com imagem relativa em prévia ao lado, editado ao vivo; arrastar arquivo do desktop e baixar
 a pasta como zip (o conteúdo do zip conferido pela fixture); binário em hexadecimal.

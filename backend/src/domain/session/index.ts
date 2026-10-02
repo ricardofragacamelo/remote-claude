@@ -1,6 +1,7 @@
 /** Public surface of the `session` domain. Another domain imports this file, never a deep path. */
 export { Session } from './entities/session.entity';
-export type { SessionCloseReason, SessionOpening } from './entities/session.entity';
+export type { SessionClient, SessionCloseReason, SessionOpening } from './entities/session.entity';
+export { liveSessionsIn } from './services/live-session-listing';
 export { SessionFileState } from './entities/session-file-state.entity';
 export type { SessionFileStateSnapshot } from './entities/session-file-state.entity';
 export { TurnFileCheckpoint } from './entities/turn-file-checkpoint.entity';
@@ -38,6 +39,16 @@ export type {
   PreservationReason,
   UndoPoint,
 } from './services/rewind-plan';
+export { AttachmentNotFoundError } from './errors/attachment-not-found.error';
+export { AttachmentTypeUnsupportedError } from './errors/attachment-type-unsupported.error';
+export { DiffNotApplicableError } from './errors/diff-not-applicable.error';
+export { EffortUnsupportedError } from './errors/effort-unsupported.error';
+export { ForkPointUnknownError } from './errors/fork-point-unknown.error';
+export { QueuedPromptNotFoundError } from './errors/queued-prompt-not-found.error';
+export { QueuedPromptStartedError } from './errors/queued-prompt-started.error';
+export { SessionChangeStaleError } from './errors/session-change-stale.error';
+export { SessionForkRejectedError } from './errors/session-fork-rejected.error';
+export { ToolUseNotFoundError } from './errors/tool-use-not-found.error';
 export { ClaudeTimeoutError } from './errors/claude-timeout.error';
 export { ClaudeUnavailableError } from './errors/claude-unavailable.error';
 export { InvalidSessionIdError } from './errors/invalid-session-id.error';

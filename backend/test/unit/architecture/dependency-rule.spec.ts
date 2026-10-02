@@ -168,6 +168,27 @@ describe('the Dependency Rule, as the build enforces it', () => {
     ).toBe(false);
   });
 
+  it('refuses `files` reaching `session`, even through its barrel — plan 07, S-08', async () => {
+    expect(
+      broke(
+        await violations(),
+        'files-never-reaches-session',
+        'application/files/reaches-session.ts',
+      ),
+    ).toBe(true);
+  });
+
+  it('lets `files` reach `workspace` through its barrel — plan 07, D-01', async () => {
+    const found = await violations();
+
+    expect(
+      broke(found, 'files-never-reaches-session', 'adapter/outbound/files/reaches-workspace.ts'),
+    ).toBe(false);
+    expect(
+      broke(found, 'no-cross-domain-internals', 'adapter/outbound/files/reaches-workspace.ts'),
+    ).toBe(false);
+  });
+
   it('carries a comment on every rule, so a failure says why the rule exists', () => {
     for (const rule of configuration.forbidden ?? []) {
       expect(rule.comment, rule.name).toBeTruthy();

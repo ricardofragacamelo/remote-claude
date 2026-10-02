@@ -22,12 +22,35 @@ const HTTP_STATUS_BY_CODE: Readonly<Record<string, number>> = {
   SESSION_NOT_FOUND: 404,
   SESSION_LOCKED: 423,
   SESSION_LIMIT_REACHED: 429,
+  SESSION_CHANGE_STALE: 409,
+  SESSION_FORK_REJECTED: 409,
+  QUEUED_PROMPT_NOT_FOUND: 404,
+  TOOL_USE_NOT_FOUND: 404,
+  DIFF_NOT_APPLICABLE: 422,
+  ATTACHMENT_NOT_FOUND: 404,
+  ATTACHMENT_TYPE_UNSUPPORTED: 415,
   PERMISSION_REQUEST_NOT_FOUND: 404,
   PERMISSION_REQUEST_EXPIRED: 410,
   PERMISSION_NOT_OWNED: 403,
   PERMISSION_RULE_PATTERN_INVALID: 400,
   PERMISSION_RULE_EXPIRY_TOO_LONG: 422,
   PERMISSION_RULE_NOT_FOUND: 404,
+  FILE_NOT_FOUND: 404,
+  FILE_EXISTS: 409,
+  DIRECTORY_NOT_EMPTY: 409,
+  FILE_CHANGED: 412,
+  PRECONDITION_REQUIRED: 428,
+  FILE_TOO_LARGE: 413,
+  FILE_NOT_TEXT: 415,
+  FILE_NOT_A_FILE: 422,
+  FILE_OPERATION_INVALID: 422,
+  FILE_NOT_ENCODABLE: 422,
+  FILE_ACCESS_DENIED: 422,
+  STORAGE_FULL: 507,
+  RANGE_NOT_SATISFIABLE: 416,
+  WATCH_LIMIT_REACHED: 429,
+  WATCH_UNAVAILABLE: 503,
+  HISTORY_ENTRY_NOT_FOUND: 404,
   CLAUDE_UNAVAILABLE: 502,
   CLAUDE_TIMEOUT: 504,
   RATE_LIMITED: 429,
@@ -81,6 +104,33 @@ export function retryAfterFor(status: number, envelope: ErrorEnvelope): number |
 
 /** What a `429` or a `503` says when the error that caused it did not know better. */
 export const DEFAULT_RETRY_AFTER_SECONDS = 1;
+
+/**
+ * The version of the resource a refusal names, as an `ETag` header, or `null`.
+ *
+ * A `412` says which version is on disk now and a `409` which file is already there
+ * (`params.currentEtag`); the header carries it too, because that is where an HTTP client looks
+ * for the current version ([07 · D-03](../../../../docs/plans/07-explorer-and-editor/decisions.md#d-03--a-semântica-de-concorrência)).
+ */
+export function etagFor(envelope: ErrorEnvelope): string | null {
+  const current = envelope.error.params?.['currentEtag'];
+
+  return typeof current === 'string' ? current : null;
+}
+
+/**
+ * The `Content-Range` a refusal of a `Range` carries, or `null`.
+ *
+ * RFC 9110 has a `416` say how long the representation is — `bytes`, a `*`, a slash, the size — so a client paging
+ * through a file that shrank learns where it ends now, without a second request (plan 07, B-47).
+ */
+export function contentRangeFor(envelope: ErrorEnvelope): string | null {
+  const size = envelope.error.params?.['size'];
+
+  return envelope.error.code === 'RANGE_NOT_SATISFIABLE' && typeof size === 'number'
+    ? `bytes */${String(size)}`
+    : null;
+}
 
 /** One invalid field. Validation reports every one of them, not only the first. */
 export interface ErrorDetail {

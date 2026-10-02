@@ -8,6 +8,12 @@
  */
 export type ConversationOrigin = 'ours' | 'external';
 
+/**
+ * What a conversation is doing now, as the backend tells it (plan 08, B-08): live in a session of
+ * this person here, recently written by something else — an estimate, and said to be one — or idle.
+ */
+export type ConversationActivity = 'liveHere' | 'activeElsewhere' | 'idle';
+
 /** One conversation of Claude's store, as the history lists it. */
 export interface ConversationSummary {
   /** The id in Claude's store — what a page of it is read by, and what a resume takes. */
@@ -22,6 +28,15 @@ export interface ConversationSummary {
 
   /** ISO 8601. */
   readonly lastModified: string;
+
+  /** What it is doing now. `idle` from a backend that does not say. */
+  readonly activity: ConversationActivity;
+
+  /** The live session of this person that holds it, when it is `liveHere`. */
+  readonly liveSessionId: string | null;
+
+  /** How long ago it was last written, by the backend's clock — what "written n min ago" says. */
+  readonly writtenAgoSeconds: number | null;
 }
 
 /**

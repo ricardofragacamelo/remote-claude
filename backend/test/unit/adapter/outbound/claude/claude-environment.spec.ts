@@ -62,6 +62,8 @@ describe('claudeEnvironment — 10 · B-13, D-10', () => {
       NODE_EXTRA_CA_CERTS: '/etc/ssl/ca.pem',
       ANTHROPIC_API_KEY: 'the-users-own',
       CLAUDE_CODE_USE_BEDROCK: '1',
+      // Which form the task list takes — the CLI's to read (plan 08, D-25).
+      CLAUDE_CODE_ENABLE_TASKS: '0',
       LANG: 'pt_BR.UTF-8',
     };
 

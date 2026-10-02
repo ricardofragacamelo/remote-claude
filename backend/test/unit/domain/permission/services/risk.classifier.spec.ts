@@ -15,6 +15,12 @@ describe('classifyRisk', () => {
     ['Read', { file_path: '/srv/app/main.ts' }],
     ['Glob', { pattern: '**/*.ts' }],
     ['Grep', { pattern: 'TODO' }],
+    // The task list, in either form — plan 08, D-25.
+    ['TodoWrite', { todos: [] }],
+    ['TaskCreate', { subject: 'Ship it' }],
+    ['TaskGet', { taskId: '1' }],
+    ['TaskUpdate', { taskId: '1', status: 'completed' }],
+    ['TaskList', {}],
   ])('grades %s as a read', (toolName, input) => {
     expect(classifyRisk(toolName, input)).toBe('read');
   });

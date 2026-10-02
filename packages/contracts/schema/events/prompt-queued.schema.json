@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/prompt-queued.json",
+  "title": "PromptQueued",
+  "description": "A prompt is waiting for the running turn to end. The queue is the backend's, not the SDK's — a prompt handed to the SDK cannot be taken back (plan 08, D-14) — so every watcher sees the same queue, and any of them can take one out with `session.cancelQueuedPrompt`.",
+  "x-kind": "event",
+  "x-type": "prompt.queued",
+  "type": "object",
+  "required": ["queueId", "position", "promptedBy", "preview"],
+  "properties": {
+    "queueId": {
+      "type": "string",
+      "description": "What `session.cancelQueuedPrompt` names it by."
+    },
+    "position": {
+      "type": "integer",
+      "description": "Its place in the queue, from 1."
+    },
+    "promptedBy": {
+      "type": "string",
+      "description": "Who sent it."
+    },
+    "preview": {
+      "type": "string",
+      "description": "The start of what was typed, for the row of the queue. Cut by the backend; the whole prompt is the turn's, when it runs."
+    }
+  }
+}

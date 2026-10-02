@@ -1,0 +1,856 @@
+{
+  "$comment": "Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. Do not edit by hand — re-record instead. See docs/plans/01-live-session/F2-session-runtime.md.",
+  "name": "reference-turn",
+  "why": "D-01 — a reference in the delimited form the backend composes: Claude reads it through Read, under PreToolUse",
+  "prompt": "Summarise the referenced file in one line.\n\n<reference path=\"notes.md\" lines=\"1-2\" />",
+  "recordedAt": "2026-10-01",
+  "sdkVersion": "0.3.277",
+  "counts": { "messages": 41, "preToolUse": 1, "canUseTool": 0 },
+  "preToolUse": [
+    { "toolName": "Read", "toolUseId": "toolu_01X2bxWJMyaD69friXVcSKnf", "effort": "high" }
+  ],
+  "canUseTool": [],
+  "stderr": [],
+  "messages": [
+    {
+      "type": "system",
+      "subtype": "init",
+      "cwd": "/workspace",
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "tools": [
+        "Task",
+        "AskUserQuestion",
+        "Bash",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DesignSync",
+        "Edit",
+        "EnterPlanMode",
+        "EnterWorktree",
+        "ExitPlanMode",
+        "ExitWorktree",
+        "ListAgents",
+        "Monitor",
+        "NotebookEdit",
+        "PushNotification",
+        "Read",
+        "RemoteTrigger",
+        "ReportFindings",
+        "ScheduleWakeup",
+        "SendMessage",
+        "ShareOnboardingGuide",
+        "Skill",
+        "TaskStop",
+        "ToolSearch",
+        "WebFetch",
+        "WebSearch",
+        "Workflow",
+        "Write"
+      ],
+      "mcp_servers": [],
+      "model": "claude-opus-5[1m]",
+      "permissionMode": "default",
+      "slash_commands": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator",
+        "advisor",
+        "agents",
+        "auto-mode-setup",
+        "autocompact",
+        "clear",
+        "color",
+        "compact",
+        "config",
+        "output-style",
+        "context",
+        "effort",
+        "fast",
+        "heapdump",
+        "init",
+        "mcp",
+        "import",
+        "model",
+        "__remote-workflow",
+        "workflow-launch-exec",
+        "reload-plugins",
+        "reload-skills",
+        "rename",
+        "security-review",
+        "usage-credits",
+        "extra-usage",
+        "usage",
+        "insights",
+        "recap",
+        "skill-doctor",
+        "goal",
+        "design-consent",
+        "design-revoke",
+        "list-agents",
+        "team-onboarding"
+      ],
+      "terminal_slash_commands": ["doctor", "color", "reload-plugins"],
+      "apiKeySource": "none",
+      "claude_code_version": "2.1.277",
+      "output_style": "default",
+      "agents": ["claude", "Explore", "general-purpose", "Plan", "statusline-setup"],
+      "skills": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator"
+      ],
+      "plugins": [{ "name": "agents-md", "path": "builtin", "source": "agents-md@builtin" }],
+      "capabilities": ["interrupt_receipt_v1", "interrupt_cancel_queued_v1", "msg_lifecycle_v1"],
+      "analytics_disabled": false,
+      "product_feedback_disabled": false,
+      "uuid": "9ff30546-b24e-4535-b15d-cbdf676b1e45",
+      "memory_paths": { "auto": "/home/user/.claude/projects/-workspace/memory/" },
+      "messaging_socket_path": "/run/user/1000/cc-socks/1975300.sock",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required"
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "uuid": "81311477-3eb3-402b-93af-c3e41307e646"
+    },
+    {
+      "type": "rate_limit_event",
+      "rate_limit_info": {
+        "status": "allowed",
+        "resetsAt": 1790889600,
+        "rateLimitType": "five_hour",
+        "overageStatus": "rejected",
+        "overageDisabledReason": "member_zero_credit_limit",
+        "isUsingOverage": false,
+        "unifiedWindows": {
+          "five_hour": { "utilization": 0.85, "resetsAt": 1790889600 },
+          "seven_day": { "utilization": 0.14, "resetsAt": 1791478800 }
+        }
+      },
+      "uuid": "7938e701-66eb-49e0-8bfb-537b93a30e30",
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011Cfc8mgz7LWLCBntWZN6nV",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 3552,
+            "cache_read_input_tokens": 11667,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 3552 },
+            "output_tokens": 1,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "1a106611-a1fd-4e8b-bd89-7493d7eff6dd",
+      "ttft_ms": 1033
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": { "type": "text", "text": "" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "a6b5fd56-885e-4ba9-acb4-3699bb62c305"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "I" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "0b942e2a-3f94-4fd4-a866-126ecf3537fd"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "'ll read the refer" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "cd6777a6-6423-47ab-87f8-23b1571719bc"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "enced file." }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "2e329294-d9a5-4ed9-898f-48567370d285"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8mgz7LWLCBntWZN6nV",
+        "type": "message",
+        "role": "assistant",
+        "content": [{ "type": "text", "text": "I'll read the referenced file." }],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3552,
+          "cache_read_input_tokens": 11667,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 3552 },
+          "output_tokens": 1,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "uuid": "1ee9e40c-e3ae-4197-847e-85e8193df3c1",
+      "timestamp": "2026-10-01T20:18:08.710Z",
+      "request_id": "req_011Cfc8mgGh3Aq3zBFT1cgCg"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "591352aa-9c6a-4101-b2c5-aa8eb82043b2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 1,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01X2bxWJMyaD69friXVcSKnf",
+          "name": "Read",
+          "input": {},
+          "caller": { "type": "direct" }
+        }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "ecf6d49c-8b53-45a7-ab54-306b790b3634"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "ab1f9c18-e18b-49c7-b19f-39b7687e8088"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"file_path\": \"/tm" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "f55b13fe-07a9-4b66-a51b-a6d5344fcdae"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "p/rc-fixture" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "9fdde748-ff1c-411b-af00-7e0fe65c8d53"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "-zIEvb9/" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "973dd02f-80bc-4bb8-bad9-830f5699a17e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "notes.md" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "a3b9e8dc-2690-4210-b7e7-7cc05c68be8c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "ee356a76-5861-48e7-a2cc-3d80b255b9f6"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8mgz7LWLCBntWZN6nV",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01X2bxWJMyaD69friXVcSKnf",
+            "name": "Read",
+            "input": { "file_path": "/workspace/notes.md" },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3552,
+          "cache_read_input_tokens": 11667,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 3552 },
+          "output_tokens": 1,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "uuid": "ab800f79-b650-4760-868a-17a11ad46099",
+      "timestamp": "2026-10-01T20:18:08.754Z",
+      "request_id": "req_011Cfc8mgGh3Aq3zBFT1cgCg",
+      "wire_tool_inputs": {
+        "toolu_01X2bxWJMyaD69friXVcSKnf": { "file_path": "/workspace/notes.md" }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 1 },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "56fbfda3-d196-4e45-8655-2d10e60be80d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3552,
+          "cache_read_input_tokens": 11667,
+          "output_tokens": 81,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 81,
+              "cache_read_input_tokens": 11667,
+              "cache_creation_input_tokens": 3552,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 3552
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "817d9153-d8d6-44b4-8927-325986d23efe"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "dde96fee-c572-4365-a612-ea3e5bfa89c8"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_01X2bxWJMyaD69friXVcSKnf",
+            "type": "tool_result",
+            "content": "1\tLine one says the build is green.\n2\tLine two says the docs are late.\n3\t"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "uuid": "a172bfa8-2b41-4cc2-8814-686c01bf4b97",
+      "timestamp": "2026-10-01T20:18:08.800Z",
+      "tool_use_result": {
+        "type": "text",
+        "file": {
+          "filePath": "/workspace/notes.md",
+          "content": "Line one says the build is green.\nLine two says the docs are late.\n",
+          "numLines": 3,
+          "startLine": 1,
+          "totalLines": 3
+        }
+      }
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "uuid": "e3e15118-a427-47a2-81ed-a90de4ca1ee4"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011Cfc8mqb3QBV2A5G6PdCW7",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 2254,
+            "cache_read_input_tokens": 15219,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2254 },
+            "output_tokens": 8,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "1f69e881-00a6-4d14-a266-1f461bd808cc",
+      "ttft_ms": 2061
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": { "type": "thinking", "thinking": "", "signature": "" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "681b4e34-711b-4a8c-9363-b53ab3242ec4"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "thinking_delta", "thinking": "", "estimated_tokens": null }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "e15de4f6-6f9d-4606-b1f4-0a9e4594b551"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "signature_delta",
+          "signature": "CAISygMKmQIIEhgCKkA9sRR6+uk+9cBzeNtnLFfVU90LjvC/oVUgGsFrvLdojO6lU5KBMAwD9Y+5ECOGf8I3QxDeo09v74HjUjXqlUIIMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ5NjZjNTdhMy04M2I1LTRhNWMtYjU2NC03Nzg4MmQ3NjJmMjhyEFUcqGZrxDNyfNKdebXgBi6IAQGaAQ8KDWNsYXVkZS1vcHVzLTWoAYOA+9UGsAEC2gFeChZwcmVmaXhfYmVmb3JlX2Jsb2NrX3YxEiCjpzaXIwW1hENN2c6P0U8KhynCY5r3hXYvK0Yva7nCBzIgwsATyGqckuIvlm89hhd2j4t6RMkCrcwJe/oeCYr7Th9IAxIMTpYUjPbA1bLK9TbvGgxpDOx3xxvgmRbjyeoiMLtmy5H0t99AV1f7nAKxOUh9K34V9q9h5jXf2naBm4Eq6OiMzKGWf4xoDGJHc2rwxCpefjDo7z9nvQ1WUKIIdldfT+aLujrQp2AcpEXSBovgDX9FJhWVQzC7dFSd202ouoe9mhzXhtqdUQQDkeYjpCWuwcxDKblL5qkyTHPQfRDlMThE6tXbg+2egg/TV7gF8RgB"
+        }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "ef1dc860-71ee-4d0b-8405-df00f2b0baa5"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8mqb3QBV2A5G6PdCW7",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "",
+            "signature": "CAISygMKmQIIEhgCKkA9sRR6+uk+9cBzeNtnLFfVU90LjvC/oVUgGsFrvLdojO6lU5KBMAwD9Y+5ECOGf8I3QxDeo09v74HjUjXqlUIIMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ5NjZjNTdhMy04M2I1LTRhNWMtYjU2NC03Nzg4MmQ3NjJmMjhyEFUcqGZrxDNyfNKdebXgBi6IAQGaAQ8KDWNsYXVkZS1vcHVzLTWoAYOA+9UGsAEC2gFeChZwcmVmaXhfYmVmb3JlX2Jsb2NrX3YxEiCjpzaXIwW1hENN2c6P0U8KhynCY5r3hXYvK0Yva7nCBzIgwsATyGqckuIvlm89hhd2j4t6RMkCrcwJe/oeCYr7Th9IAxIMTpYUjPbA1bLK9TbvGgxpDOx3xxvgmRbjyeoiMLtmy5H0t99AV1f7nAKxOUh9K34V9q9h5jXf2naBm4Eq6OiMzKGWf4xoDGJHc2rwxCpefjDo7z9nvQ1WUKIIdldfT+aLujrQp2AcpEXSBovgDX9FJhWVQzC7dFSd202ouoe9mhzXhtqdUQQDkeYjpCWuwcxDKblL5qkyTHPQfRDlMThE6tXbg+2egg/TV7gF8RgB"
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2254,
+          "cache_read_input_tokens": 15219,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2254 },
+          "output_tokens": 8,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "uuid": "ca5c5362-8dba-4092-85aa-38f550def626",
+      "timestamp": "2026-10-01T20:18:11.127Z",
+      "request_id": "req_011Cfc8mq6GcyaDYuemN2kgt"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "7de5a118-9d3d-4ddd-bb49-175ec12a170d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 1,
+        "content_block": { "type": "text", "text": "" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "e4df81b2-2ee2-44b3-b5cc-8535e5ffb8f5"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": "notes.md is" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "9b0ea909-154a-4e88-9cbf-55329d463c71"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " a two-line status note re" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "5e0bfd7b-1784-4200-9f17-29079f423ddc"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": "porting that the build is green but" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "e02a465b-93fe-4ac9-be44-63bae6915d07"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " the doc" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "9d7128f5-9750-4631-b9d0-0d63092f69d9"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": "s are running" }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "061de9c1-7fdc-4801-ba72-68999ffce6c7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "text_delta", "text": " late." }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "59ced066-d07d-4f53-a022-01d7e620d1bf"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8mqb3QBV2A5G6PdCW7",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "notes.md is a two-line status note reporting that the build is green but the docs are running late."
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2254,
+          "cache_read_input_tokens": 15219,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2254 },
+          "output_tokens": 8,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "uuid": "17ee3143-201d-4463-ab4f-374392f3f4a6",
+      "timestamp": "2026-10-01T20:18:11.391Z",
+      "request_id": "req_011Cfc8mq6GcyaDYuemN2kgt"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 1 },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "c4468492-11c2-4931-8dbb-6e6b7bce80c0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2254,
+          "cache_read_input_tokens": 15219,
+          "output_tokens": 56,
+          "output_tokens_details": { "thinking_tokens": 27 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 56,
+              "cache_read_input_tokens": 15219,
+              "cache_creation_input_tokens": 2254,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 2254
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "c00fe670-b64c-4424-ac79-368def34bf06"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "parent_tool_use_id": null,
+      "uuid": "09a1599b-3f9a-4ed7-ae26-e6edf44a7882"
+    },
+    {
+      "duration_api_ms": 5506,
+      "stop_reason": "end_turn",
+      "session_id": "c73bc808-7a4c-4a69-919f-97e691227d66",
+      "total_cost_usd": 0.075926,
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 5806,
+        "cache_read_input_tokens": 26886,
+        "output_tokens": 137,
+        "output_tokens_details": { "thinking_tokens": 27 },
+        "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+        "service_tier": "standard",
+        "cache_creation": { "ephemeral_1h_input_tokens": 5806, "ephemeral_5m_input_tokens": 0 },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 56,
+            "cache_read_input_tokens": 15219,
+            "cache_creation_input_tokens": 2254,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2254 },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "modelUsage": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 918,
+          "outputTokens": 12,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.000978,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-haiku-4-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 4,
+          "outputTokens": 137,
+          "cacheReadInputTokens": 26886,
+          "cacheCreationInputTokens": 5806,
+          "webSearchRequests": 0,
+          "costUSD": 0.074948,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 64000,
+          "thinkingTokens": 27,
+          "canonicalModel": "claude-opus-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "permission_denials": [],
+      "terminal_reason": "completed",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required",
+      "subagent_stats": {
+        "spawned": 0,
+        "requested": { "background": 0, "foreground": 0, "unset": 0 },
+        "started_in_background": 0,
+        "max_depth": 0,
+        "spawned_by_subagents": 0,
+        "completed": 0,
+        "failed": 0,
+        "killed": { "parent": 0, "user": 0, "system": 0 },
+        "refused": { "depth_limit": 0, "concurrency_limit": 0, "budget": 0 },
+        "by_type": {}
+      },
+      "is_error": false,
+      "num_turns": 2,
+      "subtype": "success",
+      "api_error_status": null,
+      "result": "notes.md is a two-line status note reporting that the build is green but the docs are running late.",
+      "ttft_ms": 2217,
+      "type": "result",
+      "duration_ms": 4925,
+      "uuid": "0819fa8c-e437-4516-bac8-3c6443d9d9dc",
+      "ttft_stream_ms": 1227,
+      "time_to_request_ms": 194,
+      "first_content_frame_ms": 1228,
+      "queued_turn_count": 0,
+      "result_index": 0
+    }
+  ]
+}

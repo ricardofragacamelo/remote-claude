@@ -31,7 +31,7 @@ O que esta fase acrescenta é **ver** as três coisas juntas, na pasta.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-07 — `GET /sessions?workspacePath=`: as sessões vivas da pasta 🔲
+### B-07 — `GET /sessions?workspacePath=`: as sessões vivas da pasta ✅
 
 O registro de sessões vivas é um `Map` em memória ([backend/04](../../architecture/backend/04-claude-integration.md#ciclo-de-vida-e-recursos)),
 e hoje nada o expõe. O endpoint filtra por **dono** (o chamador; sessão de outra pessoa não aparece,
@@ -44,7 +44,7 @@ Regra de contenção é **domínio puro** (`live-session-listing`), testada sem 
 registro e a resolução. Formato na [B-03](F0-contract.md). Log de I/O em `debug` com pasta e contagem,
 sem resumo nem prompt ([logging](../../architecture/shared/03-logging.md#a-regra-do-io-em-debug)).
 
-### B-08 — O histórico da pasta diz o que está vivo e o que parece ativo 🔲
+### B-08 — O histórico da pasta diz o que está vivo e o que parece ativo ✅
 
 `GET /transcripts` ganha, por conversa, a `activity`:
 
@@ -60,7 +60,7 @@ cache e filtro de `cwd` dentro da pasta — sem afrouxar a cerca, que continua s
 ([backend/03](../../architecture/backend/03-modules.md#transcript)). O cursor keyset sobre
 `(lastModified, sessionId)` continua valendo, e a leitura continua **só** pelas funções do SDK.
 
-### B-09 — A view "Sessões do Claude" 🔲
+### B-09 — A view "Sessões do Claude" ✅
 
 Na activity bar do [plano 06](../06-workbench/README.md), a view que ele reservou. Três grupos, cada
 um com os [quatro estados](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre),
@@ -77,7 +77,7 @@ dela (filtros, grupo recolhido, rolagem) são **da aba de pasta** — a regra da
 [B-05](F0-contract.md). A lista de conversas de hoje (`ConversationList`, em
 `features/transcript`) e a `HistoryScreen` são absorvidas aqui; nada fica duplicado.
 
-### B-10 — Integrar com a sessão: `attach`, retomar, fork 🔲
+### B-10 — Integrar com a sessão: `attach`, retomar, fork ✅
 
 Clicar numa linha abre a conversa no painel da mesma aba (a F4 cria o painel; até lá, a conversa abre
 na tela de sessão atual):
@@ -96,14 +96,14 @@ só — o backend já junta, e a view não manda o segundo. Toda ação da linha
 contexto (abrir, retomar, bifurcar, copiar o id da conversa, encerrar a sessão se for o dono) e na
 command palette.
 
-### B-11 — A lista acompanha o mundo 🔲
+### B-11 — A lista acompanha o mundo ✅
 
 Pela D-10: polling do TanStack Query com a view visível, parado com a view escondida ou a aba de pasta
 inativa, e invalidação imediata pelos eventos que o cliente já recebe das sessões que observa
 (`session.started`, `session.closed`). Resposta velha não sobrescreve a nova; reativar a aba recarrega
 uma vez. Nenhum stream novo no WebSocket.
 
-### B-12 — O link de uma sessão e de uma conversa no workbench 🔲
+### B-12 — O link de uma sessão e de uma conversa no workbench ✅
 
 O painel do Claude **não é uma tela separada**: vive na aba de pasta, ao lado do explorer e do editor.
 As rotas antigas (`/sessions/$sessionId`, `/history`, `/history/$conversationId`) **não existem mais**
@@ -126,7 +126,7 @@ Esta task também devolve ao e2e do web os cenários de histórico e retomada do
 (06 · B-33): retomar pela tela e a conversa removida voltam a ser provados pela porta do usuário, agora
 pela view de sessões.
 
-### B-13 — Usabilidade e ajuda da view de sessões 🔲
+### B-13 — Usabilidade e ajuda da view de sessões ✅
 
 A gaveta de ajuda do screen frame do plano 06, escrita para quem nunca viu o produto, em en e pt-BR: o
 que são os três grupos; o que "nossa" e "externa" significam e de onde vem a origem (o nosso banco, não

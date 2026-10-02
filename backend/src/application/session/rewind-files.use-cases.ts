@@ -1,4 +1,5 @@
 import type { RecordAuditEventUseCase } from '@application/audit';
+import type { PathLock } from '@application/shared';
 import type { UserId } from '@domain/auth';
 import type { Clock } from '@domain/shared';
 import {
@@ -189,10 +190,16 @@ export class RewindFilesUseCase {
  * disk as it is.
  */
 export class UndoPlanner {
+  /**
+   * @param lock the one the person's saves take too: an undo putting a file back and a person
+   *   saving it from the editor wait for each other, so the disk ends with one whole version
+   *   (plan 07, B-18, S-125)
+   */
   constructor(
     private readonly journal: UndoJournal,
     private readonly disk: UndoDisk,
     private readonly clock: Clock,
+    private readonly lock: PathLock,
   ) {}
 
   /** The points of the session's reach, newest first. */
@@ -233,13 +240,7 @@ export class UndoPlanner {
     let left: Pick<Baseline, 'hash' | 'mtime' | 'sizeBytes'>;
 
     try {
-      if (verdict.action === 'delete') {
-        await this.disk.remove(verdict.path);
-        left = { hash: null, mtime: this.clock.now(), sizeBytes: 0 };
-      } else {
-        const restored = await this.disk.restore(verdict.checkpoint);
-        left = { hash: verdict.checkpoint.hash, ...restored };
-      }
+      left = await this.lock.run(verdict.path, () => this.putBack(verdict));
     } catch {
       return false;
     }
@@ -255,6 +256,18 @@ export class UndoPlanner {
     );
 
     return true;
+  }
+
+  /** The disk half of {@link apply}, run under the lock of the path. */
+  private async putBack(
+    verdict: Extract<FileVerdict, { outcome: 'revert' }>,
+  ): Promise<Pick<Baseline, 'hash' | 'mtime' | 'sizeBytes'>> {
+    if (verdict.action === 'delete') {
+      await this.disk.remove(verdict.path);
+      return { hash: null, mtime: this.clock.now(), sizeBytes: 0 };
+    }
+
+    return { hash: verdict.checkpoint.hash, ...(await this.disk.restore(verdict.checkpoint)) };
   }
 }
 

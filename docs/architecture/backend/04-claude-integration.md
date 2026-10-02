@@ -342,6 +342,11 @@ Três diferenças em relação ao hook da trilha, e nenhuma é detalhe:
 `PostToolUseFailure` **não** atualiza nada: tool que falhou não mexeu no arquivo, e gravar o
 hash ali criaria uma linha de base falsa.
 
+Depois de gravar a linha de base, o journal **publica** `session.fileStateRecorded { path, hash, at }`
+no barramento interno (`EventEmitter2`). Quem ouve é o `files` (plano 07), que guarda as escritas
+recentes do Claude para rotular a origem de uma mudança no disco — sem importar `session`, e sem
+que nada do que ele faça alcance o hook: publicar **nunca lança**.
+
 ---
 
 ## O mapper — a tradução que protege o contrato
@@ -566,6 +571,10 @@ Mais três regras que o revert próprio obriga:
 
 - **restauração atômica** por arquivo: temporário no mesmo diretório, depois `rename`. Falha no
   meio deixando arquivo truncado é pior que não ter revertido;
+- **sob a trava do caminho**, a mesma que o salvar da pessoa pelo editor toma (`PATH_LOCK`, da
+  plataforma): restaurar e salvar o mesmo arquivo nunca se intercalam, e o disco termina com uma
+  versão inteira — o `ETag` diz qual. A escrita da pessoa é, para o desfazer, **alteração manual**:
+  ele a preserva (`modifiedOutside`) — ver [ADR-015](../shared/00-decisions.md#adr-015--o-humano-escreve-no-disco-pela-web);
 - **resultado parcial é first-class:** o evento carrega revertidos **e** preservados, com motivo
   — não um booleano;
 - **não exige sessão viva.** `rewindFiles` era método de `Query`; nosso store não é. "Sessão

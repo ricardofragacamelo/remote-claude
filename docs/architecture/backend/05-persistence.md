@@ -10,7 +10,7 @@ Voltar para o [índice do backend](README.md).
 |---|---|
 | Usuários, devices, tokens | **Transcript das conversas** — vive no JSONL do Claude |
 | Regras de permissão persistidas | Sessões **vivas** — estado de processo, em memória |
-| Histórico de permission requests | Conteúdo de arquivo do workspace |
+| Histórico de permission requests | Conteúdo de arquivo do workspace — inclusive o do histórico local, que é blob no disco |
 | **Trilha de auditoria** | Credencial do Claude — é do SO, em `~/.claude/` |
 | Metadados de workspace (allowlist, último uso) | |
 
@@ -195,6 +195,46 @@ O que a irmã copia é a disciplina: `seq` que ordena enquanto `at` filtra, ULID
 sempre, `DELETE` aborta dentro do piso de 90 dias. Ver
 [03-modules](03-modules.md#audit) e
 [08-authentication](../shared/08-authentication.md#logging).
+
+**A escrita da pessoa nos arquivos** entra aqui também, pela migration `0016_file_events`, que só
+acrescenta ao `CHECK` os kinds `file.created`, `file.written`, `file.moved`, `file.copied`,
+`file.deleted` e `file.failed` — sem tocar na `0013`, já aplicada. O `subject_id` é o caminho real, o
+`subject_label` o relativo à pasta aberta, e `details` leva tamanhos, hashes antes e depois, origem e
+destino, contagem e `sensitive` — **nunca conteúdo de arquivo**: o conteúdo do workspace continua
+fora do banco. O fato é gravado **antes** do disco; `file.failed` aponta (`details.failedEventId`)
+o fato cuja escrita o disco recusou depois ([ADR-015](../shared/00-decisions.md#adr-015--o-humano-escreve-no-disco-pela-web)).
+A leitura é `GET /audit-events`, no módulo de consulta ([03-modules](03-modules.md#audit)).
+
+A F7 e a F8 do plano 07 acrescentam dois kinds, cada um por migration nova: `file.downloaded`
+(`0017_file_downloads`) — baixar tira conteúdo da máquina, e entra antes do primeiro byte — e
+`file.restored` (`0018_file_history`), a restauração de uma versão do histórico local. O upload
+grava os `file.created`/`file.written` de sempre, com `details.source: upload`.
+
+### O histórico local
+
+`file_history_entries` (migration `0018_file_history`) guarda o **metadado** de cada versão que uma
+escrita da pessoa perderia: o caminho real (o sujeito, como na trilha), o relativo à pasta da
+escrita (o rótulo), o tipo da entrada (`file`·`directory`), o sha256 e o tamanho, o motivo (`save`,
+`delete`, `restore`, `upload`), se foi guardada (`yes`, ou `tooLarge` acima do teto de snapshot),
+quem e quando, e o `batch_id` que junta os itens de um mesmo apagamento. **Nenhuma coluna de
+conteúdo**: o conteúdo vai para um blob no disco do backend, endereçado pelo sha256 — a mesma razão
+do store de snapshots do desfazer, que é a desta tabela não estar no Postgres com o conteúdo junto.
+Não é trilha: a purga apaga linhas (por arquivo, por idade e pelo total dos blobs), e o fato que
+importa para sempre — que a pessoa salvou, apagou ou restaurou — já está em `audit_events`
+([ADR-015](../shared/00-decisions.md#o-histórico-local--o-backend-passa-a-guardar-conteúdo-da-pessoa)).
+
+- O id é ULID do domínio e um `seq` (identity) ordena as páginas e a purga, como nas trilhas; o
+  `created_at` é do relógio da aplicação, porque a retenção conta dele.
+- `CHECK`s: tipo, motivo e `kept` conhecidos; arquivo sempre com `hash` e `size_bytes`, pasta sem
+  os dois e sempre `kept = 'yes'`; `hash` só hex de 64 (é o nome do blob, nunca um caminho); só o
+  `delete` tem `batch_id`, e só ele guarda pasta.
+- Índices: `(path, seq DESC)` para as versões de um caminho, `path text_pattern_ops` para o prefixo
+  `LIKE '<pasta>/%'` (os caracteres de padrão do nome da pasta são escapados), `batch_id`,
+  `created_at` (retenção) e `hash` (o que a varredura deixa).
+- **Uma trava para os dois lados:** guardar toma `pg_advisory_xact_lock_shared` na chave do
+  histórico enquanto grava o blob (temporário + `rename`, ao lado) e a linha; a purga toma
+  `pg_advisory_xact_lock` exclusivo na mesma chave e só então varre. Uma guarda que falha no meio
+  desfaz as linhas e deixa, no máximo, um blob que ninguém nomeia — que a próxima varredura leva.
 
 ### As regras de permissão
 

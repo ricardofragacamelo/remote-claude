@@ -21,7 +21,7 @@ editor da F5 só as reusa (salvar como, revelar, comparar).
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-24 — A feature `explorer`: service, hooks e store por aba 🔲
+### B-24 — A feature `explorer`: service, hooks e store por aba ✅
 
 `web/src/features/explorer/`, na cadeia `Component → Hook → Service → api.ts`
 ([web/01](../../architecture/web/01-architecture.md#os-quatro-elos)): o service sobre as rotas do
@@ -32,7 +32,7 @@ global — `/r/app` e `/r/app/pkg` abertas lado a lado não compartilham nada. O
 ([web/03](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre)); raiz recusada
 leva de volta às boas-vindas do plano 06.
 
-### B-25 — A árvore 🔲
+### B-25 — A árvore ✅
 
 Componente com o padrão **ARIA tree** (`tree`/`treeitem`, `aria-expanded`, `aria-level`,
 `aria-setsize`/`aria-posinset`, tabindex móvel): setas, Home/End, type-ahead, Enter abre, → expande,
@@ -43,7 +43,7 @@ dentro da árvore; recolher tudo. Ocultos da [D-10](decisions.md#d-10--exclusõe
 escondidos com alternador; `truncated` com aviso traduzido; symlink para fora marcado e não
 expansível; entrada `unreadableName` visível e inerte, com tooltip que explica.
 
-### B-26 — As funções de arquivo 🔲
+### B-26 — As funções de arquivo ✅
 
 Cada ação existe **em três lugares** — menu de contexto, command palette e atalho —, registrada no
 registro de comandos do plano 06, e as de arquivo também no menu **Arquivo**:
@@ -64,7 +64,7 @@ registro de comandos do plano 06, e as de arquivo também no menu **Arquivo**:
 
 Erro de cada ação é traduzido **onde ela aconteceu** (inline no nome, no diálogo), com o que fazer.
 
-### B-27 — Seleção múltipla, lote e desfazer 🔲
+### B-27 — Seleção múltipla, lote e desfazer ✅
 
 Seleção com Shift/Ctrl e pelo teclado; apagar, mover e copiar N itens com **uma** confirmação (quando
 confirmação há) e resultado **por item** — o que foi, o que não foi e por quê; lote impossível (mover
@@ -75,7 +75,7 @@ pasta com a operação inversa de renomear, mover, criar e copiar — enviada co
 `ETag`, e recusada com explicação se o arquivo mudou depois (412). Desfazer o apagar é da F8, pelo
 histórico local. É o princípio do produto: desfazer em vez de confirmar, onde dá.
 
-### B-28 — Atualização viva, e a aba inativa 🔲
+### B-28 — Atualização viva, e a aba inativa ✅
 
 `workspace.watch` ao abrir a aba de pasta; `filesChanged` invalida os diretórios expandidos afetados
 (nó novo aparece, nó apagado sai e a seleção vai ao vizinho sem perder o foco); `overflow` e
@@ -84,13 +84,13 @@ reconexão recarregam o que está expandido. Aba de pasta **inativa** segue a D-
 vira aviso com botão de recarregar à mão; `watchStopped { folderDeleted }` leva a aba ao estado de
 erro sem derrubar as outras.
 
-### B-29 — Os fatos de arquivo na Auditoria 🔲
+### B-29 — Os fatos de arquivo na Auditoria ✅
 
 Uma seção "Arquivos" mínima na tela de Auditoria do plano 06, sobre o `GET /audit-events` (B-17):
 ato, caminho, quem, quando — nunca conteúdo. O redesenho e a linha do tempo única são do
 [plano 12](../12-audit-explained/README.md) ([D-13](decisions.md#d-13--onde-os-fatos-de-arquivo-aparecem-na-trilha)).
 
-### B-30 — Usabilidade e ajuda do Explorer 🔲
+### B-30 — Usabilidade e ajuda do Explorer ✅
 
 A view entra no "screen frame" do plano 06 com uma gaveta de ajuda escrita para quem nunca viu o
 produto, em en e pt-BR: o que é a árvore, o que "ocultos" esconde e o que deixa de ser assistido, o

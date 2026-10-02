@@ -74,3 +74,21 @@ export interface StatusItemEntry extends RegistryEntry {
   readonly side: 'left' | 'right';
   readonly component: ComponentType<StatusItemProps>;
 }
+
+/**
+ * What fills the editor area of a folder tab — the editor of plan 07. The first one registered is
+ * on screen; with none, the area says what will live there.
+ */
+export interface EditorAreaEntry extends RegistryEntry {
+  readonly component: ComponentType<FolderViewProps>;
+}
+
+/**
+ * Something a feature keeps per folder tab that closing the tab would lose — the editor's buffers
+ * (plan 07, B-40). The workbench asks before it closes and lists the answer in the question; it
+ * never learns what the feature is. Letting go of the memory is `TabRestorer.forget`.
+ */
+export interface FolderTabKeeper extends RegistryEntry {
+  /** What closing the folder's tab would lose: its files with unsaved changes, relative to it. */
+  unsaved(folder: string): readonly string[];
+}

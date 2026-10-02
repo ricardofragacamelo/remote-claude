@@ -2,7 +2,13 @@ import type { OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/comm
 
 import { ConfigurationError } from '@remote-claude/config';
 import type { Logger } from '@shared/logging/logger';
-import type { ReloadableWorkspaceAllowlist } from './reloadable-workspace-allowlist';
+import type {
+  AllowlistChange,
+  ReloadableWorkspaceAllowlist,
+} from './reloadable-workspace-allowlist';
+
+/** Tells the rest of the process what a reload changed — the internal bus, in the product. */
+export type AllowlistAnnouncer = (change: AllowlistChange) => void;
 
 /** The signal that reloads the allowlist. */
 export const RELOAD_SIGNAL = 'SIGHUP';
@@ -23,8 +29,10 @@ export interface SignalSource {
  *
  * With this listener registered the signal does **not** end the process — without one, Node treats
  * `SIGHUP` as a termination, and so does Nest's shutdown hook unless it is told otherwise
- * (`SHUTDOWN_SIGNALS` in bootstrap.ts). Only the list in memory changes: connections and live
- * sessions are left alone, and the list applies to what opens next (plan 06, S-64, S-180).
+ * (`SHUTDOWN_SIGNALS` in bootstrap.ts). The list in memory changes, and the reload is announced:
+ * connections and live sessions are left alone and the list applies to what opens next (plan 06,
+ * S-64, S-180), but a folder that something keeps watching is asked again — the watched folders of
+ * plan 07 stop when the list no longer allows them (S-143).
  *
  * A reload that fails keeps the previous list and says why, at `error`: the process stays up with
  * the boundary it had, which beats both going down and going on with nothing.
@@ -38,6 +46,7 @@ export class AllowlistReloadSignal implements OnApplicationBootstrap, OnApplicat
     private readonly allowlist: ReloadableWorkspaceAllowlist,
     private readonly logger: Logger,
     private readonly signals: SignalSource = process,
+    private readonly announce: AllowlistAnnouncer = () => undefined,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -64,6 +73,7 @@ export class AllowlistReloadSignal implements OnApplicationBootstrap, OnApplicat
         { ...context, added: change.added, removed: change.removed },
         'workspace allowlist reloaded',
       );
+      this.announce(change);
     } catch (error) {
       this.logger.error(
         {

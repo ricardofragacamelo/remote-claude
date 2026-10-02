@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import {
   CloseFolderUseCase,
@@ -25,7 +26,8 @@ import type {
   WorkspaceFolderRepository,
   WorkspaceUsageRepository,
 } from '@application/workspace';
-import { CLOCK } from '@application/shared';
+import { CLOCK, WORKSPACE_ALLOWLIST_RELOADED } from '@application/shared';
+import type { WorkspaceAllowlistReloaded } from '@application/shared';
 import type { Clock } from '@domain/shared';
 import { WorkspaceController } from '@adapter/inbound/http/workspace/workspace.controller';
 import { NodeWorkspaceDirectoryLister } from '@adapter/outbound/filesystem/node-workspace-directory.lister';
@@ -64,10 +66,15 @@ const RELOADABLE_ALLOWLIST = Symbol('ReloadableWorkspaceAllowlist');
     },
     { provide: WORKSPACE_ALLOWLIST_SOURCE, useExisting: RELOADABLE_ALLOWLIST },
     {
+      // The reload is announced on the internal bus, and `workspace` never learns who listens —
+      // the watched folders of `files` do (plan 07, S-143).
       provide: AllowlistReloadSignal,
-      inject: [RELOADABLE_ALLOWLIST, LOGGER],
-      useFactory: (allowlist: ReloadableWorkspaceAllowlist, logger: Logger) =>
-        new AllowlistReloadSignal(allowlist, logger),
+      inject: [RELOADABLE_ALLOWLIST, LOGGER, EventEmitter2],
+      useFactory: (allowlist: ReloadableWorkspaceAllowlist, logger: Logger, bus: EventEmitter2) =>
+        new AllowlistReloadSignal(allowlist, logger, process, (change) => {
+          const fact: WorkspaceAllowlistReloaded = change;
+          bus.emit(WORKSPACE_ALLOWLIST_RELOADED, fact);
+        }),
     },
     { provide: WORKSPACE_DIRECTORY_PROBE, useClass: NodeWorkspaceDirectoryProbe },
     { provide: WORKSPACE_DIRECTORY_LISTER, useClass: NodeWorkspaceDirectoryLister },

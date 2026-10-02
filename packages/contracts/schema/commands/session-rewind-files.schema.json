@@ -8,10 +8,19 @@
   "type": "object",
   "required": ["sessionId", "promptId"],
   "properties": {
-    "sessionId": { "type": "string" },
+    "sessionId": {
+      "type": "string"
+    },
     "promptId": {
       "type": "string",
       "description": "The turn to go back to, as `GET /sessions/:sessionId/checkpoints` names it — the `prompt_id` the hooks carry, never a message id of the transcript."
+    },
+    "paths": {
+      "type": "array",
+      "description": "Only these files, of everything the undo would touch — rejecting one file of what a session changed. Absent is every file. A path the undo does not reach is simply not touched; the outcome says what happened to each one it did.",
+      "items": {
+        "type": "string"
+      }
     }
   }
 }

@@ -159,6 +159,30 @@ describe('emulatorCommand', () => {
     expect(args).toEqual(expect.arrayContaining(['-no-window', '-no-snapshot-save', '-no-audio']));
   });
 
+  it('opens a window when somebody is there to use it, and changes nothing else', () => {
+    const headless = emulatorCommand({ avd: EMULATOR_AVD, port: 5554, fenced: false });
+    const windowed = emulatorCommand({
+      avd: EMULATOR_AVD,
+      port: 5554,
+      fenced: false,
+      window: true,
+    });
+
+    expect(windowed.args).not.toContain('-no-window');
+    expect(windowed.args).toEqual(headless.args.filter((flag) => flag !== '-no-window'));
+  });
+
+  it('stays headless when the window is explicitly declined', () => {
+    const { args } = emulatorCommand({
+      avd: EMULATOR_AVD,
+      port: 5554,
+      fenced: false,
+      window: false,
+    });
+
+    expect(args).toContain('-no-window');
+  });
+
   it('runs inside a cgroup with a hard memory ceiling when systemd-run is there', () => {
     const { command, args } = emulatorCommand({ avd: EMULATOR_AVD, port: 5556, fenced: true });
 

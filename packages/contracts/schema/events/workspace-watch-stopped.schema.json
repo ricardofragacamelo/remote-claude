@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/workspace-watch-stopped.json",
+  "title": "WorkspaceWatchStopped",
+  "description": "A subscription ended without the client asking: nothing more arrives for this `watchId`. The client says so where the folder is shown, and watches again only when the reason allows.",
+  "x-kind": "event",
+  "x-type": "workspace.watchStopped",
+  "type": "object",
+  "required": ["watchId", "reason"],
+  "properties": {
+    "watchId": { "type": "string" },
+    "reason": {
+      "type": "string",
+      "enum": ["allowlistChanged", "folderDeleted", "systemLimit"],
+      "description": "`allowlistChanged` — the folder left the allowlist in a reload; `folderDeleted` — the folder is gone from the disk; `systemLimit` — the operating system stopped delivering changes."
+    }
+  }
+}

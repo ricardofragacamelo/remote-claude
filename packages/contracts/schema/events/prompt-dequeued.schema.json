@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/prompt-dequeued.json",
+  "title": "PromptDequeued",
+  "description": "A prompt left the queue: it started, or somebody took it out. The positions of the ones behind it move up by one.",
+  "x-kind": "event",
+  "x-type": "prompt.dequeued",
+  "type": "object",
+  "required": ["queueId", "reason"],
+  "properties": {
+    "queueId": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string",
+      "enum": ["started", "cancelled"],
+      "description": "`started` — the turn it asked for began; `cancelled` — somebody took it out before that."
+    }
+  }
+}

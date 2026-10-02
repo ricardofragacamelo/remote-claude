@@ -100,7 +100,30 @@ export class ScriptedTranscripts implements TranscriptSdk {
     listSessions: [] as ListSessionsOptions[],
     getSessionInfo: [] as string[],
     getSessionMessages: [] as string[],
+    listSubagents: [] as string[],
+    getSubagentMessages: [] as string[],
   };
+
+  /** The subagents of each conversation: agent id → its messages, as the SDK files them apart. */
+  private readonly subagents = new Map<string, Map<string, SessionMessage[]>>();
+
+  /** Files the messages of a subagent of `sessionId` under `agentId`. */
+  addSubagent(sessionId: string, agentId: string, messages: readonly SessionMessage[]): this {
+    const agents = this.subagents.get(sessionId) ?? new Map<string, SessionMessage[]>();
+    agents.set(agentId, [...messages]);
+    this.subagents.set(sessionId, agents);
+    return this;
+  }
+
+  listSubagents(sessionId: string): Promise<string[]> {
+    this.calls.listSubagents.push(sessionId);
+    return this.answer(() => [...(this.subagents.get(sessionId)?.keys() ?? [])]);
+  }
+
+  getSubagentMessages(sessionId: string, agentId: string): Promise<SessionMessage[]> {
+    this.calls.getSubagentMessages.push(`${sessionId}/${agentId}`);
+    return this.answer(() => [...(this.subagents.get(sessionId)?.get(agentId) ?? [])]);
+  }
 
   /** Set to make every read fail, the way an SDK that cannot reach its store does. */
   failWith: Error | null = null;
@@ -196,7 +219,8 @@ export class ScriptedTranscripts implements TranscriptSdk {
       [...this.conversations.values()]
         .filter(
           (conversation) =>
-            conversation.directory === options.dir &&
+            // No `dir` is the whole store, as the SDK answers it (plan 08, D-05).
+            (options.dir === undefined || conversation.directory === options.dir) &&
             (!conversation.worktree || options.includeWorktrees !== false),
         )
         .map((conversation) => conversation.info),

@@ -169,3 +169,43 @@ describe('which binding a press answers', () => {
     expect(bindingFor([global], 'Alt+2', false)).toBeUndefined();
   });
 });
+
+describe('a sequence pressed — plan 07, B-34', () => {
+  it('runs its command on the second chord, and the first goes to no one else', () => {
+    const { run } = listening('Mod+K S');
+
+    expect(press({ key: 'k', code: 'KeyK', ctrlKey: true })).toBe(true);
+    expect(run).not.toHaveBeenCalled();
+    // The modifier pressed on the way to the next chord does not end the wait.
+    expect(press({ key: 'Control', code: 'ControlLeft', ctrlKey: true })).toBe(false);
+    expect(press({ key: 's', code: 'KeyS' })).toBe(true);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('ends the wait on any other chord, bound or not, and runs nothing', () => {
+    const { run } = listening('Mod+K S');
+
+    press({ key: 'k', code: 'KeyK', ctrlKey: true });
+    expect(press({ key: 'x', code: 'KeyX' })).toBe(false);
+    expect(press({ key: 's', code: 'KeyS' })).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('does not begin in a text field unless the binding allows it there', () => {
+    const { run } = listening('Mod+K S');
+    const input = field('input', 'text');
+
+    expect(press({ key: 'k', code: 'KeyK', ctrlKey: true }, input)).toBe(false);
+    expect(press({ key: 's', code: 'KeyS' }, input)).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('begins and runs in a text field when the binding allows it — the editor’s save all', () => {
+    const { run } = listening('Mod+K S', {}, { allowInInput: true });
+    const editor = field('textarea');
+
+    expect(press({ key: 'k', code: 'KeyK', ctrlKey: true }, editor)).toBe(true);
+    expect(press({ key: 's', code: 'KeyS' }, editor)).toBe(true);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+});

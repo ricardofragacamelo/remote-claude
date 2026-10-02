@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-reject-change.json",
+  "title": "SessionRejectChange",
+  "description": "Puts one hunk of what a session changed in a file back the way it was before the session. Only while the disk still has what the session left — otherwise the file is `modifiedOutside` and is rejected whole, preserving it, by `session.rewindFiles` with `paths`. The outcome arrives as `session.rewound`, with `hunkId`. A `revision` that is no longer the disk's is `SESSION_CHANGE_STALE`; the same locks as an undo apply (`SESSION_LOCKED`).",
+  "x-kind": "command",
+  "x-type": "session.rejectChange",
+  "type": "object",
+  "required": ["sessionId", "path", "hunkId", "revision"],
+  "properties": {
+    "sessionId": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string",
+      "description": "The file, as `GET /sessions/:sessionId/changes` named it."
+    },
+    "hunkId": {
+      "type": "string",
+      "description": "The hunk, as `GET /sessions/:sessionId/changes/file` named it."
+    },
+    "revision": {
+      "type": "string",
+      "description": "The `revision` the hunks were computed against — the hash of the disk then. It is what keeps a hunk from being applied to a file that moved under it."
+    }
+  }
+}

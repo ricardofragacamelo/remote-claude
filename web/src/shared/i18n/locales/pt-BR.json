@@ -67,7 +67,17 @@
       "locked": "Um turno está em execução, ou outro desfazer desta sessão está em andamento. Espere terminar e tente de novo.",
       "rewindTargetUnknown": "Esse não é um ponto para o qual esta sessão pode voltar. Recarregue a lista e escolha de novo.",
       "rewindIncomplete": "O desfazer parou antes do fim: {{failed}} arquivo(s) não puderam voltar, e cada um ficou exatamente como estava.",
-      "invalidTransition": "A sessão não conseguiu mudar de estado. É uma falha do nosso lado; tente de novo."
+      "invalidTransition": "A sessão não conseguiu mudar de estado. É uma falha do nosso lado; tente de novo.",
+      "attachmentNotFound": "Esse anexo não está mais disponível para esta sessão. Anexe de novo e envie.",
+      "attachmentTypeUnsupported": "Anexos do tipo {{mediaType}} não podem ir com um prompt. Imagens precisam ser PNG, JPEG, GIF ou WebP, e arquivos precisam ser texto.",
+      "toolUseNotFound": "Esta sessão não tem registro dessa chamada de ferramenta.",
+      "diffNotApplicable": "{{toolName}} não grava arquivos, então não há alteração para mostrar.",
+      "changeStale": "{{path}} mudou depois que as alterações foram listadas. Recarregue e escolha de novo.",
+      "forkRejected": "O Claude não conseguiu continuar a conversa a partir dessa mensagem. Retome a conversa e edite a partir dela.",
+      "queuedPromptNotFound": "Esse prompt não está mais na fila.",
+      "queuedPromptStarted": "Esse prompt já começou. Interrompa o turno para pará-lo.",
+      "forkPointUnknown": "Essa mensagem não é um prompt desta conversa. Recarregue a conversa e tente de novo.",
+      "effortUnsupported": "{{model}} não aceita o nível de esforço {{level}}."
     },
     "status": {
       "starting": "Iniciando",
@@ -105,12 +115,10 @@
       "title": "Sessão",
       "sessionLabel": "Sessão {{sessionId}}",
       "conversation": "Conversa",
-      "tools": "Ferramentas",
       "emptyTitle": "Ainda não há nada",
       "emptyDescription": "Mande um prompt abaixo para começar a conversa.",
       "partial": "Isto é só o que o servidor ainda tinha em memória, não a conversa inteira.",
-      "ended": "Esta sessão terminou às {{at}} porque {{reason}}.",
-      "turn": "O último turno custou {{cost}} e levou {{ms}} ms."
+      "ended": "Esta sessão terminou às {{at}} porque {{reason}}."
     },
     "composer": {
       "label": "Prompt",
@@ -225,6 +233,30 @@
       "placeholder": "Digite para filtrar as pastas recentes"
     }
   },
+  "files": {
+    "error": {
+      "invalidPath": "Esse não é um caminho válido dentro da pasta aberta.",
+      "unknownEncoding": "Esta máquina não conhece o encoding {{encoding}}.",
+      "notFound": "{{path}} não está mais na pasta.",
+      "exists": "{{path}} já existe. Nada foi sobrescrito.",
+      "directoryNotEmpty": "{{path}} tem {{entryCount}} itens. Apagar a pasta apaga todos eles.",
+      "changed": "{{path}} mudou no disco depois que você o abriu — o Claude pode ter escrito nele. Nada foi sobrescrito.",
+      "preconditionRequired": "{{path}} precisa de uma confirmação antes de ser alterado.",
+      "tooLarge": "{{path}} é maior do que este editor abre (no máximo {{limit}}).",
+      "rangeNotSatisfiable": "Esse trecho de {{path}} fica depois do fim — o arquivo mudou, ou é menor.",
+      "uploadSizeMismatch": "{{path}} não chegou inteiro — {{received}} de {{declared}} bytes. Nada dele foi guardado.",
+      "notText": "{{path}} não é um texto que este editor consiga mostrar.",
+      "notAFile": "{{path}} não é um arquivo.",
+      "operationInvalid": "Não é possível fazer isso com {{path}}.",
+      "notEncodable": "Alguns caracteres não podem ser gravados em {{encoding}}. Nada foi salvo.",
+      "accessDenied": "Esta máquina não deixa o remote-claude alterar {{path}}. Verifique as permissões.",
+      "storageFull": "O disco está cheio. {{path}} ficou como estava.",
+      "trailUnavailable": "A trilha de auditoria está indisponível, então nada foi gravado. Tente de novo em instantes.",
+      "watchLimitReached": "Esta janela já acompanha {{limit}} pastas. Feche uma antes.",
+      "watchUnavailable": "Esta máquina não consegue acompanhar mais pastas agora. Tente de novo em instantes.",
+      "historyEntryNotFound": "Essa versão não está mais no histórico local."
+    }
+  },
   "notification": {
     "error": {
       "rejected": "Não foi possível guardar essa notificação."
@@ -241,6 +273,10 @@
     },
     "folder": {
       "notAllowed": "{{folder}} não está mais liberada nesta máquina. A aba continua, mas nada abre nela."
+    },
+    "files": {
+      "deletedOne": "{{name}} foi apagado. Ele está guardado no histórico local.",
+      "deletedMany": "{{count}} entradas foram apagadas. Elas estão guardadas no histórico local."
     }
   },
   "permission": {
@@ -307,6 +343,18 @@
       "back": "Voltar",
       "confirm": "Permitir e parar de perguntar",
       "openRules": "Ver suas regras"
+    },
+    "plan": {
+      "label": "O plano que o Claude propõe",
+      "title": "Aprovar o plano?",
+      "modeLegend": "Depois de aprovado, seguir",
+      "approve": "Aprovar o plano",
+      "commentLabel": "Ou diga o que mudar, e continue planejando",
+      "keepPlanning": "Continuar planejando"
+    },
+    "planMode": {
+      "default": "perguntando antes de cada edição",
+      "acceptEdits": "aceitando edições sem perguntar"
     }
   },
   "audit": {
@@ -372,6 +420,28 @@
       "what": "A trilha de cada tool que o Claude pediu para rodar, e como cada uma foi decidida: por uma regra que você concedeu, por uma pessoa, ou por ninguém a tempo. Os filtros moram no endereço, então uma trilha filtrada é um link que você pode guardar ou compartilhar.",
       "states": "Uma entrada decidida por regra abre essa regra, mesmo depois de revogada. Uma entrada que ninguém respondeu a tempo foi recusada. Carregar mais acrescenta a página seguinte; uma falha ali mantém o que já está na tela, com o motivo ao lado.",
       "notRecorded": "A trilha guarda o input exato de cada tool, nunca o conteúdo de um arquivo que uma tool leu: para uma leitura, guarda o caminho e o tamanho. Ela registra decisões, não a conversa."
+    },
+    "files": {
+      "title": "Arquivos",
+      "description": "O que você fez nos arquivos das suas pastas abertas por este app — os mais recentes primeiro. O conteúdo de um arquivo nunca é guardado aqui.",
+      "loading": "Carregando o que você fez nos seus arquivos…",
+      "emptyTitle": "Nada ainda",
+      "emptyDescription": "Quando você criar, salvar, renomear, mover, copiar ou apagar um arquivo pelo Explorer ou pelo editor, isso aparece aqui.",
+      "loadMore": "Carregar ações de arquivo mais antigas",
+      "loadingMore": "Carregando ações de arquivo mais antigas…",
+      "row": "{{act}} {{path}} em {{at}}",
+      "fromTo": "{{from}} → {{to}}",
+      "byYou": "Por você, por este app"
+    },
+    "fileAct": {
+      "created": "Criado",
+      "written": "Salvo",
+      "moved": "Movido",
+      "copied": "Copiado",
+      "deleted": "Apagado",
+      "failed": "Falhou no disco",
+      "downloaded": "Baixado",
+      "restored": "Restaurado do histórico local"
     }
   },
   "devices": {
@@ -480,16 +550,7 @@
       "cursorStale": "Esta conversa mudou enquanto você a lia. Recarregue a partir das mensagens mais recentes."
     },
     "list": {
-      "title": "Conversas",
-      "description": "Tudo o que foi dito nesta pasta — aqui, no editor ou num terminal —, da escrita mais recente para a mais antiga.",
-      "loading": "Carregando as conversas desta pasta…",
-      "emptyTitle": "Ainda não há conversa nesta pasta",
-      "emptyDescription": "Abra uma sessão aqui, ou converse com o Claude nesta pasta pelo editor: a conversa aparece nesta lista.",
-      "loadMore": "Carregar mais",
-      "loadingMore": "Carregando…",
-      "untitled": "Conversa sem título",
-      "lastModified": "Escrita pela última vez em {{at}}",
-      "lastModifiedOnBranch": "Escrita pela última vez em {{at}}, em {{branch}}"
+      "untitled": "Conversa sem título"
     }
   },
   "history": {
@@ -507,7 +568,9 @@
       "loadEarlier": "Carregar mensagens anteriores",
       "loadingEarlier": "Carregando mensagens anteriores…",
       "emptyTitle": "Nada foi dito nesta conversa",
-      "emptyDescription": "Continue-a para dizer a primeira coisa."
+      "emptyDescription": "Continue-a para dizer a primeira coisa.",
+      "close": "Fechar esta conversa",
+      "activeElsewhereNote": "Outro processo escreveu nesta conversa há pouco — o editor ou um terminal pode estar com ela aberta. Continuar aqui cria uma cópia, e as duas vão divergir."
     }
   },
   "commands": {
@@ -638,7 +701,8 @@
     },
     "claude": {
       "label": "Claude",
-      "newSession": "Iniciar uma nova sessão nesta pasta"
+      "newSession": "Iniciar uma nova sessão nesta pasta",
+      "backToStart": "Voltar para uma nova conversa"
     },
     "mobile": {
       "label": "Visões desta pasta",
@@ -666,7 +730,9 @@
       "listLabel": "Pastas a fechar",
       "keep": "Manter abertas",
       "confirm": "Fechar",
-      "pending": "Fechando…"
+      "pending": "Fechando…",
+      "unsaved": "Estes arquivos têm alterações não salvas, que fechar descarta:",
+      "unsavedLabel": "Arquivos com alterações não salvas"
     },
     "explorer": {
       "label": "Explorador",
@@ -678,7 +744,7 @@
     },
     "sessions": {
       "label": "Sessões do Claude",
-      "placeholder": "As sessões e conversas desta pasta serão listadas aqui. Até lá, o chat ao lado do editor guarda a sessão desta aba."
+      "placeholder": "As sessões e conversas desta pasta vão aparecer aqui."
     },
     "tabState": {
       "notAllowed": "Não é mais permitida",
@@ -767,6 +833,47 @@
     },
     "help": {
       "show": "Ajuda desta tela"
+    },
+    "editor": {
+      "save": "Salvar",
+      "saveAs": "Salvar como…",
+      "saveAll": "Salvar todos",
+      "revert": "Reverter arquivo",
+      "compareWithSaved": "Comparar com o arquivo salvo",
+      "openRecentFile": "Abrir arquivo recente",
+      "closeTab": "Fechar editor",
+      "closeOthers": "Fechar os outros editores",
+      "closeSaved": "Fechar os editores salvos",
+      "closeAll": "Fechar todos os editores",
+      "reopenClosed": "Reabrir editor fechado",
+      "openToSide": "Abrir ao lado",
+      "focusNextGroup": "Focar o próximo grupo de editor",
+      "focusPreviousGroup": "Focar o grupo de editor anterior",
+      "find": "Localizar",
+      "replace": "Substituir",
+      "goToLine": "Ir para a linha…",
+      "undo": "Desfazer",
+      "redo": "Refazer",
+      "changeEol": "Trocar o fim de linha",
+      "changeLanguage": "Trocar a linguagem do realce",
+      "convertIndentation": "Converter indentação",
+      "reopenWithEncoding": "Reabrir com encoding…",
+      "saveWithEncoding": "Salvar com encoding…",
+      "addToClaude": "Adicionar ao contexto do Claude",
+      "revealInExplorer": "Revelar o arquivo ativo no Explorer",
+      "showHelp": "Ajuda do editor",
+      "openPreview": "Abrir prévia",
+      "openPreviewToSide": "Abrir prévia ao lado",
+      "togglePreview": "Alternar entre o editor e a prévia"
+    },
+    "sessions": {
+      "refresh": "Sessões do Claude: atualizar",
+      "toggleSubfolders": "Sessões do Claude: incluir ou deixar de fora as pastas abaixo",
+      "help": "Sessões do Claude: ajuda",
+      "openSelected": "Sessões do Claude: abrir a linha selecionada",
+      "continueSelected": "Sessões do Claude: continuar aqui a conversa selecionada",
+      "copySelectedId": "Sessões do Claude: copiar o id da conversa selecionada",
+      "endSelected": "Sessões do Claude: encerrar a sessão selecionada"
     }
   },
   "palette": {
@@ -874,7 +981,8 @@
     },
     "section": {
       "appearance": "Aparência",
-      "workspaces": "Workspaces"
+      "workspaces": "Workspaces",
+      "editor": "Editor"
     },
     "sections": {
       "label": "Seções"
@@ -938,6 +1046,794 @@
       "documentation": "Documentação",
       "newTab": "(abre numa nova aba)",
       "license": "O repositório não declara uma licença."
+    }
+  },
+  "explorer": {
+    "screen": {
+      "title": "Explorer",
+      "purpose": "Os arquivos e pastas da pasta que esta aba abriu — abrir, criar, renomear, mover, copiar e apagar."
+    },
+    "help": {
+      "what": "A árvore mostra a pasta que esta aba abriu, um nível por vez: uma pasta é lida quando você a abre. Clique num arquivo para vê-lo de relance no editor; dê dois cliques ou tecle Enter para mantê-lo aberto. Tudo o que você faz aqui — criar, renomear, mover, copiar, apagar — acontece no disco desta máquina, só nesta pasta, e entra na trilha de auditoria antes de acontecer. Uma entrada com o ícone de seta saindo da caixa é um link que leva para fora desta pasta: ela aparece para você saber que existe, e nunca abre. Uma entrada com ponto de interrogação tem um nome que não é texto válido: ela aparece, e nada pode ser feito com ela por aqui.",
+      "states": "Enquanto uma pasta é lida, as linhas dela mostram que está carregando. Uma pasta que não pôde ser lida diz por quê, e Enter nela tenta de novo. Uma pasta com mais entradas do que a árvore lista avisa: filtre pelo nome para achar o resto. Mudanças no disco — o Claude escrevendo, você em outro programa — aparecem sozinhas; quando esta máquina não consegue acompanhar a pasta, um aviso diz isso e um botão a lê de novo à mão. Ctrl+Z, com o foco na árvore, desfaz o último renomear, mover, arquivo ou pasta novos, ou cópia desta aba, desde que nada tenha mudado depois — se o Claude escreveu no arquivo depois, o desfazer é recusado e diz por quê. O desfazer vale só enquanto esta página está aberta.",
+      "notRecorded": "Entradas ocultas (.git, .svn, .hg, .DS_Store, Thumbs.db) ficam de fora até você mostrá-las; pastas como node_modules, dist, build, .venv e target aparecem mas não são acompanhadas, então uma mudança dentro delas aparece quando você as abre ou recarrega. Apagar guarda antes no histórico local o que leva e não pergunta: uma notificação diz o que foi, com Desfazer. O que o histórico não consegue guardar — grande demais, entradas demais, ou o histórico indisponível — só é apagado de vez, depois de perguntar, dizendo quanto vai embora e por que não há desfazer. O que você lê não entra na trilha de auditoria; o que você muda entra, com o caminho e nunca o conteúdo.",
+      "transferHeading": "Enviar e baixar",
+      "transfer": "Arraste arquivos ou pastas do seu desktop para uma pasta da árvore para enviá-los para lá — uma pasta mantém a estrutura. Sem mouse, use Enviar arquivos aqui… ou Enviar pasta aqui… (Alt+U, Alt+Shift+U). Os arquivos que já existem aparecem antes de qualquer coisa ser enviada: substituir, manter os dois ou pular cada um. Baixar (Alt+Shift+D) salva um arquivo, ou uma pasta ou tudo o que está selecionado num zip só.",
+      "transferLimits": "Limites desta máquina: cada arquivo enviado até {{uploadFile}}, no máximo {{uploadEntries}} arquivos e {{uploadTotal}} por envio; um download até {{download}}, e um zip de no máximo {{archiveEntries}} itens.",
+      "transferUnknown": "Os limites desta máquina não puderam ser lidos agora; o servidor continua conferindo-os.",
+      "transferAbove": "Acima de um limite, nada se move: o envio ou o download é recusado antes de começar, dizendo o limite — nunca é cortado pela metade. Downloads ficam na trilha de auditoria, com o caminho e nunca o conteúdo."
+    },
+    "tree": {
+      "label": "Arquivos",
+      "loading": "Carregando…",
+      "loadingFolder": "Carregando a pasta…",
+      "levelFailed": "Não foi possível ler esta pasta: {{reason}} Tecle Enter para tentar de novo.",
+      "truncated": "Esta pasta tem mais entradas do que a árvore lista. Filtre pelo nome para achar as outras.",
+      "outsideLink": "Um link que leva para fora da pasta aberta. Ele nunca é aberto por aqui.",
+      "unreadableName": "Este nome não é texto válido, então nada pode ser feito com ele por aqui."
+    },
+    "toolbar": {
+      "label": "Ações do Explorer",
+      "options": "Mais opções",
+      "sort": "Ordenar por"
+    },
+    "filter": {
+      "label": "Filtrar pelo nome",
+      "placeholder": "Filtrar pelo nome",
+      "noMatch": "Nada nas pastas lidas até agora se chama \"{{filter}}\". Abra mais pastas, ou limpe o filtro."
+    },
+    "empty": {
+      "title": "Esta pasta está vazia",
+      "description": "Crie aqui o primeiro arquivo ou pasta, ou comece um a partir de um modelo."
+    },
+    "error": {
+      "backToStart": "Voltar ao início"
+    },
+    "action": {
+      "newFile": "Novo arquivo",
+      "newFolder": "Nova pasta",
+      "newFromTemplate": "Novo arquivo a partir de modelo…",
+      "newFromFile": "Novo arquivo a partir deste",
+      "open": "Abrir",
+      "openToSide": "Abrir ao lado",
+      "compareSelected": "Comparar selecionados",
+      "cut": "Recortar",
+      "copy": "Copiar",
+      "paste": "Colar",
+      "duplicate": "Duplicar",
+      "moveTo": "Mover para…",
+      "rename": "Renomear",
+      "delete": "Apagar",
+      "undo": "Desfazer a última operação de arquivo",
+      "copyPath": "Copiar caminho",
+      "copyRelativePath": "Copiar caminho relativo",
+      "addToContext": "Adicionar ao contexto do Claude",
+      "refresh": "Recarregar a árvore",
+      "collapseAll": "Recolher todas as pastas",
+      "showHidden": "Mostrar entradas ocultas",
+      "hideHidden": "Esconder entradas ocultas",
+      "filter": "Filtrar a árvore pelo nome",
+      "compact": "Mostrar pastas únicas juntas",
+      "expandCompact": "Mostrar pastas únicas separadas",
+      "sortByName": "Ordenar por nome",
+      "sortByType": "Ordenar por tipo",
+      "sortByModified": "Ordenar pela última modificação",
+      "help": "Ajuda do Explorer",
+      "reveal": "Revelar no Explorer",
+      "focus": "Mostrar o Explorer",
+      "openPreview": "Abrir prévia",
+      "uploadFiles": "Enviar arquivos aqui…",
+      "uploadFolder": "Enviar pasta aqui…",
+      "download": "Baixar"
+    },
+    "menu": {
+      "label": "Ações de arquivo"
+    },
+    "name": {
+      "newFile": "Nome do novo arquivo",
+      "newFolder": "Nome da nova pasta",
+      "rename": "Novo nome para {{name}}",
+      "empty": "Digite um nome.",
+      "reserved": "\".\" e \"..\" não são nomes.",
+      "separator": "Um nome não pode ter / nem \\.",
+      "control": "Um nome não pode ter caracteres de controle invisíveis.",
+      "tooLong": "Esse nome é longo demais para este disco.",
+      "exists": "Já existe uma entrada com esse nome aqui."
+    },
+    "delete": {
+      "titleOne": "Apagar {{path}} definitivamente?",
+      "titleMany": "Apagar estas {{count}} entradas definitivamente?",
+      "countTitle": "Estas levam mais do que elas mesmas",
+      "forGood": "O histórico local não consegue guardar isto, então este apagar não tem desfazer: o que vai, vai de vez.",
+      "listLabel": "O que será apagado",
+      "countLabel": "O que vai junto",
+      "holds": "{{path}} contém {{count}} entradas, e todas vão junto.",
+      "holdsAtLeast": "{{path}} contém pelo menos {{count}} entradas, e todas vão junto.",
+      "sensitive": "{{path}} muda o que o Claude pode fazer sem te perguntar.",
+      "keep": "Manter",
+      "confirm": "Apagar definitivamente",
+      "pending": "Apagando…",
+      "undo": "Desfazer",
+      "whyTooLarge": "{{path}} é maior do que o histórico local guarda.",
+      "whyTooMany": "{{path}} tem mais entradas do que o histórico local guarda de uma vez.",
+      "whyUnavailable": "{{path}} não pôde ser guardado: o histórico local não está disponível agora."
+    },
+    "move": {
+      "title": "Mover {{count}} entradas para…",
+      "description": "Escolha a pasta para onde vão. Nada que já esteja lá é sobrescrito.",
+      "destination": "Pasta de destino",
+      "openFolder": "A própria pasta aberta",
+      "cancel": "Cancelar",
+      "confirm": "Mover"
+    },
+    "template": {
+      "title": "Novo arquivo a partir de modelo",
+      "description": "Escolha com o que o novo arquivo começa. Em seguida você dá o nome, já com a extensão.",
+      "listLabel": "Modelos",
+      "cancel": "Cancelar",
+      "markdown": "Documento Markdown",
+      "json": "Arquivo JSON",
+      "typescript": "Módulo TypeScript",
+      "test": "Arquivo de teste",
+      "gitignore": "Lista de ignorados do Git",
+      "editorconfig": "Configurações do editor (.editorconfig)",
+      "claude": "Instruções para o Claude (CLAUDE.md)"
+    },
+    "sensitive": {
+      "title": "Isto muda o que o Claude pode fazer",
+      "description": "Estes arquivos decidem o que o Claude pode fazer nesta máquina sem te perguntar. Mude-os só se for essa a intenção.",
+      "listLabel": "Arquivos que mudam o que o Claude pode fazer",
+      "cancel": "Deixar como estão",
+      "confirm": "Mudar"
+    },
+    "outcome": {
+      "description": "O que foi, e o que não foi e por quê.",
+      "listLabel": "Cada entrada",
+      "done": "Feito.",
+      "close": "Fechar",
+      "failed": "A operação não foi concluída",
+      "deleteFailed": "Algumas entradas não foram apagadas",
+      "pasteFailed": "Algumas entradas não foram coladas",
+      "duplicateFailed": "Algumas entradas não foram duplicadas",
+      "moveFailed": "Algumas entradas não foram movidas",
+      "undoFailed": "O desfazer não foi concluído",
+      "undoDeleteFailed": "Algumas entradas não voltaram",
+      "uploadFailed": "Alguns arquivos não foram enviados",
+      "downloadFailed": "O download não aconteceu",
+      "uploadNotKept": "Enviados — algumas versões substituídas não foram guardadas",
+      "notKeptTooLarge": "Substituído. A versão substituída é maior do que o histórico local guarda, por isso não ficou nele.",
+      "notKeptUnavailable": "Substituído. O histórico local estava indisponível, por isso a versão substituída não ficou nele."
+    },
+    "undo": {
+      "changed": "{{path}} mudou depois da operação — o Claude pode ter escrito nele —, então desfazer perderia isso. Nada foi desfeito.",
+      "notEmpty": "{{path}} tem conteúdo agora, então desfazer apagaria mais do que foi criado. Nada foi desfeito.",
+      "gone": "{{path}} não está mais lá, então não há o que desfazer.",
+      "taken": "Outra coisa tem agora o nome que {{path}} tinha. Nada foi sobrescrito."
+    },
+    "invalid": {
+      "intoItself": "{{path}} não pode ir para dentro de si mesmo.",
+      "openFolder": "A própria pasta aberta não pode ser mudada de dentro dela.",
+      "crossDevice": "{{path}} está em outro disco; movê-lo para lá não é feito por aqui.",
+      "symlinkLoop": "{{path}} é um link que leva de volta a si mesmo."
+    },
+    "done": {
+      "created": "{{name}} criado.",
+      "renamed": "Renomeado para {{name}}.",
+      "moved": "Entradas movidas: {{count}}.",
+      "copied": "Entradas copiadas: {{count}}.",
+      "deleted": "Entradas apagadas: {{count}}.",
+      "undone": "Desfeito.",
+      "copiedAside": "Entradas copiadas, prontas para colar: {{count}}.",
+      "cutAside": "Entradas recortadas, prontas para colar: {{count}}.",
+      "pathCopied": "Caminho copiado.",
+      "copyFailed": "O navegador não deixou copiar o caminho. Selecione e copie à mão.",
+      "restored": "Entradas de volta: {{count}}.",
+      "uploaded": "Arquivos enviados: {{count}}.",
+      "uploadCancelled": "Envio cancelado. Os arquivos que já tinham chegado inteiros ficam; nenhum fica pela metade.",
+      "uploadSkipped": "Todos os arquivos foram pulados. Nada foi enviado.",
+      "downloaded": "{{name}} baixado."
+    },
+    "context": {
+      "added": "Entradas adicionadas ao contexto do Claude: {{count}}.",
+      "excluded": "Entradas deixadas de fora porque nada pode ser feito com elas: {{count}}."
+    },
+    "watch": {
+      "notFollowed": "A árvore não se atualiza sozinha até ser lida de novo.",
+      "reload": "Recarregar a árvore",
+      "limitReached": "Esta janela já acompanha o máximo de pastas que consegue. Feche uma aba de pasta antes.",
+      "systemLimit": "Esta máquina parou de acompanhar esta pasta: os observadores se esgotaram.",
+      "refused": "Esta pasta não pode ser acompanhada agora.",
+      "folderDeleted": "A pasta aberta foi apagada do disco.",
+      "allowlistChanged": "Esta instalação não permite mais a pasta aberta."
+    },
+    "status": {
+      "short": "Sem acompanhar",
+      "notFollowed": "O Explorer não está acompanhando as mudanças desta pasta. Mostrar o Explorer."
+    },
+    "transfer": {
+      "fileTooLarge": "{{path}} tem {{size}}, e um arquivo enviado pode ter no máximo {{limit}}. Nada foi enviado.",
+      "tooManyFiles": "São {{size}} arquivos, e um envio aceita no máximo {{limit}}. Nada foi enviado.",
+      "uploadTooLarge": "São {{size}} no total, e um envio aceita no máximo {{limit}}. Nada foi enviado.",
+      "downloadTooLarge": "{{path}} passa do limite de download de {{limit}}, por isso não foi baixado. Baixe uma parte menor dele.",
+      "archiveTooManyEntries": "{{path}} tem mais de {{limit}} itens, o máximo que um zip comporta, por isso não foi baixado. Baixe uma parte menor dele."
+    },
+    "upload": {
+      "conflictsTitle": "Arquivos que já existem: {{count}}",
+      "conflictsDescription": "Dos {{count}} arquivos que você está enviando, estes já existem onde iriam ficar. Escolha para cada um antes de qualquer coisa ser enviada.",
+      "conflictsLabel": "Arquivos que já existem",
+      "replace": "Substituir",
+      "keepBoth": "Manter os dois",
+      "skip": "Pular",
+      "cancel": "Cancelar o envio",
+      "send": "Enviar",
+      "progressLabel": "Envio em andamento",
+      "sending": "Enviando {{count}} arquivos…",
+      "cancelSending": "Cancelar o envio",
+      "fileProgress": "{{path}}: {{percent}}%"
+    }
+  },
+  "editor": {
+    "screen": {
+      "title": "Editor",
+      "purpose": "Os arquivos desta pasta, abertos em abas, ao lado do chat com o Claude."
+    },
+    "help": {
+      "open": "Ajuda do editor",
+      "what": "O editor mostra os arquivos desta pasta em abas. Um clique simples no Explorer abre o arquivo em prévia — a aba em itálico, substituída pela próxima prévia até você editá-lo ou dar um duplo clique nela. Aba com alterações não salvas mostra um ponto no lugar do botão de fechar. Abra um arquivo ao lado para ver dois (ou três) grupos de uma vez; o mesmo arquivo em dois grupos é um buffer só, editado nos dois. Ctrl+S salva o arquivo ativo, Ctrl+K S salva todos e Ctrl+Shift+T reabre a última aba fechada. Localizar e substituir (Ctrl+F, Ctrl+H) e ir para a linha (Ctrl+G) são do próprio editor.",
+      "states": "O salvar diz qual versão do arquivo você abriu. Se o disco mudou desde então — provavelmente o Claude escreveu nele —, o salvar é recusado e você escolhe: comparar os dois, sobrescrever de propósito, ou recarregar e descartar suas alterações; nada é sobrescrito sozinho. Quando um arquivo muda no disco com a aba limpa, a aba recarrega e mantém sua posição; com alterações não salvas, um aviso diz quem mudou e oferece as mesmas três escolhas. Arquivo apagado no disco fica marcado, e salvá-lo oferece recriá-lo. Arquivos grandes abrem no modo leve — sem minimapa, sem dobrar trechos, sem realce —, arquivos binários abrem em visualização hexadecimal e arquivos acima do limite de edição em leitura paginada, os dois somente leitura; um arquivo que esta máquina não deixa o servidor ler abre uma página que diz o motivo no lugar do editor.",
+      "notRecorded": "Alterações não salvas vivem só nesta página: nunca ficam guardadas no navegador, por isso recarregar ou fechar a página pergunta antes. Seus salvamentos ficam na trilha de auditoria, sem o conteúdo; abrir e ler um arquivo não é registrado. Prévias, a visualização hexadecimal e a leitura paginada só leem o arquivo: também não são registradas.",
+      "previewsHeading": "Prévias, arquivos binários e arquivos grandes",
+      "previews": "Abrir prévia (Ctrl+Shift+V), ou abri-la ao lado (Ctrl+K V), mostra o arquivo renderizado: markdown, imagens, SVG e PDF; o botão de olho da aba alterna entre o arquivo e a prévia. A prévia de um markdown acompanha o que você digita, antes de salvar. Imagens e PDFs abrem já na prévia; o PDF é desenhado página a página pelo visualizador deste app, nunca pelo do navegador. Link para um arquivo desta pasta abre-o no editor; imagens da internet não são carregadas — viram links.",
+      "previewsHtml": "HTML nunca roda numa prévia — nem no markdown, nem num arquivo .html, nem um script dentro de um SVG. Uma página mostrada aqui rodaria com a sua sessão, dentro deste app; por isso o markdown mantém o texto e descarta as tags, o arquivo .html é mostrado como código-fonte e o SVG é desenhado como imagem, que não roda nada.",
+      "paged": "Um arquivo binário abre em visualização hexadecimal, e um texto acima do limite de edição abre como páginas de texto; os dois são somente leitura e leem uma página por vez. Se o arquivo mudar no disco enquanto você lê, a visualização avisa e recomeça na versão nova — nunca mistura páginas de duas versões."
+    },
+    "load": {
+      "failed": "Não foi possível carregar o editor. Verifique a conexão e tente de novo — o resto da aba continua funcionando."
+    },
+    "view": {
+      "label": "Editor de {{name}}"
+    },
+    "group": {
+      "label": "Grupo {{place}}",
+      "empty": "Nenhum arquivo aberto neste grupo.",
+      "selector": "Grupos de editor"
+    },
+    "strip": {
+      "label": "Arquivos abertos do grupo {{place}}",
+      "list": "Todos os arquivos abertos deste grupo ({{count}})",
+      "openToSide": "Abrir ao lado",
+      "togglePreview": "Prévia"
+    },
+    "tab": {
+      "close": "Fechar {{name}}",
+      "closeDirty": "Fechar {{name}} — há alterações não salvas",
+      "preview": "Prévia",
+      "pinned": "Fixada",
+      "dirty": "Alterações não salvas",
+      "deleted": "Apagado no disco",
+      "light": "Modo leve: arquivo grande",
+      "diffName": "{{left}} ↔ {{right}}",
+      "previewName": "Prévia de {{name}}"
+    },
+    "tabMenu": {
+      "close": "Fechar",
+      "closeOthers": "Fechar as outras",
+      "closeRight": "Fechar à direita",
+      "closeSaved": "Fechar as salvas",
+      "closeAll": "Fechar todas",
+      "pin": "Fixar",
+      "unpin": "Desafixar",
+      "moveLeft": "Mover para a esquerda",
+      "moveRight": "Mover para a direita",
+      "openToSide": "Abrir ao lado",
+      "compareWithSaved": "Comparar com o arquivo salvo",
+      "reveal": "Revelar no Explorer",
+      "addToClaude": "Adicionar ao contexto do Claude"
+    },
+    "breadcrumb": {
+      "label": "Onde está o arquivo do grupo {{place}}",
+      "step": "{{name}} — mostrar o que está ao lado",
+      "up": "Subir uma pasta",
+      "loading": "Lendo a pasta…"
+    },
+    "empty": {
+      "title": "Nenhum arquivo aberto",
+      "description": "Abra um arquivo pelo Explorer, crie um novo, ou volte a um que você abriu aqui antes.",
+      "openFromTree": "Abrir pelo Explorer",
+      "newFile": "Novo arquivo…",
+      "recent": "Abertos recentemente"
+    },
+    "newFile": {
+      "title": "Novo arquivo",
+      "description": "Um arquivo vazio neste caminho da pasta, aberto no editor. Nada que já esteja lá é sobrescrito.",
+      "path": "Caminho dentro da pasta",
+      "create": "Criar",
+      "cancel": "Cancelar"
+    },
+    "placeholder": {
+      "encodingTitle": "{{path}} não é UTF-8",
+      "encoding": "O texto não foi decodificado, para que nada seja mostrado e salvo de volta errado. Reabra-o com o encoding em que foi escrito.",
+      "reopenWithEncoding": "Reabrir com encoding…",
+      "deniedTitle": "{{path}} não pode ser aberto",
+      "unopenedTitle": "{{path}} não abriu"
+    },
+    "light": {
+      "notice": "Arquivo grande: aberto no modo leve, sem minimapa, sem dobrar trechos e sem realce."
+    },
+    "deleted": {
+      "notice": "{{path}} foi apagado no disco. Seu texto continua aqui; salvar oferece criar o arquivo de novo."
+    },
+    "external": {
+      "claude": "O Claude alterou {{path}} no disco, e você tem alterações não salvas aqui.",
+      "other": "{{path}} foi alterado fora do editor, e você tem alterações não salvas aqui.",
+      "compare": "Comparar",
+      "reload": "Recarregar do disco",
+      "keep": "Manter as minhas"
+    },
+    "conflict": {
+      "title": "{{name}} mudou no disco",
+      "description": "Ele mudou desde que você o abriu — provavelmente o Claude escreveu nele. Salvar agora sobrescreveria esse trabalho, então nada foi salvo.",
+      "compare": "Comparar",
+      "reload": "Recarregar e descartar minhas alterações",
+      "overwrite": "Sobrescrever o arquivo no disco",
+      "resolve": "Decidir…"
+    },
+    "saveError": {
+      "dismiss": "Dispensar"
+    },
+    "sensitive": {
+      "title": "Salvar {{path}}?",
+      "claudeSettings": "Este arquivo guarda as configurações do projeto para o Claude: os comandos que ele pode rodar sem perguntar e os hooks que rodam nas sessões dele.",
+      "claudeLocalSettings": "Este arquivo guarda as suas configurações do Claude neste projeto: os comandos que ele pode rodar sem perguntar e os hooks que rodam nas sessões dele.",
+      "mcpServers": "Este arquivo lista os servidores MCP que o Claude inicia neste projeto — programas que rodam nesta máquina.",
+      "warning": "Salvá-lo muda o que o Claude pode fazer sem perguntar a você.",
+      "confirm": "Salvar mesmo assim",
+      "cancel": "Não salvar"
+    },
+    "recreate": {
+      "title": "{{name}} foi apagado no disco",
+      "description": "Criar {{path}} de novo com o texto do editor?",
+      "confirm": "Criar de novo",
+      "cancel": "Deixar apagado"
+    },
+    "close": {
+      "titleOne": "Salvar as alterações em {{name}}?",
+      "titleMany": "Salvar as alterações em {{count}} arquivos?",
+      "description": "Fechar sem salvar descarta as alterações. Elas não ficam guardadas em nenhum outro lugar.",
+      "listLabel": "Arquivos com alterações não salvas",
+      "save": "Salvar",
+      "discard": "Não salvar",
+      "cancel": "Cancelar"
+    },
+    "saveAs": {
+      "title": "Salvar como",
+      "description": "Grava o texto do editor em outro caminho desta pasta. O arquivo que você abriu fica como está no disco.",
+      "path": "Caminho dentro da pasta",
+      "save": "Salvar",
+      "saveSensitive": "Salvar mesmo assim",
+      "replace": "Substituir",
+      "cancel": "Cancelar",
+      "taken": "{{path}} já existe. Substituir sobrescreve a versão que está lá agora."
+    },
+    "saveAll": {
+      "title": "Salvar todos",
+      "summary": "{{saved}} de {{total}} arquivos salvos",
+      "saved": "Salvo",
+      "needsAnswer": "Esperando sua resposta",
+      "dismiss": "Dispensar o relatório"
+    },
+    "encoding": {
+      "dirty": "Salve ou reverta {{path}} antes de reabri-lo com outro encoding."
+    },
+    "claude": {
+      "addSelection": "Adicionar seleção ao chat",
+      "added": "{{path}} foi adicionado ao contexto do Claude.",
+      "unavailable": "Nada recebe arquivos no contexto do Claude agora."
+    },
+    "diff": {
+      "disk": "{{name}} no disco",
+      "buffer": "{{name}} no editor",
+      "versus": "↔",
+      "readOnly": "Somente leitura",
+      "label": "Diferenças entre {{left}} e {{right}}",
+      "history": "{{name}} em {{when}}"
+    },
+    "status": {
+      "label": "O arquivo ativo",
+      "position": "Ln {{line}}, Col {{column}}",
+      "selection": "({{count}} selecionados)",
+      "goToLine": "{{position}} — ir para a linha",
+      "spaces": "Espaços: {{size}}",
+      "tabs": "Tamanho da tab: {{size}}",
+      "indentation": "Indentação: {{value}} — converter",
+      "encoding": "Encoding: {{value}} — reabrir ou salvar com outro",
+      "eol": "Fim de linha: {{value}} — converter",
+      "language": "Linguagem: {{value}} — trocar o realce"
+    },
+    "choice": {
+      "placeholder": "Escolha um…",
+      "none": "Nada corresponde.",
+      "eol": "Fim de linha",
+      "language": "Linguagem do realce",
+      "indentation": "Indentação",
+      "reopenEncoding": "Reabrir com encoding",
+      "saveEncoding": "Salvar com encoding"
+    },
+    "indentation": {
+      "toSpaces": "Converter indentação para espaços",
+      "toTabs": "Converter indentação para tabs"
+    },
+    "language": {
+      "plaintext": "Texto simples"
+    },
+    "recent": {
+      "empty": "Nenhum arquivo foi aberto nesta pasta ainda.",
+      "placeholder": "Encontre um arquivo aberto recentemente…"
+    },
+    "openEditors": {
+      "label": "Editores abertos"
+    },
+    "settings": {
+      "font": "Fonte",
+      "fontDescription": "A fonte do editor.",
+      "fontCode": "A fonte de código do app",
+      "fontBrowser": "A monoespaçada do navegador",
+      "fontSize": "Tamanho da fonte",
+      "fontSizeDescription": "O tamanho do texto no editor.",
+      "zoom": "Zoom",
+      "zoomDescription": "Aumenta ou diminui o texto do editor, sobre o tamanho da fonte.",
+      "tabSize": "Tamanho da tab",
+      "tabSizeDescription": "A largura de uma tab, nos arquivos que não dizem isso por si.",
+      "insertSpaces": "Indentar com espaços",
+      "insertSpacesDescription": "A tecla Tab insere espaços em vez de uma tab, nos arquivos que não dizem isso por si.",
+      "wordWrap": "Quebra de linha",
+      "wordWrapDescription": "Linhas longas quebram na borda do editor em vez de rolar para o lado.",
+      "minimap": "Minimapa",
+      "minimapDescription": "Uma visão pequena do arquivo inteiro ao lado do editor. Arquivos grandes nunca o mostram.",
+      "autoSave": "Salvar automaticamente",
+      "autoSaveDescription": "Salva sozinho. Nunca sobrescreve um arquivo que mudou no disco, e nunca salva um arquivo que muda o que o Claude pode fazer.",
+      "autoSaveOff": "Desligado",
+      "autoSaveAfterDelay": "Um segundo depois de digitar",
+      "autoSaveOnFocusChange": "Quando o editor perde o foco",
+      "trimTrailingWhitespace": "Remover espaços no fim da linha ao salvar",
+      "trimTrailingWhitespaceDescription": "Tira os espaços e tabs do fim de cada linha quando o arquivo é salvo.",
+      "insertFinalNewline": "Inserir nova linha final ao salvar",
+      "insertFinalNewlineDescription": "Termina o arquivo com uma quebra de linha quando ele é salvo sem uma.",
+      "on": "Ligado",
+      "off": "Desligado",
+      "pixels": "{{value}} px",
+      "percent": "{{value}}%",
+      "columns": "{{value}} colunas"
+    },
+    "history": {
+      "tooLarge": "Salvo. A versão que este salvar substituiu não entrou no histórico local: é maior do que o histórico guarda.",
+      "unavailable": "Salvo. A versão que este salvar substituiu não entrou no histórico local, que não está disponível agora.",
+      "dismiss": "Entendi"
+    },
+    "paged": {
+      "hexTitle": "{{path}} é um arquivo binário — mostrado em hexadecimal, somente leitura",
+      "hex": "O editor abre texto. Esta visualização lê o arquivo uma página por vez, à medida que você chega nela, e nada nela pode ser alterado.",
+      "textTitle": "{{path}} é grande demais para editar — mostrado somente leitura, página a página",
+      "text": "Ele tem {{size}}, e o editor abre no máximo {{limit}}. Cada página é lida do disco quando você chega nela; nada aqui pode ser alterado.",
+      "controls": "Páginas de {{path}}",
+      "first": "Primeira página",
+      "previous": "Página anterior",
+      "next": "Próxima página",
+      "last": "Última página",
+      "page": "Página {{page}} de {{pages}}",
+      "tableLabel": "Bytes {{from}} a {{to}} de {{path}}",
+      "offset": "Posição",
+      "bytes": "Bytes ({{bytes}} por linha)",
+      "ascii": "Texto",
+      "textLabel": "Página {{page}} de {{path}}",
+      "empty": "{{path}} está vazio: não tem bytes para mostrar.",
+      "changed": "{{path}} mudou no disco enquanto você lia. As páginas lidas antes foram descartadas, e esta já é a versão nova.",
+      "dismiss": "Dispensar"
+    },
+    "preview": {
+      "label": "Prévia de {{name}}",
+      "none": "{{name}} não tem prévia. Abra-o no editor.",
+      "broken": "{{name}} não pôde ser mostrado: não é uma imagem que este navegador consiga desenhar, ou está danificado.",
+      "htmlSource": "HTML é mostrado como código-fonte. Uma prévia nunca roda uma página: os scripts dela rodariam dentro deste app, com a sua sessão.",
+      "sourceLabel": "Código-fonte de {{name}}",
+      "pdfLoadFailed": "O visualizador de PDF não carregou. Confira a conexão e tente de novo.",
+      "pdfBroken": "{{name}} não pôde ser lido como PDF — pode estar danificado.",
+      "pdfPages": "Páginas de {{name}}",
+      "pdfPrevious": "Página anterior",
+      "pdfNext": "Próxima página",
+      "pdfPage": "Página {{page}} de {{pages}}",
+      "pdfPageFailed": "A página {{page}} não pôde ser desenhada.",
+      "pdfCanvas": "Página {{page}} de {{name}}",
+      "tooLarge": "{{path}} passa do limite de download de {{limit}}, por isso não tem prévia. Abra-o na visualização hexadecimal, que o lê uma página por vez."
+    }
+  },
+  "fileHistory": {
+    "screen": {
+      "title": "Linha do tempo",
+      "purpose": "As versões do arquivo ativo que esta máquina guardou antes de você sobrescrevê-las ou apagá-las — compare-as e traga uma de volta."
+    },
+    "help": {
+      "what": "A Linha do tempo é o histórico local, nesta máquina, dos arquivos que você muda por aqui. Antes que salvar, apagar, restaurar ou enviar um arquivo por cima faça perder uma versão dele, essa versão é guardada — nesta máquina, fora da pasta. Compare uma versão com o arquivo como está agora, ou escolha uma e compare com outra; restaure uma para pô-la de volta. \"Apagados recentemente\" lista o que foi apagado desta pasta e não existe mais, e traz de volta onde estava. Apagar o que o histórico consegue guardar não pergunta antes: uma notificação diz o que foi, com Desfazer.",
+      "states": "Cada versão diz por que foi guardada, quem a escreveu — você, ou outra pessoa que alcança esta pasta — e quando, das mais novas para as mais antigas; filtre pelo motivo para ver só algumas. Um arquivo maior do que o histórico guarda aparece sem o conteúdo: ele diz isso, e não pode ser comparado nem restaurado. Um arquivo ainda sem versão não tem histórico: ele começa no primeiro salvar, apagar ou envio que faria perder algo. Restaurar só pergunta antes quando o arquivo tem mudanças não salvas, que são descartadas; a versão substituída é guardada antes. Se o arquivo mudou desde que você o abriu — o Claude pode ter escrito nele —, a restauração é recusada e diz isso.",
+      "notRecorded": "Isto não é o git, e não é o desfazer do Claude. Nada aqui é commit nem branch, e o que o Claude escreve não é guardado aqui: as mudanças do Claude são desfeitas pela sessão dele. O histórico segue um caminho, não um arquivo renomeado. O conteúdo de uma versão nunca vai para a trilha de auditoria; só o fato de um arquivo ter sido restaurado.",
+      "size": "{{megabytes}} MB",
+      "sizeUnknown": "o tamanho que esta instalação define",
+      "limitsHeading": "O que guarda, e por quanto tempo",
+      "limits": "Uma versão só é guardada para um arquivo de até {{size}}. O histórico guarda um número limitado de versões, por um tempo e num espaço limitados, como esta instalação os define — por padrão, 50 versões de cada arquivo, 512 MB no total, por 30 dias — e as mais antigas saem primeiro."
+    },
+    "timeline": {
+      "title": "Linha do tempo",
+      "noFile": "Abra um arquivo no editor para ver as versões guardadas dele.",
+      "of": "Versões de {{path}}",
+      "ofGone": "Versões de {{path}}, que não existe mais",
+      "loading": "Carregando as versões…",
+      "listLabel": "Versões de {{path}}",
+      "more": "Mostrar mais antigas",
+      "loadingMore": "Carregando…",
+      "modes": "O que a Linha do tempo lista",
+      "thisFile": "Este arquivo",
+      "recentlyDeleted": "Apagados recentemente"
+    },
+    "empty": {
+      "title": "Nenhuma versão guardada ainda",
+      "filtered": "Nenhuma versão guardada por este motivo",
+      "description": "Uma versão é guardada no momento em que você a perderia por aqui: antes de salvar, apagar, restaurar ou enviar um arquivo por cima — o histórico deste arquivo começa no primeiro desses. O que o Claude escreve não é guardado aqui: é desfeito pela sessão dele."
+    },
+    "filter": {
+      "label": "Mostrar as versões guardadas antes de",
+      "all": "Todas",
+      "save": "Salvar",
+      "delete": "Apagar",
+      "restore": "Restaurar",
+      "upload": "Envio"
+    },
+    "reason": {
+      "save": "Antes de salvar",
+      "delete": "Antes de apagar",
+      "restore": "Antes de restaurar",
+      "upload": "Antes de um envio"
+    },
+    "version": {
+      "byAt": "{{who}} · {{when}}",
+      "tooLarge": "Grande demais para guardar: o histórico registra que aconteceu, não o conteúdo."
+    },
+    "author": {
+      "self": "Você",
+      "other": "Outra pessoa ({{id}})"
+    },
+    "action": {
+      "help": "Ajuda da Linha do tempo",
+      "compareWithCurrent": "Comparar a versão de {{when}} com o arquivo agora",
+      "selectForCompare": "Escolher a versão de {{when}} para comparar com outra",
+      "compareWithSelected": "Comparar a versão de {{when}} com a escolhida",
+      "restore": "Restaurar a versão de {{when}}",
+      "showVersions": "Mostrar as versões de {{path}}",
+      "restoreDeleted": "Restaurar {{path}}"
+    },
+    "deleted": {
+      "loading": "Carregando o que foi apagado…",
+      "listLabel": "Apagados recentemente",
+      "emptyTitle": "Nada apagado recentemente",
+      "emptyDescription": "O que for apagado desta pasta enquanto o histórico local puder guardar aparece aqui, até ser purgado — e pode voltar para onde estava.",
+      "byAt": "Apagado por {{who}} · {{when}}"
+    },
+    "restore": {
+      "title": "Restaurar {{path}} para a versão de {{when}}?",
+      "discards": "{{path}} tem mudanças não salvas no editor, e restaurar as descarta. A versão do disco é guardada no histórico antes.",
+      "replaces": "A versão de {{path}} que está lá agora é guardada no histórico antes, então dá para restaurá-la de volta.",
+      "sensitive": "{{path}} muda o que o Claude pode fazer sem perguntar a você.",
+      "cancel": "Deixar como está",
+      "confirm": "Restaurar",
+      "done": "{{path}} restaurado para a versão de {{when}}.",
+      "changed": "{{path}} mudou desde que você o abriu — o Claude pode ter escrito nele —, então nada foi restaurado. Veja o arquivo agora e tente de novo.",
+      "taken": "Algo agora ocupa o caminho {{path}}, então nada foi restaurado por cima.",
+      "dismiss": "Dispensar"
+    },
+    "command": {
+      "showTimeline": "Mostrar a Linha do tempo do arquivo ativo",
+      "showRecentlyDeleted": "Mostrar os arquivos apagados recentemente",
+      "help": "Ajuda da Linha do tempo"
+    }
+  },
+  "markdown": {
+    "image": {
+      "remote": "Imagem remota, não carregada: {{name}}"
+    }
+  },
+  "sessions": {
+    "screen": {
+      "title": "Sessões do Claude",
+      "purpose": "O que o Claude está fazendo nesta pasta: as sessões rodando aqui, as conversas que outro processo está escrevendo agora e o histórico da pasta."
+    },
+    "filtered": {
+      "title": "Nada corresponde ao filtro",
+      "description": "Nenhuma sessão ou conversa desta pasta corresponde ao que você buscou ou à origem que escolheu.",
+      "clear": "Limpar o filtro"
+    },
+    "action": {
+      "open": "Abrir no painel",
+      "read": "Ler no painel",
+      "continue": "Continuar aqui",
+      "fork": "Continuar aqui, como cópia",
+      "copyId": "Copiar o id da conversa",
+      "end": "Encerrar a sessão"
+    },
+    "fork": {
+      "title": "Continuar uma conversa que está sendo escrita agora?",
+      "description": "Outro processo — o editor ou um terminal — escreveu nesta conversa há pouco. Continuar aqui cria uma cópia com um id novo; a outra segue sozinha, e as duas vão divergir.",
+      "cancel": "Cancelar",
+      "confirm": "Continuar como cópia"
+    },
+    "limit": {
+      "note": "O teto de sessões é desta instalação, não seu: as sessões de todas as pessoas contam. Espere {{seconds}} s e tente de novo, ou encerre uma das suas sessões — as desta pasta estão em \"Em execução aqui\"; as outras, nas abas das pastas delas."
+    },
+    "help": {
+      "what": "Esta view lista o que o Claude faz na pasta da aba. \"Em execução aqui\" são as suas sessões abertas agora, nesta pasta ou abaixo dela. \"Ativas em outro lugar\" são conversas desta pasta que algo além deste app escreveu há pouco. \"Histórico\" é todo o resto dito nesta pasta.",
+      "states": "Cada grupo carrega, falha e fica vazio por conta própria: quando o histórico não pode ser lido, o que roda aqui continua listado. As listas se atualizam a cada poucos segundos enquanto a view está na tela, e na hora quando uma sessão sua começa ou termina.",
+      "notRecorded": "Ler uma conversa não muda nada, e nada é apagado daqui: o histórico é do próprio Claude, compartilhado com o editor.",
+      "groupsHeading": "Os três grupos",
+      "groups": "Clicar numa sessão em execução a mostra no painel ao lado do editor. Clicar numa conversa a abre no painel para leitura, com o botão que a continua.",
+      "originHeading": "Aberta aqui, ou começada fora",
+      "origin": "\"Aberta aqui\" quer dizer que este app a abriu para você — ele sabe porque guarda registro de toda conversa que abre. Todo o resto começou no editor ou num terminal desta máquina; nada diz qual dos dois.",
+      "forkHeading": "Por que continuar uma conversa começada fora cria um id novo",
+      "fork": "Uma conversa começada fora é continuada como cópia, com um id novo, para que este app nunca escreva num arquivo que o editor pode estar escrevendo. O editor não verá as respostas dadas aqui.",
+      "elsewhereHeading": "\"Ativa em outro lugar\" é uma estimativa",
+      "elsewhere": "Nada avisa este app que um editor está com uma conversa aberta. O que ele sabe é quando a conversa foi escrita pela última vez: escrita nos últimos dois minutos, ela aparece como ativa. Uma tool longa pode deixá-la minutos sem escrita enquanto ainda roda.",
+      "limitHeading": "O teto de sessões",
+      "limit": "Cada sessão é um processo do Claude nesta máquina, e a máquina comporta um número limitado. O teto é da instalação: quando é atingido, encerre uma sessão sua ou espere uma terminar."
+    },
+    "originOption": {
+      "all": "Todas",
+      "ours": "Abertas aqui",
+      "external": "Começadas fora"
+    },
+    "sortOption": {
+      "recent": "Mais recentes",
+      "name": "Nome"
+    },
+    "view": {
+      "search": "Buscar nas sessões desta pasta",
+      "searchPlaceholder": "Buscar pelo título",
+      "refresh": "Atualizar as listas",
+      "subfoldersOn": "Mostrando também as conversas das pastas abaixo — mostrar só as desta pasta",
+      "subfoldersOff": "Mostrando só as conversas desta pasta — incluir as pastas abaixo",
+      "help": "Ajuda sobre as sessões do Claude",
+      "origin": "Origem",
+      "sort": "Ordem"
+    },
+    "openedFrom": {
+      "web": "Aberta num navegador",
+      "mobile": "Aberta num celular"
+    },
+    "rowOrigin": {
+      "ours": "Aberta aqui",
+      "external": "Começada fora — no editor ou num terminal"
+    },
+    "row": {
+      "actions": "Mais ações",
+      "untitledSession": "Sessão sem título",
+      "openSession": "Abrir a sessão {{title}}",
+      "openConversation": "Ler a conversa {{title}}",
+      "pending": "{{count}} esperando você",
+      "writtenAgo": "Escrita {{when}}",
+      "lastWritten": "Escrita por último {{when}}",
+      "liveDetails": "{{status}} · {{model}} · {{since}}",
+      "originOnBranch": "{{origin}} · {{branch}}"
+    },
+    "code": {
+      "copy": "Copiar o código",
+      "insert": "Inserir no cursor do editor",
+      "insertNoEditor": "Abra um arquivo no editor desta aba para inserir o código nele",
+      "insertNotLoaded": "O arquivo do editor ainda está carregando",
+      "copied": "Código copiado",
+      "copyFailed": "O navegador não deixou copiar o código: selecione e copie à mão"
+    },
+    "thinking": {
+      "live": "Pensando…",
+      "hidden": "Pensou — o modelo não mostrou",
+      "done": "Pensou",
+      "took": "Pensou por {{seconds}} s",
+      "nothingShown": "O modelo pensou aqui e não mostrou o que pensou."
+    },
+    "output": {
+      "showAll": "Mostrar toda a saída ({{count}} caracteres) — só o fim está à vista"
+    },
+    "toolRow": {
+      "label": "{{tool}} — {{status}}. Mostrar o input exato",
+      "input": "O input exato",
+      "denied": "Recusada: {{reason}}",
+      "trail": "Ver na trilha de auditoria"
+    },
+    "tool": {
+      "read": "Ler {{path}}",
+      "edit": "Editar {{path}} (+{{added}} −{{removed}})",
+      "multiEdit": "Editar {{path}} (várias mudanças)",
+      "write": "Gravar {{path}} ({{lines}} linhas)",
+      "notebookEdit": "Editar o notebook {{path}}",
+      "bash": "Bash: {{command}}",
+      "grep": "Buscar “{{pattern}}”",
+      "grepIn": "Buscar “{{pattern}}” em {{path}}",
+      "glob": "Achar arquivos {{pattern}}",
+      "webFetch": "Buscar {{host}}",
+      "webSearch": "Pesquisar na web “{{query}}”",
+      "agent": "Subagent ({{type}}): {{description}}",
+      "exitPlan": "Apresentar o plano",
+      "other": "{{name}}",
+      "mcp": "{{server}} · {{tool}}",
+      "todoWrite": "Atualizou a lista de tarefas ({{count}} tarefas)",
+      "taskCreate": "Adicionou uma tarefa: {{subject}}",
+      "taskUpdate": "Mudou a tarefa #{{id}}",
+      "taskGet": "Leu a tarefa #{{id}}",
+      "taskList": "Leu a lista de tarefas"
+    },
+    "subagent": {
+      "loading": "Carregando o que o subagent disse…",
+      "nothing": "O histórico não guarda nada que o subagent disse.",
+      "label": "O que o subagent disse"
+    },
+    "turn": {
+      "summary": "Turno: {{cost}} · {{seconds}} s · {{input}} de entrada, {{output}} de saída, {{cache}} de cache",
+      "noUsage": "Turno encerrado: {{cost}} · {{seconds}} s · sem contagem de tokens, foi interrompido"
+    },
+    "compacted": {
+      "label": "A conversa foi compactada",
+      "manual": "Compactada a pedido: o que veio antes agora é um resumo",
+      "auto": "Compactada sozinha, o contexto encheu: o que veio antes agora é um resumo",
+      "manualTokens": "Compactada a pedido: {{tokens}} tokens de antes agora são um resumo",
+      "autoTokens": "Compactada sozinha, o contexto encheu: {{tokens}} tokens de antes agora são um resumo"
+    },
+    "message": {
+      "copy": "Copiar a mensagem",
+      "copied": "Mensagem copiada"
+    },
+    "search": {
+      "label": "Buscar na conversa",
+      "none": "Nada encontrado no que está carregado",
+      "position": "{{at}} de {{count}}",
+      "previous": "Ocorrência anterior",
+      "next": "Próxima ocorrência",
+      "everything": "Buscar em toda a conversa",
+      "close": "Fechar a busca"
+    },
+    "status": {
+      "thinking": "O Claude está pensando…",
+      "running": "O Claude está rodando uma tool…",
+      "waitingPermission": "O Claude está esperando você — responda a pergunta",
+      "cost": "Esta sessão custou {{cost}} desde que abriu, em {{turns}} turno(s)"
+    },
+    "tasks": {
+      "title": "Tarefas",
+      "label": "A lista de tarefas que o Claude mantém nesta conversa",
+      "count": "{{done}} de {{total}} concluídas",
+      "was": "era {{state}}",
+      "state": "{{state}}: "
+    },
+    "taskStatus": {
+      "pending": "Pendente",
+      "inProgress": "Em andamento",
+      "completed": "Concluída"
+    }
+  },
+  "sessionsGroup": {
+    "running": {
+      "title": "Em execução aqui",
+      "loading": "Carregando as sessões rodando nesta pasta…",
+      "emptyTitle": "Nada está rodando nesta pasta",
+      "emptyDescription": "Comece uma conversa no painel ao lado do editor, ou continue uma do histórico abaixo."
+    },
+    "elsewhere": {
+      "title": "Ativas em outro lugar",
+      "loading": "Carregando as conversas desta pasta…",
+      "emptyTitle": "Nada parece estar escrevendo uma conversa desta pasta agora",
+      "emptyDescription": "Uma conversa começada no editor ou num terminal aparece aqui enquanto está sendo escrita."
+    },
+    "history": {
+      "title": "Histórico",
+      "loading": "Carregando o histórico desta pasta…",
+      "emptyTitle": "Nenhuma conversa nesta pasta ainda",
+      "emptyDescription": "Comece uma no painel ao lado do editor: ela aparece aqui, assim como as começadas no editor ou num terminal.",
+      "loadMore": "Carregar mais",
+      "loadingMore": "Carregando…"
     }
   }
 }

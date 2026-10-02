@@ -1,5 +1,5 @@
 import type { UserId } from '@domain/auth';
-import type { PermissionMode } from '@domain/session';
+import type { PermissionMode, SessionClient } from '@domain/session';
 
 /**
  * Input of `StartSessionUseCase`.
@@ -22,4 +22,7 @@ export interface StartSessionCommand {
   readonly resumeSessionId: string | null;
 
   readonly userId: UserId;
+
+  /** The client that asked: a browser, or the app — said in the list of live sessions. */
+  readonly openedFrom: SessionClient;
 }

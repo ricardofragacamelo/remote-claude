@@ -21,6 +21,7 @@ export type { ResolvedWorkspace } from './services/workspace-allowlist';
 export {
   DIRECTORY_LISTING_LIMIT,
   DirectoryListingCriteria,
+  compareNames,
   listDirectory,
 } from './services/directory-listing';
 export type {

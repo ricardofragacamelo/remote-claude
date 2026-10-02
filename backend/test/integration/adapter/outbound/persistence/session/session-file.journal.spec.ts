@@ -17,6 +17,7 @@ import type { DisposablePostgres } from '../../../../../support/containers/postg
 import { FixedClock } from '../../../../../support/fakes/fixed-clock';
 import { aPersistenceContext } from '../../../../../support/fakes/persistence-context';
 import { RecordingLogger } from '../../../../../support/fakes/recording-logger';
+import { RecordingSessionFileEvents } from '../../../../../support/fakes/recording-session-file-events';
 
 const sessionId = SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ');
 
@@ -48,6 +49,7 @@ describe('the session file journal', () => {
   let journal: DiskSessionFileJournal;
   let files: DrizzleSessionFileRepository;
   let log: RecordingLogger;
+  let events: RecordingSessionFileEvents;
 
   beforeAll(async () => {
     database = await startPostgres();
@@ -64,6 +66,7 @@ describe('the session file journal', () => {
     workspace = await mkdtemp(path.join(tmpdir(), 'rc-journal-work-'));
     store = await mkdtemp(path.join(tmpdir(), 'rc-journal-store-'));
     log = new RecordingLogger();
+    events = new RecordingSessionFileEvents();
     files = new DrizzleSessionFileRepository(
       aPersistenceContext(connection.db, { logger: log.logger }),
     );
@@ -72,6 +75,7 @@ describe('the session file journal', () => {
       new FileSnapshotStore(store, { maxFileBytes: MAX_FILE_BYTES, maxStoreBytes: 1_000_000 }),
       new FixedClock(now),
       log.logger,
+      events,
     );
   });
 
@@ -142,6 +146,7 @@ describe('the session file journal', () => {
         new FileSnapshotStore(store, { maxFileBytes: MAX_FILE_BYTES, maxStoreBytes: 1_000 }),
         new FixedClock(now),
         log.logger,
+        events,
       );
       await write('after');
 
@@ -235,6 +240,7 @@ describe('the session file journal', () => {
         new FileSnapshotStore(store, { maxFileBytes: MAX_FILE_BYTES, maxStoreBytes: 1_000_000 }),
         new FixedClock(now),
         log.logger,
+        events,
       );
       await write('original');
 

@@ -21,6 +21,9 @@ export const NOTIFICATION_CATALOGUE: readonly NotificationKind[] = [
   { messageKey: 'notification.connection.restored', params: [] },
   // A folder with an open tab is no longer allowed.
   { messageKey: 'notification.folder.notAllowed', params: ['folder'] },
+  // A delete the local history kept went without a question; the toast carries its Undo (07 · B-58).
+  { messageKey: 'notification.files.deletedOne', params: ['name'] },
+  { messageKey: 'notification.files.deletedMany', params: ['count'] },
 ];
 
 /** One kind of notification: its key, and the names of the parameters it interpolates. */

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkCoverage, isExcluded, parseLcov } from '../../../scripts/lib/lcov.mjs';
+import {
+  asRanges,
+  checkCoverage,
+  gapsOf,
+  isExcluded,
+  parseLcov,
+} from '../../../scripts/lib/lcov.mjs';
 
 /**
  * @param {string} file
@@ -108,5 +114,58 @@ describe('checkCoverage', () => {
       below: [],
       overall: 100,
     });
+  });
+});
+
+describe('gapsOf', () => {
+  const report = [
+    'SF:src/a.ts',
+    'FN:3,shown',
+    'FN:9,hidden',
+    'FNDA:2,shown',
+    'FNDA:0,hidden',
+    'BRDA:4,0,0,1',
+    'BRDA:4,0,1,0',
+    'BRDA:7,1,0,-',
+    'DA:1,1',
+    'DA:9,0',
+    'DA:10,0',
+    'end_of_record',
+    'SF:src/whole.ts',
+    'FN:1,all',
+    'FNDA:1,all',
+    'DA:1,3',
+    'end_of_record',
+  ].join('\n');
+
+  it('names the lines, functions and branches a file never ran, and leaves out a whole file', () => {
+    expect(gapsOf(report)).toEqual([
+      {
+        file: 'src/a.ts',
+        lines: [9, 10],
+        functions: [{ name: 'hidden', line: 9 }],
+        branches: [4, 7],
+      },
+    ]);
+  });
+
+  it('reads a record with no source line as nothing', () => {
+    expect(gapsOf('DA:1,0\nend_of_record')).toEqual([]);
+  });
+
+  it('places a function it saw no FN of on line zero', () => {
+    expect(gapsOf('SF:x.ts\nFNDA:0,ghost\nend_of_record')[0]?.functions).toEqual([
+      { name: 'ghost', line: 0 },
+    ]);
+  });
+});
+
+describe('asRanges', () => {
+  it('joins consecutive numbers into ranges', () => {
+    expect(asRanges([1, 2, 3, 5, 7, 8])).toBe('1-3, 5, 7-8');
+  });
+
+  it('says nothing of no numbers', () => {
+    expect(asRanges([])).toBe('');
   });
 });

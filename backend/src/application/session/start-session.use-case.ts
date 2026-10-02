@@ -208,19 +208,20 @@ export class StartSessionUseCase {
     // Taken before anything is spawned, and given back in the `finally`. Checking the count and
     // only then awaiting a subprocess would let two starts both see room and both spawn, which is
     // the orphan the limit exists to prevent.
+    const session = Session.open({
+      id: SessionId.create(this.ids.next()),
+      ownerId: command.userId,
+      workspace,
+      model: command.model ?? this.defaults.model,
+      permissionMode: command.permissionMode ?? this.defaults.permissionMode,
+      openedAt: this.clock.now(),
+      openedFrom: command.openedFrom,
+    });
     this.registry.reserve();
 
     try {
-      const session = Session.open({
-        id: SessionId.create(this.ids.next()),
-        ownerId: command.userId,
-        workspace,
-        model: command.model ?? this.defaults.model,
-        permissionMode: command.permissionMode ?? this.defaults.permissionMode,
-        openedAt: this.clock.now(),
-      });
-
       const conversation = await conversationFor(session);
+      this.registry.announce(session, conversation);
 
       const handle = await this.claude.start({
         sessionId: session.id,
@@ -246,6 +247,9 @@ export class StartSessionUseCase {
 
       return { session, conversation, joined: false };
     } finally {
+      // A start that failed is listed as starting no longer; one that succeeded already moved to
+      // the live sessions, and withdrawing it is a no-op.
+      this.registry.withdraw(session.id);
       this.registry.release();
     }
   }

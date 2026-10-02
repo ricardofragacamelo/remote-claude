@@ -120,6 +120,7 @@ silencioso.
 | Comando | Faz |
 |---|---|
 | `pnpm dev` | sobe a stack de desenvolvimento em **portas fixas** |
+| `pnpm dev:mobile` | roda o **app Flutter** num Android apontando para a stack do `pnpm dev` (que precisa estar de pé em outro terminal): usa o aparelho conectado ou sobe a AVD `remote_claude_api35` **com janela**, e fica de pé com o `flutter run` (hot reload). Ao sair — `q`, Ctrl+C ou queda — desliga o emulador que ligou e limpa o resto. Argumentos depois de `--` vão para o `flutter run` |
 | `pnpm allowlist add <pasta>` | libera uma pasta da máquina para o Claude sem editar YAML: grava na cópia local `infra/workspace-allowlist.local.yaml` (ignorada pelo git, validada pelo schema do boot), recusa `/`, pergunta antes do `$HOME` e manda `SIGHUP` ao backend do `pnpm dev`, que recarrega sem reiniciar. `remove <pasta>` tira; `list` diz qual arquivo está ativo e as raízes dele |
 | `pnpm db reset` | derruba, recria, migra e popula — a sequência que ninguém lembra na ordem certa |
 | `pnpm db seed` | só popula; rodar duas vezes não muda nada |
@@ -127,6 +128,8 @@ silencioso.
 | `pnpm --filter backend verify` | os portões 1-7 só do backend — o ciclo curto enquanto se mexe nele |
 | `pnpm --filter web verify` | os mesmos, só do web |
 | `pnpm clean` | purga projetos e **volumes docker órfãos**, `dist/`, `coverage/`, relatórios |
+| `node scripts/watcher-spike.mjs --tree <pasta> --libs <pasta>` | o spike da D-08 do plano 07: quantos watches de inotify `fs.watch` recursivo, `chokidar` e `@parcel/watcher` gastam numa árvore e se ouvem uma pasta excluída; `--limit <n>` roda cada um com o limite baixado num user namespace (`unshare -Ur`, sem root), `--midflight` esgota o limite depois da subida. As bibliotecas ficam em `--libs`, fora do repositório; Linux só |
+| `node scripts/editor-bundle.mjs` | constrói o web em memória (nada vai para `web/dist`) e confere como o editor sai no build, pela D-09 do plano 07: o Monaco só em chunks que um import dinâmico alcança, o worker dele emitido pelo nosso build, nenhum arquivo citando CDN — e diz quanto cada parte pesa com gzip, a medida que a D-09 registra. `--json` imprime a análise para o teste de integração do web |
 
 `pnpm dev` deixa de pé:
 
@@ -147,6 +150,45 @@ sobrevive ao Ctrl+C, porque perdê-lo a cada encerramento é atrito diário.
 Sobre `pnpm clean`: volume órfão é **invisível ao `docker compose ls`** — quando uma execução
 morre de forma abrupta, os containers somem e o volume nomeado sobrevive. Por isso o comando
 existe.
+
+#### O app mobile local — `pnpm dev:mobile`
+
+Com o `pnpm dev` de pé em um terminal, `pnpm dev:mobile` em outro compila o app com os endereços
+do **mesmo `.env`** (API e WebSocket na `RC_BACKEND_PORT`, login em `OIDC_ISSUER` com
+`OIDC_CLIENT_ID_MOBILE` e `OIDC_SCOPES`) e o roda no Android:
+
+```
+.env → --dart-define  →  a stack responde?  →  aparelho (conectado, ou a AVD com janela)
+     →  adb reverse das portas da API e do Keycloak  →  flutter run, em primeiro plano
+```
+
+Os endereços continuam `localhost`: o `adb reverse` é que faz o `localhost` **de dentro** do
+aparelho chegar a esta máquina. Trocar por `10.0.2.2` funcionaria para a API e quebraria o login,
+porque o issuer do token precisa ser byte a byte o que o backend espera.
+
+Duas coisas do Android que só o login de verdade revela, e que a suíte e2e (que entra sem
+navegador) não vê, estão travadas por `test/unit/android-manifest.spec.mjs`: o build de **debug**
+libera HTTP sem TLS só para `localhost` e `127.0.0.1` (`src/debug/res/xml/network_security_config.xml`
+— o AppAuth busca o issuer pela rede da plataforma, que recusa cleartext), e a `MainActivity` **não**
+tem `android:taskAffinity=""` — com ele, o redirect do Keycloak volta para uma activity do AppAuth
+sem o estado da requisição, e o login fica parado na tela do provedor.
+
+O script fica de pé enquanto o `flutter run` estiver: `r` recarrega, `R` reinicia, `q` encerra.
+Termine como terminar — `q`, Ctrl+C, `SIGTERM`, build que falhou, app que perdeu a conexão — e ele
+devolve o que montou, na ordem inversa:
+
+- encerra o `flutter run`;
+- num aparelho que **já estava conectado**: para o app (`am force-stop`) e remove só os
+  `adb reverse` que ele criou — o aparelho continua ligado;
+- o **emulador que ele ligou** desce (`adb emu kill`, e o grupo de processos se não sair em um
+  minuto);
+- o servidor `adb`, se foi ele quem o iniciou;
+- os daemons do Gradle (`gradlew --stop`).
+
+Antes de qualquer coisa cara, ele recusa com código 1 e diz o que fazer: variável do `.env` faltando
+ou malformada (todas de uma vez), stack que não responde (`pnpm dev`), `flutter` fora do PATH. A
+primeira vez cria a AVD como descrito em [Testes](#testes). Argumentos depois de `--` vão para o
+`flutter run` — `pnpm dev:mobile -- --release`, por exemplo.
 
 ### Validação — o que define "pronto"
 
@@ -183,6 +225,7 @@ Isso não é entregar; é esconder.
 | `pnpm test:e2e:live` | a mesma stack contra o **Claude de verdade** — exige o Claude logado (ou `CLAUDE_CODE_OAUTH_TOKEN`, de `claude setup-token`), custa dinheiro, e não é portão |
 | `pnpm test:e2e:live:report` | o `test:e2e:live`, com a falha registrada: falhou, **abre issue** `smoke-live` (ou comenta na aberta); passou, não faz nada. Sob demanda, nunca agendado — não há credencial do Claude no CI. Exige o `gh` autenticado; sai ≠ 0 só quando a falha não pôde ser registrada |
 | `pnpm test:coverage` | mínimo **90 % em statements, branches, functions e lines — por arquivo** |
+| `node scripts/coverage-gaps.mjs <web\|backend> [trecho do caminho]` | lê o `coverage/lcov.info` que o último `test:coverage` do módulo deixou e diz, arquivo por arquivo, as linhas, as funções e as linhas com ramo que nenhum teste alcançou — o próximo teste a escrever, nomeado. Não roda nada |
 | `cd mobile && flutter test` | unit e widget do app |
 | `pnpm fixtures:record` | grava o stream do Agent SDK **real** como fixture — sob demanda, exige o Claude logado |
 

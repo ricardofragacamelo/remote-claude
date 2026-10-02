@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   FRAME_TYPES,
   PROTOCOL_VERSION,
+  isWorkspaceFilesChangedPayload,
+  isWorkspaceFilesChangedPayloadChangesItem,
+  isWorkspaceWatchPayload,
+  isWorkspaceWatchStoppedPayload,
+  isWorkspaceWatchingPayload,
   isConnectionAuthenticateFrame,
   isConnectionReadyFrame,
   isEnvelope,
@@ -10,6 +15,21 @@ import {
   isPermissionExtendPayload,
   isPermissionRequestedFrame,
   isPermissionResolvePayload,
+  isMessageCompletedPayload,
+  isMessageDeltaPayload,
+  isPromptDequeuedPayload,
+  isPromptQueuedPayload,
+  isSessionCancelQueuedPromptPayload,
+  isSessionCompactedPayload,
+  isSessionPromptPayload,
+  isSessionPromptPayloadAttachmentsItem,
+  isSessionPromptPayloadAttachmentsItemRange,
+  isSessionRejectChangePayload,
+  isSessionRewindFilesPayload,
+  isSessionStartPayload,
+  isToolStartedPayload,
+  SESSION_PROMPT_PAYLOAD_ATTACHMENTS_ITEM_LIMITS,
+  SESSION_PROMPT_PAYLOAD_LIMITS,
 } from '../../packages/contracts/src/index.js';
 
 /**
@@ -70,13 +90,18 @@ describe('the generated protocol surface', () => {
       'permission.requested',
       'permission.resolve',
       'permission.resolved',
+      'prompt.dequeued',
+      'prompt.queued',
       'session.attach',
       'session.attached',
+      'session.cancelQueuedPrompt',
       'session.close',
       'session.closed',
+      'session.compacted',
       'session.detach',
       'session.interrupt',
       'session.prompt',
+      'session.rejectChange',
       'session.rewindFiles',
       'session.rewound',
       'session.setLocale',
@@ -89,6 +114,11 @@ describe('the generated protocol surface', () => {
       'tool.progress',
       'tool.started',
       'turn.completed',
+      'workspace.filesChanged',
+      'workspace.unwatch',
+      'workspace.watch',
+      'workspace.watchStopped',
+      'workspace.watching',
     ]);
   });
 
@@ -102,6 +132,19 @@ describe('the generated protocol surface', () => {
   it('carries the undo: session.rewindFiles and session.rewound', () => {
     expect(FRAME_TYPES).toContain('session.rewindFiles');
     expect(FRAME_TYPES).toContain('session.rewound');
+  });
+
+  /** Plan 07, S-01 — the stream of a folder's changes, as one contract for the three ends. */
+  it('carries the watch of a folder: two commands, an ack and two events', () => {
+    for (const type of [
+      'workspace.watch',
+      'workspace.unwatch',
+      'workspace.watching',
+      'workspace.filesChanged',
+      'workspace.watchStopped',
+    ]) {
+      expect(FRAME_TYPES).toContain(type);
+    }
   });
 
   /** S-01 — the command the web client has been sending since the walking skeleton. */
@@ -312,6 +355,18 @@ describe('the envelope requires seq on an event, and only on an event', () => {
     expect(isEnvelope(eventFrame({ seq: 0 }))).toBe(true);
   });
 
+  it('rejects workspace.filesChanged with no seq, like every event — plan 07, S-02', () => {
+    const changed = eventFrame({
+      type: 'workspace.filesChanged',
+      sessionId: undefined,
+      seq: 1,
+      payload: { watchId: 'w1', changes: [{ path: 'a.ts', kind: 'changed' }] },
+    });
+
+    expect(isEnvelope(JSON.parse(JSON.stringify(changed)))).toBe(true);
+    expect(isEnvelope(without(JSON.parse(JSON.stringify(changed)), 'seq'))).toBe(false);
+  });
+
   it('asks for no seq on an ack', () => {
     expect(isEnvelope({ v: 1, id: '01J', kind: 'ack', type: 'connection.ready', ts: 'now' })).toBe(
       true,
@@ -429,5 +484,195 @@ describe('isPermissionRequestedFrame', () => {
 
   it('rejects the same payload sent as an event', () => {
     expect(isPermissionRequestedFrame(requested({ kind: 'event', seq: 1 }))).toBe(false);
+  });
+});
+
+/**
+ * Plan 07, S-01 — the payloads of the watch of a folder, as the generated guards read them.
+ *
+ * The client that asks to watch and the server that answers agree on the same shapes; a client
+ * that never asks — the mobile app — has the types and never needs them.
+ */
+describe('the payloads of a watch of a folder', () => {
+  it('needs the folder to watch', () => {
+    expect(isWorkspaceWatchPayload({ workspacePath: '/srv/app' })).toBe(true);
+    expect(isWorkspaceWatchPayload({})).toBe(false);
+    expect(isWorkspaceWatchPayload({ workspacePath: 42 })).toBe(false);
+  });
+
+  it('names the subscription in the ack', () => {
+    expect(isWorkspaceWatchingPayload({ watchId: 'w1', workspacePath: '/srv/app' })).toBe(true);
+    expect(isWorkspaceWatchingPayload({ watchId: 'w1' })).toBe(false);
+  });
+
+  it('says each path, what happened to it and — when it can — who did it', () => {
+    expect(
+      isWorkspaceFilesChangedPayload({
+        watchId: 'w1',
+        changes: [
+          { path: 'a.ts', kind: 'changed', origin: 'claude' },
+          { path: 'b.ts', kind: 'deleted' },
+        ],
+        overflow: false,
+      }),
+    ).toBe(true);
+    expect(isWorkspaceFilesChangedPayload({ watchId: 'w1' })).toBe(false);
+    // The generator checks an array's items with their own guard, as a client reads them.
+    expect(isWorkspaceFilesChangedPayloadChangesItem({ path: 'a.ts' })).toBe(false);
+    expect(isWorkspaceFilesChangedPayloadChangesItem({ path: 'a.ts', kind: 'created' })).toBe(true);
+  });
+
+  it('says why a subscription ended', () => {
+    expect(isWorkspaceWatchStoppedPayload({ watchId: 'w1', reason: 'folderDeleted' })).toBe(true);
+    expect(isWorkspaceWatchStoppedPayload({ watchId: 'w1' })).toBe(false);
+  });
+});
+
+/**
+ * Plan 08, B-01 — the context of a prompt: a union by `kind`, whose obligations and bounds live in
+ * the schema so that the TypeScript guard and the Dart predicates are the same rule.
+ */
+describe('the attachments of a prompt', () => {
+  const prompt = (/** @type {unknown[]} */ attachments) => ({
+    sessionId: 's',
+    text: 'hi',
+    attachments,
+  });
+
+  /** S-01 */
+  it.each([
+    ['a file', { kind: 'file', path: 'src/a.ts' }],
+    ['a range of a file', { kind: 'file', path: 'src/a.ts', range: { startLine: 3, endLine: 9 } }],
+    ['a folder', { kind: 'folder', path: 'src' }],
+    ['an uploaded attachment', { kind: 'upload', attachmentId: 'att_1' }],
+    ['text a provider holds', { kind: 'text', source: 'terminal', label: 'bash', content: '$ ls' }],
+  ])('accepts %s', (_case, attachment) => {
+    expect(isSessionPromptPayloadAttachmentsItem(attachment)).toBe(true);
+    expect(isSessionPromptPayload(prompt([attachment]))).toBe(true);
+  });
+
+  /** S-02 */
+  it('reads an attachment without a kind as the file it always was', () => {
+    expect(
+      isSessionPromptPayloadAttachmentsItem({ path: 'notes.md', mediaType: 'text/markdown' }),
+    ).toBe(true);
+    expect(isSessionPromptPayloadAttachmentsItem({ mediaType: 'text/markdown' })).toBe(false);
+  });
+
+  /** S-03 */
+  it.each([
+    ['a file without a path', { kind: 'file' }],
+    ['a folder without a path', { kind: 'folder' }],
+    ['an upload without its id', { kind: 'upload' }],
+    ['text without content', { kind: 'text', source: 'terminal', label: 'bash' }],
+    ['text without a source', { kind: 'text', label: 'bash', content: 'x' }],
+    ['text without a label', { kind: 'text', source: 'terminal', content: 'x' }],
+  ])('refuses %s', (_case, attachment) => {
+    expect(isSessionPromptPayloadAttachmentsItem(attachment)).toBe(false);
+  });
+
+  /** S-04 — the floor of a line is the schema's; the order of two lines is the backend's. */
+  it.each([
+    ['a start at line 0', { startLine: 0, endLine: 3 }],
+    ['a negative end', { startLine: 1, endLine: -2 }],
+    ['a range with no end', { startLine: 1 }],
+  ])('refuses %s', (_case, range) => {
+    expect(isSessionPromptPayloadAttachmentsItemRange(range)).toBe(false);
+  });
+
+  /** S-05 */
+  it('bounds the number of attachments, and says the bound', () => {
+    const one = { kind: 'file', path: 'a' };
+    const max = SESSION_PROMPT_PAYLOAD_LIMITS.attachments.maxItems;
+
+    expect(isSessionPromptPayload(prompt(Array.from({ length: max }, () => one)))).toBe(true);
+    expect(isSessionPromptPayload(prompt(Array.from({ length: max + 1 }, () => one)))).toBe(false);
+  });
+
+  /** S-06 */
+  it('bounds the text a provider sends', () => {
+    const max = SESSION_PROMPT_PAYLOAD_ATTACHMENTS_ITEM_LIMITS.content.maxLength;
+    const text = (/** @type {number} */ length) => ({
+      kind: 'text',
+      source: 'terminal',
+      label: 'bash',
+      content: 'x'.repeat(length),
+    });
+
+    expect(isSessionPromptPayloadAttachmentsItem(text(max))).toBe(true);
+    expect(isSessionPromptPayloadAttachmentsItem(text(max + 1))).toBe(false);
+  });
+
+  it('accepts a kind it has never heard of, like every enum at runtime', () => {
+    expect(isSessionPromptPayloadAttachmentsItem({ kind: 'snippet', body: 'x' })).toBe(true);
+  });
+});
+
+/**
+ * Plan 08, B-02 — what the stream and the commands gained. Every field is optional or every type is
+ * new, which is what keeps `v` at 1.
+ */
+describe('the stream and the commands of the panel', () => {
+  /** S-07 */
+  it('accepts a thinking delta, and a delta that names none, as before', () => {
+    expect(isMessageDeltaPayload({ messageId: 'm', delta: 'hm', blockType: 'thinking' })).toBe(
+      true,
+    );
+    expect(isMessageDeltaPayload({ messageId: 'm', delta: 'hi' })).toBe(true);
+  });
+
+  /** S-07 */
+  it('accepts the subagent a message and a tool belong to', () => {
+    expect(
+      isMessageCompletedPayload({
+        messageId: 'm',
+        role: 'assistant',
+        content: [{ type: 'thinking', thinking: 'hm' }, { type: 'redacted_thinking' }],
+        parentToolUseId: 'toolu_task',
+      }),
+    ).toBe(true);
+    expect(
+      isToolStartedPayload({
+        toolUseId: 't',
+        toolName: 'Read',
+        input: {},
+        parentToolUseId: 'toolu_task',
+      }),
+    ).toBe(true);
+  });
+
+  /** S-07 */
+  it('carries compaction and the queue as events of their own', () => {
+    expect(isSessionCompactedPayload({ trigger: 'auto', preTokens: 180000 })).toBe(true);
+    expect(isSessionCompactedPayload({})).toBe(false);
+    expect(
+      isPromptQueuedPayload({ queueId: 'q', position: 1, promptedBy: 'u', preview: 'next' }),
+    ).toBe(true);
+    expect(isPromptQueuedPayload({ queueId: 'q', position: 1, promptedBy: 'u' })).toBe(false);
+    expect(isPromptDequeuedPayload({ queueId: 'q', reason: 'cancelled' })).toBe(true);
+  });
+
+  /** S-08 */
+  it('refuses a fork point without the conversation it belongs to', () => {
+    expect(isSessionStartPayload({ workspacePath: '/w', forkAt: 'msg' })).toBe(false);
+    expect(
+      isSessionStartPayload({ workspacePath: '/w', forkAt: 'msg', resumeSessionId: 'c' }),
+    ).toBe(true);
+    expect(isSessionStartPayload({ workspacePath: '/w' })).toBe(true);
+  });
+
+  it('carries the commands of the queue and the rejection, and the effort of a start', () => {
+    expect(isSessionCancelQueuedPromptPayload({ sessionId: 's', queueId: 'q' })).toBe(true);
+    expect(isSessionCancelQueuedPromptPayload({ sessionId: 's' })).toBe(false);
+    expect(isSessionStartPayload({ workspacePath: '/w', effort: 'low' })).toBe(true);
+    expect(
+      isSessionRejectChangePayload({ sessionId: 's', path: 'a.ts', hunkId: 'h1', revision: 'r' }),
+    ).toBe(true);
+    expect(isSessionRejectChangePayload({ sessionId: 's', path: 'a.ts', hunkId: 'h1' })).toBe(
+      false,
+    );
+    expect(isSessionRewindFilesPayload({ sessionId: 's', promptId: 'p', paths: ['a.ts'] })).toBe(
+      true,
+    );
   });
 });

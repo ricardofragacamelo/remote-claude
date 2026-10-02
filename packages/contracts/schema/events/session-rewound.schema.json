@@ -8,7 +8,10 @@
   "type": "object",
   "required": ["promptId", "reverted", "preserved", "unchanged", "failed"],
   "properties": {
-    "promptId": { "type": "string", "description": "The turn the files went back to." },
+    "promptId": {
+      "type": "string",
+      "description": "The turn the files went back to."
+    },
     "reverted": {
       "type": "array",
       "description": "Paths put back the way they were before the turn.",
@@ -16,7 +19,9 @@
         "type": "object",
         "required": ["path", "action"],
         "properties": {
-          "path": { "type": "string" },
+          "path": {
+            "type": "string"
+          },
           "action": {
             "type": "string",
             "enum": ["restored", "deleted"],
@@ -32,7 +37,9 @@
         "type": "object",
         "required": ["path", "reason"],
         "properties": {
-          "path": { "type": "string" },
+          "path": {
+            "type": "string"
+          },
           "reason": {
             "type": "string",
             "enum": ["modifiedOutside", "notRestorable", "unsafePath", "noBaseline"],
@@ -47,7 +54,11 @@
       "items": {
         "type": "object",
         "required": ["path"],
-        "properties": { "path": { "type": "string" } }
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
       }
     },
     "failed": {
@@ -56,8 +67,16 @@
       "items": {
         "type": "object",
         "required": ["path"],
-        "properties": { "path": { "type": "string" } }
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
       }
+    },
+    "hunkId": {
+      "type": "string",
+      "description": "Set when only one hunk went back (`session.rejectChange`): the file is the one path of `reverted`, and the rest of what the session changed in it stays."
     }
   }
 }

@@ -11,20 +11,25 @@ const List<String> frameTypes = <String>[
   'command.accepted',
   'connection.ready',
   'session.attached',
+  'workspace.watching',
   'connection.authenticate',
   'connection.reauthenticate',
   'diag.ping',
   'permission.extend',
   'session.attach',
+  'session.cancelQueuedPrompt',
   'session.close',
   'session.detach',
   'session.interrupt',
   'session.prompt',
+  'session.rejectChange',
   'session.rewindFiles',
   'session.setLocale',
   'session.setModel',
   'session.setPermissionMode',
   'session.start',
+  'workspace.unwatch',
+  'workspace.watch',
   'diag.pong',
   'error',
   'message.completed',
@@ -32,7 +37,10 @@ const List<String> frameTypes = <String>[
   'permission.extended',
   'permission.requested',
   'permission.resolved',
+  'prompt.dequeued',
+  'prompt.queued',
   'session.closed',
+  'session.compacted',
   'session.rewound',
   'session.started',
   'session.statusChanged',
@@ -40,6 +48,8 @@ const List<String> frameTypes = <String>[
   'tool.progress',
   'tool.started',
   'turn.completed',
+  'workspace.filesChanged',
+  'workspace.watchStopped',
   'permission.resolve',
 ];
 
@@ -60,6 +70,12 @@ const String sessionAttachedKind = 'ack';
 
 /// `type` of a session.attached frame.
 const String sessionAttachedType = 'session.attached';
+
+/// `kind` of a workspace.watching frame.
+const String workspaceWatchingKind = 'ack';
+
+/// `type` of a workspace.watching frame.
+const String workspaceWatchingType = 'workspace.watching';
 
 /// `kind` of a connection.authenticate frame.
 const String connectionAuthenticateKind = 'command';
@@ -91,6 +107,12 @@ const String sessionAttachKind = 'command';
 /// `type` of a session.attach frame.
 const String sessionAttachType = 'session.attach';
 
+/// `kind` of a session.cancelQueuedPrompt frame.
+const String sessionCancelQueuedPromptKind = 'command';
+
+/// `type` of a session.cancelQueuedPrompt frame.
+const String sessionCancelQueuedPromptType = 'session.cancelQueuedPrompt';
+
 /// `kind` of a session.close frame.
 const String sessionCloseKind = 'command';
 
@@ -114,6 +136,12 @@ const String sessionPromptKind = 'command';
 
 /// `type` of a session.prompt frame.
 const String sessionPromptType = 'session.prompt';
+
+/// `kind` of a session.rejectChange frame.
+const String sessionRejectChangeKind = 'command';
+
+/// `type` of a session.rejectChange frame.
+const String sessionRejectChangeType = 'session.rejectChange';
 
 /// `kind` of a session.rewindFiles frame.
 const String sessionRewindFilesKind = 'command';
@@ -144,6 +172,18 @@ const String sessionStartKind = 'command';
 
 /// `type` of a session.start frame.
 const String sessionStartType = 'session.start';
+
+/// `kind` of a workspace.unwatch frame.
+const String workspaceUnwatchKind = 'command';
+
+/// `type` of a workspace.unwatch frame.
+const String workspaceUnwatchType = 'workspace.unwatch';
+
+/// `kind` of a workspace.watch frame.
+const String workspaceWatchKind = 'command';
+
+/// `type` of a workspace.watch frame.
+const String workspaceWatchType = 'workspace.watch';
 
 /// `kind` of a diag.pong frame.
 const String diagPongKind = 'event';
@@ -187,11 +227,29 @@ const String permissionResolvedKind = 'event';
 /// `type` of a permission.resolved frame.
 const String permissionResolvedType = 'permission.resolved';
 
+/// `kind` of a prompt.dequeued frame.
+const String promptDequeuedKind = 'event';
+
+/// `type` of a prompt.dequeued frame.
+const String promptDequeuedType = 'prompt.dequeued';
+
+/// `kind` of a prompt.queued frame.
+const String promptQueuedKind = 'event';
+
+/// `type` of a prompt.queued frame.
+const String promptQueuedType = 'prompt.queued';
+
 /// `kind` of a session.closed frame.
 const String sessionClosedKind = 'event';
 
 /// `type` of a session.closed frame.
 const String sessionClosedType = 'session.closed';
+
+/// `kind` of a session.compacted frame.
+const String sessionCompactedKind = 'event';
+
+/// `type` of a session.compacted frame.
+const String sessionCompactedType = 'session.compacted';
 
 /// `kind` of a session.rewound frame.
 const String sessionRewoundKind = 'event';
@@ -234,6 +292,18 @@ const String turnCompletedKind = 'event';
 
 /// `type` of a turn.completed frame.
 const String turnCompletedType = 'turn.completed';
+
+/// `kind` of a workspace.filesChanged frame.
+const String workspaceFilesChangedKind = 'event';
+
+/// `type` of a workspace.filesChanged frame.
+const String workspaceFilesChangedType = 'workspace.filesChanged';
+
+/// `kind` of a workspace.watchStopped frame.
+const String workspaceWatchStoppedKind = 'event';
+
+/// `type` of a workspace.watchStopped frame.
+const String workspaceWatchStoppedType = 'workspace.watchStopped';
 
 /// `kind` of a permission.resolve frame.
 const String permissionResolveKind = 'response';
@@ -294,7 +364,7 @@ class Envelope {
   /// Session the frame belongs to, when it belongs to one. It is what fan-out routes on, and what ties the many traces of a conversation together.
   final String? sessionId;
 
-  /// Monotonic per session, on events only. This is what makes replay after a reconnect possible.
+  /// Monotonic per stream, on events only — a stream is a session, or a subscription such as a watch of a folder. On a session it is what makes replay after a reconnect possible; a subscription has no replay, and a reconnect subscribes again from 1.
   final int? seq;
 
   /// Contents, defined per `type`.
@@ -336,8 +406,8 @@ class Envelope {
 
 /// Whether [json] satisfies the conditional requirements of [Envelope].
 ///
-/// `seq` is also required when `kind` is
-/// `event` — replay is built on `seq`, and an event without one is a hole nobody can detect afterwards, so the schema is what charges it rather than the goodwill of whoever emits.
+/// `seq` is also required when `kind`
+/// is `event` — replay is built on `seq`, and an event without one is a hole nobody can detect afterwards, so the schema is what charges it rather than the goodwill of whoever emits.
 bool envelopeConditionalsHold(Map<String, Object?> json) {
   if (json['kind'] == 'event' && json['seq'] is! int) {
     return false;
@@ -499,6 +569,36 @@ class SessionAttachedPayload {
     if (resumedFrom != null) {
       json['resumedFrom'] = resumedFrom;
     }
+
+    return json;
+  }
+}
+
+/// Answer to `workspace.watch`: the subscription exists, and the changes of the folder will arrive as `workspace.filesChanged` with this `watchId`.
+class WorkspaceWatchingPayload {
+  const WorkspaceWatchingPayload({
+    required this.watchId,
+    required this.workspacePath,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory WorkspaceWatchingPayload.fromJson(Map<String, Object?> json) => WorkspaceWatchingPayload(
+        watchId: json['watchId']! as String,
+        workspacePath: json['workspacePath']! as String,
+      );
+
+  /// The subscription. Its events carry it, and `seq` is monotonic per `watchId`, from 1.
+  final String watchId;
+
+  /// The real path of the folder being followed.
+  final String workspacePath;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'watchId': watchId,
+      'workspacePath': workspacePath,
+    };
 
     return json;
   }
@@ -751,6 +851,35 @@ class SessionAttachPayload {
   }
 }
 
+/// Takes a prompt out of the session's queue before it starts. Any watcher may, as any may send one. The outcome is `prompt.dequeued` with `reason: cancelled`, for everybody watching. A prompt that already started is `CONFLICT` (`session.error.queuedPromptStarted`); one the queue never had is `QUEUED_PROMPT_NOT_FOUND`.
+class SessionCancelQueuedPromptPayload {
+  const SessionCancelQueuedPromptPayload({
+    required this.sessionId,
+    required this.queueId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionCancelQueuedPromptPayload.fromJson(Map<String, Object?> json) => SessionCancelQueuedPromptPayload(
+        sessionId: json['sessionId']! as String,
+        queueId: json['queueId']! as String,
+      );
+
+  final String sessionId;
+
+  /// What `prompt.queued` named the prompt.
+  final String queueId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+      'queueId': queueId,
+    };
+
+    return json;
+  }
+}
+
 /// Ends the session and releases its subprocess. Unlike every other command of the session, only the owner may send it.
 class SessionClosePayload {
   const SessionClosePayload({
@@ -821,38 +950,198 @@ class SessionInterruptPayload {
   }
 }
 
-class SessionPromptPayloadAttachmentsItem {
-  const SessionPromptPayloadAttachmentsItem({
-    required this.path,
-    this.mediaType,
+/// The lines of a `file` the prompt is about, inclusive and counted from 1. `endLine` before `startLine` is refused by the backend — an order between two fields is not a bound of one.
+class SessionPromptPayloadAttachmentsItemRange {
+  const SessionPromptPayloadAttachmentsItemRange({
+    required this.startLine,
+    required this.endLine,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory SessionPromptPayloadAttachmentsItem.fromJson(Map<String, Object?> json) => SessionPromptPayloadAttachmentsItem(
-        path: json['path']! as String,
-        mediaType: json['mediaType'] as String?,
+  factory SessionPromptPayloadAttachmentsItemRange.fromJson(Map<String, Object?> json) => SessionPromptPayloadAttachmentsItemRange(
+        startLine: json['startLine']! as int,
+        endLine: json['endLine']! as int,
       );
 
-  /// Path inside the session's workspace.
-  final String path;
+  final int startLine;
 
-  final String? mediaType;
+  final int endLine;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
-      'path': path,
+      'startLine': startLine,
+      'endLine': endLine,
     };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionPromptPayloadAttachmentsItemRange].
+bool sessionPromptPayloadAttachmentsItemRangeLimitsHold(Map<String, Object?> json) {
+  if (json['startLine'] is int && (json['startLine']! as int) < 1) {
+    return false;
+  }
+
+  if (json['endLine'] is int && (json['endLine']! as int) < 1) {
+    return false;
+  }
+
+  return true;
+}
+
+class SessionPromptPayloadAttachmentsItem {
+  const SessionPromptPayloadAttachmentsItem({
+    this.kind,
+    this.path,
+    this.mediaType,
+    this.range,
+    this.attachmentId,
+    this.source,
+    this.label,
+    this.content,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionPromptPayloadAttachmentsItem.fromJson(Map<String, Object?> json) => SessionPromptPayloadAttachmentsItem(
+        kind: json['kind'] as String?,
+        path: json['path'] as String?,
+        mediaType: json['mediaType'] as String?,
+        range: json['range'] == null ? null : SessionPromptPayloadAttachmentsItemRange.fromJson(json['range']! as Map<String, Object?>),
+        attachmentId: json['attachmentId'] as String?,
+        source: json['source'] as String?,
+        label: json['label'] as String?,
+        content: json['content'] as String?,
+      );
+
+  /// What the attachment is. Absent reads as `file`, which is what keeps the field that existed before compatible — and `v` where it is.
+  final String? kind;
+
+  /// Path inside the session's folder, relative or absolute, for a `file` or a `folder`.
+  final String? path;
+
+  /// The type of the file, when the client knows it. Informative: the backend decides nothing by it.
+  final String? mediaType;
+
+  /// The lines of a `file` the prompt is about, inclusive and counted from 1. `endLine` before `startLine` is refused by the backend — an order between two fields is not a bound of one.
+  final SessionPromptPayloadAttachmentsItemRange? range;
+
+  /// What `POST /sessions/:sessionId/attachments` answered, for an `upload`: an image, or a text file dropped from the desktop. Unknown, expired or of another session is `ATTACHMENT_NOT_FOUND`.
+  final String? attachmentId;
+
+  /// The provider that holds the `text` — the integrated terminal of plan 10, when it exists. An enum read as a string, so a provider added later does not break a client already published.
+  final String? source;
+
+  /// How the `text` is introduced to Claude and shown on the chip: "terminal: bash".
+  final String? label;
+
+  /// The text itself, for a `text`. Bounded so that even at four bytes a character it fits the 64 KB frame beside the rest of the prompt.
+  final String? content;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+    };
+
+    if (kind != null) {
+      json['kind'] = kind;
+    }
+
+    if (path != null) {
+      json['path'] = path;
+    }
 
     if (mediaType != null) {
       json['mediaType'] = mediaType;
+    }
+
+    if (range != null) {
+      json['range'] = range?.toJson();
+    }
+
+    if (attachmentId != null) {
+      json['attachmentId'] = attachmentId;
+    }
+
+    if (source != null) {
+      json['source'] = source;
+    }
+
+    if (label != null) {
+      json['label'] = label;
+    }
+
+    if (content != null) {
+      json['content'] = content;
     }
 
     return json;
   }
 }
 
-/// Sends one turn. A prompt that arrives while a turn is running is **queued** and runs next, the way the Claude Code UI does it — it is never refused.
+/// Whether [json] satisfies the conditional requirements of [SessionPromptPayloadAttachmentsItem].
+///
+/// `path` is also required when `kind`
+/// is absent — an attachment without a kind is the file attachment that existed before kinds did, and a file is named by its path.
+/// `path` is also required when `kind`
+/// is `file` — a file is named by its path inside the session's folder.
+/// `path` is also required when `kind`
+/// is `folder` — a folder is named by its path inside the session's folder.
+/// `attachmentId` is also required when `kind`
+/// is `upload` — an uploaded attachment travels over HTTP, and the prompt carries only the id the upload answered.
+/// `source` is also required when `kind`
+/// is `text` — text a provider holds goes to Claude labelled with where it came from, never as if the user had typed it.
+/// `label` is also required when `kind`
+/// is `text` — the label is what the delimited block is introduced by, and what the chip showed.
+/// `content` is also required when `kind`
+/// is `text` — text that is not on disk has nothing to be read from, so it travels itself.
+bool sessionPromptPayloadAttachmentsItemConditionalsHold(Map<String, Object?> json) {
+  if (json['kind'] == null && json['path'] is! String) {
+    return false;
+  }
+
+  if (json['kind'] == 'file' && json['path'] is! String) {
+    return false;
+  }
+
+  if (json['kind'] == 'folder' && json['path'] is! String) {
+    return false;
+  }
+
+  if (json['kind'] == 'upload' && json['attachmentId'] is! String) {
+    return false;
+  }
+
+  if (json['kind'] == 'text' && json['source'] is! String) {
+    return false;
+  }
+
+  if (json['kind'] == 'text' && json['label'] is! String) {
+    return false;
+  }
+
+  if (json['kind'] == 'text' && json['content'] is! String) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionPromptPayloadAttachmentsItem].
+bool sessionPromptPayloadAttachmentsItemLimitsHold(Map<String, Object?> json) {
+  if (json['label'] is String && (json['label']! as String).length > 200) {
+    return false;
+  }
+
+  if (json['content'] is String && (json['content']! as String).length > 16384) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way the Claude Code UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`).
 class SessionPromptPayload {
   const SessionPromptPayload({
     required this.sessionId,
@@ -872,7 +1161,7 @@ class SessionPromptPayload {
   /// What the user typed.
   final String text;
 
-  /// Files carried with the prompt.
+  /// The context of the prompt, chosen with `@`, a drag or the editor: files, folders, ranges of lines, an uploaded attachment, or text a provider of the client holds (the terminal). A file or a folder is a **reference** — the backend checks it inside the session's folder, all or nothing, and Claude reads it through `Read`, which the trail records; its content never travels here (plan 08, D-01).
   final List<SessionPromptPayloadAttachmentsItem>? attachments;
 
   /// A JSON map with the absent optional fields left out.
@@ -890,17 +1179,69 @@ class SessionPromptPayload {
   }
 }
 
+/// Whether [json] keeps within the bounds the schema gives [SessionPromptPayload].
+bool sessionPromptPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['attachments'] is List<Object?> && (json['attachments']! as List<Object?>).length > 20) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Puts one hunk of what a session changed in a file back the way it was before the session. Only while the disk still has what the session left — otherwise the file is `modifiedOutside` and is rejected whole, preserving it, by `session.rewindFiles` with `paths`. The outcome arrives as `session.rewound`, with `hunkId`. A `revision` that is no longer the disk's is `SESSION_CHANGE_STALE`; the same locks as an undo apply (`SESSION_LOCKED`).
+class SessionRejectChangePayload {
+  const SessionRejectChangePayload({
+    required this.sessionId,
+    required this.path,
+    required this.hunkId,
+    required this.revision,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionRejectChangePayload.fromJson(Map<String, Object?> json) => SessionRejectChangePayload(
+        sessionId: json['sessionId']! as String,
+        path: json['path']! as String,
+        hunkId: json['hunkId']! as String,
+        revision: json['revision']! as String,
+      );
+
+  final String sessionId;
+
+  /// The file, as `GET /sessions/:sessionId/changes` named it.
+  final String path;
+
+  /// The hunk, as `GET /sessions/:sessionId/changes/file` named it.
+  final String hunkId;
+
+  /// The `revision` the hunks were computed against — the hash of the disk then. It is what keeps a hunk from being applied to a file that moved under it.
+  final String revision;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+      'path': path,
+      'hunkId': hunkId,
+      'revision': revision,
+    };
+
+    return json;
+  }
+}
+
 /// Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not `rewindFiles()` of the SDK: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`.
 class SessionRewindFilesPayload {
   const SessionRewindFilesPayload({
     required this.sessionId,
     required this.promptId,
+    this.paths,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory SessionRewindFilesPayload.fromJson(Map<String, Object?> json) => SessionRewindFilesPayload(
         sessionId: json['sessionId']! as String,
         promptId: json['promptId']! as String,
+        paths: json['paths'] == null ? null : (json['paths']! as List<Object?>).map((item) => item! as String).toList(growable: false),
       );
 
   final String sessionId;
@@ -908,12 +1249,19 @@ class SessionRewindFilesPayload {
   /// The turn to go back to, as `GET /sessions/:sessionId/checkpoints` names it — the `prompt_id` the hooks carry, never a message id of the transcript.
   final String promptId;
 
+  /// Only these files, of everything the undo would touch — rejecting one file of what a session changed. Absent is every file. A path the undo does not reach is simply not touched; the outcome says what happened to each one it did.
+  final List<String>? paths;
+
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'sessionId': sessionId,
       'promptId': promptId,
     };
+
+    if (paths != null) {
+      json['paths'] = paths;
+    }
 
     return json;
   }
@@ -1007,7 +1355,9 @@ class SessionStartPayload {
     required this.workspacePath,
     this.model,
     this.permissionMode,
+    this.effort,
     this.resumeSessionId,
+    this.forkAt,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -1015,7 +1365,9 @@ class SessionStartPayload {
         workspacePath: json['workspacePath']! as String,
         model: json['model'] as String?,
         permissionMode: json['permissionMode'] as String?,
+        effort: json['effort'] as String?,
         resumeSessionId: json['resumeSessionId'] as String?,
+        forkAt: json['forkAt'] as String?,
       );
 
   /// Absolute path of the workspace. Outside the allowlist it is refused with WORKSPACE_NOT_ALLOWED, and a root that exists but belongs to someone else answers 404, never 403.
@@ -1027,8 +1379,14 @@ class SessionStartPayload {
   /// Permission mode to open with. Absent means the server default.
   final String? permissionMode;
 
+  /// How much effort the model puts in, for the whole session. Absent is the installation's default. Chosen before the session exists, because changing it on a live one (`applyFlagSettings`) restarts the CLI's query and drops its hooks — measured in plan 08, D-16. A level the model does not take is `INVALID_INPUT` (`session.error.effortUnsupported`). An enum read as a string, so a level added later does not break a client.
+  final String? effort;
+
   /// Session of the Agent SDK to resume instead of starting fresh.
   final String? resumeSessionId;
+
+  /// Edit and resend: the `messageId` of the user prompt to rewrite. The conversation `resumeSessionId` names continues from **just before** it, always in a new id — the original stays as it was (plan 08, D-19). A point the conversation does not have is `INVALID_INPUT` (`session.error.forkPointUnknown`); one the CLI refuses is `SESSION_FORK_REJECTED`.
+  final String? forkAt;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -1044,9 +1402,77 @@ class SessionStartPayload {
       json['permissionMode'] = permissionMode;
     }
 
+    if (effort != null) {
+      json['effort'] = effort;
+    }
+
     if (resumeSessionId != null) {
       json['resumeSessionId'] = resumeSessionId;
     }
+
+    if (forkAt != null) {
+      json['forkAt'] = forkAt;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] satisfies the conditional requirements of [SessionStartPayload].
+///
+/// `resumeSessionId` is also required when `forkAt`
+/// is present — a fork point is a message of a conversation, and only a resumed conversation has one.
+bool sessionStartPayloadConditionalsHold(Map<String, Object?> json) {
+  if (json['forkAt'] != null && json['resumeSessionId'] is! String) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Stops following a folder. Idempotent: a subscription that already ended — or never was this connection's — is acknowledged all the same, because a client that unwatches as it closes a tab races its own reconnection.
+class WorkspaceUnwatchPayload {
+  const WorkspaceUnwatchPayload({
+    required this.watchId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory WorkspaceUnwatchPayload.fromJson(Map<String, Object?> json) => WorkspaceUnwatchPayload(
+        watchId: json['watchId']! as String,
+      );
+
+  /// The subscription, as `workspace.watching` named it.
+  final String watchId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'watchId': watchId,
+    };
+
+    return json;
+  }
+}
+
+/// Starts following the changes on disk of an open folder, for the explorer and the editor. Answered with `workspace.watching`, which names the subscription; the changes then arrive as `workspace.filesChanged`, with a `seq` of their own that starts at 1. There is **no replay**: after a reconnect the client watches again — a new `watchId`, `seq` from 1 — and reloads the tree, because what matters after a drop is the disk as it is now. Refused with `INVALID_INPUT` (every invalid field in `details[]`), with the refusals of the folder (`WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`), with `WATCH_LIMIT_REACHED` past the ceiling of the connection and with `WATCH_UNAVAILABLE` when the system refuses another watch.
+class WorkspaceWatchPayload {
+  const WorkspaceWatchPayload({
+    required this.workspacePath,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory WorkspaceWatchPayload.fromJson(Map<String, Object?> json) => WorkspaceWatchPayload(
+        workspacePath: json['workspacePath']! as String,
+      );
+
+  /// The open folder, absolute — the same value `session.start` takes, and the `folder` of the HTTP routes of the files.
+  final String workspacePath;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'workspacePath': workspacePath,
+    };
 
     return json;
   }
@@ -1187,6 +1613,7 @@ class MessageCompletedPayloadContentItem {
   const MessageCompletedPayloadContentItem({
     required this.type,
     this.text,
+    this.thinking,
     this.toolUseId,
   });
 
@@ -1194,13 +1621,18 @@ class MessageCompletedPayloadContentItem {
   factory MessageCompletedPayloadContentItem.fromJson(Map<String, Object?> json) => MessageCompletedPayloadContentItem(
         type: json['type']! as String,
         text: json['text'] as String?,
+        thinking: json['thinking'] as String?,
         toolUseId: json['toolUseId'] as String?,
       );
 
-  /// Block kind — `text`, `tool_use`, `tool_result` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped.
+  /// Block kind — `text`, `thinking`, `redacted_thinking`, `tool_use`, `tool_result` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped.
   final String type;
 
+  /// The text of a `text` block.
   final String? text;
+
+  /// What the model thought, on a `thinking` block — in a field of its own and not in `text`, so a client that joins the `text` of every block never shows it as the answer. A `redacted_thinking` block has neither: it says the model thought, and nothing it thought.
+  final String? thinking;
 
   final String? toolUseId;
 
@@ -1212,6 +1644,10 @@ class MessageCompletedPayloadContentItem {
 
     if (text != null) {
       json['text'] = text;
+    }
+
+    if (thinking != null) {
+      json['thinking'] = thinking;
     }
 
     if (toolUseId != null) {
@@ -1229,6 +1665,7 @@ class MessageCompletedPayload {
     required this.role,
     this.promptedBy,
     required this.content,
+    this.parentToolUseId,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -1237,6 +1674,7 @@ class MessageCompletedPayload {
         role: json['role']! as String,
         promptedBy: json['promptedBy'] as String?,
         content: (json['content']! as List<Object?>).map((item) => MessageCompletedPayloadContentItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        parentToolUseId: json['parentToolUseId'] as String?,
       );
 
   final String messageId;
@@ -1248,6 +1686,9 @@ class MessageCompletedPayload {
 
   /// The blocks of the message, in order.
   final List<MessageCompletedPayloadContentItem> content;
+
+  /// Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation.
+  final String? parentToolUseId;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -1261,6 +1702,10 @@ class MessageCompletedPayload {
       json['promptedBy'] = promptedBy;
     }
 
+    if (parentToolUseId != null) {
+      json['parentToolUseId'] = parentToolUseId;
+    }
+
     return json;
   }
 }
@@ -1270,12 +1715,16 @@ class MessageDeltaPayload {
   const MessageDeltaPayload({
     required this.messageId,
     required this.delta,
+    this.blockType,
+    this.parentToolUseId,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory MessageDeltaPayload.fromJson(Map<String, Object?> json) => MessageDeltaPayload(
         messageId: json['messageId']! as String,
         delta: json['delta']! as String,
+        blockType: json['blockType'] as String?,
+        parentToolUseId: json['parentToolUseId'] as String?,
       );
 
   /// What the fragments of one message are grouped by.
@@ -1284,12 +1733,26 @@ class MessageDeltaPayload {
   /// The text of this fragment, and only of this one.
   final String delta;
 
+  /// What the fragment is part of: the answer, or Claude's thinking before it. Absent reads as `text`. An enum read as a string, so a block kind added later is not a crash.
+  final String? blockType;
+
+  /// Set when the fragment comes from a subagent: the `toolUseId` of the `Task` that opened it. The client nests it there instead of in the conversation.
+  final String? parentToolUseId;
+
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'messageId': messageId,
       'delta': delta,
     };
+
+    if (blockType != null) {
+      json['blockType'] = blockType;
+    }
+
+    if (parentToolUseId != null) {
+      json['parentToolUseId'] = parentToolUseId;
+    }
 
     return json;
   }
@@ -1515,14 +1978,85 @@ class PermissionResolvedPayload {
 
 /// Whether [json] satisfies the conditional requirements of [PermissionResolvedPayload].
 ///
-/// `resolvedBy` is also required when `auto` is
-/// `false` — a decision a human made has an author; only the automatic deny has none.
+/// `resolvedBy` is also required when `auto`
+/// is `false` — a decision a human made has an author; only the automatic deny has none.
 bool permissionResolvedPayloadConditionalsHold(Map<String, Object?> json) {
   if (json['auto'] == false && json['resolvedBy'] is! String) {
     return false;
   }
 
   return true;
+}
+
+/// A prompt left the queue: it started, or somebody took it out. The positions of the ones behind it move up by one.
+class PromptDequeuedPayload {
+  const PromptDequeuedPayload({
+    required this.queueId,
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PromptDequeuedPayload.fromJson(Map<String, Object?> json) => PromptDequeuedPayload(
+        queueId: json['queueId']! as String,
+        reason: json['reason']! as String,
+      );
+
+  final String queueId;
+
+  /// `started` — the turn it asked for began; `cancelled` — somebody took it out before that.
+  final String reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'queueId': queueId,
+      'reason': reason,
+    };
+
+    return json;
+  }
+}
+
+/// A prompt is waiting for the running turn to end. The queue is the backend's, not the SDK's — a prompt handed to the SDK cannot be taken back (plan 08, D-14) — so every watcher sees the same queue, and any of them can take one out with `session.cancelQueuedPrompt`.
+class PromptQueuedPayload {
+  const PromptQueuedPayload({
+    required this.queueId,
+    required this.position,
+    required this.promptedBy,
+    required this.preview,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PromptQueuedPayload.fromJson(Map<String, Object?> json) => PromptQueuedPayload(
+        queueId: json['queueId']! as String,
+        position: json['position']! as int,
+        promptedBy: json['promptedBy']! as String,
+        preview: json['preview']! as String,
+      );
+
+  /// What `session.cancelQueuedPrompt` names it by.
+  final String queueId;
+
+  /// Its place in the queue, from 1.
+  final int position;
+
+  /// Who sent it.
+  final String promptedBy;
+
+  /// The start of what was typed, for the row of the queue. Cut by the backend; the whole prompt is the turn's, when it runs.
+  final String preview;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'queueId': queueId,
+      'position': position,
+      'promptedBy': promptedBy,
+      'preview': preview,
+    };
+
+    return json;
+  }
 }
 
 /// The session ended and its subprocess is gone. The replay buffer **survives** this event — opening a closed session shows the terminal state plus whatever the ring still holds, labelled as partial.
@@ -1549,6 +2083,39 @@ class SessionClosedPayload {
       'sessionId': sessionId,
       'reason': reason,
     };
+
+    return json;
+  }
+}
+
+/// The conversation was compacted: what came before is now a summary Claude carries forward. Said on its own rather than as a status, because a client that keeps the turns on screen has to mark the point — and the context meter drops there.
+class SessionCompactedPayload {
+  const SessionCompactedPayload({
+    required this.trigger,
+    this.preTokens,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionCompactedPayload.fromJson(Map<String, Object?> json) => SessionCompactedPayload(
+        trigger: json['trigger']! as String,
+        preTokens: json['preTokens'] as int?,
+      );
+
+  /// `manual` — somebody sent `/compact`; `auto` — the context was full and Claude compacted it.
+  final String trigger;
+
+  /// How many tokens the context held before, when the SDK says.
+  final int? preTokens;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'trigger': trigger,
+    };
+
+    if (preTokens != null) {
+      json['preTokens'] = preTokens;
+    }
 
     return json;
   }
@@ -1662,6 +2229,7 @@ class SessionRewoundPayload {
     required this.preserved,
     required this.unchanged,
     required this.failed,
+    this.hunkId,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -1671,6 +2239,7 @@ class SessionRewoundPayload {
         preserved: (json['preserved']! as List<Object?>).map((item) => SessionRewoundPayloadPreservedItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
         unchanged: (json['unchanged']! as List<Object?>).map((item) => SessionRewoundPayloadUnchangedItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
         failed: (json['failed']! as List<Object?>).map((item) => SessionRewoundPayloadFailedItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        hunkId: json['hunkId'] as String?,
       );
 
   /// The turn the files went back to.
@@ -1688,6 +2257,9 @@ class SessionRewoundPayload {
   /// Paths the undo tried to put back and could not. Each is left exactly as it was: restoring writes a temporary file beside it and renames it over.
   final List<SessionRewoundPayloadFailedItem> failed;
 
+  /// Set when only one hunk went back (`session.rejectChange`): the file is the one path of `reverted`, and the rest of what the session changed in it stays.
+  final String? hunkId;
+
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
@@ -1697,6 +2269,10 @@ class SessionRewoundPayload {
       'unchanged': unchanged.map((item) => item.toJson()).toList(growable: false),
       'failed': failed.map((item) => item.toJson()).toList(growable: false),
     };
+
+    if (hunkId != null) {
+      json['hunkId'] = hunkId;
+    }
 
     return json;
   }
@@ -1786,6 +2362,8 @@ class ToolCompletedPayload {
     required this.toolUseId,
     required this.status,
     this.summary,
+    this.parentToolUseId,
+    this.taskId,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -1793,6 +2371,8 @@ class ToolCompletedPayload {
         toolUseId: json['toolUseId']! as String,
         status: json['status']! as String,
         summary: json['summary'] as String?,
+        parentToolUseId: json['parentToolUseId'] as String?,
+        taskId: json['taskId'] as String?,
       );
 
   final String toolUseId;
@@ -1802,6 +2382,12 @@ class ToolCompletedPayload {
 
   /// A short result for the timeline. The full output is the transcript's job, not this event's.
   final String? summary;
+
+  /// Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation.
+  final String? parentToolUseId;
+
+  /// The task of the list a `TaskCreate` made or a `TaskUpdate` changed — taken from the tool's structured result live, and from its result in the history. Absent for every other tool. The `summary` is the CLI's text, cut, and never carries it reliably (plan 08, B-20).
+  final String? taskId;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -1814,6 +2400,14 @@ class ToolCompletedPayload {
       json['summary'] = summary;
     }
 
+    if (parentToolUseId != null) {
+      json['parentToolUseId'] = parentToolUseId;
+    }
+
+    if (taskId != null) {
+      json['taskId'] = taskId;
+    }
+
     return json;
   }
 }
@@ -1823,12 +2417,14 @@ class ToolProgressPayload {
   const ToolProgressPayload({
     required this.toolUseId,
     required this.chunk,
+    this.parentToolUseId,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory ToolProgressPayload.fromJson(Map<String, Object?> json) => ToolProgressPayload(
         toolUseId: json['toolUseId']! as String,
         chunk: json['chunk']! as String,
+        parentToolUseId: json['parentToolUseId'] as String?,
       );
 
   final String toolUseId;
@@ -1836,12 +2432,19 @@ class ToolProgressPayload {
   /// This fragment of the output, and only this one.
   final String chunk;
 
+  /// Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation.
+  final String? parentToolUseId;
+
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'toolUseId': toolUseId,
       'chunk': chunk,
     };
+
+    if (parentToolUseId != null) {
+      json['parentToolUseId'] = parentToolUseId;
+    }
 
     return json;
   }
@@ -1854,6 +2457,7 @@ class ToolStartedPayload {
     required this.toolName,
     required this.input,
     this.title,
+    this.parentToolUseId,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -1862,6 +2466,7 @@ class ToolStartedPayload {
         toolName: json['toolName']! as String,
         input: json['input']! as Map<String, Object?>,
         title: json['title'] as String?,
+        parentToolUseId: json['parentToolUseId'] as String?,
       );
 
   /// The SDK's id for this invocation. It is what ties started, progress and completed together.
@@ -1875,6 +2480,9 @@ class ToolStartedPayload {
   /// A short human label for the invocation, already derived by the backend.
   final String? title;
 
+  /// Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation.
+  final String? parentToolUseId;
+
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
@@ -1885,6 +2493,10 @@ class ToolStartedPayload {
 
     if (title != null) {
       json['title'] = title;
+    }
+
+    if (parentToolUseId != null) {
+      json['parentToolUseId'] = parentToolUseId;
     }
 
     return json;
@@ -1940,6 +2552,110 @@ class TurnCompletedPayload {
   }
 }
 
+class WorkspaceFilesChangedPayloadChangesItem {
+  const WorkspaceFilesChangedPayloadChangesItem({
+    required this.path,
+    required this.kind,
+    this.origin,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory WorkspaceFilesChangedPayloadChangesItem.fromJson(Map<String, Object?> json) => WorkspaceFilesChangedPayloadChangesItem(
+        path: json['path']! as String,
+        kind: json['kind']! as String,
+        origin: json['origin'] as String?,
+      );
+
+  /// Relative to the folder, POSIX.
+  final String path;
+
+  final String kind;
+
+  /// Who changed it, as far as the server can tell: a write of Claude's, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say.
+  final String? origin;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'kind': kind,
+    };
+
+    if (origin != null) {
+      json['origin'] = origin;
+    }
+
+    return json;
+  }
+}
+
+/// What changed on disk in a folder being followed, coalesced. The frame's `seq` belongs to the subscription, not to any session: monotonic per `watchId`, from 1, and never replayed. A client that is not following this `watchId` — the mobile app never asks to — ignores it, and never lets its `seq` move the resume point of a session.
+class WorkspaceFilesChangedPayload {
+  const WorkspaceFilesChangedPayload({
+    required this.watchId,
+    required this.changes,
+    this.overflow,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory WorkspaceFilesChangedPayload.fromJson(Map<String, Object?> json) => WorkspaceFilesChangedPayload(
+        watchId: json['watchId']! as String,
+        changes: (json['changes']! as List<Object?>).map((item) => WorkspaceFilesChangedPayloadChangesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        overflow: json['overflow'] as bool?,
+      );
+
+  final String watchId;
+
+  /// Each path that changed, relative to the folder, with what happened to it.
+  final List<WorkspaceFilesChangedPayloadChangesItem> changes;
+
+  /// More changed than the event carries: the client reloads what it shows instead of patching it.
+  final bool? overflow;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'watchId': watchId,
+      'changes': changes.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    if (overflow != null) {
+      json['overflow'] = overflow;
+    }
+
+    return json;
+  }
+}
+
+/// A subscription ended without the client asking: nothing more arrives for this `watchId`. The client says so where the folder is shown, and watches again only when the reason allows.
+class WorkspaceWatchStoppedPayload {
+  const WorkspaceWatchStoppedPayload({
+    required this.watchId,
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory WorkspaceWatchStoppedPayload.fromJson(Map<String, Object?> json) => WorkspaceWatchStoppedPayload(
+        watchId: json['watchId']! as String,
+        reason: json['reason']! as String,
+      );
+
+  final String watchId;
+
+  /// `allowlistChanged` — the folder left the allowlist in a reload; `folderDeleted` — the folder is gone from the disk; `systemLimit` — the operating system stopped delivering changes.
+  final String reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'watchId': watchId,
+      'reason': reason,
+    };
+
+    return json;
+  }
+}
+
 /// The answer to `permission.requested`, carrying its `id` in `correlationId`. Resolving the same `requestId` twice is a silent ack and **one** execution, never an error and never a double run — several clients watch one session, and a client may resend after reconnecting.
 class PermissionResolvePayload {
   const PermissionResolvePayload({
@@ -1990,8 +2706,8 @@ class PermissionResolvePayload {
 
 /// Whether [json] satisfies the conditional requirements of [PermissionResolvePayload].
 ///
-/// `reason` is also required when `decision` is
-/// `deny` — the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from.
+/// `reason` is also required when `decision`
+/// is `deny` — the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from.
 bool permissionResolvePayloadConditionalsHold(Map<String, Object?> json) {
   if (json['decision'] == 'deny' && json['reason'] is! String) {
     return false;

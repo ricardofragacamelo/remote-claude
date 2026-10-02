@@ -6,7 +6,13 @@ import { DomainError } from '@domain/shared';
 import { LOGGER } from '../logging/logger';
 import type { Logger } from '../logging/logger';
 import { currentTraceId } from '../logging/trace-context';
-import { httpStatusFor, retryAfterFor, toErrorEnvelope } from './error-catalogue';
+import {
+  contentRangeFor,
+  etagFor,
+  httpStatusFor,
+  retryAfterFor,
+  toErrorEnvelope,
+} from './error-catalogue';
 import { FrameworkHttpError } from './framework-http.error';
 
 /**
@@ -46,6 +52,16 @@ export class DomainExceptionFilter implements ExceptionFilter {
     const retryAfter = retryAfterFor(status, envelope);
     if (retryAfter !== null) {
       response.setHeader('Retry-After', String(retryAfter));
+    }
+
+    const etag = etagFor(envelope);
+    if (etag !== null) {
+      response.setHeader('ETag', etag);
+    }
+
+    const contentRange = contentRangeFor(envelope);
+    if (contentRange !== null) {
+      response.setHeader('Content-Range', contentRange);
     }
 
     response.status(status).json(envelope);

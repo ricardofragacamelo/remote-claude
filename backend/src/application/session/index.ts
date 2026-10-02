@@ -2,6 +2,12 @@
 export { AttachSessionUseCase } from './attach-session.use-case';
 export type { AttachedSession, SessionConversations } from './attach-session.use-case';
 export { StartSessionUseCase } from './start-session.use-case';
+export { ListLiveSessionsUseCase } from './list-live-sessions.use-case';
+export type { LiveSessionListing } from './list-live-sessions.use-case';
+export type { FolderLocator } from './ports/folder-locator.port';
+export { FOLDER_LOCATOR } from './ports/folder-locator.port';
+export type { PendingPermissions } from './ports/pending-permissions.port';
+export { PENDING_PERMISSIONS } from './ports/pending-permissions.port';
 export type {
   SessionDefaults,
   SessionProvenance,
@@ -64,6 +70,8 @@ export type {
 export { SESSION_PERMISSION_GATE } from './ports/permission-gate.port';
 export type { SessionFileJournal } from './ports/session-file-journal.port';
 export { SESSION_FILE_JOURNAL } from './ports/session-file-journal.port';
+export type { SessionFileEvents } from './ports/session-file-events.port';
+export { SESSION_FILE_EVENTS } from './ports/session-file-events.port';
 export type { ToolInvocation, ToolInvocationRecorder } from './ports/tool-invocation.port';
 export { TOOL_INVOCATION_RECORDER } from './ports/tool-invocation.port';
 export type { WorkspaceResolver } from './ports/workspace-resolver.port';

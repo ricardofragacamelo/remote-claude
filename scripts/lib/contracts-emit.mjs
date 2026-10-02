@@ -27,3 +27,26 @@ export function docComment(description, indent, style) {
 
   return [style === 'block' ? `${indent}/** ${description} */` : `${indent}/// ${description}`];
 }
+
+/**
+ * How a rule's trigger reads in a doc comment: "is `deny`", "is absent" or "is present".
+ *
+ * @param {import('./contracts-model.mjs').Conditional} conditional
+ * @returns {string}
+ */
+export function conditionPhrase(conditional) {
+  return conditional.presence === null
+    ? `is \`${String(conditional.equals)}\``
+    : `is ${conditional.presence}`;
+}
+
+/**
+ * The fields of a declaration the schema bounds — `maxItems`, `maxLength`, `minimum` — which both
+ * targets turn into a check of their own.
+ *
+ * @param {import('./contracts-model.mjs').Interface} declaration
+ * @returns {import('./contracts-model.mjs').Field[]}
+ */
+export function boundedFields(declaration) {
+  return declaration.fields.filter((field) => Object.keys(field.limits).length > 0);
+}

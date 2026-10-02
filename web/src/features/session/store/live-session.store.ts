@@ -81,6 +81,8 @@ const EMPTY = {
   lastSeq: 0,
   messages: [],
   tools: [],
+  timeline: [],
+  turns: [],
   lastTurn: null,
   ending: null,
   isPartial: false,
@@ -104,8 +106,8 @@ const EMPTY = {
  * 2. **A gap clears the store.** When the server says the buffer no longer holds what was missed,
  *    the client reloads from scratch. Stitching a partial hole produces a view that looks complete
  *    and is not, which is worse than one that admits it has to reload.
- * 3. **`message.delta` accumulates by `messageId`**, and `message.completed` replaces what it
- *    accumulated. Concatenating deltas in arrival order turns two answers in flight into one
+ * 3. **`message.delta` accumulates by `messageId`**, and `message.completed` finishes the block it
+ *    was streaming. Concatenating deltas in arrival order turns two answers in flight into one
  *    paragraph of nonsense — and two answers in flight is ordinary, not exotic.
  *
  * And one of the history's, since plan 04: what the buffer cannot hold is **laid under** the

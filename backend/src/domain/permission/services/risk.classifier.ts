@@ -14,7 +14,12 @@ const READ_ONLY_TOOLS = new Set([
   'NotebookRead',
   'WebFetch',
   'WebSearch',
+  // The task list, in either form (plan 08, D-25): it writes the list of the session, nothing else.
   'TodoWrite',
+  'TaskCreate',
+  'TaskGet',
+  'TaskUpdate',
+  'TaskList',
   'Task',
   'BashOutput',
 ]);

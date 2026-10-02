@@ -17,6 +17,15 @@ import type { SessionStatus } from '../value-objects/session-status.value-object
 export type SessionCloseReason =
   'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown' | 'idleTimeout';
 
+/**
+ * Which client a session was opened from: a browser, or the app on a phone.
+ *
+ * Said in the list of live sessions (plan 08, B-07), so "opened on your phone 10 min ago" is
+ * something the screen can say. It is a fact of the socket that asked — the handshake of the app
+ * declares an installation, a browser's declares none.
+ */
+export type SessionClient = 'web' | 'mobile';
+
 /** What opening a session needs to know. */
 export interface SessionOpening {
   readonly id: SessionId;
@@ -25,6 +34,7 @@ export interface SessionOpening {
   readonly model: string;
   readonly permissionMode: PermissionMode;
   readonly openedAt: Date;
+  readonly openedFrom: SessionClient;
 }
 
 /**
@@ -48,6 +58,7 @@ export class Session {
     readonly ownerId: UserId,
     readonly workspace: WorkspacePath,
     readonly openedAt: Date,
+    readonly openedFrom: SessionClient,
     private currentModel: string,
     private currentMode: PermissionMode,
     private currentStatus: SessionStatus,
@@ -62,6 +73,7 @@ export class Session {
       opening.ownerId,
       opening.workspace,
       opening.openedAt,
+      opening.openedFrom,
       opening.model,
       opening.permissionMode,
       'starting',

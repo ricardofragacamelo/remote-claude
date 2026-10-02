@@ -23,138 +23,138 @@ conteúdo hostil neutralizado na renderização.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-01 | o schema aceita os anexos `file` (com e sem `range`), `folder`, `upload` (imagem ou texto enviado) e `text` de um provedor | eq | unit | — | B-01 | ⬜ |
-| S-02 | anexo sem `kind` é lido como `file`: o campo que já existia continua válido e `v` não sobe | eq | unit | — | B-01 | ⬜ |
-| S-03 | `kind: 'file'` sem `path`, `kind: 'upload'` sem `attachmentId` ou `kind: 'text'` sem `content` → recusado pelo guard gerado, em TypeScript e em Dart (`x-required-when`) | err | unit | `INVALID_INPUT` | B-01 | ⬜ |
-| S-04 | `range` com `startLine` 0, negativo ou `endLine < startLine` | err | unit | `INVALID_INPUT` | B-01 | ⬜ |
-| S-05 | anexos exatamente no `maxItems` passam; um acima é recusado | fron | unit | `INVALID_INPUT` | B-01 | ⬜ |
-| S-06 | `text` de provedor acima do teto de caracteres do schema | fron | unit | `INVALID_INPUT` | B-01 | ⬜ |
-| S-07 | eventos com os campos novos (`blockType`, `parentToolUseId`, `session.compacted`, `prompt.queued`) validam nos guards gerados; cliente antigo os ignora sem quebrar | eq | unit | — | B-02 | ⬜ |
-| S-08 | `session.start` com `forkAt` sem `resumeSessionId` → recusado pelo guard (`x-required-when`) | err | unit | `INVALID_INPUT` | B-02 | ⬜ |
-| S-09 | `contracts:check` verde com o Dart regenerado, e o app segue verde no `test:e2e:mobile` sem usar nada novo | eq | e2e | — | B-01, B-02 | ⬜ |
-| S-10 | cada código novo tem status, `messageKey` en/pt-BR e linha no catálogo; código sem chave reprova o teste do catálogo | err | unit | — | B-04 | ⬜ |
-| S-11 | o fake reproduz as fixtures gravadas de Edit, MultiEdit, Write, `Read` de referência, `Task` com subagent, `TodoWrite`, `ExitPlanMode`, thinking e `/compact`, com a mesma assimetria hook × `canUseTool` do real | eq | integração | — | B-06 | ⬜ |
-| S-12 | regravar uma fixture com o mesmo roteiro não muda o que os testes afirmam (ids e horários normalizados) | idem | integração | — | B-06 | ⬜ |
+| S-01 | o schema aceita os anexos `file` (com e sem `range`), `folder`, `upload` (imagem ou texto enviado) e `text` de um provedor | eq | unit | — | B-01 | ✅ |
+| S-02 | anexo sem `kind` é lido como `file`: o campo que já existia continua válido e `v` não sobe | eq | unit | — | B-01 | ✅ |
+| S-03 | `kind: 'file'` sem `path`, `kind: 'upload'` sem `attachmentId` ou `kind: 'text'` sem `content` → recusado pelo guard gerado, em TypeScript e em Dart (`x-required-when`) | err | unit | `INVALID_INPUT` | B-01 | ✅ |
+| S-04 | `range` com `startLine` 0, negativo ou `endLine < startLine` | err | unit | `INVALID_INPUT` | B-01 | ✅ |
+| S-05 | anexos exatamente no `maxItems` passam; um acima é recusado | fron | unit | `INVALID_INPUT` | B-01 | ✅ |
+| S-06 | `text` de provedor acima do teto de caracteres do schema | fron | unit | `INVALID_INPUT` | B-01 | ✅ |
+| S-07 | eventos com os campos novos (`blockType`, `parentToolUseId`, `session.compacted`, `prompt.queued`) validam nos guards gerados; cliente antigo os ignora sem quebrar | eq | unit | — | B-02 | ✅ |
+| S-08 | `session.start` com `forkAt` sem `resumeSessionId` → recusado pelo guard (`x-required-when`) | err | unit | `INVALID_INPUT` | B-02 | ✅ |
+| S-09 | `contracts:check` verde com o Dart regenerado, e o app segue verde no `test:e2e:mobile` sem usar nada novo | eq | e2e | — | B-01, B-02 | ✅ |
+| S-10 | cada código novo tem status, `messageKey` en/pt-BR e linha no catálogo; código sem chave reprova o teste do catálogo | err | unit | — | B-04 | ✅ |
+| S-11 | o fake reproduz as fixtures gravadas de Edit, MultiEdit, Write, `Read` de referência, `Task` com subagent, `TodoWrite`, `ExitPlanMode`, thinking e `/compact`, com a mesma assimetria hook × `canUseTool` do real | eq | integração | — | B-06 | ✅ |
+| S-12 | regravar uma fixture com o mesmo roteiro não muda o que os testes afirmam (ids e horários normalizados) | idem | integração | — | B-06 | ✅ |
 
 ## Sessões vivas da pasta — B-07
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-13 | lista as sessões vivas do chamador na pasta e nas subpastas, com status, modelo, modo, início, conversa e de onde foi aberta | eq | integração | — | B-07 | ⬜ |
-| S-14 | sessão viva de outra pessoa na mesma pasta não aparece | eq | integração | — | B-07 | ⬜ |
-| S-15 | sessão cujo `cwd` é a pasta-mãe não aparece (`/repo` não entra em `/repo/app`) | fron | unit | — | B-07 | ⬜ |
-| S-16 | prefixo que não é pasta: `/repo-old` não entra em `/repo` | fron | unit | — | B-07 | ⬜ |
-| S-17 | pasta sem sessão viva → `200` com lista vazia | fron | integração | — | B-07 | ⬜ |
-| S-18 | `workspacePath` relativo ou ausente | err | integração | `INVALID_INPUT` | B-07 | ⬜ |
-| S-19 | fora da allowlist / raiz de outra pessoa | err | integração | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN` | B-07 | ⬜ |
-| S-20 | pasta inexistente / que é arquivo | err | integração | `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY` | B-07 | ⬜ |
-| S-21 | a contenção é no realpath: sessão num symlink que resolve para dentro aparece uma vez; symlink que escapa não aparece | fron | integração | — | B-07 | ⬜ |
-| S-22 | sessão que fecha entre duas chamadas some; a que abre aparece | est | integração | — | B-07 | ⬜ |
-| S-23 | sessão em `starting` aparece como `starting`, nunca duas vezes nem sem conversa | conc | integração | — | B-07 | ⬜ |
-| S-24 | o log de I/O da borda leva pasta e contagem, nunca resumo nem prompt | eq | integração | — | B-07 | ⬜ |
+| S-13 | lista as sessões vivas do chamador na pasta e nas subpastas, com status, modelo, modo, início, conversa e de onde foi aberta | eq | integração | — | B-07 | ✅ |
+| S-14 | sessão viva de outra pessoa na mesma pasta não aparece | eq | integração | — | B-07 | ✅ |
+| S-15 | sessão cujo `cwd` é a pasta-mãe não aparece (`/repo` não entra em `/repo/app`) | fron | unit | — | B-07 | ✅ |
+| S-16 | prefixo que não é pasta: `/repo-old` não entra em `/repo` | fron | unit | — | B-07 | ✅ |
+| S-17 | pasta sem sessão viva → `200` com lista vazia | fron | integração | — | B-07 | ✅ |
+| S-18 | `workspacePath` relativo ou ausente | err | integração | `INVALID_INPUT` | B-07 | ✅ |
+| S-19 | fora da allowlist / raiz de outra pessoa | err | integração | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN` | B-07 | ✅ |
+| S-20 | pasta inexistente / que é arquivo | err | integração | `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY` | B-07 | ✅ |
+| S-21 | a contenção é no realpath: sessão num symlink que resolve para dentro aparece uma vez; symlink que escapa não aparece | fron | integração | — | B-07 | ✅ |
+| S-22 | sessão que fecha entre duas chamadas some; a que abre aparece | est | integração | — | B-07 | ✅ |
+| S-23 | sessão em `starting` aparece como `starting`, nunca duas vezes nem sem conversa | conc | integração | — | B-07 | ✅ |
+| S-24 | o log de I/O da borda leva pasta e contagem, nunca resumo nem prompt | eq | integração | — | B-07 | ✅ |
 
 ## Histórico com atividade — B-08
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-25 | o histórico da pasta traz cada conversa com `activity` (`liveHere`, `activeElsewhere`, `idle`) — e as das subpastas quando a D-05 decidir por elas | eq | integração | — | B-08 | ⬜ |
-| S-26 | conversa externa escrita dentro da janela é `activeElsewhere`; um milissegundo fora dela é `idle` | fron | unit | — | B-08 | ⬜ |
-| S-27 | conversa viva para o chamador vem `liveHere` com o `liveSessionId`, e não se repete no histórico | eq | integração | — | B-08 | ⬜ |
-| S-28 | conversa **nossa** recente e encerrada nunca é `activeElsewhere` — quem escreveu fomos nós | eq | unit | — | B-08 | ⬜ |
-| S-29 | subpasta cujo realpath sai da raiz (symlink) não traz conversas | err | integração | — | B-08 | ⬜ |
-| S-30 | o cursor continua estável sob escrita concorrente, com subpastas | conc | integração | — | B-08 | ⬜ |
-| S-31 | a mesma página pedida duas vezes lê o store uma vez | idem | integração | — | B-08 | ⬜ |
-| S-32 | SDK indisponível no histórico; a lista de vivas continua respondendo | err | integração | `CLAUDE_UNAVAILABLE` | B-08 | ⬜ |
+| S-25 | o histórico da pasta traz cada conversa com `activity` (`liveHere`, `activeElsewhere`, `idle`) — e as das subpastas quando a D-05 decidir por elas | eq | integração | — | B-08 | ✅ |
+| S-26 | conversa externa escrita dentro da janela é `activeElsewhere`; um milissegundo fora dela é `idle` | fron | unit | — | B-08 | ✅ |
+| S-27 | conversa viva para o chamador vem `liveHere` com o `liveSessionId`, e não se repete no histórico | eq | integração | — | B-08 | ✅ |
+| S-28 | conversa **nossa** recente e encerrada nunca é `activeElsewhere` — quem escreveu fomos nós | eq | unit | — | B-08 | ✅ |
+| S-29 | subpasta cujo realpath sai da raiz (symlink) não traz conversas | err | integração | — | B-08 | ✅ |
+| S-30 | o cursor continua estável sob escrita concorrente, com subpastas | conc | integração | — | B-08 | ✅ |
+| S-31 | a mesma página pedida duas vezes lê o store uma vez | idem | unit | — | B-08 | ✅ |
+| S-32 | SDK indisponível no histórico; a lista de vivas continua respondendo | err | integração | `CLAUDE_UNAVAILABLE` | B-08 | ✅ |
 
 ## A view de sessões — B-09…B-13
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-33 | a view mostra três grupos — em execução aqui, ativas em outro lugar, histórico — com origem, título, quando e modelo | eq | integração | — | B-09 | ⬜ |
-| S-34 | os quatro estados, por grupo: skeleton, erro com tentar de novo, vazio que ensina o próximo passo, conteúdo | eq | integração | — | B-09 | ⬜ |
-| S-35 | falha do histórico não esconde as vivas, e o inverso | err | integração | `CLAUDE_UNAVAILABLE` | B-09 | ⬜ |
-| S-36 | busca por título/resumo, filtro por origem e ordenação; a busca sem resultado diz isso e oferece limpar | fron | integração | — | B-09 | ⬜ |
-| S-37 | "carregar mais" acrescenta a página; falha mantém o que está, com o erro ao lado | fron | integração | `CLAUDE_UNAVAILABLE` | B-09 | ⬜ |
-| S-38 | a view é da aba de pasta: duas abas mostram listas diferentes, e filtro de uma não aparece na outra | eq | integração | — | B-09 | ⬜ |
-| S-39 | clicar numa viva → `session.attach` com `resumeFromSeq: 0`, e a conversa abre no painel | eq | integração | — | B-10 | ⬜ |
-| S-40 | clicar numa nossa encerrada → retomada in-place, mesmo id | eq | integração | — | B-10 | ⬜ |
-| S-41 | clicar numa externa → fork, dizendo que a continuação tem id novo e que o editor não verá as respostas | eq | integração | — | B-10 | ⬜ |
-| S-42 | externa ativa → aviso explícito de que outro processo escreve nela, e o fork só com confirmação | est | integração | — | B-10 | ⬜ |
-| S-43 | retomar no teto → recusa traduzida que diz que o teto é da instalação, com o tempo de espera e as sessões do usuário | err | integração | `SESSION_LIMIT_REACHED` | B-10 | ⬜ |
-| S-44 | retomar conversa cuja pasta saiu da allowlist | err | integração | `WORKSPACE_NOT_ALLOWED` | B-10 | ⬜ |
-| S-45 | clique duplo na mesma conversa → uma retomada e um painel | idem | integração | — | B-10 | ⬜ |
-| S-46 | retomada sem resposta no prazo do cliente | err | integração | `RESUME_TIMEOUT` | B-10 | ⬜ |
-| S-47 | as ações da linha estão também no menu de contexto e na command palette | eq | integração | — | B-10 | ⬜ |
-| S-48 | a lista se atualiza no intervalo com a view visível, e para com a view escondida ou a aba inativa | est | integração | — | B-11 | ⬜ |
-| S-49 | `session.started`/`session.closed` de sessão observada invalida a lista na hora | est | integração | — | B-11 | ⬜ |
-| S-50 | duas atualizações sobrepostas não duplicam nem reordenam linha — a mais nova vence | conc | integração | — | B-11 | ⬜ |
-| S-51 | aba reativada recarrega a lista uma vez | idem | integração | — | B-11 | ⬜ |
-| S-52 | `/workbench?folder=` com a view de sessões é o lugar do histórico da pasta; `/history` não existe (06 · D-07) | eq | integração | — | B-12 | ⬜ |
-| S-53 | o link de sessão (D-24) abre a aba da pasta da sessão (abrindo-a, se preciso) com a conversa no painel, ao lado do explorer e do editor; sessão inexistente mostra o erro com caminho de volta | err | integração | `SESSION_NOT_FOUND` | B-12 | ⬜ |
-| S-54 | o link de conversa (D-24) abre a conversa, somente leitura, no painel da aba da pasta dela | eq | integração | — | B-12 | ⬜ |
-| S-55 | a gaveta de ajuda da view explica os três grupos, a origem, o fork e a heurística de "ativa", em en e pt-BR | eq | integração | — | B-13 | ⬜ |
-| S-56 | todo controle de ícone da view tem tooltip e nome acessível; axe sem violação | eq | integração | — | B-13 | ⬜ |
-| S-57 | literal apresentável nas telas novas | err | unit | — | B-13 | ⬜ |
+| S-33 | a view mostra três grupos — em execução aqui, ativas em outro lugar, histórico — com origem, título, quando e modelo | eq | integração | — | B-09 | ✅ |
+| S-34 | os quatro estados, por grupo: skeleton, erro com tentar de novo, vazio que ensina o próximo passo, conteúdo | eq | integração | — | B-09 | ✅ |
+| S-35 | falha do histórico não esconde as vivas, e o inverso | err | integração | `CLAUDE_UNAVAILABLE` | B-09 | ✅ |
+| S-36 | busca por título/resumo, filtro por origem e ordenação; a busca sem resultado diz isso e oferece limpar | fron | integração | — | B-09 | ✅ |
+| S-37 | "carregar mais" acrescenta a página; falha mantém o que está, com o erro ao lado | fron | integração | `CLAUDE_UNAVAILABLE` | B-09 | ✅ |
+| S-38 | a view é da aba de pasta: duas abas mostram listas diferentes, e filtro de uma não aparece na outra | eq | integração | — | B-09 | ✅ |
+| S-39 | clicar numa viva → `session.attach` com `resumeFromSeq: 0`, e a conversa abre no painel | eq | integração | — | B-10 | ✅ |
+| S-40 | clicar numa nossa encerrada → retomada in-place, mesmo id | eq | integração | — | B-10 | ✅ |
+| S-41 | clicar numa externa → fork, dizendo que a continuação tem id novo e que o editor não verá as respostas | eq | integração | — | B-10 | ✅ |
+| S-42 | externa ativa → aviso explícito de que outro processo escreve nela, e o fork só com confirmação | est | integração | — | B-10 | ✅ |
+| S-43 | retomar no teto → recusa traduzida que diz que o teto é da instalação, com o tempo de espera e as sessões do usuário | err | integração | `SESSION_LIMIT_REACHED` | B-10 | ✅ |
+| S-44 | retomar conversa cuja pasta saiu da allowlist | err | integração | `WORKSPACE_NOT_ALLOWED` | B-10 | ✅ |
+| S-45 | clique duplo na mesma conversa → uma retomada e um painel | idem | integração | — | B-10 | ✅ |
+| S-46 | retomada sem resposta no prazo do cliente | err | integração | `RESUME_TIMEOUT` | B-10 | ✅ |
+| S-47 | as ações da linha estão também no menu de contexto e na command palette | eq | integração | — | B-10 | ✅ |
+| S-48 | a lista se atualiza no intervalo com a view visível, e para com a view escondida ou a aba inativa | est | integração | — | B-11 | ✅ |
+| S-49 | `session.started`/`session.closed` de sessão observada invalida a lista na hora | est | integração | — | B-11 | ✅ |
+| S-50 | duas atualizações sobrepostas não duplicam nem reordenam linha — a mais nova vence | conc | unit | — | B-11 | ✅ |
+| S-51 | aba reativada recarrega a lista uma vez | idem | integração | — | B-11 | ✅ |
+| S-52 | `/workbench?folder=` com a view de sessões é o lugar do histórico da pasta; `/history` não existe (06 · D-07) | eq | integração | — | B-12 | ✅ |
+| S-53 | o link de sessão (D-24) abre a aba da pasta da sessão (abrindo-a, se preciso) com a conversa no painel, ao lado do explorer e do editor; sessão inexistente mostra o erro com caminho de volta | err | integração | `SESSION_NOT_FOUND` | B-12 | ✅ |
+| S-54 | o link de conversa (D-24) abre a conversa, somente leitura, no painel da aba da pasta dela | eq | integração | — | B-12 | ✅ |
+| S-55 | a gaveta de ajuda da view explica os três grupos, a origem, o fork e a heurística de "ativa", em en e pt-BR | eq | integração | — | B-13 | ✅ |
+| S-56 | todo controle de ícone da view tem tooltip e nome acessível; axe sem violação | eq | integração | — | B-13 | ✅ |
+| S-57 | literal apresentável nas telas novas | err | unit | — | B-13 | ✅ |
 
 ## Markdown, código e caminhos — B-14…B-16
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-58 | títulos, listas, tabelas GFM, citação, código inline e em bloco | eq | unit | — | B-14 | ⬜ |
-| S-59 | HTML cru no texto aparece escapado, nunca como elemento (`<img onerror>`, `<script>`, `<iframe>`) | err | unit | — | B-14 | ⬜ |
-| S-60 | link `javascript:`, `data:` ou `vbscript:` não vira link | err | unit | — | B-14 | ⬜ |
-| S-61 | imagem remota no markdown não é carregada — vira link com o endereço à vista | err | unit | — | B-14 | ⬜ |
-| S-62 | link externo abre em nova aba com `rel="noopener noreferrer"` | eq | unit | — | B-14 | ⬜ |
-| S-63 | markdown incompleto durante o delta (bloco de código aberto) renderiza sem quebrar e se acerta no `message.completed` | est | unit | — | B-14 | ⬜ |
-| S-64 | mensagem de 200 KB em streaming não trava o composer: só a mensagem em voo re-renderiza | fron | integração | — | B-14 | ⬜ |
-| S-65 | bloco com linguagem recebe realce; sem linguagem ou desconhecida → monoespaçado, sem erro | fron | unit | — | B-15 | ⬜ |
-| S-66 | copiar copia exatamente o conteúdo do bloco, e a confirmação é anunciada | eq | integração | — | B-15 | ⬜ |
-| S-67 | "inserir no editor" insere no cursor do editor ativo da mesma aba de pasta, deixa a aba suja e não grava no disco | eq | integração | — | B-15 | ⬜ |
-| S-68 | sem editor aberto, "inserir no editor" fica desabilitado com a razão no tooltip | fron | integração | — | B-15 | ⬜ |
-| S-69 | caminho relativo ou absoluto dentro da pasta, com ou sem `:linha`, vira link que abre no editor na linha | eq | unit | — | B-16 | ⬜ |
-| S-70 | caminho fora da pasta, URL, ou `a/b` em prosa que não é arquivo fica texto | fron | unit | — | B-16 | ⬜ |
-| S-71 | link para arquivo que não existe mais → erro traduzido, e o painel fica | err | integração | `FILE_NOT_FOUND` (do 07) | B-16 | ⬜ |
+| S-58 | títulos, listas, tabelas GFM, citação, código inline e em bloco | eq | unit | — | B-14 | ✅ |
+| S-59 | HTML cru no texto aparece escapado, nunca como elemento (`<img onerror>`, `<script>`, `<iframe>`) | err | unit | — | B-14 | ✅ |
+| S-60 | link `javascript:`, `data:` ou `vbscript:` não vira link | err | unit | — | B-14 | ✅ |
+| S-61 | imagem remota no markdown não é carregada — vira link com o endereço à vista | err | unit | — | B-14 | ✅ |
+| S-62 | link externo abre em nova aba com `rel="noopener noreferrer"` | eq | unit | — | B-14 | ✅ |
+| S-63 | markdown incompleto durante o delta (bloco de código aberto) renderiza sem quebrar e se acerta no `message.completed` | est | unit | — | B-14 | ✅ |
+| S-64 | mensagem de 200 KB em streaming não trava o composer: só a mensagem em voo re-renderiza | fron | integração | — | B-14 | ✅ |
+| S-65 | bloco com linguagem recebe realce; sem linguagem ou desconhecida → monoespaçado, sem erro | fron | unit | — | B-15 | ✅ |
+| S-66 | copiar copia exatamente o conteúdo do bloco, e a confirmação é anunciada | eq | integração | — | B-15 | ✅ |
+| S-67 | "inserir no editor" insere no cursor do editor ativo da mesma aba de pasta, deixa a aba suja e não grava no disco | eq | integração | — | B-15 | ✅ |
+| S-68 | sem editor aberto, "inserir no editor" fica desabilitado com a razão no tooltip | fron | integração | — | B-15 | ✅ |
+| S-69 | caminho relativo ou absoluto dentro da pasta, com ou sem `:linha`, vira link que abre no editor na linha | eq | unit | — | B-16 | ✅ |
+| S-70 | caminho fora da pasta, URL, ou `a/b` em prosa que não é arquivo fica texto | fron | unit | — | B-16 | ✅ |
+| S-71 | link para arquivo que não existe mais → erro traduzido, e o painel fica | err | integração | `FILE_NOT_FOUND` (do 07) | B-16 | ✅ |
 
 ## Tools, saída, thinking, tarefas, subagents e plano — B-17…B-22
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-72 | `Read`, `Edit`, `Write`, `Bash`, `Grep`, `Glob`, `WebFetch` têm rótulo compacto traduzido com o sujeito relativo à pasta | eq | unit | — | B-17 | ⬜ |
-| S-73 | tool MCP `mcp__srv__tool` mostra servidor e tool; tool desconhecida mostra o nome, e ao expandir o input inteiro | fron | unit | — | B-17 | ⬜ |
-| S-74 | expandir mostra o input exato, sem truncar; o título compacto tem o comando inteiro no nome acessível | eq | integração | — | B-17 | ⬜ |
-| S-75 | `started` → `succeeded`/`failed`/`denied` muda ícone e texto; `denied` mostra o motivo | est | integração | — | B-17 | ⬜ |
-| S-76 | o card de permissão nunca é compactado | eq | integração | — | B-17 | ⬜ |
-| S-77 | `tool.progress` chega vivo e o ANSI vira cor por token, pelos tokens de tema | eq | unit | — | B-18 | ⬜ |
-| S-78 | OSC 8 (hyperlink), título de janela e sequência desconhecida não viram link nem mudam o documento | err | unit | — | B-18 | ⬜ |
-| S-79 | saída acima do teto da UI mostra o fim e "mostrar tudo", sem travar | fron | integração | — | B-18 | ⬜ |
-| S-80 | chunks reentregues no replay não duplicam saída | idem | integração | — | B-18 | ⬜ |
-| S-81 | com a pessoa no fim, a saída acompanha; rolou para cima, respeita | est | integração | — | B-18 | ⬜ |
-| S-82 | thinking chega vivo como bloco próprio, recolhido por padrão, com "pensou por *n* s" | eq | integração | — | B-19 | ⬜ |
-| S-83 | thinking redigido pelo modelo mostra que existiu, sem inventar conteúdo | fron | unit | — | B-19 | ⬜ |
-| S-84 | thinking no histórico (transcript) aparece igual ao vivo — um redutor só | eq | integração | — | B-19 | ⬜ |
-| S-85 | a lista de tarefas do `TodoWrite` aparece viva, com pendente/em andamento/concluída, e se atualiza a cada chamada | eq | integração | — | B-20 | ⬜ |
-| S-86 | `TodoWrite` com lista vazia limpa o painel; input malformado mostra a tool genérica, sem quebrar | fron | unit | — | B-20 | ⬜ |
-| S-87 | tarefa que muda de estado entre duas chamadas mostra a transição, e a lista sobrevive a recarga (histórico) | est | integração | — | B-20 | ⬜ |
-| S-88 | tools e texto de um subagent aparecem aninhados sob o `Task` que o abriu, pelo `parentToolUseId` | eq | integração | — | B-21 | ⬜ |
-| S-89 | dois subagents em paralelo não misturam os filhos | conc | integração | — | B-21 | ⬜ |
-| S-90 | subagent no histórico é carregado ao expandir, pelas funções do SDK | eq | integração | — | B-21 | ⬜ |
-| S-91 | subagent de conversa que o chamador não lê | err | integração | `NOT_FOUND` | B-21 | ⬜ |
-| S-92 | em modo `plan`, o `ExitPlanMode` vira o card "aprovar plano", com o plano em markdown | eq | integração | — | B-22 | ⬜ |
-| S-93 | aprovar o plano resolve `allow` e troca o modo para o escolhido (padrão ou aceitar edições) | est | integração | — | B-22 | ⬜ |
-| S-94 | "continuar planejando" resolve `deny` com o comentário como motivo, que volta ao Claude | est | integração | — | B-22 | ⬜ |
-| S-95 | o plano aprovado noutro dispositivo atualiza o card, sem segunda resolução | conc | integração | — | B-22 | ⬜ |
+| S-72 | `Read`, `Edit`, `Write`, `Bash`, `Grep`, `Glob`, `WebFetch` têm rótulo compacto traduzido com o sujeito relativo à pasta | eq | unit | — | B-17 | ✅ |
+| S-73 | tool MCP `mcp__srv__tool` mostra servidor e tool; tool desconhecida mostra o nome, e ao expandir o input inteiro | fron | unit | — | B-17 | ✅ |
+| S-74 | expandir mostra o input exato, sem truncar; o título compacto tem o comando inteiro no nome acessível | eq | integração | — | B-17 | ✅ |
+| S-75 | `started` → `succeeded`/`failed`/`denied` muda ícone e texto; `denied` mostra o motivo | est | integração | — | B-17 | ✅ |
+| S-76 | o card de permissão nunca é compactado | eq | integração | — | B-17 | ✅ |
+| S-77 | `tool.progress` chega vivo e o ANSI vira cor por token, pelos tokens de tema | eq | unit | — | B-18 | ✅ |
+| S-78 | OSC 8 (hyperlink), título de janela e sequência desconhecida não viram link nem mudam o documento | err | unit | — | B-18 | ✅ |
+| S-79 | saída acima do teto da UI mostra o fim e "mostrar tudo", sem travar | fron | integração | — | B-18 | ✅ |
+| S-80 | chunks reentregues no replay não duplicam saída | idem | unit | — | B-18 | ✅ |
+| S-81 | com a pessoa no fim, a saída acompanha; rolou para cima, respeita | est | integração | — | B-18 | ✅ |
+| S-82 | thinking chega vivo como bloco próprio, recolhido por padrão, com "pensou por *n* s" | eq | integração | — | B-19 | ✅ |
+| S-83 | thinking redigido pelo modelo mostra que existiu, sem inventar conteúdo | fron | unit | — | B-19 | ✅ |
+| S-84 | thinking no histórico (transcript) aparece igual ao vivo — um redutor só | eq | integração | — | B-19 | ✅ |
+| S-85 | a lista de tarefas aparece viva, com pendente/em andamento/concluída, e se atualiza a cada chamada — pelo `TodoWrite` (`todo-write-turn`) e pelas `Task*` (`task-tools-turn`), com o mesmo desenho | eq | integração | — | B-20 | ✅ |
+| S-86 | `TodoWrite` com lista vazia limpa o painel; `TaskUpdate` com `deleted` tira a tarefa; input malformado, ou `TaskUpdate` de `id` desconhecido, mostra a tool genérica, sem quebrar | fron | unit | — | B-20 | ✅ |
+| S-87 | tarefa que muda de estado entre duas chamadas mostra a transição, nas duas formas, e a lista sobrevive a recarga (histórico) | est | integração | — | B-20 | ✅ |
+| S-88 | tools e texto de um subagent aparecem aninhados sob o `Task` que o abriu, pelo `parentToolUseId` | eq | integração | — | B-21 | ✅ |
+| S-89 | dois subagents em paralelo não misturam os filhos | conc | integração | — | B-21 | ✅ |
+| S-90 | subagent no histórico é carregado ao expandir, pelas funções do SDK | eq | integração | — | B-21 | ✅ |
+| S-91 | subagent de conversa que o chamador não lê | err | integração | `NOT_FOUND` | B-21 | ✅ |
+| S-92 | em modo `plan`, o `ExitPlanMode` vira o card "aprovar plano", com o plano em markdown | eq | integração | — | B-22 | ✅ |
+| S-93 | aprovar o plano resolve `allow` e troca o modo para o escolhido (padrão ou aceitar edições) | est | integração | — | B-22 | ✅ |
+| S-94 | "continuar planejando" resolve `deny` com o comentário como motivo, que volta ao Claude | est | integração | — | B-22 | ✅ |
+| S-95 | o plano aprovado noutro dispositivo atualiza o card, sem segunda resolução | conc | integração | — | B-22 | ✅ |
 
 ## Status, turno, cópia e busca — B-23, B-24
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-96 | o indicador segue `session.statusChanged`, e `waitingPermission` leva ao card | est | integração | — | B-23 | ⬜ |
-| S-97 | o resumo do turno mostra custo, duração e tokens (entrada, saída, cache), formatados pelo idioma | eq | unit | — | B-23 | ⬜ |
-| S-98 | turno interrompido sem `usage` mostra o que há, sem `NaN` | fron | unit | — | B-23 | ⬜ |
-| S-99 | o custo da sessão soma os turnos sem contar o replay duas vezes | idem | unit | — | B-23 | ⬜ |
-| S-100 | copiar mensagem copia o markdown de origem | eq | integração | — | B-24 | ⬜ |
-| S-101 | buscar na conversa destaca e navega entre ocorrências; "buscar em toda a conversa" carrega as páginas antigas | eq | integração | — | B-24 | ⬜ |
-| S-102 | busca sem ocorrência diz isso; busca durante o streaming inclui o que chega | fron | integração | — | B-24 | ⬜ |
+| S-96 | o indicador segue `session.statusChanged`, e `waitingPermission` leva ao card | est | integração | — | B-23 | ✅ |
+| S-97 | o resumo do turno mostra custo, duração e tokens (entrada, saída, cache), formatados pelo idioma | eq | unit | — | B-23 | ✅ |
+| S-98 | turno interrompido sem `usage` mostra o que há, sem `NaN` | fron | unit | — | B-23 | ✅ |
+| S-99 | o custo da sessão soma os turnos sem contar o replay duas vezes | idem | unit | — | B-23 | ✅ |
+| S-100 | copiar mensagem copia o markdown de origem | eq | integração | — | B-24 | ✅ |
+| S-101 | buscar na conversa destaca e navega entre ocorrências; "buscar em toda a conversa" carrega as páginas antigas | eq | integração | — | B-24 | ✅ |
+| S-102 | busca sem ocorrência diz isso; busca durante o streaming inclui o que chega | fron | integração | — | B-24 | ✅ |
 
 ## Diffs no backend — B-25, B-26
 

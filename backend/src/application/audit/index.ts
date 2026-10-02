@@ -8,6 +8,14 @@ export { AUDIT_REPOSITORY } from './ports/audit.repository';
 export type { AuditEventRepository } from './ports/audit-event.repository';
 export { AUDIT_EVENT_REPOSITORY } from './ports/audit-event.repository';
 export { QueryAuditTrailUseCase } from './query-audit-trail.use-case';
+export { QueryAuditEventsUseCase } from './query-audit-events.use-case';
+export type {
+  AuditEventPage,
+  AuditEventPageRequest,
+  AuditEventReader,
+  AuditEventRecord,
+} from './ports/audit-event.reader';
+export { AUDIT_EVENT_READER } from './ports/audit-event.reader';
 export type {
   AuditTrailFilter,
   AuditTrailPage,

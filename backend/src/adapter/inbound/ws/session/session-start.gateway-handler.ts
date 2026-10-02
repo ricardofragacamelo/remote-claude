@@ -39,6 +39,8 @@ export class SessionStartHandler implements WsCommandHandler {
       permissionMode: command.permissionMode ?? null,
       resumeSessionId: command.resumeSessionId ?? null,
       userId: context.userId,
+      // A socket that declared an installation is the app's; a browser declares none.
+      openedFrom: context.installId === null ? 'web' : 'mobile',
     });
 
     const sessionId = started.session.id.value;

@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import type { DirectoryRead, WorkspaceDirectoryLister } from '@application/workspace';
 import type { DirectoryChild, DirectoryListingCriteria } from '@domain/workspace';
 import { LOGGER, type Logger } from '@shared/logging/logger';
+import { codeOf } from './folder-file-system';
 
 /** The four calls the lister makes, so a test can stand in for a filesystem it cannot build. */
 export interface ListerFileSystem {
@@ -190,11 +191,4 @@ function hasType(entry: Dirent): boolean {
     entry.isBlockDevice() ||
     entry.isCharacterDevice()
   );
-}
-
-function codeOf(error: unknown): string {
-  const code =
-    typeof error === 'object' && error !== null ? (error as { code?: unknown }).code : undefined;
-
-  return typeof code === 'string' ? code : '';
 }

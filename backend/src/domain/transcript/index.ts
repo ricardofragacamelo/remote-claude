@@ -10,6 +10,12 @@ export type {
   VisibleTranscriptSession,
 } from './entities/transcript-session.entity';
 export { transcriptOriginFor } from './services/transcript-visibility';
+export { activityOf } from './services/transcript-activity';
+export type {
+  ActivityContext,
+  ConversationActivity,
+  TranscriptActivity,
+} from './services/transcript-activity';
 export type { TranscriptAudience } from './services/transcript-visibility';
 export { pageFromTail, pageOfSessions } from './services/transcript-pages';
 export type { Page, SessionListCursor } from './services/transcript-pages';

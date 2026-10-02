@@ -107,7 +107,10 @@ export function attachedDevices(output) {
  * state, and the shutdown does not spend a minute saving one. With `systemd-run` present it runs
  * inside a cgroup with a hard memory ceiling, so a runaway emulator cannot take the machine down.
  *
- * @param {{ avd: string, port: number, fenced: boolean }} options
+ * `window` is for `pnpm dev:mobile`, where somebody is there to tap the screen; a suite has nobody
+ * looking, and a window would only cost the GPU.
+ *
+ * @param {{ avd: string, port: number, fenced: boolean, window?: boolean }} options
  * @returns {{ command: string, args: string[] }}
  */
 export function emulatorCommand(options) {
@@ -116,7 +119,7 @@ export function emulatorCommand(options) {
     options.avd,
     '-port',
     String(options.port),
-    '-no-window',
+    ...(options.window === true ? [] : ['-no-window']),
     '-no-audio',
     '-no-boot-anim',
     '-no-snapshot-save',

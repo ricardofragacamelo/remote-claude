@@ -181,7 +181,7 @@ describe('the live session store', () => {
       store().apply(event('message.delta', 1, { messageId: 'm1', delta: 'Hel' }));
       store().apply(event('message.delta', 2, { messageId: 'm1', delta: 'lo' }));
 
-      expect(store().messages).toEqual([
+      expect(store().messages).toMatchObject([
         { messageId: 'm1', role: 'assistant', text: 'Hello', isComplete: false },
       ]);
     });
@@ -208,7 +208,7 @@ describe('the live session store', () => {
         }),
       );
 
-      expect(store().messages).toEqual([
+      expect(store().messages).toMatchObject([
         { messageId: 'm1', role: 'assistant', text: 'partial no more', isComplete: true },
       ]);
     });
@@ -242,7 +242,9 @@ describe('the live session store', () => {
       expect(store().messages[0]).toMatchObject({ role: 'user', text: 'sent from a phone' });
     });
 
-    it('does not re-open a completed message with a late fragment', () => {
+    it('takes a fragment after a finished block as the next block — plan 08, B-02', () => {
+      // The CLI finishes a message one block at a time under one id: the text after a tool or after
+      // the thinking is the same message going on, not a late fragment of a finished one.
       store().apply(
         event('message.completed', 1, {
           messageId: 'm1',
@@ -252,7 +254,7 @@ describe('the live session store', () => {
       );
       store().apply(event('message.delta', 2, { messageId: 'm1', delta: ' and more' }));
 
-      expect(store().messages[0]?.text).toBe('done');
+      expect(store().messages[0]).toMatchObject({ text: 'done and more', isComplete: false });
     });
 
     it('joins the text blocks and ignores the ones that carry none', () => {
@@ -282,8 +284,8 @@ describe('the live session store', () => {
       // over and empty is a fact about the conversation rather than a frame to drop.
       store().apply(event('message.completed', 1, { messageId: 'm1', role: 'assistant' }));
 
-      expect(store().messages).toEqual([
-        { messageId: 'm1', role: 'assistant', text: '', isComplete: true },
+      expect(store().messages).toMatchObject([
+        { messageId: 'm1', role: 'assistant', text: '', isComplete: true, blocks: [] },
       ]);
     });
   });
@@ -300,22 +302,25 @@ describe('the live session store', () => {
           toolName: 'Bash',
           input: { command: 'ls' },
           status: 'running',
-          output: '',
+          elapsed: null,
           summary: null,
+          parentToolUseId: null,
+          taskId: null,
         },
       ]);
     });
 
-    it('accumulates its output, and records how it ended', () => {
+    it('keeps the latest elapsed reading, and records how it ended — plan 08, B-18', () => {
+      // The SDK reports how long a tool has run, not its output: each reading replaces the last.
       store().apply(event('tool.started', 1, started));
-      store().apply(event('tool.progress', 2, { toolUseId: 't1', chunk: 'one\n' }));
-      store().apply(event('tool.progress', 3, { toolUseId: 't1', chunk: 'two\n' }));
+      store().apply(event('tool.progress', 2, { toolUseId: 't1', chunk: 'Bash · 1s' }));
+      store().apply(event('tool.progress', 3, { toolUseId: 't1', chunk: 'Bash · 2s' }));
       store().apply(
         event('tool.completed', 4, { toolUseId: 't1', status: 'succeeded', summary: 'ok' }),
       );
 
       expect(store().tools[0]).toMatchObject({
-        output: 'one\ntwo\n',
+        elapsed: 'Bash · 2s',
         status: 'succeeded',
         summary: 'ok',
       });
@@ -334,7 +339,7 @@ describe('the live session store', () => {
       );
       store().apply(event('tool.progress', 3, { toolUseId: 't2', chunk: 'contents' }));
 
-      expect(store().tools.map((tool) => tool.output)).toEqual(['', 'contents']);
+      expect(store().tools.map((tool) => tool.elapsed)).toEqual([null, 'contents']);
     });
 
     it.each([
@@ -345,7 +350,7 @@ describe('the live session store', () => {
 
       store().apply(event(type, 2, payload));
 
-      expect(store().tools[0]).toMatchObject({ status: 'running', output: '' });
+      expect(store().tools[0]).toMatchObject({ status: 'running', elapsed: null });
     });
 
     it('replaces rather than duplicates when a start is redelivered', () => {
@@ -394,7 +399,12 @@ describe('the live session store', () => {
       }),
     );
 
-    expect(store().lastTurn).toEqual({ turnId: 'turn-1', costUsd: '0.0123', durationMs: 2_400 });
+    expect(store().lastTurn).toEqual({
+      turnId: 'turn-1',
+      costUsd: '0.0123',
+      durationMs: 2_400,
+      usage: null,
+    });
   });
 
   it('records how the session ended, with the instant of the frame', () => {

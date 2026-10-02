@@ -1,6 +1,7 @@
 import { api } from '@/shared/api/api';
 import { isRecord, readText } from '@/shared/lib/json';
 import type {
+  ConversationActivity,
   ConversationOrigin,
   ConversationSummary,
   HistoryEvent,
@@ -42,7 +43,7 @@ export async function fetchHistoryPage(
 
   return {
     conversation,
-    events: Array.isArray(body.events) ? body.events.flatMap(toHistoryEvent) : [],
+    events: toHistoryEvents(body.events),
     nextCursor: typeof body.nextCursor === 'string' ? body.nextCursor : null,
   };
 }
@@ -74,11 +75,37 @@ export function toConversationSummary(value: unknown): ConversationSummary | nul
     cwd,
     gitBranch: readText(value, 'gitBranch'),
     lastModified,
+    ...activityOf(value),
   };
 }
 
 function isOrigin(value: unknown): value is ConversationOrigin {
   return value === 'ours' || value === 'external';
+}
+
+const ACTIVITIES: ReadonlySet<string> = new Set(['liveHere', 'activeElsewhere', 'idle']);
+
+/**
+ * What a conversation is doing, as the backend said it — `idle` when it said nothing this build
+ * reads, which promises nothing: a conversation the screen does not know is live is shown as history.
+ */
+function activityOf(
+  value: Readonly<Record<string, unknown>>,
+): Pick<ConversationSummary, 'activity' | 'liveSessionId' | 'writtenAgoSeconds'> {
+  const activity = readText(value, 'activity');
+  const writtenAgo = value['writtenAgoSeconds'];
+
+  return {
+    activity:
+      activity !== null && ACTIVITIES.has(activity) ? (activity as ConversationActivity) : 'idle',
+    liveSessionId: readText(value, 'liveSessionId'),
+    writtenAgoSeconds: typeof writtenAgo === 'number' ? writtenAgo : null,
+  };
+}
+
+/** The events of a page, as far as they can be read: one this build cannot read is dropped. */
+export function toHistoryEvents(value: unknown): HistoryEvent[] {
+  return Array.isArray(value) ? value.flatMap(toHistoryEvent) : [];
 }
 
 function toHistoryEvent(value: unknown): HistoryEvent[] {

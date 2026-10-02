@@ -2,7 +2,7 @@ import { SessionRegistry } from '@application/session';
 import type { ClaudeSessionHandle, SessionConversation } from '@application/session';
 import { UserId } from '@domain/auth';
 import { Session, SessionId } from '@domain/session';
-import type { PermissionMode, SlashCommand } from '@domain/session';
+import type { PermissionMode, SessionClient, SlashCommand } from '@domain/session';
 import { ClaudeSessionId } from '@domain/transcript';
 import { WorkspacePath } from '@domain/workspace';
 import { FixedClock } from '../fakes/fixed-clock';
@@ -33,6 +33,7 @@ export function aSession(
     model?: string;
     permissionMode?: PermissionMode;
     openedAt?: Date;
+    openedFrom?: SessionClient;
   } = {},
 ): Session {
   return Session.open({
@@ -42,6 +43,7 @@ export function aSession(
     model: overrides.model ?? 'claude-sonnet-5',
     permissionMode: overrides.permissionMode ?? 'default',
     openedAt: overrides.openedAt ?? OPENED_AT,
+    openedFrom: overrides.openedFrom ?? 'web',
   });
 }
 

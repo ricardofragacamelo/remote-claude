@@ -299,7 +299,7 @@ reusa. Criar, mover e apagar esses caminhos passam pelo mesmo passo.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-08 | Qual watcher: `fs.watch` recursivo, `chokidar` ou `@parcel/watcher` | quantos watches de inotify cada um consome num repositório com `node_modules`, e o que acontece no limite — **medir** | B-19, B-20 | 2026-09-28 · **o método está decidido, a escolha não**: o spike B-19 mede `fs.watch` recursivo, `chokidar` v4 e `@parcel/watcher` (watches, subida, `max_user_watches` baixo) num clone com `pnpm install`; critério "diretório excluído não consome watch" e "no limite, erro explícito"; empate → a sem módulo nativo. Decisão do usuário com a recomendação; fecha com a medida, registrada aqui | 🔄 |
+| D-08 | Qual watcher: `fs.watch` recursivo, `chokidar` ou `@parcel/watcher` | quantos watches de inotify cada um consome num repositório com `node_modules`, e o que acontece no limite — **medir** | B-19, B-20 | 2026-09-28 · método decidido pelo usuário com a recomendação. 2026-10-01 · **`chokidar` v5**, pela medida do spike B-19 (`scripts/watcher-spike.mjs`, números na seção): é a única das três que passa nos **dois** critérios — não gasta watch em diretório excluído (`fs.watch` gasta ~50 mil, dentro de `node_modules`) e diz `ENOSPC` no limite **na subida e depois dela** (`@parcel/watcher` recusa a subida, mas fica **mudo** quando o limite acaba com ele já de pé, e perde o que muda nas pastas novas). O preço: um watch por arquivo além de um por pasta (2 805 contra 709 do `@parcel/watcher` neste repositório). Sem empate, a regra do módulo nativo não decidiu | ✅ |
 
 ### D-08 — a implementação do watcher
 
@@ -318,6 +318,31 @@ repositório com `pnpm install` feito, contando watches (`/proc/<pid>/fdinfo`) e
 três opções, e o comportamento com `max_user_watches` baixado de propósito. O critério é
 "diretório excluído (D-10) não consome watch" e "no limite, erro explícito, nunca silêncio". Se
 duas empatarem, a sem módulo nativo.
+
+**Resultado da medida (2026-10-01, B-19).** Clone raso deste repositório com
+`pnpm install --frozen-lockfile` feito — 8 005 diretórios e 58 631 entradas, das quais 2 805 (709
+diretórios) fora de `.git` e da lista da D-10 —, Linux 6.8, Node 24.16, `chokidar` 4.0.3 e 5.0.0,
+`@parcel/watcher` 2.6.0. Cada opção num processo próprio, que conta as linhas `inotify wd:` do seu
+`/proc/self/fdinfo` quando o watcher está pronto, e escreve uma sonda numa pasta assistida e outra
+em `node_modules/`. O limite foi baixado sem root, num user namespace próprio
+(`unshare -Ur`, `/proc/sys/user/max_inotify_watches`). Reproduzir:
+`node scripts/watcher-spike.mjs --tree <clone> --libs <pasta com as bibliotecas> [--limit <n> | --midflight]`.
+
+| Opção | Watches | Pronto em | Sonda em `node_modules` | Limite 300 na subida | Limite gasto depois da subida |
+|---|---|---|---|---|---|
+| `fs.watch` recursivo | **49 941** | 1,8–3,3 s | ouvida (assiste tudo) | evento `error` `ENOSPC`, watcher parcial de pé | `error` `ENOSPC` |
+| `chokidar` 4 / 5 | 2 805 | 0,2–0,8 s | não ouvida | evento `error` `ENOSPC`, `ready` mesmo assim | `error` `ENOSPC` por pasta nova |
+| `@parcel/watcher` | 709 | 0,15 s | não ouvida | a subida **rejeita** (`inotify_add_watch … No space left on device`), nada retido | **nada** — o arquivo escrito numa pasta nova não chega e nenhum erro aparece |
+
+Os 2 805 do `chokidar` são exatamente as entradas fora das exclusões: ele põe um watch em cada
+arquivo além de cada pasta, e não há opção que o impeça. Com `@parcel/watcher` o número cai a um
+quarto, mas o silêncio depois da subida reprova o segundo critério — e é o caso comum: o limite se
+esgota quando o VS Code do usuário sobe **depois** de nós. **Escolha: `chokidar` v5** (ESM, Node
+≥ 20, sem módulo nativo). O adapter (`ChokidarFolderWatcher`) trata o `ENOSPC`/`EMFILE` antes do
+`ready` como `WATCH_UNAVAILABLE` e fecha o que reteve, e depois dele como
+`workspace.watchStopped { reason: systemLimit }`. Alternativa registrada, sem task: um adapter
+nosso sobre `fs.watch` não recursivo por pasta custaria os 709 watches com erro explícito — se o
+custo por arquivo virar problema medido, é por aí, atrás da mesma porta.
 
 ---
 
@@ -365,7 +390,7 @@ registrados aqui como alternativa, sem task.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-09 | O editor é o Monaco ou o CodeMirror 6 | tamanho do bundle, toque no celular, testabilidade em jsdom, CSP e workers — **medir** | B-31 | 2026-09-28 · **Monaco**, carregado sob demanda, servido pelo nosso build (nenhum byte de CDN), atrás da porta `CodeEditor`; modo simplificado em tela pequena. Decisão do usuário com a recomendação; a medida (chunk gzip, tempo até editar no celular, cobertura do modo simplificado) não troca o editor — decide só a partir de que largura o modo simplificado assume | ✅ |
+| D-09 | O editor é o Monaco ou o CodeMirror 6 | tamanho do bundle, toque no celular, testabilidade em jsdom, CSP e workers — **medir** | B-31 | 2026-09-28 · **Monaco**, carregado sob demanda, servido pelo nosso build (nenhum byte de CDN), atrás da porta `CodeEditor`; modo simplificado em tela pequena. Decisão do usuário com a recomendação; a medida (chunk gzip, tempo até editar no celular, cobertura do modo simplificado) não troca o editor — decide só a partir de que largura o modo simplificado assume. **Medida 2026-10-01** (`node scripts/editor-bundle.mjs`): chunk `monaco-engine` 3 972,7 kB / **1 029,8 kB gzip**, CSS 27,7 kB gzip, `editor.worker` ~81 kB gzip, cada gramática 0,5–3,8 kB gzip sob demanda; nada do Monaco no chunk inicial, nenhum byte de CDN. Abaixo de `md` o Monaco **nunca carrega** (o modo simplificado é um campo de texto com as mesmas regras de save); o tempo até editar num celular médio não foi medido | ✅ |
 | D-14 | Rascunho não salvo sobrevive à recarga da página | se guardar conteúdo de arquivo no navegador é aceitável (`.env` aberto num computador emprestado) | B-40 | 2026-09-28 · **não persistir conteúdo**: buffer sujo em memória, `beforeunload` ao recarregar ou fechar, confirmação listando os arquivos ao fechar aba suja; persistir cifrado no servidor fica para decisão própria. Decisão do usuário com a recomendação | ✅ |
 | D-20 | O formato do que se arrasta da árvore e das abas para o chat do Claude, e o que acontece entre abas de pasta | o que o [plano 08](../08-claude-panel/README.md) aceita como anexo (`{kind:'file', path, range?}`), e se pasta entra como anexo | B-42 | 2026-09-28 · **`application/x-remote-claude-files+json`** (`{ folder, entries, selection? }`, caminho relativo) + `text/plain`; `scopeDragPayload` pura em `web/src/shared/`, recusando com `outsideFolder`; pasta vai como `directory`, sem expandir; "Adicionar ao contexto do Claude" só com o painel do 08 registrado; a fronteira continua no `session.prompt`. Decisão do usuário com a recomendação | ✅ |
 
@@ -437,7 +462,9 @@ não fronteira.
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| — | nenhuma decisão em aberto — os cenários vêm das fases anteriores, e o Claude roteirizado já existe (`backend/test/e2e/scripted-main.ts`) | — | — | — | — |
+| D-21 | O menu de contexto é modal? | o axe no navegador (S-289) acusou `aria-hidden-focus`: o menu modal do Radix esconde o resto da página com `aria-hidden` e o deixa focável — e o axe só perdoa isso para `dialog` com `aria-modal` | B-45 | 2026-10-01 · **não**: `ContextMenu` de `shared/components/ui/context-menu.tsx` passa a `modal={false}` por padrão (`// CUSTOM:`), o que vale para a árvore, as abas do editor, as abas de pasta e as pastas recentes. O padrão de menu do WAI-ARIA não esconde a página; clique fora e `Esc` continuam fechando, e o foco continua entrando e voltando. Os `DropdownMenu` ficam como estão — fora do escopo do S-289, sem medição | ✅ |
+| D-22 | O tema escuro do editor é o `vs-dark` do Monaco? | o axe (S-289, tema escuro) mediu o comentário do `vs-dark` (`#608b4e` em `#1e1e1e`) em 4,2:1, abaixo dos 4,5:1 do AA | B-45 | 2026-10-01 · **não**: um tema `remote-claude-dark` herda o `vs-dark` e troca só o comentário pelo verde do Dark+ do VS Code (`#6A9955`, 5,0:1); o claro continua `vs`. O teste unitário do engine mede o contraste | ✅ |
+| D-23 | Como o e2e prova que desfazer o turno do Claude preserva a edição humana (S-285), se o único arquivo do turno foi editado depois | a confirmação da tela não oferece um desfazer que não faria nada (plano 04 · S-38): com o único arquivo preservado, o botão fica desabilitado | B-44 | 2026-10-01 · a tela prova o que diz **antes** — o arquivo em "Ficam como estão" com o motivo `modifiedOutside`, "nada mudaria" e o botão desabilitado —, e o desfazer é pedido assim mesmo por um socket da suíte, como outro dispositivo faria: o `session.rewound` lista o arquivo em `preserved` com `modifiedOutside`, a região "Último desfazer" da tela o mostra em "Mantidos como estavam", e o disco guarda a edição humana | ✅ |
 
 ---
 
@@ -447,6 +474,7 @@ não fronteira.
 |---|---|---|---|---|---|
 | D-16 | Como baixar arquivo e pasta sem token na URL, e os tetos de download e de upload | quanto um blob aguenta no navegador do celular; se um bilhete de uso único na URL é aceitável — **medir** | B-48, B-49, B-52 | 2026-09-28 · **`fetch` com Bearer → blob**, teto de download configurado (default 200 MB) conhecido antes (`413` no `archive` pelo estimado); `showSaveFilePicker` + stream onde existir; upload com teto por arquivo (default 100 MB), multipart em stream. Bilhete na URL fica como alternativa, só com decisão própria. Decisão do usuário com a recomendação; os tetos são provisórios até medir o blob no celular | ✅ |
 | D-18 | Como servir conteúdo do usuário para prévia sem abrir XSS na origem do app | quais tipos entram na prévia; se o pdf.js local cabe no orçamento de bundle | B-48, B-50 | 2026-09-28 · **`GET /files/raw` sempre com `nosniff` e `CSP: sandbox`**, fora da lista de prévia como `attachment`; a web nunca navega para o `raw` — imagem e SVG por `<img src=blob:>`, PDF pelo pdf.js do nosso build, markdown pelo sanitizador do plano 08; prévia de `.html` é o código-fonte. Decisão do usuário com a recomendação | ✅ |
+| D-26 | Como o e2e passa pelas superfícies nativas do navegador na transferência (S-326, S-360) | o Playwright não responde ao diálogo de `showSaveFilePicker` nem arrasta um arquivo de fora da página; o arrastar do desktop, o seletor de arquivos e o salvar são do navegador | B-54 | 2026-10-01 · **o salvar**: `showSaveFilePicker` é removido antes da página carregar (`addInitScript`), e o download segue o caminho de todo navegador sem ele — link para um blob que a página fez (D-16) —, chegando como `download` do Playwright; o caminho do seletor fica com o teste de integração. **O arrastar**: um `drop` despachado na linha da pasta com um `DataTransfer` da página carregando um `File` — o que o navegador entrega ao soltar um arquivo do desktop; a leitura cai no `transfer.files` (sem `webkitGetAsEntry`), como num navegador sem a API de entradas. **O seletor**: o `filechooser` que "Enviar arquivos aqui…" abre, respondido com `setFiles`. **O teclado**: o foco é posto na linha da pasta (`focus()`), e daí em diante só teclas — `Shift+F10`, a letra do item, `Enter`, a palette, `Alt+Shift+D` | ✅ |
 
 ### D-16 — download sem token na URL, e os tetos
 
@@ -486,6 +514,8 @@ código-fonte, não a página.
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-17 | O que o histórico local guarda, com que teto e retenção, quem vê, e o que acontece quando ele falha | quanto espaço o usuário aceita dar; se a versão salva por uma pessoa pode ser vista por outra da mesma raiz | B-55, B-56, B-57 | 2026-09-28 · **como na seção**: versão anterior a toda escrita humana que perde conteúdo (a do Claude não), metadado em tabela nova e blob por hash no disco do backend, nunca no Postgres; defaults configurados de **50 versões por arquivo, 512 MB, 30 dias**, purga por job; visível a quem alcança a raiz agora, com o autor; falha não impede salvar, impede apagar sem confirmação; restaurar é escrita comum (`file.restored`). Decisão do usuário com a recomendação; ADR-015 (B-55) registra | ✅ |
+| D-24 | Como o e2e prova o conflito do restaurar sobre o que o Claude roteirizado escreveu (S-355) | com o arquivo aberto **e limpo**, o editor recarrega o que o Claude escreveu (S-283) e o restaurar manda o `If-Match` novo — e vai; com o arquivo fechado, a versão atual é lida na hora do restaurar. Nenhum dos dois manda um `If-Match` velho | B-61 | 2026-10-01 · pelo **único caminho em que a tela manda um `If-Match` velho**: o buffer sujo quando o Claude escreve. A versão que a pessoa viu fica no buffer; restaurar pergunta (descarta o não salvo), e a resposta é `412` `FILE_CHANGED` dito com as palavras do restaurar e o trace; o disco guarda o que o Claude escreveu, e o servidor continua com **uma** versão (nada guardado, nada escrito) | ✅ |
+| D-25 | O que fazer com S-281 e S-282 (F6), escritos antes da F8 mudar o apagar | com a B-58, apagar o que cabe no histórico não pergunta mais: o e2e da F6 esperava o diálogo "Apagar … de vez?" para um arquivo e para uma pasta de 4 entradas, e quebrou | B-61 | 2026-10-01 · o comportamento é o da [D-06](#f2--file-write) em sua segunda etapa, não um bug: o S-281 passa a esperar o aviso "… was deleted. It is kept in the local history." e nenhum diálogo; o S-282 continua provando o diálogo com a contagem, agora numa pasta que o histórico **não** guarda — um arquivo esparso de `historyMaxFileBytes + 1` (lido de `GET /files/limits`) dentro dela, e o primeiro passo diz por quê (`whyTooLarge`). Os helpers comuns dos specs foram para `e2e/fixtures/explorer.ts`, `page-checks.ts` e `history.ts` (`pnpm lint:dup` 0 clones) | ✅ |
 
 ### D-17 — o histórico local
 

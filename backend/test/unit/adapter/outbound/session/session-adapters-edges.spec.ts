@@ -14,6 +14,7 @@ import { SessionHub } from '@infra/websocket/session-hub';
 import { runWithTrace } from '@shared/logging/trace-context';
 import { FixedClock } from '../../../../support/fakes/fixed-clock';
 import { RecordingLogger } from '../../../../support/fakes/recording-logger';
+import { RecordingSessionFileEvents } from '../../../../support/fakes/recording-session-file-events';
 import { SequentialIds } from '../../../../support/fakes/sequential-ids';
 
 const sessionId = SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ');
@@ -48,6 +49,7 @@ describe('DiskSessionFileJournal, at its edges', () => {
       store,
       new FixedClock(now),
       new RecordingLogger().logger,
+      new RecordingSessionFileEvents(),
     );
 
   it('records a file it could not read as not restorable', () => {

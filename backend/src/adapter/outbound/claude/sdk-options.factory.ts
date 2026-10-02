@@ -78,6 +78,16 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
     // The JSONL is shared with the editor: it is what lets a phone continue what a desktop began.
     persistSession: true,
 
+    // Thinking is shown, folded (plan 08, D-17), and by default it comes **omitted** — a block with
+    // no text, measured. Summarised is what gives the panel something to show; adaptive is what the
+    // CLI does anyway on a model that has it, and an older one takes the option too (discovery §10.7).
+    thinking: { type: 'adaptive', display: 'summarized' },
+
+    // A subagent's text and thinking, not only its tools, with `parent_tool_use_id` — what lets the
+    // panel nest it under the tool that opened it (D-15). One that reads a file costs a handful of
+    // messages, measured: the replay buffer is not at risk.
+    forwardSubagentText: true,
+
     // The user's own `/rewind` in the editor. Our undo does not depend on it — `rewindFiles()`
     // overwrites manual edits in silence and takes no file filter, so the snapshot store is ours.
     enableFileCheckpointing: true,
@@ -85,7 +95,11 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
     maxBudgetUsd: input.limits.maxBudgetUsd,
     maxTurns: input.limits.maxTurns,
     abortController: input.abortController,
-    env: { ...input.environment },
+    // The task list (plan 08, D-25): since CLI 2.1.268 it is offered only to models up to Opus 4.7,
+    // and this turns it on for every model. Which tool keeps it — `TodoWrite` or the `Task*` — is
+    // `CLAUDE_CODE_ENABLE_TASKS`, left to the environment — absent, the current `Task*`; `0`, the
+    // older `TodoWrite` (documented in `.env.example`). The panel reads both.
+    env: { ...input.environment, CLAUDE_CODE_ENABLE_TODO_TOOLS: '1' },
 
     // Read rather than dropped: it is the only channel on which the SDK reports that one of our
     // own options shadowed the permission callback.

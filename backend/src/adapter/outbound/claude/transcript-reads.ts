@@ -24,6 +24,15 @@ export interface TranscriptReadLimits {
 
   /** How long a read may take before the caller stops waiting for it. */
   readonly timeoutMs: number;
+
+  /**
+   * How long a listing of the **whole** store is served again before it is read anew.
+   *
+   * Only the "include subfolders" filter reads the whole store (plan 08, D-05), at ~281 ms for 298
+   * sessions measured, and the view that asks for it polls. Short, because a conversation written in
+   * between shows up that much later — and nothing about a listing gets worse with time but that.
+   */
+  readonly wholeStoreTtlMs: number;
 }
 
 /**
@@ -39,6 +48,7 @@ export const TRANSCRIPT_READ_LIMITS: TranscriptReadLimits = {
   cachedSessions: 16,
   concurrentReads: 2,
   timeoutMs: 10_000,
+  wholeStoreTtlMs: 2_000,
 };
 
 export const TRANSCRIPT_LIMITS = Symbol('TranscriptReadLimits');
@@ -163,6 +173,54 @@ export class TranscriptCache<T> {
       }
 
       this.entries.delete(oldest);
+    }
+  }
+}
+
+/**
+ * One read of a listing at a time, per key — and, for a while after it, the same answer.
+ *
+ * Two callers asking for the same listing together share one read of the store (plan 08, S-31): a
+ * folder open in two tabs polls it twice, and the second poll would otherwise pay for the first. A
+ * `ttlMs` of zero shares only what is in flight; above zero, the answer is also served again until
+ * it is that old. A read that fails is never kept.
+ */
+export class SharedListing<T> {
+  private readonly flights = new Map<string, Promise<T>>();
+  private readonly answers = new Map<string, { readonly at: number; readonly value: T }>();
+
+  constructor(
+    private readonly ttlMs: number,
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  /** The answer for `key`: kept, in flight, or what `read` produces. */
+  async read(
+    key: string,
+    read: () => Promise<T>,
+  ): Promise<{ readonly value: T; readonly hit: boolean }> {
+    const kept = this.answers.get(key);
+
+    if (kept !== undefined && this.now() - kept.at < this.ttlMs) {
+      return { value: kept.value, hit: true };
+    }
+
+    const flying = this.flights.get(key);
+    if (flying !== undefined) {
+      return { value: await flying, hit: true };
+    }
+
+    const started = read();
+    this.flights.set(key, started);
+
+    try {
+      const value = await started;
+      if (this.ttlMs > 0) {
+        this.answers.set(key, { at: this.now(), value });
+      }
+      return { value, hit: false };
+    } finally {
+      this.flights.delete(key);
     }
   }
 }

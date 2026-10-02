@@ -106,6 +106,7 @@ describe('StartSessionUseCase', () => {
         permissionMode: null,
         resumeSessionId: null,
         userId: owner,
+        openedFrom: 'web',
       })
     ).session;
 
@@ -134,9 +135,12 @@ describe('StartSessionUseCase', () => {
       permissionMode: 'plan',
       resumeSessionId: null,
       userId: owner,
+      openedFrom: 'mobile',
     });
 
     expect(session.model).toBe('claude-opus-5');
+    // Plan 08, B-07: the list of live sessions says which client opened each one.
+    expect(session.openedFrom).toBe('mobile');
     expect(claude.starts[0]?.permissionMode).toBe('plan');
   });
 
@@ -203,6 +207,7 @@ describe('StartSessionUseCase', () => {
         permissionMode: null,
         resumeSessionId,
         userId: overrides.userId ?? owner,
+        openedFrom: 'web',
       });
 
     beforeEach(() => {

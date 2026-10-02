@@ -7,6 +7,12 @@ import request from 'supertest';
 
 import { historicalEvents } from '@adapter/outbound/claude/sdk-message.mapper';
 import { TRANSCRIPT_SDK } from '@adapter/outbound/claude/transcript-sdk';
+import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
+import {
+  TRANSCRIPT_LIMITS,
+  TRANSCRIPT_READ_LIMITS,
+} from '@adapter/outbound/claude/transcript-reads';
 import { SESSION_ORIGIN_REPOSITORY } from '@application/session';
 import type { SessionOriginRepository } from '@application/session';
 import { UserId } from '@domain/auth';
@@ -19,6 +25,8 @@ import {
   capturedTranscript,
   ScriptedTranscripts,
 } from '../../../../fakes/agent-sdk/scripted-transcripts';
+import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
+import { commandFrame, TestSocket } from '../../../../support/app/ws-client';
 import { startPostgres } from '../../../../support/containers/postgres';
 import type { DisposablePostgres } from '../../../../support/containers/postgres';
 import { startIdentityServer } from '../../../../support/identity/identity-server';
@@ -76,11 +84,24 @@ describe('the transcript HTTP surface', () => {
       // Replaced through a mutable holder rather than a value: every test gets a fresh store, and
       // the container is built once.
       (builder) =>
-        builder.overrideProvider(TRANSCRIPT_SDK).useValue({
-          listSessions: (options: never) => store.listSessions(options),
-          getSessionInfo: (id: string) => store.getSessionInfo(id),
-          getSessionMessages: (id: string) => store.getSessionMessages(id),
-        }),
+        builder
+          .overrideProvider(TRANSCRIPT_SDK)
+          .useValue({
+            listSessions: (options: never) => store.listSessions(options),
+            getSessionInfo: (id: string) => store.getSessionInfo(id),
+            getSessionMessages: (id: string) => store.getSessionMessages(id),
+            listSubagents: (id: string) => store.listSubagents(id),
+            getSubagentMessages: (id: string, agent: string) =>
+              store.getSubagentMessages(id, agent),
+          })
+          // Every test gets a store of its own: a whole store kept from the previous one would be
+          // somebody else's history. The keeping itself has a test of its own, in the adapter's.
+          .overrideProvider(TRANSCRIPT_LIMITS)
+          .useValue({ ...TRANSCRIPT_READ_LIMITS, wholeStoreTtlMs: 0 })
+          // A session that stays alive and says nothing: what makes a conversation `liveHere`.
+          .overrideProvider(QUERY_FACTORY)
+          .useValue(((params) =>
+            scriptedSdk({ silent: true }).createQuery(params)) as QueryFactory),
       allowlist,
     );
     token = await identity.accessToken({ subject: SUBJECT });
@@ -188,6 +209,9 @@ describe('the transcript HTTP surface', () => {
             gitBranch: null,
             createdAt: null,
             lastModified: new Date(2_000).toISOString(),
+            activity: 'idle',
+            liveSessionId: null,
+            writtenAgoSeconds: expect.any(Number),
           },
           expect.objectContaining({ sessionId: external, origin: 'external' }),
         ],
@@ -274,6 +298,214 @@ describe('the transcript HTTP surface', () => {
         messageKey: 'transcript.error.claudeUnavailable',
       });
       expect(response.text).not.toContain('EACCES');
+    });
+  });
+
+  /** Plan 08, B-08 — what each conversation is doing, and the folders below the one asked about. */
+  describe('the activity of the history', () => {
+    const open: TestSocket[] = [];
+
+    afterAll(() => {
+      for (const socket of open) {
+        socket.close();
+      }
+    });
+
+    /** Opens a session on the suite's root over a real socket, and answers its conversation. */
+    async function liveConversation(): Promise<{ sessionId: string; conversation: string }> {
+      const socket = await TestSocket.open(harness.url);
+      open.push(socket);
+      socket.send(
+        commandFrame('connection.authenticate', {
+          token,
+          locale: 'en',
+          client: { kind: 'web', version: '0.0.0' },
+        }),
+      );
+      await socket.next();
+      socket.send(commandFrame('session.start', { workspacePath: allowlist.root }));
+
+      for (let taken = 0; taken < 50; taken += 1) {
+        const frame = await socket.next();
+        if (frame.type === 'session.started') {
+          return {
+            sessionId: String(frame.payload?.['sessionId']),
+            conversation: String(frame.payload?.['claudeSessionId']),
+          };
+        }
+      }
+      throw new Error('no session.started');
+    }
+
+    it('says live here, active elsewhere or idle, by the backend’s clock — S-25', async () => {
+      const recent = conversation(7, { lastModified: Date.now() - 5_000 });
+      const old = conversation(8, { lastModified: Date.now() - 3_600_000 });
+
+      const sessions = (await list()).body.sessions as { sessionId: string; activity: string }[];
+
+      expect(sessions.find((row) => row.sessionId === recent)?.activity).toBe('activeElsewhere');
+      expect(sessions.find((row) => row.sessionId === old)?.activity).toBe('idle');
+    });
+
+    it('names the live session that holds a conversation of the caller — S-27', async () => {
+      const live = await liveConversation();
+      store.add({
+        sessionId: live.conversation,
+        directory: allowlist.root,
+        cwd: allowlist.root,
+        lastModified: Date.now(),
+      });
+
+      const row = ((await list()).body.sessions as Record<string, unknown>[]).find(
+        (entry) => entry['sessionId'] === live.conversation,
+      );
+
+      expect(row).toMatchObject({
+        origin: 'ours',
+        activity: 'liveHere',
+        liveSessionId: live.sessionId,
+      });
+    });
+
+    it('with the subfolders, lists what ran below the folder, and only that — D-05', async () => {
+      const below = path.join(allowlist.root, 'backend');
+      store
+        .add({
+          sessionId: conversationId(21),
+          directory: below,
+          cwd: below,
+          lastModified: (written += 1_000),
+        })
+        .add({
+          sessionId: conversationId(22),
+          directory: `${allowlist.root}-old`,
+          cwd: `${allowlist.root}-old`,
+          lastModified: (written += 1_000),
+        });
+
+      const exact = await list();
+      const deep = await list({ includeSubfolders: 'true' });
+
+      expect((exact.body.sessions as unknown[]).length).toBe(0);
+      expect((deep.body.sessions as { sessionId: string }[]).map((row) => row.sessionId)).toEqual([
+        conversationId(21),
+      ]);
+      expect(store.calls.listSessions.at(-1)).toEqual({ includeWorktrees: false });
+    });
+
+    it('brings nothing from a subfolder whose real path leaves the root — S-29', async () => {
+      // The CLI records the real path of its process: a subfolder that links out records where it
+      // points, which is outside every root of the caller.
+      store.add({
+        sessionId: conversationId(23),
+        directory: allowlist.theirs,
+        cwd: allowlist.theirs,
+        lastModified: (written += 1_000),
+      });
+
+      expect((await list({ includeSubfolders: 'true' })).body.sessions).toEqual([]);
+    });
+
+    it('keeps the cursor stable under a concurrent write, with the subfolders — S-30', async () => {
+      const below = path.join(allowlist.root, 'pages');
+      for (const n of [31, 32, 33]) {
+        store.add({
+          sessionId: conversationId(n),
+          directory: below,
+          cwd: below,
+          lastModified: (written += 1_000),
+        });
+      }
+
+      const first = await list({ includeSubfolders: 'true', limit: '2' });
+      // The newest one is written again between the two pages: it moves up, above what was read.
+      store.append(conversationId(33), [], (written += 1_000));
+      const second = await list({
+        includeSubfolders: 'true',
+        limit: '2',
+        cursor: String(first.body.nextCursor),
+      });
+
+      const ids = [...first.body.sessions, ...second.body.sessions].map(
+        (row: { sessionId: string }) => row.sessionId,
+      );
+      expect(ids).toEqual([conversationId(33), conversationId(32), conversationId(31)]);
+    });
+
+    it('answers CLAUDE_UNAVAILABLE for the history while the live sessions still answer — S-32', async () => {
+      store.failWith = new Error('the store is gone');
+
+      const history = await list();
+      const live = await http()
+        .get('/sessions')
+        .query({ workspacePath: allowlist.root })
+        .set('authorization', `Bearer ${token}`);
+
+      expect([history.status, history.body.error.code]).toEqual([502, 'CLAUDE_UNAVAILABLE']);
+      expect(live.status).toBe(200);
+    });
+  });
+
+  /** Plan 08, B-21 — what a subagent said, loaded when its tool is unfolded. */
+  describe('the task list of a conversation — plan 08, B-20', () => {
+    it('reads back the id of every task created, from the text the store kept — S-87', async () => {
+      const id = conversationId(80);
+      store.add({
+        sessionId: id,
+        directory: allowlist.root,
+        cwd: allowlist.root,
+        lastModified: (written += 1_000),
+        messages: capturedTranscript('task-tools-turn'),
+      });
+
+      const response = await read(id, { limit: '100' });
+      const events = response.body.events as { type: string; payload: Record<string, unknown> }[];
+
+      expect(response.status).toBe(200);
+      expect(
+        events
+          .filter((event) => event.type === 'tool.completed' && 'taskId' in event.payload)
+          .map((event) => event.payload['taskId']),
+      ).toEqual(['1', '2', '3']);
+    });
+  });
+
+  describe('a subagent of a conversation', () => {
+    const subagent = (id: string, tool: string, as: string | null = token): request.Test => {
+      const call = http().get(`/transcripts/${id}/subagents/${tool}/messages`);
+      return as === null ? call : call.set('authorization', `Bearer ${as}`);
+    };
+
+    it('answers what the subagent of a tool said, nested under it — S-90', async () => {
+      const id = conversation(51);
+      const nested = capturedTranscript('task-subagent-turn').filter(
+        (message) => message.parent_tool_use_id !== null,
+      );
+      const tool = String(nested[0]?.parent_tool_use_id);
+      store.addSubagent(id, 'agent-1', nested);
+
+      const response = await subagent(id, tool);
+
+      expect(response.status).toBe(200);
+      expect(response.body.events.length).toBeGreaterThan(0);
+      expect(
+        (response.body.events as { payload: Record<string, unknown> }[]).every(
+          (event) => event.payload['parentToolUseId'] === tool,
+        ),
+      ).toBe(true);
+    });
+
+    it('answers 404 for a conversation the caller does not read, and for a tool with no subagent — S-91', async () => {
+      const theirs = conversation(52, { cwd: allowlist.theirs });
+      store.addSubagent(theirs, 'agent-1', capturedTranscript('task-subagent-turn'));
+      const mine = conversation(53);
+
+      expect((await subagent(theirs, 'toolu_x')).status).toBe(404);
+      expect((await subagent(mine, 'toolu_none')).status).toBe(404);
+    });
+
+    it('answers 400 for a tool id this server cannot name', async () => {
+      expect((await subagent(conversation(54), 'not%20one')).status).toBe(400);
     });
   });
 

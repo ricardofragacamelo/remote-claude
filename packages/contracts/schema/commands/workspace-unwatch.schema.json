@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/workspace-unwatch.json",
+  "title": "WorkspaceUnwatch",
+  "description": "Stops following a folder. Idempotent: a subscription that already ended — or never was this connection's — is acknowledged all the same, because a client that unwatches as it closes a tab races its own reconnection.",
+  "x-kind": "command",
+  "x-type": "workspace.unwatch",
+  "type": "object",
+  "required": ["watchId"],
+  "properties": {
+    "watchId": {
+      "type": "string",
+      "description": "The subscription, as `workspace.watching` named it."
+    }
+  }
+}

@@ -18,14 +18,25 @@ import 'package:remote_claude/features/session/domain/entities/conversation.dart
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 
+/// The type prefixes of the streams that are not a session.
+///
+/// `seq` is monotonic **per stream** — a session, or a subscription such as the watch of a folder
+/// (docs/architecture/shared/05-websocket-protocol.md#envelope). A `workspace.filesChanged`
+/// numbers its watch, never a session: read as an unknown event of the session it would move the
+/// session's resume point past events the session never sent, and the next reconnection would ask
+/// for a replay that skips them (plan 07, B-05). This app never watches a folder, so these frames
+/// only ever reach it by mistake — and are ignored.
+const List<String> _otherStreams = <String>['workspace.'];
+
 /// The event in [frame], or `null` when the frame is not part of a session's history.
 ///
 /// A frame with no `seq` is not: a question is asked, not recorded, and it belongs to the
-/// permission queue rather than to the transcript.
+/// permission queue rather than to the transcript. Neither is a frame of another stream, whatever
+/// its `seq` says.
 SessionEvent? sessionEventFrom(Envelope frame) {
   final int? seq = frame.seq;
 
-  if (seq == null) {
+  if (seq == null || _otherStreams.any(frame.type.startsWith)) {
     return null;
   }
 
@@ -128,15 +139,27 @@ SessionEvent _fragment(int seq, Map<String, Object?> payload) {
   final String? messageId = _text(payload, 'messageId');
   final String? delta = _text(payload, 'delta');
 
-  return messageId == null || delta == null
+  return messageId == null || delta == null || !_isAnswer(payload)
       ? UnreadEvent(seq)
       : MessageFragment(seq, messageId: messageId, delta: delta);
+}
+
+/// Whether a fragment or a message is the answer of the main conversation.
+///
+/// Thinking and what a subagent says reach the web panel, which folds the one and nests the other
+/// (plan 08, B-02); this app shows neither. Read as the answer, a thinking fragment would put the
+/// model's reasoning into the reply on screen, and a subagent's text would interleave with it.
+/// Neither is dropped from the numbering: the event is unread, and its `seq` still moves past.
+bool _isAnswer(Map<String, Object?> payload) {
+  final String blockType = _text(payload, 'blockType') ?? 'text';
+
+  return blockType == 'text' && payload['parentToolUseId'] == null;
 }
 
 SessionEvent _finished(int seq, Map<String, Object?> payload) {
   final String? messageId = _text(payload, 'messageId');
 
-  if (messageId == null) {
+  if (messageId == null || !_isAnswer(payload)) {
     return UnreadEvent(seq);
   }
 

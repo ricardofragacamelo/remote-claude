@@ -24,7 +24,7 @@ guarda cópia de conteúdo humano no backend, o que pede registro na ADR-015
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-55 — O contrato do histórico, e a ADR 🔲
+### B-55 — O contrato do histórico, e a ADR ✅
 
 No `backend/03` (seção `files`): `GET /files/history?folder=&path=` (versões de um arquivo, mais novas
 primeiro, com cursor), `GET /files/history?folder=&deleted=true` (apagados recentemente),
@@ -35,7 +35,7 @@ guardar cópia de conteúdo humano, com teto, retenção, quem vê e por quê. N
 [backend/05](../../architecture/backend/05-persistence.md#o-que-vai-no-banco-e-o-que-não-vai), a
 tabela nova e a razão de o conteúdo ficar em blob no disco.
 
-### B-56 — O store 🔲
+### B-56 — O store ✅
 
 Pela [D-17](decisions.md#d-17--o-histórico-local): tabela `file_history_entries` (pasta, caminho,
 hash, tamanho, motivo, quem, quando — nenhuma coluna de conteúdo) e blobs no disco do backend
@@ -44,7 +44,7 @@ por idade, configurados; arquivo acima do teto de snapshot não entra, e a entra
 é um job interno no molde do `SnapshotPurgeJob` do desfazer, sob advisory lock (duas purgas não
 perdem nem duplicam), e nunca apaga blob que outra entrada ainda usa.
 
-### B-57 — Guardar antes de sobrescrever 🔲
+### B-57 — Guardar antes de sobrescrever ✅
 
 A escrita da F2 ganha um passo **antes** do disco: salvar, apagar, mover por cima, restaurar e upload
 com substituição guardam a versão que vai ser perdida. A falha do histórico **não** impede salvar
@@ -52,7 +52,7 @@ com substituição guardam a versão que vai ser perdida. A falha do histórico 
 definitivo da [D-06](decisions.md#d-06--apagar-definitivo-ou-lixeira) — nunca apaga achando que tem
 volta. Escrita do Claude não entra: já tem o store do desfazer da sessão.
 
-### B-58 — Restaurar, e desfazer o apagar 🔲
+### B-58 — Restaurar, e desfazer o apagar ✅
 
 Restaurar é uma escrita comum: `If-Match` do atual (412 se mudou — inclusive pelo Claude), a versão
 atual guardada antes, `file.restored` na trilha antes do disco; restaurar duas vezes a mesma entrada
@@ -61,7 +61,7 @@ ocupado). Na web, apagar o que cabe no histórico deixa de abrir o diálogo: o a
 notificações do plano 06 traz **Desfazer**, que restaura todos os itens do lote; o que não cabe
 continua com a contagem e o segundo passo.
 
-### B-59 — A Linha do tempo 🔲
+### B-59 — A Linha do tempo ✅
 
 Uma seção "Linha do tempo" no Explorer para o arquivo ativo: versões com motivo, autor e quando,
 mais novas primeiro, paginadas e filtráveis por motivo; comparar uma versão com o atual (aba de diff)
@@ -70,13 +70,13 @@ alcança o histórico de arquivo que não existe mais. Arquivo sem histórico mo
 quando o histórico nasce. É só o histórico local — o git ficou fora dos planos por decisão do usuário
 de 2026-09-26.
 
-### B-60 — Usabilidade e ajuda da Linha do tempo 🔲
+### B-60 — Usabilidade e ajuda da Linha do tempo ✅
 
 Ajuda em en e pt-BR: o que é guardado e o que não é (escrita do Claude), o teto e a retenção, e que
 isto **não** é git nem o desfazer do Claude — três coisas que o usuário confunde se ninguém disser.
 Teclado, atalhos na palette e axe sem violação.
 
-### B-61 — E2e do histórico local 🔲
+### B-61 — E2e do histórico local ✅
 
 Salvar três vezes → três versões → comparar → restaurar; apagar arquivo → aviso com Desfazer → o
 arquivo volta, e a Auditoria mostra os dois fatos; restaurar com o arquivo mudado pelo Claude

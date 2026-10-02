@@ -155,12 +155,20 @@ function toEntry(directory: WorkspacePath, child: DirectoryChild): DirectoryEntr
 const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
 
 function byName(left: DirectoryEntry, right: DirectoryEntry): number {
-  const natural = collator.compare(left.name, right.name);
+  return compareNames(left.name, right.name);
+}
+
+/**
+ * The order two names of one directory list in — the picker's here, and the explorer's tree in
+ * `files`, so the two never sort the same folder differently.
+ */
+export function compareNames(left: string, right: string): number {
+  const natural = collator.compare(left, right);
 
   if (natural !== 0) {
     return natural;
   }
 
   // Two children of one directory never share a name, so this never answers "equal".
-  return left.name < right.name ? -1 : 1;
+  return left < right ? -1 : 1;
 }

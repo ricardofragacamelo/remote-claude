@@ -87,7 +87,7 @@ function DesktopShell({ folder, claude }: FolderShellProps): React.JSX.Element {
               onLayoutChanged={rowsChanged}
             >
               <ResizablePanel id="editor" minSize="20">
-                <EditorArea />
+                <EditorArea folder={folder} />
               </ResizablePanel>
               <ResizableHandle />
               <ResizablePanel id="panel" {...bounds(LAYOUT_LIMITS.panel)}>
@@ -95,7 +95,7 @@ function DesktopShell({ folder, claude }: FolderShellProps): React.JSX.Element {
               </ResizablePanel>
             </ResizablePanelGroup>
           ) : (
-            <EditorArea />
+            <EditorArea folder={folder} />
           )}
         </ResizablePanel>
 
@@ -120,7 +120,7 @@ function PhoneShell({ folder, claude }: FolderShellProps): React.JSX.Element {
         <SideBar folder={folder} view={view} />
       </div>
     ),
-    editor: <EditorArea />,
+    editor: <EditorArea folder={folder} />,
     claude: <SecondarySideBar>{claude}</SecondarySideBar>,
     panel: <BottomPanel folder={folder} />,
   };

@@ -23,6 +23,13 @@ export interface TranscriptStore {
   list(directory: string): Promise<readonly TranscriptSession[]>;
 
   /**
+   * Every session of the store — for the "include subfolders" filter alone (plan 08, D-05), which
+   * then keeps what ran inside the folder by its `cwd`. ~281 ms for 298 sessions, measured: the
+   * implementation holds the answer for a short while, and two callers at once share one read.
+   */
+  listAll(): Promise<readonly TranscriptSession[]>;
+
+  /**
    * One session, or `null` when no transcript has that id.
    *
    * It is what tells "empty" from "absent": the messages come back `[]` in both cases, and only
@@ -38,6 +45,19 @@ export interface TranscriptStore {
    * by `session.id` and `session.lastModified` (S-64).
    */
   messages(session: TranscriptSession): Promise<readonly TranscriptMessage[]>;
+
+  /**
+   * Every message of the subagent the tool `toolUseId` opened, oldest first, as events of our
+   * contract — or `null` when the conversation has no subagent of that tool (plan 08, B-21).
+   *
+   * By the tool and not by the subagent's own id: the tool is what the conversation names, and the
+   * id of the subagent is said only in the text of its result. The SDK lists the subagents, and the
+   * one whose messages hang off that tool is it.
+   */
+  subagentMessages(
+    session: TranscriptSession,
+    toolUseId: string,
+  ): Promise<readonly TranscriptMessage[] | null>;
 }
 
 export const TRANSCRIPT_STORE = Symbol('TranscriptStore');

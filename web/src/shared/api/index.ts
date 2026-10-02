@@ -5,3 +5,11 @@ export { AppError, toAppError, toTransportError } from './errors';
 export type { AppErrorDetail } from './errors';
 export { WsClient } from './ws-client';
 export type { ConnectionStatus, SessionSubscriber, SocketLike } from './ws-client';
+export { createFolderWatches } from './folder-watches';
+export type {
+  FolderChange,
+  FolderWatches,
+  FolderWatchSubscriber,
+  WatchRefusal,
+  WatchStopReason,
+} from './folder-watches';

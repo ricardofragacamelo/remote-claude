@@ -17,7 +17,7 @@ import { RecordingLogger } from '../../../../support/fakes/recording-logger';
 import { conversationId } from '../../../../support/builders/transcript.builder';
 
 const DIRECTORY = '/srv/projects/app';
-const limits = { cachedSessions: 4, concurrentReads: 2, timeoutMs: 5_000 };
+const limits = { cachedSessions: 4, concurrentReads: 2, timeoutMs: 5_000, wholeStoreTtlMs: 0 };
 
 describe('AgentSdkTranscriptAdapter', () => {
   let sdk: ScriptedTranscripts;
@@ -39,12 +39,115 @@ describe('AgentSdkTranscriptAdapter', () => {
         listSessions: (options) => sdk.listSessions(options),
         getSessionInfo: (id) => sdk.getSessionInfo(id),
         getSessionMessages: (id) => sdk.getSessionMessages(id),
+        listSubagents: (id) => sdk.listSubagents(id),
+        getSubagentMessages: (id, agent) => sdk.getSubagentMessages(id, agent),
         ...overrides,
       },
       limits,
       scheduler,
       log.logger,
     );
+
+  describe('listing the whole store, and sharing a listing — plan 08, D-05 and S-31', () => {
+    it('lists every directory of the store, still without worktrees', async () => {
+      sdk
+        .add({ sessionId: conversationId(1), directory: DIRECTORY, cwd: DIRECTORY })
+        .add({
+          sessionId: conversationId(2),
+          directory: `${DIRECTORY}/backend`,
+          cwd: `${DIRECTORY}/backend`,
+        })
+        .add({ sessionId: conversationId(3), directory: DIRECTORY, cwd: '/wt', worktree: true });
+
+      const sessions = await adapter.listAll();
+
+      expect(sdk.calls.listSessions).toEqual([{ includeWorktrees: false }]);
+      expect(sessions.map((session) => session.id.value).sort()).toEqual(
+        [conversationId(1), conversationId(2)].sort(),
+      );
+    });
+
+    it('reads the store once when the same folder is asked for twice at the same time', async () => {
+      sdk.add({ sessionId: conversationId(1), directory: DIRECTORY, cwd: DIRECTORY });
+
+      const [first, second] = await Promise.all([adapter.list(DIRECTORY), adapter.list(DIRECTORY)]);
+
+      expect(first).toBe(second);
+      expect(sdk.calls.listSessions).toHaveLength(1);
+      expect(log.lines.filter((line) => line['shared'] === true)).toHaveLength(1);
+    });
+
+    it('keeps the whole store for as long as the installation says, and reads it again after', async () => {
+      const kept = new AgentSdkTranscriptAdapter(
+        sdk,
+        { ...limits, wholeStoreTtlMs: 60_000 },
+        scheduler,
+        log.logger,
+      );
+
+      await kept.listAll();
+      await kept.listAll();
+
+      expect(sdk.calls.listSessions).toHaveLength(1);
+    });
+
+    it('translates a failure of the whole store like any other read', async () => {
+      sdk.failWith = new Error('store gone');
+
+      await expect(adapter.listAll()).rejects.toThrow(TranscriptUnavailableError);
+    });
+  });
+
+  /** Plan 08, B-21 — a subagent, found by the tool that opened it. */
+  describe('reading a subagent', () => {
+    const session = () => ({
+      id: ClaudeSessionId.create(conversationId(1)),
+      summary: '',
+      cwd: DIRECTORY,
+      gitBranch: null,
+      createdAt: null,
+      lastModified: 1,
+    });
+    const nested = capturedTranscript('task-subagent-turn').filter(
+      (message) => message.parent_tool_use_id !== null,
+    );
+    const tool = String(nested[0]?.parent_tool_use_id);
+
+    it('finds the subagent whose messages hang off the tool, and reads them as our events', async () => {
+      sdk
+        .addSubagent(conversationId(1), 'other', [])
+        .addSubagent(conversationId(1), 'agent-1', nested);
+
+      const messages = await adapter.subagentMessages(session(), tool);
+
+      expect(messages?.length).toBe(nested.length);
+      expect(
+        messages
+          ?.flatMap((message) => message.events)
+          .every((event) => event.payload['parentToolUseId'] === tool),
+      ).toBe(true);
+      expect(sdk.calls.getSubagentMessages).toEqual([
+        `${conversationId(1)}/other`,
+        `${conversationId(1)}/agent-1`,
+      ]);
+    });
+
+    it('answers null for a tool that opened none, and does not read the store again for it', async () => {
+      sdk.addSubagent(conversationId(1), 'agent-1', nested);
+
+      expect(await adapter.subagentMessages(session(), 'toolu_none')).toBeNull();
+      expect(await adapter.subagentMessages(session(), 'toolu_none')).toBeNull();
+      expect(sdk.calls.listSubagents).toHaveLength(1);
+    });
+
+    it('translates a failure of the store', async () => {
+      sdk.failWith = new Error('gone');
+
+      await expect(adapter.subagentMessages(session(), tool)).rejects.toThrow(
+        TranscriptUnavailableError,
+      );
+    });
+  });
 
   describe('listing', () => {
     it('asks for exactly one directory, and never for its worktrees — D-01', async () => {

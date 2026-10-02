@@ -40,7 +40,7 @@
     },
     "seq": {
       "type": "integer",
-      "description": "Monotonic per session, on events only. This is what makes replay after a reconnect possible."
+      "description": "Monotonic per stream, on events only — a stream is a session, or a subscription such as a watch of a folder. On a session it is what makes replay after a reconnect possible; a subscription has no replay, and a reconnect subscribes again from 1."
     },
     "payload": { "type": "object", "description": "Contents, defined per `type`." }
   }

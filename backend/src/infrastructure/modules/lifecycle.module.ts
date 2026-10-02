@@ -9,6 +9,7 @@ import { GracefulShutdown } from '../lifecycle/graceful-shutdown';
 import { OrphanSweep } from '../lifecycle/orphan-sweep';
 import { PidFile } from '../lifecycle/pid-file';
 import { ProcfsProcessTable } from '../lifecycle/process-table';
+import { FilesModule } from './files.module';
 import { GatewayModule } from './gateway.module';
 import { SessionModule } from './session.module';
 
@@ -18,7 +19,7 @@ import { SessionModule } from './session.module';
  * development stack finds the process by (plan 06, B-11).
  */
 @Module({
-  imports: [GatewayModule, SessionModule],
+  imports: [FilesModule, GatewayModule, SessionModule],
   providers: [
     {
       provide: OrphanSweep,

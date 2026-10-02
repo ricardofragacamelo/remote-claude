@@ -16,7 +16,13 @@ import type { ConnectionStatus } from '@/shared/api/ws-client';
  */
 export const RESUME_TIMEOUT_MS = 30_000;
 
-/** What the history screen gets to continue a conversation. */
+/** A conversation to continue, and where it ran — a resume runs there too, and nowhere else. */
+export interface ResumeTarget {
+  readonly conversationId: string;
+  readonly workspacePath: string;
+}
+
+/** What a screen gets to continue a conversation. */
 export interface ResumeControl {
   readonly connection: ConnectionStatus;
 
@@ -27,6 +33,19 @@ export interface ResumeControl {
   readonly error: AppError | null;
 
   resume(): void;
+}
+
+/** Continuing any conversation, named when it is asked for — what a list of them needs. */
+export interface Resumer extends Omit<ResumeControl, 'resume'> {
+  /** The conversation the resume in flight, or the last one, was for. */
+  readonly target: ResumeTarget | null;
+  resume(target: ResumeTarget): void;
+}
+
+/** The resume in flight: the command that asked, and the conversation it asked for. */
+interface InFlight {
+  readonly commandId: string;
+  readonly conversationId: string;
 }
 
 /**
@@ -40,53 +59,50 @@ export interface ResumeControl {
  * @param onResumed called once with the live session. It has to be stable across renders, because
  *   the subscription is rebuilt whenever it changes.
  */
-export function useResumeSession(
-  conversation: { readonly conversationId: string; readonly workspacePath: string } | null,
-  onResumed: (sessionId: string) => void,
-): ResumeControl {
+export function useResumer(onResumed: (sessionId: string) => void): Resumer {
   const [connection, setConnection] = useState<ConnectionStatus>('idle');
-  const [pending, setPending] = useState<string | null>(null);
+  const [pending, setPending] = useState<InFlight | null>(null);
+  const [target, setTarget] = useState<ResumeTarget | null>(null);
   const [error, setError] = useState<AppError | null>(null);
 
   // Read from the subscription, which outlives the render that set it.
-  const inFlight = useRef<string | null>(null);
+  const inFlight = useRef<InFlight | null>(null);
 
   useEffect(() => wsClient.onStatus(setConnection), []);
 
-  const conversationId = conversation?.conversationId ?? null;
+  useEffect(
+    () =>
+      wsClient.observe((frame) => {
+        const asked = inFlight.current;
 
-  useEffect(() => {
-    if (conversationId === null) {
-      return;
-    }
+        if (asked === null) {
+          return;
+        }
 
-    return wsClient.observe((frame) => {
-      const commandId = inFlight.current;
+        const answer = resumeAnswer(frame, {
+          conversationId: asked.conversationId,
+          commandId: asked.commandId,
+        });
 
-      if (commandId === null) {
-        return;
-      }
+        if (answer === null) {
+          return;
+        }
 
-      const answer = resumeAnswer(frame, { conversationId, commandId });
+        inFlight.current = null;
+        setPending(null);
 
-      if (answer === null) {
-        return;
-      }
+        if (answer.kind === 'refused') {
+          setError(answer.error);
+          return;
+        }
 
-      inFlight.current = null;
-      setPending(null);
-
-      if (answer.kind === 'refused') {
-        setError(answer.error);
-        return;
-      }
-
-      // A resume lands on the caller's own session — a new one, or the one already live — so it
-      // is this browser's to close, and the screen it moves to has to know that already.
-      useOwnedSessionsStore.getState().claim(answer.sessionId);
-      onResumed(answer.sessionId);
-    });
-  }, [conversationId, onResumed]);
+        // A resume lands on the caller's own session — a new one, or the one already live — so it
+        // is this browser's to close, and the screen it moves to has to know that already.
+        useOwnedSessionsStore.getState().claim(answer.sessionId);
+        onResumed(answer.sessionId);
+      }),
+    [onResumed],
+  );
 
   // The deadline of the resume in flight: armed when it leaves, cleared by its answer.
   useEffect(() => {
@@ -101,7 +117,7 @@ export function useResumeSession(
 
       inFlight.current = null;
       setPending(null);
-      setError(new AppError('RESUME_TIMEOUT', 'session.error.resumeTimeout', pending));
+      setError(new AppError('RESUME_TIMEOUT', 'session.error.resumeTimeout', pending.commandId));
     }, RESUME_TIMEOUT_MS);
 
     return () => {
@@ -109,23 +125,51 @@ export function useResumeSession(
     };
   }, [pending]);
 
-  const resume = useCallback(() => {
-    // A second click while the first is in flight sends nothing: the button is disabled while
-    // `isResuming` holds, and the ref is what holds when two clicks land inside one frame.
-    if (conversation === null || inFlight.current !== null) {
+  const resume = useCallback((next: ResumeTarget) => {
+    // A second press while the first is in flight sends nothing (S-45): the button is disabled
+    // while `isResuming` holds, and the ref is what holds when two presses land inside one frame.
+    if (inFlight.current !== null) {
       return;
     }
 
-    const commandId = resumeSession(
-      wsClient,
-      conversation.workspacePath,
-      conversation.conversationId,
-    );
+    const commandId = resumeSession(wsClient, next.workspacePath, next.conversationId);
 
-    inFlight.current = commandId;
-    setPending(commandId);
+    // The socket was not ready and nothing left: there is nothing to wait for.
+    if (commandId === null) {
+      return;
+    }
+
+    const asked = { commandId, conversationId: next.conversationId };
+
+    inFlight.current = asked;
+    setPending(asked);
+    setTarget(next);
     setError(null);
-  }, [conversation]);
+  }, []);
 
-  return { connection, isResuming: pending !== null, error, resume };
+  return { connection, isResuming: pending !== null, error, target, resume };
+}
+
+/**
+ * Continuing **one** conversation — the panel that reads it, with its button.
+ *
+ * @param conversation the conversation, or `null` while it is not known yet
+ */
+export function useResumeSession(
+  conversation: ResumeTarget | null,
+  onResumed: (sessionId: string) => void,
+): ResumeControl {
+  const resumer = useResumer(onResumed);
+  const { resume } = resumer;
+
+  return {
+    connection: resumer.connection,
+    isResuming: resumer.isResuming,
+    error: resumer.error,
+    resume: useCallback(() => {
+      if (conversation !== null) {
+        resume(conversation);
+      }
+    }, [conversation, resume]),
+  };
 }

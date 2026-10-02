@@ -96,6 +96,9 @@ export class WsClient {
   private wanted = false;
   private readonly subscribers = new Map<string, Set<SessionSubscriber>>();
   private readonly observers = new Set<(frame: Envelope) => void>();
+
+  /** Who wants to hear that a session began or ended, whoever is watching it. */
+  private readonly lifecycleListeners = new Set<(frame: Envelope) => void>();
   private readonly watchers = new Set<(status: ConnectionStatus) => void>();
   private readonly schedule: Scheduler;
   private readonly random: () => number;
@@ -225,6 +228,19 @@ export class WsClient {
   observe(listener: (frame: Envelope) => void): () => void {
     this.observers.add(listener);
     return () => this.observers.delete(listener);
+  }
+
+  /**
+   * Hears every `session.started` and `session.closed` this socket receives — of a session somebody
+   * watches here or of one nobody does yet.
+   *
+   * It exists for the list of sessions of a folder (plan 08, D-10): the list polls, and a session
+   * this client sees begin or end is a reason to ask again **now** rather than at the next tick. It
+   * hears, and changes nothing: the frame still goes where it would have gone.
+   */
+  onSessionLifecycle(listener: (frame: Envelope) => void): () => void {
+    this.lifecycleListeners.add(listener);
+    return () => this.lifecycleListeners.delete(listener);
   }
 
   /** Sends a command. Silently queues nothing: a command sent while down is a command lost. */
@@ -358,9 +374,17 @@ export class WsClient {
       return;
     }
 
+    // The answer to a `workspace.watch` names the subscription, and only the one who sent the
+    // command can tell it is theirs — by `correlationId`, like a refusal.
+    if (parsed.type === 'workspace.watching') {
+      this.notify(parsed);
+      return;
+    }
+
     // An `event` is a fact of the conversation; a `request` is the server asking a question and
     // waiting. Both belong to a session and both go to whoever is watching it.
     if (parsed.kind === 'event' || parsed.kind === 'request') {
+      this.announceLifecycle(parsed);
       this.deliver(parsed);
       return;
     }
@@ -440,6 +464,17 @@ export class WsClient {
 
     for (const subscriber of watching) {
       subscriber.onGap(claudeSessionId);
+    }
+  }
+
+  /** Tells whoever listens that a session began or ended. */
+  private announceLifecycle(frame: Envelope): void {
+    if (frame.type !== 'session.started' && frame.type !== 'session.closed') {
+      return;
+    }
+
+    for (const listener of this.lifecycleListeners) {
+      listener(frame);
     }
   }
 

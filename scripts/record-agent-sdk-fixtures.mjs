@@ -43,11 +43,68 @@ const FIXTURES_DIR = path.join(repoRoot, 'backend', 'test', 'fakes', 'agent-sdk'
 /** How long one scenario may take before it is abandoned. A turn with tools is not fast. */
 const SCENARIO_TIMEOUT_MS = 240_000;
 
+/** A 16×16 red PNG — the image the D-02 spike asks the colour of. */
+const RED_PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFklEQVR4nGO4I2JDEmIY1TCqYfhqAAAeBCwQ8YdREQAAAABJRU5ErkJggg==';
+
+/** How long a run whose prompts are all in waits for a turn that may never come (D-14). */
+const QUIET_MS = 20_000;
+
+/**
+ * Variables a running Claude Code session puts in the environment of what it spawns.
+ *
+ * Recorded from inside one — a terminal of the editor, an agent of Claude Code itself — the CLI the
+ * SDK spawns would read them and behave as that session's child: another entrypoint, its tools and
+ * MCP servers, its own task tools instead of `TodoWrite`, its Bash guards. The recording would then
+ * be of that host, not of the CLI the product runs — measured in plan 08, where every turn of the
+ * first recording carried `entrypoint: claude-vscode`.
+ */
+const PARENT_SESSION_VARIABLES = [
+  'CLAUDECODE',
+  'CLAUDE_PID',
+  'CLAUDE_EFFORT',
+  'CLAUDE_AGENT_SDK_VERSION',
+  'MCP_CONNECTION_NONBLOCKING',
+];
+const PARENT_SESSION_PREFIX = 'CLAUDE_CODE_';
+
+/** The machine's environment, without what a parent Claude Code session put in it. */
+function recordingEnvironment() {
+  return Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([name]) =>
+        !name.startsWith(PARENT_SESSION_PREFIX) && !PARENT_SESSION_VARIABLES.includes(name),
+    ),
+  );
+}
+
+/** How often the transcript of a scenario that watches it is looked at. */
+const TRANSCRIPT_POLL_MS = 250;
+
+/**
+ * One recording: a prompt — or several, as steps — against a throwaway workspace.
+ *
+ * @typedef {object} Scenario
+ * @property {string} name
+ * @property {string} why
+ * @property {string} [prompt] one prompt, one turn
+ * @property {(string | Step)[]} [prompts] several, one turn each — see {@link stepsOf}
+ * @property {Record<string, string>} files what the workspace is seeded with
+ * @property {Record<string, unknown>} [options] options of the query beyond the product's own
+ * @property {Record<string, string>} [env] variables added to the {@link recordingEnvironment} —
+ *   only these are written to the fixture, never the machine's own
+ * @property {boolean} [watchTranscript] measure how long the transcript goes unwritten
+ * @property {number} [quietMs] how long to wait, once every prompt is in, for a result that may
+ *   never come — longer than {@link QUIET_MS} for a turn that is slow by nature, like `/compact`
+ */
+
 /**
  * What gets recorded.
  *
  * Each one exists for a claim the fake has to be able to support. `files` seeds the throwaway
  * workspace so the prompt has something real to act on.
+ *
+ * @type {Scenario[]}
  */
 const SCENARIOS = [
   {
@@ -82,6 +139,179 @@ const SCENARIOS = [
       'Reply with only the absolute path of your current working directory, on one line, ' +
       'and nothing else. Do not use any tool.',
     files: {},
+  },
+
+  // Plan 08, B-06 — the turns the Claude panel draws, and the spikes of its F0 (D-01, D-02, D-06,
+  // D-14, D-15, D-16), which are measured on the same recordings.
+  {
+    name: 'edit-turn',
+    why: 'Edit twice on one file in one turn, Write over an existing file and Write of a new one — what the diffs of plan 08 (F3) are computed from',
+    prompt:
+      "Use the Edit tool to change 'hello' to 'hi' in app.js. Then use the Edit tool again on " +
+      'app.js to change console.log to console.info. Then use the Write tool to overwrite ' +
+      'config.json with exactly {"debug": true} and a newline. Then use the Write tool to create ' +
+      'notes.txt containing the single line: done. Use no other tool and do not ask me anything.',
+    files: {
+      'app.js': "const greeting = 'hello';\nconsole.log(greeting);\n",
+      'config.json': '{"debug": false}\n',
+    },
+  },
+  {
+    name: 'reference-turn',
+    why: 'D-01 — a reference in the delimited form the backend composes: Claude reads it through Read, under PreToolUse',
+    prompt:
+      'Summarise the referenced file in one line.\n\n<reference path="notes.md" lines="1-2" />',
+    files: { 'notes.md': 'Line one says the build is green.\nLine two says the docs are late.\n' },
+  },
+  {
+    name: 'mention-turn',
+    why: 'D-01 — `@path` as the CLI spells a mention: whether the CLI expands it inline, with no Read under PreToolUse',
+    prompt: 'Summarise @notes.md in one line.',
+    files: { 'notes.md': 'Line one says the build is green.\nLine two says the docs are late.\n' },
+  },
+  {
+    name: 'task-subagent-turn',
+    why: 'D-15 — a subagent with forwardSubagentText: its text, thinking and tools carry parent_tool_use_id, and how many events one costs',
+    prompt:
+      'Use the Agent tool with the general-purpose subagent, not in the background, to read ' +
+      'notes.md and report its first line. Do not read the file yourself. Then repeat what the ' +
+      'subagent reported, in one line.',
+    files: { 'notes.md': 'The first line is about apples.\nThe second is about pears.\n' },
+    options: { forwardSubagentText: true },
+  },
+  {
+    name: 'todo-turn',
+    why: 'the task list the panel pins on top: the whole list on every TodoWrite, updated twice',
+    prompt:
+      'Use the TodoWrite tool to record a list of three steps: write a.txt, write b.txt, write ' +
+      'c.txt. Then mark the first one in progress with TodoWrite, write a.txt containing the ' +
+      'letter a with the Write tool, and mark it completed with TodoWrite. Stop there and do not ' +
+      'ask me anything.',
+    files: {},
+  },
+  {
+    name: 'todo-enabled-turn',
+    why: 'the task list with `todoFeatureEnabled`, which the SDK leaves off: what tool keeps the list, and its input',
+    prompt:
+      'Keep a task list with your todo tool: three steps — write a.txt, write b.txt, write c.txt. ' +
+      'Mark the first in progress, write a.txt containing the letter a with the Write tool, then ' +
+      'mark it completed. Stop there and do not ask me anything.',
+    files: {},
+    options: { settings: { todoFeatureEnabled: true } },
+  },
+  {
+    name: 'task-tools-turn',
+    why: 'D-25 — the task tools the CLI 2.1.268+ withholds from models outside its list unless `CLAUDE_CODE_ENABLE_TODO_TOOLS` opts in: TaskCreate and TaskUpdate, one call per change',
+    prompt:
+      'Keep a task list with your task tools: three steps — write a.txt, write b.txt, write c.txt. ' +
+      'Mark the first in progress, write a.txt containing the letter a with the Write tool, then ' +
+      'mark it completed. Stop there and do not ask me anything.',
+    files: {},
+    env: { CLAUDE_CODE_ENABLE_TODO_TOOLS: '1' },
+  },
+  {
+    name: 'todo-write-turn',
+    why: 'D-25 — the same opt-in with `CLAUDE_CODE_ENABLE_TASKS` off, which swaps the task tools for the legacy TodoWrite: the whole list on every call',
+    prompt:
+      'Use the TodoWrite tool to record a list of three steps: write a.txt, write b.txt, write ' +
+      'c.txt. Then mark the first one in progress with TodoWrite, write a.txt containing the ' +
+      'letter a with the Write tool, and mark it completed with TodoWrite. Stop there and do not ' +
+      'ask me anything.',
+    files: {},
+    env: { CLAUDE_CODE_ENABLE_TODO_TOOLS: '1', CLAUDE_CODE_ENABLE_TASKS: '0' },
+  },
+  {
+    name: 'task-tools-listed-model-turn',
+    why: 'D-25 — a model inside the CLI list, with no variable: whether the model picks TodoWrite or the task tools, or only whether there is a list at all',
+    prompt:
+      'Keep a task list with your task tools: three steps — write a.txt, write b.txt, write c.txt. ' +
+      'Mark the first in progress, write a.txt containing the letter a with the Write tool, then ' +
+      'mark it completed. Stop there and do not ask me anything.',
+    files: {},
+    options: { model: 'claude-haiku-4-5' },
+  },
+  {
+    name: 'thinking-summarized-turn',
+    why: 'D-17 — thinking with `display: summarized`, which the installation omits by default: what text the blocks carry',
+    prompt:
+      'Think it through step by step before answering: a train leaves at 14:35 and the trip takes ' +
+      '2 hours 47 minutes. At what time does it arrive? Reply with only the time.',
+    files: {},
+    options: { thinking: { type: 'adaptive', display: 'summarized' } },
+  },
+  {
+    name: 'thinking-other-model-turn',
+    why: 'D-17 — the same summarized thinking asked of a model older than adaptive thinking: whether the option is harmless there',
+    prompt: 'Reply with exactly the word: pong. Do not use any tool.',
+    files: {},
+    options: { model: 'claude-haiku-4-5', thinking: { type: 'adaptive', display: 'summarized' } },
+  },
+  {
+    name: 'plan-turn',
+    why: 'B-22 — in plan mode, ExitPlanMode reaches canUseTool with the plan in its input',
+    prompt:
+      'Plan how you would add a README.md that describes this project in two lines. Do not write ' +
+      'anything yet. When the plan is ready, present it to me with ExitPlanMode.',
+    files: { 'index.js': "console.log('tally');\n" },
+    options: { permissionMode: 'plan' },
+  },
+  {
+    name: 'thinking-turn',
+    why: 'D-17 — what thinking the model of the installation returns by default: blocks, deltas, redaction',
+    prompt:
+      'Think it through step by step before answering: a train leaves at 14:35 and the trip takes ' +
+      '2 hours 47 minutes. At what time does it arrive? Reply with only the time.',
+    files: {},
+  },
+  {
+    name: 'compact-turn',
+    why: '`/compact` after a turn: the compact_boundary that becomes session.compacted',
+    prompts: ['Reply with exactly the word: one. Do not use any tool.', '/compact'],
+    files: {},
+    quietMs: 150_000,
+  },
+  {
+    name: 'image-turn',
+    why: 'D-02 — an image block in the SDKUserMessage of the streaming input: whether the CLI takes it',
+    prompts: [
+      {
+        content: [
+          {
+            type: 'text',
+            text: 'What is the dominant colour of this image? Reply with one lowercase word.',
+          },
+          { type: 'image', source: { type: 'base64', media_type: 'image/png', data: RED_PNG } },
+        ],
+      },
+    ],
+    files: {},
+  },
+  {
+    name: 'effort-turn',
+    why: 'D-16 — applyFlagSettings({ effortLevel }) between two turns of a live session, read off the effort the PreToolUse hook reports',
+    prompts: [
+      'Run `ls` with the Bash tool, then reply with exactly: ok.',
+      { text: 'Run `pwd` with the Bash tool, then reply with exactly: ok.', before: 'effortLow' },
+    ],
+    files: { 'a.txt': 'a\n' },
+  },
+  {
+    name: 'queue-turn',
+    why: 'D-14 — a prompt pushed while a turn runs: whether the SDK folds it into that turn or runs it as its own',
+    prompts: [
+      'Run `sleep 6` with the Bash tool, then reply with exactly: first.',
+      { text: 'Reply with exactly the word: second.', when: 'midTurn' },
+    ],
+    files: {},
+  },
+  {
+    name: 'long-tool-turn',
+    why: 'D-06 — how long a transcript goes unwritten while one tool runs: the window of "active elsewhere"',
+    prompt:
+      'Run exactly this command with the Bash tool, in the foreground and not in the background: ' +
+      'node -e "setTimeout(() => console.log(\'waited\'), 40000)". Then reply with exactly: done.',
+    files: {},
+    watchTranscript: true,
   },
 ];
 
@@ -136,87 +366,311 @@ function makeWorkspace(files) {
 }
 
 /**
+ * The prompts of a scenario, each as a step: what to send, and when.
+ *
+ * A step is a string, or `{ text | content, before?, when? }`: `content` is a list of blocks of the
+ * Messages API (the image of D-02); `before` names an action run on the live query just before the
+ * step is sent (`effortLow`, for D-16); `when: 'midTurn'` sends it while the previous turn is still
+ * running — as soon as that turn announces its first tool — instead of after its result (D-14).
+ *
+ * @typedef {{ text?: string, content?: unknown[], before?: string, when?: 'midTurn' }} Step
+ * @param {Scenario} scenario
+ * @returns {Step[]}
+ */
+function stepsOf(scenario) {
+  const declared = scenario.prompts ?? [String(scenario.prompt)];
+
+  return declared.map((step) => (typeof step === 'string' ? { text: step } : step));
+}
+
+/**
+ * What a step sends, as the streaming input carries a user message.
+ *
+ * @param {Step} step
+ */
+function userMessage(step) {
+  return {
+    type: 'user',
+    message: { role: 'user', content: step.content ?? step.text ?? '' },
+    parent_tool_use_id: null,
+  };
+}
+
+/** Actions a step can ask for on the live query before it is sent. */
+const BEFORE = {
+  /** @param {{ applyFlagSettings(settings: unknown): Promise<void> }} session */
+  effortLow: (session) => session.applyFlagSettings({ effortLevel: 'low' }),
+};
+
+/**
+ * A promise and the function that settles it, for the input to wait on what the stream says.
+ *
+ * @returns {{ promise: Promise<void>, settle: () => void }}
+ */
+function signal() {
+  /** @type {() => void} */
+  let settle = () => undefined;
+  const promise = new Promise((resolve) => {
+    settle = () => resolve(undefined);
+  });
+
+  return { promise, settle };
+}
+
+/**
+ * When the transcript of a run was written, polled while the run lasts: the longest silence is the
+ * measure D-06 asks for. The file is the CLI's own — `<config>/projects/<slug>/<session>.jsonl` —
+ * and is only ever `stat`ed, never read.
+ *
+ * @param {() => string | null} sessionId the id the CLI reported, once it has
+ * @param {string} workspace
+ */
+function watchTranscript(sessionId, workspace) {
+  /** @type {number[]} */
+  const writes = [];
+  const timer = setInterval(() => {
+    const id = sessionId();
+    if (id === null) {
+      return;
+    }
+    const file = path.join(os.homedir(), '.claude', 'projects', slugOf(workspace), `${id}.jsonl`);
+    try {
+      const written = fs.statSync(file).mtimeMs;
+      if (writes.at(-1) !== written) {
+        writes.push(written);
+      }
+    } catch {
+      // Not written yet.
+    }
+  }, TRANSCRIPT_POLL_MS);
+
+  return {
+    stop() {
+      clearInterval(timer);
+      const gaps = writes.slice(1).map((at, index) => at - Number(writes[index]));
+      return { writes: writes.length, longestSilenceMs: Math.round(Math.max(0, ...gaps)) };
+    },
+  };
+}
+
+/**
+ * What a run has seen so far, and the signals its input waits on.
+ *
+ * @param {Step[]} steps
+ */
+function runState(steps) {
+  return {
+    /** @type {string | null} */
+    claudeSessionId: null,
+    results: steps.map(() => signal()),
+    firstTool: steps.map(() => signal()),
+    turn: 0,
+    resultsSeen: 0,
+    /** How many steps the input has handed to the SDK. */
+    sent: 0,
+    /** Set when the run was closed for having gone quiet, which ends the stream on purpose. */
+    quiet: false,
+  };
+}
+
+/**
+ * Takes note of one message of the stream: the conversation's id, the first tool of the running
+ * turn, a turn's result. Answers whether every turn of the scenario has ended.
+ *
+ * @param {unknown} message
+ * @param {ReturnType<typeof runState>} state
+ * @param {number} turns
+ * @returns {boolean}
+ */
+function observe(message, state, turns) {
+  const kind =
+    /** @type {{ type?: string, session_id?: unknown, message?: { content?: unknown } }} */ (
+      message
+    );
+
+  if (state.claudeSessionId === null && typeof kind.session_id === 'string') {
+    state.claudeSessionId = kind.session_id;
+  }
+  if (kind.type === 'assistant' && hasToolUse(kind.message?.content)) {
+    state.firstTool[state.turn]?.settle();
+  }
+  if (kind.type !== 'result') {
+    return false;
+  }
+  state.results[state.resultsSeen]?.settle();
+  state.resultsSeen += 1;
+
+  return state.resultsSeen >= turns;
+}
+
+/** @param {unknown} content @returns {boolean} */
+function hasToolUse(content) {
+  return Array.isArray(content) && content.some((block) => block?.type === 'tool_use');
+}
+
+/**
+ * The prompts of a run as the streaming input the SDK pulls from, each sent when its step says.
+ *
+ * @param {Step[]} steps
+ * @param {ReturnType<typeof runState>} state
+ * @param {() => any} session the live query, for the actions a step asks for
+ */
+async function* inputOf(steps, state, session) {
+  for (const [index, step] of steps.entries()) {
+    if (index > 0) {
+      const previous = step.when === 'midTurn' ? state.firstTool : state.results;
+      await previous[index - 1]?.promise;
+    }
+    if (step.before !== undefined) {
+      await BEFORE[/** @type {keyof typeof BEFORE} */ (step.before)](session());
+    }
+    state.turn = index;
+    state.sent = index + 1;
+    yield userMessage(step);
+  }
+}
+
+/**
+ * The hooks and the callback a recording runs with, writing what they saw into `seen`.
+ *
+ * @param {{ canUseTool: { toolName: string, input: unknown }[], preToolUse: { toolName: string, toolUseId: string | undefined, effort?: string }[] }} seen
+ */
+function recordingCallbacks(seen) {
+  return {
+    hooks: {
+      PreToolUse: [
+        {
+          hooks: [
+            /**
+             * @param {{ tool_name?: string, effort?: { level?: string } }} input
+             * @param {string | undefined} toolUseId
+             */
+            (input, toolUseId) => {
+              seen.preToolUse.push({
+                toolName: input.tool_name ?? 'unknown',
+                toolUseId,
+                ...(input.effort?.level === undefined ? {} : { effort: input.effort.level }),
+              });
+              return Promise.resolve({ continue: true });
+            },
+          ],
+        },
+      ],
+    },
+    /**
+     * @param {string} toolName
+     * @param {Record<string, unknown>} input
+     */
+    canUseTool: (toolName, input) => {
+      seen.canUseTool.push({ toolName, input });
+      return Promise.resolve({ behavior: 'allow', updatedInput: input });
+    },
+  };
+}
+
+/**
+ * Reads the stream of a run to its end — every turn's result, or the quiet after the last prompt.
+ *
+ * Every prompt in and a turn ended with fewer results than prompts means the SDK may have folded a
+ * prompt into a running turn (D-14): the run waits a while for one more result, then closes itself,
+ * and the stream ending that way is not a failure.
+ *
+ * @param {any} session
+ * @param {ReturnType<typeof runState>} state
+ * @param {number} turns
+ * @param {unknown[]} messages
+ * @param {number} quietMs
+ */
+async function consume(session, state, turns, messages, quietMs) {
+  /** @type {NodeJS.Timeout | undefined} */
+  let quiet;
+  try {
+    for await (const message of session) {
+      messages.push(message);
+      if (observe(message, state, turns)) {
+        break;
+      }
+      if (quiet === undefined && state.sent === turns && state.resultsSeen > 0) {
+        quiet = setTimeout(() => {
+          state.quiet = true;
+          session.close();
+        }, quietMs);
+      }
+    }
+  } catch (error) {
+    if (!state.quiet) {
+      throw error;
+    }
+  } finally {
+    clearTimeout(quiet);
+  }
+}
+
+/**
  * Runs one scenario and returns everything that happened.
  *
  * `canUseTool` answers `allow` and records that it was asked. It has to answer something, and
  * denying would record a stream of refusals rather than a stream of work — but **which** tools it
  * was consulted about is the measurement the fixture carries.
  *
+ * The prompts go one per turn: the next is sent when the previous turn's `result` arrives, unless a
+ * step asks to be sent mid-turn.
+ *
  * @param {(params: unknown) => AsyncIterable<unknown> & { close(): void }} query
  * @param {(typeof SCENARIOS)[number]} scenario
  */
 async function record(query, scenario) {
   const workspace = makeWorkspace(scenario.files);
+  const steps = stepsOf(scenario);
+  const state = runState(steps);
+  const seen = { canUseTool: [], preToolUse: [] };
 
   /** @type {unknown[]} */
   const messages = [];
-  /** @type {{ toolName: string, input: unknown }[]} */
-  const canUseTool = [];
-  /** @type {{ toolName: string, toolUseId: string | undefined }[]} */
-  const preToolUse = [];
   /** @type {string[]} */
   const stderr = [];
-
-  const prompts = (async function* stream() {
-    yield {
-      type: 'user',
-      message: { role: 'user', content: scenario.prompt },
-      parent_tool_use_id: null,
-    };
-  })();
+  /** @type {any} */
+  let session = null;
 
   const abortController = new AbortController();
   const deadline = setTimeout(() => abortController.abort(), SCENARIO_TIMEOUT_MS);
+  const transcript = scenario.watchTranscript
+    ? watchTranscript(() => state.claudeSessionId, workspace)
+    : null;
 
-  const session = query({
-    prompt: prompts,
+  // The callbacks are built before the call and spread into it, but `settingSources` stays written
+  // here, in the arguments of the `query(` call — where `pnpm scan:security` looks for it.
+  const callbacks = recordingCallbacks(seen);
+  session = query({
+    prompt: inputOf(steps, state, () => session),
     options: {
       cwd: workspace,
       // The same value the product runs with, and for the same reason: omitting it loads the
       // user's own `allow` rules and skips `canUseTool` in silence.
       settingSources: ['project'],
-      hooks: {
-        PreToolUse: [
-          {
-            hooks: [
-              /** @param {{ tool_name?: string }} input @param {string | undefined} toolUseId */
-              (input, toolUseId) => {
-                preToolUse.push({ toolName: input.tool_name ?? 'unknown', toolUseId });
-                return Promise.resolve({ continue: true });
-              },
-            ],
-          },
-        ],
-      },
-      /**
-       * @param {string} toolName
-       * @param {Record<string, unknown>} input
-       */
-      canUseTool: (toolName, input) => {
-        canUseTool.push({ toolName, input });
-        return Promise.resolve({ behavior: 'allow', updatedInput: input });
-      },
+      hooks: callbacks.hooks,
+      canUseTool: callbacks.canUseTool,
       includePartialMessages: true,
       includeHookEvents: true,
       allowDangerouslySkipPermissions: false,
       maxTurns: 20,
       abortController,
+      env: { ...recordingEnvironment(), ...(scenario.env ?? {}) },
       /** @param {string} data */
       stderr: (data) => stderr.push(data),
+      ...(scenario.options ?? {}),
     },
   });
 
   try {
-    for await (const message of session) {
-      messages.push(message);
-    }
+    await consume(session, state, steps.length, messages, scenario.quietMs ?? QUIET_MS);
   } finally {
     clearTimeout(deadline);
     session.close();
     fs.rmSync(workspace, { recursive: true, force: true });
   }
 
-  return { messages, canUseTool, preToolUse, stderr };
+  return { messages, ...seen, stderr, transcript: transcript?.stop() ?? null };
 }
 
 /**
@@ -419,7 +873,13 @@ async function recordScenario(query, scenario) {
       'Do not edit by hand — re-record instead. See docs/plans/01-live-session/F2-session-runtime.md.',
     name: scenario.name,
     why: scenario.why,
-    prompt: scenario.prompt,
+    prompt: stepsOf(scenario)[0]?.text ?? '(content blocks)',
+    ...(scenario.prompts === undefined
+      ? {}
+      : { prompts: stepsOf(scenario).map((step) => step.text ?? '(content blocks)') }),
+    ...(scenario.options === undefined ? {} : { options: scenario.options }),
+    ...(scenario.env === undefined ? {} : { env: scenario.env }),
+    ...(result.transcript === null ? {} : { transcript: result.transcript }),
     recordedAt: new Date().toISOString().slice(0, 10),
     sdkVersion: sdkVersion(),
     counts: {

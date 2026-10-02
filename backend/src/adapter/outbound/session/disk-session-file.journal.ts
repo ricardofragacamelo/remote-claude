@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import type { JournalScope, SessionFileJournal } from '@application/session';
+import { SESSION_FILE_EVENTS } from '@application/session';
+import type { JournalScope, SessionFileEvents, SessionFileJournal } from '@application/session';
 import { CLOCK } from '@application/shared';
 import type { Clock } from '@domain/shared';
 import { SessionFileState, TurnFileCheckpoint } from '@domain/session';
@@ -35,6 +36,7 @@ export class DiskSessionFileJournal implements SessionFileJournal {
     @Inject(FileSnapshotStore) private readonly snapshots: FileSnapshotStore,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(LOGGER) private readonly logger: Logger,
+    @Inject(SESSION_FILE_EVENTS) private readonly events: SessionFileEvents,
   ) {}
 
   openTurn(sessionId: SessionId, promptId: string, promptText: string): Promise<void> {
@@ -97,6 +99,9 @@ export class DiskSessionFileJournal implements SessionFileJournal {
           updatedAt: this.clock.now(),
         }),
       );
+
+      // After the baseline, so whoever hears it can rely on the journal saying the same thing.
+      this.events.fileStateRecorded({ path, hash: measured.hash, at: this.clock.now() });
     } catch (error) {
       this.fail(sessionId, path, 'state', error);
     }

@@ -71,16 +71,13 @@ import process from 'node:process';
 
 import { purgeStaleProjects, resolveComposeCli } from './lib/compose.mjs';
 import {
-  EMULATOR_AVD,
-  EMULATOR_PORT,
-  androidSdkRoot,
-  claimDevice,
-  emulatorCommand,
-  releaseDevice,
-  waitForBoot,
-  withSdkOnPath,
-} from './lib/emulator.mjs';
-import { commandExists, run, runAsync } from './lib/exec.mjs';
+  claimReported,
+  deviceTools as androidDeviceTools,
+  giveDeviceBack,
+  stopGradleDaemons,
+} from './lib/android-host.mjs';
+import { EMULATOR_AVD, androidSdkRoot, waitForBoot, withSdkOnPath } from './lib/emulator.mjs';
+import { run, runAsync } from './lib/exec.mjs';
 import { bringUp, composeRunner, stillPending, STACK_TIMEOUT_MS } from './lib/local-stack.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { findFreePort } from './lib/ports.mjs';
@@ -160,30 +157,8 @@ let compose = null;
 /** Where the Android SDK is, for the app's runs — `adb` and `emulator` need not be on PATH. */
 const sdkRoot = androidSdkRoot(process.env, os.homedir(), process.platform);
 
-/** The Gradle wrapper Flutter writes, whose daemons outlive every build of the app. */
-const gradleWrapper = path.join(
-  repoRoot,
-  'mobile',
-  'android',
-  process.platform === 'win32' ? 'gradlew.bat' : 'gradlew',
-);
-
 /** @type {import('./lib/emulator.mjs').DeviceTools} */
-const deviceTools = {
-  adb: (args) => run(path.join(sdkRoot, 'platform-tools', 'adb'), args, { timeoutMs: 30_000 }),
-  startEmulator: () => {
-    const fenced = process.platform === 'linux' && commandExists('systemd-run');
-    const { command, args } = emulatorCommand({ avd: EMULATOR_AVD, port: EMULATOR_PORT, fenced });
-    // Ignored output: the emulator writes several lines a second for as long as it lives, and a
-    // pipe nobody drains is a pipe that fills and freezes it. When it dies, the wait says so.
-    return startProc(command, args, {
-      cwd: repoRoot,
-      env: withSdkOnPath(process.env, sdkRoot),
-      stdio: 'ignore',
-    });
-  },
-  kill: (child) => kill(child),
-};
+const deviceTools = androidDeviceTools(sdkRoot);
 
 /**
  * The device of an app run, once claimed. Out here for the same reason as `compose`: a teardown
@@ -222,45 +197,6 @@ function takeStackDown() {
 }
 
 /**
- * Gives back the device of an app run: an emulator of ours goes down, one that was attached
- * before the run stays as it was.
- */
-async function giveDeviceBack() {
-  if (device === null) {
-    return;
-  }
-
-  const released = await releaseDevice(device, deviceTools);
-  if (released === 'kept') {
-    ok('device left as it was', `${device.serial} was attached before the run`);
-  } else {
-    ok(
-      'emulator down',
-      released === 'killed' ? 'it ignored emu kill, so it was killed' : device.serial,
-    );
-  }
-}
-
-/**
- * Stops the Gradle daemons the app's build left behind — only when the app was built at all.
- */
-function stopGradleDaemons() {
-  if (!appBuilt || !fs.existsSync(gradleWrapper)) {
-    return;
-  }
-
-  const stopped = run(gradleWrapper, ['--stop'], {
-    cwd: path.dirname(gradleWrapper),
-    timeoutMs: 60_000,
-  });
-  if (stopped.code === 0) {
-    ok('Gradle daemons stopped');
-  } else {
-    warn('gradlew --stop did not exit cleanly', `exit ${String(stopped.code)}`);
-  }
-}
-
-/**
  * Reverse of the start order, and idempotent: a second Ctrl+C arrives while the first teardown is
  * still running, and the `finally` below runs on the same shutdown as the signal handler.
  */
@@ -273,8 +209,12 @@ const teardown = cleanupOnce(async () => {
   }
 
   takeStackDown();
-  await giveDeviceBack();
-  stopGradleDaemons();
+  if (device !== null) {
+    await giveDeviceBack(device, deviceTools);
+  }
+  if (appBuilt) {
+    stopGradleDaemons();
+  }
 
   // Even when the run failed: a stale file pointing at ports nothing listens on turns the next
   // `pnpm exec playwright test` into a confusing timeout instead of a clear "run the script".
@@ -364,19 +304,12 @@ function realPushOrExit() {
  *   or `null` instead of a promise when there is no device to be had at all
  */
 function claimAndBoot() {
-  const claimed = claimDevice(deviceTools);
-
-  if ('problem' in claimed) {
-    fail(claimed.problem);
-    hint(`looked for the SDK in ${sdkRoot}`);
+  device = claimReported(deviceTools, sdkRoot, {
+    kept: 'it stays as it was',
+    started: 'it goes down with the stack',
+  });
+  if (device === null) {
     return null;
-  }
-
-  device = claimed.device;
-  if (device.child === null) {
-    ok('using the attached device', device.serial);
-  } else {
-    info(`starting the emulator ${bold(EMULATOR_AVD)} — it goes down with the stack`);
   }
 
   return waitForBoot(device, deviceTools).then(

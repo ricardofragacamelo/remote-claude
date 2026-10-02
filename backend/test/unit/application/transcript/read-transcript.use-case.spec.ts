@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ReadTranscriptUseCase } from '@application/transcript';
+import { ReadTranscriptUseCase, TranscriptAudience } from '@application/transcript';
 import { UserId } from '@domain/auth';
 import { SessionId } from '@domain/session';
 import {
@@ -17,6 +17,7 @@ import {
 } from '../../../support/builders/transcript.builder';
 import { InMemorySessionOriginRepository } from '../../../support/fakes/in-memory-session-origin.repository';
 import { InMemoryTranscriptStore } from '../../../support/fakes/in-memory-transcript.store';
+import { FixedClock } from '../../../support/fakes/fixed-clock';
 
 const owner = UserId.create(OWNER);
 const stranger = UserId.create('auth|stranger');
@@ -31,7 +32,18 @@ describe('ReadTranscriptUseCase', () => {
   });
 
   const read = (n = 1, before: string | null = null, limit = 2) =>
-    new ReadTranscriptUseCase({ current: () => anAllowlist() }, store, origins).execute({
+    new ReadTranscriptUseCase(
+      store,
+      new TranscriptAudience(
+        { current: () => anAllowlist() },
+        origins,
+        { liveSessionOf: () => null },
+        {
+          clock: new FixedClock(new Date(1_758_800_000_000 + 1_000)),
+          activeWindowMs: 120_000,
+        },
+      ),
+    ).execute({
       userId: owner,
       sessionId: ClaudeSessionId.create(conversationId(n)),
       before,
@@ -42,6 +54,13 @@ describe('ReadTranscriptUseCase', () => {
     store.add('/srv/projects/app', aTranscriptSession({ id: 1 }), someMessages(3));
 
     const { session, page } = await read();
+
+    // Plan 08, B-08: written a second ago and begun elsewhere — active there, as far as can be told.
+    expect(session.activity).toEqual({
+      activity: 'activeElsewhere',
+      liveSessionId: null,
+      writtenAgoSeconds: 1,
+    });
 
     expect(session.origin).toBe('external');
     expect(page.items.map(({ id }) => id)).toEqual(['m2', 'm3']);
@@ -96,5 +115,53 @@ describe('ReadTranscriptUseCase', () => {
     store.add('/srv/projects/app', aTranscriptSession({ id: 1 }), someMessages(3));
 
     await expect(read(1, 'gone')).rejects.toThrow(TranscriptCursorStaleError);
+  });
+
+  /** Plan 08, B-21 — a subagent of the conversation, read when its tool is unfolded. */
+  describe('a subagent', () => {
+    const subagent = (toolUseId: string, as = owner) =>
+      new ReadTranscriptUseCase(
+        store,
+        new TranscriptAudience(
+          { current: () => anAllowlist() },
+          origins,
+          { liveSessionOf: () => null },
+          {
+            clock: new FixedClock(new Date(0)),
+            activeWindowMs: 120_000,
+          },
+        ),
+      ).subagent({
+        userId: as,
+        sessionId: ClaudeSessionId.create(conversationId(1)),
+        toolUseId,
+        before: null,
+        limit: 2,
+      });
+
+    it('answers the latest page of what it said, from the tail — S-90', async () => {
+      store
+        .add('/srv/projects/app', aTranscriptSession({ id: 1 }))
+        .addSubagent(conversationId(1), 'toolu_task', someMessages(3, 's'));
+
+      const page = await subagent('toolu_task');
+
+      expect(page.items.map((message) => message.id)).toEqual(['s2', 's3']);
+      expect(page.next).toBe('s2');
+    });
+
+    it('answers not found for a tool that opened no subagent', async () => {
+      store.add('/srv/projects/app', aTranscriptSession({ id: 1 }));
+
+      await expect(subagent('toolu_none')).rejects.toThrow(TranscriptNotFoundError);
+    });
+
+    it('answers not found for a conversation the caller does not read — S-91', async () => {
+      store
+        .add('/srv/projects/app', aTranscriptSession({ id: 1, cwd: '/srv/elsewhere' }))
+        .addSubagent(conversationId(1), 'toolu_task', someMessages(1));
+
+      await expect(subagent('toolu_task')).rejects.toThrow(TranscriptNotFoundError);
+    });
   });
 });

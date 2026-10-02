@@ -94,15 +94,15 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Contrato](F0-contract.md) | ADR-015, módulo `files`, rotas, códigos, stream WS nas três pontas, estado por aba | B-01…B-06 | 🔲 |
-| F1 | [Leitura de arquivos](F1-file-read.md) | contenção de caminho, árvore e leitura com `ETag` | B-07…B-10 | 🔲 |
-| F2 | [Escrita de arquivos](F2-file-write.md) | salvar, criar, mover, copiar e apagar sem perder trabalho, na trilha | B-11…B-18 | 🔲 |
-| F3 | [Observação de mudanças](F3-file-watch.md) | o disco avisa o que mudou e quem mudou, sem vazar watcher | B-19…B-23 | 🔲 |
-| F4 | [Explorer](F4-explorer.md) | a árvore e todas as funções de arquivo, com lote e desfazer | B-24…B-30 | 🔲 |
-| F5 | [Editor](F5-editor.md) | abas, grupos, salvar e conflito, mudança externa, arrastar para o Claude | B-31…B-42 | 🔲 |
-| F6 | [E2E](F6-e2e.md) | o núcleo pela porta do usuário, com o Claude no mesmo arquivo | B-43…B-46 | 🔲 |
-| F7 | [Prévias e transferência](F7-previews-and-transfer.md) | prévias, hexadecimal, paginado, upload e download | B-47…B-54 | 🔲 |
-| F8 | [Histórico local](F8-local-history.md) | histórico local, restaurar, desfazer o apagar | B-55…B-61 | 🔲 |
+| F0 | [Contrato](F0-contract.md) | ADR-015, módulo `files`, rotas, códigos, stream WS nas três pontas, estado por aba | B-01…B-06 | ✅ |
+| F1 | [Leitura de arquivos](F1-file-read.md) | contenção de caminho, árvore e leitura com `ETag` | B-07…B-10 | ✅ |
+| F2 | [Escrita de arquivos](F2-file-write.md) | salvar, criar, mover, copiar e apagar sem perder trabalho, na trilha | B-11…B-18 | ✅ |
+| F3 | [Observação de mudanças](F3-file-watch.md) | o disco avisa o que mudou e quem mudou, sem vazar watcher | B-19…B-23 | ✅ |
+| F4 | [Explorer](F4-explorer.md) | a árvore e todas as funções de arquivo, com lote e desfazer | B-24…B-30 | ✅ |
+| F5 | [Editor](F5-editor.md) | abas, grupos, salvar e conflito, mudança externa, arrastar para o Claude | B-31…B-42 | ✅ |
+| F6 | [E2E](F6-e2e.md) | o núcleo pela porta do usuário, com o Claude no mesmo arquivo | B-43…B-46 | ✅ |
+| F7 | [Prévias e transferência](F7-previews-and-transfer.md) | prévias, hexadecimal, paginado, upload e download | B-47…B-54 | ✅ |
+| F8 | [Histórico local](F8-local-history.md) | histórico local, restaurar, desfazer o apagar | B-55…B-61 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 
@@ -183,7 +183,7 @@ docs/architecture/                 ADR-015 · backend/03 · backend/05 · shared
 |---|---|---|
 | R-01 | **Perda de trabalho** entre o humano e o Claude no mesmo arquivo | **aberto** — `ETag` forte, `If-Match` obrigatório, save atômico e reenvio idempotente ([D-03](decisions.md#d-03--a-semântica-de-concorrência)); a trava por caminho serializa humano e desfazer no mesmo processo (B-18). Resta uma janela entre a última conferência do hash e o `rename` contra um escritor **externo** (o CLI escreve direto no disco): declarada, e coberta depois pelo watcher (aviso) e pelo desfazer (preserva) |
 | R-02 | **Fuga de caminho** por `..`, symlink ou troca de diretório entre checar e abrir | **aberto** — `FilePath` puro, `realpath` a cada operação, verificação no descritor ([D-05](decisions.md#d-05--symlinks-e-hard-links)); o `rename` é por caminho e tem janela residual; `/proc/self/fd` é Linux-only, e o macOS é gap para o [plano 17](../17-distribution/README.md) |
-| R-03 | O watcher **esgota o inotify** da máquina (e o VS Code do usuário para de ver mudanças) ou **vaza** | **aberto** — medido antes de escolher ([D-08](decisions.md#d-08--a-implementação-do-watcher)), não assistidos da [D-10](decisions.md#d-10--exclusões-padrão-e-teto-da-árvore), refcount e liberação por toda saída (S-145), erro explícito no limite |
+| R-03 | O watcher **esgota o inotify** da máquina (e o VS Code do usuário para de ver mudanças) ou **vaza** | **aberto** — medido antes de escolher ([D-08](decisions.md#d-08--a-implementação-do-watcher)): `chokidar`, que não gasta watch nos não assistidos da [D-10](decisions.md#d-10--exclusões-padrão-e-teto-da-árvore) nem em `.git` e diz `ENOSPC` na subida e depois dela; refcount e liberação por toda saída, provados (S-142…S-147; mil ciclos em S-145); erro explícito no limite (S-135). Resta o custo de um watch por arquivo além de um por pasta — 2 805 neste repositório, contra os 709 de um watcher só de pastas |
 | R-04 | O editor é pesado no celular, não roda em jsdom, ou exige CDN | **aberto** — [D-09](decisions.md#d-09--monaco-ou-codemirror-6) decide depois de medir; porta `CodeEditor` com falso para os 90 % por arquivo; modo simplificado abaixo de `md` |
 | R-05 | Contrato WS alterado numa ponta só, ou `seq` de stream que não é sessão | **aberto** — nas três pontas na mesma mudança (B-04, B-05); a regra "por stream" é escrita uma vez e o plano 10 a reusa ([D-07](decisions.md#d-07--o-transporte-da-mudança-e-o-seq-do-stream)) |
 | R-06 | **Conteúdo de arquivo vazando** para log, trilha, armazenamento do navegador ou URL | **aberto** — teste de marcador no log (S-61), trilha só com caminho e hash (S-116), nada de rascunho no navegador ([D-14](decisions.md#d-14--rascunho-não-salvo-e-a-recarga)), blob com Bearer ([D-16](decisions.md#d-16--download-sem-token-na-url-e-os-tetos)) |

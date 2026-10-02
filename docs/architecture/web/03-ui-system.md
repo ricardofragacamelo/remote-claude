@@ -227,6 +227,54 @@ Responde a uma pergunta só: **"o que foi executado na minha máquina sem me per
 - Bloco de código com `syntax highlight` e botão de copiar.
 - Tool em execução mostra estado vivo, não congela em "aguarde".
 
+O painel do Claude ([plano 08](../../plans/08-claude-panel/README.md)) é este stream dentro da aba de
+pasta, e acrescenta as regras abaixo. Elas vêm **antes** das telas (08 · B-05).
+
+**Markdown do modelo é conteúdo não confiável.** O modelo leu arquivos e páginas que ninguém revisou, e
+uma injeção de prompt escreve no que ele responde (R-01 do plano 08). Por isso, sempre pelo componente
+`Markdown` de `shared/components/markdown`, e nunca por outro caminho:
+
+- **HTML cru nunca vira elemento** — `skipHtml`, sem `rehype-raw`: `<img onerror>`, `<script>` e
+  `<iframe>` aparecem como texto;
+- **link só `http`, `https`, `mailto` e caminho relativo** — `javascript:`, `data:` e `vbscript:` ficam
+  texto; o externo abre em nova aba com `rel="noopener noreferrer"`;
+- **imagem remota nunca carrega** — vira link com o endereço à vista, porque uma imagem é o jeito mais
+  barato de exfiltrar dado por URL;
+- markdown incompleto do delta (bloco aberto) renderiza sem quebrar, e o `message.completed` o substitui;
+  só a mensagem em voo re-renderiza;
+- carregado **sob demanda** (`lazy()`), nunca no primeiro chunk — o `editor-bundle` reprova o build que
+  o puser lá.
+
+**Tools compactas, a permissão nunca.** Cada tool é **uma linha** com rótulo traduzido e o sujeito
+relativo à pasta — "Read src/x.ts", "Edit src/x.ts (+3 −1)", "Bash: pnpm test"; tool MCP mostra servidor
+e tool; tool desconhecida mostra o nome. O título pode elidir visualmente, mas o comando **inteiro** está
+no nome acessível e a um clique: expandir mostra o **input exato**, sem truncar. O estado vivo é ícone
+**e** texto (`started`, `succeeded`, `failed`, `denied` com o motivo). O card de permissão
+([acima](#permissão--a-tela-mais-importante)) **nunca** é compactado: ali a pessoa autoriza execução na
+própria máquina.
+
+**Saída de terminal é texto, com cor por token.** ANSI vira cor pelos tokens de tema, nunca HTML; OSC 8
+(hyperlink), título de janela e sequência desconhecida são descartados. Acima do teto de exibição,
+mostra o fim e "mostrar tudo".
+
+**Thinking recolhido, subagent aninhado.** Thinking aparece recolhido, com "pensou por *n* s" quando a
+duração é conhecida (o stream vivo a mede; o histórico não guarda tempo por bloco, e então diz só que
+pensou); thinking redigido diz que existiu, sem inventar conteúdo. O subagent aparece **dentro** do
+`Task` que o abriu, recolhido, com o tipo do agente e o status; dois em paralelo não se misturam.
+
+**Diff inline, e "prévia contra o disco agora".** Edit e Write mostram o diff no card, recolhido acima de
+*n* linhas, com "abrir diff" para a aba de diff do editor. A prévia **antes** de aprovar é o input
+aplicado ao disco **agora**: ela diz contra que momento foi calculada, é relida ao focar, e o resultado
+da tool é a verdade — o arquivo pode mudar até a aprovação.
+
+**Permissão nunca se perde por estar noutra aba.** O pedido que nasce numa aba de pasta inativa, ou com
+o painel escondido, vira **badge na aba** (e na activity bar do painel), nunca só um card fora de vista.
+
+**A view "Sessões do Claude" tem os quatro estados por grupo** — em execução aqui, ativas em outro
+lugar, histórico —, e falha de um grupo não esconde os outros. **"Ativa em outro lugar" é estimativa,
+e o rótulo diz isso**: "escrita há *n* min", nunca "aberta no VS Code" — o que se sabe é que o
+transcript foi escrito há pouco, não quem o escreve ([08 · D-06](../../plans/08-claude-panel/decisions.md#d-06--ativa-em-outro-lugar-o-critério-e-o-que-se-permite)).
+
 ---
 
 ## Workbench
@@ -390,6 +438,36 @@ e como aparece. Entrada não registrada **não aparece** — nem link, nem item,
 | modos da paleta | prefixo, fonte | 06 (`>`), 09 |
 | seções de Configurações | id, rótulo, ícone, posição, componente e as **opções** que a busca acha — **nunca** do Claude: o registro recusa seção cujo id, rótulo ou opção fale de Claude, modelo, permission mode ou MCP | 06 (Aparência, Workspaces), 07 (Editor), 10 (Terminal) |
 | restauração da aba | chave, versão, ler e gravar o estado | 06 (layout), 07 (editores), 08 (conversa) |
+| abas de editor por tipo | o que abre (arquivo, diff, prévia), como restaura | 07 (arquivo, diff); 08 e 09 abrem a aba de diff |
+| área de editor | o componente que preenche a área de editor da aba (`editorAreas`); sem entrada, o placeholder | 07 |
+| o que fechar a aba perderia | os arquivos com alteração não salva de uma pasta (`folderTabKeepers`), listados na confirmação de fechar a aba de pasta | 07 (editor) |
+| alvos de arraste para o Claude | aceita `application/x-remote-claude-files+json` | 08 — a fonte é o 07 (árvore e abas) |
+
+### Explorer e editor
+
+Os padrões que o [plano 07](../../plans/07-explorer-and-editor/README.md) traz, para que o 08, o 09 e
+o 11 os reusem em vez de reinventar ([07 · B-06](../../plans/07-explorer-and-editor/F0-contract.md#b-06--o-estado-do-explorer-e-do-editor-por-aba-de-pasta-)):
+
+- **A árvore é uma ARIA tree** (`role="tree"`, `treeitem`, `aria-expanded`, `aria-level`), virtualizada,
+  navegável só por teclado — setas, Home/End, digitar para achar —, com seleção múltipla. O que a
+  [D-10](../../plans/07-explorer-and-editor/decisions.md#d-10--exclusões-padrão-e-teto-da-árvore)
+  esconde vem **marcado** do servidor e some só sem "mostrar ocultos". Link para fora da pasta
+  aparece com ícone próprio e não abre; nome que não é UTF-8 aparece e não é operável. Nível cortado
+  pelo teto diz que foi cortado, com a ação de filtrar.
+- **Abas de editor** como as do VS Code: sujo é um ponto no lugar do fechar; aba de prévia (itálico)
+  é substituída pela próxima; arrastar reordena e leva para outro grupo. Fechar aba suja pergunta,
+  listando o arquivo.
+- **O diálogo de conflito** aparece quando o salvar recebe `412`: diz que o arquivo mudou no disco —
+  provavelmente pelo Claude —, e oferece **comparar** (abre a aba de diff), **sobrescrever** (salvar
+  de novo com o `ETag` atual, decisão explícita) e **descartar as minhas mudanças**. Nunca sobrescreve
+  sozinho.
+- **Placeholders de arquivo não editável**, um por motivo, cada um com a ação que cabe: binário
+  (abrir em hexadecimal, F7), grande demais (leitura paginada, F7), encoding desconhecido ("reabrir
+  com encoding"), sem permissão do sistema, link para fora da pasta. Nunca uma área de editor vazia.
+- **O segundo passo dos arquivos que mudam a permissão** (`.claude/settings.json`,
+  `.claude/settings.local.json`, `.mcp.json`) diz **o que** o arquivo faz antes de salvar —
+  "isto muda o que o Claude pode fazer sem perguntar" — e a resposta vai como `confirmSensitive`
+  ([07 · D-15](../../plans/07-explorer-and-editor/decisions.md#d-15--arquivos-que-mudam-a-permissão)).
 
 ---
 

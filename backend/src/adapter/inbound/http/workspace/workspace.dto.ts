@@ -44,7 +44,7 @@ export interface ResolvedWorkspaceDto {
  * the workbench walks up by the `parent` a listing hands out, never by editing a path, so a `..`
  * that arrives was typed by somebody probing the fence (plan 06, S-02).
  */
-const folderPath = z
+export const folderPath = z
   .string()
   .min(1)
   .max(4096)
@@ -53,7 +53,7 @@ const folderPath = z
   .refine((path) => !path.split('/').includes('..'), { message: 'mustNotClimb' });
 
 /** A query string's boolean: the literal words, and `false` when it is absent. */
-const flag = z
+export const flag = z
   .enum(['true', 'false'])
   .optional()
   .transform((value) => value === 'true');

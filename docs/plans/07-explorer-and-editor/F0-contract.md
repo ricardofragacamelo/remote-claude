@@ -23,7 +23,7 @@ do código é descobrir, no plano seguinte, que cada um fala de um jeito.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — ADR-015: o humano escreve no disco pela web 🔲
+### B-01 — ADR-015: o humano escreve no disco pela web ✅
 
 Nova ADR em [00-decisions](../../architecture/shared/00-decisions.md), no formato das existentes. Até
 aqui, quem escrevia no disco do usuário era o Claude, sob `canUseTool` e com o hook `PreToolUse`
@@ -43,7 +43,7 @@ A ADR registra o ator novo:
 
 A F8 acrescenta à ADR o histórico local (B-55).
 
-### B-02 — O módulo `files` no catálogo, e as rotas do núcleo 🔲
+### B-02 — O módulo `files` no catálogo, e as rotas do núcleo ✅
 
 Em [backend/03-modules](../../architecture/backend/03-modules.md#o-catálogo): o módulo `files`
 ([D-01](decisions.md#d-01--módulo-novo-ou-extensão-do-workspace)) na tabela, no diagrama de fronteiras
@@ -64,7 +64,7 @@ rotas e os status — o mesmo formato das seções `transcript` e `permission`:
 Registrar também, na seção `workspace`, que uma subpasta aberta é uma fronteira mais estreita que a
 raiz. As rotas de prévia/transferência e de histórico entram nas fases delas (B-47, B-55).
 
-### B-03 — Os códigos novos no catálogo 🔲
+### B-03 — Os códigos novos no catálogo ✅
 
 No [catálogo](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio) e no
 `error-catalogue.ts`, **antes** de existirem no código, com `messageKey` en/pt-BR:
@@ -91,7 +91,7 @@ para `412`, `415`, `428` e `507`, com o que cada um significa neste produto — 
 e no desfazer é `500`. Reusados sem mudança: `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`,
 `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`, `INVALID_INPUT`, `SERVICE_UNAVAILABLE`.
 
-### B-04 — O stream de mudança no WebSocket 🔲
+### B-04 — O stream de mudança no WebSocket ✅
 
 Em [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#envelope), pela
 [D-07](decisions.md#d-07--o-transporte-da-mudança-e-o-seq-do-stream):
@@ -108,14 +108,14 @@ Em [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#en
 Schema em `packages/contracts/schema`, geração TS e Dart (`pnpm contracts:generate`) na mesma
 mudança — contrato quebrado numa ponta só é bug.
 
-### B-05 — O app continua verde com o contrato novo 🔲
+### B-05 — O app continua verde com o contrato novo ✅
 
 O app Flutter não ganha explorer nem editor (fora do escopo), mas recebe os tipos Dart gerados e
 precisa **ignorar** os eventos `workspace.*` que nunca pede — a regra "cliente ignora o
 desconhecido" do contrato, provada. `pnpm test:e2e:mobile` verde é critério desta fase e do plano
 (lembrar de parar os daemons do Gradle antes do `verify:full`).
 
-### B-06 — O estado do explorer e do editor por aba de pasta 🔲
+### B-06 — O estado do explorer e do editor por aba de pasta ✅
 
 Em [web/04-state-and-data](../../architecture/web/04-state-and-data.md#onde-cada-estado-mora) e
 [web/03-ui-system](../../architecture/web/03-ui-system.md#padrões-de-ui-deste-produto):
@@ -136,7 +136,10 @@ Em [web/04-state-and-data](../../architecture/web/04-state-and-data.md#onde-cada
 
 ## Cenários cobertos
 
-S-01…S-13.
+S-01, S-02, S-04…S-09. S-03 passou para a [B-21](F3-file-watch.md) (é o handler de
+`workspace.watch` que valida o payload) e S-10…S-13 para a [B-24](F4-explorer.md), a
+[B-26](F4-explorer.md) e a [B-40](F5-editor.md), que constroem a tela que eles exercitam — ver o
+[progresso](progress.md#decisões-tomadas-durante-a-execução).
 
 ---
 

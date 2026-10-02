@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ReadLimiter,
+  SharedListing,
   TRANSCRIPT_READ_LIMITS,
   TranscriptCache,
 } from '@adapter/outbound/claude/transcript-reads';
@@ -165,5 +166,73 @@ describe('TranscriptCache', () => {
     expect(cache.size).toBe(2);
     expect((await cache.read('a', 1, () => Promise.resolve('reloaded'))).hit).toBe(true);
     expect((await cache.read('b', 1, () => Promise.resolve('reloaded'))).hit).toBe(false);
+  });
+});
+
+/** A listing shared by whoever asks at once, and kept for a moment — plan 08, S-31 and D-05. */
+describe('SharedListing', () => {
+  it('shares one read between two callers asking for the same key at once', async () => {
+    const listing = new SharedListing<number>(0);
+    const gate = deferred<number>();
+    let reads = 0;
+    const read = () => {
+      reads += 1;
+      return gate.promise;
+    };
+
+    const both = Promise.all([listing.read('a', read), listing.read('a', read)]);
+    gate.resolve(7);
+
+    expect(await both).toEqual([
+      { value: 7, hit: false },
+      { value: 7, hit: true },
+    ]);
+    expect(reads).toBe(1);
+  });
+
+  it('with no time to keep, reads again once the first read is done', async () => {
+    const listing = new SharedListing<number>(0);
+    let reads = 0;
+    const read = () => Promise.resolve((reads += 1));
+
+    await listing.read('a', read);
+    await listing.read('a', read);
+
+    expect(reads).toBe(2);
+  });
+
+  it('keeps an answer for as long as it was told to, and no longer', async () => {
+    let now = 1_000;
+    const listing = new SharedListing<number>(2_000, () => now);
+    let reads = 0;
+    const read = () => Promise.resolve((reads += 1));
+
+    await listing.read('a', read);
+    now += 1_999;
+    expect(await listing.read('a', read)).toEqual({ value: 1, hit: true });
+
+    now += 1;
+    expect(await listing.read('a', read)).toEqual({ value: 2, hit: false });
+  });
+
+  it('keeps each key apart', async () => {
+    const listing = new SharedListing<string>(60_000);
+
+    await listing.read('a', () => Promise.resolve('A'));
+
+    expect(await listing.read('b', () => Promise.resolve('B'))).toEqual({ value: 'B', hit: false });
+  });
+
+  it('never keeps a failure: the next caller reads again', async () => {
+    const listing = new SharedListing<number>(60_000);
+
+    await expect(listing.read('a', () => Promise.reject(new Error('gone')))).rejects.toThrow(
+      'gone',
+    );
+    expect(await listing.read('a', () => Promise.resolve(3))).toEqual({ value: 3, hit: false });
+  });
+
+  it('keeps the whole store for two seconds in the installation’s limits', () => {
+    expect(TRANSCRIPT_READ_LIMITS.wholeStoreTtlMs).toBe(2_000);
   });
 });

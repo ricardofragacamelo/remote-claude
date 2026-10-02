@@ -15,6 +15,15 @@ export interface PagedQueryOptions<P> {
 
   /** A list asks again when the tab comes back; a detail does not. */
   readonly refetchOnWindowFocus: boolean;
+
+  /**
+   * Asks again on its own every so many milliseconds while it is on screen — a list that follows
+   * the world (plan 08, D-10). Absent, it never polls.
+   */
+  readonly refetchIntervalMs?: number;
+
+  /** How long a page stays good; the thirty seconds of every stable server datum when absent. */
+  readonly staleTimeMs?: number;
 }
 
 /** The four states of the first page, and the way to the next ones. */
@@ -61,8 +70,9 @@ export function usePagedQuery<P>(options: PagedQueryOptions<P>): PagedQuery<P> {
     queryFn: ({ pageParam }) => options.fetchPage(pageParam),
     initialPageParam: null,
     getNextPageParam: (page) => options.nextCursor(page),
-    staleTime: STALE_AFTER_MS,
+    staleTime: options.staleTimeMs ?? STALE_AFTER_MS,
     refetchOnWindowFocus: options.refetchOnWindowFocus,
+    refetchInterval: options.refetchIntervalMs ?? false,
   });
 
   const pages = query.data?.pages;

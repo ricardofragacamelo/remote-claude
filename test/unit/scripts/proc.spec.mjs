@@ -56,6 +56,27 @@ describe('startProc', () => {
     await kill(proc, { graceMs: 500 });
     expect(proc.exitCode !== null || proc.signalCode !== null).toBe(true);
   });
+
+  it('leads a process group of its own by default', async () => {
+    const proc = startProc(process.execPath, ['-e', 'setTimeout(() => {}, 10_000)']);
+    spawned.push(proc);
+
+    expect(groupAlive(/** @type {number} */ (proc.pid))).toBe(true);
+    await kill(proc, { graceMs: 500 });
+  });
+
+  // `flutter run` reads the keyboard: outside the terminal's foreground group it would be stopped.
+  it('stays in this process group in the foreground, and kill still ends it', async () => {
+    const proc = startProc(process.execPath, ['-e', 'setTimeout(() => {}, 10_000)'], {
+      stdio: 'ignore',
+      foreground: true,
+    });
+    spawned.push(proc);
+
+    expect(groupAlive(/** @type {number} */ (proc.pid))).toBe(false);
+    await kill(proc, { graceMs: 500 });
+    expect(proc.exitCode !== null || proc.signalCode !== null).toBe(true);
+  });
 });
 
 describe('kill', () => {

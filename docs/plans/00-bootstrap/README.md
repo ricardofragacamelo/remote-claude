@@ -139,6 +139,7 @@ remote-claude/
 │   ├── start-local.mjs            portas fixas, stack de desenvolvimento
 │   ├── run-e2e-local.mjs          portas aleatórias, efêmero, roda Playwright (ou o Flutter)
 │   ├── run-smoke-live.mjs         a mesma stack contra o Claude real — sob demanda, não é portão
+│   ├── run-mobile-local.mjs       o app no Android contra a stack do `pnpm dev` — limpa na saída
 │   ├── verify.mjs                 portões 1-7
 │   ├── verify-full.mjs            portões 1-11
 │   ├── verify-workspace.mjs       os portões 1-7 de um workspace só
@@ -188,6 +189,7 @@ Todos em `.mjs`, executados direto pelo `node`, sem build.
 | `start-local.mjs` | B-10 | sobe a stack de desenvolvimento, portas fixas | `pnpm dev` |
 | `allowlist.mjs` | [06 · B-10, B-11](../06-workbench/F1-directory-browse.md#b-10--raízes-locais-de-desenvolvimento-pnpm-allowlist-) | libera uma pasta na cópia local da allowlist (ignorada pelo git, validada pelo schema do boot) e manda `SIGHUP` ao backend do `pnpm dev` | `pnpm allowlist add <pasta>` · `remove` · `list` |
 | `run-e2e-local.mjs` | B-37 | sobe stack efêmera, roda e2e, derruba tudo | `pnpm test:e2e` · `:mobile` · `--live` |
+| `run-mobile-local.mjs` | — (ferramenta de dev, 2026-10-01) | roda o app Flutter num Android contra a stack do `pnpm dev`: defines do `.env`, aparelho conectado ou AVD com janela, `adb reverse`, `flutter run` em primeiro plano; na saída, desliga o emulador que ligou e limpa forwards, servidor `adb` e daemons do Gradle | `pnpm dev:mobile` |
 | `run-smoke-live.mjs` | [01 · B-41](../01-live-session/F6-e2e.md) | a mesma stack contra o **Claude de verdade** — exige o Claude logado, e não é portão | `pnpm test:e2e:live` |
 | `verify.mjs` | B-46 | portões 1-7 | `pnpm verify` |
 | `verify-full.mjs` | B-46 | portões 1-11 | `pnpm verify:full` |

@@ -8,7 +8,9 @@
   "type": "object",
   "required": ["toolUseId", "status"],
   "properties": {
-    "toolUseId": { "type": "string" },
+    "toolUseId": {
+      "type": "string"
+    },
     "status": {
       "type": "string",
       "enum": ["succeeded", "failed", "denied"],
@@ -17,6 +19,14 @@
     "summary": {
       "type": "string",
       "description": "A short result for the timeline. The full output is the transcript's job, not this event's."
+    },
+    "parentToolUseId": {
+      "type": "string",
+      "description": "Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation."
+    },
+    "taskId": {
+      "type": "string",
+      "description": "The task of the list a `TaskCreate` made or a `TaskUpdate` changed — taken from the tool's structured result live, and from its result in the history. Absent for every other tool. The `summary` is the CLI's text, cut, and never carries it reliably (plan 08, B-20)."
     }
   }
 }

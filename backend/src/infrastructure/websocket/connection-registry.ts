@@ -4,7 +4,16 @@ import type { UserId } from '@domain/auth';
 export interface Sendable {
   send(data: string): void;
   close(code?: number, reason?: string): void;
+
+  /**
+   * Bytes queued on the socket and not yet handed to the network — how far behind this client is.
+   * Absent from a stand-in that never falls behind.
+   */
+  readonly bufferedAmount?: number;
 }
+
+/** Told when a connection leaves the registry, whatever took it out. */
+export type ConnectionRemoved = (connectionId: string) => void;
 
 /** One open connection, and everything known about it. */
 export interface Connection {
@@ -34,6 +43,7 @@ export interface Connection {
  */
 export class ConnectionRegistry {
   private readonly connections = new Map<string, Connection>();
+  private readonly removed = new Set<ConnectionRemoved>();
 
   /** Registers a socket that has not authenticated yet. */
   register(id: string, socket: Sendable): Connection {
@@ -55,8 +65,32 @@ export class ConnectionRegistry {
     return this.connections.get(id) ?? null;
   }
 
+  /**
+   * Takes a connection out, and tells whoever holds something on its behalf — once, however many
+   * ways its end arrives (a close, a disconnect, a failed send, the shutdown).
+   */
   remove(id: string): void {
-    this.connections.delete(id);
+    if (!this.connections.delete(id)) {
+      return;
+    }
+
+    for (const listener of this.removed) {
+      listener(id);
+    }
+  }
+
+  /**
+   * Hears every connection that leaves — the hook a module uses to let go of what a socket held,
+   * without a branch of its business in the gateway (the watched folders of plan 07, S-142).
+   *
+   * @returns the way to stop hearing
+   */
+  onRemoved(listener: ConnectionRemoved): () => void {
+    this.removed.add(listener);
+
+    return () => {
+      this.removed.delete(listener);
+    };
   }
 
   /**

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/session-compacted.json",
+  "title": "SessionCompacted",
+  "description": "The conversation was compacted: what came before is now a summary Claude carries forward. Said on its own rather than as a status, because a client that keeps the turns on screen has to mark the point — and the context meter drops there.",
+  "x-kind": "event",
+  "x-type": "session.compacted",
+  "type": "object",
+  "required": ["trigger"],
+  "properties": {
+    "trigger": {
+      "type": "string",
+      "enum": ["manual", "auto"],
+      "description": "`manual` — somebody sent `/compact`; `auto` — the context was full and Claude compacted it."
+    },
+    "preTokens": {
+      "type": "integer",
+      "description": "How many tokens the context held before, when the SDK says."
+    }
+  }
+}

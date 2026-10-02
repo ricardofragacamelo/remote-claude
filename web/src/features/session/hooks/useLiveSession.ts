@@ -6,6 +6,7 @@ import { wsClient } from '@/shared/api/ws';
 import type { ConnectionStatus } from '@/shared/api/ws-client';
 import { useConnectionStatus } from '@/shared/hooks/useConnectionStatus';
 import { fetchHistoryPage } from '../services/history.service';
+import { sessionCostOf } from '../services/conversation-reducer';
 import {
   closeSession,
   interruptSession,
@@ -36,6 +37,9 @@ export interface HistoryStatus {
 
 /** What the screen gets: the conversation, where it stands, and what it can do about it. */
 export interface LiveSession extends Conversation {
+  /** What the session has cost since it opened — each turn once, the replay never twice (S-99). */
+  readonly costUsd: string;
+
   readonly connection: ConnectionStatus;
   readonly sessionId: string | null;
 
@@ -132,6 +136,9 @@ export function useLiveSession(sessionId: string | null): LiveSession {
     status: state.status,
     messages: state.messages,
     tools: state.tools,
+    timeline: state.timeline,
+    turns: state.turns,
+    costUsd: sessionCostOf(state.turns),
     lastTurn: state.lastTurn,
     ending: state.ending,
     isPartial: state.isPartial,

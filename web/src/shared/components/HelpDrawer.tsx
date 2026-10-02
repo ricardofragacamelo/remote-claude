@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { HelpPanel } from '@/shared/components/HelpPanel';
-import type { ScreenShortcut } from '@/shared/components/HelpPanel';
+import type { HelpExtra, ScreenShortcut } from '@/shared/components/HelpPanel';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/shared/components/ui/sheet';
 
 export interface HelpDrawerProps {
@@ -22,6 +22,9 @@ export interface HelpDrawerProps {
   readonly help: string;
   readonly shortcuts: readonly ScreenShortcut[];
   readonly headingId: string;
+
+  /** Parts of the screen's own, after the written ones. */
+  readonly extra?: readonly HelpExtra[];
 }
 
 /**
@@ -40,6 +43,7 @@ export function HelpDrawer({
   help,
   shortcuts,
   headingId,
+  extra,
 }: HelpDrawerProps): React.JSX.Element {
   const { t } = useTranslation();
 
@@ -55,7 +59,16 @@ export function HelpDrawer({
       >
         <SheetTitle className="sr-only">{t('help.panel.title', { screen: title })}</SheetTitle>
         <SheetDescription className="sr-only">{purpose}</SheetDescription>
-        <HelpPanel title={title} help={help} shortcuts={shortcuts} headingId={headingId} />
+        <HelpPanel
+          title={title}
+          help={help}
+          shortcuts={shortcuts}
+          headingId={headingId}
+          {...(extra === undefined ? {} : { extra })}
+          onClose={() => {
+            onOpenChange(false);
+          }}
+        />
       </SheetContent>
     </Sheet>
   );

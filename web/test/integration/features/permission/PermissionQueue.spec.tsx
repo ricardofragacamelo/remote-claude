@@ -434,4 +434,138 @@ describe('the permission queue', () => {
       });
     });
   });
+
+  describe('approving a plan — plan 08, B-22', () => {
+    const PLAN = '# The plan\n\n1. Read the tests\n2. Fix the clock';
+
+    function askPlan(): void {
+      ask({
+        toolName: 'ExitPlanMode',
+        title: 'permission.tool.ExitPlanMode',
+        description: 'plan',
+        input: { plan: PLAN, planFilePath: '/home/dev/.claude/plans/p.md' },
+        riskHint: 'read',
+        defaultToNo: false,
+      });
+    }
+
+    function answers(): Record<string, unknown>[] {
+      return sockets.latest.frames().filter((sent) => sent['type'] === 'permission.resolve');
+    }
+
+    it('shows the plan, in markdown, on a card of its own — S-92', async () => {
+      render(<PermissionQueuePanel sessionId={SESSION} />);
+      connect();
+      askPlan();
+
+      const card = screen.getByRole('listitem', { name: t('permission.plan.label') });
+      expect(await within(card).findByRole('heading', { name: 'The plan' })).toBeInTheDocument();
+      expect(within(card).getByText('Fix the clock')).toBeInTheDocument();
+      expect(screen.queryByText(t('permission.risk.read'))).not.toBeInTheDocument();
+    });
+
+    it('allows it and goes on in the mode chosen — S-93', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onPlanApproved = vi.fn();
+      render(<PermissionQueuePanel sessionId={SESSION} onPlanApproved={onPlanApproved} />);
+      connect();
+      askPlan();
+
+      await user.click(screen.getByRole('radio', { name: t('permission.planMode.acceptEdits') }));
+      await user.click(screen.getByRole('button', { name: t('permission.plan.approve') }));
+
+      expect(answers()).toHaveLength(1);
+      expect(answers()[0]?.['payload']).toMatchObject({ decision: 'allow', scope: 'once' });
+      expect(onPlanApproved).toHaveBeenCalledWith('acceptEdits');
+    });
+
+    it('goes on asking for each edit unless told otherwise', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onPlanApproved = vi.fn();
+      render(<PermissionQueuePanel sessionId={SESSION} onPlanApproved={onPlanApproved} />);
+      connect();
+      askPlan();
+
+      await user.click(screen.getByRole('button', { name: t('permission.plan.approve') }));
+
+      expect(onPlanApproved).toHaveBeenCalledWith('default');
+    });
+
+    it('keeps planning by refusing it, with the comment as the reason for Claude — S-94', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<PermissionQueuePanel sessionId={SESSION} />);
+      connect();
+      askPlan();
+
+      await user.type(
+        screen.getByLabelText(t('permission.plan.commentLabel')),
+        'Also cover the timezone',
+      );
+      await user.click(screen.getByRole('button', { name: t('permission.plan.keepPlanning') }));
+
+      expect(answers()[0]?.['payload']).toMatchObject({
+        decision: 'deny',
+        reason: 'Also cover the timezone',
+      });
+    });
+
+    it('lets the card go when the plan is approved on another device, with no second answer — S-95', () => {
+      render(<PermissionQueuePanel sessionId={SESSION} />);
+      connect();
+      askPlan();
+
+      act(() => {
+        sockets.latest.receive({
+          v: 1,
+          id: 'evt-1',
+          kind: 'event',
+          type: 'permission.resolved',
+          ts: NOW.toISOString(),
+          sessionId: SESSION,
+          seq: 1,
+          payload: { requestId: 'req-1', decision: 'allow', auto: false, resolvedBy: 'auth|42' },
+        });
+      });
+
+      expect(
+        screen.queryByRole('listitem', { name: t('permission.plan.label') }),
+      ).not.toBeInTheDocument();
+      expect(answers()).toHaveLength(0);
+    });
+
+    it('shows an empty plan as an empty plan, not as a failure', () => {
+      render(<PermissionQueuePanel sessionId={SESSION} />);
+      connect();
+      ask({ toolName: 'ExitPlanMode', input: {}, riskHint: 'read', defaultToNo: false });
+
+      expect(
+        screen.getByRole('listitem', { name: t('permission.plan.label') }),
+      ).toBeInTheDocument();
+    });
+
+    it('keeps the anchor the status leads to even with no session', () => {
+      const { container } = render(<PermissionQueuePanel sessionId={null} />);
+
+      expect(container.querySelector('#permission-queue-none')).not.toBeNull();
+    });
+
+    it('never compacts a question about any other tool — S-76', () => {
+      render(<PermissionQueuePanel sessionId={SESSION} />);
+      connect();
+      ask();
+
+      expect(screen.getByText('rm -rf build/')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: t('permission.scope.once') })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Bash: / })).not.toBeInTheDocument();
+    });
+
+    it('has no accessibility violation', async () => {
+      const { container } = render(<PermissionQueuePanel sessionId={SESSION} />);
+      connect();
+      askPlan();
+      await screen.findByRole('heading', { name: 'The plan' });
+
+      expect(await axe(container)).toHaveNoViolations();
+    });
+  });
 });

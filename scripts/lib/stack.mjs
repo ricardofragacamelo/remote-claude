@@ -135,6 +135,28 @@ export const E2E_POSTGRES = {
  * @property {string} RC_CHECKPOINT_DIR
  * @property {string} RC_CHECKPOINT_MAX_FILE_BYTES
  * @property {string} RC_CHECKPOINT_MAX_STORE_BYTES
+ * @property {string} RC_FILES_TREE_MAX_ENTRIES
+ * @property {string} RC_FILES_LARGE_FILE_BYTES
+ * @property {string} RC_FILES_MAX_EDIT_BYTES
+ * @property {string} RC_FILES_COPY_MAX_ENTRIES
+ * @property {string} RC_FILES_COPY_MAX_BYTES
+ * @property {string} RC_FILES_DELETE_COUNT_CAP
+ * @property {string} RC_FILES_WATCH_WINDOW_MS
+ * @property {string} RC_FILES_WATCH_MAX_CHANGES
+ * @property {string} RC_FILES_WATCH_MAX_PER_CONNECTION
+ * @property {string} RC_FILES_WATCH_MAX_BUFFERED_BYTES
+ * @property {string} RC_FILES_DOWNLOAD_MAX_BYTES
+ * @property {string} RC_FILES_ARCHIVE_MAX_ENTRIES
+ * @property {string} RC_FILES_UPLOAD_MAX_BYTES
+ * @property {string} RC_FILES_UPLOAD_MAX_ENTRIES
+ * @property {string} RC_FILES_UPLOAD_MAX_TOTAL_BYTES
+ * @property {string} RC_FILES_HISTORY_DIR
+ * @property {string} RC_FILES_HISTORY_MAX_FILE_BYTES
+ * @property {string} RC_FILES_HISTORY_MAX_PER_FILE
+ * @property {string} RC_FILES_HISTORY_MAX_STORE_BYTES
+ * @property {string} RC_FILES_HISTORY_RETENTION_DAYS
+ * @property {string} RC_FILES_HISTORY_MAX_BATCH_ENTRIES
+ * @property {string} RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS
  * @property {string} RC_AUDIT_RETENTION_DAYS
  * @property {string} RC_AUDIT_PURGE_INTERVAL_MS
  * @property {string} [CLAUDE_CONFIG_DIR]
@@ -250,6 +272,35 @@ export function ephemeralEnvironment(ports, options = {}) {
     RC_CHECKPOINT_DIR: path.join(os.tmpdir(), `remote-claude-checkpoints-${String(ports.backend)}`),
     RC_CHECKPOINT_MAX_FILE_BYTES: '5242880',
     RC_CHECKPOINT_MAX_STORE_BYTES: '524288000',
+
+    // The product's ceilings of the explorer and the editor (plan 07, D-04 and D-10).
+    RC_FILES_TREE_MAX_ENTRIES: '5000',
+    RC_FILES_LARGE_FILE_BYTES: '1048576',
+    RC_FILES_MAX_EDIT_BYTES: '10485760',
+    RC_FILES_COPY_MAX_ENTRIES: '10000',
+    RC_FILES_COPY_MAX_BYTES: '104857600',
+    RC_FILES_DELETE_COUNT_CAP: '10000',
+    RC_FILES_WATCH_WINDOW_MS: '200',
+    RC_FILES_WATCH_MAX_CHANGES: '500',
+    RC_FILES_WATCH_MAX_PER_CONNECTION: '16',
+    RC_FILES_WATCH_MAX_BUFFERED_BYTES: '1048576',
+    RC_FILES_DOWNLOAD_MAX_BYTES: '209715200',
+    RC_FILES_ARCHIVE_MAX_ENTRIES: '10000',
+    RC_FILES_UPLOAD_MAX_BYTES: '104857600',
+    RC_FILES_UPLOAD_MAX_ENTRIES: '1000',
+    RC_FILES_UPLOAD_MAX_TOTAL_BYTES: '524288000',
+
+    // The local history of this stack, in a folder of its own like the snapshots (plan 07, D-17).
+    RC_FILES_HISTORY_DIR: path.join(
+      os.tmpdir(),
+      `remote-claude-file-history-${String(ports.backend)}`,
+    ),
+    RC_FILES_HISTORY_MAX_FILE_BYTES: '10485760',
+    RC_FILES_HISTORY_MAX_PER_FILE: '50',
+    RC_FILES_HISTORY_MAX_STORE_BYTES: '536870912',
+    RC_FILES_HISTORY_RETENTION_DAYS: '30',
+    RC_FILES_HISTORY_MAX_BATCH_ENTRIES: '1000',
+    RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS: '120',
 
     // The floor, and the job **off**. The retention spec plants rows past the window and purges them
     // through `pnpm db purge`, the door it is testing; a job waking up a minute after boot would race
@@ -762,5 +813,18 @@ export function dartDefines(env, scenario, appVersion) {
     RC_SCENARIO: scenario,
   };
 
+  return defineArgs(defines);
+}
+
+/**
+ * Values as `--dart-define` arguments, two per value: the flag, then `NAME=value`.
+ *
+ * Two arguments and never one `--dart-define=NAME=value` string: the scopes hold spaces, and a
+ * single string is one more thing a shell on the way could split.
+ *
+ * @param {Record<string, string>} defines
+ * @returns {string[]}
+ */
+export function defineArgs(defines) {
   return Object.entries(defines).flatMap(([name, value]) => ['--dart-define', `${name}=${value}`]);
 }

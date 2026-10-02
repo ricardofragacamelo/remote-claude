@@ -48,6 +48,7 @@ describe('SessionStartHandler', () => {
   const run = async (
     started: StartedSession,
     payload: unknown = { workspacePath: '/srv/projects/app' },
+    installId: string | null = null,
   ): Promise<{
     ack: { type: string; payload: Readonly<Record<string, unknown>> };
     published: { sessionId: string; event: EventDraft }[];
@@ -59,6 +60,7 @@ describe('SessionStartHandler', () => {
     const published: { sessionId: string; event: EventDraft }[] = [];
     const context = aWsContext({
       frame: frame(payload),
+      installId,
       attached,
       replay: () => ({ events: [], oldestAvailableSeq: 4, gap: false }),
       publish: (sessionId, event) => published.push({ sessionId, event }),
@@ -144,6 +146,16 @@ describe('SessionStartHandler', () => {
       permissionMode: null,
       resumeSessionId: SOURCE,
     });
+  });
+
+  it('says which client opened the session: a browser, or the app — plan 08, B-07', async () => {
+    const started = { session: aSession(), conversation: aConversation(), joined: false };
+
+    expect((await run(started)).commands[0]?.openedFrom).toBe('web');
+    expect(
+      (await run(started, { workspacePath: '/srv/projects/app' }, 'install-1')).commands[0]
+        ?.openedFrom,
+    ).toBe('mobile');
   });
 
   it.each([

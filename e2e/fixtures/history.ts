@@ -188,9 +188,12 @@ export async function sessionScreen(
   await expect(page.getByText('Connected', { exact: true }).first()).toBeVisible();
 }
 
-/** The messages on a screen — the session's, or the history's — one list item each. */
-export function messagesOn(page: Page): ReturnType<Page['getByRole']> {
-  return page.getByRole('list', { name: 'Conversation' }).getByRole('listitem');
+/**
+ * The messages on a screen — the session's, or the history's — one list item each. Only the
+ * messages: the conversation also lists its tools and the end of each turn (plan 08, F2).
+ */
+export function messagesOn(page: Page): ReturnType<Page['locator']> {
+  return page.getByRole('list', { name: 'Conversation' }).locator('li[data-message-id]');
 }
 
 /** The question on screen about one tool — its card in the permission queue. */
@@ -270,4 +273,20 @@ export class SwitchableSocket {
   restore(): void {
     this.down = false;
   }
+}
+
+/**
+ * Opens the undo panel of the session on screen and the confirmation of its only point — the turn
+ * the recorded `do the work` prompt started.
+ */
+export async function confirmationOfTheOnlyPoint(
+  page: Page,
+): Promise<ReturnType<Page['getByRole']>> {
+  await page.getByRole('button', { name: 'Undo file changes' }).click();
+  await page
+    .getByRole('list', { name: 'Undo points' })
+    .getByRole('button', { name: /do the work/ })
+    .click();
+
+  return page.getByRole('group', { name: 'Undo these file changes?' });
 }

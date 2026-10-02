@@ -1,14 +1,45 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { TokenExpiredError, UnauthenticatedError } from '@domain/auth';
 import {
+  AttachmentNotFoundError,
+  AttachmentTypeUnsupportedError,
+  DiffNotApplicableError,
+  EffortUnsupportedError,
+  ForkPointUnknownError,
   InvalidSessionIdError,
+  QueuedPromptNotFoundError,
+  QueuedPromptStartedError,
+  SessionChangeStaleError,
+  SessionForkRejectedError,
   SessionLimitReachedError,
   SessionNotFoundError,
+  ToolUseNotFoundError,
 } from '@domain/session';
 import { OpenFoldersLimitReachedError, WorkspaceDirectoryUnreadableError } from '@domain/workspace';
 import {
+  DirectoryNotEmptyError,
+  FileAccessDeniedError,
+  FileChangedError,
+  FileExistsError,
+  FileNotAFileError,
+  FileNotEncodableError,
+  FileNotFoundError,
+  FileNotTextError,
+  FileOperationInvalidError,
+  FileTooLargeError,
+  FileTrailUnavailableError,
+  PreconditionRequiredError,
+  StorageFullError,
+  WatchLimitReachedError,
+  WatchUnavailableError,
+} from '@domain/files';
+import {
   DEFAULT_RETRY_AFTER_SECONDS,
+  etagFor,
   hasDetails,
   httpStatusFor,
   retryAfterFor,
@@ -184,6 +215,150 @@ describe('the codes the workbench adds — plan 06, B-03', () => {
       params: { limit: 8 },
       traceId: 't',
       httpEquivalent: 409,
+    });
+  });
+});
+
+/** The catalogue of doc 04, as `code → status`, read from the document itself. */
+function documentedStatuses(): Map<string, number> {
+  const doc = readFileSync(
+    path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '../../../../../docs/architecture/shared/04-errors-and-http.md',
+    ),
+    'utf8',
+  );
+  const rows = [...doc.matchAll(/^\| `([A-Z_]+)` \| (\d{3}) \|/gm)];
+
+  return new Map(rows.map((row) => [row[1] ?? '', Number(row[2])]));
+}
+
+describe('the codes the explorer and the editor add — plan 07, B-03', () => {
+  const errors = [
+    new FileNotFoundError('a.ts'),
+    new FileExistsError('a.ts', '"abc"'),
+    new DirectoryNotEmptyError('src', 3, false),
+    new FileChangedError('a.ts', '"abc"'),
+    new PreconditionRequiredError('a.ts', 'ifMatchMissing'),
+    new FileTooLargeError('a.ts', 11, 10, 'bytes'),
+    new FileNotTextError('a.bin', 'binary'),
+    new FileNotAFileError('src'),
+    new FileOperationInvalidError('src', 'intoItself'),
+    new FileNotEncodableError('a.txt', 'windows1252'),
+    new FileAccessDeniedError('a.ts', 'permission'),
+    new StorageFullError('a.ts'),
+    new WatchLimitReachedError(16),
+    new WatchUnavailableError(30),
+  ];
+
+  it.each(errors.map((error) => [error.code, error] as const))(
+    'carries %s with the status doc 04 declares — S-05',
+    (code, error) => {
+      const documented = documentedStatuses().get(code);
+
+      expect(documented).toBeDefined();
+      expect(httpStatusFor(code)).toBe(documented);
+      expect(error.messageKey).toMatch(/^files\.error\.[a-zA-Z]+$/);
+    },
+  );
+
+  it('answers 412, 415, 428 and 507 — never the 500 of an uncatalogued code — S-06', () => {
+    expect(httpStatusFor('FILE_CHANGED')).toBe(412);
+    expect(httpStatusFor('FILE_NOT_TEXT')).toBe(415);
+    expect(httpStatusFor('PRECONDITION_REQUIRED')).toBe(428);
+    expect(httpStatusFor('STORAGE_FULL')).toBe(507);
+  });
+
+  it('gives a watch the system refused the wait it declared, like every 503 — S-07', () => {
+    const envelope = toErrorEnvelope(new WatchUnavailableError(30), 't');
+
+    expect(envelope.error).toMatchObject({
+      code: 'WATCH_UNAVAILABLE',
+      httpEquivalent: 503,
+      params: { retryAfterSeconds: 30 },
+    });
+    expect(retryAfterFor(503, envelope)).toBe(30);
+  });
+
+  it('answers a trail that is down with 503 and a wait, unlike the undo — D-02', () => {
+    const envelope = toErrorEnvelope(new FileTrailUnavailableError('a.ts', new Error('db')), 't');
+
+    expect(envelope.error).toMatchObject({ code: 'SERVICE_UNAVAILABLE', httpEquivalent: 503 });
+    expect(retryAfterFor(503, envelope)).toBe(5);
+  });
+
+  it('names the version on disk of a 412 and a 409, for the ETag header', () => {
+    expect(etagFor(toErrorEnvelope(new FileChangedError('a.ts', '"abc"'), 't'))).toBe('"abc"');
+    expect(etagFor(toErrorEnvelope(new FileChangedError('a.ts', null), 't'))).toBeNull();
+    expect(etagFor(toErrorEnvelope(new FileNotFoundError('a.ts'), 't'))).toBeNull();
+  });
+});
+
+/** The codes the Claude panel adds — plan 08, B-04 (S-10). */
+describe('the codes the Claude panel adds — plan 08, B-04', () => {
+  const repository = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../../..');
+
+  /** A key of a catalogue of the web, by its dotted path — `undefined` when it is not there. */
+  const keyOf = (catalogue: string, key: string): unknown =>
+    key
+      .split('.')
+      .reduce<unknown>(
+        (node, segment) => (node as Record<string, unknown> | undefined)?.[segment],
+        JSON.parse(
+          readFileSync(path.join(repository, 'web/src/shared/i18n/locales', catalogue), 'utf8'),
+        ) as unknown,
+      );
+
+  const errors = [
+    new AttachmentNotFoundError('att_1'),
+    new AttachmentTypeUnsupportedError('image/tiff'),
+    new ToolUseNotFoundError('toolu_1'),
+    new DiffNotApplicableError('Bash'),
+    new SessionChangeStaleError('src/a.ts'),
+    new SessionForkRejectedError('c-1'),
+    new QueuedPromptNotFoundError('q-1'),
+  ];
+
+  it.each(errors.map((error) => [error.code, error] as const))(
+    'carries %s with the status doc 04 declares',
+    (code, error) => {
+      const documented = documentedStatuses().get(code);
+
+      expect(documented).toBeDefined();
+      expect(httpStatusFor(code)).toBe(documented);
+      expect(error.messageKey).toMatch(/^session\.error\.[a-zA-Z]+$/);
+    },
+  );
+
+  const keyed = [
+    ...errors,
+    new QueuedPromptStartedError('q-1'),
+    new ForkPointUnknownError('m-1'),
+    new EffortUnsupportedError('max', 'claude-haiku'),
+  ];
+
+  it.each(keyed.map((error) => [error.messageKey, error] as const))(
+    'translates %s in both languages of the web',
+    (messageKey) => {
+      expect(keyOf('en.json', messageKey)).toEqual(expect.any(String));
+      expect(keyOf('pt-BR.json', messageKey)).toEqual(expect.any(String));
+    },
+  );
+
+  it('answers the new keys on old codes with the statuses those codes already have', () => {
+    expect(toErrorEnvelope(new QueuedPromptStartedError('q-1'), 't').error).toMatchObject({
+      code: 'CONFLICT',
+      httpEquivalent: 409,
+      params: { queueId: 'q-1' },
+    });
+    expect(toErrorEnvelope(new ForkPointUnknownError('m-1'), 't').error).toMatchObject({
+      code: 'INVALID_INPUT',
+      httpEquivalent: 400,
+      params: { messageId: 'm-1' },
+    });
+    expect(toErrorEnvelope(new EffortUnsupportedError('max', 'm'), 't').error).toMatchObject({
+      code: 'INVALID_INPUT',
+      params: { level: 'max', model: 'm' },
     });
   });
 });
