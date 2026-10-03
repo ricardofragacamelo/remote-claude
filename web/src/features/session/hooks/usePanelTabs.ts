@@ -164,3 +164,8 @@ export function usePanelDraft(
 }
 
 export { tabKeyOf };
+
+/** The live session the panel shows — `null` with a draft or a conversation of the history on screen. */
+export function sessionShownIn(tabs: Pick<PanelTabs, 'active'>): string | null {
+  return tabs.active?.kind === 'session' ? tabs.active.sessionId : null;
+}

@@ -800,6 +800,19 @@ as carrega pelo `ToolSearch` antes da primeira chamada. Nenhuma passa pelo `canU
 - Subtipos de `system` novos para o mapper: `thinking_tokens`, `task_*`, `background_tasks_changed`, e
   `status` com `requesting`/`compacting`.
 
+### 10.10 — O prompt não volta pelo stream; com `uuid`, o CLI responde `command_lifecycle` (plano 08, F6)
+
+- **O CLI não ecoa o prompt do streaming input**: em nenhuma gravação há a mensagem `user` do prompt
+  (só a do `/compact`, com `isReplay`). Sem eco, o painel e o app mostravam a resposta sem a pergunta —
+  achado pelo e2e da F6. O backend passou a dizer o prompt ele mesmo (`message.completed` de papel
+  `user`, [05-websocket-protocol](../architecture/shared/05-websocket-protocol.md#multi-cliente-na-mesma-sessão)).
+- **Um `SDKUserMessage` com `uuid`** é guardado na conversa **sob esse `uuid`** — o `forkSession` do
+  `sdk.d.ts` o aceita como `upToMessageId` — e o CLI responde com mensagens de `type`
+  **`command_lifecycle`** (`{ command_uuid, state: 'queued' | 'started', uuid, session_id }`), que a
+  união tipada do SDK não nomeia. Gravado em `stamped-turn`; o primeiro `smoke-live` da F6 as viu como
+  variante desconhecida, e o mapper passou a conhecê-las como silenciosas — a fila de prompts é do
+  backend (D-14) e já diz quando um prompt espera, começa ou sai.
+
 ### Como reproduzir
 
 `pnpm fixtures:record <cenário>` — os cenários e o porquê de cada um estão em

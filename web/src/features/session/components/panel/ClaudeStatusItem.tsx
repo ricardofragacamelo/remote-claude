@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useFolderTab } from '@/features/workbench';
 import { StatusBarButton } from '@/shared/components/StatusBarButton';
-import { COMPOSER_ID } from '../../hooks/usePanelCommands';
+import { focusComposerOf } from '../../hooks/usePanelCommands';
 import { useSessionSummary } from '../../hooks/useSessionSummary';
 import { sessionStatusItem } from '../session-status-item';
 import type { SessionItemProps } from '../session-status-item';
@@ -31,9 +31,7 @@ function Item({ folder, sessionId }: SessionItemProps): React.JSX.Element {
       label={label}
       onClick={() => {
         tab.showSecondary();
-        requestAnimationFrame(() => {
-          document.getElementById(COMPOSER_ID)?.focus();
-        });
+        focusComposerOf(folder);
       }}
     >
       {t('sessions.status.short', { status: t(`session.status.${status}`), cost })}

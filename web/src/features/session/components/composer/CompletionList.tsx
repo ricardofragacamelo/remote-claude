@@ -91,18 +91,21 @@ function MenuFrame({
   );
 }
 
+/** What a menu of the box is handed: its id, what it lists, the option on focus, and the pick. */
+interface MenuListProps<Menu> {
+  readonly id: string;
+  readonly menu: Menu;
+  readonly active: number;
+  onPick(index: number): void;
+}
+
 /** The `@` menu: providers, the open files and the entries of the folder, and the typed path. */
 export function MentionList({
   id,
   menu,
   active,
   onPick,
-}: {
-  readonly id: string;
-  readonly menu: MentionMenu;
-  readonly active: number;
-  onPick(index: number): void;
-}): React.JSX.Element {
+}: MenuListProps<MentionMenu>): React.JSX.Element {
   const { t } = useTranslation();
   const emptiness =
     menu.empty === 'emptyFolder'
@@ -189,12 +192,7 @@ export function SlashList({
   menu,
   active,
   onPick,
-}: {
-  readonly id: string;
-  readonly menu: SlashMenu;
-  readonly active: number;
-  onPick(index: number): void;
-}): React.JSX.Element {
+}: MenuListProps<SlashMenu>): React.JSX.Element {
   const { t } = useTranslation();
   const nothing = !menu.isLoading && menu.error === null && menu.commands.length === 0;
 

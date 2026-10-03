@@ -7,7 +7,6 @@ import type { Envelope } from '@remote-claude/contracts';
 
 import { Conversation } from '@/features/session/components/Conversation';
 import { OUTPUT_CEILING } from '@/features/session/components/conversation/AnsiText';
-import { TurnStatus } from '@/features/session/components/conversation/TurnStatus';
 import { readEvent, SILENT } from '@/features/session/services/conversation-reducer';
 import type { Conversation as ConversationState } from '@/features/session/types/live-session';
 import { setEngineLoader } from '@/features/editor/lib/engine-loader';
@@ -647,26 +646,6 @@ describe('the conversation of the panel', () => {
       show(fold(frame('session.compacted', { trigger: 'manual' })));
 
       expect(await screen.findByText(t('sessions.compacted.manual'))).toBeInTheDocument();
-    });
-
-    it('leads from "waiting for you" to the question — S-96', () => {
-      renderRouted(<TurnStatus sessionId="s-1" status="waitingPermission" costUsd="0" turns={0} />);
-
-      return waitFor(() => {
-        expect(
-          screen.getByRole('link', { name: t('sessions.status.waitingPermission') }),
-        ).toHaveAttribute('href', '#permission-queue-s-1');
-      });
-    });
-
-    it('says nothing of where the turn is when nothing is happening', async () => {
-      const { container } = renderRouted(
-        <TurnStatus sessionId="s-1" status="idle" costUsd="0" turns={0} />,
-      );
-
-      await waitFor(() => {
-        expect(container.querySelector('div')).toBeEmptyDOMElement();
-      });
     });
   });
 

@@ -82,9 +82,10 @@ export class RecordingHandle implements ClaudeSessionHandle {
   /** What went beside each prompt — `undefined` for one without context (plan 08, B-44). */
   readonly extras: (PromptExtras | undefined)[] = [];
 
-  prompt(text: string, extras?: PromptExtras): void {
+  prompt(text: string, extras?: PromptExtras): string {
     this.prompts.push(text);
     this.extras.push(extras);
+    return `prompt-${String(this.prompts.length)}`;
   }
 
   interrupt(): Promise<void> {

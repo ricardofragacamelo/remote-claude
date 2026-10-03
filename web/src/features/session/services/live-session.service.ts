@@ -102,18 +102,27 @@ export function interruptSession(client: WsClient, sessionId: string): boolean {
   return client.command(SESSION_COMMANDS.interrupt, { sessionId });
 }
 
-/** Changes the model of a running session. */
-export function setSessionModel(client: WsClient, sessionId: string, model: string): boolean {
-  return client.command(SESSION_COMMANDS.setModel, { sessionId, model });
+/**
+ * Changes the model of a running session.
+ *
+ * @returns the id of the command frame — what a refusal of it names (plan 09, S-23) — or `null`
+ *   when the socket was not ready and nothing left
+ */
+export function setSessionModel(client: WsClient, sessionId: string, model: string): string | null {
+  return client.issue(SESSION_COMMANDS.setModel, { sessionId, model });
 }
 
-/** Changes how the SDK treats tool invocations. */
+/**
+ * Changes how the SDK treats tool invocations.
+ *
+ * @returns the id of the command frame, or `null` when nothing left
+ */
 export function setSessionPermissionMode(
   client: WsClient,
   sessionId: string,
   mode: string,
-): boolean {
-  return client.command(SESSION_COMMANDS.setPermissionMode, { sessionId, mode });
+): string | null {
+  return client.issue(SESSION_COMMANDS.setPermissionMode, { sessionId, mode });
 }
 
 /** Ends a session and releases its subprocess. Only its owner may. */

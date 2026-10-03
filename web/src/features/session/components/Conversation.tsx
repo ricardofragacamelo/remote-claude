@@ -7,13 +7,16 @@ import { EmptyState } from '@/shared/components/EmptyState';
 import { IconButton } from '@/shared/components/IconButton';
 import { Button } from '@/shared/components/ui/button';
 import { useConversationSearch } from '../hooks/useConversationSearch';
-import { useFollowTail } from '../hooks/useFollowTail';
 import type { ConversationSearch } from '../hooks/useConversationSearch';
 import type { Conversation as ConversationState } from '../types/live-session';
 import { taskListOf } from '../lib/task-list';
-import { TaskListPanel } from './conversation/TaskListPanel';
 import { TimelineEntries } from './conversation/TimelineEntries';
-import type { TimelineContext } from './conversation/timeline-context';
+import type {
+  InlineContext,
+  PromptActions,
+  TimelineContext,
+} from './conversation/timeline-context';
+import { StateStrip } from './frame/StateStrip';
 
 export interface ConversationProps {
   readonly conversation: Pick<ConversationState, 'messages' | 'tools' | 'timeline' | 'turns'>;
@@ -33,9 +36,11 @@ export interface ConversationProps {
   /** Brings the rest of the conversation, for a search of the whole of it (S-101). */
   onSearchEverything?(): void;
 
-  /** Edits a prompt to send it again, and forks from before one (plan 08, B-35). */
-  readonly onEditPrompt?: TimelineContext['onEditPrompt'];
-  readonly onForkFrom?: TimelineContext['onForkFrom'];
+  /** What can be done from a prompt: edit, fork, undo to it (plan 08, B-35; plan 09, B-27). */
+  readonly prompts?: PromptActions;
+
+  /** The questions of the live session, in the place of their tools (plan 09, B-23). */
+  readonly inline?: InlineContext;
 }
 
 /**
@@ -47,8 +52,10 @@ export interface ConversationProps {
  * which is worse than showing nothing at all
  * ([D-10](../../../../../docs/plans/01-live-session/decisions.md)).
  *
- * `Ctrl/Cmd+F` with the focus in it opens a search of what is loaded (B-24). With the person at the
- * end, what arrives keeps the end in view; scrolled up, it leaves them where they read (S-81).
+ * `Ctrl/Cmd+F` with the focus in it opens a search of what is loaded (B-24), whose bar stays at the
+ * top of the scroller while the conversation moves under it (plan 09, B-28). Following its end is the
+ * frame's, which owns the one scroller of the panel (plan 09, B-05). The task list is not here: it
+ * stands above the box (plan 09, B-26).
  */
 export function Conversation({
   conversation,
@@ -57,13 +64,12 @@ export function Conversation({
   sessionId = null,
   conversationId = null,
   onSearchEverything,
-  onEditPrompt,
-  onForkFrom,
+  prompts,
+  inline,
 }: ConversationProps): React.JSX.Element {
   const { t } = useTranslation();
   const container = useRef<HTMLDivElement>(null);
   const search = useConversationSearch(conversation.messages, container);
-  useFollowTail(container, conversation);
   const taskList = useMemo(() => taskListOf(conversation.tools), [conversation.tools]);
 
   const context: TimelineContext = {
@@ -73,23 +79,17 @@ export function Conversation({
     conversation,
     current: search.found[search.at] ?? null,
     taskList,
-    onEditPrompt,
-    onForkFrom,
+    prompts,
+    inline,
   };
 
   return (
     <div ref={container} className="flex flex-col gap-4">
-      {isPartial && (
-        <p className="rounded bg-muted p-2 text-xs" role="note">
-          {t('session.screen.partial')}
-        </p>
-      )}
-
       {search.query !== null && (
         <SearchBar query={search.query} search={search} onSearchEverything={onSearchEverything} />
       )}
 
-      <TaskListPanel list={taskList} />
+      {isPartial && <StateStrip role="note">{t('session.screen.partial')}</StateStrip>}
 
       {conversation.timeline.length === 0 ? (
         <EmptyState
@@ -129,7 +129,8 @@ function SearchBar({
   return (
     <div
       role="search"
-      className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1"
+      // Pinned to the top of the scroller while the conversation moves under it (plan 09, S-79).
+      className="sticky top-0 z-10 flex flex-wrap items-center gap-1 rounded-md border border-border bg-background p-1"
     >
       <label className="sr-only" htmlFor="conversation-search">
         {t('sessions.search.label')}

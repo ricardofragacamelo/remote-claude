@@ -12,6 +12,7 @@ import type { MenuCommand, PermissionMode, SessionClient, SlashCommand } from '@
 import type { SessionBroadcaster } from './ports/session-broadcaster.port';
 import type { CommandCatalog } from './command-catalog';
 import type { OutgoingPrompt, PromptAttachment, PromptContextResolver } from './prompt-context';
+import { handOverPrompt } from './prompt-hand-over';
 import type { SessionEnder } from './session-ender';
 import type { LiveSession, SessionRegistry } from './session-registry';
 
@@ -143,7 +144,7 @@ export class PromptSessionUseCase extends SessionCommandUseCase {
     const submission = live.session.prompts.submit(prompt);
 
     if (submission.kind === 'now') {
-      live.handle.prompt(prompt.text, outgoing.extras);
+      handOverPrompt(live, this.queueing.broadcaster, prompt);
       return;
     }
 

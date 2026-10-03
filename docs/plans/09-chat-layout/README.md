@@ -96,12 +96,12 @@ conclusão. A ordem é dependência, não preferência. Uma fase só começa com
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Normas](F0-norms.md) | as regras do painel novo em `web/03`, as chaves i18n e o page object do e2e | B-01…B-03 | 🔲 |
-| F1 | [Moldura do painel](F1-panel-frame.md) | só a conversa rola, e o composer fica ancorado em qualquer tamanho | B-04…B-08 | 🔲 |
-| F2 | [Composer](F2-composer.md) | a caixa com a barra do plugin: contexto, comandos, modo, modelo, esforço, contexto e enviar/parar | B-09…B-15 | 🔲 |
-| F3 | [Cabeçalho](F3-header.md) | uma faixa com abas, histórico, alterações, status e o menu da sessão | B-16…B-20 | 🔲 |
-| F4 | [Inline](F4-inline.md) | processamento, thinking, permissão, plano, tarefas e desfazer dentro da conversa | B-21…B-28 | 🔲 |
-| F5 | [E2E](F5-e2e.md) | o layout provado pela porta do usuário, no desktop e no celular | B-29…B-32 | 🔲 |
+| F0 | [Normas](F0-norms.md) | as regras do painel novo em `web/03`, as chaves i18n e o page object do e2e | B-01…B-03 | ✅ |
+| F1 | [Moldura do painel](F1-panel-frame.md) | só a conversa rola, e o composer fica ancorado em qualquer tamanho | B-04…B-08 | ✅ |
+| F2 | [Composer](F2-composer.md) | a caixa com a barra do plugin: contexto, comandos, modo, modelo, esforço, contexto e enviar/parar | B-09…B-15 | ✅ |
+| F3 | [Cabeçalho](F3-header.md) | uma faixa com abas, histórico, alterações, status e o menu da sessão | B-16…B-20 | ✅ |
+| F4 | [Inline](F4-inline.md) | processamento, thinking, permissão, plano, tarefas e desfazer dentro da conversa | B-21…B-28 | ✅ |
+| F5 | [E2E](F5-e2e.md) | o layout provado pela porta do usuário, no desktop e no celular | B-29…B-32 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 
@@ -130,7 +130,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | O contexto da janela à vista, com `/compact` | B-13 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd) | S-33, S-34 |
 | Fila, edição e recusa acima da caixa; o motivo de não enviar sem poluir | B-14 | [shared/04-errors-and-http](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio) | S-28…S-32 |
 | O composer por teclado, com os atalhos de antes | B-15 | [web/03-ui-system](../../architecture/web/03-ui-system.md#acessibilidade--não-é-opcional) | S-35, S-36 |
-| O cabeçalho numa faixa, com status e histórico | B-16, B-18, B-19 | [web/03-ui-system](../../architecture/web/03-ui-system.md#padrões-de-ui-deste-produto) | S-37, S-38, S-43…S-46 |
+| O cabeçalho numa faixa, com status e histórico | B-16, B-18, B-19 | [web/03-ui-system](../../architecture/web/03-ui-system.md#padrões-de-ui-deste-produto) | S-37, S-38, S-43…S-46, S-91 |
 | O menu da sessão: encerrar (do dono, confirmado), exportar, desfazer, notificações, regras, ajuda | B-17 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#multi-cliente-na-mesma-sessão) | S-39…S-42 |
 | A ajuda descreve os lugares novos | B-20 | [shared/02-i18n](../../architecture/shared/02-i18n.md#garantias-automatizadas) | S-47 |
 | O processamento à vista, na cauda, com verbo, tempo e movimento que respeita `prefers-reduced-motion` | B-21 | [web/03-ui-system](../../architecture/web/03-ui-system.md#stream-de-mensagens) | S-48…S-53 |

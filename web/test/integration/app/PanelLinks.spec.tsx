@@ -98,9 +98,9 @@ describe('the link of a session and of a conversation', () => {
     const mounted = open({ session: LIVE });
 
     expect(
-      await within(await claude()).findByText(
-        t('session.screen.sessionLabel', { sessionId: LIVE }),
-      ),
+      await within(await claude()).findByRole('region', {
+        name: t('session.screen.sessionLabel', { sessionId: LIVE }),
+      }),
     ).toBeInTheDocument();
     expect(mounted.search()).toMatchObject({ folder: A, session: LIVE });
   });
@@ -163,9 +163,9 @@ describe('the link of a session and of a conversation', () => {
     });
 
     expect(
-      await within(await claude()).findByText(
-        t('session.screen.sessionLabel', { sessionId: RESUMED }),
-      ),
+      await within(await claude()).findByRole('region', {
+        name: t('session.screen.sessionLabel', { sessionId: RESUMED }),
+      }),
     ).toBeInTheDocument();
     await waitFor(() => {
       expect(mounted.search()).toMatchObject({ session: RESUMED });

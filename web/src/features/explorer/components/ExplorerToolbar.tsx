@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { IconButton } from '@/shared/components/IconButton';
+import { MenuTrigger } from '@/shared/components/MenuTrigger';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,9 +12,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { SORT_KEYS } from '../hooks/explorer-actions';
 import type { ExplorerAction } from '../hooks/explorer-actions';
 import type { Explorer } from '../hooks/useExplorer';
@@ -113,20 +112,15 @@ function ViewOptions({
 
   return (
     <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label={label}
-              className="inline-flex size-touch items-center justify-center rounded-md hover:bg-accent md:size-7"
-            >
-              <Ellipsis className="size-4" aria-hidden />
-            </button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{label}</TooltipContent>
-      </Tooltip>
+      <MenuTrigger label={label}>
+        <button
+          type="button"
+          aria-label={label}
+          className="inline-flex size-touch items-center justify-center rounded-md hover:bg-accent md:size-7"
+        >
+          <Ellipsis className="size-4" aria-hidden />
+        </button>
+      </MenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>{t('explorer.toolbar.sort')}</DropdownMenuLabel>
         <DropdownMenuRadioGroup

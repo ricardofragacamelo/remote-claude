@@ -89,4 +89,16 @@ export interface PermissionOutcome {
 
   /** Who answered, when somebody did. */
   readonly resolvedBy: string | null;
+
+  /** The client the answer came from — `web` or `mobile` —, when the server said. */
+  readonly resolvedFrom: string | null;
+
+  /**
+   * The tool the request was about — what the conversation draws the decision on, in the place of
+   * the card (plan 09, B-23). `null` for a request this screen never saw asked: a rule settled it.
+   */
+  readonly toolUseId: string | null;
+
+  /** This screen sent the answer that won — "allowed by you". */
+  readonly answeredHere: boolean;
 }

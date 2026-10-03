@@ -1,0 +1,24 @@
+{
+  "id": "08·S-264…S-268",
+  "title": "the sessions of a folder, its tabs and its queue: the Sessions view lists a live session, a conversation active elsewhere and the history, and opens, continues and forks from them; a question asked in an inactive folder tab is a badge there and is answered; the link of a session opens it beside the explorer and the editor; two prompts queued during a turn, one taken out; editing a prompt forks the conversation; the panel on a phone",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "groups": { "running": "Running here", "elsewhere": "Active elsewhere", "history": "History" },
+    "elsewhere": { "fixture": "text-turn", "title": "Begun in the editor" },
+    "ended": { "fixture": "text-turn", "prompt": "the ended one" },
+    "forkTitle": "Continue a conversation that is being written now?",
+    "askingTurn": "tool-turn",
+    "badge": "1 question(s) waiting for you",
+    "gone": "That session no longer exists.",
+    "held": { "prompt": "first [hold]", "fixture": "text-turn" },
+    "queued": [
+      { "prompt": "second", "fixture": "cwd-turn" },
+      { "prompt": "third", "fixture": "compact-turn" }
+    ],
+    "cancelled": "Take prompt 2 out of the queue",
+    "edited": { "prompt": "second, edited", "fixture": "text-turn", "answer": "pong" },
+    "phone": { "width": 360, "height": 740 },
+    "tags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+    "phoneTurn": "tool-turn"
+  }
+}

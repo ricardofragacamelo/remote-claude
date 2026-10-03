@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { cn } from '@/shared/lib/utils';
 import { FILES_DRAG_TYPE, readFilesDrag, scopeDragPayload } from '@/shared/lib/files-drag';
 import type { ContextSet } from '../../hooks/useContextSet';
 import { itemsOfPayload } from '../../lib/context-set';
@@ -9,6 +10,9 @@ export interface ContextDropZoneProps {
   readonly folder: string;
   readonly context: ContextSet;
   readonly children: React.ReactNode;
+
+  /** Fills its place — the whole frame of the conversation is where a drag lands (plan 09, B-05). */
+  readonly fill?: boolean;
 }
 
 /** Whether a drag carries what the context takes: entries of a tree or a tab, or desktop files. */
@@ -27,16 +31,18 @@ export function ContextDropZone({
   folder,
   context,
   children,
+  fill = false,
 }: ContextDropZoneProps): React.JSX.Element {
   const { t } = useTranslation();
   const [over, setOver] = useState(false);
 
   return (
     <div
-      className={
-        'relative flex flex-col gap-3 ' +
-        (over ? 'rounded-md outline-2 outline-dashed outline-ring' : '')
-      }
+      className={cn(
+        'relative flex flex-col gap-3',
+        fill && 'min-h-0 flex-1 gap-0',
+        over && 'rounded-md outline-2 outline-dashed outline-ring',
+      )}
       onDragOver={(event) => {
         if (carriesContext([...event.dataTransfer.types])) {
           event.preventDefault();
@@ -60,7 +66,7 @@ export function ContextDropZone({
       }}
     >
       {over && (
-        <p role="status" className="text-ui-sm font-medium">
+        <p role="status" className={cn('text-ui-sm font-medium', fill && 'px-3 pt-2')}>
           {t('composer.drop.here')}
         </p>
       )}

@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
+import { DialogFrame } from '@/shared/components/DialogFrame';
+import { PathList } from '@/shared/components/PathList';
 import { Button } from '@/shared/components/ui/button';
 import type { OperationRunner } from '../hooks/useOutcome';
-import { ExplorerDialog, PathList } from './ExplorerDialog';
 
 export interface SensitiveDialogProps {
   readonly runner: OperationRunner;
@@ -32,14 +33,18 @@ export function SensitiveDialog({ runner }: SensitiveDialogProps): React.JSX.Ele
   );
 
   return (
-    <ExplorerDialog
+    <DialogFrame
       title={t('explorer.sensitive.title')}
       description={t('explorer.sensitive.description')}
       footer={answers}
       open={runner.sensitive !== null}
       onClose={runner.cancelSensitive}
     >
-      <PathList label={t('explorer.sensitive.listLabel')} paths={runner.sensitive?.paths ?? []} />
-    </ExplorerDialog>
+      <PathList
+        label={t('explorer.sensitive.listLabel')}
+        paths={runner.sensitive?.paths ?? []}
+        className="gap-0.5"
+      />
+    </DialogFrame>
   );
 }

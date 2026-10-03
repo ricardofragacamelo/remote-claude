@@ -15,7 +15,7 @@ A pergunta que resolve 90 % dos casos: **quem é o dono deste dado?**
 | O que **este navegador** abriu | a aba | **Zustand** (store da feature) | as sessões que ele pode encerrar — aprendidas por quem mandou o comando, não pela tela que as mostra ([plano 05 · S-84](../../plans/05-hardening-operations/scenarios.md)) |
 | UI local | o componente | `useState` | menu aberto |
 | UI compartilhada | app | **Zustand** (store global) | tema, navegação recolhida |
-| UI de uma aba de pasta | **a aba** | **Zustand**, um store **por pasta**, criado por fábrica | view ativa, painel aberto — [abaixo](#estado-de-aba-de-pasta) |
+| UI de uma aba de pasta | **a aba** | **Zustand**, um store **por pasta**, criado por fábrica | view ativa, painel aberto, onde a conversa de cada aba do painel foi deixada (a rolagem sobrevive à troca de pane e de layout, nunca à recarga — [09 · B-05](../../plans/09-chat-layout/F1-panel-frame.md#b-05--chatframe-as-três-faixas-e-o-único-scroller-)) — [abaixo](#estado-de-aba-de-pasta) |
 | Conveniência por visitante | este navegador | `localStorage`, **sempre** com `try/catch` | tamanhos de painel, tema, estado restaurável de cada aba |
 | Preferência do usuário | servidor | **TanStack Query** | abas abertas e a ordem delas, recentes, histórico de notificações |
 | Formulário | o formulário | **React Hook Form + Zod** | novo prompt |
@@ -140,7 +140,11 @@ interface SessionStreamState {
 
 Três regras que não podem faltar:
 
-1. **Descarte evento com `seq <= lastSeq`.** Replay reentrega — sem isso, mensagem duplica.
+1. **Descarte evento com `seq <= lastSeq`.** Replay reentrega — sem isso, mensagem duplica. A
+   exceção é o `session.started`: uma sessão nascida num rascunho ouve seus primeiros frames ao vivo,
+   antes de o replay do attach trazer o início de volta, e ele é o único frame que diz qual conversa
+   a sessão é e como roda. Atrasado, o que ele diz é tomado, a menos que um frame posterior já tenha
+   dito (`lateStart`, no `live-session.store.ts`; plano 08, S-267).
 2. **`gap: true` → limpe o store e recarregue o transcript por HTTP.** Não tente costurar. A
    conversa a recarregar é a que o ack nomeia em `claudeSessionId` — o id da **conversa** no store
    do Claude, não o da sessão viva —, e a página é **posta por baixo** do que o stream trouxer
@@ -211,7 +215,15 @@ regra da aba (08 · B-05):
 - **o rascunho não tem sessão.** "Nova conversa" é estado do cliente: modelo, modo, esforço, texto e
   contexto escolhidos ali, e nenhum subprocesso. A sessão nasce no **primeiro envio**
   (`session.start` e, no `session.started`, o `session.prompt`); recusa no teto mantém o rascunho inteiro
-  ([08 · D-07](../../plans/08-claude-panel/decisions.md#d-07--a-sessão-nasce-no-primeiro-prompt));
+  ([08 · D-07](../../plans/08-claude-panel/decisions.md#d-07--a-sessão-nasce-no-primeiro-prompt)).
+  O esforço escolhido no rascunho fica guardado **por sessão** quando ela nasce (`efforts`): na sessão
+  viva o chip do esforço só mostra o valor, porque trocá-lo reiniciaria a query sem o `PreToolUse`;
+  sessão aberta noutro lugar não tem esse valor, e o chip diz que é o do início
+  ([09 · S-90](../../plans/09-chat-layout/scenarios.md));
+- **o que o servidor só confirma aparece na hora, e volta com a recusa.** O modo e o modelo trocados
+  pela barra da caixa mudam o chip antes da resposta — o servidor confirma, não ecoa —, e o `error` que
+  nomeia o comando (`correlationId`) devolve o chip ao valor anterior, com o erro traduzido acima da
+  caixa ([09 · S-23](../../plans/09-chat-layout/scenarios.md));
 - **as sessões vivem no backend**: fechar a aba do painel ou a aba de pasta **não** as encerra — encerrar
   é um comando. A conversa aberta é registrada no `tabRestorers` e volta ao recarregar;
 - **a lista de sessões é polling, com invalidação por evento** — 10 s pelo TanStack Query com a view
@@ -236,7 +248,21 @@ regra da aba (08 · B-05):
   confirmação.
 - Enquanto envia a resposta, o card fica em `pending` e **não** aceita segundo clique.
 - Resposta recusada porque outro venceu a corrida (`ack` sem efeito) **não** é erro na tela —
-  atualize mostrando quem resolveu.
+  atualize mostrando quem resolveu. Resposta que chega **depois do prazo** é recusada pelo servidor
+  (`PERMISSION_REQUEST_EXPIRED`) com um `error` que nomeia o frame da resposta: o `respond` do
+  `wsClient` devolve o id do frame, e a recusa aparece traduzida acima da caixa
+  ([09 · S-61](../../plans/09-chat-layout/scenarios.md#permissão-e-plano-inline--b-23-b-24)).
+- A fila é a **fonte**; o lugar é da conversa ([09 · D-12](../../plans/09-chat-layout/decisions.md#f4--inline)).
+  O `useInlineRequests` acha cada pedido pela tool (`toolUseId`) e cada pedido decidido também: o
+  resultado guarda a tool do card que ele fechou, e se a resposta vencedora foi a desta tela ("por
+  você"). Pedido que uma regra decidiu antes de perguntar a alguém nunca esteve na fila e não tem
+  tool para marcar.
+- O card toma o foco **uma vez**, na chegada (`claimArrival`), e só se ninguém escreve
+  ([09 · D-13](../../plans/09-chat-layout/decisions.md#f4--inline)). Redesenhado — movido para o
+  lugar da tool, ou de volta com a aba —, não toma de novo.
+- A contagem regressiva vive no hook: com um pedido aberto, a tela da sessão re-renderiza a cada
+  segundo, e as mensagens não (são `memo`). O relógio do indicador do turno vive no próprio
+  indicador ([09 · R-07](../../plans/09-chat-layout/README.md#riscos-e-decisões-em-aberto)).
 
 Ver [o fluxo](../shared/05-websocket-protocol.md#o-fluxo-de-permissão).
 

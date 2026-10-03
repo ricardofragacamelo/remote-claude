@@ -152,7 +152,7 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `session.started` | `{ sessionId, workspacePath, model, permissionMode, claudeSessionId, resumedFrom? }` | `system:init` |
 | `session.statusChanged` | `{ status }` — `idle`·`thinking`·`running`·`waitingPermission`·`closed` | derivado |
 | `message.delta` | `{ messageId, delta, blockType?, parentToolUseId? }` — `blockType`: `text`·`thinking` | `stream_event` |
-| `message.completed` | `{ messageId, role, content[], promptedBy?, parentToolUseId? }` | `assistant` / `user` |
+| `message.completed` | `{ messageId, role, content[], promptedBy?, parentToolUseId? }` | `assistant` / `user` — e o **prompt**, dito pelo backend (ver abaixo) |
 | `tool.started` | `{ toolUseId, toolName, input, title?, parentToolUseId? }` | `assistant` (tool_use) |
 | `tool.progress` | `{ toolUseId, chunk, parentToolUseId? }` | `tool_progress` |
 | `tool.completed` | `{ toolUseId, status, summary?, parentToolUseId?, taskId? }` — `succeeded`·`failed`·`denied`; `taskId` só de `TaskCreate`/`TaskUpdate` (a lista de tarefas, plano 08) | `user` (tool_result) |
@@ -717,6 +717,18 @@ N connections podem observar 1 sessão. Todas recebem **todos** os eventos.
 há 2 min". Eles viajam **no evento resultante**, não no comando: `promptedBy` em
 `message.completed` (papel `user`) e em `turn.completed`; `resolvedBy` em `permission.resolved`,
 ao lado de `resolvedFrom`, que diz de qual cliente veio a resposta.
+
+**O prompt é dito pelo backend.** O CLI não ecoa o prompt do streaming input (medido em toda
+gravação, menos a do `/compact`), então é o backend que publica, no momento em que entrega o prompt
+ao Claude — na hora, ou quando ele sai da fila (depois do `prompt.dequeued`) —, um
+`message.completed { messageId, role: 'user', content, promptedBy }` (plano 08, F6, S-273):
+
+- `messageId` é o `uuid` com que o prompt vai no `SDKUserMessage`, e é sob ele que o CLI o guarda na
+  conversa — o histórico lido depois e o stream são **uma** mensagem, e o editar-e-reenviar bifurca
+  a partir dele (`forkAt`, D-19);
+- `content` é o texto que a pessoa **digitou** (mais um bloco `image`, sem bytes, por imagem), nunca
+  o prompt composto: o texto de um provedor de contexto (a saída do terminal) iria para o log de
+  todo frame de saída (S-204). O histórico guarda o composto, que é o que o Claude leu.
 
 A exceção é a decisão automática — prazo vencido, ou regra de escopo `session` que já valia.
 Nela não há autor, e é por isso que `resolvedBy` é obrigatório **apenas quando `auto` é

@@ -42,13 +42,13 @@ export async function startFromDraft(
   const aside = await screen.findByRole('complementary', { name: t('workbench.claude.label') });
   await typeIn(
     user,
-    await within(aside).findByLabelText(t('session.composer.label')),
+    await within(aside).findByLabelText(t('composer.box.label')),
     session.text ?? 'hello',
   );
   await user.click(within(aside).getByRole('button', { name: t('session.composer.send') }));
 
   live.receive(startedFrame(live.lastSent('session.start')?.['id'], session.id, session.folder));
-  await within(claudeAside()).findByText(
-    t('session.screen.sessionLabel', { sessionId: session.id }),
-  );
+  await within(claudeAside()).findByRole('region', {
+    name: t('session.screen.sessionLabel', { sessionId: session.id }),
+  });
 }

@@ -14,7 +14,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 
 ## Panorama
 
-**Última atualização:** 2026-10-02
+**Última atualização:** 2026-10-03
 
 ```
 00-bootstrap             ████████████████████ 100%   ✅ concluído
@@ -25,8 +25,8 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 05-hardening-operations  ████████████████████ 100%   ✅ concluído
 06-workbench             ████████████████████ 100%   ✅ concluído
 07-explorer-and-editor   ████████████████████ 100%   ✅ concluído
-08-claude-panel          ██████████████████░░  90%   🔄 em andamento
-09-chat-layout           ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+08-claude-panel          ████████████████████ 100%   ✅ concluído
+09-chat-layout           ████████████████████ 100%   ✅ concluído
 10-mobile-chat-layout    ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 11-search                ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 12-integrated-terminal   ░░░░░░░░░░░░░░░░░░░░   0%   🔄 em andamento
@@ -56,7 +56,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [05 — Endurecimento e operação](05-hardening-operations/README.md) | 5/5 | 22/22 | 77/77 | 14/14 | ✅ |
 | [06 — Workbench](06-workbench/README.md) | 7/7 | 40/40 | 210/210 | 33/33 | ✅ |
 | [07 — Explorer e editor](07-explorer-and-editor/README.md) | 9/9 | 61/61 | 360/360 | 26/26 | ✅ |
-| [08 — Painel do Claude](08-claude-panel/README.md) | 6/7 | 52/58 | 254/272 | 25/25 | 🔄 |
+| [08 — Painel do Claude](08-claude-panel/README.md) | 7/7 | 58/58 | 275/275 | 25/25 | ✅ |
 | [11 — Busca](11-search/README.md) | 0/4 | 0/25 | 0/174 | 8/8 | 🔲 |
 | [12 — Terminal integrado](12-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 13/13 | 🔄 |
 | [13 — Configuração do Claude](13-claude-settings/README.md) | 0/5 | 0/47 | 0/213 | 22/22 | 🔲 |
@@ -67,9 +67,9 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [18 — Logs e diagnóstico](18-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 2/16 | 🔲 |
 | [19 — Distribuição](19-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/8 | 🔲 |
 | [20 — Dev public](20-dev-public/README.md) | 0/1 | 6/7 | 38/41 | 8/8 | 🔄 |
-| [09 — Layout do chat](09-chat-layout/README.md) | 0/6 | 0/32 | 0/90 | 19/19 | 🔲 |
+| [09 — Layout do chat](09-chat-layout/README.md) | 6/6 | 32/32 | 92/92 | 19/19 | ✅ |
 | [10 — Layout do chat no app](10-mobile-chat-layout/README.md) | 0/6 | 0/27 | 0/91 | 2/10 | 🔲 |
-| **Total** | **58/113** | **362/714** | **1443/2968** | **252/340** | 🔄 |
+| **Total** | **65/113** | **400/714** | **1556/2973** | **252/340** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -321,6 +321,8 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-10-03 | **Plano 09 — Layout do chat concluído** (F4, inline; F5, e2e) | 32/32 tarefas e 92 cenários; `verify:full` com os onze portões verdes (e2e 122/122), e o `chat-layout.spec` duas vezes seguidas, 36/36. Inline: o indicador do turno na cauda, o thinking vivo, a permissão e o plano no lugar da tool (ou na cauda até a linha chegar), a linha da decisão, a pílula e o comando `Mod+Alt+P`, a lista de tarefas sobre a caixa, editar, bifurcar e desfazer pela mensagem. Achados: a norma do 03 de foco no negar nunca tinha sido implementada no web; a resposta atrasada não era vigiada (o `respond` passou a devolver o id do frame). A 360×400 o card se responde com o teclado fechado (ver o progresso do plano). O contrato não mudou: o plano 10 começa sem `test:e2e:mobile` pendente deste |
+| 2026-10-02 | **Plano 08 — Painel do Claude concluído** (F6, o e2e) | 58/58 tarefas e 275 cenários; `verify:full` com os onze portões verdes (e2e 102/102), `test:e2e:mobile` 15/15 e `test:e2e:live` 3/3. O e2e achou e a F6 corrigiu: o prompt que não aparecia na conversa (o backend passou a dizê-lo, como o contrato já previa), o modo depois de aprovar o plano, o `session.started` atrasado da sessão nascida no rascunho, a rolagem lateral num telefone e o diff que rola sem foco; o `smoke-live` achou a variante `command_lifecycle` que o `uuid` do prompt trouxe. O plano 09 (layout do chat), que esperava a F6, pode começar ([09 · D-01](09-chat-layout/decisions.md#f0--normas)) |
 | 2026-10-02 | **Plano 10 — Layout do chat no app criado; os planos 10…19 passaram a 11…20** | o app sai do plano 09 e ganha o seu, com paridade com o painel web (10 · D-01). A renumeração foi feita pelo `pnpm plan new --at 10`, novo nesta data: pastas, títulos, links, âncoras e referências explícitas em docs e comentários de código. As referências soltas ("o 18 empacota"), que a renumeração anterior não tinha tocado, foram revisadas uma a uma pelo sentido |
 | 2026-10-02 | **Plano 09: as 16 decisões em aberto respondidas pelo usuário** | treze seguem a recomendação: caixa até 40 % com menu de excesso, enviar/parar híbrido, motivo na tela só para bloqueio real, menu "Commands" sai, alternar modo pela palette, encerrar com diálogo, custo no tooltip e na status bar, permissão na linha da tool, foco que respeita a caixa, tarefas sobre a caixa, desfazer na mensagem e no `⋯`, verbos sorteados, e o app fora do plano (D-03, que virou o plano 10). **Três mudam o plano:** o 09 roda depois da F6 do 08 (D-01), o contrato pode mudar (D-02), e a caixa da sessão encerrada fica ativa e retoma no Enter (D-05). O plano foi revisado para as três na mesma data, e a B-11 ganhou o esforço só no rascunho (08 · D-16) |
 | 2026-10-02 | **Plano 09 — Layout do chat criado; os planos 09…18 passaram a 10…19** (hoje 11…20, depois que o 10 entrou) | o usuário reprovou a disposição do painel do 08 e pediu o molde do plugin do VS Code: só a conversa rola, o composer sempre à vista, thinking, processamento e permissão inline, os controles na barra da caixa. O plano entra logo depois do 08; pastas, títulos, links, âncoras e referências dos planos seguintes foram renumerados na mesma data, e as referências deste histórico já usam os números novos. 6 fases, 32 tarefas, 86 cenários e 16 decisões em aberto, com recomendação |

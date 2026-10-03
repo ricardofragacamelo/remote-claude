@@ -13,7 +13,12 @@ import type { MentionEntry, MentionLevel } from '../services/composer.service';
 import type { ContextItem } from '../types/context';
 import type { CommandMenu, SlashCommand } from '../types/command';
 import { useCatalog } from './useCatalog';
-import { commandKeys } from './useCommandMenu';
+
+/** The keys of the commands of a live session, in one place. */
+export const commandKeys = {
+  all: ['sessions', 'commands'] as const,
+  of: (sessionId: string) => [...commandKeys.all, sessionId] as const,
+};
 
 /** How many entries the `@` menu shows at most: a menu, not a listing. */
 export const MAX_MENTIONS = 30;

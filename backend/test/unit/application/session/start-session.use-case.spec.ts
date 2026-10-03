@@ -561,10 +561,19 @@ describe('StartSessionUseCase', () => {
       claude.emit({ type: 'turn.completed', payload: {} });
 
       expect(claude.handle.prompts).toEqual(['second']);
-      expect(broadcaster.events.at(-1)?.event).toEqual({
-        type: 'prompt.dequeued',
-        payload: { queueId: 'q2', reason: 'started' },
-      });
+      // It left the queue, and then it is said, as the prompt of the turn it opens — by its sender.
+      expect(broadcaster.events.slice(-2).map((entry) => entry.event)).toEqual([
+        { type: 'prompt.dequeued', payload: { queueId: 'q2', reason: 'started' } },
+        {
+          type: 'message.completed',
+          payload: {
+            messageId: 'prompt-1',
+            role: 'user',
+            content: [{ type: 'text', text: 'second' }],
+            promptedBy: 'mobile',
+          },
+        },
+      ]);
 
       claude.emit({ type: 'turn.completed', payload: {} });
       expect(claude.handle.prompts).toEqual(['second']);

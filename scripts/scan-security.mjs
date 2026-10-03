@@ -23,6 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
+import { auditFindings, judge, loadAccepted, todayOf } from './lib/accepted-advisories.mjs';
 import { inspectAll } from './lib/agent-sdk-rules.mjs';
 import { inspectAll as inspectVendorNames } from './lib/vendor-name-rules.mjs';
 import { filesUnder } from './lib/files.mjs';
@@ -63,22 +64,50 @@ function checkSecrets() {
   }).code;
 }
 
+/**
+ * What the dependency checks judge by: an advisory is updated past, or — with no fixed version to
+ * update to — accepted for a while by an ADR, and said aloud every run (ADR-019).
+ *
+ * @param {import('./lib/accepted-advisories.mjs').AuditFinding[]} findings
+ * @returns {number} `0` when every finding is covered
+ */
+function reportJudged(findings) {
+  const judged = judge(findings, loadAccepted(repoRoot), todayOf());
+
+  for (const accepted of judged.accepted) {
+    warn(accepted);
+  }
+  for (const reason of judged.reasons) {
+    fail(reason);
+  }
+
+  return judged.failing.length === 0 ? 0 : 1;
+}
+
 /** @returns {number} */
 function checkDependencies() {
   info('dependencies — pnpm audit, high and above');
 
-  const result = runAttached('pnpm', ['audit', '--audit-level', 'high'], {
+  const result = run('pnpm', ['audit', '--audit-level', 'high', '--json'], {
     cwd: repoRoot,
     timeoutMs: 300_000,
   });
 
-  if (result.code === 0) {
+  let findings;
+  try {
+    findings = auditFindings(result.stdout);
+  } catch (error) {
+    fail('pnpm audit could not be read', String(error));
+    hint('a scan that could not look is not a scan that found nothing — fix the scanner first');
+    return 1;
+  }
+
+  if (findings.length === 0) {
     ok('no high or critical advisory');
     return 0;
   }
 
-  fail('pnpm audit found an advisory', 'update the dependency; never ignore the advisory id');
-  return result.code;
+  return reportJudged(findings);
 }
 
 /**
@@ -118,11 +147,21 @@ function checkOsv() {
     return 1;
   }
 
-  for (const finding of verdict.findings) {
-    fail(`${finding.lockfile}: ${finding.name}@${finding.version}`, finding.advisories.join(', '));
+  // osv does not say the path a package is reached by; `pnpm audit` does, and judges it. An
+  // exception is about the npm lockfile only — anything in the app's is never covered.
+  const findings = verdict.findings.flatMap((finding) =>
+    finding.advisories.map((id) => ({
+      id: finding.lockfile === 'pnpm-lock.yaml' ? id : `${finding.lockfile}:${id}`,
+      package: finding.name,
+      version: finding.version,
+      paths: [],
+    })),
+  );
+  const code = reportJudged(findings);
+  if (code !== 0) {
+    hint('update the dependency past the fixed version; never ignore the advisory id');
   }
-  hint('update the dependency past the fixed version; never ignore the advisory id');
-  return 1;
+  return code;
 }
 
 /**

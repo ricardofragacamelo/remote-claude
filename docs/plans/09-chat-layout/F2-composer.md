@@ -17,7 +17,7 @@ Os botões "Interrupt", "Commands" e as duas linhas de seletores saem de cima da
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-09 — A caixa com a barra 🔲
+### B-09 — A caixa com a barra ✅
 
 `ChatComposer`, de cima para baixo: os chips de contexto, a área de texto e a `ComposerToolbar`. O
 comportamento do `PromptComposer` do 08 · B-46 fica (React Hook Form + Zod, Enter, Shift+Enter, IME,
@@ -25,7 +25,7 @@ completion de `@` e `/`). Muda a forma. A caixa e a barra formam um bloco com bo
 rótulo "PROMPT" visível sai, e o nome acessível fica. A mesma caixa serve o rascunho, a sessão e a edição.
 A edição esconde o que não vale para ela (contexto e `/`) em vez de montar outra caixa.
 
-### B-10 — Enviar e parar 🔲
+### B-10 — Enviar e parar ✅
 
 Pela [D-06](decisions.md#f2--composer): com o turno rodando e a caixa vazia, o botão de enviar vira
 **parar** e interrompe. Com texto, enviar enfileira e diz isso, e o parar fica ao lado. Clicar parar
@@ -35,7 +35,7 @@ enviar", e dois envios seguidos retomam uma vez e mandam um prompt. O `Esc`
 continua como no 08 · B-40: fecha o menu aberto primeiro, e sem menu interrompe uma vez por turno. O
 `SessionControls` deixa de existir. "Encerrar sessão" vai para o menu da sessão ([B-17](F3-header.md)).
 
-### B-11 — Modo, modelo e esforço na barra 🔲
+### B-11 — Modo, modelo e esforço na barra ✅
 
 `ModePicker`, `ModelPicker` e `EffortPicker` em variante compacta (chip com ícone e nome curto, menu que
 abre **para cima**), com o mesmo comportamento do 08 · B-36: o modelo vem da instalação, o esforço só
@@ -47,7 +47,7 @@ valor anterior, com o erro traduzido. O rascunho e a sessão usam os mesmos chip
 leitura, e o tooltip diz por quê. O atalho de alternar o
 modo é a [D-09](decisions.md#f2--composer).
 
-### B-12 — `/` e `+` no lugar de "Commands" e dos botões soltos 🔲
+### B-12 — `/` e `+` no lugar de "Commands" e dos botões soltos ✅
 
 - **`/`** insere `/` no cursor e abre a completion de comandos e skills do 08 · B-50. O `CommandMenu` em
   `Disclosure` sai ([D-08](decisions.md#f2--composer)).
@@ -56,13 +56,13 @@ modo é a [D-09](decisions.md#f2--composer).
 
 Nada novo: cada item leva ao fluxo que já existe.
 
-### B-13 — O contexto da janela na barra 🔲
+### B-13 — O contexto da janela na barra ✅
 
 O `ContextMeter` vira um anel pequeno com a porcentagem. O popover abre para cima, com as categorias, o
 aviso perto do limite e **Compactar** dentro dele. O ícone solto de compactar sai. Medida ilegível: o
 anel some com o motivo no tooltip, e a barra não muda de posição (o lugar fica reservado).
 
-### B-14 — Fila, edição, recusa e o motivo de não enviar 🔲
+### B-14 — Fila, edição, recusa e o motivo de não enviar ✅
 
 Acima da caixa, nesta ordem:
 
@@ -74,7 +74,7 @@ Pela [D-07](decisions.md#f2--composer), o motivo de não enviar **com a caixa va
 acessível e no tooltip do botão. O bloqueio real (arquivo sumiu, upload pendente, teto do contexto)
 aparece na tela, acima da caixa.
 
-### B-15 — O composer por teclado 🔲
+### B-15 — O composer por teclado ✅
 
 Ordem de foco = ordem visual: caixa → `+` → `/` → modo → modelo → esforço → contexto → enviar/parar. Os
 menus abrem com Enter ou Espaço, fecham com `Esc` e devolvem o foco ao chip. O atalho de focar a caixa

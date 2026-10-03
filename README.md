@@ -63,6 +63,7 @@ O porquê de cada uma, e as alternativas descartadas, está em
 | Ver o que está sendo construído agora | [docs/plans/](docs/plans/README.md) |
 | Entender a arquitetura | [docs/architecture/](docs/architecture/README.md) |
 | Saber como o backend fala com o Claude | [Descoberta do Agent SDK](docs/discovery/01-descoberta-claude-agent-sdk.md) |
+| Ver uma proposta que ainda vai virar plano | [Workflow de sessões](docs/propostas/workflow-de-sessoes.md) · [Múltiplos motores de agente](docs/propostas/multiplos-motores-de-agente.md) |
 
 A documentação é fragmentada de propósito, com índices que roteiam por situação
 (*"vai fazer X → leia Y"*), para que se carregue só o necessário.

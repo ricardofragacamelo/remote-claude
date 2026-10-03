@@ -139,6 +139,15 @@ describe('the commands that drive a running session', () => {
       expect(handle.prompts).toEqual(['first']);
       expect(broadcaster.events.map((entry) => entry.event)).toEqual([
         {
+          type: 'message.completed',
+          payload: {
+            messageId: 'prompt-1',
+            role: 'user',
+            content: [{ type: 'text', text: 'first' }],
+            promptedBy: 'web',
+          },
+        },
+        {
           type: 'prompt.queued',
           payload: {
             queueId: expect.stringMatching(/^q_/) as unknown,
@@ -177,7 +186,7 @@ describe('the commands that drive a running session', () => {
             send();
           });
 
-        expect(broadcaster.events[0]?.event.payload).toMatchObject({ preview: 'second' });
+        expect(broadcaster.events[1]?.event.payload).toMatchObject({ preview: 'second' });
         const next = session.prompts.turnEnded();
         expect(next?.text).toBe('second\n\n<reference path="docs" kind="folder" />');
         expect(next?.extras?.context).toEqual([{ kind: 'folder', path: 'docs' }]);
@@ -210,7 +219,30 @@ describe('the commands that drive a running session', () => {
         send();
       });
 
-      expect(broadcaster.events[0]?.event.payload).toMatchObject({ promptedBy: 'mobile' });
+      expect(broadcaster.events[1]?.event).toMatchObject({
+        type: 'prompt.queued',
+        payload: { promptedBy: 'mobile' },
+      });
+    });
+
+    it('says the prompt that went to Claude as it was typed, under the id the conversation keeps it, and who sent it — S-273', async () => {
+      await prompter()
+        .execute(SESSION_ID, 'from the phone', owner, 'mobile', [{ path: 'src/a.ts' }])
+        .then((send) => {
+          send();
+        });
+
+      expect(broadcaster.events.map((entry) => entry.event)).toEqual([
+        {
+          type: 'message.completed',
+          payload: {
+            messageId: 'prompt-1',
+            role: 'user',
+            content: [{ type: 'text', text: 'from the phone' }],
+            promptedBy: 'mobile',
+          },
+        },
+      ]);
     });
 
     it('preserves the order the prompts arrived in — S-23', async () => {

@@ -36,7 +36,7 @@ de cada peça.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-21 — O indicador de processamento na cauda 🔲
+### B-21 — O indicador de processamento na cauda ✅
 
 `WorkingIndicator`: a última linha da conversa enquanto o turno roda (`thinking`, `running`,
 `waitingPermission`). Some no fim do turno, e o resumo do turno (08 · B-23) toma o lugar dele.
@@ -54,7 +54,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 
 O "Claude is thinking…" e o rótulo `THINKING` do topo já saíram na [B-18](F3-header.md).
 
-### B-22 — Thinking vivo e encerrado, na ordem 🔲
+### B-22 — Thinking vivo e encerrado, na ordem ✅
 
 O `ThinkingBlock` do 08 · B-19 ganha o estado **vivo**. Enquanto chegam deltas de `blockType: thinking`,
 a linha diz "Pensando…" com o glifo animado. Quando o bloco fecha, vira "Pensou por *n* s", recolhida,
@@ -62,7 +62,7 @@ que expande para o texto. Thinking redigido diz que existiu, sem inventar conte�
 No histórico, sem duração por bloco, a linha diz só "Pensou" (a regra do 08). Vários blocos no mesmo
 turno são várias linhas, na ordem em que vieram, entre as tools.
 
-### B-23 — A permissão no lugar da tool 🔲
+### B-23 — A permissão no lugar da tool ✅
 
 `InlinePermission`: o `PermissionCard` do 03 (e a prévia de diff do 08 · B-29) desenhado **no lugar da
 linha da tool** cujo `toolUseId` o pedido traz, ou na cauda quando a linha ainda não existe
@@ -72,12 +72,12 @@ linha da tool com a decisão em palavras ("aprovado por você", "recusado — ni
 "aprovado no celular por *X*", "aprovado pela regra *Y*"), no lugar da linha "última decidida" da fila
 de hoje. O `PermissionQueuePanel` sai do painel. O `usePermissionQueue` continua sendo a fonte.
 
-### B-24 — O plano para aprovar, inline 🔲
+### B-24 — O plano para aprovar, inline ✅
 
 O `PlanApprovalCard` (08 · B-22) no lugar do `ExitPlanMode`, pela mesma regra da B-23. Aprovar com um modo
 troca o chip de modo da barra ([B-11](F2-composer.md)) no mesmo gesto.
 
-### B-25 — Nunca fora de vista, e sem roubar o foco 🔲
+### B-25 — Nunca fora de vista, e sem roubar o foco ✅
 
 - **`PendingPill`**: com um pedido aberto e o card fora da área visível (rolado para cima, ou com o pane
   "Alterações" aberto), aparece uma pílula **sobre a caixa**: "Claude espera sua resposta (*n*)".
@@ -88,13 +88,13 @@ troca o chip de modo da barra ([B-11](F2-composer.md)) no mesmo gesto.
 - **Comando "Ir para o pedido de permissão"** na palette, com atalho.
 - O badge na aba de pasta inativa (08 · B-42) e a notificação do navegador continuam como estão.
 
-### B-26 — A lista de tarefas sobre a caixa 🔲
+### B-26 — A lista de tarefas sobre a caixa ✅
 
 Pela [D-14](decisions.md#f4--inline): o `TaskListPanel` (08 · B-20) sai do topo da conversa e vira o
 `TaskStrip` ancorado acima da caixa, recolhido numa linha ("3/7 · Rodando os testes"). Expande para a
 lista inteira. Sem lista, nada aparece. Atualiza ao vivo sem mexer na rolagem da conversa.
 
-### B-27 — As ações da mensagem, e desfazer por ela 🔲
+### B-27 — As ações da mensagem, e desfazer por ela ✅
 
 `MessageActions` no prompt do usuário, ao passar o mouse e por teclado (foco na mensagem): **editar**
 e **bifurcar** (08 · B-35, que já existem) e **desfazer arquivos até aqui** ([D-15](decisions.md#f4--inline)).
@@ -103,7 +103,7 @@ vira uma linha na conversa (o `RewindReport`). Com o turno rodando, a ação fic
 motivo. Com a sessão encerrada, ela não aparece. O `UndoPanel` em `Disclosure` sai. O menu `⋯` da
 [B-17](F3-header.md) é a outra entrada.
 
-### B-28 — Busca fixa e linhas de sistema compactas 🔲
+### B-28 — Busca fixa e linhas de sistema compactas ✅
 
 A barra de busca (`Ctrl/Cmd+F`, 08 · B-24) fica **fixa no topo do scroller** enquanto a conversa rola. O
 resumo do turno, a compactação, o replay parcial e o resultado do desfazer são linhas de uma linha, em
@@ -111,9 +111,13 @@ tom discreto, na ordem em que aconteceram.
 
 ---
 
+**A ajuda do que esta fase desenha.** A [B-20](F3-header.md) descreveu a barra da caixa e o menu `⋯`;
+os tópicos do indicador, do card inline, da pílula e das ações da mensagem entram aqui, com os lugares
+que descrevem (S-92) — ajuda de um lugar que ainda não existe ensinaria errado.
+
 ## Cenários cobertos
 
-S-48…S-80.
+S-48…S-80, S-92.
 
 ---
 

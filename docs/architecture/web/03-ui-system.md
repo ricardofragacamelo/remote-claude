@@ -120,7 +120,7 @@ verificada:
   `comfortable`, que troca os tokens da escala por `data-density` no `<html>` — o componente continua
   nomeando o token, e o alvo de toque é o mesmo nas duas;
 - **escala por token** em `globals.css` — tamanhos de texto da UI e do código, pesos, espaçamentos,
-  raios. Componente usa o token, nunca o valor: `text-ui`, `text-ui-sm`, `font-code`, `h-row` (22 px),
+  raios. Componente usa o token, nunca o valor: `text-ui`, `text-ui-sm`, `text-ui-xs` (a letra miúda do painel: chips, badges, faixas de uma linha), `font-code`, `h-row` (22 px),
   `h-header` (36 px), `w-rail` (48 px), `size-touch` (44 px), `font-ui-strong`;
 - **ícones só do `lucide-react`**; ícone sem texto tem `aria-label` traduzido **e** tooltip — o
   `IconButton` de `shared/components/` exige os dois pelo tipo;
@@ -169,7 +169,11 @@ Quando chega `permission.requested`:
   execução na própria máquina; esconder o conteúdo é inaceitável.
 - Destaque visual por `riskHint` (`destructive` → tom `destructive`).
 - Mostre a contagem regressiva até `expiresAt` — silêncio nega.
-- Botão de negar recebe o foco inicial quando `defaultToNo`.
+- Botão de negar recebe o foco inicial quando `defaultToNo` — **se ninguém está escrevendo**. Com o
+  foco num campo ou no editor (a caixa do composer inclusive), o foco fica lá, e o pedido é anunciado
+  (pílula e `aria-live`): um Enter de prompt nunca vira uma resposta ao pedido
+  ([09 · D-13](../../plans/09-chat-layout/decisions.md#f4--inline)). Só na chegada: o card redesenhado
+  não toma o foco de novo.
 - O escopo (`once` / `session` / `project` / `always`) é escolha explícita, com `once` default.
   Cada opção diz **o que significa**, sem eufemismo e sem sigla — "não perguntar de novo neste
   projeto", "não perguntar de novo em lugar nenhum" —, com a validade da regra à vista.
@@ -251,7 +255,8 @@ e tool; tool desconhecida mostra o nome. O título pode elidir visualmente, mas 
 no nome acessível e a um clique: expandir mostra o **input exato**, sem truncar. O estado vivo é ícone
 **e** texto (`started`, `succeeded`, `failed`, `denied` com o motivo). O card de permissão
 ([acima](#permissão--a-tela-mais-importante)) **nunca** é compactado: ali a pessoa autoriza execução na
-própria máquina.
+própria máquina. Ele fica **inline**, no lugar da linha da tool que pede (pelo `toolUseId`), e nunca
+fora de vista — ver [o painel em três faixas](#o-painel-do-claude--três-faixas).
 
 **Saída de terminal é texto, com cor por token.** ANSI vira cor pelos tokens de tema, nunca HTML; OSC 8
 (hyperlink), título de janela e sequência desconhecida são descartados. Acima do teto de exibição,
@@ -274,6 +279,95 @@ o painel escondido, vira **badge na aba** (e na activity bar do painel), nunca s
 lugar, histórico —, e falha de um grupo não esconde os outros. **"Ativa em outro lugar" é estimativa,
 e o rótulo diz isso**: "escrita há *n* min", nunca "aberta no VS Code" — o que se sabe é que o
 transcript foi escrito há pouco, não quem o escreve ([08 · D-06](../../plans/08-claude-panel/decisions.md#d-06--ativa-em-outro-lugar-o-critério-e-o-que-se-permite)).
+
+### O painel do Claude — três faixas
+
+O painel se lê e se opera como o plugin do VS Code ([plano 09](../../plans/09-chat-layout/README.md)). As
+regras abaixo vêm **antes** das telas (09 · B-01) e valem também para o app, que segue o mesmo molde no
+[plano 10](../../plans/10-mobile-chat-layout/README.md).
+
+**Três faixas, e só a do meio rola.** Cabeçalho fixo em cima, a conversa no meio, o composer ancorado
+embaixo. A página e a secondary side bar **não rolam**: a side bar dá ao filho altura definida, e o
+painel decide o que rola. O scroller da conversa é o **único** `overflow-y-auto` do painel, com
+`overscroll-contain`, e é ele que o auto-scroll observa. O composer **nunca** sai da tela, em nenhuma
+largura de painel, no celular e com o teclado virtual aberto (a altura acompanha o `visualViewport`).
+
+```
+┌──────────────────────────────┐
+│ cabeçalho — abas, ações, ⋯   │  fixo
+├──────────────────────────────┤
+│ faixas de estado (topo)      │
+│ conversa                     │  o único que rola
+│ … indicador de processamento │
+├──────────────────────────────┤
+│ pedidos · fila · edição      │
+│ ┌──────────────────────────┐ │  ancorado
+│ │ caixa                    │ │
+│ │ + / modo modelo … enviar │ │
+│ └──────────────────────────┘ │
+└──────────────────────────────┘
+```
+
+- **A caixa cresce até 40 % da altura do painel** e depois rola por dentro; a conversa sempre fica
+  com área visível ([09 · D-04](../../plans/09-chat-layout/decisions.md#f1--moldura-do-painel)).
+- **"Alterações" troca só o meio.** O composer, o texto escrito, o contexto e a fila ficam; voltar à
+  conversa devolve a rolagem de onde a pessoa estava.
+- **O rascunho usa a mesma moldura:** as dicas (`@`, `/`, arrastar, o atalho) no meio vazio, a caixa
+  embaixo.
+- **Estados são faixas de uma linha, nunca cards.** Desconectado ou reconectando: uma faixa fixa no
+  topo do meio, que some sem mexer no composer. Replay parcial, histórico carregando e histórico que
+  falhou (com "tentar de novo"): no topo da conversa. Sessão encerrada: uma faixa **acima da caixa**,
+  com o motivo — e a caixa continua ativa: enviar retoma a conversa e manda o prompt, como no plugin;
+  a faixa diz isso, porque retomar abre um subprocesso que conta no teto
+  ([09 · D-05](../../plans/09-chat-layout/decisions.md#f1--moldura-do-painel)).
+- **Painel estreito:** nada rola na horizontal; as abas rolam na própria faixa do cabeçalho; abaixo da
+  largura em que a barra da caixa cabe, modelo e esforço vão para um menu de excesso, e enviar/parar,
+  modo e `+` nunca saem da barra.
+
+**Onde fica cada controle.** O que o plano 08 entregou muda de lugar, não de comportamento.
+
+| Controle | Lugar | Por quê |
+|---|---|---|
+| abas, nova conversa, histórico, alterações, status | cabeçalho, numa faixa só | é o que muda **qual** conversa está na tela |
+| encerrar (do dono, confirmado), exportar, desfazer, notificações, regras, ajuda, copiar o id | menu `⋯` da sessão, no cabeçalho | uso raro; encerrar é irreversível e pede confirmação ([09 · D-10](../../plans/09-chat-layout/decisions.md#f3--cabeçalho)) |
+| id da sessão e custo | tooltip do status, e o custo na status bar ([09 · D-11](../../plans/09-chat-layout/decisions.md#f3--cabeçalho)) | não é conversa; o resumo de cada turno continua nela |
+| `+` (arquivo, anexo, seleção), `/`, modo, modelo, esforço, contexto, enviar/parar | a barra da caixa, nessa ordem | é o que vale para o **próximo** prompt; enviar e parar no mesmo lugar ([09 · D-06](../../plans/09-chat-layout/decisions.md#f2--composer)) |
+| esforço | escolhido só no rascunho; na sessão viva, só leitura com o motivo | trocá-lo com a sessão viva reinicia a query e desliga o `PreToolUse` |
+| fila, edição, recusa, sessão encerrada, pedidos fora de vista, lista de tarefas | acima da caixa | é o que impede ou espera o próximo envio |
+| permissão e plano para aprovar | inline, no lugar da linha da tool | a pessoa decide olhando o que a tool vai fazer, na ordem em que aconteceu |
+| processamento, thinking, "pensou por *n* s" | inline, na cauda da conversa | o retorno de que há trabalho fica onde a resposta vai aparecer |
+| editar, bifurcar, desfazer até aqui | na mensagem do prompt, ao passar o mouse e com o foco | o desfazer é por turno, e cada turno é um prompt ([09 · D-15](../../plans/09-chat-layout/decisions.md#f4--inline)) |
+
+O motivo de não enviar com a caixa vazia fica no nome acessível e no tooltip do botão, sem linha
+visível; bloqueio de verdade (arquivo que sumiu, upload, teto) aparece na tela, acima da caixa
+([09 · D-07](../../plans/09-chat-layout/decisions.md#f2--composer)).
+
+**A permissão inline, inteira, e nunca fora de vista.** O card é o de
+[Permissão](#permissão--a-tela-mais-importante), sem cortar nada, no lugar da linha da tool. Se o
+pedido chegar antes da linha, ele fica na cauda e vai para o lugar quando a linha chegar; o pedido de
+uma tool de subagent fica na cauda também, porque a linha dela está recolhida sob o `Task`. Sem pedido,
+nada ocupa espaço. Respondido, o card volta a ser a linha da tool, com a decisão em palavras embaixo
+("aprovado por você", "recusado — ninguém respondeu a tempo", "aprovado num celular por *X*",
+"aprovado por uma regra sua"). Rolado para cima, ou com "Alterações" aberto, uma **pílula ancorada
+sobre a caixa** ("Claude espera sua resposta (*n*)") leva ao pedido mais antigo, e o comando
+"Ir para a pergunta que espera você" (`Mod+Alt+P`) faz o mesmo da palette; o badge da aba e o
+`aria-live` continuam. O card que chega **não tira o foco** de quem está escrevendo
+([09 · D-13](../../plans/09-chat-layout/decisions.md#f4--inline)).
+
+**O processamento à vista.** Enquanto o turno roda, a **última linha** da conversa é um indicador vivo:
+um asterisco nosso (ícone do `lucide`, em `primary`), um verbo sorteado por turno e estável nele (lista
+traduzida, `sessions.workingVerb.*` — o catálogo não aninha mais de três segmentos) e o tempo. Com tool rodando, diz qual; com pedido aberto, diz que
+espera a pessoa. Com `prefers-reduced-motion`, o glifo fica parado. O relógio re-renderiza só o
+indicador, e o `aria-live` anuncia a **troca** de estado, nunca cada segundo. O thinking aparece na
+ordem da conversa: "Pensando…" enquanto chega, "Pensou por *n* s" recolhido quando fecha
+([09 · D-16](../../plans/09-chat-layout/decisions.md#f4--inline)). O topo do painel não mostra estado
+do turno.
+
+**O contrato pode mudar, e hoje nada pede.** Cada lugar novo lê o que o stream já manda: o `toolUseId`
+de `permission.requested`, o status do turno, o `blockType` do thinking, a fila (`prompt.queued`) e o
+catálogo. Se uma fase achar um dado que falte, ele entra no
+[05-websocket-protocol](../shared/05-websocket-protocol.md) e nas três pontas na mesma mudança
+([09 · D-02](../../plans/09-chat-layout/decisions.md#f0--normas)).
 
 ---
 
@@ -324,7 +418,7 @@ Dentro de cada aba de pasta, em `md+`, tudo ao mesmo tempo:
 | **activity bar** | as views da pasta: **Explorer**, **Busca**, **Sessões do Claude**; clicar na ativa recolhe a side bar | planos [07](../../plans/07-explorer-and-editor/README.md), [10](../../plans/11-search/README.md), [08](../../plans/08-claude-panel/README.md) |
 | **side bar** | a view ativa | quem registrou a view |
 | **área de editor** | os arquivos abertos | [plano 07](../../plans/07-explorer-and-editor/README.md) |
-| **secondary side bar** | **o painel do Claude, ao lado do editor** — nunca uma tela nem uma rota própria; abre e fecha (`Mod+Alt+B` e o botão do topo) sem perder nada, porque o estado do painel é da aba. Os comandos do painel (nova conversa, focar o prompt, interromper, próxima/anterior, alterações) vivem enquanto a aba está na tela, com o painel aberto ou não — focar o prompt é como um painel fechado abre | [plano 08](../../plans/08-claude-panel/README.md) (`ClaudePanel`, `PanelCommands`) |
+| **secondary side bar** | **o painel do Claude, ao lado do editor** — nunca uma tela nem uma rota própria; abre e fecha (`Mod+Alt+B` e o botão do topo) sem perder nada, porque o estado do painel é da aba. Ela **não rola**: dá ao filho altura definida, e o filho rola por conta própria ([três faixas](#o-painel-do-claude--três-faixas)). Os comandos do painel (nova conversa, focar o prompt, interromper, alternar o modo — `Mod+Shift+M`, nunca o Shift+Tab do CLI, que no navegador é o foco para trás ([09 · D-09](../../plans/09-chat-layout/decisions.md#f2--composer)) —, próxima/anterior, alterações) vivem enquanto a aba está na tela, com o painel aberto ou não — focar o prompt é como um painel fechado abre | [plano 08](../../plans/08-claude-panel/README.md) (`ClaudePanel`, `PanelCommands`) |
 | **painel inferior** | abas registráveis | planos [08](../../plans/08-claude-panel/README.md) e [11](../../plans/12-integrated-terminal/README.md) |
 | **status bar** | itens da pasta à esquerda, do app à direita: conexão, pasta (um toque copia o caminho), idioma (troca por visitante), tema, sino de notificações (B-26) | registro |
 
@@ -494,6 +588,10 @@ de `md`, **uma view por vez** ([06 · D-08](../../plans/06-workbench/decisions.m
   views embaixo — o chat e os arquivos continuam na mesma aba, só não cabem lado a lado;
 - as abas de pasta viram um **seletor no topo**, com as mesmas ações;
 - a navegação global e o menu Arquivo vão para um menu (`sheet`), com foco preso e `Esc` fechando;
-- **o mesmo store** serve os dois layouts: mudar a largura da janela não perde estado.
+- **o mesmo store** serve os dois layouts: mudar a largura da janela não perde estado — nem o texto
+  da caixa, nem a rolagem da conversa, nem a aba do painel;
+- a view Claude ocupa o espaço entre o seletor de abas e a barra de views, e a altura da moldura
+  acompanha o `visualViewport` (`--app-height`, com `100dvh` de reserva): com o teclado virtual aberto,
+  o composer fica acima dele.
 
 Uma tela "mobile" separada foi descartada: duas UIs para manter, e o web já é mobile-first.

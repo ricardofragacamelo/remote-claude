@@ -1,0 +1,29 @@
+{
+  "id": "08·S-258…S-260",
+  "title": "the context of a prompt: a file chosen with @, another dragged from the explorer and an image from the desktop reach Claude, and the Read is in the audit trail; the skill of the project in /, badged, fired; context out of the folder refused, the draft kept",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "notes": "Line one says the build is green.\nLine two says the docs are late.\n",
+    "dragged": {
+      "name": "app.js",
+      "content": "console.log('tally');\n"
+    },
+    "image": "shot.png",
+    "mention": "@no",
+    "referenceTurn": "reference-turn",
+    "text": "Summarise the referenced files in one line.",
+    "references": ["<reference path=\"notes.md\" />", "<reference path=\"app.js\" />"],
+    "answer": "notes.md is a two-line status note reporting that the build is green but the docs are running late.",
+    "readTool": "Read",
+    "skill": "release-notes",
+    "skillBadge": "Project",
+    "skillTurn": "text-turn",
+    "skillAnswer": "pong",
+    "outside": "../elsewhere.md",
+    "outsideNote": "Only what is inside this folder can be offered.",
+    "refused": "This installation does not allow "
+  }
+}

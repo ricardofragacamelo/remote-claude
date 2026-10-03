@@ -110,7 +110,6 @@
       "idleTimeout": "it sat idle too long — resume it from the history"
     },
     "screen": {
-      "title": "Session",
       "sessionLabel": "Session {{sessionId}}",
       "conversation": "Conversation",
       "emptyTitle": "Nothing yet",
@@ -118,13 +117,15 @@
       "partial": "This is only what the server still had in memory, not the whole conversation.",
       "ended": "This session ended at {{at}} because {{reason}}."
     },
+    "ended": {
+      "resumes": "Sending a prompt resumes it, in a new process of Claude on this machine.",
+      "resumeAndSend": "Resume and send"
+    },
     "composer": {
-      "label": "Prompt",
       "placeholder": "Ask Claude to do something in this folder…",
       "send": "Send"
     },
     "controls": {
-      "interrupt": "Interrupt",
       "close": "End session",
       "closeNotOwner": "Only the browser that opened this session can end it."
     },
@@ -285,14 +286,6 @@
     }
   },
   "permission": {
-    "queue": {
-      "title": "Waiting for you",
-      "description": "Claude has stopped and will not run these until you answer.",
-      "emptyTitle": "Nothing to decide",
-      "emptyDescription": "Claude asks here before it runs anything that needs your word.",
-      "lastAuto": "The last request was {{decision}} automatically.",
-      "lastBy": "The last request was {{decision}} by {{who}}."
-    },
     "card": {
       "label": "Permission for {{tool}}",
       "remaining": "{{seconds}} s left",
@@ -310,10 +303,6 @@
       "session": "Allow for this session",
       "project": "Don't ask again in this project",
       "always": "Don't ask again anywhere"
-    },
-    "decision": {
-      "allow": "allowed",
-      "deny": "refused"
     },
     "tool": {
       "Bash": "Run a shell command",
@@ -370,6 +359,19 @@
       "outside": "The file is outside the folder of this tab, so there is no preview. The exact input is above.",
       "unavailable": "No preview: {{reason}} The exact input is above.",
       "unchanged": "The file already holds exactly this: nothing would change."
+    },
+    "verdict": {
+      "allow": "Allowed",
+      "deny": "Refused"
+    },
+    "outcome": {
+      "byYou": "{{decision}} by you",
+      "onPhone": "{{decision}} on a phone by {{who}}",
+      "inBrowser": "{{decision}} in a browser by {{who}}",
+      "by": "{{decision}} by {{who}}",
+      "expired": "Refused — nobody answered in time",
+      "rule": "Allowed by one of your rules",
+      "somebody": "somebody"
     }
   },
   "audit": {
@@ -588,25 +590,8 @@
       "activeElsewhereNote": "Something else wrote this conversation a moment ago — the editor or a terminal may have it open. Continuing it here makes a copy, and the two will diverge."
     }
   },
-  "commands": {
-    "menu": {
-      "toggle": "Commands",
-      "title": "Commands of this installation",
-      "search": "Search commands",
-      "searchPlaceholder": "Name, alias or description",
-      "loading": "Loading the commands of this installation…",
-      "unavailable": "The list of commands is not available right now. You can still type any command in the prompt.",
-      "emptyTitle": "This installation offers no command",
-      "emptyDescription": "You can still type anything in the prompt below.",
-      "noMatch": "No command matches “{{search}}”.",
-      "suggested": "Suggested",
-      "all": "All other commands",
-      "version": "From Claude Code {{version}} on this machine."
-    }
-  },
   "undo": {
     "panel": {
-      "toggle": "Undo file changes",
       "title": "Undo points",
       "description": "Puts the files this session wrote back the way they were before a turn. A file changed outside the session afterwards is kept as it is.",
       "loading": "Loading the undo points of this session…",
@@ -616,7 +601,8 @@
       "startedAt": "Turn started {{at}}",
       "busy": "Undo is available once the turn that is running finishes.",
       "ended": "Undo is not available for a session that has ended.",
-      "rewinding": "Undoing…"
+      "rewinding": "Undoing…",
+      "close": "Close"
     },
     "confirm": {
       "title": "Undo these file changes?",
@@ -717,8 +703,7 @@
     "claude": {
       "label": "Claude",
       "backToStart": "Back to a new conversation",
-      "showChanges": "What the session changed",
-      "showChat": "The conversation"
+      "showChanges": "What the session changed"
     },
     "mobile": {
       "label": "Views of this folder",
@@ -901,7 +886,10 @@
       "focusComposer": "Claude: Focus the prompt",
       "interrupt": "Claude: Interrupt the turn",
       "nextConversation": "Claude: Next conversation",
-      "previousConversation": "Claude: Previous conversation"
+      "previousConversation": "Claude: Previous conversation",
+      "cycleMode": "Claude: switch the mode of the conversation",
+      "goToRequest": "Claude: Go to the question waiting for you ({{count}})",
+      "goToRequestNone": "Claude: Go to the question waiting for you — nothing is waiting"
     }
   },
   "palette": {
@@ -1814,7 +1802,10 @@
       "copy": "Copy the message",
       "copied": "Message copied",
       "edit": "Edit and send again",
-      "forkFrom": "Fork from here — send it again, unchanged, in a new conversation"
+      "forkFrom": "Fork from here — send it again, unchanged, in a new conversation",
+      "actions": "What to do with this prompt",
+      "undo": "Put the files back to before this prompt",
+      "undoBusy": "Put the files back to before this prompt — not while Claude is working"
     },
     "search": {
       "label": "Search the conversation",
@@ -1826,19 +1817,16 @@
       "close": "Close the search"
     },
     "status": {
-      "thinking": "Claude is thinking…",
-      "running": "Claude is running a tool…",
-      "waitingPermission": "Claude is waiting for you — answer the question",
       "cost": "This session has cost {{cost}} since it opened, over {{turns}} turn(s)",
       "item": "Claude: {{status}} · {{model}} · {{cost}} — open the panel",
       "short": "{{status}} · {{cost}}"
     },
     "tasks": {
-      "title": "Tasks",
       "label": "The task list Claude keeps for this conversation",
-      "count": "{{done}} of {{total}} done",
       "was": "was {{state}}",
-      "state": "{{state}}: "
+      "state": "{{state}}: ",
+      "headline": "{{done}}/{{total}} · {{task}}",
+      "allDone": "{{done}}/{{total}} · All done"
     },
     "taskStatus": {
       "pending": "Pending",
@@ -1918,7 +1906,8 @@
       "turnOff": "Stop notifying me in the browser",
       "turnOn": "Notify me in the browser when Claude finishes or asks something",
       "permission": "Claude is waiting for you in {{folder}}",
-      "turn": "Claude finished a turn in {{folder}}"
+      "turn": "Claude finished a turn in {{folder}}",
+      "unsupported": "This browser has no notifications."
     },
     "context": {
       "compact": "Compact the conversation (/compact)",
@@ -1953,7 +1942,8 @@
       "noUndo": "No file changed in or after that turn can be put back from here.",
       "resumeInstead": "Resume the conversation instead",
       "send": "Send again",
-      "undoFiles": "Also put the files back the way they were before that turn"
+      "undoFiles": "Also put the files back the way they were before that turn",
+      "editing": "Editing a message"
     },
     "effort": {
       "default": "Default effort",
@@ -1962,7 +1952,9 @@
       "medium": "Medium",
       "high": "High",
       "xhigh": "Extra high",
-      "max": "Maximum"
+      "max": "Maximum",
+      "readOnly": "The effort is chosen when a conversation starts. Changing it in a running one would stop Claude from asking before each tool.",
+      "unknown": "As it started"
     },
     "export": {
       "compacted": "The conversation was compacted here.",
@@ -1974,13 +1966,15 @@
       "save": "Save as Markdown",
       "thinking": "Thinking",
       "title": "Conversation {{conversationId}}",
-      "withOutputs": "Include the outputs of the tools"
+      "withOutputs": "Include the outputs of the tools",
+      "close": "Close"
     },
     "header": {
-      "label": "How this conversation runs"
+      "label": "How this conversation runs",
+      "history": "The conversations of this folder",
+      "changesPending": "What the session changed — {{pending}} to review"
     },
     "mcp": {
-      "count": "MCP {{fine}}/{{count}}",
       "line": "{{status}} · {{tools}}",
       "summary": "{{fine}} of {{count}} MCP server(s) connected",
       "tools": "{{count}} tool(s)",
@@ -2025,6 +2019,65 @@
       "session": "Conversation",
       "draft": "New conversation",
       "history": "From the history"
+    },
+    "dot": {
+      "connected": "Connected — nothing running",
+      "reconnecting": "Reconnecting…",
+      "running": "Claude is working",
+      "ended": "The session ended",
+      "session": "Session {{sessionId}}"
+    },
+    "menu": {
+      "open": "More actions of the session",
+      "rules": "Permission rules",
+      "undo": "Undo file changes…",
+      "copyId": "Copy the session id",
+      "copied": "The session id was copied.",
+      "copyFailed": "The browser did not let the id be copied. Select it and copy it by hand: {{sessionId}}"
+    },
+    "close": {
+      "title": "End this session?",
+      "description": "Claude stops on this machine. What it wrote stays on disk, but the undo of its file changes goes with the session, and the changes you have not accepted can no longer be rejected from here. The conversation stays in the history, and can be resumed.",
+      "keep": "Keep it running",
+      "confirm": "End the session"
+    },
+    "working": {
+      "waiting": "Waiting for your answer",
+      "runningTool": "Running {{tool}}…",
+      "seconds": "{{seconds}} s",
+      "minutes": "{{minutes}} min {{seconds}} s"
+    },
+    "workingVerb": {
+      "pondering": "Pondering…",
+      "deciphering": "Deciphering…",
+      "mulling": "Mulling it over…",
+      "reasoning": "Reasoning…",
+      "weighing": "Weighing the options…",
+      "sketching": "Sketching…",
+      "untangling": "Untangling…",
+      "assembling": "Assembling…",
+      "tinkering": "Tinkering…",
+      "exploring": "Exploring…",
+      "connecting": "Connecting the dots…",
+      "distilling": "Distilling…",
+      "brewing": "Brewing…",
+      "crafting": "Crafting…",
+      "investigating": "Investigating…",
+      "puzzling": "Puzzling it out…",
+      "considering": "Considering…",
+      "computing": "Computing…",
+      "working": "Working…",
+      "musing": "Musing…"
+    },
+    "inline": {
+      "tail": "Questions waiting for you"
+    },
+    "pending": {
+      "pill": "Claude is waiting for your answer ({{count}})"
+    },
+    "rewound": {
+      "summary": "Files put back: {{restored}} back, {{kept}} kept as they were",
+      "failed": "Files put back: {{restored}} back, {{kept}} kept as they were, {{failed}} could not go back"
     }
   },
   "sessionsGroup": {
@@ -2091,7 +2144,19 @@
       "desktopHeading": "Files from your computer",
       "desktop": "An image or a text file dragged from your computer goes with the prompt as an attachment: it is kept in memory for this session only, never written into the folder nor into the trail, and is gone when the session ends. To put it in the folder, upload it in the explorer instead.",
       "skillsHeading": "Where the commands and skills come from",
-      "skills": "Each entry of / says its origin: Claude Code is the command of the installation itself; Project comes from the .claude folder of this project; User and System are the skills of your user and of the system. Two with the same name are both listed, and the one / runs is Claude Code's — the other says it is covered."
+      "skills": "Each entry of / says its origin: Claude Code is the command of the installation itself; Project comes from the .claude folder of this project; User and System are the skills of your user and of the system. Two with the same name are both listed, and the one / runs is Claude Code's — the other says it is covered.",
+      "barHeading": "The bar under the box",
+      "bar": "What holds for the next prompt is under the box, in this order: + adds a file or a folder, a file of your computer or the selection of the editor; / lists the commands and skills; then the mode, the model and the effort, the share of the context window used — with Compact inside it — and send. While Claude works, send puts what you wrote in the queue, and Stop beside it ends the turn; with the box empty, the button itself is Stop. The effort is chosen in a new conversation only. In a narrow panel, the model and the effort move into the … of the bar.",
+      "menuHeading": "The menu of the session",
+      "menu": "The … of the header holds what is done to the whole session, and seldom: end it — only the browser that opened it may, and it asks first —, export it as Markdown, undo its file changes, copy its id; and the notifications of the browser, the permission rules and this help. The dot beside it says how the session stands, with its id and what it has cost since it opened; the clock beside the + opens the conversations of this folder.",
+      "workingHeading": "While Claude works",
+      "working": "While a turn runs, its last line moves: an asterisk, what Claude is doing — the tool it runs, or a word for the turn — and for how long. Its thinking is a line of its own, in order: \"Thinking…\" while it arrives, \"Thought for n s\" once it is over, folded — press it to read it. When the turn ends, the line gives way to what the turn cost.",
+      "inlineHeading": "Questions in the conversation",
+      "inline": "When Claude asks before running a tool, the question is in the conversation, in the place of that tool: the exact command, how risky it is, the time left and how far a yes reaches. Once answered, the tool line says how — by you, on a phone and by whom, by one of your rules, or refused because nobody answered in time. A question never takes the focus from the box while you write: Enter still sends your prompt.",
+      "pillHeading": "Waiting for your answer",
+      "pill": "With a question out of view — the conversation scrolled up, or the changes on screen — a pill above the box says Claude is waiting, and how many questions. Pressing it, or the command Go to the question waiting for you, takes you to the oldest.",
+      "actionsHeading": "From a prompt",
+      "actions": "Pointing at a prompt of yours, or moving the focus into it, shows what can be done from it: edit and send it again, fork from before it, and put the files back to before its turn — with the reach shown file by file first. While Claude works the undo waits for the turn to end; once the session has ended there is no undo, so the button is not there."
     },
     "screen": {
       "title": "Claude",
@@ -2113,7 +2178,8 @@
       "missing": "gone from the folder",
       "binary": "not text — Claude will not read it",
       "dirty": "unsaved — Claude reads what is saved",
-      "pending": "sent with the prompt"
+      "pending": "sent with the prompt",
+      "choice": "{{label}}: {{value}}"
     },
     "drop": {
       "here": "Drop to add to the context of the next prompt",
@@ -2140,7 +2206,8 @@
       "unavailable": "The commands are not available right now. Anything you type still goes as the prompt.",
       "noMatch": "No command or skill matches what you typed.",
       "shadowed": "covered by the Claude Code command of the same name",
-      "argumentHint": "Takes: {{hint}}"
+      "argumentHint": "Takes: {{hint}}",
+      "open": "Commands and skills (/)"
     },
     "origin": {
       "builtin": "Claude Code",
@@ -2153,7 +2220,23 @@
       "queue": "Add to queue",
       "empty": "Write a prompt or add context to send.",
       "missing": "{{path}} is no longer in the folder. Remove it to send.",
-      "upload": "{{name}} could not be attached. Remove it to send."
+      "upload": "{{name}} could not be attached. Remove it to send.",
+      "stop": "Stop"
+    },
+    "box": {
+      "label": "Prompt"
+    },
+    "add": {
+      "open": "Add context",
+      "mention": "A file or a folder… (@)",
+      "computer": "A file from this computer…",
+      "nothing": "Nothing to add right now"
+    },
+    "bar": {
+      "more": "More choices: the model and the effort"
+    },
+    "refusal": {
+      "close": "Close this message"
     }
   }
 }

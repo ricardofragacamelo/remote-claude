@@ -192,7 +192,7 @@ describe('a new conversation is a draft — plan 08, B-33, D-07', () => {
     ).toBeNull();
   });
 
-  it('keeps the prompt and the choices when the machine is at its ceiling — S-153', async () => {
+  it('keeps the prompt and the choices when the machine is at its ceiling — S-153, plan 09 S-30', async () => {
     const user = userEvent.setup();
     await onWorkbench();
     await choose(
@@ -201,7 +201,7 @@ describe('a new conversation is a draft — plan 08, B-33, D-07', () => {
       new RegExp(t('sessions.mode.plan')),
     );
 
-    await typeIn(user, within(claudeAside()).getByLabelText(t('session.composer.label')), 'go');
+    await typeIn(user, within(claudeAside()).getByLabelText(t('composer.box.label')), 'go');
     await user.click(
       within(claudeAside()).getByRole('button', { name: t('session.composer.send') }),
     );
@@ -219,10 +219,11 @@ describe('a new conversation is a draft — plan 08, B-33, D-07', () => {
       ),
     );
 
-    expect(
-      await within(claudeAside()).findByText(t('session.error.limitReached', { limit: 10 })),
-    ).toBeVisible();
-    expect(within(claudeAside()).getByLabelText(t('session.composer.label'))).toHaveValue('go');
+    // A strip above the box, that closes — the text and the choices staying (plan 09, S-30).
+    expect(await within(claudeAside()).findByRole('alert')).toHaveTextContent(
+      t('session.error.limitReached', { limit: 10 }),
+    );
+    expect(within(claudeAside()).getByLabelText(t('composer.box.label'))).toHaveValue('go');
     expect(
       within(claudeAside()).getByRole('button', {
         name: `${t('sessions.mode.label')}: ${t('sessions.mode.plan')}`,
@@ -241,20 +242,20 @@ describe('a new conversation is a draft — plan 08, B-33, D-07', () => {
     const user = userEvent.setup();
     await onWorkbench();
 
-    await typeIn(user, within(claudeAside()).getByLabelText(t('session.composer.label')), 'once');
+    await typeIn(user, within(claudeAside()).getByLabelText(t('composer.box.label')), 'once');
     await user.click(
       within(claudeAside()).getByRole('button', { name: t('session.composer.send') }),
     );
-    await typeIn(user, within(claudeAside()).getByLabelText(t('session.composer.label')), 'twice');
+    await typeIn(user, within(claudeAside()).getByLabelText(t('composer.box.label')), 'twice');
     fireEvent.submit(
-      within(claudeAside()).getByLabelText(t('session.composer.label')).closest('form')!,
+      within(claudeAside()).getByLabelText(t('composer.box.label')).closest('form')!,
     );
 
     expect(starts()).toHaveLength(1);
     live.receive(startedFrame(live.lastSent('session.start')?.['id'], SESSION, A));
-    await within(claudeAside()).findByText(
-      t('session.screen.sessionLabel', { sessionId: SESSION }),
-    );
+    await within(claudeAside()).findByRole('region', {
+      name: t('session.screen.sessionLabel', { sessionId: SESSION }),
+    });
     expect(live.sent().filter((frame) => frame['type'] === 'session.prompt')).toHaveLength(1);
   });
 
@@ -306,9 +307,9 @@ describe('the conversations of a folder tab, in tabs — plan 08, B-32', () => {
 
     await user.click(within(panelTabs()[1]!).getByRole('button', { name: 'name of the tab' }));
     expect(
-      await within(claudeAside()).findByText(
-        t('session.screen.sessionLabel', { sessionId: SESSION }),
-      ),
+      await within(claudeAside()).findByRole('region', {
+        name: t('session.screen.sessionLabel', { sessionId: SESSION }),
+      }),
     ).toBeVisible();
 
     fireEvent.contextMenu(
@@ -327,13 +328,16 @@ describe('the conversations of a folder tab, in tabs — plan 08, B-32', () => {
     expect(
       await within(claudeAside()).findByRole('region', { name: t('sessions.changes.title') }),
     ).toBeVisible();
-    await user.click(
-      within(claudeAside()).getByRole('button', { name: t('workbench.claude.showChat') }),
-    );
+    // One button, pressed while the changes are on screen (plan 09, B-16).
+    const changes = within(claudeAside()).getByRole('button', {
+      name: t('workbench.claude.showChanges'),
+    });
+    expect(changes).toHaveAttribute('aria-pressed', 'true');
+    await user.click(changes);
     expect(
-      await within(claudeAside()).findByText(
-        t('session.screen.sessionLabel', { sessionId: SESSION }),
-      ),
+      await within(claudeAside()).findByRole('region', {
+        name: t('session.screen.sessionLabel', { sessionId: SESSION }),
+      }),
     ).toBeVisible();
 
     fireEvent.contextMenu(within(panelTabs()[0]!).getByRole('button', { name: 'name of the tab' }));
@@ -346,18 +350,16 @@ describe('the conversations of a folder tab, in tabs — plan 08, B-32', () => {
   it('keeps each folder tab’s drafts to itself, and gives them back — S-146, S-147', async () => {
     const user = userEvent.setup();
     await onWorkbench();
-    await typeIn(user, within(claudeAside()).getByLabelText(t('session.composer.label')), 'for a');
+    await typeIn(user, within(claudeAside()).getByLabelText(t('composer.box.label')), 'for a');
 
     await user.click(await tabNamed('b'));
     await waitFor(() => {
-      expect(within(claudeAside()).getByLabelText(t('session.composer.label'))).toHaveValue('');
+      expect(within(claudeAside()).getByLabelText(t('composer.box.label'))).toHaveValue('');
     });
 
     await user.click(await tabNamed('a'));
     await waitFor(() => {
-      expect(within(claudeAside()).getByLabelText(t('session.composer.label'))).toHaveValue(
-        'for a',
-      );
+      expect(within(claudeAside()).getByLabelText(t('composer.box.label'))).toHaveValue('for a');
     });
   });
 
@@ -374,9 +376,9 @@ describe('the conversations of a folder tab, in tabs — plan 08, B-32', () => {
     });
     await user.click(await tabNamed('b'));
     expect(
-      await within(claudeAside()).findByText(
-        t('session.screen.sessionLabel', { sessionId: SESSION }),
-      ),
+      await within(claudeAside()).findByRole('region', {
+        name: t('session.screen.sessionLabel', { sessionId: SESSION }),
+      }),
     ).toBeVisible();
 
     expect(attaches()).toBe(before);
@@ -397,9 +399,9 @@ describe('the keys of the panel — plan 08, B-40, S-185', () => {
 
     press(']', 'BracketRight');
     expect(
-      await within(claudeAside()).findByText(
-        t('session.screen.sessionLabel', { sessionId: SESSION }),
-      ),
+      await within(claudeAside()).findByRole('region', {
+        name: t('session.screen.sessionLabel', { sessionId: SESSION }),
+      }),
     ).toBeVisible();
 
     press('i', 'KeyI');
@@ -439,6 +441,93 @@ describe('the keys of the panel — plan 08, B-40, S-185', () => {
     expect(
       await screen.findByRole('complementary', { name: t('workbench.claude.label') }),
     ).toBeVisible();
+    // …and the focus lands in its box — the one of this folder tab (plan 09, B-15).
+    await waitFor(() => {
+      expect(within(claudeAside()).getByLabelText(t('composer.box.label'))).toHaveFocus();
+    });
+  });
+
+  it('switches the mode of a draft and of a session, never with Shift+Tab — plan 09, D-09', async () => {
+    const user = userEvent.setup();
+    await onWorkbench();
+    const mode = (value: string): HTMLElement =>
+      within(claudeAside()).getByRole('button', {
+        name: t('composer.chip.choice', { label: t('sessions.mode.label'), value }),
+      });
+
+    act(() => {
+      fireEvent.keyDown(document.body, { key: 'M', code: 'KeyM', ctrlKey: true, shiftKey: true });
+    });
+    expect(mode(t('sessions.mode.acceptEdits'))).toBeVisible();
+
+    await startFromDraft(user, live, { id: SESSION, folder: A });
+    act(() => {
+      fireEvent.keyDown(document.body, { key: 'M', code: 'KeyM', ctrlKey: true, shiftKey: true });
+    });
+    // The session runs in the mode it says it started with — the default — and moves from there.
+    expect(live.lastSent('session.setPermissionMode')).toMatchObject({
+      payload: { sessionId: SESSION, mode: 'acceptEdits' },
+    });
+    expect(mode(t('sessions.mode.acceptEdits'))).toBeVisible();
+  });
+});
+
+describe('the header of the panel, in one strip — plan 09, F3', () => {
+  it('holds the tabs, a new conversation, the history and the menu — and no loose row of icons — S-37', async () => {
+    const user = userEvent.setup();
+    await onWorkbench();
+    const header = within(claudeAside()).getByRole('list', { name: t('sessions.tabs.label') })
+      .parentElement as HTMLElement;
+
+    const names = (): string[] =>
+      within(header)
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('aria-label') ?? button.textContent);
+    expect(names()).toEqual([
+      t('sessions.tabs.draft'),
+      t('sessions.tabs.closeTab'),
+      t('sessions.tabs.new'),
+      t('sessions.header.history'),
+      t('sessions.menu.open'),
+    ]);
+    expect(
+      within(claudeAside()).queryByRole('button', { name: t('claudePanel.help.open') }),
+    ).toBeNull();
+
+    await startFromDraft(user, live, { id: SESSION, folder: A });
+    expect(names().slice(-4)).toEqual([
+      t('sessions.tabs.new'),
+      t('sessions.header.history'),
+      t('workbench.claude.showChanges'),
+      t('sessions.menu.open'),
+    ]);
+    expect(
+      within(header).getByRole('img', { name: /Session 01J0ABCDEFGHJKMNPQRSTVWXYZ/ }),
+    ).toBeVisible();
+  });
+
+  it('opens the sessions of the folder from the history, keeping the panel as it was — S-45', async () => {
+    const user = userEvent.setup();
+    await onWorkbench();
+
+    await user.click(
+      within(claudeAside()).getByRole('button', { name: t('sessions.header.history') }),
+    );
+
+    expect(folderTabStore(A).getState()).toMatchObject({ view: 'sessions', sideBarOpen: true });
+    await draftOnScreen();
+  });
+
+  it('ends a session of this browser once, after asking — S-39', async () => {
+    const user = userEvent.setup();
+    await onWorkbench();
+    await startFromDraft(user, live, { id: SESSION, folder: A });
+
+    await choose(user, t('sessions.menu.open'), t('session.controls.close'));
+    const confirm = await screen.findByRole('button', { name: t('sessions.close.confirm') });
+    await user.click(confirm);
+
+    expect(live.sent().filter((frame) => frame['type'] === 'session.close')).toHaveLength(1);
   });
 });
 
@@ -530,6 +619,28 @@ describe('questions asked where nobody is looking — plan 08, B-42', () => {
     stop();
   });
 
+  it('brings the conversation back over the changes from the pill above the box, on the card — plan 09, S-68', async () => {
+    const user = userEvent.setup();
+    await onWorkbench();
+    await startFromDraft(user, live, { id: SESSION, folder: A });
+    await user.click(
+      within(claudeAside()).getByRole('button', { name: t('workbench.claude.showChanges') }),
+    );
+    live.receive(question());
+
+    await user.click(
+      await within(claudeAside()).findByRole('button', {
+        name: t('sessions.pending.pill', { count: 1 }),
+      }),
+    );
+
+    const card = await within(claudeAside()).findByRole('listitem', { name: /Bash/ });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(card);
+    });
+    expect(claudePanelStore(A).getState().pane).toBe('chat');
+  });
+
   it('marks the activity bar and says it aloud when the panel is closed — S-188', async () => {
     const user = userEvent.setup();
     await onWorkbench();
@@ -579,6 +690,21 @@ describe('the notifications of the browser — plan 08, B-42, D-21', () => {
     hidden(false);
   });
 
+  /** Opens the menu of the panel, and answers its item of the notifications — named `name`. */
+  async function notificationsItem(
+    user: ReturnType<typeof userEvent.setup>,
+    name: string,
+  ): Promise<HTMLElement> {
+    within(claudeAside())
+      .getByRole('button', { name: t('sessions.menu.open') })
+      .focus();
+    await user.keyboard('{Enter}');
+    const items = await screen.findAllByRole('menuitem');
+    const item = items.find((each) => each.textContent.startsWith(name));
+    expect(item).toBeDefined();
+    return item as HTMLElement;
+  }
+
   it('asks only when turned on, and tells only with the page hidden, never the command — S-192', async () => {
     const user = userEvent.setup();
     const browser = browserAnswering('granted');
@@ -586,15 +712,11 @@ describe('the notifications of the browser — plan 08, B-42, D-21', () => {
     await startFromDraft(user, live, { id: SESSION, folder: A });
     expect(browser.Fake.requestPermission).not.toHaveBeenCalled();
 
-    await user.click(
-      within(claudeAside()).getByRole('button', { name: t('sessions.browserNotice.turnOn') }),
-    );
+    // In the menu of the session since plan 09 (B-17).
+    await choose(user, t('sessions.menu.open'), t('sessions.browserNotice.turnOn'));
     expect(browser.Fake.requestPermission).toHaveBeenCalledTimes(1);
-    expect(
-      await within(claudeAside()).findByRole('button', {
-        name: t('sessions.browserNotice.turnOff'),
-      }),
-    ).toHaveAttribute('aria-pressed', 'true');
+    await notificationsItem(user, t('sessions.browserNotice.turnOff'));
+    await user.keyboard('{Escape}');
 
     live.receive(question());
     expect(browser.shown).toEqual([]);
@@ -611,9 +733,7 @@ describe('the notifications of the browser — plan 08, B-42, D-21', () => {
     ]);
     expect(browser.shown.join()).not.toContain('rm -rf');
 
-    await user.click(
-      within(claudeAside()).getByRole('button', { name: t('sessions.browserNotice.turnOff') }),
-    );
+    await choose(user, t('sessions.menu.open'), t('sessions.browserNotice.turnOff'));
     live.receive(question('req-3'));
     expect(browser.shown).toHaveLength(2);
   });
@@ -623,22 +743,23 @@ describe('the notifications of the browser — plan 08, B-42, D-21', () => {
     browserAnswering('denied');
     await onWorkbench();
 
-    await user.click(
-      within(claudeAside()).getByRole('button', { name: t('sessions.browserNotice.turnOn') }),
-    );
+    await choose(user, t('sessions.menu.open'), t('sessions.browserNotice.turnOn'));
 
-    expect(
-      await within(claudeAside()).findByText(t('sessions.browserNotice.denied')),
-    ).toBeVisible();
+    // Inside the item of the menu — never a loose line in the header (plan 09, S-42).
+    const item = await notificationsItem(user, t('sessions.browserNotice.turnOn'));
+    expect(item).toHaveTextContent(t('sessions.browserNotice.denied'));
+    expect(item).toHaveAttribute('aria-disabled', 'true');
+    expect(within(claudeAside()).queryByText(t('sessions.browserNotice.denied'))).toBeNull();
   });
 
   it('cannot be turned on where the browser has none', async () => {
+    const user = userEvent.setup();
     vi.stubGlobal('Notification', undefined);
     await onWorkbench();
 
-    expect(
-      within(claudeAside()).getByRole('button', { name: t('sessions.browserNotice.turnOn') }),
-    ).toBeDisabled();
+    const item = await notificationsItem(user, t('sessions.browserNotice.turnOn'));
+    expect(item).toHaveAttribute('aria-disabled', 'true');
+    expect(item).toHaveTextContent(t('sessions.browserNotice.unsupported'));
   });
 });
 
@@ -647,15 +768,37 @@ describe('the help and the accessibility of the panel — plan 08, B-43', () => 
     const user = userEvent.setup();
     await onWorkbench();
 
-    await user.click(
-      within(claudeAside()).getByRole('button', { name: t('claudePanel.help.open') }),
-    );
+    await choose(user, t('sessions.menu.open'), t('claudePanel.help.open'));
 
     const help = await screen.findByRole('dialog');
-    for (const topic of ['modes', 'queue', 'resend', 'review', 'context', 'notices']) {
+    for (const topic of [
+      'bar',
+      'menu',
+      'modes',
+      'queue',
+      'resend',
+      'review',
+      'context',
+      'notices',
+    ]) {
       expect(within(help).getByText(t(`claudePanel.help.${topic}Heading`))).toBeVisible();
     }
     expect(within(help).getByText(t('claudePanel.help.notRecorded'))).toBeVisible();
+  });
+
+  it('describes what happens in the conversation: the line of a turn, the questions, the pill, a prompt — plan 09, S-92, S-78', async () => {
+    const user = userEvent.setup();
+    await onWorkbench();
+
+    await choose(user, t('sessions.menu.open'), t('claudePanel.help.open'));
+
+    const help = await screen.findByRole('dialog');
+    for (const topic of ['working', 'inline', 'pill', 'actions']) {
+      expect(within(help).getByText(t(`claudePanel.help.${topic}Heading`))).toBeVisible();
+      expect(within(help).getByText(t(`claudePanel.help.${topic}`))).toBeVisible();
+    }
+    // Why an ended session has no undo on its prompts (S-78).
+    expect(t('claudePanel.help.actions')).toMatch(/ended/);
   });
 
   it('has no accessibility violation, with a draft and with a session — S-195', async () => {

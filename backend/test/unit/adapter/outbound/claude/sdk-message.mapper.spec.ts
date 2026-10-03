@@ -552,6 +552,25 @@ describe('the SDK message mapper', () => {
       expect(mapped.unknown).toBe('something_new_in_0_4');
     });
 
+    it('knows the lifecycle the CLI answers a prompt streamed with a uuid, and says nothing of it', () => {
+      const lifecycle = loadFixture('stamped-turn').messages.filter(
+        (each) => (each as { type: string }).type === 'command_lifecycle',
+      );
+
+      expect(lifecycle.length).toBeGreaterThan(0);
+      for (const each of lifecycle) {
+        expect(toEvents(each)).toEqual({ events: [], unknown: null });
+      }
+    });
+
+    it('maps every message of a turn whose prompt was streamed with a uuid', () => {
+      const mapper = new SdkMessageMapper();
+
+      for (const each of loadFixture('stamped-turn').messages) {
+        expect(mapper.read(each).unknown).toBeNull();
+      }
+    });
+
     it('drops a `system` subtype it does not know, and names it', () => {
       const mapped = toEvents(message({ type: 'system', subtype: 'brand_new' }));
 

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { sep } from 'node:path';
 
 import type {
   HookCallbackMatcher,
@@ -598,7 +599,9 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     store.persist(conversation.id, conversation.cwd, [
       {
         type: 'user',
-        uuid: randomUUID(),
+        // Under the uuid the prompt was streamed with, as the real CLI files it — the id a fork of
+        // an edit-and-resend starts from (`forkSession`'s `upToMessageId`).
+        uuid: this.prompted.uuid ?? randomUUID(),
         session_id: conversation.id,
         message: this.prompted.message,
         parent_tool_use_id: null,
@@ -807,9 +810,17 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     return root === 'cwd' ? this.options.cwd : root;
   }
 
-  /** What the CLI does between the two hooks of a file tool, when this run performs writes. */
+  /**
+   * What the CLI does between the two hooks of a file tool, when this run performs writes.
+   *
+   * Only inside the directory it was given: a recording also writes where the CLI keeps its own
+   * files — the plan of `plan-turn` goes to `~/.claude/plans/` of the machine it was recorded on —
+   * and a replay that followed it would write into the home of whoever runs the suite.
+   */
   private write(toolName: string, input: unknown): void {
-    if (this.writesRoot === undefined || !PERFORMED_TOOLS.has(toolName)) {
+    const root = this.writesRoot;
+
+    if (root === undefined || !PERFORMED_TOOLS.has(toolName)) {
       return;
     }
 
@@ -818,7 +829,7 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
       content?: unknown;
     };
 
-    if (typeof target !== 'string') {
+    if (typeof target !== 'string' || !target.startsWith(`${root}${sep}`)) {
       return;
     }
 

@@ -135,6 +135,7 @@ export function useLiveSession(sessionId: string | null): LiveSession {
     costUsd: sessionCostOf(state.turns),
     lastTurn: state.lastTurn,
     ending: state.ending,
+    turnSince: state.turnSince,
     isPartial: state.isPartial,
     isOwner: sessionId !== null && owned.includes(sessionId),
     history,

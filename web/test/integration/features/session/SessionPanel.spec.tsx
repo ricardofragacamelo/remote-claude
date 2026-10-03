@@ -4,7 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
 import { forgetLiveSessions, SessionScreen } from '@/features/session';
+import { McpIndicator } from '@/features/session/components/panel/McpIndicator';
+import { SessionMenu } from '@/features/session/components/panel/SessionMenu';
 import { useEditAndResend } from '@/features/session/hooks/useEditAndResend';
+import { useSessionHeader } from '@/features/session/hooks/useSessionHeader';
 import { claudePanelStore } from '@/features/session/store/claude-panel.store';
 import { folderTabStore, forgetFolderTabs } from '@/features/workbench';
 import { aHistoryPage, claudeUnavailable, said } from '../../../support/history';
@@ -70,10 +73,21 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** The screen as the panel hosts it: with the editing of prompts. */
+/**
+ * The screen as the panel hosts it: with the editing of prompts — and, above it, what the header of
+ * the panel holds of the session since plan 09 (B-17, B-18): its MCP servers and its menu.
+ */
 function Hosted(): React.JSX.Element {
   const edit = useEditAndResend(A, SESSION);
-  return <SessionScreen sessionId={SESSION} folder={A} edit={edit} />;
+  const session = useSessionHeader(SESSION);
+
+  return (
+    <>
+      <McpIndicator sessionId={SESSION} />
+      <SessionMenu session={session} folder={A} onOpenHelp={() => undefined} />
+      <SessionScreen sessionId={SESSION} folder={A} edit={edit} />
+    </>
+  );
 }
 
 /** What the session says next, numbered after what it said before. */
@@ -116,7 +130,7 @@ function opened(started: Record<string, unknown> = {}): ReturnType<typeof render
 }
 
 const header = (): HTMLElement => screen.getByRole('group', { name: t('sessions.header.label') });
-const box = (): HTMLElement => screen.getByLabelText(t('session.composer.label'));
+const box = (): HTMLElement => screen.getByLabelText(t('composer.box.label'));
 
 describe('the queue of prompts, above the box — plan 08, B-34', () => {
   const queue = (): HTMLElement => screen.getByRole('region', { name: t('sessions.queue.title') });
@@ -232,7 +246,14 @@ describe('the model, the mode — plan 08, B-36', () => {
     expect(live.lastSent('session.setPermissionMode')).toMatchObject({
       payload: { sessionId: SESSION, mode: 'acceptEdits' },
     });
-    expect(screen.getByRole('note')).toHaveTextContent(t('sessions.mode.acceptEditsWarning'));
+    // In the tone of a warning, said in full inside the menu — never a loose line (plan 09, S-24).
+    const chip = picker(t('sessions.mode.label'), t('sessions.mode.acceptEdits'));
+    expect(chip).toHaveClass('text-warning');
+    expect(screen.queryByRole('note')).toBeNull();
+    await user.click(chip);
+    expect(await screen.findByRole('note')).toHaveTextContent(
+      t('sessions.mode.acceptEditsWarning'),
+    );
   });
 });
 
@@ -274,9 +295,13 @@ describe('the context window — plan 08, B-37', () => {
     const get = served({ context: [aContext(85), aContext(10)] });
     opened();
 
+    // Inside the popover of the ring, which opens upwards (plan 09, S-33).
     await user.click(
-      await within(header()).findByRole('button', { name: t('sessions.context.compact') }),
+      await within(header()).findByRole('button', {
+        name: t('sessions.context.label', { percentage: 85 }),
+      }),
     );
+    await user.click(await screen.findByRole('menuitem', { name: t('sessions.context.compact') }));
     expect(live.lastSent('session.prompt')).toMatchObject({
       payload: { sessionId: SESSION, text: '/compact' },
     });
@@ -322,7 +347,7 @@ describe('the MCP servers — plan 08, B-38', () => {
     opened();
 
     await user.click(
-      await within(header()).findByRole('button', {
+      await screen.findByRole('button', {
         name: t('sessions.mcp.summary', { fine: 1, count: 5 }),
       }),
     );
@@ -356,14 +381,14 @@ describe('the MCP servers — plan 08, B-38', () => {
     await waitFor(() => {
       expect(get).toHaveBeenCalledWith(PATHS.mcp);
     });
-    expect(within(header()).queryByRole('button', { name: /MCP/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /MCP/ })).toBeNull();
   });
 
-  it('says so in a line when they cannot be read, never in the way of the chat — S-178', async () => {
+  it('says so in an icon when they cannot be read, never in the way of the chat — S-178, plan 09 S-44', async () => {
     served({ mcp: [{ ...claudeUnavailable }] });
     opened();
 
-    expect(await within(header()).findByText(t('sessions.mcp.unavailable'))).toBeVisible();
+    expect(await screen.findByRole('img', { name: t('sessions.mcp.unavailable') })).toBeVisible();
     expect(box()).toBeEnabled();
   });
 });
@@ -399,8 +424,14 @@ describe('exporting the conversation — plan 08, B-39', () => {
     },
   ];
 
+  /** Opens the menu of the session — where exporting is since plan 09 (B-17). */
+  async function menu(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+    await user.click(screen.getByRole('button', { name: t('sessions.menu.open') }));
+  }
+
   async function exportIt(user: ReturnType<typeof userEvent.setup>, outputs: boolean) {
-    await user.click(within(header()).getByRole('button', { name: t('sessions.export.open') }));
+    await menu(user);
+    await user.click(await screen.findByRole('menuitem', { name: t('sessions.export.open') }));
     if (outputs) {
       await user.click(await screen.findByLabelText(t('sessions.export.withOutputs')));
     }
@@ -458,13 +489,15 @@ describe('exporting the conversation — plan 08, B-39', () => {
     expect(saved.names).toEqual([]);
   });
 
-  it('is not offered before the conversation is known', () => {
+  it('is not offered before the conversation is known', async () => {
+    const user = userEvent.setup();
     served();
     opened({ claudeSessionId: undefined });
+    await menu(user);
 
     expect(
-      within(header()).getByRole('button', { name: t('sessions.export.open') }),
-    ).toBeDisabled();
+      await screen.findByRole('menuitem', { name: t('sessions.export.open') }),
+    ).toHaveAttribute('aria-disabled', 'true');
   });
 });
 
@@ -701,7 +734,7 @@ describe('the header of the session — plan 08, S-195', () => {
   it('has no accessibility violation', async () => {
     served({ mcp: [{ servers: [{ name: 'docs', status: 'connected', toolCount: 1 }] }] });
     const { container } = opened();
-    await within(header()).findByRole('button', { name: /MCP/ });
+    await screen.findByRole('button', { name: /MCP/ });
 
     expect(await axe(container)).toHaveNoViolations();
   });

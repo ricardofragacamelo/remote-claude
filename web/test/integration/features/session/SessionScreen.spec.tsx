@@ -177,13 +177,15 @@ describe('the session screen', () => {
     ).toBeInTheDocument();
   });
 
-  it('reports the status the server publishes', () => {
+  it('offers to stop while a turn runs — the status the server publishes — plan 09, S-19', () => {
     render(<SessionScreen sessionId={SESSION} />);
     connect();
 
+    expect(screen.queryByRole('button', { name: t('composer.send.stop') })).toBeNull();
+
     receive(event('session.statusChanged', 1, { status: 'waitingPermission' }));
 
-    expect(screen.getByText(t('session.status.waitingPermission'))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('composer.send.stop') })).toBeInTheDocument();
   });
 
   it('sends a prompt, and clears the composer', async () => {
@@ -191,7 +193,7 @@ describe('the session screen', () => {
     render(<SessionScreen sessionId={SESSION} />);
     connect();
 
-    const box = screen.getByLabelText(t('session.composer.label'));
+    const box = screen.getByLabelText(t('composer.box.label'));
     await user.type(box, 'do the work');
     await user.click(screen.getByRole('button', { name: t('session.composer.send') }));
 
@@ -208,7 +210,7 @@ describe('the session screen', () => {
     render(<SessionScreen sessionId={SESSION} />);
     connect();
 
-    await user.type(screen.getByLabelText(t('session.composer.label')), '   ');
+    await user.type(screen.getByLabelText(t('composer.box.label')), '   ');
     await user.click(screen.getByRole('button', { name: t('session.composer.send') }));
 
     await waitFor(() => {
@@ -218,58 +220,24 @@ describe('the session screen', () => {
     });
   });
 
-  it('interrupts the turn that is running', async () => {
+  it('interrupts the turn that is running, from the stop of the bar', async () => {
     const user = userEvent.setup();
     render(<SessionScreen sessionId={SESSION} />);
     connect();
+    receive(event('session.statusChanged', 1, { status: 'running' }));
 
-    await user.click(screen.getByRole('button', { name: t('session.controls.interrupt') }));
+    await user.click(screen.getByRole('button', { name: t('composer.send.stop') }));
 
     expect(
       sockets.latest.frames().find((sent) => sent['type'] === 'session.interrupt'),
     ).toMatchObject({ payload: { sessionId: SESSION } });
   });
 
-  it('disables ending a session this browser did not open, and says why — B-37', () => {
-    // Hiding an authorisation rule makes it look like a bug the first time somebody hits it.
+  it('has no control to end the session of its own — that is the menu of the panel — plan 09, B-17', () => {
     render(<SessionScreen sessionId={SESSION} />);
     connect();
 
-    expect(screen.getByRole('button', { name: t('session.controls.close') })).toBeDisabled();
-    expect(screen.getByText(t('session.controls.closeNotOwner'))).toBeInTheDocument();
-  });
-
-  it('lets the browser that opened the session end it', async () => {
-    const user = userEvent.setup();
-    render(<SessionScreen sessionId={SESSION} />);
-    connect();
-
-    // `session.start` opens the session it is about, so its event arrives before anything could
-    // have attached — which is how this screen learns the session is its own.
-    receive({
-      v: 1,
-      id: 'evt-0',
-      kind: 'event',
-      type: 'session.started',
-      ts: AT,
-      seq: 1,
-      payload: {
-        sessionId: SESSION,
-        workspacePath: '/srv/projects/app',
-        model: 'claude-sonnet-5',
-        permissionMode: 'default',
-      },
-    });
-
-    const close = screen.getByRole('button', { name: t('session.controls.close') });
-    await waitFor(() => {
-      expect(close).toBeEnabled();
-    });
-    await user.click(close);
-
-    expect(sockets.latest.frames().find((sent) => sent['type'] === 'session.close')).toMatchObject({
-      payload: { sessionId: SESSION },
-    });
+    expect(screen.queryByRole('button', { name: t('session.controls.close') })).toBeNull();
   });
 
   describe('a session that has already ended', () => {
@@ -302,9 +270,14 @@ describe('the session screen', () => {
 
       receive(event('session.closed', 1, { sessionId: SESSION, reason: 'shutdown' }));
 
-      expect(screen.getByRole('status')).toHaveTextContent(
-        t('session.screen.ended', { reason: t('session.closeReason.shutdown'), at: AT }),
-      );
+      // Beside the live region of the pill, empty with nothing asked (plan 09, B-25).
+      const ended = t('session.screen.ended', {
+        reason: t('session.closeReason.shutdown'),
+        at: AT,
+      });
+      expect(
+        screen.getAllByRole('status').filter((each) => each.textContent?.includes(ended) === true),
+      ).toHaveLength(1);
       // The label is still there, because "we no longer have it" and "there was nothing" are
       // different things and the screen has to say which.
       expect(screen.getByRole('note')).toHaveTextContent(t('session.screen.partial'));
@@ -318,23 +291,31 @@ describe('the session screen', () => {
       receive(event('session.closed', 1, { sessionId: SESSION, reason: 'completed' }));
 
       expect(screen.getByRole('button', { name: t('session.composer.send') })).toBeDisabled();
-      expect(screen.getByRole('button', { name: t('session.controls.interrupt') })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: t('composer.send.stop') })).toBeNull();
     });
   });
 
-  it('drives the model and the permission mode of a running session', async () => {
+  it('drives the permission mode of a running session from the bar of its box', async () => {
     const user = userEvent.setup();
     render(<SessionScreen sessionId={SESSION} />);
     connect();
 
-    // Not on the screen yet — the controls for these arrive with the plan that gives them a place
-    // to live — so the hook is exercised where it is reachable: through the screen's own wiring.
-    await user.click(screen.getByRole('button', { name: t('session.controls.interrupt') }));
+    await user.click(
+      screen.getByRole('button', {
+        name: t('composer.chip.choice', {
+          label: t('sessions.mode.label'),
+          value: t('sessions.mode.default'),
+        }),
+      }),
+    );
+    await user.click(await screen.findByRole('menuitem', { name: /^Plan/ }));
 
-    expect(sockets.latest.frames().some((sent) => sent['type'] === 'session.interrupt')).toBe(true);
+    expect(
+      sockets.latest.frames().find((sent) => sent['type'] === 'session.setPermissionMode'),
+    ).toMatchObject({ payload: { sessionId: SESSION, mode: 'plan' } });
   });
 
-  it('reports what each turn cost, and what the session has cost since it opened — S-97, S-99', () => {
+  it('reports what each turn cost, in the conversation — S-97 (the whole session: the status dot, plan 09, S-43)', () => {
     render(<SessionScreen sessionId={SESSION} />);
     connect();
 
@@ -367,9 +348,8 @@ describe('the session screen', () => {
     expect(
       screen.getByText(t('sessions.turn.noUsage', { cost: '$0.01', seconds: '0.9' })),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(t('sessions.status.cost', { cost: '$0.0223', turns: 2 })),
-    ).toBeInTheDocument();
+    // The line above the conversation is gone (D-11): the cost of the session is the status's.
+    expect(screen.queryByText(t('sessions.status.cost', { cost: '$0.0223', turns: 2 }))).toBeNull();
   });
 
   it('has no accessibility violation', async () => {

@@ -4,6 +4,13 @@ import type { Page } from '@playwright/test';
 import { callApi } from './api';
 import { openSignedIn } from './auth';
 import type { AuthenticatedUser } from './auth';
+import {
+  connectedStatus,
+  openedSessionOf,
+  promptBox,
+  sendButton,
+  turnsEnded,
+} from './claude-panel';
 import { environment } from './environment';
 import type { ScenarioUser } from '../scenarios';
 
@@ -95,23 +102,6 @@ export function tabOf(page: Page, name: string): ReturnType<Page['getByRole']> {
     .first();
 }
 
-/** What the chat beside the editor says, one list item per message. */
-export function conversationOf(page: Page): ReturnType<Page['getByRole']> {
-  return page
-    .getByRole('complementary', { name: 'Claude' })
-    .getByRole('list', { name: 'Conversation' });
-}
-
-/**
- * The draft of a new conversation, in the chat beside the editor — what a folder tab shows before it
- * has a session (plan 08, D-07): nothing runs until its first prompt.
- */
-export function draftOf(page: Page): ReturnType<Page['getByRole']> {
-  return page
-    .getByRole('complementary', { name: 'Claude' })
-    .getByRole('group', { name: 'How the conversation starts' });
-}
-
 /**
  * The first prompt of a session a test opens: a recorded turn that only answers — no tool, no file,
  * and a word ("red") no scenario looks for — so what the test does next starts from a session that
@@ -124,15 +114,8 @@ export const OPENING_PROMPT = 'say hello [fixture:image-turn]';
  * the box when the start is refused, so sending again is this same call.
  */
 export async function sendFirstPrompt(page: Page, prompt: string = OPENING_PROMPT): Promise<void> {
-  const claude = page.getByRole('complementary', { name: 'Claude' });
-
-  await claude.getByLabel('Prompt').fill(prompt);
-  await claude.getByRole('button', { name: 'Send', exact: true }).click();
-}
-
-/** The line that says a session's turns ended — `turns` of them. */
-export function turnsEnded(page: Page, turns: number): ReturnType<Page['getByText']> {
-  return page.getByText(new RegExp(`^This session has cost .+ over ${String(turns)} turn\\(s\\)$`));
+  await promptBox(page).fill(prompt);
+  await sendButton(page).click();
 }
 
 /**
@@ -145,26 +128,6 @@ export async function openFromDraft(page: Page): Promise<string> {
   await expect(turnsEnded(page, 1)).toBeVisible();
 
   return sessionId;
-}
-
-/** Where the chat beside the editor names the session it shows — once it shows one. */
-export function sessionLabelOf(page: Page): ReturnType<Page['getByText']> {
-  return page
-    .getByRole('complementary', { name: 'Claude' })
-    .getByText(/^Session [0-9ABCDEFGHJKMNPQRSTVWXYZ]{26}$/);
-}
-
-/**
- * The session the browser just opened, read off the chat beside the editor.
- *
- * A session born in a folder tab stays in that tab — the chat is never a screen of its own
- * (plan 06, S-115) — so its id is what the side bar says, not an address the browser moved to.
- */
-export async function openedSessionOf(page: Page): Promise<string> {
-  const label = sessionLabelOf(page);
-
-  await expect(label).toBeVisible();
-  return ((await label.textContent()) ?? '').replace('Session ', '');
 }
 
 /**
@@ -180,7 +143,7 @@ export async function sessionInTab(
   webUrl: string = environment.webUrl,
 ): Promise<string> {
   await openSignedIn(page, user, workbenchAddress(folder), webUrl);
-  await expect(page.getByText('Connected', { exact: true }).first()).toBeVisible();
+  await expect(connectedStatus(page)).toBeVisible();
 
   return openFromDraft(page);
 }

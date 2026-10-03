@@ -1,11 +1,14 @@
 /** Public surface of the `permission` feature. */
-export { PermissionQueuePanel } from './components/PermissionQueue';
+export { PermissionRequestCard } from './components/PermissionRequestCard';
+export { PermissionOutcomeLine } from './components/PermissionOutcomeLine';
 export { RuleList } from './components/RuleList';
 export { RuleDetail } from './components/RuleDetail';
 export { usePermissionRules } from './hooks/usePermissionRules';
 export { usePermissionQueue } from './hooks/usePermissionQueue';
+export type { PermissionQueue } from './hooks/usePermissionQueue';
 export { KeepPermissionsAttached } from './components/KeepPermissionsAttached';
 export { forgetPermissionQueues, permissionQueueOf } from './store/permission.store';
+export type { PlanMode } from './components/PlanApprovalCard';
 export type {
   PermissionDecision,
   PermissionOutcome,

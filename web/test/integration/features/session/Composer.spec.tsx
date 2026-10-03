@@ -153,7 +153,7 @@ function opened(): ReturnType<typeof render> {
   return mounted;
 }
 
-const box = (): HTMLTextAreaElement => screen.getByLabelText(t('session.composer.label'));
+const box = (): HTMLTextAreaElement => screen.getByLabelText(t('composer.box.label'));
 const send = (): HTMLElement => screen.getByRole('button', { name: t('session.composer.send') });
 const chips = (): HTMLElement => screen.getByRole('list', { name: t('composer.set.label') });
 const chipNames = (): string[] =>
@@ -248,15 +248,22 @@ describe('the composer — plan 08, B-46', () => {
     opened();
     says('session.statusChanged', { status: 'thinking' });
 
-    expect(await screen.findByText(t('composer.send.queued'))).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: t('composer.send.queue') })).toBeInTheDocument();
+    // Nothing to send: the button is stop (plan 09, D-06).
+    expect(
+      await screen.findByRole('button', { name: t('composer.send.stop') }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('composer.send.queue') })).toBeNull();
 
-    // A drop during the turn goes into the context of the next prompt, which queues.
-    drop(screen.getByLabelText(t('session.composer.label')).closest('form') as HTMLElement, {
+    // A drop during the turn goes into the context of the next prompt, which queues — and says so.
+    drop(screen.getByLabelText(t('composer.box.label')).closest('form') as HTMLElement, {
       folder: A,
       entries: [{ path: 'src', kind: 'directory' }],
     });
     expect(chipNames()).toEqual(['src']);
+    expect(
+      screen.getByRole('button', { name: t('composer.send.queue') }),
+    ).toHaveAccessibleDescription(t('composer.send.queued'));
+    expect(screen.getByRole('button', { name: t('composer.send.stop') })).toBeInTheDocument();
   });
 });
 
@@ -933,7 +940,7 @@ describe('a draft — plan 08, B-45, B-50, D-13', () => {
     );
     live.connect();
 
-    const [one, other] = screen.getAllByLabelText(t('session.composer.label'));
+    const [one, other] = screen.getAllByLabelText(t('composer.box.label'));
     await typeIn(user, one as HTMLElement, '/');
     await typeIn(user, other as HTMLElement, '/');
     await waitFor(() => {

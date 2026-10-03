@@ -29,26 +29,26 @@ e é escrita pelas funções do SDK, não por um JSONL à mão.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-53 — A conversa renderizada 🔲
+### B-53 — A conversa renderizada ✅
 
 Prompt → resposta em markdown → tool compacta → "abrir diff" abre a aba de diff do editor na mesma aba de
 pasta. Thinking, a lista do `TodoWrite` e um subagent aninhado aparecem vivos e continuam iguais depois
 de recarregar. Recarregar no meio do turno volta à mesma aba de pasta e à mesma conversa, sem mensagem
 duplicada.
 
-### B-54 — O contexto de um prompt 🔲
+### B-54 — O contexto de um prompt ✅
 
 `@` escolhe um arquivo, outro vem arrastado do explorer e uma imagem do desktop: as referências chegam, e
 o `Read` do arquivo mencionado aparece em `/audit`. `/` mostra a skill do projeto da fixture, com o selo,
 e escolhê-la a dispara. Contexto fora da pasta é recusado com o erro traduzido, e o rascunho fica.
 
-### B-55 — Diff, rejeição e plano 🔲
+### B-55 — Diff, rejeição e plano ✅
 
 A permissão de Edit mostra o diff contra o disco, é aprovada, o disco muda e a view "Alterações" lista o
 arquivo. Rejeitar um trecho e depois o arquivo inteiro pela view, e desfazer a rejeição. Em modo plan,
 aprovar o plano troca o modo e o Claude segue.
 
-### B-56 — As sessões da pasta, as abas e a fila 🔲
+### B-56 — As sessões da pasta, as abas e a fila ✅
 
 A view de sessões mostra uma sessão viva, uma conversa externa ativa e o histórico; `attach`, retomar e
 fork a partir dela. Duas abas de pasta: a permissão pedida na inativa vira badge na aba e é respondida.
@@ -59,13 +59,13 @@ os tirou do e2e ao remover `/history`. Dois prompts durante um turno entram na f
 prompt bifurca a conversa. Em viewport de celular, o painel é uma view única, sem scroll horizontal, e o
 axe não acusa violação.
 
-### B-57 — O app continua verde 🔲
+### B-57 — O app continua verde ✅
 
 `pnpm test:e2e:mobile` com o contrato novo: os tipos Dart regenerados, o app ignorando o que não conhece
 e os cenários compartilhados de `e2e/scenarios/` passando. Rodar antes do `verify:full` e parar os
 daemons do Gradle depois — senão o portão 7 estoura o prazo.
 
-### B-58 — `smoke-live` contra o Claude real 🔲
+### B-58 — `smoke-live` contra o Claude real ✅
 
 Numa fixture gerada por execução (a D-07 do plano 04): uma menção real gera o `Read` auditado; `@caminho`
 no texto **não** é expandido em silêncio pelo CLI (a premissa da D-01, vigiada a cada versão);
@@ -78,7 +78,7 @@ fixtures. Rodar o `smoke-live` é item do Definition of Done de toda mudança no
 
 ## Cenários cobertos
 
-S-255…S-272.
+S-255…S-272, e os que o e2e descobriu: S-273…S-275.
 
 ---
 

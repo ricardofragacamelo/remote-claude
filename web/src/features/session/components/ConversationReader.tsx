@@ -7,13 +7,17 @@ import type { ConversationHistory } from '../hooks/useConversationHistory';
 import { useResumeSession } from '../hooks/useResumeSession';
 import type { ResumeControl } from '../hooks/useResumeSession';
 import type { ConversationSummary } from '../types/history';
+import { useScrollKeeper } from '../hooks/useScrollKeeper';
+import { taskListOf } from '../lib/task-list';
+import { tabKeyOf } from '../store/claude-panel.store';
+import { TaskStrip } from './composer/TaskStrip';
 import { Conversation } from './Conversation';
+import { ChatFrame } from './frame/ChatFrame';
 import { ForkDialog } from './sessions/ForkDialog';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { IconButton } from '@/shared/components/IconButton';
 import { LoadMore } from '@/shared/components/LoadMore';
-import { Panel } from '@/shared/components/Panel';
 import { Button } from '@/shared/components/ui/button';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 
@@ -29,6 +33,9 @@ export interface ConversationReaderProps {
 
   /** The panel stops reading it. */
   onClose(): void;
+
+  /** The folder of the tab whose panel reads it — where its scroll is kept (plan 09, B-05). */
+  readonly folder?: string;
 }
 
 /**
@@ -45,34 +52,53 @@ export interface ConversationReaderProps {
  * button is pressed: the editor will not see what is answered here. The promise is editor → phone,
  * and it was only ever that one ([D-04](../../../../../docs/plans/04-transcript-and-resume/decisions.md)).
  *
+ * In the frame of the panel (plan 09, B-05), the way to continue it stays under the conversation, as
+ * the box of a session does.
+ *
  * It imports hooks, and nothing else: no service, no `api.ts`.
  */
 export function ConversationReader({
   conversationId,
   onResumed,
   onClose,
+  folder = '',
 }: ConversationReaderProps): React.JSX.Element {
   const { t } = useTranslation();
   const history = useConversationHistory(conversationId);
   const { summary, conversation } = history;
+  const keeper = useScrollKeeper(folder, tabKeyOf('conversation', conversationId));
+  const title =
+    summary === null || summary.summary === '' ? t('history.screen.title') : summary.summary;
 
   const target = useMemo(
     () => (summary === null ? null : { conversationId, workspacePath: summary.cwd }),
     [conversationId, summary],
   );
   const resume = useResumeSession(target, onResumed);
+  const taskList = useMemo(() => taskListOf(conversation.tools), [conversation.tools]);
 
   return (
-    <Panel
-      title={
-        summary === null || summary.summary === '' ? t('history.screen.title') : summary.summary
+    <ChatFrame
+      label={title}
+      keeper={keeper}
+      header={
+        <div className="flex items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <h3 className="truncate text-ui-sm font-ui-strong">{title}</h3>
+            <p className="text-ui-xs text-muted-foreground">{t('history.screen.description')}</p>
+          </div>
+          <IconButton icon={X} label={t('history.screen.close')} onClick={onClose} />
+        </div>
       }
-      description={t('history.screen.description')}
+      dock={
+        summary !== null && (
+          <>
+            <TaskStrip list={taskList} />
+            <ResumeControls resume={resume} summary={summary} />
+          </>
+        )
+      }
     >
-      <div className="flex justify-end">
-        <IconButton icon={X} label={t('history.screen.close')} onClick={onClose} />
-      </div>
-
       {history.isLoading && (
         <Skeleton className="h-24 w-full" aria-label={t('history.screen.loading')} />
       )}
@@ -84,7 +110,6 @@ export function ConversationReader({
       {summary !== null && (
         <>
           <Origin summary={summary} />
-          <ResumeControls resume={resume} summary={summary} />
 
           <LoadMore
             hasMore={history.hasEarlier}
@@ -103,7 +128,7 @@ export function ConversationReader({
           />
         </>
       )}
-    </Panel>
+    </ChatFrame>
   );
 }
 

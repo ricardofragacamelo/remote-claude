@@ -367,24 +367,27 @@ conteúdo hostil neutralizado na renderização.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-255 | prompt → markdown → tool compacta → abrir o diff no editor | eq | e2e | — | B-53 | ⬜ |
-| S-256 | thinking, lista de tarefas e subagent aninhado aparecem no painel, vivos e depois de recarregar | eq | e2e | — | B-53 | ⬜ |
-| S-257 | recarregar no meio do turno volta à mesma aba e conversa, sem duplicar | est | e2e | — | B-53 | ⬜ |
-| S-258 | `@` escolhe um arquivo, outro vem arrastado do explorer e uma imagem do desktop: as referências chegam e o `Read` aparece em `/audit` | eq | e2e | — | B-54 | ⬜ |
-| S-259 | `/` mostra a skill do projeto da fixture, com selo, e escolhê-la a dispara | eq | e2e | — | B-54 | ⬜ |
-| S-260 | contexto fora da pasta é recusado com o erro traduzido, e o rascunho fica | err | e2e | `WORKSPACE_NOT_ALLOWED` | B-54 | ⬜ |
-| S-261 | permissão de Edit mostra o diff, aprova, o disco muda e a view "Alterações" lista | eq | e2e | — | B-55 | ⬜ |
-| S-262 | rejeitar um trecho e um arquivo pela view "Alterações", e desfazer a rejeição | est | e2e | — | B-55 | ⬜ |
-| S-263 | modo plan: aprovar o plano troca o modo e o Claude segue | est | e2e | — | B-55 | ⬜ |
-| S-264 | a view de sessões mostra viva, externa ativa e histórico; `attach`, retomar e fork a partir dela | eq | e2e | — | B-56 | ⬜ |
-| S-265 | duas abas de pasta: a permissão pedida na inativa vira badge e é respondida | conc | e2e | — | B-56 | ⬜ |
-| S-266 | o link de sessão (D-24) colado no navegador abre a aba da pasta com a conversa no painel, ao lado do explorer e do editor; retomar pela view de sessões e a conversa removida voltam a ser provados pelo web (devolvidos pelo 06 · B-33) | eq | e2e | — | B-56 | ⬜ |
-| S-267 | fila: dois prompts durante um turno, um cancelado; editar e reenviar bifurca | est | e2e | — | B-56 | ⬜ |
-| S-268 | viewport de celular: painel como view única, sem scroll horizontal; axe sem violação | fron | e2e | — | B-56 | ⬜ |
-| S-269 | `test:e2e:mobile` verde com o contrato novo | eq | e2e | — | B-57 | ⬜ |
-| S-270 | `smoke-live`: menção real gera `Read` auditado; `supportedModels()`, `mcpServerStatus()` e `getContextUsage()` reais respondem | eq | e2e | — | B-58 | ⬜ |
-| S-271 | `smoke-live`: `@caminho` no streaming input **não** é expandido em silêncio pelo CLI — a premissa da D-01 vale na versão atual | est | e2e | — | B-58 | ⬜ |
-| S-272 | `smoke-live`: skills de projeto (e de usuário e sistema, quando o plano 13 existir) aparecem no `supportedCommands()` real com o nome que o menu insere; imagem real chega (se a D-02 a mantiver); thinking e subagent reais têm o formato das fixtures | eq | e2e | — | B-58 | ⬜ |
+| S-255 | prompt → markdown → tool compacta → abrir o diff no editor | eq | e2e | — | B-53 | ✅ |
+| S-256 | thinking, lista de tarefas e subagent aninhado aparecem no painel, vivos e depois de recarregar | eq | e2e | — | B-53 | ✅ |
+| S-257 | recarregar no meio do turno volta à mesma aba e conversa, sem duplicar | est | e2e | — | B-53 | ✅ |
+| S-258 | `@` escolhe um arquivo, outro vem arrastado do explorer e uma imagem do desktop: as referências chegam e o `Read` aparece em `/audit` | eq | e2e | — | B-54 | ✅ |
+| S-259 | `/` mostra a skill do projeto da fixture, com selo, e escolhê-la a dispara | eq | e2e | — | B-54 | ✅ |
+| S-260 | contexto fora da pasta é recusado com o erro traduzido, e o rascunho fica | err | e2e | `WORKSPACE_NOT_ALLOWED` | B-54 | ✅ |
+| S-261 | permissão de Edit mostra o diff, aprova, o disco muda e a view "Alterações" lista | eq | e2e | — | B-55 | ✅ |
+| S-262 | rejeitar um trecho e um arquivo pela view "Alterações", e desfazer a rejeição | est | e2e | — | B-55 | ✅ |
+| S-263 | modo plan: aprovar o plano troca o modo e o Claude segue | est | e2e | — | B-55 | ✅ |
+| S-264 | a view de sessões mostra viva, externa ativa e histórico; `attach`, retomar e fork a partir dela | eq | e2e | — | B-56 | ✅ |
+| S-265 | duas abas de pasta: a permissão pedida na inativa vira badge e é respondida | conc | e2e | — | B-56 | ✅ |
+| S-266 | o link de sessão (D-24) colado no navegador abre a aba da pasta com a conversa no painel, ao lado do explorer e do editor; retomar pela view de sessões e a conversa removida voltam a ser provados pelo web (devolvidos pelo 06 · B-33) | eq | e2e | — | B-56 | ✅ |
+| S-267 | fila: dois prompts durante um turno, um cancelado; editar e reenviar bifurca | est | e2e | — | B-56 | ✅ |
+| S-268 | viewport de celular: painel como view única, sem scroll horizontal; axe sem violação | fron | e2e | — | B-56 | ✅ |
+| S-269 | `test:e2e:mobile` verde com o contrato novo | eq | e2e | — | B-57 | ✅ |
+| S-270 | `smoke-live`: menção real gera `Read` auditado; `supportedModels()`, `mcpServerStatus()` e `getContextUsage()` reais respondem | eq | e2e | — | B-58 | ✅ |
+| S-271 | `smoke-live`: `@caminho` no streaming input **não** é expandido em silêncio pelo CLI — a premissa da D-01 vale na versão atual | est | e2e | — | B-58 | ✅ |
+| S-272 | `smoke-live`: skills de projeto (e de usuário e sistema, quando o plano 13 existir) aparecem no `supportedCommands()` real com o nome que o menu insere; imagem real chega (se a D-02 a mantiver); thinking e subagent reais têm o formato das fixtures | eq | e2e | — | B-58 | ✅ |
+| S-273 | o prompt entregue ao Claude — na hora ou ao sair da fila — é dito a todo cliente como `message.completed` de papel `user`, com o texto **digitado**, `promptedBy` e o `uuid` sob o qual a conversa o guarda (descoberto pelo e2e da F6: o CLI não ecoa o prompt) | eq | integração | — | B-53 | ✅ |
+| S-274 | um `session.started` que chega depois de frames que o seguem — a sessão nascida no rascunho — ainda diz a conversa, o modelo, o modo e a pasta, sem passar por cima do que um frame posterior disse (descoberto pelo e2e da F6, S-267) | est | unit | — | B-56 | ✅ |
+| S-275 | aprovar o plano mostra o modo em que a sessão segue, como o seletor do cabeçalho (descoberto pelo e2e da F6, S-263) | est | unit | — | B-55 | ✅ |
 
 ---
 

@@ -8,6 +8,7 @@ import type { Page, WebSocketRoute } from '@playwright/test';
 
 import { callApi } from './api';
 import { openSignedIn } from './auth';
+import { connectedStatus } from './claude-panel';
 import { attachFrom, closeSession, connected, prompt } from './live-session';
 import type { AuthenticatedUser } from './auth';
 import type { E2eSocket } from './ws';
@@ -185,34 +186,7 @@ export async function sessionScreen(
   sessionId: string,
 ): Promise<void> {
   await openSignedIn(page, user, `/sessions/${sessionId}`);
-  await expect(page.getByText('Connected', { exact: true }).first()).toBeVisible();
-}
-
-/**
- * The messages on a screen — the session's, or the history's — one list item each. Only the
- * messages: the conversation also lists its tools and the end of each turn (plan 08, F2).
- */
-export function messagesOn(page: Page): ReturnType<Page['locator']> {
-  return page.getByRole('list', { name: 'Conversation' }).locator('li[data-message-id]');
-}
-
-/** The question on screen about one tool — its card in the permission queue. */
-export function cardFor(page: Page, toolName: string): ReturnType<Page['getByRole']> {
-  return page.getByRole('listitem', { name: `Permission for ${toolName}` });
-}
-
-/**
- * Writes a prompt into the screen's box and sends it, the way a person does — with Enter, as the
- * composer sends (plan 08, B-46). Not by clicking: the button sits at the foot of the panel, where
- * the toasts of the notification centre appear, and a pointer held over a toast keeps it on screen
- * (the toaster pauses its timer on hover) — a click that waits for it never lands.
- */
-export async function send(page: Page, text: string): Promise<void> {
-  const box = page.getByLabel('Prompt');
-
-  await box.fill(text);
-  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
-  await box.press('Enter');
+  await expect(connectedStatus(page)).toBeVisible();
 }
 
 /**
@@ -281,20 +255,4 @@ export class SwitchableSocket {
   restore(): void {
     this.down = false;
   }
-}
-
-/**
- * Opens the undo panel of the session on screen and the confirmation of its only point — the turn
- * the recorded `do the work` prompt started.
- */
-export async function confirmationOfTheOnlyPoint(
-  page: Page,
-): Promise<ReturnType<Page['getByRole']>> {
-  await page.getByRole('button', { name: 'Undo file changes' }).click();
-  await page
-    .getByRole('list', { name: 'Undo points' })
-    .getByRole('button', { name: /do the work/ })
-    .click();
-
-  return page.getByRole('group', { name: 'Undo these file changes?' });
 }

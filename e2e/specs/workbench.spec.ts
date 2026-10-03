@@ -5,12 +5,10 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import { openSignedIn } from '../fixtures/auth';
+import { conversationOf, draftOf, panelOf, send } from '../fixtures/claude-panel';
 import { sessionsOpened, tabsOf, workbenchSuite } from '../fixtures/folder-tree';
-import { send } from '../fixtures/history';
 import { attachFrom, connected } from '../fixtures/live-session';
 import {
-  conversationOf,
-  draftOf,
   folderDialog,
   goDown,
   namesListed,
@@ -132,7 +130,7 @@ test(`${cwd.id} — ${cwd.title}`, async ({ page }) => {
   // The explorer, the editor and the chat, side by side in the one tab.
   const explorer = await page.getByRole('complementary', { name: 'Explorer' }).boundingBox();
   const editor = await page.getByRole('region', { name: 'Editor' }).boundingBox();
-  const claude = await page.getByRole('complementary', { name: 'Claude' }).boundingBox();
+  const claude = await panelOf(page).boundingBox();
   expect(explorer?.x).toBeLessThan(editor?.x ?? 0);
   expect(editor?.x).toBeLessThan(claude?.x ?? 0);
 });

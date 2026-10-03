@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 
 import type { TimelineEntry } from '../../types/live-session';
+import { InlinePermission } from './InlinePermission';
 import { MessageItem } from './MessageItem';
 import { ToolRow } from './ToolRow';
-import { CompactedRow, TurnRow } from './TurnRow';
+import { CompactedRow, RewoundRow, TurnRow } from './TurnRow';
 import type { TimelineContext } from './timeline-context';
 
 /** The subagent an entry belongs to — `null` for the main conversation. */
@@ -16,6 +17,31 @@ function parentOfEntry(entry: TimelineEntry, context: TimelineContext): string |
     return context.conversation.tools.find((tool) => tool.toolUseId === entry.id)?.parentToolUseId;
   }
   return null;
+}
+
+/**
+ * A tool of the timeline: its line — or, while it asks to run, its card, whole, in its own place
+ * (plan 09, B-23).
+ */
+function ToolEntry({
+  toolUseId,
+  context,
+}: {
+  readonly toolUseId: string;
+  readonly context: TimelineContext;
+}): React.JSX.Element | null {
+  const tool = context.conversation.tools.find((each) => each.toolUseId === toolUseId);
+  const request = context.inline?.requests.byTool.get(toolUseId);
+
+  if (tool === undefined) {
+    return null;
+  }
+
+  return request === undefined || context.inline === undefined ? (
+    <ToolRow tool={tool} context={context} />
+  ) : (
+    <InlinePermission request={request} inline={context.inline} />
+  );
 }
 
 /** One entry of the timeline, drawn as what it is. */
@@ -33,16 +59,16 @@ function Entry({
       const message = conversation.messages.find((each) => each.messageId === entry.id);
       return message === undefined ? null : <MessageItem message={message} context={context} />;
     }
-    case 'tool': {
-      const tool = conversation.tools.find((each) => each.toolUseId === entry.id);
-      return tool === undefined ? null : <ToolRow tool={tool} context={context} />;
-    }
+    case 'tool':
+      return <ToolEntry toolUseId={entry.id} context={context} />;
     case 'turn': {
       const turn = conversation.turns.find((each) => each.turnId === entry.id);
       return turn === undefined ? null : <TurnRow turn={turn} />;
     }
     case 'compacted':
       return <CompactedRow trigger={entry.trigger} preTokens={entry.preTokens} />;
+    case 'rewound':
+      return <RewoundRow entry={entry} />;
   }
 }
 

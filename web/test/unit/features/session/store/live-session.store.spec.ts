@@ -104,6 +104,51 @@ describe('the live session store', () => {
       expect(store().historyFrom).toBeNull();
     });
 
+    it('learns the conversation from a `session.started` that came after what followed it — S-267', () => {
+      // A session born in a draft hears its first frames live, before its attach replays the start.
+      store().apply(event('message.completed', 2, completed('u1', 'say hello').payload));
+      store().apply(
+        event('session.started', 1, {
+          sessionId: SESSION,
+          claudeSessionId: CONVERSATION,
+          resumedFrom: SOURCE,
+          model: 'claude-sonnet-5',
+          permissionMode: 'default',
+          workspacePath: '/srv/projects/app',
+        }),
+      );
+
+      expect(store()).toMatchObject({
+        conversationId: CONVERSATION,
+        historyFrom: SOURCE,
+        model: 'claude-sonnet-5',
+        permissionMode: 'default',
+        workspacePath: '/srv/projects/app',
+        lastSeq: 2,
+      });
+      expect(store().messages).toHaveLength(1);
+    });
+
+    it('keeps what later frames said over a late start, and a start already taken over a second one', () => {
+      store().apply(event('message.delta', 3, { messageId: 'm1', delta: 'hi' }));
+      store().noteMode('plan');
+      store().noteModel('claude-opus-5');
+      store().apply(
+        event('session.started', 1, {
+          sessionId: SESSION,
+          claudeSessionId: CONVERSATION,
+          model: 'claude-sonnet-5',
+          permissionMode: 'default',
+        }),
+      );
+      store().apply(event('session.started', 2, { sessionId: SESSION, claudeSessionId: SOURCE }));
+
+      expect(store().permissionMode).toBe('plan');
+      expect(store().model).toBe('claude-opus-5');
+      expect(store().conversationId).toBe(CONVERSATION);
+      expect(store().historyFrom).toBeNull();
+    });
+
     it('asks for the history a resumed session continues — B-11', () => {
       store().apply(
         event('session.started', 1, {

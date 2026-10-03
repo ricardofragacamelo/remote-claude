@@ -1,4 +1,5 @@
-import { Plus, X } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
 import { useStore } from 'zustand';
 import { useTranslation } from 'react-i18next';
 
@@ -38,17 +39,15 @@ export function PanelTabStrip({ tabs }: { readonly tabs: PanelTabs }): React.JSX
   const { t } = useTranslation();
 
   return (
-    <div className="flex min-w-0 items-center gap-1 border-b border-border pb-1">
-      <ul
-        aria-label={t('sessions.tabs.label')}
-        className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto"
-      >
-        {tabs.tabs.map((tab) => (
-          <TabItem key={tab.key} tab={tab} tabs={tabs} />
-        ))}
-      </ul>
-      <IconButton icon={Plus} label={t('sessions.tabs.new')} onClick={tabs.newConversation} />
-    </div>
+    // The tabs scroll sideways in their strip, and the actions of the header stay (plan 09, S-46).
+    <ul
+      aria-label={t('sessions.tabs.label')}
+      className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto py-1 [scrollbar-width:thin]"
+    >
+      {tabs.tabs.map((tab) => (
+        <TabItem key={tab.key} tab={tab} tabs={tabs} />
+      ))}
+    </ul>
   );
 }
 
@@ -83,9 +82,17 @@ function NamedTab({
 }): React.JSX.Element {
   const { t } = useTranslation();
   const active = tabs.active?.key === tab.key;
+  const item = useRef<HTMLLIElement>(null);
+
+  // The tab on screen is in view in the strip, however many there are.
+  useEffect(() => {
+    if (active) {
+      item.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [active]);
 
   return (
-    <li className={cn('flex shrink-0 items-center rounded', active && 'bg-accent')}>
+    <li ref={item} className={cn('flex shrink-0 items-center rounded', active && 'bg-accent')}>
       <PanelTabMenu tab={tab} tabs={tabs}>
         <button
           type="button"

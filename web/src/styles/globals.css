@@ -66,6 +66,9 @@
   --text-ui--line-height: 1.25rem;
   --text-ui-sm: 0.75rem;
   --text-ui-sm--line-height: 1rem;
+  /* The fine print of the panel: chips, badges, one-line strips, the summary of a turn. */
+  --text-ui-xs: 0.6875rem;
+  --text-ui-xs--line-height: 1rem;
   --text-code: 0.8125rem;
   --text-code--line-height: 1.25rem;
 
@@ -93,6 +96,8 @@
   --text-ui--line-height: 1.375rem;
   --text-ui-sm: 0.8125rem;
   --text-ui-sm--line-height: 1.125rem;
+  --text-ui-xs: 0.75rem;
+  --text-ui-xs--line-height: 1rem;
   --text-code: 0.875rem;
   --text-code--line-height: 1.375rem;
   --spacing-row: 1.75rem;

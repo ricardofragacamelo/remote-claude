@@ -63,6 +63,40 @@ export function DropdownMenuRadioItem({
   );
 }
 
+// CUSTOM: the submenu, for a menu of the composer bar that holds other choices when the bar is too
+// narrow for them (plan 09, B-11) — the shape of shadcn/ui's own, on the same item style.
+export const DropdownMenuSub = DropdownMenuPrimitive.Sub;
+
+export function DropdownMenuSubTrigger({
+  className,
+  ...props
+}: ComponentProps<typeof DropdownMenuPrimitive.SubTrigger>): React.JSX.Element {
+  return (
+    <DropdownMenuPrimitive.SubTrigger
+      className={cn(item, 'data-[state=open]:bg-accent', className)}
+      {...props}
+    />
+  );
+}
+
+export function DropdownMenuSubContent({
+  className,
+  ...props
+}: ComponentProps<typeof DropdownMenuPrimitive.SubContent>): React.JSX.Element {
+  return (
+    <DropdownMenuPrimitive.Portal>
+      <DropdownMenuPrimitive.SubContent
+        className={cn(
+          'z-50 max-h-[80dvh] min-w-48 overflow-y-auto rounded-md border border-border bg-popover p-1',
+          'text-popover-foreground shadow-md',
+          className,
+        )}
+        {...props}
+      />
+    </DropdownMenuPrimitive.Portal>
+  );
+}
+
 export function DropdownMenuLabel({
   className,
   ...props

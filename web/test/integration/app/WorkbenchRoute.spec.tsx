@@ -126,7 +126,7 @@ describe('the workbench of one folder — B-16', () => {
     connect();
 
     // The session is born of the first prompt of the draft (plan 08, D-07).
-    await typeIn(user, await screen.findByLabelText(t('session.composer.label')), 'hello');
+    await typeIn(user, await screen.findByLabelText(t('composer.box.label')), 'hello');
     await user.click(screen.getByRole('button', { name: t('session.composer.send') }));
 
     const start = sockets.latest.frames().find((frame) => frame['type'] === 'session.start');

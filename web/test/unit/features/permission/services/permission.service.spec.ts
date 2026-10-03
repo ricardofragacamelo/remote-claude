@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Envelope } from '@remote-claude/contracts';
 
 import {
+  answerRefusalOf,
   sendAnswer,
   sendExtension,
   toExtension,
@@ -33,7 +34,7 @@ function aClient() {
         correlationId: string,
       ) => {
         responses.push({ type, payload, correlationId });
-        return true;
+        return 'answer-1';
       },
     } as unknown as WsClient,
   };
@@ -50,7 +51,49 @@ function frame(overrides: Partial<Envelope>): Envelope {
   } as Envelope;
 }
 
+describe('the refusal of an answer — plan 09, S-61', () => {
+  const refusal = (correlationId: string): Envelope =>
+    frame({
+      kind: 'error',
+      type: 'error',
+      correlationId,
+      traceId: 'trace-late',
+      payload: {
+        code: 'PERMISSION_REQUEST_EXPIRED',
+        messageKey: 'permission.error.requestExpired',
+        params: {},
+      },
+    });
+
+  it('reads the error that names the answer, translated by its key', () => {
+    const error = answerRefusalOf(refusal('answer-1'), 'answer-1');
+
+    expect(error?.code).toBe('PERMISSION_REQUEST_EXPIRED');
+    expect(error?.messageKey).toBe('permission.error.requestExpired');
+    expect(error?.traceId).toBe('trace-late');
+  });
+
+  it('is not the refusal of another frame, nor an event', () => {
+    expect(answerRefusalOf(refusal('answer-2'), 'answer-1')).toBeNull();
+    expect(answerRefusalOf(frame({ correlationId: 'answer-1' }), 'answer-1')).toBeNull();
+  });
+});
+
 describe('answering a permission request', () => {
+  it('answers the id of the frame it sent — what a refusal names', () => {
+    const { client } = aClient();
+
+    expect(
+      sendAnswer(client, {
+        requestId: 'req-1',
+        frameId: 'frame-1',
+        decision: 'allow',
+        scope: 'once',
+        reason: null,
+      }),
+    ).toBe('answer-1');
+  });
+
   it('sends a response that names the request it answers', () => {
     const { client, responses } = aClient();
 
@@ -107,7 +150,36 @@ describe('reading the permission frames', () => {
   it('reads an outcome', () => {
     expect(
       toOutcome(frame({ payload: { requestId: 'req-1', decision: 'deny', auto: true } })),
-    ).toEqual({ requestId: 'req-1', decision: 'deny', auto: true, resolvedBy: null });
+    ).toEqual({
+      requestId: 'req-1',
+      decision: 'deny',
+      auto: true,
+      resolvedBy: null,
+      resolvedFrom: null,
+      toolUseId: null,
+      answeredHere: false,
+    });
+  });
+
+  it.each([
+    ['mobile', 'mobile'],
+    ['web', 'web'],
+    ['a client this build does not know', null],
+  ])('reads where the answer came from — %s — plan 09, S-62', (_case, expected) => {
+    const from = expected ?? 'desktop';
+    const outcome = toOutcome(
+      frame({
+        payload: {
+          requestId: 'req-1',
+          decision: 'allow',
+          auto: false,
+          resolvedBy: 'auth|42',
+          resolvedFrom: from,
+        },
+      }),
+    );
+
+    expect(outcome?.resolvedFrom).toBe(expected);
   });
 
   it.each([

@@ -81,18 +81,14 @@ describe('the chat with Claude, in the folder tab — plan 06, S-115', () => {
     // Still the tab of the folder: the chat never moves to a screen of its own.
     expect(mounted.path()).toBe('/workbench');
     expect(screen.getByRole('region', { name: t('workbench.editor.label') })).toBeVisible();
-    expect(within(claude()).getByLabelText(t('session.composer.label'))).toBeVisible();
+    expect(within(claude()).getByLabelText(t('composer.box.label'))).toBeVisible();
   });
 
   it('talks and shows what the session says, without leaving the tab', async () => {
     const user = userEvent.setup();
     await withASession(user);
 
-    await typeIn(
-      user,
-      within(claude()).getByLabelText(t('session.composer.label')),
-      'run the tests',
-    );
+    await typeIn(user, within(claude()).getByLabelText(t('composer.box.label')), 'run the tests');
     await user.click(within(claude()).getByRole('button', { name: t('session.composer.send') }));
     live.receive(
       hubEvent(SESSION, 'message.completed', 2, {
@@ -222,17 +218,13 @@ describe('a session of a tab that is not on screen — plan 06, S-181, S-99, S-1
   it('keeps the half-written prompt of each tab to itself, and gives it back', async () => {
     const user = userEvent.setup();
     await withASession(user);
-    await typeIn(
-      user,
-      within(claude()).getByLabelText(t('session.composer.label')),
-      'half a thought',
-    );
+    await typeIn(user, within(claude()).getByLabelText(t('composer.box.label')), 'half a thought');
 
     await user.click(await tabNamed('b'));
     expect(await draftOnScreen()).toBeVisible();
 
     await user.click(await tabNamed('a'));
-    expect(await within(claude()).findByLabelText(t('session.composer.label'))).toHaveValue(
+    expect(await within(claude()).findByLabelText(t('composer.box.label'))).toHaveValue(
       'half a thought',
     );
   });

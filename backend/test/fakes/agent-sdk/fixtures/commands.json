@@ -1,11 +1,16 @@
 {
   "$comment": "Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. Do not edit by hand — re-record instead. See docs/plans/04-transcript-and-resume/F3-commands.md.",
   "name": "commands",
-  "why": "what supportedCommands() answers, dead and internal entries included — the menu filters them by metadata",
-  "recordedAt": "2026-09-26",
+  "why": "what supportedCommands() answers, dead and internal entries included — the menu filters them by metadata; with a skill of the project, which the menu badges as such (plan 08, S-259)",
+  "recordedAt": "2026-10-02",
   "sdkVersion": "0.3.277",
-  "counts": { "commands": 55 },
+  "counts": { "commands": 56 },
   "commands": [
+    {
+      "name": "release-notes",
+      "description": "Summarise what changed in this project since the last release, in three bullets. (project)",
+      "argumentHint": ""
+    },
     {
       "name": "deep-research",
       "description": "Deep research harness — fan-out web searches, fetch sources, adversarially verify claims, synthesize a cited report. (dynamic workflow)",

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/components/ui/button';
 import { intoItself } from '../lib/batch';
 import type { Explorer } from '../hooks/useExplorer';
-import { ExplorerDialog } from './ExplorerDialog';
+import { DialogFrame } from '@/shared/components/DialogFrame';
 
 export interface MoveToDialogProps {
   readonly explorer: Explorer;
@@ -21,7 +21,7 @@ export function MoveToDialog({ explorer }: MoveToDialogProps): React.JSX.Element
   const formId = useId();
 
   return (
-    <ExplorerDialog
+    <DialogFrame
       open={moving !== null}
       onClose={explorer.cancelMove}
       title={t('explorer.move.title', { count: moving?.length ?? 0 })}
@@ -45,7 +45,7 @@ export function MoveToDialog({ explorer }: MoveToDialogProps): React.JSX.Element
           explorer={explorer}
         />
       )}
-    </ExplorerDialog>
+    </DialogFrame>
   );
 }
 

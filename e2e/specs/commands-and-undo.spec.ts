@@ -5,9 +5,24 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import { callApi } from '../fixtures/api';
-import { cardFor, confirmationOfTheOnlyPoint, scratchFolders, send } from '../fixtures/history';
+import {
+  allowOnce,
+  cardFor,
+  commandsToggle,
+  confirmationOfTheOnlyPoint,
+  idleStatus,
+  interruptButton,
+  lastUndoReport,
+  promptBox,
+  refuse,
+  send,
+  sendButton,
+  suggestedCommand,
+  turnsEnded,
+} from '../fixtures/claude-panel';
+import { scratchFolders } from '../fixtures/history';
 import { attachFrom, closeSession, connected, workspaceFor } from '../fixtures/live-session';
-import { closeTab, sessionInTab, turnsEnded } from '../fixtures/workbench';
+import { closeTab, sessionInTab } from '../fixtures/workbench';
 import type { E2eSocket } from '../fixtures/ws';
 import { scenario } from '../scenarios';
 
@@ -50,24 +65,19 @@ async function cleanUp(socket: E2eSocket, sessionId: string, workspace: string):
   await closeTab(context().user, workspace);
 }
 
-/** The status the screen shows for a session with nothing running. */
-function idle(page: Page): ReturnType<Page['getByText']> {
-  return page.getByText('Idle', { exact: true });
-}
-
 /**
  * Waits for the first turn of the test to end — the one after the opening — as the screen says it:
  * what the session has cost over both, and the session idle again.
  */
 async function firstTurnEnded(page: Page): Promise<void> {
   await expect(turnsEnded(page, 2)).toBeVisible();
-  await expect(idle(page)).toBeVisible();
+  await expect(idleStatus(page)).toBeVisible();
 }
 
 /** Sends the recorded turn that writes a file, and allows the write on its card. */
 async function writingTurn(page: Page, fixture: string): Promise<void> {
   await send(page, `do the work [fixture:${fixture}]`);
-  await cardFor(page, 'Write').getByRole('button', { name: 'Allow once' }).click();
+  await allowOnce(cardFor(page, 'Write')).click();
   await firstTurnEnded(page);
 }
 
@@ -84,26 +94,24 @@ test(`${init.id} — ${init.title}`, async ({ page }) => {
   const { socket, sessionId } = await onScreen(page, workspace);
 
   try {
-    // Picked from the menu of this installation, which writes it into the box and sends nothing.
-    await page.getByRole('button', { name: 'Commands' }).click();
-    await page
-      .getByRole('list', { name: 'Suggested' })
-      .getByRole('button', { name: new RegExp(`^${expected.command}\\b`) })
-      .click();
+    // Picked from the list of `/` of this installation, which writes it into the box and sends
+    // nothing (plan 09, B-12: the `/` of the bar opens it).
+    await commandsToggle(page).click();
+    await suggestedCommand(page, expected.command).click();
 
-    const box = page.getByLabel('Prompt');
+    const box = promptBox(page);
     await expect(box).toHaveValue(`${expected.command} `);
 
     // The argument a person would add. This one is read by the scripted backend alone: it names
     // the recording of a real `/init` to replay.
     await box.press('End');
     await box.pressSequentially(`[fixture:${expected.fixture}]`);
-    await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await sendButton(page).click();
 
     // The recorded `/init` asks twice — a shell command, then the write. The shell command is
     // refused, as a cautious person would; the write goes through the same card as any other.
-    await cardFor(page, expected.refused).getByRole('button', { name: 'Refuse' }).click();
-    await cardFor(page, expected.toolName).getByRole('button', { name: 'Allow once' }).click();
+    await refuse(cardFor(page, expected.refused)).click();
+    await allowOnce(cardFor(page, expected.toolName)).click();
     await firstTurnEnded(page);
 
     const written = fs.readFileSync(path.join(workspace, expected.file), 'utf8');
@@ -133,7 +141,7 @@ test(`${undone.id} — ${undone.title}`, async ({ page }) => {
     await confirmation.getByRole('button', { name: 'Undo these files' }).click();
 
     // And the outcome, file by file — then the disk itself.
-    const report = page.getByRole('region', { name: 'Last undo' });
+    const report = lastUndoReport(page);
     await expect(report.getByRole('list', { name: 'Put back' }).getByText(file)).toBeVisible();
     expect(fs.readFileSync(file, 'utf8')).toBe(expected.before);
   } finally {
@@ -159,7 +167,7 @@ test(`${locked.id} — ${locked.title}`, async ({ page }) => {
 
     // A turn that runs until somebody stops it — from the outside, a tool that takes minutes.
     await send(page, `hold on [fixture:${expected.held}] [hold]`);
-    await expect(idle(page)).toBeHidden();
+    await expect(idleStatus(page)).toBeHidden();
 
     // The screen says why, and offers nothing to press.
     const confirmation = await confirmationOfTheOnlyPoint(page);
@@ -182,11 +190,14 @@ test(`${locked.id} — ${locked.title}`, async ({ page }) => {
     });
     expect(fs.readFileSync(file, 'utf8')).toBe(written);
 
-    // Once the turn stops, the undo is offered again.
-    await page.getByRole('button', { name: 'Interrupt' }).click();
-    await expect(idle(page)).toBeVisible();
+    // Once the turn stops, the undo is offered again — the dialog closed, stop pressed, and the
+    // dialog opened anew (plan 09, B-17: the undo is a dialog of the menu of the session).
+    await page.keyboard.press('Escape');
+    await interruptButton(page).click();
+    await expect(idleStatus(page)).toBeVisible();
+    const again = await confirmationOfTheOnlyPoint(page);
     await expect(page.getByText(expected.busy)).toBeHidden();
-    await expect(confirmation.getByRole('button', { name: 'Undo these files' })).toBeEnabled();
+    await expect(again.getByRole('button', { name: 'Undo these files' })).toBeEnabled();
   } finally {
     await cleanUp(socket, sessionId, workspace);
   }

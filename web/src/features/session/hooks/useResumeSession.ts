@@ -39,7 +39,9 @@ export interface ResumeControl {
 export interface Resumer extends Omit<ResumeControl, 'resume'> {
   /** The conversation the resume in flight, or the last one, was for. */
   readonly target: ResumeTarget | null;
-  resume(target: ResumeTarget): void;
+
+  /** @returns whether the resume left — it does not with one in flight, or with the socket down */
+  resume(target: ResumeTarget): boolean;
 }
 
 /** The resume in flight: the command that asked, and the conversation it asked for. */
@@ -129,14 +131,14 @@ export function useResumer(onResumed: (sessionId: string) => void): Resumer {
     // A second press while the first is in flight sends nothing (S-45): the button is disabled
     // while `isResuming` holds, and the ref is what holds when two presses land inside one frame.
     if (inFlight.current !== null) {
-      return;
+      return false;
     }
 
     const commandId = resumeSession(wsClient, next.workspacePath, next.conversationId);
 
     // The socket was not ready and nothing left: there is nothing to wait for.
     if (commandId === null) {
-      return;
+      return false;
     }
 
     const asked = { commandId, conversationId: next.conversationId };
@@ -145,6 +147,7 @@ export function useResumer(onResumed: (sessionId: string) => void): Resumer {
     setPending(asked);
     setTarget(next);
     setError(null);
+    return true;
   }, []);
 
   return { connection, isResuming: pending !== null, error, target, resume };

@@ -559,3 +559,47 @@ Cada trava tem o seu limite dito no [plano 12](../../plans/12-integrated-termina
 (`nohup`, `setsid`) sobrevive ao fechamento, como em qualquer terminal; um PTY não sobrevive ao
 restart do backend.
 
+---
+
+## ADR-019 — Aviso de dependência sem versão corrigida: exceção datada, por ADR
+
+**Status:** aceita · 2026-10-03 · decisão do usuário, no ciclo 8 do
+[plano 09](../../plans/09-chat-layout/progress.md#histórico-de-validação)
+
+**Contexto.** O portão 10 reprova qualquer aviso `high` do `pnpm audit` e qualquer aviso do
+`osv-scanner`, e a instrução do script é "atualize a dependência; nunca ignore o id". Em 2026-10-03
+saiu o GHSA-vfj7-8cjw-p6xm — `braces` ≤ 3.0.3, *stack exhaustion* por padrão muito aninhado — **sem
+versão corrigida**: a 3.0.3 é a última. Ele só entra por `jscpd` 4.3.0 → `@jscpd/finder` →
+`fast-glob` → `micromatch` → `braces`, dependência de desenvolvimento do portão de duplicação, que
+expande só os padrões do nosso `.jscpd.json`. Não há para onde atualizar, e o repositório inteiro
+parou no portão 10.
+
+**Alternativas consideradas.**
+
+| Alternativa | Por que não |
+|---|---|
+| `jscpd` 5.x, que vem empacotado e não declara dependência | é outro motor: com o mesmo config acha 131 clones (em `web/src`, `backend/src`, `mobile/lib` e no lockfile) onde a 4.3.0 acha 0. Adotá-lo pede refatorar tudo isso ou recalibrar o limiar do portão 5 — e recalibrar para passar é proibido. E o código do `braces` pode seguir lá dentro, sem o scanner ver |
+| `pnpm.overrides` para outra versão | não existe versão corrigida para onde apontar |
+| ignorar o id no `pnpm audit` / no osv | a exceção ficaria sem dono, sem prazo e larga demais: qualquer caminho até o `braces` passaria |
+| esperar a correção com o portão vermelho | nenhuma tarefa de nenhum plano fecharia até lá, por um risco que não alcança o produto |
+
+**Decisão.** Um aviso sem versão corrigida pode ser aceito **por um tempo**, por uma ADR, e por
+nada mais estreito que isto — em `scripts/accepted-advisories.json`, lido por
+`scripts/lib/accepted-advisories.mjs`:
+
+- o **id**, o **pacote** e a **versão**, os três;
+- só pelos **caminhos** de dependência que a entrada nomeia (prefixos do `pnpm audit`): o mesmo pacote
+  chegando por outra dependência é risco novo, e reprova;
+- até uma **data**, depois da qual reprova de novo, com o motivo, saia a correção ou não;
+- dito a **cada execução** do portão (`! braces@3.0.3 GHSA-… — accepted by ADR-019 until …`).
+
+O `osv-scanner` não diz o caminho; o `pnpm audit` diz e o julga, e os dois rodam sempre. Nada do
+lockfile do app (`pubspec.lock`) é coberto por exceção.
+
+**A exceção aceita hoje:** GHSA-vfj7-8cjw-p6xm, `braces` 3.0.3, só por `.>jscpd>`, até
+**2026-11-02**. Ao vencer, o portão volta a reprovar, e a escolha é de novo do usuário: a correção
+publicada, outra ferramenta de duplicação, ou uma emenda a esta ADR com outra data.
+
+**O que não muda.** Aviso **com** versão corrigida continua sendo atualizado, nunca aceito — a regra
+não ganha uma porta, ganha uma exceção para o caso em que a porta não existe.
+

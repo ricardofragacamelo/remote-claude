@@ -117,7 +117,7 @@ export function useDraft(folder: string, key: string, workspacePath: string): Dr
 }
 
 /** What the first prompt of a draft needs once its session opened. */
-interface FirstPrompt {
+export interface FirstPrompt {
   readonly folder: string;
   readonly key: string;
   readonly sessionId: string;
@@ -130,8 +130,11 @@ interface FirstPrompt {
  * prompt. An attachment refused there stops the prompt: the tab of the session gets the text and the
  * set back, the refused item marked. The refusal of the prompt itself is watched by the composer of
  * the session's tab, which gives them back the same way.
+ *
+ * A session that ended and is resumed by its box sends its prompt the same way (plan 09, B-06): the
+ * key is then the ended session's tab, which becomes the resumed one's.
  */
-async function firstPrompt(panel: ClaudePanelStore, first: FirstPrompt): Promise<void> {
+export async function firstPrompt(panel: ClaudePanelStore, first: FirstPrompt): Promise<void> {
   const items = await uploadHeld(panel.getState().contexts[first.key] ?? [], first.sessionId);
   const refused = items.some((item) => item.kind === 'upload' && item.error !== null);
 

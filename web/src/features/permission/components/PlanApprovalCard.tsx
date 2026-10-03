@@ -48,7 +48,9 @@ export function PlanApprovalCard({
 
   return (
     <li
-      className="flex flex-col gap-3 rounded-lg border-2 border-border p-4"
+      data-permission-request={request.requestId}
+      tabIndex={-1}
+      className="flex flex-col gap-3 rounded-lg border-2 border-border p-4 outline-ring focus-visible:outline-2"
       aria-label={t('permission.plan.label')}
     >
       <div className="flex items-baseline justify-between gap-2">

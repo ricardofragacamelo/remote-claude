@@ -110,7 +110,6 @@
       "idleTimeout": "ficou ociosa por tempo demais — retome-a pelo histórico"
     },
     "screen": {
-      "title": "Sessão",
       "sessionLabel": "Sessão {{sessionId}}",
       "conversation": "Conversa",
       "emptyTitle": "Ainda não há nada",
@@ -118,13 +117,15 @@
       "partial": "Isto é só o que o servidor ainda tinha em memória, não a conversa inteira.",
       "ended": "Esta sessão terminou às {{at}} porque {{reason}}."
     },
+    "ended": {
+      "resumes": "Mandar um prompt a retoma, num novo processo do Claude nesta máquina.",
+      "resumeAndSend": "Retomar e enviar"
+    },
     "composer": {
-      "label": "Prompt",
       "placeholder": "Peça ao Claude algo nesta pasta…",
       "send": "Enviar"
     },
     "controls": {
-      "interrupt": "Interromper",
       "close": "Encerrar sessão",
       "closeNotOwner": "Só o navegador que abriu esta sessão pode encerrá-la."
     },
@@ -285,14 +286,6 @@
     }
   },
   "permission": {
-    "queue": {
-      "title": "Esperando você",
-      "description": "O Claude parou e não vai executar isto até você responder.",
-      "emptyTitle": "Nada para decidir",
-      "emptyDescription": "O Claude pergunta aqui antes de executar qualquer coisa que precise da sua palavra.",
-      "lastAuto": "O último pedido foi {{decision}} automaticamente.",
-      "lastBy": "O último pedido foi {{decision}} por {{who}}."
-    },
     "card": {
       "label": "Permissão para {{tool}}",
       "remaining": "faltam {{seconds}} s",
@@ -310,10 +303,6 @@
       "session": "Permitir nesta sessão",
       "project": "Não perguntar de novo neste projeto",
       "always": "Não perguntar de novo em lugar nenhum"
-    },
-    "decision": {
-      "allow": "permitido",
-      "deny": "recusado"
     },
     "tool": {
       "Bash": "Executar um comando de shell",
@@ -370,6 +359,19 @@
       "outside": "O arquivo está fora da pasta desta aba, por isso não há prévia. O input exato está acima.",
       "unavailable": "Sem prévia: {{reason}} O input exato está acima.",
       "unchanged": "O arquivo já tem exatamente isto: nada mudaria."
+    },
+    "verdict": {
+      "allow": "Aprovado",
+      "deny": "Recusado"
+    },
+    "outcome": {
+      "byYou": "{{decision}} por você",
+      "onPhone": "{{decision}} num celular por {{who}}",
+      "inBrowser": "{{decision}} num navegador por {{who}}",
+      "by": "{{decision}} por {{who}}",
+      "expired": "Recusado — ninguém respondeu a tempo",
+      "rule": "Aprovado por uma regra sua",
+      "somebody": "alguém"
     }
   },
   "audit": {
@@ -588,25 +590,8 @@
       "activeElsewhereNote": "Outro processo escreveu nesta conversa há pouco — o editor ou um terminal pode estar com ela aberta. Continuar aqui cria uma cópia, e as duas vão divergir."
     }
   },
-  "commands": {
-    "menu": {
-      "toggle": "Comandos",
-      "title": "Comandos desta instalação",
-      "search": "Buscar comandos",
-      "searchPlaceholder": "Nome, apelido ou descrição",
-      "loading": "Carregando os comandos desta instalação…",
-      "unavailable": "A lista de comandos não está disponível agora. Você ainda pode digitar qualquer comando no prompt.",
-      "emptyTitle": "Esta instalação não oferece nenhum comando",
-      "emptyDescription": "Você ainda pode digitar o que quiser no prompt abaixo.",
-      "noMatch": "Nenhum comando corresponde a “{{search}}”.",
-      "suggested": "Sugeridos",
-      "all": "Todos os outros comandos",
-      "version": "Do Claude Code {{version}} desta máquina."
-    }
-  },
   "undo": {
     "panel": {
-      "toggle": "Desfazer alterações em arquivos",
       "title": "Pontos de desfazer",
       "description": "Devolve os arquivos que esta sessão escreveu ao estado de antes de um turno. Um arquivo alterado fora da sessão depois disso fica como está.",
       "loading": "Carregando os pontos de desfazer desta sessão…",
@@ -616,7 +601,8 @@
       "startedAt": "Turno iniciado em {{at}}",
       "busy": "O desfazer fica disponível quando o turno em execução terminar.",
       "ended": "Não é possível desfazer em uma sessão que já foi encerrada.",
-      "rewinding": "Desfazendo…"
+      "rewinding": "Desfazendo…",
+      "close": "Fechar"
     },
     "confirm": {
       "title": "Desfazer estas alterações em arquivos?",
@@ -717,8 +703,7 @@
     "claude": {
       "label": "Claude",
       "backToStart": "Voltar para uma nova conversa",
-      "showChanges": "O que a sessão alterou",
-      "showChat": "A conversa"
+      "showChanges": "O que a sessão alterou"
     },
     "mobile": {
       "label": "Visões desta pasta",
@@ -901,7 +886,10 @@
       "focusComposer": "Claude: Focar o prompt",
       "interrupt": "Claude: Interromper o turno",
       "nextConversation": "Claude: Próxima conversa",
-      "previousConversation": "Claude: Conversa anterior"
+      "previousConversation": "Claude: Conversa anterior",
+      "cycleMode": "Claude: trocar o modo da conversa",
+      "goToRequest": "Claude: Ir para a pergunta que espera você ({{count}})",
+      "goToRequestNone": "Claude: Ir para a pergunta que espera você — nada espera"
     }
   },
   "palette": {
@@ -1814,7 +1802,10 @@
       "copy": "Copiar a mensagem",
       "copied": "Mensagem copiada",
       "edit": "Editar e reenviar",
-      "forkFrom": "Bifurcar daqui — reenviar sem mudar, numa nova conversa"
+      "forkFrom": "Bifurcar daqui — reenviar sem mudar, numa nova conversa",
+      "actions": "O que fazer com este prompt",
+      "undo": "Devolver os arquivos a antes deste prompt",
+      "undoBusy": "Devolver os arquivos a antes deste prompt — não enquanto o Claude trabalha"
     },
     "search": {
       "label": "Buscar na conversa",
@@ -1826,19 +1817,16 @@
       "close": "Fechar a busca"
     },
     "status": {
-      "thinking": "O Claude está pensando…",
-      "running": "O Claude está rodando uma tool…",
-      "waitingPermission": "O Claude está esperando você — responda a pergunta",
       "cost": "Esta sessão custou {{cost}} desde que abriu, em {{turns}} turno(s)",
       "item": "Claude: {{status}} · {{model}} · {{cost}} — abrir o painel",
       "short": "{{status}} · {{cost}}"
     },
     "tasks": {
-      "title": "Tarefas",
       "label": "A lista de tarefas que o Claude mantém nesta conversa",
-      "count": "{{done}} de {{total}} concluídas",
       "was": "era {{state}}",
-      "state": "{{state}}: "
+      "state": "{{state}}: ",
+      "headline": "{{done}}/{{total}} · {{task}}",
+      "allDone": "{{done}}/{{total}} · Tudo feito"
     },
     "taskStatus": {
       "pending": "Pendente",
@@ -1918,7 +1906,8 @@
       "turnOff": "Parar de me notificar no navegador",
       "turnOn": "Notificar no navegador quando o Claude terminar ou perguntar algo",
       "permission": "O Claude está esperando por você em {{folder}}",
-      "turn": "O Claude terminou um turno em {{folder}}"
+      "turn": "O Claude terminou um turno em {{folder}}",
+      "unsupported": "Este navegador não tem notificações."
     },
     "context": {
       "compact": "Compactar a conversa (/compact)",
@@ -1953,7 +1942,8 @@
       "noUndo": "Nenhum arquivo alterado nesse turno ou depois pode ser devolvido daqui.",
       "resumeInstead": "Retomar a conversa em vez disso",
       "send": "Reenviar",
-      "undoFiles": "Devolver também os arquivos a como estavam antes daquele turno"
+      "undoFiles": "Devolver também os arquivos a como estavam antes daquele turno",
+      "editing": "Editando uma mensagem"
     },
     "effort": {
       "default": "Esforço padrão",
@@ -1962,7 +1952,9 @@
       "medium": "Médio",
       "high": "Alto",
       "xhigh": "Muito alto",
-      "max": "Máximo"
+      "max": "Máximo",
+      "readOnly": "O esforço se escolhe quando a conversa começa. Trocá-lo com ela rodando faria o Claude parar de perguntar antes de cada tool.",
+      "unknown": "O do início"
     },
     "export": {
       "compacted": "A conversa foi compactada aqui.",
@@ -1974,13 +1966,15 @@
       "save": "Salvar em Markdown",
       "thinking": "Pensamento",
       "title": "Conversa {{conversationId}}",
-      "withOutputs": "Incluir as saídas das tools"
+      "withOutputs": "Incluir as saídas das tools",
+      "close": "Fechar"
     },
     "header": {
-      "label": "Como esta conversa roda"
+      "label": "Como esta conversa roda",
+      "history": "As conversas desta pasta",
+      "changesPending": "O que a sessão alterou — {{pending}} para revisar"
     },
     "mcp": {
-      "count": "MCP {{fine}}/{{count}}",
       "line": "{{status}} · {{tools}}",
       "summary": "{{fine}} de {{count}} servidor(es) MCP conectado(s)",
       "tools": "{{count}} tool(s)",
@@ -2025,6 +2019,65 @@
       "session": "Conversa",
       "draft": "Nova conversa",
       "history": "Do histórico"
+    },
+    "dot": {
+      "connected": "Conectado — nada rodando",
+      "reconnecting": "Reconectando…",
+      "running": "O Claude está trabalhando",
+      "ended": "A sessão terminou",
+      "session": "Sessão {{sessionId}}"
+    },
+    "menu": {
+      "open": "Mais ações da sessão",
+      "rules": "Regras de permissão",
+      "undo": "Desfazer alterações de arquivo…",
+      "copyId": "Copiar o id da sessão",
+      "copied": "O id da sessão foi copiado.",
+      "copyFailed": "O navegador não deixou copiar o id. Selecione e copie à mão: {{sessionId}}"
+    },
+    "close": {
+      "title": "Encerrar esta sessão?",
+      "description": "O Claude para nesta máquina. O que ele escreveu fica no disco, mas o desfazer das alterações de arquivo vai embora com a sessão, e as alterações que você não aceitou não podem mais ser rejeitadas daqui. A conversa fica no histórico e pode ser retomada.",
+      "keep": "Manter rodando",
+      "confirm": "Encerrar a sessão"
+    },
+    "working": {
+      "waiting": "Esperando sua resposta",
+      "runningTool": "Executando {{tool}}…",
+      "seconds": "{{seconds}} s",
+      "minutes": "{{minutes}} min {{seconds}} s"
+    },
+    "workingVerb": {
+      "pondering": "Ponderando…",
+      "deciphering": "Decifrando…",
+      "mulling": "Matutando…",
+      "reasoning": "Raciocinando…",
+      "weighing": "Pesando as opções…",
+      "sketching": "Rascunhando…",
+      "untangling": "Desembaraçando…",
+      "assembling": "Montando…",
+      "tinkering": "Ajustando…",
+      "exploring": "Explorando…",
+      "connecting": "Ligando os pontos…",
+      "distilling": "Destilando…",
+      "brewing": "Preparando…",
+      "crafting": "Elaborando…",
+      "investigating": "Investigando…",
+      "puzzling": "Quebrando a cabeça…",
+      "considering": "Considerando…",
+      "computing": "Calculando…",
+      "working": "Trabalhando…",
+      "musing": "Refletindo…"
+    },
+    "inline": {
+      "tail": "Perguntas esperando você"
+    },
+    "pending": {
+      "pill": "O Claude espera sua resposta ({{count}})"
+    },
+    "rewound": {
+      "summary": "Arquivos devolvidos: {{restored}} voltaram, {{kept}} ficaram como estavam",
+      "failed": "Arquivos devolvidos: {{restored}} voltaram, {{kept}} ficaram como estavam, {{failed}} não puderam voltar"
     }
   },
   "sessionsGroup": {
@@ -2091,7 +2144,19 @@
       "desktopHeading": "Arquivos do seu computador",
       "desktop": "Uma imagem ou um arquivo de texto arrastado do seu computador vai com o prompt como anexo: fica na memória só para esta sessão, nunca é gravado na pasta nem na trilha, e some quando a sessão termina. Para pô-lo na pasta, faça o upload pelo explorer.",
       "skillsHeading": "De onde vêm os comandos e as skills",
-      "skills": "Cada item do / diz a sua origem: Claude Code é o comando da própria instalação; Projeto vem da pasta .claude deste projeto; Usuário e Sistema são as skills do seu usuário e do sistema. Dois com o mesmo nome aparecem os dois, e o que o / roda é o do Claude Code — o outro diz que está encoberto."
+      "skills": "Cada item do / diz a sua origem: Claude Code é o comando da própria instalação; Projeto vem da pasta .claude deste projeto; Usuário e Sistema são as skills do seu usuário e do sistema. Dois com o mesmo nome aparecem os dois, e o que o / roda é o do Claude Code — o outro diz que está encoberto.",
+      "barHeading": "A barra sob a caixa",
+      "bar": "O que vale para o próximo prompt fica sob a caixa, nesta ordem: + adiciona um arquivo ou uma pasta, um arquivo do seu computador ou a seleção do editor; / lista os comandos e skills; depois o modo, o modelo e o esforço, a parte da janela de contexto em uso — com Compactar dentro dela — e enviar. Enquanto o Claude trabalha, enviar põe o que você escreveu na fila, e Parar ao lado encerra o turno; com a caixa vazia, o próprio botão é Parar. O esforço só se escolhe numa conversa nova. Num painel estreito, o modelo e o esforço vão para o … da barra.",
+      "menuHeading": "O menu da sessão",
+      "menu": "O … do cabeçalho reúne o que se faz com a sessão inteira, e raramente: encerrá-la — só o navegador que a abriu pode, e ele pergunta antes —, exportá-la em Markdown, desfazer as alterações de arquivo, copiar o id; e as notificações do navegador, as regras de permissão e esta ajuda. O ponto ao lado diz como a sessão está, com o id e o que ela custou desde que abriu; o relógio ao lado do + abre as conversas desta pasta.",
+      "workingHeading": "Enquanto o Claude trabalha",
+      "working": "Enquanto um turno roda, a última linha dele se mexe: um asterisco, o que o Claude está fazendo — a tool que executa, ou uma palavra para o turno — e há quanto tempo. O raciocínio é uma linha própria, na ordem: \"Pensando…\" enquanto chega, \"Pensou por n s\" quando termina, recolhido — clique para ler. Quando o turno acaba, a linha dá lugar ao que o turno custou.",
+      "inlineHeading": "Perguntas na conversa",
+      "inline": "Quando o Claude pergunta antes de executar uma tool, a pergunta fica na conversa, no lugar dessa tool: o comando exato, o risco, o tempo que resta e até onde vai um sim. Respondida, a linha da tool diz como — por você, num celular e por quem, por uma regra sua, ou recusada porque ninguém respondeu a tempo. Uma pergunta nunca tira o foco da caixa enquanto você escreve: o Enter continua enviando o seu prompt.",
+      "pillHeading": "Esperando sua resposta",
+      "pill": "Com uma pergunta fora de vista — a conversa rolada para cima, ou as alterações na tela —, uma pílula acima da caixa diz que o Claude espera, e quantas perguntas. Clicar nela, ou o comando Ir para a pergunta que espera você, leva à mais antiga.",
+      "actionsHeading": "A partir de um prompt",
+      "actions": "Apontar para um prompt seu, ou levar o foco a ele, mostra o que dá para fazer a partir dele: editar e reenviar, bifurcar de antes dele, e devolver os arquivos a antes do turno dele — com o alcance mostrado arquivo a arquivo antes. Enquanto o Claude trabalha, o desfazer espera o turno acabar; com a sessão encerrada não há desfazer, e o botão não aparece."
     },
     "screen": {
       "title": "Claude",
@@ -2113,7 +2178,8 @@
       "missing": "não está mais na pasta",
       "binary": "não é texto — o Claude não vai lê-lo",
       "dirty": "não salvo — o Claude lê o que está salvo",
-      "pending": "vai junto com o prompt"
+      "pending": "vai junto com o prompt",
+      "choice": "{{label}}: {{value}}"
     },
     "drop": {
       "here": "Solte para pôr no contexto do próximo prompt",
@@ -2140,7 +2206,8 @@
       "unavailable": "Os comandos não estão disponíveis agora. O que você digitar continua indo como prompt.",
       "noMatch": "Nenhum comando ou skill corresponde ao que você digitou.",
       "shadowed": "encoberto pelo comando do Claude Code de mesmo nome",
-      "argumentHint": "Recebe: {{hint}}"
+      "argumentHint": "Recebe: {{hint}}",
+      "open": "Comandos e skills (/)"
     },
     "origin": {
       "builtin": "Claude Code",
@@ -2153,7 +2220,23 @@
       "queue": "Pôr na fila",
       "empty": "Escreva um prompt ou ponha contexto para enviar.",
       "missing": "{{path}} não está mais na pasta. Tire-o para enviar.",
-      "upload": "Não foi possível anexar {{name}}. Tire-o para enviar."
+      "upload": "Não foi possível anexar {{name}}. Tire-o para enviar.",
+      "stop": "Parar"
+    },
+    "box": {
+      "label": "Prompt"
+    },
+    "add": {
+      "open": "Adicionar contexto",
+      "mention": "Um arquivo ou uma pasta… (@)",
+      "computer": "Um arquivo deste computador…",
+      "nothing": "Nada para adicionar agora"
+    },
+    "bar": {
+      "more": "Mais escolhas: o modelo e o esforço"
+    },
+    "refusal": {
+      "close": "Fechar esta mensagem"
     }
   }
 }

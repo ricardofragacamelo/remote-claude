@@ -4,6 +4,7 @@ import { expect, test } from '@playwright/test';
 import type { Locator } from '@playwright/test';
 
 import { openSignedIn } from '../fixtures/auth';
+import { panelOf } from '../fixtures/claude-panel';
 import { workbenchSuite } from '../fixtures/folder-tree';
 import { scrollsSideways } from '../fixtures/page-checks';
 import { onWorkbenchOf, workbenchAddress } from '../fixtures/workbench';
@@ -64,11 +65,11 @@ test(`${phone.id} — ${phone.title}`, async ({ page }) => {
     await expectTouchable(bar.getByRole('button', { name: view }));
   }
   await bar.getByRole('button', { name: 'Claude' }).click();
-  await expect(page.getByRole('complementary', { name: 'Claude' })).toBeVisible();
+  await expect(panelOf(page)).toBeVisible();
   await expect(page.getByRole('region', { name: 'Editor' })).toHaveCount(0);
   await bar.getByRole('button', { name: 'Editor' }).click();
   await expect(page.getByRole('region', { name: 'Editor' })).toBeVisible();
-  await expect(page.getByRole('complementary', { name: 'Claude' })).toHaveCount(0);
+  await expect(panelOf(page)).toHaveCount(0);
   expect(await scrollsSideways(page)).toBe(false);
 
   for (const name of ['Open the menu', 'Open folder…', 'Help for this screen']) {

@@ -25,3 +25,37 @@ export async function violationsOn(page: Page, tags: readonly string[]): Promise
 export function scrollsSideways(page: Page): Promise<boolean> {
   return page.locator('html').evaluate((html) => html.scrollWidth > html.clientWidth);
 }
+
+/**
+ * What sticks out past the right edge of the page, the outermost of each — tag, accessible name or
+ * text, and how far — so a page that scrolls sideways says where, not only that it does.
+ */
+export function widerThanThePage(page: Page): Promise<string[]> {
+  return page.locator('body').evaluate((body) => {
+    const view = body.ownerDocument.defaultView;
+    const edge = body.ownerDocument.documentElement.clientWidth;
+    const every = [...body.querySelectorAll('*')];
+    // Clipped by a box of its own that scrolls or hides what overflows, and stays on the page: that
+    // box scrolls, never the page.
+    const clipped = (element: (typeof every)[number]): boolean => {
+      for (let box = element.parentElement; box !== null; box = box.parentElement) {
+        const overflow = view?.getComputedStyle(box).overflowX ?? 'visible';
+        if (overflow !== 'visible' && box.getBoundingClientRect().right <= edge + 0.5) {
+          return true;
+        }
+      }
+      return false;
+    };
+    const out = every.filter(
+      (element) => element.getBoundingClientRect().right > edge + 0.5 && !clipped(element),
+    );
+
+    return out
+      .filter((element) => !out.includes(element.parentElement ?? body))
+      .map((element) => {
+        const name = element.getAttribute('aria-label') ?? (element.textContent ?? '').trim();
+        const past = Math.round(element.getBoundingClientRect().right - edge);
+        return `${element.tagName.toLowerCase()} “${name.slice(0, 60)}” — ${String(past)} px past the edge`;
+      });
+  });
+}

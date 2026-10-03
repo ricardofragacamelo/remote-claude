@@ -1,0 +1,21 @@
+{
+  "id": "08·S-270…S-272",
+  "title": "the premises of the panel of Claude that only the real Claude confirms: a reference read by an audited Read, an @path in the text never expanded in silence, the models, the MCP servers and the context answered, the skill of the project listed under the name the menu inserts, an image reaching the model, and thinking and a subagent shaped as the recordings are",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "notes": "This file holds the codeword {{codeword}}.\nIt is a fixture of smoke-live, made for one run.\n",
+    "referencePrompt": "Summarise the referenced file in one line.",
+    "mentionPrompt": "Do not use any tool. Reply with the codeword written in @secret.md, or with the single word none if its contents are not in this conversation.",
+    "skill": "release-notes",
+    "skillFile": "---\nname: release-notes\ndescription: Summarise what changed in this project since the last release, in three bullets.\n---\n\nRead what changed since the last tag and write three bullets for the release notes.\n",
+    "imagePrompt": "Do not use any tool. What is the dominant colour of the attached image? Reply with one lowercase word.",
+    "colour": "red",
+    "thinkingPrompt": "Think it through step by step before answering: a train leaves at 14:35 and the trip takes 2 hours 47 minutes. At what time does it arrive? Reply with only the time.",
+    "subagentPrompt": "Use the Agent tool with the general-purpose subagent, not in the background, to read notes.md and report its first line. Do not read the file yourself. Then repeat what the subagent reported, in one line.",
+    "readingTools": ["Read", "Glob", "Grep", "LS", "Agent", "Task"],
+    "secret": "The codeword is {{codeword}}.\n"
+  }
+}

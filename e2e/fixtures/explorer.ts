@@ -7,7 +7,14 @@ import type { Locator, Page } from '@playwright/test';
 
 import { openSignedIn } from './auth';
 import type { WorkbenchSuite } from './folder-tree';
-import { cardFor, send } from './history';
+import {
+  allowOnce,
+  cardFor,
+  connectedStatus,
+  idleStatus,
+  send,
+  turnSummaries,
+} from './claude-panel';
 import { openFromDraft } from './workbench';
 import type { ScenarioUser } from '../scenarios';
 
@@ -140,7 +147,7 @@ export async function claudeBeside(
 ): Promise<string> {
   await side.suite.openTab(folder);
   await openSignedIn(page, side.user, fileAddress(folder, file));
-  await expect(page.getByText('Connected', { exact: true }).first()).toBeVisible();
+  await expect(connectedStatus(page)).toBeVisible();
   await monacoShows(page, file, text);
   const sessionId = await openFromDraft(page);
   side.opened(sessionId);
@@ -153,11 +160,11 @@ export async function claudeBeside(
  * of a turn in the conversation, whatever turns the session had before (plan 08, B-23).
  */
 export async function claudeWrites(page: Page, fixture: string): Promise<void> {
-  const turnsEnded = page.getByText(/^Turn(?: ended)?: /);
+  const turnsEnded = turnSummaries(page);
   const before = await turnsEnded.count();
 
   await send(page, `do the work [fixture:${fixture}]`);
-  await cardFor(page, 'Write').getByRole('button', { name: 'Allow once' }).click();
+  await allowOnce(cardFor(page, 'Write')).click();
   await expect(turnsEnded).toHaveCount(before + 1);
-  await expect(page.getByText('Idle', { exact: true })).toBeVisible();
+  await expect(idleStatus(page)).toBeVisible();
 }

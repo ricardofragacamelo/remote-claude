@@ -1,9 +1,11 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
 import { ChangesView, forgetLiveSessions, registerClaudeChanges } from '@/features/session';
+import { PanelHeader } from '@/features/session/components/panel/PanelHeader';
+import { usePanelTabs } from '@/features/session/hooks/usePanelTabs';
 import { claudePanelStore, forgetClaudePanel } from '@/features/session/store/claude-panel.store';
 import { EditorWorkspace } from '@/features/editor/components/EditorWorkspace';
 import { folderTabStore, releaseFolderTabs } from '@/features/workbench/store/folder-tab.store';
@@ -14,6 +16,7 @@ import { fakeDisk } from '../../../support/editor-disk';
 import { aLiveSocket, hubEvent } from '../../../support/live-socket';
 import type { LiveSocket } from '../../../support/live-socket';
 import { render, translator } from '../../../support/render';
+import { aViewport } from '../../../support/viewport';
 import { aRefusal, aWireError, routeApi, SESSION } from '../../../support/session-tools';
 
 const t = translator('en');
@@ -119,6 +122,23 @@ describe('the changes of a session', () => {
   }
 
   const sent = (type: string) => live.sent().filter((frame) => frame['type'] === type);
+
+  it('opens the undo of the session from the changes, as the menu does — plan 09, B-17', async () => {
+    const user = userEvent.setup();
+    routeApi({
+      [CHANGES]: [twoChanges()],
+      [`/sessions/${SESSION}/checkpoints`]: [{ checkpoints: [] }],
+    });
+    show();
+
+    await user.click(await screen.findByRole('button', { name: t('sessions.menu.undo') }));
+    expect(await screen.findByRole('dialog', { name: t('undo.panel.title') })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: t('undo.panel.close') }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+  });
 
   it('lists each file with what was done and how much, and opens its diff against before the session — S-122', async () => {
     routeApi({
@@ -493,5 +513,64 @@ describe('the changes of a session', () => {
     await rows();
 
     expect(await axe(view())).toHaveNoViolations();
+  });
+});
+
+/** The header of the panel of `FOLDER`, as the panel draws it. */
+function Header(): React.JSX.Element {
+  const tabs = usePanelTabs(FOLDER);
+  return <PanelHeader folder={FOLDER} tabs={tabs} onOpenHelp={() => undefined} />;
+}
+
+describe('the changes, from the header of the panel — plan 09, B-16', () => {
+  let live: LiveSocket;
+
+  beforeEach(() => {
+    forgetLiveSessions();
+    live = aLiveSocket();
+  });
+
+  afterEach(() => {
+    live.close();
+    forgetClaudePanel(null);
+    releaseFolderTabs();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('counts the files still to review, and switches the middle to them and back', async () => {
+    const user = userEvent.setup();
+    routeApi({ [CHANGES]: [twoChanges()] });
+    render(<Header />);
+    live.connect();
+    act(() => {
+      claudePanelStore(FOLDER).getState().show('session', SESSION);
+    });
+
+    const toggle = await screen.findByRole('button', {
+      name: t('sessions.header.changesPending', { pending: 2 }),
+    });
+    expect(toggle.parentElement).toHaveTextContent('2');
+
+    await user.click(toggle);
+    expect(claudePanelStore(FOLDER).getState().pane).toBe('changes');
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    await user.click(toggle);
+    expect(claudePanelStore(FOLDER).getState().pane).toBe('chat');
+  });
+
+  it('opens the sessions of the folder in its own place on a phone — S-45', async () => {
+    const user = userEvent.setup();
+    aViewport('phone');
+    routeApi({ [CHANGES]: [{ promptId: null, files: [] }] });
+    render(<Header />);
+    live.connect();
+
+    await user.click(screen.getByRole('button', { name: t('sessions.header.history') }));
+
+    expect(folderTabStore(FOLDER).getState()).toMatchObject({
+      view: 'sessions',
+      mobileView: 'explorer',
+    });
   });
 });

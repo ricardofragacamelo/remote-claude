@@ -9,6 +9,8 @@ const HELP_SHORTCUTS = [
   'claude.newConversation',
   'claude.focusComposer',
   'claude.interrupt',
+  'claude.cycleMode',
+  'claude.goToRequest',
   'claude.nextConversation',
   'claude.previousConversation',
   'session.showChanges',
@@ -20,7 +22,10 @@ const HELP_SHORTCUTS = [
  * do not go back on their own —, accepting against rejecting and what rejecting keeps, the meter and
  * `/compact`, and what is never recorded. Since F5, the composer too (B-52): what `@` and `/` do, what
  * dragging from each place does, the set of context and its estimate, what Claude reads and what goes
- * to the trail, what a file of the desktop becomes, and where the skills come from.
+ * to the trail, what a file of the desktop becomes, and where the skills come from. Since plan 09
+ * (B-20), where each control is: the bar of the box, and the menu of the session; and since its F4
+ * (S-92), what happens in the conversation: the line of a turn that runs, the questions in the place
+ * of their tools, the pill that brings one back into view, and what is done from a prompt.
  */
 export function PanelHelp({
   open,
@@ -32,6 +37,12 @@ export function PanelHelp({
   const { t } = useTranslation();
   const shortcuts = useScreenShortcuts(HELP_SHORTCUTS);
   const topics = [
+    'bar',
+    'menu',
+    'working',
+    'inline',
+    'pill',
+    'actions',
     'modes',
     'queue',
     'composer',

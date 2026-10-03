@@ -1,0 +1,39 @@
+{
+  "id": "09·S-05…S-91",
+  "title": "the frame of the panel of Claude: only the conversation scrolls, the box is always in view — on a desktop, in a narrow panel, on a phone with and without its keyboard, and across md; the bar of the box by keyboard, the header in one strip, and the history a click away; the turn inline — its line, the thought, the card in the place of its tool, the decision — the pill, a phone that answers, and stop; and a long conversation at three sizes",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "desktop": {
+      "width": 1280,
+      "height": 800
+    },
+    "short": {
+      "width": 1024,
+      "height": 600
+    },
+    "phone": {
+      "width": 360,
+      "height": 640
+    },
+    "turn": "text-turn",
+    "maxTurns": 8,
+    "written": "half a thought, kept across md",
+    "slack": 48,
+    "keyboard": {
+      "width": 360,
+      "height": 400
+    },
+    "tabs": 10,
+    "inlineTurn": "long-tool-turn",
+    "inlineTool": "Bash",
+    "heldTurn": "text-turn",
+    "decidedHere": "Allowed by you",
+    "decidedOnPhone": "^Allowed on a phone by ",
+    "waiting": "Waiting for your answer",
+    "thoughtTurn": "tool-turn",
+    "thoughtTool": "Write"
+  }
+}

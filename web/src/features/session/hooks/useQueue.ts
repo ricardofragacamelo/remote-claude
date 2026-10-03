@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useStore } from 'zustand';
 
 import type { AppError } from '@/shared/api/errors';
@@ -19,18 +19,34 @@ export interface Queue {
 
 /**
  * The prompts waiting for the turn to end — the backend's, the same for every client watching — and
- * the way to take one out before it reaches Claude (D-14).
+ * the way to take one out before it reaches Claude (D-14). Taking the same one out twice asks once
+ * (plan 09, S-31); a refusal lets it be asked again.
  */
 export function useQueue(sessionId: string): Queue {
   const prompts = useStore(liveSessionStoreOf(sessionId), (state) => state.queue);
   const { error, expect } = useCommandRefusal();
+  const asked = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (error !== null) {
+      asked.current.clear();
+    }
+  }, [error]);
 
   return {
     prompts,
     refusal: error,
     cancel: useCallback(
       (queueId: string) => {
-        expect(cancelQueuedPrompt(wsClient, sessionId, queueId));
+        if (asked.current.has(queueId)) {
+          return;
+        }
+
+        const commandId = cancelQueuedPrompt(wsClient, sessionId, queueId);
+        if (commandId !== null) {
+          asked.current.add(queueId);
+        }
+        expect(commandId);
       },
       [expect, sessionId],
     ),

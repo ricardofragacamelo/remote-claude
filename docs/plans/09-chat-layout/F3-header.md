@@ -17,14 +17,14 @@ alterações, notificações, ajuda) e os botões grandes saem.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-16 — Uma faixa só 🔲
+### B-16 — Uma faixa só ✅
 
 `PanelHeader`: as abas do `PanelTabStrip` (08 · B-32), que rolam **na faixa** quando não cabem, e à direita:
 nova conversa (`+`), histórico ([B-19](#b-19--o-histórico-da-pasta-a-um-clique-)), alternar
 conversa/alterações (com a contagem de arquivos alterados) e `⋯`. A linha separada de `IconButton`s do
 `ClaudePanel` sai. Os ícones têm nome acessível e tooltip, e o alvo de toque é de 44 px no celular.
 
-### B-17 — O menu da sessão 🔲
+### B-17 — O menu da sessão ✅
 
 `SessionMenu` (`⋯`), com:
 
@@ -40,7 +40,7 @@ conversa/alterações (com a contagem de arquivos alterados) e `⋯`. A linha se
 
 Com o rascunho aberto, o menu mostra só o que vale sem sessão (ajuda, notificações, regras).
 
-### B-18 — Status, custo e MCP 🔲
+### B-18 — Status, custo e MCP ✅
 
 O `StatusDot` mostra conectado, reconectando, rodando ou encerrado por cor **e** por texto no tooltip
 (nunca só cor). No tooltip vão o id da sessão e o custo desde que abriu, onde a
@@ -49,13 +49,13 @@ no cabeçalho: neutro quando todos estão conectados, em aviso quando algum falh
 popover. Lista ilegível vira um item que diz isso, sem quebrar a faixa. O `TurnStatus` e o rótulo de
 status (`IDLE`, `THINKING`) somem do topo: o estado do turno é a cauda da conversa ([B-21](F4-inline.md)).
 
-### B-19 — O histórico da pasta a um clique 🔲
+### B-19 — O histórico da pasta a um clique ✅
 
 O ícone de histórico, como o do plugin, abre a view "Sessões do Claude" da pasta (08 · F1). Escolher uma
 conversa a abre em aba do painel, pelas regras de `attach`, retomar e fork que já existem. Voltar ao chat
 mantém a aba e a rolagem.
 
-### B-20 — A ajuda do painel 🔲
+### B-20 — A ajuda do painel ✅
 
 A `PanelHelp` passa a descrever os lugares novos: a barra da caixa, o menu `⋯`, o indicador na cauda, o
 card inline, a pílula e as ações da mensagem. É a regra de "ajuda em toda tela" do workbench. As chaves
@@ -65,7 +65,7 @@ saem do inventário da [B-02](F0-norms.md).
 
 ## Cenários cobertos
 
-S-37…S-47.
+S-37…S-47, S-91.
 
 ---
 

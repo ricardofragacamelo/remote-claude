@@ -3,7 +3,13 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
-import { forgetPermissionQueues, PermissionQueuePanel } from '@/features/permission';
+import {
+  forgetPermissionQueues,
+  PermissionOutcomeLine,
+  PermissionRequestCard,
+  usePermissionQueue,
+} from '@/features/permission';
+import type { PlanMode } from '@/features/permission';
 import { setAccessToken } from '@/shared/api/credentials';
 import { wsClient } from '@/shared/api/ws';
 import { render, translator } from '../../../support/render';
@@ -54,6 +60,45 @@ function requestFrame(overrides: Record<string, unknown> = {}): Record<string, u
 }
 
 /**
+ * The requests of a session as the conversation draws them since plan 09 (B-23): each card whole,
+ * and the line the last one became — without the card of the queue around them, which is gone.
+ */
+function Requests({
+  sessionId,
+  onOpenRules,
+  onPlanApproved,
+}: {
+  readonly sessionId: string;
+  readonly onOpenRules?: () => void;
+  readonly onPlanApproved?: (mode: PlanMode) => void;
+}): React.JSX.Element {
+  const queue = usePermissionQueue(sessionId);
+  const last = queue.settled.at(-1);
+
+  return (
+    <>
+      {queue.pending.length > 0 && (
+        <ul>
+          {queue.pending.map((request) => (
+            <PermissionRequestCard
+              key={request.requestId}
+              request={request}
+              remainingMs={queue.remainingMs[request.requestId] ?? 0}
+              onAnswer={queue.answer}
+              onExtend={queue.extend}
+              onOpenRules={onOpenRules}
+              onPlanApproved={onPlanApproved}
+            />
+          ))}
+        </ul>
+      )}
+      {last !== undefined && <PermissionOutcomeLine outcome={last} />}
+      {queue.refusal !== null && <p role="alert">{t(queue.refusal.messageKey)}</p>}
+    </>
+  );
+}
+
+/**
  * The queue, through the screen.
  *
  * Every case here is one of the four rules of
@@ -91,14 +136,40 @@ describe('the permission queue', () => {
     });
   }
 
-  it('shows nothing to decide before anything is asked', () => {
-    render(<PermissionQueuePanel sessionId={SESSION} />);
+  it('takes no room with nothing to decide — no "Waiting for you", no "Nothing to decide" — plan 09, S-65', () => {
+    const { container } = render(<Requests sessionId={SESSION} />);
 
-    expect(screen.getByText(t('permission.queue.emptyTitle'))).toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText('Waiting for you')).toBeNull();
+    expect(screen.queryByText('Nothing to decide')).toBeNull();
+  });
+
+  it('becomes the line of how it was settled — by one of your rules — plan 09, B-23', () => {
+    render(<Requests sessionId={SESSION} />);
+    connect();
+
+    ask();
+    expect(screen.getByRole('listitem', { name: /Bash/ })).toBeInTheDocument();
+
+    act(() => {
+      sockets.latest.receive({
+        v: 1,
+        id: 'evt-1',
+        kind: 'event',
+        type: 'permission.resolved',
+        ts: NOW.toISOString(),
+        sessionId: SESSION,
+        seq: 1,
+        payload: { requestId: 'req-1', decision: 'allow', auto: true },
+      });
+    });
+
+    expect(screen.queryByRole('listitem')).toBeNull();
+    expect(screen.getByText(t('permission.outcome.rule'))).toBeInTheDocument();
   });
 
   it('puts the exact command on screen, with the risk the backend derived', () => {
-    render(<PermissionQueuePanel sessionId={SESSION} />);
+    render(<Requests sessionId={SESSION} />);
     connect();
     ask();
 
@@ -108,7 +179,7 @@ describe('the permission queue', () => {
   });
 
   it('falls back to a generic label for a tool it has no words for', () => {
-    render(<PermissionQueuePanel sessionId={SESSION} />);
+    render(<Requests sessionId={SESSION} />);
     connect();
     ask({ toolName: 'McpDoSomething', title: 'permission.tool.McpDoSomething' });
 
@@ -119,7 +190,7 @@ describe('the permission queue', () => {
 
   it('answers as a response that names the request it answers', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<PermissionQueuePanel sessionId={SESSION} />);
+    render(<Requests sessionId={SESSION} />);
     connect();
     ask();
 
@@ -136,7 +207,7 @@ describe('the permission queue', () => {
 
   it('sends a reason with a refusal, because the contract demands one', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<PermissionQueuePanel sessionId={SESSION} />);
+    render(<Requests sessionId={SESSION} />);
     connect();
     ask();
 
@@ -149,7 +220,7 @@ describe('the permission queue', () => {
 
   it('takes no second click while an answer is in flight — S-70', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<PermissionQueuePanel sessionId={SESSION} />);
+    render(<Requests sessionId={SESSION} />);
     connect();
     ask();
 
@@ -164,7 +235,7 @@ describe('the permission queue', () => {
   });
 
   it('lets the card go when the countdown reaches zero, without asking — S-71', () => {
-    render(<PermissionQueuePanel sessionId={SESSION} />);
+    render(<Requests sessionId={SESSION} />);
     connect();
     ask({ expiresAt: new Date(NOW.getTime() + 1_000).toISOString() });
 
@@ -177,11 +248,11 @@ describe('the permission queue', () => {
     // No dialogue and no confirmation: the deadline has already refused it on the server, and
     // asking about something that is over is asking about nothing.
     expect(screen.queryByRole('timer')).not.toBeInTheDocument();
-    expect(screen.getByText(t('permission.queue.emptyTitle'))).toBeInTheDocument();
+    expect(screen.getByText(t('permission.outcome.expired'))).toBeInTheDocument();
   });
 
   it('drops a card resolved on another device, and says who resolved it — S-72', () => {
-    render(<PermissionQueuePanel sessionId={SESSION} />);
+    render(<Requests sessionId={SESSION} />);
     connect();
     ask();
 
@@ -201,13 +272,13 @@ describe('the permission queue', () => {
     expect(screen.queryByRole('timer')).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        t('permission.queue.lastBy', { decision: t('permission.decision.allow'), who: 'auth|42' }),
+        t('permission.outcome.by', { decision: t('permission.verdict.allow'), who: 'auth|42' }),
       ),
     ).toBeInTheDocument();
   });
 
   it('says when the server decided by itself, rather than leaving a card to vanish', () => {
-    render(<PermissionQueuePanel sessionId={SESSION} />);
+    render(<Requests sessionId={SESSION} />);
     connect();
     ask();
 
@@ -224,15 +295,13 @@ describe('the permission queue', () => {
       });
     });
 
-    expect(
-      screen.getByText(t('permission.queue.lastAuto', { decision: t('permission.decision.deny') })),
-    ).toBeInTheDocument();
+    expect(screen.getByText(t('permission.outcome.expired'))).toBeInTheDocument();
   });
 
   it('names nobody rather than a blank when the server said who without saying who', () => {
     // The contract requires `resolvedBy` whenever `auto` is false. A frame that breaks that rule
     // still has to render something rather than the word `undefined`.
-    render(<PermissionQueuePanel sessionId={SESSION} />);
+    render(<Requests sessionId={SESSION} />);
     connect();
     ask();
 
@@ -251,14 +320,17 @@ describe('the permission queue', () => {
 
     expect(
       screen.getByText(
-        t('permission.queue.lastBy', { decision: t('permission.decision.allow'), who: '' }),
+        t('permission.outcome.by', {
+          decision: t('permission.verdict.allow'),
+          who: t('permission.outcome.somebody'),
+        }),
       ),
     ).toBeInTheDocument();
   });
 
   it('asks for more time without choosing the number', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<PermissionQueuePanel sessionId={SESSION} />);
+    render(<Requests sessionId={SESSION} />);
     connect();
     ask();
 
@@ -272,7 +344,7 @@ describe('the permission queue', () => {
   });
 
   it('has no accessibility violation', async () => {
-    const { container } = render(<PermissionQueuePanel sessionId={SESSION} />);
+    const { container } = render(<Requests sessionId={SESSION} />);
     connect();
     ask();
 
@@ -306,7 +378,7 @@ describe('the permission queue', () => {
 
     it('says in full what `always` reaches, and for how long, before sending anything — S-17', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      render(<PermissionQueuePanel sessionId={SESSION} />);
+      render(<Requests sessionId={SESSION} />);
       connect();
       askPersisted();
 
@@ -325,7 +397,7 @@ describe('the permission queue', () => {
 
     it('asks the second step on a tool that is not destructive, too — S-65', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      render(<PermissionQueuePanel sessionId={SESSION} />);
+      render(<Requests sessionId={SESSION} />);
       connect();
       askPersisted();
 
@@ -355,7 +427,7 @@ describe('the permission queue', () => {
 
     it('sends nothing when the person goes back — S-65', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      render(<PermissionQueuePanel sessionId={SESSION} />);
+      render(<Requests sessionId={SESSION} />);
       connect();
       askPersisted();
 
@@ -370,7 +442,7 @@ describe('the permission queue', () => {
     it('leads to the rules from the second step — one of the two ways in of D-04', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const openRules = vi.fn();
-      render(<PermissionQueuePanel sessionId={SESSION} onOpenRules={openRules} />);
+      render(<Requests sessionId={SESSION} onOpenRules={openRules} />);
       connect();
       askPersisted();
 
@@ -382,7 +454,7 @@ describe('the permission queue', () => {
 
     it('offers no way to the rules when there is nowhere to go', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      render(<PermissionQueuePanel sessionId={SESSION} />);
+      render(<Requests sessionId={SESSION} />);
       connect();
       askPersisted();
 
@@ -395,7 +467,7 @@ describe('the permission queue', () => {
 
     it('says a lifetime shorter than a day in hours, not as zero days', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      render(<PermissionQueuePanel sessionId={SESSION} />);
+      render(<Requests sessionId={SESSION} />);
       connect();
       ask({
         suggestions: [
@@ -421,9 +493,7 @@ describe('the permission queue', () => {
 
     it('has no accessibility violation in the second step', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      const { container } = render(
-        <PermissionQueuePanel sessionId={SESSION} onOpenRules={vi.fn()} />,
-      );
+      const { container } = render(<Requests sessionId={SESSION} onOpenRules={vi.fn()} />);
       connect();
       askPersisted();
 
@@ -454,7 +524,7 @@ describe('the permission queue', () => {
     }
 
     it('shows the plan, in markdown, on a card of its own — S-92', async () => {
-      render(<PermissionQueuePanel sessionId={SESSION} />);
+      render(<Requests sessionId={SESSION} />);
       connect();
       askPlan();
 
@@ -467,7 +537,7 @@ describe('the permission queue', () => {
     it('allows it and goes on in the mode chosen — S-93', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const onPlanApproved = vi.fn();
-      render(<PermissionQueuePanel sessionId={SESSION} onPlanApproved={onPlanApproved} />);
+      render(<Requests sessionId={SESSION} onPlanApproved={onPlanApproved} />);
       connect();
       askPlan();
 
@@ -482,7 +552,7 @@ describe('the permission queue', () => {
     it('goes on asking for each edit unless told otherwise', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const onPlanApproved = vi.fn();
-      render(<PermissionQueuePanel sessionId={SESSION} onPlanApproved={onPlanApproved} />);
+      render(<Requests sessionId={SESSION} onPlanApproved={onPlanApproved} />);
       connect();
       askPlan();
 
@@ -493,7 +563,7 @@ describe('the permission queue', () => {
 
     it('keeps planning by refusing it, with the comment as the reason for Claude — S-94', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      render(<PermissionQueuePanel sessionId={SESSION} />);
+      render(<Requests sessionId={SESSION} />);
       connect();
       askPlan();
 
@@ -510,7 +580,7 @@ describe('the permission queue', () => {
     });
 
     it('lets the card go when the plan is approved on another device, with no second answer — S-95', () => {
-      render(<PermissionQueuePanel sessionId={SESSION} />);
+      render(<Requests sessionId={SESSION} />);
       connect();
       askPlan();
 
@@ -534,7 +604,7 @@ describe('the permission queue', () => {
     });
 
     it('shows an empty plan as an empty plan, not as a failure', () => {
-      render(<PermissionQueuePanel sessionId={SESSION} />);
+      render(<Requests sessionId={SESSION} />);
       connect();
       ask({ toolName: 'ExitPlanMode', input: {}, riskHint: 'read', defaultToNo: false });
 
@@ -543,14 +613,8 @@ describe('the permission queue', () => {
       ).toBeInTheDocument();
     });
 
-    it('keeps the anchor the status leads to even with no session', () => {
-      const { container } = render(<PermissionQueuePanel sessionId={null} />);
-
-      expect(container.querySelector('#permission-queue-none')).not.toBeNull();
-    });
-
     it('never compacts a question about any other tool — S-76', () => {
-      render(<PermissionQueuePanel sessionId={SESSION} />);
+      render(<Requests sessionId={SESSION} />);
       connect();
       ask();
 
@@ -560,7 +624,7 @@ describe('the permission queue', () => {
     });
 
     it('has no accessibility violation', async () => {
-      const { container } = render(<PermissionQueuePanel sessionId={SESSION} />);
+      const { container } = render(<Requests sessionId={SESSION} />);
       connect();
       askPlan();
       await screen.findByRole('heading', { name: 'The plan' });

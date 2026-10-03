@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/components/ui/button';
 import { FILE_TEMPLATES } from '../lib/templates';
 import type { Explorer } from '../hooks/useExplorer';
-import { ExplorerDialog } from './ExplorerDialog';
+import { DialogFrame } from '@/shared/components/DialogFrame';
 
 export interface TemplateDialogProps {
   readonly explorer: Explorer;
@@ -23,7 +23,7 @@ export function TemplateDialog({ explorer }: TemplateDialogProps): React.JSX.Ele
   };
 
   return (
-    <ExplorerDialog
+    <DialogFrame
       open={explorer.choosingTemplate}
       onClose={close}
       title={t('explorer.template.title')}
@@ -61,6 +61,6 @@ export function TemplateDialog({ explorer }: TemplateDialogProps): React.JSX.Ele
           </li>
         ))}
       </ul>
-    </ExplorerDialog>
+    </DialogFrame>
   );
 }

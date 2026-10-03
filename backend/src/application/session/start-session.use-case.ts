@@ -26,6 +26,7 @@ import type { SessionBroadcaster } from './ports/session-broadcaster.port';
 import type { SessionOriginRepository } from './ports/session-origin.repository';
 import type { WorkspaceResolver } from './ports/workspace-resolver.port';
 import { observedStatus } from './session-status';
+import { handOverPrompt } from './prompt-hand-over';
 import type { LiveSession, SessionRegistry } from './session-registry';
 
 /** What the installation opens a session with when the client states no preference. */
@@ -398,11 +399,11 @@ export class StartSessionUseCase {
       return;
     }
 
-    live.handle.prompt(next.text, next.extras);
     this.broadcaster.publish(session.id, {
       type: 'prompt.dequeued',
       payload: { queueId: next.queueId, reason: 'started' },
     });
+    handOverPrompt(live, this.broadcaster, next);
   }
 
   /** The stream ended, for whatever reason. The entry goes, and everybody watching is told. */

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/components/ui/button';
 import type { NotKept } from '../hooks/kept-delete';
 import type { CountedFolder, DeleteFlow, DeleteStep } from '../hooks/useDeleteFlow';
-import { ExplorerDialog } from './ExplorerDialog';
+import { DialogFrame } from '@/shared/components/DialogFrame';
 
 export interface DeleteDialogProps {
   readonly flow: DeleteFlow;
@@ -47,7 +47,7 @@ export function DeleteDialog({ flow }: DeleteDialogProps): React.JSX.Element {
   }, [step]);
 
   return (
-    <ExplorerDialog
+    <DialogFrame
       open={current !== null}
       onClose={flow.cancel}
       title={titleOf(current, t)}
@@ -73,7 +73,7 @@ export function DeleteDialog({ flow }: DeleteDialogProps): React.JSX.Element {
       {current?.step === 'count' && (
         <CountStep counted={current.counted} sensitive={current.sensitive} />
       )}
-    </ExplorerDialog>
+    </DialogFrame>
   );
 }
 

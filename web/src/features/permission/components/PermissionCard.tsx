@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/components/ui/button';
+import { claimArrival } from '../store/permission.store';
 import { EditPreviewView } from './EditPreviewView';
 import type {
   PermissionDecision,
@@ -59,10 +60,14 @@ export function PermissionCard({
   const { t } = useTranslation();
   const seconds = Math.ceil(remainingMs / 1_000);
   const [armed, setArmed] = useState<ScopeSuggestion | null>(null);
+  const denyRef = useArrivalFocus(request);
 
   return (
     <li
-      className={`flex flex-col gap-3 rounded-lg border-2 p-4 ${RISK_STYLE[request.riskHint]}`}
+      data-permission-request={request.requestId}
+      // Focusable from code only: the pill and the palette take the person to the card (plan 09, B-25).
+      tabIndex={-1}
+      className={`flex flex-col gap-3 rounded-lg border-2 p-4 outline-ring focus-visible:outline-2 ${RISK_STYLE[request.riskHint]}`}
       aria-label={t('permission.card.label', { tool: request.toolName })}
     >
       <div className="flex items-baseline justify-between gap-2">
@@ -95,6 +100,7 @@ export function PermissionCard({
       {armed === null ? (
         <div className="flex flex-wrap gap-2">
           <Button
+            ref={denyRef}
             variant="destructive"
             size="touch"
             disabled={request.isAnswering}
@@ -151,6 +157,34 @@ export function PermissionCard({
       {request.isAnswering && <p className="text-xs opacity-70">{t('permission.card.sending')}</p>}
     </li>
   );
+}
+
+/** Whether the focus is where somebody writes: a field, or an editor. */
+function isWriting(element: Element | null): boolean {
+  return (
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLInputElement ||
+    (element instanceof HTMLElement && element.isContentEditable)
+  );
+}
+
+/**
+ * The refusal takes the focus when the card arrives and the request leans to no — **unless somebody
+ * is writing** (plan 09, D-13): with the focus in the prompt box, or in the editor, it stays there,
+ * and an Enter meant for the prompt never answers the request. Only on arrival: a card drawn again
+ * leaves the focus where it is.
+ */
+function useArrivalFocus(request: PermissionRequest): React.RefObject<HTMLButtonElement | null> {
+  const denyRef = useRef<HTMLButtonElement>(null);
+  const { requestId, defaultToNo } = request;
+
+  useEffect(() => {
+    if (claimArrival(requestId) && defaultToNo && !isWriting(document.activeElement)) {
+      denyRef.current?.focus();
+    }
+  }, [requestId, defaultToNo]);
+
+  return denyRef;
 }
 
 interface PersistConfirmationProps {

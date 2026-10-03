@@ -6,6 +6,7 @@ import {
   ResizablePanelGroup,
 } from '@/shared/components/ui/resizable';
 import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
+import { cn } from '@/shared/lib/utils';
 import { useActiveView } from '../hooks/useActiveView';
 import { useFolderTab } from '../hooks/useFolderTab';
 import { useWorkbenchLayout } from '../hooks/useWorkbenchLayout';
@@ -143,7 +144,15 @@ function PhoneShell({ folder, claude }: FolderShellProps): React.JSX.Element {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{screens[tab.mobileView]}</div>
+      {/* The chat scrolls its own conversation, and its box stays above the bar (plan 09, B-04). */}
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 flex-col',
+          tab.mobileView === 'claude' ? 'overflow-hidden' : 'overflow-y-auto',
+        )}
+      >
+        {screens[tab.mobileView]}
+      </div>
       <MobileViewBar view={tab.mobileView} onPick={tab.showMobile} />
     </div>
   );

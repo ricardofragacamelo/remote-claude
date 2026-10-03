@@ -25,9 +25,9 @@ import {
 } from '../fixtures/explorer';
 import { sessionsOpened, tabsOf, workbenchSuite } from '../fixtures/folder-tree';
 import { callApi } from '../fixtures/api';
-import { confirmationOfTheOnlyPoint } from '../fixtures/history';
+import { confirmationOfTheOnlyPoint, lastUndoReport } from '../fixtures/claude-panel';
 import { attachFrom, connected } from '../fixtures/live-session';
-import { scrollsSideways, violationsOn } from '../fixtures/page-checks';
+import { scrollsSideways, violationsOn, widerThanThePage } from '../fixtures/page-checks';
 import {
   onWorkbenchOf,
   openThroughDialog,
@@ -325,7 +325,7 @@ test.describe('B-44 — the scripted Claude in the same file', () => {
       preserved: [{ path: file, reason: 'modifiedOutside' }],
       failed: [],
     });
-    const report = page.getByRole('region', { name: 'Last undo' });
+    const report = lastUndoReport(page);
     await expect(
       report.getByRole('list', { name: 'Kept as they were' }).getByText(file),
     ).toBeVisible();
@@ -449,7 +449,7 @@ test.describe('B-45 — folder tabs, groups, the phone and accessibility', () =>
       await expect(area).toHaveValue(original);
       expect(await area.evaluate((element) => element.tagName)).toBe('TEXTAREA');
       await expect(page.locator('.monaco-editor')).toHaveCount(0);
-      expect(await scrollsSideways(page)).toBe(false);
+      expect(await scrollsSideways(page), (await widerThanThePage(page)).join('\n')).toBe(false);
 
       await area.focus();
       await page.keyboard.press('Control+End');

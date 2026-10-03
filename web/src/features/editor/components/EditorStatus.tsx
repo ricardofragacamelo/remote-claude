@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
 
 import type { StatusItemProps } from '@/features/workbench';
+import { MenuTrigger } from '@/shared/components/MenuTrigger';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { STATUS_BAR_ITEM } from '@/shared/components/StatusBarButton';
@@ -39,16 +39,11 @@ interface ChoiceItemProps {
 function ChoiceItem({ text, label, groups }: ChoiceItemProps): React.JSX.Element {
   return (
     <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <button type="button" aria-label={label} className={STATUS_BAR_ITEM}>
-              {text}
-            </button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{label}</TooltipContent>
-      </Tooltip>
+      <MenuTrigger label={label}>
+        <button type="button" aria-label={label} className={STATUS_BAR_ITEM}>
+          {text}
+        </button>
+      </MenuTrigger>
       <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
         {groups.map((group, index) => (
           <div key={group.title}>

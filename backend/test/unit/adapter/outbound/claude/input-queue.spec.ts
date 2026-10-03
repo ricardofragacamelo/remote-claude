@@ -49,17 +49,40 @@ describe('SessionInputQueue', () => {
     expect(queue.depth).toBe(100);
   });
 
-  it('shapes a prompt the way the SDK expects a user message', async () => {
+  it('shapes a prompt the way the SDK expects a user message, under the uuid it answers — S-273', async () => {
     const queue = new SessionInputQueue();
-    queue.push('hello');
+    const uuid = queue.push('hello');
 
     const next = await queue[Symbol.asyncIterator]().next();
 
+    expect(uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(next.value).toEqual({
       type: 'user',
       message: { role: 'user', content: 'hello' },
       parent_tool_use_id: null,
+      uuid,
     });
+  });
+
+  it('gives every prompt a uuid of its own, the one handed to a waiting consumer too', async () => {
+    const queue = new SessionInputQueue();
+    const iterator = queue[Symbol.asyncIterator]();
+    const waiting = iterator.next();
+
+    const first = queue.push('one');
+    const second = queue.push('two');
+
+    expect((await waiting).value).toMatchObject({ uuid: first });
+    expect((await iterator.next()).value).toMatchObject({ uuid: second });
+    expect(first).not.toBe(second);
+  });
+
+  it('still answers a uuid for a prompt pushed after closing, and queues nothing', () => {
+    const queue = new SessionInputQueue();
+    queue.close();
+
+    expect(typeof queue.push('late')).toBe('string');
+    expect(queue.depth).toBe(0);
   });
 
   describe('closing', () => {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCheck, Undo2 } from 'lucide-react';
+import { CheckCheck, History, Undo2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/shared/components/EmptyState';
@@ -10,7 +10,7 @@ import { useDiffTabs } from '../../hooks/useDiffTabs';
 import { useRejections } from '../../hooks/useRejections';
 import { useSessionChanges } from '../../hooks/useSessionChanges';
 import type { ChangesFilter } from '../../types/changes';
-import { UndoPanel } from '../UndoPanel';
+import { UndoDialog } from '../panel/UndoDialog';
 import { ChangeRow } from './ChangeRow';
 import { RejectAllDialog } from './RejectAllDialog';
 
@@ -39,6 +39,7 @@ export function ChangesView({ folder, sessionId }: ChangesViewProps): React.JSX.
   const rejections = useRejections(sessionId);
   const tabs = useDiffTabs(folder, sessionId);
   const [confirming, setConfirming] = useState(false);
+  const [undoing, setUndoing] = useState(false);
 
   return (
     <section aria-label={t('sessions.changes.title')} className="flex flex-col gap-3">
@@ -82,6 +83,15 @@ export function ChangesView({ folder, sessionId }: ChangesViewProps): React.JSX.
             <Undo2 className="size-3.5" aria-hidden />
             {t('sessions.changes.rejectAll')}
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setUndoing(true);
+            }}
+          >
+            <History className="size-3.5" aria-hidden />
+            {t('sessions.menu.undo')}
+          </Button>
         </div>
       </header>
 
@@ -97,7 +107,15 @@ export function ChangesView({ folder, sessionId }: ChangesViewProps): React.JSX.
         onRejectHunk={rejections.rejectHunk}
       />
 
-      <UndoPanel sessionId={sessionId} />
+      {undoing && (
+        <UndoDialog
+          sessionId={sessionId}
+          open
+          onClose={() => {
+            setUndoing(false);
+          }}
+        />
+      )}
 
       <RejectAllDialog
         open={confirming}

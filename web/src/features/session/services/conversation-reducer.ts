@@ -1,6 +1,7 @@
 import type { Envelope } from '@remote-claude/contracts';
 
 import { isRecord, readText } from '@/shared/lib/json';
+import { isTurnRunning } from '../lib/turn';
 import type { HistoryEvent } from '../types/history';
 import type {
   BlockKind,
@@ -25,6 +26,7 @@ export const SILENT: Conversation = {
   turns: [],
   lastTurn: null,
   ending: null,
+  turnSince: null,
 };
 
 /** How one event changes the conversation. */
@@ -161,6 +163,23 @@ function statusOf(payload: Readonly<Record<string, unknown>>): SessionStatus | n
   const status = payload['status'];
 
   return typeof status === 'string' && STATUSES.has(status) ? (status as SessionStatus) : null;
+}
+
+/**
+ * Where the session stands, and since when its turn runs (plan 09, B-21): the instant, by the
+ * server's clock, the status first left rest — kept while it moves between thinking, running a tool
+ * and waiting on a person, and dropped once the turn is over. A replay re-delivers the same frame,
+ * so it lands on the same instant; the history carries no instant, and so starts no clock.
+ */
+function applyStatus(
+  state: Conversation,
+  payload: Readonly<Record<string, unknown>>,
+  frame: Envelope,
+): Conversation {
+  const status = statusOf(payload) ?? state.status;
+  const since = state.turnSince ?? (frame.ts === '' ? null : frame.ts);
+
+  return { ...state, status, turnSince: isTurnRunning(status) ? since : null };
 }
 
 /** The subagent a payload belongs to, or `null` for the main conversation. */
@@ -515,6 +534,35 @@ function applyCompacted(
   };
 }
 
+/**
+ * Where the files of the session were put back — a line of the conversation, in the order it
+ * happened, with how many went back, stayed and failed (plan 09, B-28). What each file did is the
+ * undo dialog's, which reads the same event.
+ */
+function applyRewound(
+  state: Conversation,
+  payload: Readonly<Record<string, unknown>>,
+  frame: Envelope,
+): Conversation {
+  return readText(payload, 'promptId') === null
+    ? state
+    : {
+        ...state,
+        timeline: appended(state.timeline, {
+          kind: 'rewound',
+          id: frame.seq === undefined ? frame.id : String(frame.seq),
+          restored: countOf(payload['reverted']),
+          kept: countOf(payload['preserved']),
+          failed: countOf(payload['failed']),
+        }),
+      };
+}
+
+/** How many files a list of the event names — none, when it is not a list. */
+function countOf(files: unknown): number {
+  return Array.isArray(files) ? files.filter(isRecord).length : 0;
+}
+
 /** The six reasons the contract carries. */
 const CLOSE_REASONS = new Set<string>([
   'closedByUser',
@@ -539,6 +587,7 @@ function applyClosed(
   return {
     ...state,
     status: 'closed',
+    turnSince: null,
     ending: { reason: reason as SessionCloseReason, at },
   };
 }
@@ -569,10 +618,7 @@ const EVENT_READERS: ReadonlyMap<string, EventReader> = new Map<string, EventRea
   // the same event; a client that waited for a `session.statusChanged` to learn it would show
   // "starting" until the first fragment of the first answer arrived.
   ['session.started', (state) => ({ ...state, status: 'idle' })],
-  [
-    'session.statusChanged',
-    (state, payload) => ({ ...state, status: statusOf(payload) ?? state.status }),
-  ],
+  ['session.statusChanged', applyStatus],
   ['message.delta', aboutMessage(applyDelta)],
   ['message.completed', aboutMessage(applyCompleted)],
   ['tool.started', applyToolStarted],
@@ -580,5 +626,6 @@ const EVENT_READERS: ReadonlyMap<string, EventReader> = new Map<string, EventRea
   ['tool.completed', (state, payload) => changeTool(state, payload, outcomeOf(payload))],
   ['turn.completed', applyTurn],
   ['session.compacted', applyCompacted],
+  ['session.rewound', applyRewound],
   ['session.closed', (state, payload, frame) => applyClosed(state, payload, frame.ts)],
 ]);

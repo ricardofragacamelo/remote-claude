@@ -263,6 +263,13 @@ que o furo acontece **em silêncio**: nem `settingSources` omitido nem hook ause
 erro ou aviso — apenas desligam a proteção. Ver
 [backend/04](../backend/04-claude-integration.md#a-armadilha-do-settingsources).
 
+**Aviso sem versão corrigida.** A regra das duas checagens de dependência é "atualize a dependência;
+nunca ignore o id". Um aviso que **não tem versão corrigida** não se atualiza, e a exceção é uma
+decisão, não uma edição de config: entra em `scripts/accepted-advisories.json` com a ADR que a
+tomou, valendo só para o id, o pacote, a versão e o caminho de dependência que nomeia, e até uma data
+— vencida, ou com o pacote chegando por outro caminho, o portão volta a reprovar. Cada aviso aceito é
+dito a cada execução, nunca em silêncio ([ADR-019](00-decisions.md#adr-019--aviso-de-dependência-sem-versão-corrigida-exceção-datada-por-adr)).
+
 Duas notas sobre como a regra própria funciona, e por que ela é assim:
 
 - **ela lê código, não prosa.** Comentários são apagados antes da busca pela chamada; strings não,

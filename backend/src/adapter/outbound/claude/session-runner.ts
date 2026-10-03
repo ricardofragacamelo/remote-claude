@@ -251,7 +251,7 @@ export class SessionRunner implements ClaudeSessionHandle {
       });
   }
 
-  prompt(text: string, extras?: PromptExtras): void {
+  prompt(text: string, extras?: PromptExtras): string {
     // What was typed, and never what was composed after it: the context is said by its kinds,
     // paths, sizes and hashes — the content of a dropped file or of the terminal never reaches the
     // log (plan 08, S-204, S-211).
@@ -272,7 +272,7 @@ export class SessionRunner implements ClaudeSessionHandle {
 
     // Queued with the prompt, in the same order, and adopted when the CLI opens the turn.
     this.pendingTraces.push(currentTraceId());
-    this.queue.push(text, extras?.images ?? []);
+    return this.queue.push(text, extras?.images ?? []);
   }
 
   async interrupt(): Promise<void> {

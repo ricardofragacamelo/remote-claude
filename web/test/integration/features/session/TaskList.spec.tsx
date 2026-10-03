@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
 import type { Envelope } from '@remote-claude/contracts';
 
 import { ConversationReader } from '@/features/session';
 import { Conversation } from '@/features/session/components/Conversation';
+import { TaskStrip } from '@/features/session/components/composer/TaskStrip';
+import { taskListOf } from '@/features/session/lib/task-list';
 import { readEvent, SILENT } from '@/features/session/services/conversation-reducer';
 import type { Conversation as ConversationState } from '@/features/session/types/live-session';
 import { api } from '@/shared/api/api';
@@ -79,40 +82,85 @@ function list(): HTMLElement {
   return screen.getByRole('region', { name: t('sessions.tasks.label') });
 }
 
+/** The strip of the list above the box, as the tools of `events` leave it (plan 09, B-26). */
+function strip(events: readonly Event[]): ReturnType<typeof render> {
+  return render(<TaskStrip list={taskListOf(fold(events).tools)} />);
+}
+
+/** The line the list folds into — what unfolds it. */
+function headline(): HTMLElement {
+  return within(list()).getByRole('button');
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** The task list of the panel — plan 08, B-20, D-25. */
+/** The task list of the panel — plan 08, B-20, D-25; above the box since plan 09, B-26, D-14. */
 describe('the task list of a conversation', () => {
   it.each([
     ['TodoWrite', TODO_WRITE],
     ['TaskCreate and TaskUpdate', TASK_TOOLS],
-  ])('draws the list of %s pinned above the conversation, the same way — S-85', (_, events) => {
-    render(<Conversation conversation={fold(events)} isPartial={false} />);
+  ])(
+    'folds the list of %s into one line above the box, and unfolds it whole — S-85, plan 09 S-73',
+    async (_, events) => {
+      const user = userEvent.setup();
+      strip(events);
 
-    expect(
-      within(list()).getByText(t('sessions.tasks.count', { done: 1, total: 3 })),
-    ).toBeInTheDocument();
-    const items = within(list())
-      .getAllByRole('listitem')
-      .map((item) => item.textContent);
-    expect(items).toEqual([
-      `${t('sessions.taskStatus.completed')}: Write a.txt${t('sessions.tasks.was', { state: t('sessions.taskStatus.inProgress') })}`,
-      `${t('sessions.taskStatus.pending')}: Write b.txt`,
-      `${t('sessions.taskStatus.pending')}: Write c.txt`,
-    ]);
-  });
+      expect(headline()).toHaveTextContent(
+        t('sessions.tasks.headline', { done: 1, total: 3, task: 'Write b.txt' }),
+      );
+      expect(headline()).toHaveAttribute('aria-expanded', 'false');
+      expect(within(list()).queryAllByRole('listitem')).toEqual([]);
 
-  it('says what a task is doing while it is in progress', () => {
-    render(<Conversation conversation={fold(TASK_TOOLS.slice(0, 8))} isPartial={false} />);
+      await user.click(headline());
 
+      const items = within(list())
+        .getAllByRole('listitem')
+        .map((item) => item.textContent);
+      expect(items).toEqual([
+        `${t('sessions.taskStatus.completed')}: Write a.txt${t('sessions.tasks.was', { state: t('sessions.taskStatus.inProgress') })}`,
+        `${t('sessions.taskStatus.pending')}: Write b.txt`,
+        `${t('sessions.taskStatus.pending')}: Write c.txt`,
+      ]);
+
+      await user.click(headline());
+      expect(within(list()).queryAllByRole('listitem')).toEqual([]);
+    },
+  );
+
+  it('says what a task is doing while it is in progress — on its line, and on its row', async () => {
+    const user = userEvent.setup();
+    strip(TASK_TOOLS.slice(0, 8));
+
+    expect(headline()).toHaveTextContent(
+      t('sessions.tasks.headline', { done: 0, total: 3, task: 'Writing a.txt' }),
+    );
+    await user.click(headline());
     expect(within(list()).getByText('Writing a.txt')).toBeInTheDocument();
     expect(
       within(list()).getByText(
         t('sessions.tasks.was', { state: t('sessions.taskStatus.pending') }),
       ),
     ).toBeInTheDocument();
+  });
+
+  it('says so when every task is done, and counts none done at the start — plan 09, S-73', () => {
+    const done = todos('completed', 'completed', 'completed');
+    const { unmount } = strip([started('w9', 'TodoWrite', done), ended('w9')]);
+    expect(headline()).toHaveTextContent(t('sessions.tasks.allDone', { done: 3, total: 3 }));
+    unmount();
+
+    strip(TODO_WRITE.slice(0, 2));
+    expect(headline()).toHaveTextContent(
+      t('sessions.tasks.headline', { done: 0, total: 3, task: 'Write a.txt' }),
+    );
+  });
+
+  it('is no longer at the top of the conversation — plan 09, B-26', () => {
+    render(<Conversation conversation={fold(TODO_WRITE)} isPartial={false} />);
+
+    expect(screen.queryByRole('region', { name: t('sessions.tasks.label') })).toBeNull();
   });
 
   it('says each change of the list on its row, and leaves a call it could not read a tool — S-86', () => {
@@ -139,14 +187,12 @@ describe('the task list of a conversation', () => {
     ).toBeInTheDocument();
   });
 
-  it('draws nothing once the list was emptied — S-86', () => {
-    render(
-      <Conversation
-        conversation={fold([...TODO_WRITE, started('w4', 'TodoWrite', { todos: [] }), ended('w4')])}
-        isPartial={false}
-      />,
-    );
+  it('draws nothing without a list, or once the list was emptied — S-86, plan 09 S-73', () => {
+    const { container, unmount } = strip([]);
+    expect(container).toBeEmptyDOMElement();
+    unmount();
 
+    strip([...TODO_WRITE, started('w4', 'TodoWrite', { todos: [] }), ended('w4')]);
     expect(
       screen.queryByRole('region', { name: t('sessions.tasks.label') }),
     ).not.toBeInTheDocument();
@@ -160,16 +206,17 @@ describe('the task list of a conversation', () => {
     render(<ConversationReader conversationId={OURS} onResumed={vi.fn()} onClose={vi.fn()} />);
 
     const region = await screen.findByRole('region', { name: t('sessions.tasks.label') });
-    expect(
-      within(region).getByText(t('sessions.tasks.count', { done: 1, total: 3 })),
-    ).toBeInTheDocument();
+    expect(within(region).getByRole('button')).toHaveTextContent(
+      t('sessions.tasks.headline', { done: 1, total: 3, task: 'Write b.txt' }),
+    );
   });
 
-  it('has no accessibility violation', async () => {
-    const { container } = render(
-      <Conversation conversation={fold(TASK_TOOLS)} isPartial={false} />,
-    );
+  it('has no accessibility violation, folded and unfolded', async () => {
+    const user = userEvent.setup();
+    const { container } = strip(TASK_TOOLS);
+    expect(await axe(container)).toHaveNoViolations();
 
+    await user.click(headline());
     expect(await axe(container)).toHaveNoViolations();
   });
 });

@@ -39,6 +39,12 @@ export type ReviewMarks = Readonly<Record<string, string>>;
 /** How many sessions keep their marks; past it, the session marked longest ago forgets them. */
 export const MAX_REVIEWED_SESSIONS = 20;
 
+/** Where the conversation of a tab was scrolled to, and whether it was following its end. */
+export interface ScrollMemory {
+  readonly top: number;
+  readonly following: boolean;
+}
+
 /** What the panel of Claude keeps **for one folder tab**. */
 export interface ClaudePanelState {
   readonly pane: PanelPane;
@@ -67,6 +73,19 @@ export interface ClaudePanelState {
   /** What the set of each tab said last — what an add left out, a drop refused. Never kept. */
   readonly notices: Readonly<Record<string, ContextNotice>>;
 
+  /**
+   * Where the conversation of each tab was left (plan 09, B-05): a look at the changes, a switch of
+   * tab or a window crossing `md` gives it back as it was (S-08, S-16). Never kept across a reload.
+   */
+  readonly scrolls: Readonly<Record<string, ScrollMemory>>;
+
+  /**
+   * The effort each session opened here started with, by session (plan 09, S-90): a live session
+   * only shows it — changing it would start the query again without the hook that asks before each
+   * tool (08 · D-16). A session opened elsewhere is not in it, and its effort is not known here.
+   */
+  readonly efforts: Readonly<Record<string, EffortLevel | null>>;
+
   showPane(pane: PanelPane): void;
 
   /** Opens a new draft, and puts it on screen. @returns its key */
@@ -82,6 +101,7 @@ export interface ClaudePanelState {
   setDraft(key: string, text: string): void;
   setContext(key: string, items: readonly ContextItem[]): void;
   setNotice(key: string, notice: ContextNotice | null): void;
+  setScroll(key: string, memory: ScrollMemory): void;
   setChoices(key: string, choices: DraftChoices): void;
 
   /** A draft became a session: its tab is the session's now, in the same place. */
@@ -105,6 +125,8 @@ function createClaudePanelStore(): ClaudePanelStore {
     drafts: {},
     contexts: {},
     notices: {},
+    scrolls: {},
+    efforts: {},
 
     openDraft: () => {
       // A reload gives drafts back under their keys, and the count starts over: a key in use is
@@ -145,6 +167,7 @@ function createClaudePanelStore(): ClaudePanelStore {
           drafts: without(state.drafts, key),
           contexts: without(state.contexts, key),
           notices: without(state.notices, key),
+          scrolls: without(state.scrolls, key),
           active: state.active === key ? neighbour : state.active,
         };
       });
@@ -160,6 +183,9 @@ function createClaudePanelStore(): ClaudePanelStore {
         contexts:
           items.length === 0 ? without(state.contexts, key) : { ...state.contexts, [key]: items },
       }));
+    },
+    setScroll: (key, memory) => {
+      set((state) => ({ scrolls: { ...state.scrolls, [key]: memory } }));
     },
     setNotice: (key, notice) => {
       set((state) => ({
@@ -177,7 +203,12 @@ function createClaudePanelStore(): ClaudePanelStore {
     promote: (key, sessionId) => {
       const promoted = tabKeyOf('session', sessionId);
       set((state) => {
+        const draft = state.tabs.find((tab) => tab.key === key);
         return {
+          efforts:
+            draft?.kind === 'draft'
+              ? { ...state.efforts, [sessionId]: draft.choices.effort }
+              : state.efforts,
           tabs: state.tabs
             .filter((tab) => tab.key !== promoted)
             .map((tab) => (tab.key === key ? tabOf('session', sessionId, promoted) : tab)),

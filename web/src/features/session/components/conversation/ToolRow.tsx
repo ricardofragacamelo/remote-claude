@@ -11,6 +11,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
+import { PermissionOutcomeLine } from '@/features/permission';
 import { opensSubagent, toolLabel } from '../../lib/tool-labels';
 import type { ToolExecution, ToolStatus } from '../../types/live-session';
 import { AnsiText } from './AnsiText';
@@ -29,6 +30,11 @@ const STATUS_ICON: Readonly<Record<ToolStatus, LucideIcon>> = {
   denied: CircleSlash,
 };
 
+/** How long a tool has run, while it runs and the SDK said — `null` otherwise. */
+function runningFor(tool: ToolExecution): string | null {
+  return tool.status === 'running' ? tool.elapsed : null;
+}
+
 export interface ToolRowProps {
   readonly tool: ToolExecution;
   readonly context: TimelineContext;
@@ -40,7 +46,8 @@ export interface ToolRowProps {
  * but the whole command is in its accessible name, and unfolding it shows the **exact** input,
  * never truncated (S-74). A subagent's tool unfolds into what the subagent said (B-21).
  *
- * A permission is never drawn like this: the card that asks is the queue's, whole (S-76).
+ * A permission is never drawn like this: while it asks, the card stands in the place of this line,
+ * whole (S-76, plan 09, B-23); once settled, the line comes back with the decision in words under it.
  */
 export function ToolRow({ tool, context }: ToolRowProps): React.JSX.Element {
   const { t } = useTranslation();
@@ -50,6 +57,7 @@ export function ToolRow({ tool, context }: ToolRowProps): React.JSX.Element {
   const status = t(`session.toolStatus.${tool.status}`);
   const Icon = STATUS_ICON[tool.status];
   const Chevron = open ? ChevronDown : ChevronRight;
+  const outcome = context.inline?.requests.settledByTool.get(tool.toolUseId);
 
   return (
     <li className="flex flex-col gap-1">
@@ -71,9 +79,10 @@ export function ToolRow({ tool, context }: ToolRowProps): React.JSX.Element {
         />
         <span className="truncate font-code">{text}</span>
         <span className="ml-auto shrink-0 text-ui-xs text-muted-foreground">
-          {tool.status === 'running' && tool.elapsed !== null ? tool.elapsed : status}
+          {runningFor(tool) ?? status}
         </span>
       </button>
+      {outcome !== undefined && <PermissionOutcomeLine outcome={outcome} />}
       {DIFFABLE.has(tool.toolName) && tool.status === 'succeeded' && context.sessionId !== null && (
         <ToolDiffView tool={tool} sessionId={context.sessionId} folder={context.folder} />
       )}

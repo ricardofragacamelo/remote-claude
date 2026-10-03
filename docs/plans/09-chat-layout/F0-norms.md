@@ -19,7 +19,7 @@ estas normas.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — O painel novo em `web/03-ui-system` 🔲
+### B-01 — O painel novo em `web/03-ui-system` ✅
 
 Reescrever as seções do painel em [web/03](../../architecture/web/03-ui-system.md#stream-de-mensagens) e a
 nota da secondary side bar em [Anatomia do workbench](../../architecture/web/03-ui-system.md#anatomia-do-workbench):
@@ -41,7 +41,7 @@ nota da secondary side bar em [Anatomia do workbench](../../architecture/web/03-
   [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) e nas três pontas na mesma
   mudança, pelo gatilho do `AGENTS.md`.
 
-### B-02 — Chaves i18n e o inventário da ajuda 🔲
+### B-02 — Chaves i18n e o inventário da ajuda ✅
 
 Listar as chaves que saem (`permission.queue.emptyTitle`, `permission.queue.emptyDescription`,
 `session.screen.title`, `session.screen.sessionLabel`, `commands.menu.toggle`, `undo.panel.toggle`,
@@ -51,7 +51,7 @@ menu da sessão, faixas de estado, confirmação de encerrar), em `en` e `pt-BR`
 `i18n:check`. A remoção acontece na fase que tira o uso, não aqui. O inventário dos tópicos da
 `PanelHelp` que mudam de texto vai para a [B-20](F3-header.md).
 
-### B-03 — O page object do painel 🔲
+### B-03 — O page object do painel ✅
 
 `e2e/fixtures/claude-panel.ts`, que expõe o painel por **papel e nome acessível**: a caixa, enviar, parar,
 modo, modelo, o menu da sessão, o card de permissão de uma tool, a pílula e o indicador. Os specs que

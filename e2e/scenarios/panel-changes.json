@@ -1,0 +1,31 @@
+{
+  "id": "08·S-261…S-263",
+  "title": "what Claude changes: the permission of an Edit previews it against the disk, the disk changes and the Changes view lists the files; a change and a whole file rejected from the view, and the rejection undone; in plan mode, approving the plan changes the mode and Claude goes on",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "editTurn": "edit-turn",
+    "asks": ["Edit", "Write", "Write", "Edit"],
+    "before": {
+      "app.js": "const greeting = 'hello';\nconsole.log(greeting);\n",
+      "config.json": "{\"debug\": false}\n"
+    },
+    "after": {
+      "app.js": "const greeting = 'hi';\nconsole.info(greeting);\n",
+      "config.json": "{\"debug\": true}\n",
+      "notes.txt": "done\n"
+    },
+    "previewRemoved": "const greeting = 'hello';",
+    "previewAdded": "const greeting = 'hi';",
+    "changed": ["app.js", "config.json", "notes.txt"],
+    "rejectedFile": "notes.txt went back to how it was before the session.",
+    "planTurn": "plan-turn",
+    "planFiles": { "index.js": "console.log('tally');\n" },
+    "planAsksBefore": ["AskUserQuestion"],
+    "planAsksAfter": ["Bash", "Write"],
+    "planMode": "Plan",
+    "approvedMode": "Ask me",
+    "goOn": "asking before each edit",
+    "planHeading": "Add a two-line README.md",
+    "written": "README.md"
+  }
+}

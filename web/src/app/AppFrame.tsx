@@ -17,6 +17,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/shared/comp
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
 import { useRegistry } from '@/shared/hooks/useRegistry';
+import { useVisualViewport } from '@/shared/hooks/useVisualViewport';
 import { cn } from '@/shared/lib/utils';
 import { AccountMenu } from './AccountMenu';
 import { RailMenuTrigger } from './RailMenuTrigger';
@@ -65,6 +66,7 @@ function useNavigationEntries(): readonly ResolvedEntry[] {
 export function AppFrame({ children }: AppFrameProps): React.JSX.Element {
   const desktop = useIsDesktop();
   const { isAuthenticated } = useAuth();
+  useVisualViewport(!desktop);
 
   return desktop ? (
     <div className="flex h-dvh min-h-0 bg-background text-foreground">
@@ -79,7 +81,7 @@ export function AppFrame({ children }: AppFrameProps): React.JSX.Element {
       </div>
     </div>
   ) : (
-    <div className="flex h-dvh min-h-0 flex-col bg-background text-foreground">
+    <div className="flex h-[var(--app-height,100dvh)] min-h-0 flex-col bg-background text-foreground">
       <TopBar />
       <main className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</main>
     </div>

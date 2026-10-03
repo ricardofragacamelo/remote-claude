@@ -1,4 +1,4 @@
-import { Brain } from 'lucide-react';
+import { Asterisk, Brain } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { MessageBlock } from '../../types/live-session';
@@ -24,6 +24,9 @@ function summaryKey(block: MessageBlock, thinkingMs: number | null, streaming: b
  * The model's thinking, **folded** by default (plan 08, D-17) — "thought for n s" when the stream
  * measured it, "thought" from the history, which keeps no time per block. A thinking the model
  * omitted or redacted says it existed and invents nothing (S-83).
+ *
+ * While it arrives it is **alive** (plan 09, B-22): "Thinking…", with the asterisk of the turn moving
+ * — for who has not asked for less motion —, in the order of the conversation, between its tools.
  */
 export function ThinkingBlock({
   block,
@@ -36,7 +39,11 @@ export function ThinkingBlock({
   return (
     <details className="rounded-md border border-border px-2 py-1 text-ui-sm text-muted-foreground">
       <summary className="flex cursor-pointer items-center gap-1">
-        <Brain className="size-3.5" aria-hidden />
+        {streaming ? (
+          <Asterisk className="size-3.5 text-primary motion-safe:animate-pulse" aria-hidden />
+        ) : (
+          <Brain className="size-3.5" aria-hidden />
+        )}
         {t(summaryKey(block, thinkingMs, streaming), {
           seconds: Math.round((thinkingMs ?? 0) / 1000),
         })}

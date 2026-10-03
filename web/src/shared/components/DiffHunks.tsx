@@ -60,7 +60,9 @@ export function DiffHunks({
       <div
         role="group"
         aria-label={label}
-        className="overflow-x-auto rounded border border-border font-code text-ui-xs"
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the lines scroll sideways inside it on a narrow screen, and a region that scrolls must be reachable by keyboard (WCAG 2.1.1, axe scrollable-region-focusable; plan 08, S-268)
+        tabIndex={0}
+        className="overflow-x-auto rounded border border-border font-code text-ui-xs focus-visible:outline-2 focus-visible:outline-ring"
       >
         {visible.map(({ hunk, shown }) => {
           return shown.length === 0 ? null : (

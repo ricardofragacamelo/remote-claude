@@ -325,6 +325,85 @@ describe('the conversation reducer', () => {
     });
   });
 
+  describe('when the turn began — plan 09, B-21', () => {
+    const status = (value: string, ts: string): Envelope =>
+      frame('session.statusChanged', { status: value }, ts);
+
+    it('takes the instant the status first left rest, and keeps it while the turn moves', () => {
+      const state = fold(
+        status('thinking', at(0)),
+        status('running', at(5)),
+        status('waitingPermission', at(9)),
+      );
+
+      expect(state.turnSince).toBe(at(0));
+      expect(state.status).toBe('waitingPermission');
+    });
+
+    it('drops it when the turn is over, and the next turn starts its own', () => {
+      const ended = fold(status('thinking', at(0)), status('idle', at(30)));
+      expect(ended.turnSince).toBeNull();
+
+      expect(readEvent(ended, status('thinking', at(40))).turnSince).toBe(at(40));
+    });
+
+    it('drops it when the session closes mid-turn', () => {
+      const state = fold(
+        status('running', at(0)),
+        frame('session.closed', { reason: 'failed' }, at(3)),
+      );
+
+      expect(state.turnSince).toBeNull();
+    });
+
+    it('starts no clock from the history, which carries no instant', () => {
+      expect(fold(status('thinking', '')).turnSince).toBeNull();
+    });
+
+    it('keeps it through a status it cannot read', () => {
+      const state = fold(status('thinking', at(0)), status('dreaming', at(2)));
+
+      expect(state).toMatchObject({ status: 'thinking', turnSince: at(0) });
+    });
+  });
+
+  describe('the files put back — plan 09, B-28', () => {
+    it('is a line of the conversation, in its place, with how many went back, stayed and failed', () => {
+      const state = fold(
+        completed('m1', [{ type: 'text', text: 'Done.' }]),
+        frame(
+          'session.rewound',
+          {
+            promptId: 'p1',
+            reverted: [
+              { path: '/a', action: 'restored' },
+              { path: '/b', action: 'deleted' },
+            ],
+            preserved: [{ path: '/c', reason: 'modifiedOutside' }],
+            unchanged: [{ path: '/d' }],
+            failed: [],
+          },
+          T0,
+          7,
+        ),
+      );
+
+      expect(state.timeline).toEqual([
+        { kind: 'message', id: 'm1' },
+        { kind: 'rewound', id: '7', restored: 2, kept: 1, failed: 0 },
+      ]);
+    });
+
+    it('counts nothing a list does not carry, and reads no undo that names no point', () => {
+      const counted = fold(frame('session.rewound', { promptId: 'p1', reverted: 'all' }));
+      expect(counted.timeline).toEqual([
+        { kind: 'rewound', id: 'f-session.rewound', restored: 0, kept: 0, failed: 0 },
+      ]);
+
+      expect(fold(frame('session.rewound', { reverted: [] })).timeline).toEqual([]);
+    });
+  });
+
   describe('compaction', () => {
     it('marks where the conversation was compacted, once per event', () => {
       const compacted = frame('session.compacted', { trigger: 'manual', preTokens: 9000 }, T0, 7);

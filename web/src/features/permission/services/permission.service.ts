@@ -1,5 +1,7 @@
 import type { Envelope } from '@remote-claude/contracts';
 
+import { toAppError } from '@/shared/api/errors';
+import type { AppError } from '@/shared/api/errors';
 import type { WsClient } from '@/shared/api/ws-client';
 import { isRecord, readText as text } from '@/shared/lib/json';
 import type {
@@ -36,9 +38,10 @@ export interface Answer {
  * A **response** and not a command: `correlationId` names the request being answered, which is
  * what the kind of the frame exists to say.
  *
- * @returns whether the frame left; a socket that is not ready silently sends nothing
+ * @returns the id of the answer's frame — what a refusal of it names — or `null` when it did not
+ *   leave; a socket that is not ready silently sends nothing
  */
-export function sendAnswer(client: WsClient, answer: Answer): boolean {
+export function sendAnswer(client: WsClient, answer: Answer): string | null {
   return client.respond(
     PERMISSION_FRAMES.resolve,
     {
@@ -141,7 +144,26 @@ function readRequired(payload: Readonly<Record<string, unknown>>): RequiredField
   return { requestId, toolName, expiresAt, riskHint: riskHint as RiskHint };
 }
 
-/** The feature's model of a `permission.resolved` frame, or `null` when it is not one. */
+/**
+ * The refusal of an answer of ours — one that arrived after the deadline had refused the request
+ * (`PERMISSION_REQUEST_EXPIRED`), or after another device had answered it — or `null` when the frame
+ * is not that (plan 09, S-61).
+ */
+export function answerRefusalOf(frame: Envelope, answerId: string): AppError | null {
+  return frame.kind === 'error' && frame.correlationId === answerId
+    ? toAppError({ error: frame.payload }, frame.traceId ?? answerId)
+    : null;
+}
+
+/** The clients the contract names as where an answer came from. */
+const ORIGINS = new Set<string>(['web', 'mobile']);
+
+/**
+ * The feature's model of a `permission.resolved` frame, or `null` when it is not one.
+ *
+ * The frame names only the request: which tool it was about is the request's, and the store fills it
+ * in from the card it settles — a request a rule settled was never put to anybody, and has none.
+ */
 export function toOutcome(frame: Envelope): PermissionOutcome | null {
   const payload = frame.payload;
 
@@ -156,11 +178,16 @@ export function toOutcome(frame: Envelope): PermissionOutcome | null {
     return null;
   }
 
+  const resolvedFrom = text(payload, 'resolvedFrom');
+
   return {
     requestId,
     decision,
     auto: payload['auto'] === true,
     resolvedBy: text(payload, 'resolvedBy'),
+    resolvedFrom: resolvedFrom !== null && ORIGINS.has(resolvedFrom) ? resolvedFrom : null,
+    toolUseId: null,
+    answeredHere: false,
   };
 }
 

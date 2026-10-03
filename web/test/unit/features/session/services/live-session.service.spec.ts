@@ -139,17 +139,20 @@ describe('the session commands', () => {
   it('changes the model', () => {
     const { client, sent } = aClient();
 
-    setSessionModel(client, SESSION, 'claude-opus-5');
+    const commandId = setSessionModel(client, SESSION, 'claude-opus-5');
 
     expect(sent[0]?.payload).toEqual({ sessionId: SESSION, model: 'claude-opus-5' });
+    // The id a refusal of it names — plan 09, S-23.
+    expect(commandId).toBe('cmd-1');
   });
 
   it('changes the permission mode', () => {
     const { client, sent } = aClient();
 
-    setSessionPermissionMode(client, SESSION, 'acceptEdits');
+    const commandId = setSessionPermissionMode(client, SESSION, 'acceptEdits');
 
     expect(sent[0]?.payload).toEqual({ sessionId: SESSION, mode: 'acceptEdits' });
+    expect(commandId).toBe('cmd-1');
   });
 
   it('never pretends a command left while the socket is down', () => {

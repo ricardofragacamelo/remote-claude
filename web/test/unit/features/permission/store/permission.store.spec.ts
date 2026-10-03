@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { Envelope } from '@remote-claude/contracts';
 
 import { forgetPermissionQueues, permissionQueueOf } from '@/features/permission';
+import { claimArrival } from '@/features/permission/store/permission.store';
 
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
 const EXPIRES = '2026-09-19T12:02:00.000Z';
@@ -102,8 +103,63 @@ describe('the permission queue', () => {
 
     expect(store().pending).toEqual([]);
     expect(store().settled).toEqual([
-      { requestId: 'req-1', decision: 'allow', auto: false, resolvedBy: 'auth|42' },
+      {
+        requestId: 'req-1',
+        decision: 'allow',
+        auto: false,
+        resolvedBy: 'auth|42',
+        resolvedFrom: null,
+        toolUseId: 'toolu-1',
+        answeredHere: false,
+      },
     ]);
+  });
+
+  it('keeps the tool the request was about, for the line its card becomes — plan 09, B-23', () => {
+    store().apply(requested());
+    store().expire('req-1');
+
+    expect(store().settled[0]?.toolUseId).toBe('toolu-1');
+  });
+
+  it('knows nothing of the tool of a request it never saw asked — a rule settled it', () => {
+    store().apply(
+      event('permission.resolved', { requestId: 'req-9', decision: 'allow', auto: true }),
+    );
+
+    expect(store().settled[0]).toMatchObject({ toolUseId: null, answeredHere: false });
+  });
+
+  it('says the answer was this screen’s when it was answering and nobody else won — plan 09, B-23', () => {
+    store().apply(requested());
+    store().markAnswering('req-1');
+    store().apply(
+      event('permission.resolved', {
+        requestId: 'req-1',
+        decision: 'deny',
+        auto: false,
+        resolvedBy: 'auth|1',
+        resolvedFrom: 'web',
+      }),
+    );
+
+    expect(store().settled[0]?.answeredHere).toBe(true);
+  });
+
+  it('says a phone won the race, even with an answer of ours in flight — plan 09, S-62', () => {
+    store().apply(requested());
+    store().markAnswering('req-1');
+    store().apply(
+      event('permission.resolved', {
+        requestId: 'req-1',
+        decision: 'allow',
+        auto: false,
+        resolvedBy: 'auth|1',
+        resolvedFrom: 'mobile',
+      }),
+    );
+
+    expect(store().settled[0]).toMatchObject({ answeredHere: false, resolvedFrom: 'mobile' });
   });
 
   it('records a decision nobody made as an automatic one', () => {
@@ -117,6 +173,9 @@ describe('the permission queue', () => {
       decision: 'deny',
       auto: true,
       resolvedBy: null,
+      resolvedFrom: null,
+      toolUseId: 'toolu-1',
+      answeredHere: false,
     });
   });
 
@@ -193,6 +252,24 @@ describe('the permission queue', () => {
 
     expect(store().pending).toEqual([]);
     expect(store().settled[0]).toMatchObject({ decision: 'deny', auto: true });
+  });
+
+  it('knows no tool for an expired request that named none', () => {
+    store().apply(requested({ toolUseId: '' }));
+
+    store().expire('req-1');
+
+    expect(store().settled[0]?.toolUseId).toBeNull();
+  });
+
+  it('lets a card take the focus once, on arrival — and again after a sign-out — plan 09, D-13', () => {
+    expect(claimArrival('req-1')).toBe(true);
+    expect(claimArrival('req-1')).toBe(false);
+    expect(claimArrival('req-2')).toBe(true);
+
+    forgetPermissionQueues();
+
+    expect(claimArrival('req-1')).toBe(true);
   });
 
   it('expiring something that already left changes nothing', () => {

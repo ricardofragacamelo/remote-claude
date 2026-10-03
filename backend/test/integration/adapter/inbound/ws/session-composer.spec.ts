@@ -190,6 +190,29 @@ describe('the composer of the panel', () => {
       ).toContain('Read');
     });
 
+    it('says the prompt as it was typed, by whom, before the answer, under the id the conversation keeps it — S-273', async () => {
+      const socket = await connect();
+      socket.send(commandFrame('session.start', { workspacePath: workspace }));
+      const opened = await until(socket, ofType('session.started'));
+      const sessionId = String(opened.payload?.['sessionId']);
+      const conversationId = String(opened.payload?.['claudeSessionId']);
+
+      await prompted(socket, sessionId, 'what does it say?', [{ path: 'notes.md' }]);
+      const said = await until(socket, ofType('message.completed'));
+      await until(socket, ofType('turn.completed'));
+
+      expect(said.payload).toEqual({
+        messageId: expect.any(String) as unknown,
+        role: 'user',
+        content: [{ type: 'text', text: 'what does it say?' }],
+        promptedBy: 'web',
+      });
+      const stored = await store.getSessionMessages(conversationId);
+      expect(stored.find((message) => message.type === 'user')?.uuid).toBe(
+        said.payload?.['messageId'],
+      );
+    });
+
     it('takes an absolute path inside the folder, and names it relative to it', async () => {
       const socket = await connect();
       const sessionId = await started(socket);

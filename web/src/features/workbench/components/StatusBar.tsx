@@ -55,20 +55,30 @@ export function StatusBar({ tab }: StatusItemProps): React.JSX.Element {
   return (
     <footer
       aria-label={t('status.bar.label')}
-      className="flex h-statusbar shrink-0 items-center justify-between gap-2 bg-statusbar px-2 text-ui-sm text-statusbar-foreground"
+      className="flex h-touch shrink-0 items-center justify-between gap-2 bg-statusbar px-2 text-ui-sm text-statusbar-foreground md:h-statusbar"
     >
-      <Side items={sideOf(items, 'left')} tab={tab} />
-      <Side items={sideOf(items, 'right')} tab={tab} />
+      <Side items={sideOf(items, 'left')} tab={tab} className="min-w-0 flex-1 overflow-x-auto" />
+      <Side items={sideOf(items, 'right')} tab={tab} className="min-w-0 overflow-x-auto" />
     </footer>
   );
 }
 
+/**
+ * One side of the bar. Each scrolls within itself when the bar is narrow — on a phone, once a session
+ * puts its status and its changes at the left and the editor its position and language at the right —
+ * so the page never does (plan 08, S-268; 07, S-288). The folder's side gives way first: the app's
+ * keeps the width of what it holds while it fits.
+ */
 function Side({
   items,
   tab,
-}: StatusItemProps & { readonly items: readonly StatusItemEntry[] }): React.JSX.Element {
+  className,
+}: StatusItemProps & {
+  readonly items: readonly StatusItemEntry[];
+  readonly className: string;
+}): React.JSX.Element {
   return (
-    <div className="flex min-w-0 items-center gap-1">
+    <div className={cn('flex items-center gap-1', className)}>
       {items.map((item) => {
         const Item: ComponentType<StatusItemProps> = item.component;
         return <Item key={item.id} tab={tab} />;

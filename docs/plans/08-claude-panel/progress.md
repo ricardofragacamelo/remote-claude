@@ -10,9 +10,9 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F5 concluída — a F6 é a próxima. A troca do `@` para o localizador saiu para o plano 11 (B-25)
+**Fase corrente:** F6 concluída — o plano 08 está completo. A troca do `@` para o localizador saiu para o plano 11 (B-25)
 **Última atualização:** 2026-10-02
-**Validação:** `pnpm verify:full` de 2026-10-02 com os onze portões verdes (saída 0; e2e 88/88), depois dos ciclos 15–20
+**Validação:** `pnpm verify:full` de 2026-10-02 com os onze portões verdes (saída 0; e2e 102/102), depois dos ciclos 21–28; `pnpm test:e2e:mobile` 15/15 e `pnpm test:e2e:live` 3/3
 **Bloqueios:** nenhum
 
 ```
@@ -22,7 +22,7 @@ F2 ████████████████████ 100%   ✅ concl
 F3 ████████████████████ 100%   ✅ concluída
 F4 ████████████████████ 100%   ✅ concluída
 F5 ████████████████████ 100%   ✅ concluída
-F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
+F6 ████████████████████ 100%   ✅ concluída
 ```
 
 ---
@@ -39,8 +39,8 @@ F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 | [F3](F3-diffs.md) | B-25…B-31 | 7/7 | ✅ |
 | [F4](F4-chat-panel.md) | B-32…B-43 | 12/12 | ✅ |
 | [F5](F5-composer-and-context.md) | B-44…B-52 | 9/9 | ✅ |
-| [F6](F6-e2e.md) | B-53…B-58 | 0/6 | 🔲 |
-| **Total** | **B-01…B-58** | **52/58** | 🔄 |
+| [F6](F6-e2e.md) | B-53…B-58 | 6/6 | ✅ |
+| **Total** | **B-01…B-58** | **58/58** | ✅ |
 
 ---
 
@@ -48,7 +48,7 @@ F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 272 | 18 | 0 | 254 | 0 |
+| [Matriz](scenarios.md) | 275 | 0 | 0 | 275 | 0 |
 
 ---
 
@@ -90,6 +90,14 @@ Um registro por **ciclo**, conforme o
 | 18 | 2026-10-02 | F5 | unit (portão 6) — `test/unit/env-example.spec.mjs` | as variáveis do composer no `.env.example` com um comentário só para o bloco, não um acima de cada | um comentário logo acima de cada variável | verde |
 | 19 | 2026-10-02 | F5 | cobertura (portão 7) — a integração S-30 do plano 04, e cinco arquivos do backend e doze do web abaixo de 90 % | o menu ganhou `builtin`/`origin`/`label`/`shadowed` e o S-30 comparava o objeto exato; ramos inalcançáveis (`?? ''` de grupo de regex, `isUtf8` depois do sniff, um efeito redundante de upload no `useContextSet`, `?? ''` em `queryFn` que só roda com sessão); e casos sem teste. Na medida apareceu um defeito: a sondagem que falha no envio fazia o texto sumir | a expectativa do S-30; os ramos inalcançáveis saíram por desenho (`skipToken`, fatias, o efeito removido); `uploadHeld` no serviço, `asAppError` e `completion-keys` em `lib/`, com unit; integração do arrastar que sai, do arquivo repetido, do socket caído no envio e no primeiro prompt, do upload recusado no rascunho, do catálogo com modelos. O `revalidate` passou a deixar como estava o arquivo que não pôde reler (o backend decide), com log | — |
 | 20 | 2026-10-02 | F5 | e2e (portão 9 do `verify:full`) — 05·S-43; os outros 87 passaram | o `send` do e2e clicava no Send, que no composer novo fica sob a área dos toasts; o toast "conexão perdida" do martelo de frames ficava na tela porque o Sonner pausa o temporizador com o ponteiro em cima — e o Playwright, esperando para clicar, mantinha o ponteiro ali até a sessão ser colhida por ociosidade (20 s na pilha de limites). Reproduzido sozinho; no HEAD, num worktree, o mesmo cenário passa | o `send` envia com Enter na caixa, como a B-46 define, depois de conferir o botão habilitado; nenhum código do produto mudou; S-43 sozinho verde, `verify:full` de novo do portão 1 | — |
+| 21 | 2026-10-02 | F6 | e2e novo da B-53 (portão 9, só os specs da fase) — S-257 | o prompt não aparecia na conversa, nem antes nem depois de recarregar: o CLI não ecoa o prompt do streaming input, e o backend não publicava o `message.completed` de papel `user` que o contrato já previa | o backend diz o prompt ao entregá-lo ao Claude, sob o `uuid` do `SDKUserMessage` (decisão da F6); unit e integração (S-273); a contagem da 04·S-46 passou a somar o prompt | verde |
+| 22 | 2026-10-02 | F6 | integração do backend (portão 8) — S-204 | o eco levava o prompt **composto**, e o log de frame de saída citava a saída de um provedor de contexto | o eco leva o texto digitado (`extras.typed`); o composto vai só ao Claude e à conversa | verde |
+| 23 | 2026-10-02 | F6 | e2e novo da B-55 (portão 9) — S-263 | aprovado o plano, o cabeçalho continuava em "Plan": o `useSetPermissionMode` mandava o comando sem anotar o modo no store | o hook anota o modo enviado, como o seletor do cabeçalho; unit (S-275) | verde |
+| 24 | 2026-10-02 | F6 | e2e novo da B-56 (portão 9) — S-267 e S-268 | o editar-e-reenviar não enviava nada: o store da sessão nascida no rascunho descartava o `session.started` que chegava depois dos primeiros frames, e ficava sem conversa; num telefone a página rolava de lado (a status bar), e o axe acusou o diff que rola sem foco | `lateStart` no store (S-274); o lado da pasta da status bar rola em si; o grupo do diff focável, com a supressão justificada; `widerThanThePage` diz o que passa da borda | verde |
+| 25 | 2026-10-02 | F6 | `pnpm test:e2e:live` — os três specs | a variante `command_lifecycle`, que o CLI manda para um prompt com `uuid` (novo da F6), caía no ramo desconhecido; e o S-271 perguntava pelo código de um arquivo que o turno de antes tinha lido | o mapper a conhece como silenciosa, gravada em `stamped-turn` (discovery §10.10); o S-271 pergunta por `secret.md`, que nada leu antes | verde (3/3) |
+| 26 | 2026-10-02 | F6 | lint (portão 2) | complexidade 12 no teste da S-267; `jsx-a11y/no-noninteractive-tabindex` no grupo focável do diff | o editar-e-reenviar do teste numa função; a supressão justificada na linha (a regra contradiz o `scrollable-region-focusable` do axe) | verde |
+| 27 | 2026-10-02 | F6 | e2e (portão 9 do `verify:full`) — 07·S-288; os outros 101 passaram | o lado do app da status bar, que a F6 tinha deixado sem encolher, recebe também os itens do editor (linha, codificação, linguagem): num telefone, com um arquivo aberto, ele passou 169 px da borda e a página rolou de lado | os dois lados rolam em si; o da pasta cede primeiro. O assert da S-288 passou a dizer o que passa da borda (`widerThanThePage`). Os testes de telefone (06·S-161, 07·S-288, 08·S-268) verdes sozinhos; `verify:full` de novo do portão 1 | — |
+| 28 | 2026-10-02 | F6 | integração do backend (portão 8 do `verify:full`) — o plano de consulta da trilha (S-28 do plano 03) | o `INSERT` de 40 000 linhas que monta a trilha grande do teste estourou o `statement_timeout` do PostgreSQL (`57014`), com a máquina em carga 23 por processos de outro projeto; o teste passou no `verify:full` anterior e nada da trilha mudou | nenhum código mudou; `verify:full` de novo do portão 1 | — |
 
 ---
 
@@ -99,6 +107,17 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
+| 2026-10-02 | **O backend diz o prompt**: ao entregá-lo ao Claude (na hora, ou ao sair da fila, depois do `prompt.dequeued`) publica `message.completed { messageId, role: 'user', content, promptedBy }`; o `messageId` é o `uuid` com que o prompt vai no `SDKUserMessage` (a porta `ClaudeSessionHandle.prompt` passou a devolvê-lo) e o `content` é o texto **digitado** | o contrato já mandava `promptedBy` no `message.completed` de papel `user` e ninguém o emitia; o CLI não ecoa o prompt (discovery §10.10) — o painel mostrava respostas sem pergunta, e S-257/S-267 dependiam dele. O texto composto vazava a saída de um provedor no log de frame de saída (S-204, achado pela integração) | B-53, B-56, S-273; [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#multi-cliente-na-mesma-sessão); app e web sem mudança (os dois já desenham o papel `user`) |
+| 2026-10-02 | O mapper conhece `command_lifecycle` como silenciosa (`QUIET_TYPES`), gravada em `stamped-turn` | com o `uuid` no prompt, o CLI responde com esse `type`, que a união tipada do SDK não nomeia; o primeiro `smoke-live` da F6 o viu como variante desconhecida. A fila é do backend (D-14) e já diz o que ele diz | B-58; discovery §10.10; `scripts/record-agent-sdk-fixtures.mjs` (`stamped`) |
+| 2026-10-02 | Um `session.started` que chega depois de frames que o seguem ainda vale no store do web (`lateStart`), sem passar por cima do que um frame posterior disse | a sessão nascida no rascunho ouve seus frames ao vivo antes de o replay do attach trazer o início; o store o descartava por `seq` e ficava sem conversa, modelo, modo e pasta — o editar-e-reenviar não enviava nada (achado pelo e2e, S-267). O eco do prompt tornou a corrida certa | B-56, S-274; [web/04](../../architecture/web/04-state-and-data.md) |
+| 2026-10-02 | Aprovar o plano anota o modo escolhido no store da sessão, como o seletor do cabeçalho faz (`useSetPermissionMode`) | o cabeçalho ficava dizendo "Plan" com o Claude já seguindo noutro modo (achado pelo e2e, S-263) | B-55, S-275 |
+| 2026-10-02 | Na status bar, os dois lados rolam em si (`overflow-x-auto`), e o da pasta cede primeiro (`flex-1`); o do app fica com a largura do que tem enquanto cabe | num telefone, com o status e as alterações de uma sessão, o tema e as notificações saíam da tela e a página rolava de lado (achado pelo e2e, S-268) | B-56, S-268; status bar do plano 06 |
+| 2026-10-02 | O grupo de um diff (`DiffHunks`) é focável (`tabIndex={0}`), com a supressão justificada de `jsx-a11y/no-noninteractive-tabindex` na linha | as linhas rolam de lado nele num telefone, e o axe exige que a região que rola seja alcançável por teclado (WCAG 2.1.1, `scrollable-region-focusable`); as duas regras de máquina se contradizem aqui, e o critério de acessibilidade é o que vale | B-56, S-268 |
+| 2026-10-02 | A conversa **externa ativa** do e2e é plantada por `POST /e2e/conversations-elsewhere`, rota montada só no `scripted-main.ts`, que chama o `add` do store com as mensagens de uma gravação | o store do fake vive no processo do backend; a conversa externa é a única que o produto não pode produzir (o que a faz externa é ele nunca a ter aberto) e, como pede a F6, nasce das funções do store, não de um JSONL à mão. O `main.ts` não tem a rota | B-56, S-264 |
+| 2026-10-02 | O fake grava o prompt sob o `uuid` com que ele veio, e só escreve arquivos dentro do diretório da sessão | o CLI real faz o primeiro (`forkSession`, `upToMessageId`), e o fork do editar-e-reenviar parte dele; a gravação `plan-turn` escreve o plano em `~/.claude/plans/` da máquina gravada, e o replay escreveria na home de quem roda a suíte | B-55, B-56 |
+| 2026-10-02 | `commands.json` regravado com uma skill do projeto (`release-notes`) em `.claude/skills/` do workspace do catálogo: o CLI a lista sem `builtin` e com "(project)" na descrição | S-259 pede a skill do projeto da fixture; a gravação anterior era de um workspace vazio, só com o que é do Claude Code | B-54, S-259 |
+| 2026-10-02 | No e2e, a linha e a trilha das tools que não escrevem (`Read`, `Bash`) mostram o input da gravação (`/workspace/notes.md`) | o fake só move para a pasta da sessão o input das tools de arquivo que ele executa; o das outras fica o da gravação, porque as regras das suítes casam nele. Os specs casam o nome do arquivo, não o caminho | B-53, B-54 |
+| 2026-10-02 | S-260 é provado numa sessão; S-271 pergunta por um arquivo que nada leu antes (`secret.md`) | o rascunho recusado já é da integração (S-223, S-236); a primeira versão do `smoke-live` perguntava pelo código de `notes.md`, que o turno de antes acabara de ler pelo `Read` — o modelo o sabia pelo contexto, não por expansão | B-54, B-58 |
 | 2026-10-02 | A troca do `@` para o localizador (a B-59 desta fase) saiu para o **plano 11, como B-25 da F2**; a D-12 ganhou essa emenda | pedido do usuário: a task fica no plano que traz a fonte — o `useFileFinder` da B-13 do 11 —, que é quando ela pode ser feita. A F5 fecha com o que entregou (B-44…B-52) | F5, D-12; [11 · B-25](../11-search/F2-search-ui.md#b-25--o--do-composer-do-08-passa-ao-localizador-), S-172…S-174 do 10 |
 | 2026-10-02 | **D-12 no passo provisório**: o `@` completa **por nível** sobre `GET /files/tree` do plano 07 (`@src/co` lista `src` e procura `co` nele, letras em ordem), com os abertos e os recentes do editor primeiro; a troca para o fuzzy do `GET /search/files` é a **B-25 do plano 11** | o plano 11 não começou; a D-12 manda o passo provisório registrado e a troca como task — nunca uma diferença calada. S-226, S-228 e S-229 foram verificados contra a fonte provisória | B-48; [11 · B-25](../11-search/F2-search-ui.md#b-25--o--do-composer-do-08-passa-ao-localizador-) |
 | 2026-10-02 | O `@caminho` do texto livre é neutralizado com um `WORD JOINER` (U+2060) antes de todo `@` que começa palavra; um `@` dentro de palavra (`a@b.com`) fica | lido no binário do CLI 2.1.277: a expansão casa `(^\|\s\|。、？！)@…` — com o caractere invisível antes, o `@` deixa de casar, e o modelo lê o arquivo, se quiser, pelo `Read`. O `smoke-live` da F6 é quem vigia a premissa num CLI novo | B-44, R-10; [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#o-contexto-do-prompt--attachments) |

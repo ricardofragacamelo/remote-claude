@@ -44,6 +44,11 @@ See [S-83](../../docs/plans/01-live-session/scenarios.md) and
 |---|---|---|
 | `sdk-contract.spec.ts` | [01 · S-83](../../docs/plans/01-live-session/scenarios.md) | a real turn answers, and every message of it maps |
 | `commands-and-init.spec.ts` | [04 · S-52](../../docs/plans/04-transcript-and-resume/scenarios.md) | `supportedCommands()` lists this installation's commands, `/init` among the suggested; `/init` asks for its `Write` through the normal flow and finishes, and the file is there |
+| `claude-panel.spec.ts` | [08 · S-270…S-272](../../docs/plans/08-claude-panel/scenarios.md) | a reference is read by a `Read` the trail records; `@notes.md` in the text never reaches the model behind the hook's back; `supportedModels()`, `mcpServerStatus()` and `getContextUsage()` answer; a skill of the project is listed under the name the menu inserts; an image reaches the model; thinking and a subagent come shaped as the recordings are |
+
+`claude-panel.spec.ts` runs in a folder made for the run too — a `notes.md` with a codeword of the
+run, and the skill in `.claude/skills/` — and lets through only reading inside it. The skills of the
+user and of the system belong to plan 13, and are asserted once it exists.
 
 `/init` **writes into the project**, so it never runs against a fixed repository or against ours: the
 spec makes one for the run — `git init` in a folder of its own inside the allowlist, two files, one

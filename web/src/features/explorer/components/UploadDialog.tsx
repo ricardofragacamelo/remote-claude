@@ -6,7 +6,7 @@ import type { Transfer } from '../hooks/useTransfer';
 import { choicesOf } from '../lib/upload-plan';
 import type { Conflict } from '../lib/upload-plan';
 import type { ConflictChoice } from '../types/transfer';
-import { ExplorerDialog } from './ExplorerDialog';
+import { DialogFrame } from '@/shared/components/DialogFrame';
 
 export interface UploadDialogProps {
   readonly transfer: Transfer;
@@ -74,7 +74,7 @@ export function UploadDialog({ transfer }: UploadDialogProps): React.JSX.Element
   );
 
   return (
-    <ExplorerDialog
+    <DialogFrame
       open={asking !== null}
       onClose={transfer.cancel}
       title={t('explorer.upload.conflictsTitle', { count: asking?.conflicts.length ?? 0 })}
@@ -97,6 +97,6 @@ export function UploadDialog({ transfer }: UploadDialogProps): React.JSX.Element
           />
         ))}
       </ul>
-    </ExplorerDialog>
+    </DialogFrame>
   );
 }

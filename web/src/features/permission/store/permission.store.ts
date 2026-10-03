@@ -74,7 +74,7 @@ export function createPermissionQueueStore(): PermissionQueueStore {
           return {
             ...state,
             pending: without(state.pending, outcome.requestId),
-            settled: [...state.settled, outcome],
+            settled: [...state.settled, settledOf(outcome, state.pending)],
           };
         }
 
@@ -100,18 +100,28 @@ export function createPermissionQueueStore(): PermissionQueueStore {
       set((state) => ({ ...state, pending: answering(state.pending, requestId, false) })),
 
     expire: (requestId) =>
-      set((state) =>
-        state.pending.some((request) => request.requestId === requestId)
-          ? {
+      set((state) => {
+        const expired = state.pending.find((request) => request.requestId === requestId);
+
+        return expired === undefined
+          ? state
+          : {
               ...state,
               pending: without(state.pending, requestId),
               settled: [
                 ...state.settled,
-                { requestId, decision: 'deny' as const, auto: true, resolvedBy: null },
+                {
+                  requestId,
+                  decision: 'deny' as const,
+                  auto: true,
+                  resolvedBy: null,
+                  resolvedFrom: null,
+                  toolUseId: expired.toolUseId === '' ? null : expired.toolUseId,
+                  answeredHere: false,
+                },
               ],
-            }
-          : state,
-      ),
+            };
+      }),
 
     reset: () => {
       set({ pending: [], settled: [] });
@@ -137,9 +147,46 @@ export function permissionQueueOf(sessionId: string): PermissionQueueStore {
   return created;
 }
 
+/** The requests whose card has had its one chance to take the focus. */
+const arrived = new Set<string>();
+
+/**
+ * Whether this is the first time the card of `requestId` is drawn — the only moment it may take the
+ * focus (plan 09, D-13). A card drawn again — moved to the place of its tool, or shown again with its
+ * tab — never takes it a second time.
+ */
+export function claimArrival(requestId: string): boolean {
+  if (arrived.has(requestId)) {
+    return false;
+  }
+
+  arrived.add(requestId);
+  return true;
+}
+
 /** Drops every queue — what a sign-out calls for, and what keeps one test from seeing another's. */
 export function forgetPermissionQueues(): void {
   queues.clear();
+  arrived.clear();
+}
+
+/**
+ * How a request left the queue, with what only the card knew: the tool it was about, and whether the
+ * answer that won is the one this screen sent — a phone that won the race answered it, not us.
+ */
+function settledOf(
+  outcome: PermissionOutcome,
+  pending: readonly PermissionRequest[],
+): PermissionOutcome {
+  const asked = pending.find((request) => request.requestId === outcome.requestId);
+
+  return asked === undefined
+    ? outcome
+    : {
+        ...outcome,
+        toolUseId: asked.toolUseId === '' ? null : asked.toolUseId,
+        answeredHere: asked.isAnswering && !outcome.auto && outcome.resolvedFrom !== 'mobile',
+      };
 }
 
 function without(

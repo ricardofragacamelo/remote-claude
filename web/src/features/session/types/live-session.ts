@@ -133,6 +133,18 @@ export type TimelineEntry =
       readonly id: string;
       readonly trigger: string;
       readonly preTokens: number | null;
+    }
+  | {
+      /** The files of the session were put back (plan 09, B-28). */
+      readonly kind: 'rewound';
+      readonly id: string;
+
+      /** Put back, or deleted because the turn had created them. */
+      readonly restored: number;
+
+      /** Left as they were, each with its reason. */
+      readonly kept: number;
+      readonly failed: number;
     };
 
 /**
@@ -152,4 +164,10 @@ export interface Conversation {
   readonly turns: readonly TurnSummary[];
   readonly lastTurn: TurnSummary | null;
   readonly ending: SessionEnding | null;
+
+  /**
+   * When the turn running began, by the server's clock — `null` with no turn running, and from the
+   * history, which keeps no instant (plan 09, B-21).
+   */
+  readonly turnSince: string | null;
 }

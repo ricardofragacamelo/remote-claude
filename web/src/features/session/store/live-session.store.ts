@@ -4,7 +4,12 @@ import type { Envelope } from '@remote-claude/contracts';
 
 import { readText } from '@/shared/lib/json';
 import { rewoundOf } from '../services/checkpoint.service';
-import { conversationOfStart, readEvent, withHistory } from '../services/live-session.service';
+import {
+  conversationOfStart,
+  readEvent,
+  SILENT,
+  withHistory,
+} from '../services/live-session.service';
 import { queueAfter } from '../services/queue.service';
 import type { RewindOutcome } from '../types/checkpoint';
 import type { HistoryEvent } from '../types/history';
@@ -59,9 +64,12 @@ export interface LiveSessionState extends Conversation {
   /** The folder the session runs in, as `session.started` said — where a fork of it starts. */
   readonly workspacePath: string | null;
 
-  /** What this browser changed them to: the server acknowledges, it does not echo (B-36). */
-  noteModel(model: string): void;
-  noteMode(mode: string): void;
+  /**
+   * What this browser changed them to: the server acknowledges, it does not echo (B-36). A change
+   * refused puts back what was there, unknown included (plan 09, S-23).
+   */
+  noteModel(model: string | null): void;
+  noteMode(mode: string | null): void;
 
   /** Applies one frame from the stream. */
   apply(frame: Envelope): void;
@@ -93,14 +101,9 @@ export interface LiveSessionOptions {
 
 /** A session nothing has been said in yet. */
 const EMPTY = {
+  ...SILENT,
   status: 'starting' as SessionStatus,
   lastSeq: 0,
-  messages: [],
-  tools: [],
-  timeline: [],
-  turns: [],
-  lastTurn: null,
-  ending: null,
   isPartial: false,
   conversationId: null,
   historyFrom: null,
@@ -150,13 +153,14 @@ export function createLiveSessionStore(
       set((state) => {
         const seq = frame.seq;
 
+        const started = conversationOfStart(frame);
+
         // A `request` frame carries no `seq` — a question is not part of the history — and belongs
         // to the permission queue, not to the conversation.
         if (seq === undefined || seq <= state.lastSeq) {
-          return state;
+          return seq === undefined || started === null ? state : lateStart(frame, started, state);
         }
 
-        const started = conversationOfStart(frame);
         const rewound = rewoundOf(frame);
 
         return {
@@ -214,6 +218,34 @@ function runsWith(
     model: readText(payload, 'model') ?? state.model,
     permissionMode: readText(payload, 'permissionMode') ?? state.permissionMode,
     workspacePath: readText(payload, 'workspacePath') ?? state.workspacePath,
+  };
+}
+
+/**
+ * A `session.started` that arrived after frames that followed it — what a session born in a draft
+ * hears: its first frames live, on the connection that started it, before the replay of its attach
+ * brings the start back. Nothing else says which conversation the session is, nor how it runs, so it
+ * is never old news: what it says is taken, unless a later frame already said it (found by the e2e,
+ * plan 08, S-267).
+ */
+function lateStart(
+  frame: Envelope,
+  started: NonNullable<ReturnType<typeof conversationOfStart>>,
+  state: LiveSessionState,
+): LiveSessionState {
+  if (state.conversationId !== null) {
+    return state;
+  }
+
+  const said = runsWith(frame, state);
+
+  return {
+    ...state,
+    model: state.model ?? said.model,
+    permissionMode: state.permissionMode ?? said.permissionMode,
+    workspacePath: state.workspacePath ?? said.workspacePath,
+    conversationId: started.claudeSessionId,
+    historyFrom: state.historyFrom ?? started.resumedFrom,
   };
 }
 

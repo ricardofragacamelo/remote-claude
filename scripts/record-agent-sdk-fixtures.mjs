@@ -25,6 +25,7 @@
  *   pnpm fixtures:record --normalise   # re-apply the normalisation to what is committed, no SDK
  */
 
+import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -305,6 +306,12 @@ const SCENARIOS = [
     files: {},
   },
   {
+    name: 'stamped-turn',
+    why: 'plan 08, F6 — the prompt streamed with a uuid, as the backend streams it: the CLI answers with `command_lifecycle` frames the typed union of the SDK does not name',
+    prompts: [{ text: 'Reply with exactly the word: pong. Do not use any tool.', stamped: true }],
+    files: {},
+  },
+  {
     name: 'long-tool-turn',
     why: 'D-06 — how long a transcript goes unwritten while one tool runs: the window of "active elsewhere"',
     prompt:
@@ -324,7 +331,17 @@ const SCENARIOS = [
  */
 const CATALOGUE = {
   name: 'commands',
-  why: 'what supportedCommands() answers, dead and internal entries included — the menu filters them by metadata',
+  why: 'what supportedCommands() answers, dead and internal entries included — the menu filters them by metadata; with a skill of the project, which the menu badges as such (plan 08, S-259)',
+  // A skill of the project, in the place the CLI reads it with `settingSources: ['project']`: what
+  // the menu of `/` shows as the project's, and what the e2e chooses to fire (plan 08, B-54).
+  files: {
+    '.claude/skills/release-notes/SKILL.md':
+      '---\n' +
+      'name: release-notes\n' +
+      'description: Summarise what changed in this project since the last release, in three bullets.\n' +
+      '---\n\n' +
+      'Read what changed since the last tag and write three bullets for the release notes.\n',
+  },
 };
 
 /**
@@ -369,6 +386,7 @@ function makeWorkspace(files) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'rc-fixture-'));
 
   for (const [name, content] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(directory, name)), { recursive: true });
     fs.writeFileSync(path.join(directory, name), content, 'utf8');
   }
 
@@ -378,12 +396,13 @@ function makeWorkspace(files) {
 /**
  * The prompts of a scenario, each as a step: what to send, and when.
  *
- * A step is a string, or `{ text | content, before?, when? }`: `content` is a list of blocks of the
+ * A step is a string, or `{ text | content, before?, when?, stamped? }`: `content` is a list of blocks of the
  * Messages API (the image of D-02); `before` names an action run on the live query just before the
  * step is sent (`effortLow`, for D-16); `when: 'midTurn'` sends it while the previous turn is still
- * running — as soon as that turn announces its first tool — instead of after its result (D-14).
+ * running — as soon as that turn announces its first tool — instead of after its result (D-14);
+ * `stamped` sends it with a uuid of its own, as the backend does (plan 08, F6).
  *
- * @typedef {{ text?: string, content?: unknown[], before?: string, when?: 'midTurn' }} Step
+ * @typedef {{ text?: string, content?: unknown[], before?: string, when?: 'midTurn', stamped?: boolean }} Step
  * @param {Scenario} scenario
  * @returns {Step[]}
  */
@@ -403,6 +422,9 @@ function userMessage(step) {
     type: 'user',
     message: { role: 'user', content: step.content ?? step.text ?? '' },
     parent_tool_use_id: null,
+    // With the uuid the backend streams every prompt with since plan 08, F6 — what the CLI files
+    // the prompt under, and what it answers `command_lifecycle` frames about.
+    ...(step.stamped === true ? { uuid: randomUUID() } : {}),
   };
 }
 
@@ -692,7 +714,7 @@ async function record(query, scenario) {
  * @param {(params: unknown) => { supportedCommands(): Promise<unknown[]>, close(): void }} query
  */
 async function recordCatalogue(query) {
-  return idleSession(query, (session) => session.supportedCommands());
+  return idleSession(query, (session) => session.supportedCommands(), CATALOGUE.files);
 }
 
 /**
@@ -715,10 +737,11 @@ async function recordInstallation(query) {
  * @template T
  * @param {(params: unknown) => any} query
  * @param {(session: any) => Promise<T>} ask
+ * @param {Record<string, string>} [files] what the workspace is seeded with
  * @returns {Promise<T>}
  */
-async function idleSession(query, ask) {
-  const workspace = makeWorkspace({});
+async function idleSession(query, ask, files = {}) {
+  const workspace = makeWorkspace(files);
   // An iterable whose first `next()` never settles: the CLI waits for a prompt that never comes.
   const idle = { [Symbol.asyncIterator]: () => ({ next: () => new Promise(() => undefined) }) };
 

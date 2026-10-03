@@ -107,8 +107,10 @@ export interface ClaudeSessionHandle {
    * @param text what Claude reads — composed already, mentions guarded (plan 08, B-44)
    * @param extras the images that go beside it, and what the log may say of its context — never the
    *   content (S-204)
+   * @returns the id of the message, the one the conversation keeps it under — what an edit-and-resend
+   *   forks from (plan 08, D-19)
    */
-  prompt(text: string, extras?: PromptExtras): void;
+  prompt(text: string, extras?: PromptExtras): string;
 
   interrupt(): Promise<void>;
   setModel(model: string): Promise<void>;

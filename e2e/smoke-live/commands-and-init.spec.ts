@@ -3,12 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { expect, test } from '@playwright/test';
-import type { Envelope } from '@remote-claude/contracts';
 
 import { callApi } from '../fixtures/api';
-import { unknownVariants } from '../fixtures/backend-log';
 import { startConversation } from '../fixtures/history';
-import { closeSession, connected, workspaceFor } from '../fixtures/live-session';
+import { connected, workspaceFor } from '../fixtures/live-session';
+import { answeredUntilTheTurnEnds, endedWithEveryMessageKnown } from '../fixtures/live-turns';
 import { scenario } from '../scenarios';
 
 /**
@@ -75,52 +74,6 @@ function inside(directory: string, candidate: unknown): boolean {
   return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
 }
 
-/**
- * Answers every question of the turn until it ends: a write inside the repository is allowed, and
- * anything else is refused, as a careful person would. Answered at once — the deadline of this
- * stack is seconds.
- *
- * @returns each question, as `tool:allowed`
- */
-async function answeredUntilTheTurnEnds(
-  socket: Awaited<ReturnType<typeof connected>>,
-  repository: string,
-): Promise<readonly string[]> {
-  const answered = new Set<string>();
-  const asked: string[] = [];
-
-  for (;;) {
-    const next: Envelope = await socket.waitFor(
-      (frame) =>
-        (frame.type === 'permission.requested' && !answered.has(frame.id)) ||
-        frame.type === 'turn.completed',
-      540_000,
-    );
-
-    if (next.type === 'turn.completed') {
-      return asked;
-    }
-
-    answered.add(next.id);
-    const payload = next.payload as { requestId: string; toolName: string; input?: unknown };
-    const target = (payload.input as { file_path?: unknown } | undefined)?.file_path;
-    const allowed = WRITING_TOOLS.has(payload.toolName) && inside(repository, target);
-
-    socket.respond(
-      next,
-      allowed
-        ? { requestId: payload.requestId, decision: 'allow', scope: 'once' }
-        : {
-            requestId: payload.requestId,
-            decision: 'deny',
-            reason: 'smoke-live lets through only the write of /init',
-            scope: 'once',
-          },
-    );
-    asked.push(`${payload.toolName}:${String(allowed)}`);
-  }
-}
-
 test(`${live.id} — ${live.title}`, async () => {
   const expected = live.expect as { command: string; toolName: string; file: string };
   const repository = throwawayRepository(context().workspace);
@@ -140,8 +93,17 @@ test(`${live.id} — ${live.title}`, async () => {
     });
     expect(menu.commands.some((command) => command.name.startsWith('__'))).toBe(false);
 
+    // Of the questions the real `/init` asks, only a write inside the repository is let through.
+    const mark = socket.frames.length;
     socket.send('session.prompt', { sessionId, text: `/${expected.command}` });
-    const asked = await answeredUntilTheTurnEnds(socket, repository);
+    const { asked } = await answeredUntilTheTurnEnds(
+      socket,
+      (question) =>
+        WRITING_TOOLS.has(question.toolName) &&
+        inside(repository, (question.input as { file_path?: unknown } | undefined)?.file_path),
+      'smoke-live lets through only the write of /init',
+      mark,
+    );
 
     expect(asked).toContain(`${expected.toolName}:true`);
     expect(fs.existsSync(path.join(repository, expected.file))).toBe(true);
@@ -152,8 +114,7 @@ test(`${live.id} — ${live.title}`, async () => {
     ).json()) as Menu;
     expect(after.cliVersion).toMatch(/^\d+\.\d+\.\d+/);
 
-    await closeSession(socket, sessionId);
-    expect(unknownVariants()).toEqual([]);
+    await endedWithEveryMessageKnown(socket, sessionId);
   } finally {
     socket.close();
     fs.rmSync(repository, { recursive: true, force: true });

@@ -1,0 +1,34 @@
+{
+  "id": "08·S-255…S-257",
+  "title": "the conversation rendered in the panel of Claude: markdown, compact tools and the diff opened in the editor; thinking, the task list and a nested subagent, live and after a reload; a reload in the middle of a turn",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "notes": "The project has two goals: be safe, and be fast.\n",
+    "toolTurn": "tool-turn",
+    "bold": "Read notes.md",
+    "listItems": 4,
+    "tools": {
+      "read": "Read \\S*notes\\.md",
+      "bash": "Bash: ls",
+      "write": "Write \\S*summary\\.md \\(2 lines\\)"
+    },
+    "wrote": "The project has two goals: safety and speed.",
+    "diffTab": "summary.md ↔ summary.md",
+    "thinkingTurn": "thinking-summarized-turn",
+    "thought": "Adding 14:35 and 2:47 gives 16:82",
+    "taskTurn": "task-tools-turn",
+    "tasksDone": "1/3",
+    "pendingTask": "Write b.txt",
+    "subagentTurn": "task-subagent-turn",
+    "subagentNotes": "The first line is about apples.\nThe second is about pears.\n",
+    "subagent": "Subagent (general-purpose): Read first line of notes.md",
+    "subagentSaid": "The first line is about apples.",
+    "heldTurn": "text-turn",
+    "heldAnswer": "pong",
+    "heldPrompt": "hold on [hold]",
+    "subagentRead": "Read \\S*notes\\.md"
+  }
+}

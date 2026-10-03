@@ -17,7 +17,7 @@ hoje (os seletores e os botões mudam de lugar na F2 e na F3). Muda a moldura e 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-04 — A secondary side bar deixa a rolagem para o filho 🔲
+### B-04 — A secondary side bar deixa a rolagem para o filho ✅
 
 Hoje o [SecondarySideBar](../../../web/src/features/workbench/components/SecondarySideBar.tsx) rola tudo
 (`overflow-y-auto` no contêiner), e a view Claude do celular, no `FolderShell`, também. Os dois passam a
@@ -25,7 +25,7 @@ dar ao filho **altura definida** (`min-h-0 flex-1`, sem overflow), e o painel de
 bar só tem o Claude como filho. Se outro plano registrar outra coisa ali, a regra é a mesma: o filho
 rola por conta própria.
 
-### B-05 — `ChatFrame`: as três faixas e o único scroller 🔲
+### B-05 — `ChatFrame`: as três faixas e o único scroller ✅
 
 Uma grade `auto · 1fr · auto` com `h-full`. O scroller do meio é o **único** `overflow-y-auto` do painel,
 com `overscroll-contain` para a rolagem não vazar para a página. O `useFollowTail` passa a observar esse
@@ -33,7 +33,7 @@ scroller. Hoje ele observa a `div` da conversa, que não rola, e por isso o fim 
 (S-07). O pane "Alterações" troca **só** o conteúdo do scroller: o composer, o texto escrito e o
 contexto ficam (S-08).
 
-### B-06 — A sessão sem card, e os estados em faixas 🔲
+### B-06 — A sessão sem card, e os estados em faixas ✅
 
 A `SessionScreen` deixa de ser um `<Panel>`: somem o título "Session", o id da sessão em texto e a linha
 "Connected". Os estados viram **faixas de uma linha** (`StateStrip`):
@@ -48,13 +48,13 @@ A `SessionScreen` deixa de ser um `<Panel>`: somem o título "Session", o id da 
 
 O id da sessão vai para o tooltip do status ([B-18](F3-header.md)).
 
-### B-07 — O rascunho na mesma moldura 🔲
+### B-07 — O rascunho na mesma moldura ✅
 
 A `DraftView` usa o `ChatFrame`: as dicas (`@`, `/`, arrastar, o atalho) ficam no scroller vazio, como o
 estado vazio do plugin, e a caixa fica ancorada embaixo. Os seletores de modelo, modo e esforço ficam
 onde estão até a [B-11](F2-composer.md) levá-los para a barra da caixa.
 
-### B-08 — Painel estreito, caixa alta, celular e teclado virtual 🔲
+### B-08 — Painel estreito, caixa alta, celular e teclado virtual ✅
 
 - **Painel estreito:** na largura mínima da [D-04](decisions.md#f1--moldura-do-painel), nada rola na
   horizontal. As abas do cabeçalho rolam na própria faixa.

@@ -1,5 +1,5 @@
 import { lazy, memo, Suspense, useDeferredValue } from 'react';
-import { ClipboardCopy, PencilLine } from 'lucide-react';
+import { ClipboardCopy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -12,6 +12,7 @@ import { IconButton } from '@/shared/components/IconButton';
 import { useCopy } from '@/shared/hooks/useCopy';
 import { cn } from '@/shared/lib/utils';
 import type { MessageBlock, StreamMessage } from '../../types/live-session';
+import { MessageActions } from './MessageActions';
 import { ThinkingBlock } from './ThinkingBlock';
 import type { TimelineContext } from './timeline-context';
 
@@ -65,11 +66,14 @@ function isResendable(message: StreamMessage, context: TimelineContext): boolean
     message.role === 'user' &&
     message.parentToolUseId === null &&
     message.text !== '' &&
-    context.onEditPrompt !== undefined
+    context.prompts !== undefined
   );
 }
 
-/** A message is drawn again only when it changed, or the search arrived at it or left it. */
+/**
+ * A message is drawn again only when it changed, the search arrived at it or left it, or what can
+ * be done from a prompt changed — a turn began, and the undo waits for it to end.
+ */
 function sameMessage(
   before: { readonly message: StreamMessage; readonly context: TimelineContext },
   after: { readonly message: StreamMessage; readonly context: TimelineContext },
@@ -79,7 +83,9 @@ function sameMessage(
   return (
     before.message === after.message &&
     before.context.folder === after.context.folder &&
-    (before.context.current === id) === (after.context.current === id)
+    (before.context.current === id) === (after.context.current === id) &&
+    before.context.prompts?.undoBlocked === after.context.prompts?.undoBlocked &&
+    (before.context.prompts?.onUndo === undefined) === (after.context.prompts?.onUndo === undefined)
   );
 }
 
@@ -105,7 +111,7 @@ export const MessageItem = memo(function MessageItem({
     <li
       data-message-id={message.messageId}
       aria-current={current ? 'true' : undefined}
-      className={cn('flex flex-col gap-1 rounded-md', current && 'ring-2 ring-ring')}
+      className={cn('group flex flex-col gap-1 rounded-md', current && 'ring-2 ring-ring')}
     >
       <ContextMenu>
         <ContextMenuTrigger asChild>
@@ -124,14 +130,8 @@ export const MessageItem = memo(function MessageItem({
                   }}
                 />
               )}
-              {resendable && (
-                <IconButton
-                  icon={PencilLine}
-                  label={t('sessions.message.edit')}
-                  onClick={() => {
-                    context.onEditPrompt?.(message);
-                  }}
-                />
+              {resendable && context.prompts !== undefined && (
+                <MessageActions message={message} actions={context.prompts} />
               )}
             </div>
             {message.blocks.map((block, index) => (
@@ -165,14 +165,14 @@ export const MessageItem = memo(function MessageItem({
             <>
               <ContextMenuItem
                 onSelect={() => {
-                  context.onEditPrompt?.(message);
+                  context.prompts?.onEdit?.(message);
                 }}
               >
                 {t('sessions.message.edit')}
               </ContextMenuItem>
               <ContextMenuItem
                 onSelect={() => {
-                  context.onForkFrom?.(message);
+                  context.prompts?.onFork?.(message);
                 }}
               >
                 {t('sessions.message.forkFrom')}

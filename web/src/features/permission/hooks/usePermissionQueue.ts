@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
 import { wsClient } from '@/shared/api/ws';
-import { sendAnswer, sendExtension } from '../services/permission.service';
+import type { AppError } from '@/shared/api/errors';
+import { useClock } from '@/shared/hooks/useClock';
+import { answerRefusalOf, sendAnswer, sendExtension } from '../services/permission.service';
 import { createPermissionQueueStore, permissionQueueOf } from '../store/permission.store';
 import { usePermissionAttachment } from './usePermissionAttachment';
 import type {
@@ -21,6 +23,12 @@ export interface PermissionQueue {
   readonly remainingMs: Readonly<Record<string, number>>;
 
   /**
+   * Why the last answer sent from here was refused — it arrived after the deadline, or after another
+   * device answered (plan 09, S-61). Cleared when the next answer leaves.
+   */
+  readonly refusal: AppError | null;
+
+  /**
    * @param reason why it was refused, when the person said — "keep planning, and…" (plan 08,
    *   B-22). A refusal without one carries the screen's own.
    */
@@ -32,9 +40,6 @@ export interface PermissionQueue {
   ): void;
   extend(request: PermissionRequest): void;
 }
-
-/** How often the countdown is recomputed. A second is what a person perceives as a countdown. */
-const TICK_MS = 1_000;
 
 /** What Claude is told when a person refuses from this screen. */
 const REFUSED_HERE = 'refused from the web client';
@@ -58,26 +63,12 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
   const releaseAnswering = useStore(store, (state) => state.releaseAnswering);
   const expire = useStore(store, (state) => state.expire);
 
-  const [now, setNow] = useState(() => Date.now());
-
   // A subscription of its own, beside the conversation's. Both watch the same session and neither
   // knows the other exists; the transport attaches once and re-delivers to both. Shared with the
   // folder tab that keeps the session attached while it is not on screen (plan 06, S-181).
   usePermissionAttachment(sessionId);
 
-  useEffect(() => {
-    if (pending.length === 0) {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setNow(Date.now());
-    }, TICK_MS);
-
-    return () => {
-      clearInterval(timer);
-    };
-  }, [pending.length]);
+  const now = useClock(pending.length > 0);
 
   useEffect(() => {
     for (const request of pending) {
@@ -86,6 +77,8 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
       }
     }
   }, [pending, now, expire]);
+
+  const { refusal, expectRefusal } = useAnswerRefusal(releaseAnswering);
 
   const answer = useCallback(
     (
@@ -110,13 +103,15 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
         reason: decision === 'deny' ? refusalReason(reason) : null,
       });
 
-      if (!left) {
+      if (left === null) {
         // The socket was down, so nothing was answered. Leaving the card disabled would leave a
         // question nobody can answer from a screen that looks like it is working on it.
         releaseAnswering(request.requestId);
+      } else {
+        expectRefusal(left, request.requestId);
       }
     },
-    [markAnswering, releaseAnswering],
+    [markAnswering, releaseAnswering, expectRefusal],
   );
 
   const extend = useCallback((request: PermissionRequest) => {
@@ -130,7 +125,42 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
     ]),
   );
 
-  return { pending, settled, remainingMs, answer, extend };
+  return { pending, settled, remainingMs, refusal, answer, extend };
+}
+
+/**
+ * The refusal of the last answer sent from here, among everything else on the socket: an `error`
+ * whose `correlationId` is the answer's frame. A refused answer gives its card back, if the card is
+ * still there — the answer did not count.
+ */
+function useAnswerRefusal(release: (requestId: string) => void): {
+  readonly refusal: AppError | null;
+  expectRefusal(answerId: string, requestId: string): void;
+} {
+  const [refusal, setRefusal] = useState<AppError | null>(null);
+  const sent = useRef<{ readonly answerId: string; readonly requestId: string } | null>(null);
+
+  useEffect(
+    () =>
+      wsClient.observe((frame) => {
+        const last = sent.current;
+        const refused = last === null ? null : answerRefusalOf(frame, last.answerId);
+
+        if (last !== null && refused !== null) {
+          sent.current = null;
+          release(last.requestId);
+          setRefusal(refused);
+        }
+      }),
+    [release],
+  );
+
+  const expectRefusal = useCallback((answerId: string, requestId: string) => {
+    sent.current = { answerId, requestId };
+    setRefusal(null);
+  }, []);
+
+  return { refusal, expectRefusal };
 }
 
 /** What a screen with no session reads: an empty queue, attached to nothing. */

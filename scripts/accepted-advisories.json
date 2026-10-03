@@ -1,0 +1,10 @@
+[
+  {
+    "id": "GHSA-vfj7-8cjw-p6xm",
+    "package": "braces",
+    "version": "3.0.3",
+    "via": [".>jscpd>"],
+    "adr": "ADR-019",
+    "expires": "2026-11-02"
+  }
+]

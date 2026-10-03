@@ -7,13 +7,18 @@ import { expect, test } from '@playwright/test';
 import { approvedPhone, connectedPhone } from '../fixtures/devices';
 import { openSignedIn } from '../fixtures/auth';
 import {
+  connectedStatus,
+  continueConversationButton,
+  messagesOn,
+  openedSessionOf,
+  send,
+} from '../fixtures/claude-panel';
+import {
   completedTurn,
   endSession,
   framesCounted,
-  messagesOn,
   said,
   scratchFolders,
-  send,
   startConversation,
   SwitchableSocket,
   transcriptOf,
@@ -31,7 +36,7 @@ import {
   timelineOf,
   workspaceFor,
 } from '../fixtures/live-session';
-import { closeTab, openedSessionOf, sessionInTab, workbenchAddress } from '../fixtures/workbench';
+import { closeTab, sessionInTab, workbenchAddress } from '../fixtures/workbench';
 import { scenario } from '../scenarios';
 
 /**
@@ -125,10 +130,11 @@ test(`${overflow.id} — ${overflow.title}`, async ({ page }) => {
     await expect(messagesOn(page)).toHaveCount(messagesIn(latest));
     await expect(messagesOn(page).last()).toContainText(expected.answer);
 
-    // And the stream carries on on top of it, without repeating anything the reload brought.
+    // And the stream carries on on top of it, without repeating anything the reload brought: the
+    // prompt the other socket sent, and its answer.
     const before = messagesIn(latest);
     await completedTurn(producer, sessionId, expected.fixture);
-    await expect(messagesOn(page)).toHaveCount(before + 1);
+    await expect(messagesOn(page)).toHaveCount(before + 2);
   } finally {
     await closeSession(producer, sessionId);
     await closeTab(context().user, workspace);
@@ -190,7 +196,7 @@ test(`${resumed.id} — ${resumed.title}`, async ({ page }) => {
   const { conversationId } = await anEndedConversation(workspace, expected.fixture);
 
   await openSignedIn(page, resumed.user, workbenchAddress(workspace));
-  await expect(page.getByText('Connected', { exact: true }).first()).toBeVisible();
+  await expect(connectedStatus(page)).toBeVisible();
 
   // The Sessions view of the tab lists it under History; pressed, it opens in the panel, to read.
   await page.getByRole('button', { name: 'Claude sessions' }).click();
@@ -202,7 +208,7 @@ test(`${resumed.id} — ${resumed.title}`, async ({ page }) => {
   ).toBeVisible();
   await expect(messagesOn(page).filter({ hasText: expected.answer })).toHaveCount(1);
 
-  await page.getByRole('button', { name: 'Continue this conversation' }).click();
+  await continueConversationButton(page).click();
   const sessionId = await openedSessionOf(page);
 
   try {
@@ -239,7 +245,7 @@ test(`${removed.id} — ${removed.title}`, async ({ page }) => {
       removed.user,
       `${workbenchAddress(workspace)}&${new URLSearchParams({ conversation: conversationId }).toString()}`,
     );
-    const resume = page.getByRole('button', { name: 'Continue this conversation' });
+    const resume = continueConversationButton(page);
     await expect(resume).toBeEnabled();
 
     // The folder it ran in is deleted while the panel is open...

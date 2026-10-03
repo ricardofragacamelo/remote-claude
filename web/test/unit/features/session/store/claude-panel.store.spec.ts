@@ -248,6 +248,16 @@ describe('the conversations of the panel, in tabs — S-150', () => {
 
     expect(panel().active).toBe('session:s9');
   });
+
+  it('keeps the effort the draft chose, by session — plan 09, S-90', () => {
+    const draft = panel().openDraft();
+    panel().setChoices(draft, { model: 'opus', mode: 'default', effort: 'max' });
+    panel().promote(draft, 's1');
+    // A tab that is not a draft has no choices to keep.
+    panel().promote('session:s1', 's2');
+
+    expect(panel().efforts).toEqual({ s1: 'max' });
+  });
 });
 
 describe('the context of each conversation — plan 08, B-47', () => {

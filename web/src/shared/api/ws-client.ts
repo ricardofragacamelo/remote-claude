@@ -317,14 +317,15 @@ export class WsClient {
    * names the question, and the kind is what tells the gateway the difference. The one case that
    * exists today is `permission.resolve`, and the agent loop is stopped until it arrives.
    *
-   * @returns whether the frame left; a socket that is not ready silently sends nothing
+   * @returns the id of the frame — what an `error` refusing the answer names, in `correlationId`
+   *   (plan 09, S-61) — or `null` when it did not leave; a socket that is not ready sends nothing
    */
   respond(
     type: string,
     payload: Readonly<Record<string, unknown>>,
     correlationId: string,
-  ): boolean {
-    return this.send('response', type, payload, correlationId) !== null;
+  ): string | null {
+    return this.send('response', type, payload, correlationId);
   }
 
   /** The delay before the next attempt: exponential, capped, and jittered. */

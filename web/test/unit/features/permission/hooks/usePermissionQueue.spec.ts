@@ -128,4 +128,78 @@ describe('the permission queue hook', () => {
     expect(result.current.pending[0]?.isAnswering).toBe(false);
     expect(answers()).toHaveLength(0);
   });
+
+  it('says why an answer was refused — it came after the deadline — and gives the card back — plan 09, S-61', () => {
+    const { result } = mountWithQuestion();
+
+    act(() => {
+      const [request] = result.current.pending;
+      if (request !== undefined) result.current.answer(request, 'allow', 'once');
+    });
+    const answerId = answers()[0]?.['id'];
+
+    act(() => {
+      sockets.latest.receive({
+        v: 1,
+        id: 'err-1',
+        kind: 'error',
+        type: 'error',
+        ts: NOW,
+        correlationId: 'not-ours',
+        payload: { code: 'INTERNAL_ERROR', messageKey: 'common.error.unexpected', params: {} },
+      });
+    });
+    expect(result.current.refusal).toBeNull();
+
+    act(() => {
+      sockets.latest.receive({
+        v: 1,
+        id: 'err-2',
+        kind: 'error',
+        type: 'error',
+        ts: NOW,
+        correlationId: answerId,
+        traceId: 'trace-late',
+        payload: {
+          code: 'PERMISSION_REQUEST_EXPIRED',
+          messageKey: 'permission.error.requestExpired',
+          params: {},
+        },
+      });
+    });
+
+    expect(result.current.refusal?.code).toBe('PERMISSION_REQUEST_EXPIRED');
+    expect(result.current.pending[0]?.isAnswering).toBe(false);
+  });
+
+  it('forgets the last refusal when the next answer leaves', () => {
+    const { result } = mountWithQuestion();
+
+    act(() => {
+      const [request] = result.current.pending;
+      if (request !== undefined) result.current.answer(request, 'allow', 'once');
+    });
+    act(() => {
+      sockets.latest.receive({
+        v: 1,
+        id: 'err-2',
+        kind: 'error',
+        type: 'error',
+        ts: NOW,
+        correlationId: answers()[0]?.['id'],
+        payload: {
+          code: 'PERMISSION_REQUEST_NOT_FOUND',
+          messageKey: 'permission.error.requestNotFound',
+        },
+      });
+    });
+    expect(result.current.refusal).not.toBeNull();
+
+    act(() => {
+      const [request] = result.current.pending;
+      if (request !== undefined) result.current.answer(request, 'deny', 'once');
+    });
+
+    expect(result.current.refusal).toBeNull();
+  });
 });

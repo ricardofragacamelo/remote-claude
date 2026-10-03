@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 
 import type { Envelope } from '@remote-claude/contracts';
 
@@ -33,21 +33,9 @@ function view(conversation: ConversationState): React.JSX.Element {
   );
 }
 
-/** A scrolled element of jsdom, which measures nothing: its sizes, as a test sets them. */
-function measured(element: HTMLElement, sizes: { scrollHeight: number; clientHeight: number }) {
-  Object.defineProperty(element, 'scrollHeight', {
-    configurable: true,
-    get: () => sizes.scrollHeight,
-  });
-  Object.defineProperty(element, 'clientHeight', {
-    configurable: true,
-    get: () => sizes.clientHeight,
-  });
-}
-
 /**
- * A long answer streaming in (plan 08, S-64, S-81): only the message in flight renders again, and the
- * end stays in view only while the person is there.
+ * A long answer streaming in (plan 08, S-64): only the message in flight renders again. Following the
+ * end (S-81) is the frame's since plan 09, and is proven with it (`ChatFrame.spec`, S-07).
  */
 describe('a conversation as it streams', () => {
   it('renders only the message in flight again, for an answer of 200 KB — S-64', async () => {
@@ -80,42 +68,6 @@ describe('a conversation as it streams', () => {
     expect(before).toBeGreaterThan(0);
     expect(renders.get('First answer')).toBe(before);
     expect(renders.get('yyyyyyyyyyyy')).toBeGreaterThan(0);
-  });
-
-  it('follows the end while the person is there, and leaves them where they read — S-81', async () => {
-    let state = [frame('message.delta', { messageId: 'm1', delta: 'one' })].reduce(
-      readEvent,
-      SILENT,
-    );
-    const { rerender } = render(view(state));
-    await screen.findByText('one');
-    const scroller = screen.getByTestId('scroller');
-    const sizes = { scrollHeight: 1_000, clientHeight: 200 };
-    measured(scroller, sizes);
-
-    state = readEvent(state, frame('message.delta', { messageId: 'm1', delta: ' two' }));
-    act(() => {
-      rerender(view(state));
-    });
-    expect(scroller.scrollTop).toBe(1_000);
-
-    scroller.scrollTop = 100;
-    fireEvent.scroll(scroller);
-    sizes.scrollHeight = 1_500;
-    state = readEvent(state, frame('message.delta', { messageId: 'm1', delta: ' three' }));
-    act(() => {
-      rerender(view(state));
-    });
-    expect(scroller.scrollTop).toBe(100);
-
-    scroller.scrollTop = 1_300;
-    fireEvent.scroll(scroller);
-    sizes.scrollHeight = 2_000;
-    state = readEvent(state, frame('message.delta', { messageId: 'm1', delta: ' four' }));
-    act(() => {
-      rerender(view(state));
-    });
-    expect(scroller.scrollTop).toBe(2_000);
   });
 
   it('follows nothing when nothing around it scrolls', async () => {

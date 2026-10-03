@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type { SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 
 import type { PromptImage } from '@domain/session';
@@ -42,27 +44,33 @@ export class SessionInputQueue implements AsyncIterable<SDKUserMessage> {
    *
    * @param images go beside the text, as blocks of image of the Messages API — the CLI takes them
    *   from the streaming input (measured, discovery §10.2)
+   * @returns the `uuid` the message goes with — the one the CLI files it under in the conversation,
+   *   and so the one a fork starts from (`forkSession`'s `upToMessageId` takes either)
    */
-  push(text: string, images: readonly PromptImage[] = []): void {
+  push(text: string, images: readonly PromptImage[] = []): string {
+    const uuid = randomUUID();
+
     if (this.closed) {
-      return;
+      return uuid;
     }
 
     const message: SDKUserMessage = {
       type: 'user',
       message: { role: 'user', content: contentOf(text, images) },
       parent_tool_use_id: null,
+      uuid,
     };
 
     const waiting = this.waiting;
 
     if (waiting === null) {
       this.pending.push(message);
-      return;
+      return uuid;
     }
 
     this.waiting = null;
     waiting({ value: message, done: false });
+    return uuid;
   }
 
   /**

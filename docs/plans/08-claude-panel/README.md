@@ -117,7 +117,7 @@ conclusão. A ordem é dependência, não preferência — uma fase só começa 
 | F3 | [Diffs](F3-diffs.md) | o que o Claude mudou, visto antes de aprovar, no chat, no editor e por sessão — aceito ou rejeitado por arquivo e por trecho | B-25…B-31 | ✅ |
 | F4 | [Painel de chat](F4-chat-panel.md) | o painel dentro da aba de pasta, com conversas, fila, reenviar, seletores, contexto, MCP, atalhos, badges e ajuda | B-32…B-43 | ✅ |
 | F5 | [Composer e contexto](F5-composer-and-context.md) | escolher o contexto do prompt com `@`, arrastar e `/`, com autocomplete, em chips | B-44…B-52 | ✅ |
-| F6 | [E2E](F6-e2e.md) | o ciclo pela porta do usuário, o app verde e o `smoke-live` | B-53…B-58 | 🔲 |
+| F6 | [E2E](F6-e2e.md) | o ciclo pela porta do usuário, o app verde e o `smoke-live` | B-53…B-58 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 

@@ -93,8 +93,23 @@ function toEvents(message: SDKMessage, mapper: SdkMessageMapper): MappedMessage 
       return NOTHING;
 
     default:
-      return { events: [], unknown: describe(message) };
+      return QUIET_TYPES.has(typeOf(message))
+        ? NOTHING
+        : { events: [], unknown: describe(message) };
   }
+}
+
+/**
+ * Real messages of the CLI that the typed union of the SDK does not name, known so they cost no
+ * warning: `command_lifecycle` — `queued`, `started` — is the CLI acknowledging a prompt streamed
+ * with a uuid, which every prompt of ours is (plan 08, F6, recorded in `stamped-turn`). The queue of
+ * prompts is the backend's own (D-14), and it already says when a prompt waits, starts or leaves.
+ */
+const QUIET_TYPES: ReadonlySet<string> = new Set(['command_lifecycle']);
+
+/** The `type` of a message, whatever the message is. */
+function typeOf(message: unknown): string {
+  return isPlainObject(message) ? String(message['type'] ?? 'absent') : 'not an object';
 }
 
 /** The `system` family, which is several unrelated things under one `type`. */

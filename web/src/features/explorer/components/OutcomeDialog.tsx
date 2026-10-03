@@ -5,7 +5,7 @@ import { Button } from '@/shared/components/ui/button';
 import type { ItemResult } from '../lib/batch';
 import type { Outcome } from '../hooks/useOutcome';
 import { reasonKeyOf } from '../lib/reasons';
-import { ExplorerDialog } from './ExplorerDialog';
+import { DialogFrame } from '@/shared/components/DialogFrame';
 
 export interface OutcomeDialogProps {
   readonly outcome: Outcome | null;
@@ -21,7 +21,7 @@ export function OutcomeDialog({ outcome, onClose }: OutcomeDialogProps): React.J
   const { t } = useTranslation();
 
   return (
-    <ExplorerDialog
+    <DialogFrame
       open={outcome !== null}
       onClose={onClose}
       title={outcome === null ? '' : t(outcome.titleKey)}
@@ -33,7 +33,7 @@ export function OutcomeDialog({ outcome, onClose }: OutcomeDialogProps): React.J
           <ResultLine key={result.path} result={result} context={outcome.context} />
         ))}
       </ul>
-    </ExplorerDialog>
+    </DialogFrame>
   );
 }
 
