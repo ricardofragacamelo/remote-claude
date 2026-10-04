@@ -9,28 +9,41 @@ import 'package:flutter/material.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/note_line.dart';
+import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// The card of one invocation.
 class ToolCard extends StatelessWidget {
-  const ToolCard({required this.tool, super.key});
+  const ToolCard({required this.tool, super.key, this.decision});
 
   /// What is running, or what ran.
   final ToolExecution tool;
 
+  /// How the question about it was settled — the card it was, become a line (plan 10, B-20): by
+  /// whom, from where, by a rule, or refused because nobody answered in time.
+  final PermissionOutcome? decision;
+
   @override
-  Widget build(BuildContext context) => Card(
-    child: ContentColumn(
-      children: <Widget>[
-        _Heading(tool: tool),
-        const SizedBox(height: Tokens.spaceSm),
-        Text('${tool.input}', style: identifierStyle(context)),
-        if (tool.output.isNotEmpty) _Output(output: tool.output),
-        if (tool.summary != null) NoteLine(tool.summary!),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final PermissionOutcome? settled = decision;
+
+    return Card(
+      child: ContentColumn(
+        children: <Widget>[
+          _Heading(tool: tool),
+          const SizedBox(height: Tokens.spaceSm),
+          Text('${tool.input}', style: identifierStyle(context)),
+          if (tool.output.isNotEmpty) _Output(output: tool.output),
+          if (tool.summary != null) NoteLine(tool.summary!),
+          if (settled != null) ...<Widget>[
+            const SizedBox(height: Tokens.spaceSm),
+            PermissionOutcomeLine(outcome: settled),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 /// What the tool is, and how it is going.

@@ -552,7 +552,18 @@ describe('the transcript HTTP surface', () => {
       const again = await read(id, { cursor: String(first.body.nextCursor), limit: '5' });
       const twice = await read(id, { cursor: String(first.body.nextCursor), limit: '5' });
 
-      expect(again.body).toEqual(twice.body);
+      // The page is the subject here. `writtenAgoSeconds` is read off the wall clock at each
+      // request, so two requests that straddle a second disagree on it by that second — and only
+      // by that second.
+      const clockless = (body: Record<string, unknown>) => {
+        const { writtenAgoSeconds, ...session } = body['session'] as Record<string, unknown>;
+        return { body: { ...body, session }, writtenAgoSeconds: Number(writtenAgoSeconds) };
+      };
+      const one = clockless(again.body);
+      const other = clockless(twice.body);
+
+      expect(one.body).toEqual(other.body);
+      expect(Math.abs(one.writtenAgoSeconds - other.writtenAgoSeconds)).toBeLessThanOrEqual(1);
     });
 
     it('parses a conversation once, and again only once it was written to — S-64', async () => {

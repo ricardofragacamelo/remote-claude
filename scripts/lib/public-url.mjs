@@ -8,8 +8,19 @@
  * that signs it and the backend that compares `iss` against `OIDC_ISSUER`.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+
 /** The variable that carries the public origin, read only under `--public` (D-02). */
 export const PUBLIC_URL_VARIABLE = 'RC_PUBLIC_URL';
+
+/**
+ * Where `pnpm dev:public` writes the origin the tunnel opened, relative to the repository root —
+ * under `.run/`, which git ignores. Without `RC_PUBLIC_URL` the tunnel picks the account's own
+ * domain, and only the tunnel knows which; this is how `pnpm mobile:install` finds out without
+ * opening one (plan 10, D-22).
+ */
+export const PUBLIC_ORIGIN_FILE = '.run/public-origin';
 
 /**
  * The compose files of a run: compose's own default locally, the public override on top of the
@@ -145,4 +156,31 @@ export function parseStartArgs(argv) {
   }
 
   return { ok: true, public: isPublic, url };
+}
+
+/**
+ * Keeps the origin the tunnel opened, for the next `pnpm mobile:install`.
+ *
+ * @param {string} file absolute path
+ * @param {string} origin as returned by `parsePublicOrigin`
+ */
+export function recordPublicOrigin(file, origin) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${origin}\n`);
+}
+
+/**
+ * The origin the last public run opened, or `null` — no file, an empty one, or something in it that
+ * is not an https origin, which a hand or another tool wrote and nobody should build an app with.
+ *
+ * @param {string} file absolute path
+ * @returns {string | null}
+ */
+export function readRecordedOrigin(file) {
+  if (!fs.existsSync(file)) {
+    return null;
+  }
+
+  const parsed = parsePublicOrigin(fs.readFileSync(file, 'utf8'));
+  return parsed.ok ? parsed.origin : null;
 }

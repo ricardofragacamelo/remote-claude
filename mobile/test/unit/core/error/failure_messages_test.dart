@@ -32,6 +32,9 @@ void main() {
       'auth.error.deviceApprovalForbidden',
       'session.error.claudeUnavailable',
       'workspace.error.forbidden',
+      // Plan 10, F7: the folder screens' refusals.
+      'workspace.error.notFound',
+      'workspace.error.notADirectory',
       'transcript.error.notFound',
       'transcript.error.claudeUnavailable',
       'transcript.error.claudeTimeout',
@@ -88,6 +91,8 @@ void main() {
         <String, (String, Map<String, String>)>{
           'session.error.limitReached': ('4', <String, String>{'limit': '4'}),
           'workspace.error.notAllowed': ('/etc', <String, String>{'path': '/etc'}),
+          'workspace.error.directoryUnreadable': ('/w/x', <String, String>{'path': '/w/x'}),
+          'workspace.error.openFoldersLimitReached': ('8', <String, String>{'limit': '8'}),
           'transcript.error.invalidSessionId': ('abc', <String, String>{'sessionId': 'abc'}),
           // Plan 04, F3 and F4: a command the installation lacks (S-34), and an undo that could
           // not put every file back (S-44).

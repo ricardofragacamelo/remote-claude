@@ -37,27 +37,30 @@ import { repoRoot } from './lib/paths.mjs';
 import { resolveComposeCli } from './lib/compose.mjs';
 import { run } from './lib/exec.mjs';
 import { ensurePublicRedirect } from './lib/keycloak-admin.mjs';
+import { resolveLanAddress } from './lib/lan.mjs';
 import { bringUp, composeRunner, stillPending } from './lib/local-stack.mjs';
 import { cleanupOnce, kill, onTermination, startProc } from './lib/proc.mjs';
 import {
   ORIGIN_REFUSALS,
+  PUBLIC_ORIGIN_FILE,
   PUBLIC_URL_VARIABLE,
   composeFiles,
   localEnvironment,
   parsePublicOrigin,
   parseStartArgs,
   publicEnvironment,
+  recordPublicOrigin,
 } from './lib/public-url.mjs';
 import {
   HEALTH_PATH,
   boardRows,
-  lanAddress,
   loadDotEnv,
   REALM,
   projectName,
   resolvePorts,
   serviceUrls,
   watchEnvironment,
+  withWebIssuer,
   workspaceStatus,
 } from './lib/stack.mjs';
 import {
@@ -225,6 +228,8 @@ async function openPublicOrigin(webPort) {
 
   Object.assign(process.env, publicEnvironment(process.env, opened.origin));
   ok('tunnel', opened.origin);
+  // For `pnpm mobile:install`, which builds the app's external address from it (plan 10, D-22).
+  recordPublicOrigin(path.join(repoRoot, PUBLIC_ORIGIN_FILE), opened.origin);
   return opened.origin;
 }
 
@@ -355,6 +360,19 @@ async function main() {
   const ports = resolvePorts(process.env);
   const urls = serviceUrls(ports);
 
+  // The phone signs in through the web's origin, which forwards the realm in local mode too, and
+  // the provider writes that origin into `iss`: the backend accepts it beside the direct one —
+  // through `localhost`, and through this machine's address on the local network, which the app
+  // `pnpm mobile:install` puts on a phone talks through (plan 10, D-15, D-16 and D-23).
+  const lan = resolveLanAddress(process.env);
+  if ('problem' in lan) {
+    fail(lan.problem);
+    hint('fix it in .env, or leave it empty to use the address of the network interface');
+    return 1;
+  }
+  info(`local network: ${lan.address ?? 'none'} (${lan.source})`);
+  Object.assign(process.env, withWebIssuer(process.env, ports.web, lan.address));
+
   if (composeCli === null) {
     fail('docker compose is not available');
     hint('install the Compose v2 plugin (docker-compose-plugin) or the docker-compose binary');
@@ -403,7 +421,7 @@ async function main() {
   }
 
   const problems = await waitForWorkspaces(urls, running);
-  const rows = boardRows(ports, { env: process.env, lan: lanAddress() });
+  const rows = boardRows(ports, { env: process.env, lan: lan.address, origin });
   board(rows, new Set(running.keys()), problems);
 
   if (origin !== null) {

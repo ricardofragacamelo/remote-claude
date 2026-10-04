@@ -36,7 +36,7 @@ describe('PushMessage', () => {
     it('has no field for the content of a file or the output of a command', () => {
       const message = PushMessage.permissionRequested(target, reference, { toolName: 'Bash' });
 
-      expect(Object.keys(message.reference)).toEqual(['sessionId', 'requestId', 'expiresAt']);
+      expect(Object.keys(message.reference ?? {})).toEqual(['sessionId', 'requestId', 'expiresAt']);
       expect(JSON.stringify(message.reference)).not.toContain('/');
     });
 
@@ -64,6 +64,22 @@ describe('PushMessage', () => {
   it('is tagged by the request, so one question is one notification', () => {
     expect(PushMessage.permissionRequested(target, reference, {}).tag).toBe('req-1');
     expect(PushMessage.permissionResolved(target, reference).tag).toBe('req-1');
+  });
+
+  describe('the approval of the device — plan 17, F3', () => {
+    // S-119: about the phone itself, so it carries no request and no words of its own.
+    it('is about the device, carries no request and no parameter, and is meant to be seen', () => {
+      const message = PushMessage.deviceApproved(target);
+
+      expect(message.kind).toBe('deviceApproved');
+      expect(message.reference).toBeNull();
+      expect(message.params).toEqual({});
+      expect(message.isSilent).toBe(false);
+    });
+
+    it('is tagged by the device, apart from every request', () => {
+      expect(PushMessage.deviceApproved(target).tag).toBe('device:dev_1');
+    });
   });
 
   it('keeps the device it is going to, and the language it is rendered in', () => {

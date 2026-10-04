@@ -31,11 +31,19 @@ function Pages({ doc, name }: { readonly doc: PdfDocument; readonly name: string
   useEffect(() => {
     // The canvas is on screen by the time an effect runs: it is drawn with the pages, always.
     const target = canvas.current as HTMLCanvasElement;
+    // One drawing on the canvas at a time: the one of a page left behind is given up on.
+    const drawing = new AbortController();
 
-    doc.renderPage(page, target, scaleOf()).catch((error: unknown) => {
+    doc.renderPage(page, target, scaleOf(), drawing.signal).catch((error: unknown) => {
       logger.warn({ op: 'editor.pdf.render', page, err: String(error) }, 'pdf page not drawn');
-      setFailed(page);
+      if (!drawing.signal.aborted) {
+        setFailed(page);
+      }
     });
+
+    return () => {
+      drawing.abort();
+    };
   }, [doc, page]);
 
   return (

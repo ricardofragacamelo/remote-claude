@@ -110,7 +110,7 @@ void _signedOut(Ref ref) {
 
   ref
     ..invalidate(sessionStreamControllerProvider)
-    ..invalidate(sessionStarterControllerProvider)
+    ..invalidate(firstPromptsProvider)
     ..invalidate(liveSessionControllerProvider)
     ..invalidate(workspaceListControllerProvider)
     ..invalidate(permissionQueueControllerProvider);

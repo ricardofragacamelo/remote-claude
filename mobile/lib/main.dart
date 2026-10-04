@@ -12,33 +12,44 @@ import 'package:remote_claude/app/app.dart';
 import 'package:remote_claude/app/bootstrap.dart';
 import 'package:remote_claude/app/lifecycle.dart';
 import 'package:remote_claude/core/config/app_config.dart';
+import 'package:remote_claude/core/config/connection_choice.dart';
+import 'package:remote_claude/core/config/connection_store.dart';
 import 'package:remote_claude/core/device/device_identity_provider.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
-import 'package:remote_claude/core/network/ws_client.dart';
-import 'package:remote_claude/core/network/ws_client_provider.dart';
+import 'package:remote_claude/core/storage/credential_store.dart';
+import 'package:remote_claude/features/device/device.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final AppConfig config = AppConfig.from(appDefines);
+  final BuildConfig build = BuildConfig.from(appDefines);
   final AppLogger logger = buildLogger(
-    config: config,
+    appVersion: build.appVersion,
     platform: defaultTargetPlatform.name,
     isRelease: kReleaseMode,
   );
 
   installErrorHandlers(logger);
 
+  // The address the phone was told to use, before anything talks to the server (plan 10, D-18).
+  final ConnectionChoice? saved = await ConnectionStore(
+    const SecureCredentialStore(),
+    logger: logger,
+  ).read();
+
   final ProviderContainer container = ProviderContainer(
-    overrides: bootstrapOverrides(config: config, logger: logger),
+    overrides: bootstrapOverrides(build: build, logger: logger, saved: saved),
   );
 
   // Before the socket opens, and before the first request goes out: both stamp the installation
   // id, and one that is not there yet is a handshake the backend cannot tie to a device.
   await container.read(deviceIdentityProvider).ensure();
 
-  final WsClient client = container.read(wsClientProvider)..connect();
-  SocketLifecycle(client: client, logger: logger);
+  keepConnected(container);
+  SocketLifecycle(client: () => currentSocket(container), logger: logger);
+  ForegroundRecheck(
+    recheck: () => container.read(deviceControllerProvider.notifier).recheckIfPending(),
+  );
 
   runApp(UncontrolledProviderScope(container: container, child: const RemoteClaudeApp()));
 }

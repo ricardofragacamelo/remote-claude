@@ -8,13 +8,31 @@ import type { PdfDocument, PdfEngine } from '../types/pdf';
 function documentOf(proxy: PDFDocumentProxy, task: PDFDocumentLoadingTask): PdfDocument {
   return {
     pageCount: proxy.numPages,
-    renderPage: async (number, canvas, scale) => {
+    renderPage: async (number, canvas, scale, signal) => {
       const page = await proxy.getPage(number);
+      // Given up on while the page was fetched: the canvas may already be another drawing's.
+      if (signal.aborted) {
+        return;
+      }
       const viewport = page.getViewport({ scale });
 
       canvas.width = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
-      await page.render({ canvas, viewport }).promise;
+      // pdf.js refuses a second drawing on a canvas still in use — cancelling frees it at once.
+      const task = page.render({ canvas, viewport });
+      const cancel = (): void => {
+        task.cancel();
+      };
+      signal.addEventListener('abort', cancel, { once: true });
+      try {
+        await task.promise;
+      } catch (error: unknown) {
+        if (!signal.aborted) {
+          throw error;
+        }
+      } finally {
+        signal.removeEventListener('abort', cancel);
+      }
     },
     destroy: () => {
       void task.destroy();

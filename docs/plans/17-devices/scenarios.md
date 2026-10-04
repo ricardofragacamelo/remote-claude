@@ -238,6 +238,26 @@ estão marcados *(regressão 02)* — são as garantias que a tela nova não pod
 | S-117 | pendente de 8 dias não aparece e não é aprovável pela tela *(regressão 02 · D-11)* | fron | e2e | `NOT_FOUND` | B-28 | ⬜ |
 | S-118 | pedido respondido pelo aparelho aparece nas respostas daquele aparelho, com o link para a trilha | eq | e2e | — | B-26 | ⬜ |
 
+
+## O celular fica sabendo que foi aprovado — B-29…B-32
+
+| ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
+|---|---|---|---|---|---|---|
+| S-119 | `PushMessage.deviceApproved` tem o kind, o `deviceId`, a tag `device:<id>`, não é silencioso e não carrega conteúdo | eq | unit | — | B-29 | ✅ |
+| S-120 | o texto sai no idioma do aparelho (`en`, `pt-BR`), e um idioma desconhecido cai no `en` | fron | unit | — | B-29 | ✅ |
+| S-121 | o corpo enviado ao provedor tem `data = { kind, deviceId }`, o bloco `notification`, a tag e o canal `device_status`; o log diz o `deviceId` e nunca o token | eq | unit | — | B-29 | ✅ |
+| S-122 | aprovar de verdade publica o fato uma vez; aprovar de novo (já aprovado) não publica | idem | unit | — | B-29 | ✅ |
+| S-123 | aparelho aprovado sem token: nada é enviado, e o log diz por quê | fron | unit | — | B-29 | ✅ |
+| S-124 | token recusado pelo provedor é esquecido; falha do provedor só é logada; nenhuma das duas desfaz a aprovação nem muda a resposta `200` | err | integração | — | B-29 | ✅ |
+| S-125 | `POST /devices/:id/approve` pelo navegador manda o push ao aparelho aprovado, e só a ele | eq | integração | — | B-29 | ✅ |
+| S-126 | Android: `deviceApproved` com `deviceId` é aceito; sem `deviceId`, descartado; os kinds de permissão continuam exigindo os seus três campos | err | unit | — | B-30 | ✅ |
+| S-127 | Dart: a chegada `deviceApproved` vira `DeviceApprovedArrival`; um kind desconhecido continua descartado | eq | unit | — | B-30 | ✅ |
+| S-128 | a chegada chama o `recheck`, e a faixa do aparelho troca de "esperando aprovação" para aprovado | est | integração | — | B-30 | ✅ |
+| S-129 | tocar na notificação abre o app sem deep link | eq | unit | — | B-30 | ✅ |
+| S-130 | pendente e de volta ao primeiro plano, o app confere o estado; aprovado, voltar não pergunta nada | est | unit | — | B-30 | ✅ |
+| S-131 | duas chegadas seguidas (push e volta ao primeiro plano juntos) dão o mesmo estado, sem piscar a faixa | conc | unit | — | B-30 | ✅ |
+| S-132 | e2e: pendente, o navegador aprova, e a faixa do app troca sem reiniciar | est | e2e | — | B-32 | ⬜ |
+
 ---
 
 ## Dimensões sem cenário — justificativa

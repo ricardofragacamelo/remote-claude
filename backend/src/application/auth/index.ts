@@ -18,6 +18,8 @@ export { RevokeDeviceUseCase } from './revoke-device.use-case';
 export type { AccessTokenVerifier, VerifiedAccessToken } from './ports/access-token-verifier.port';
 export { ACCESS_TOKEN_VERIFIER } from './ports/access-token-verifier.port';
 export type { DeviceConnections } from './ports/device-connections.port';
+export type { DeviceApprovedEvent, DeviceEvents } from './ports/device-events.port';
+export { DEVICE_EVENTS } from './ports/device-events.port';
 export { DEVICE_CONNECTIONS } from './ports/device-connections.port';
 export type { DeviceRepository } from './ports/device.repository';
 export { DEVICE_REPOSITORY } from './ports/device.repository';

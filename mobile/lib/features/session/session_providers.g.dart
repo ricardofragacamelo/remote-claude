@@ -52,7 +52,7 @@ final class SessionWsDataSourceProvider
   }
 }
 
-String _$sessionWsDataSourceHash() => r'2861736adf06de53d11ea3874cf29351f794f1ab';
+String _$sessionWsDataSourceHash() => r'fb802916f5c97d712b21f9885ce9c01928faed10';
 
 /// The session repository.
 
@@ -603,3 +603,186 @@ final class ListCheckpointsProvider
 }
 
 String _$listCheckpointsHash() => r'b16a6d53aeee6bef8120ff1dcdaef60eab185122';
+
+/// The insight repository: the catalogue, the models and the context.
+
+@ProviderFor(insightRepository)
+final insightRepositoryProvider = InsightRepositoryProvider._();
+
+/// The insight repository: the catalogue, the models and the context.
+
+final class InsightRepositoryProvider
+    extends $FunctionalProvider<InsightRepository, InsightRepository, InsightRepository>
+    with $Provider<InsightRepository> {
+  /// The insight repository: the catalogue, the models and the context.
+  InsightRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'insightRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$insightRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<InsightRepository> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  InsightRepository create(Ref ref) {
+    return insightRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(InsightRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<InsightRepository>(value),
+    );
+  }
+}
+
+String _$insightRepositoryHash() => r'580f6e2202dc8dee4728e822e778fb68e2dc8e5a';
+
+/// Reads the catalogue of a folder, and the models and context of a session.
+
+@ProviderFor(readInsight)
+final readInsightProvider = ReadInsightProvider._();
+
+/// Reads the catalogue of a folder, and the models and context of a session.
+
+final class ReadInsightProvider extends $FunctionalProvider<ReadInsight, ReadInsight, ReadInsight>
+    with $Provider<ReadInsight> {
+  /// Reads the catalogue of a folder, and the models and context of a session.
+  ReadInsightProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'readInsightProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$readInsightHash();
+
+  @$internal
+  @override
+  $ProviderElement<ReadInsight> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ReadInsight create(Ref ref) {
+    return readInsight(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ReadInsight value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ReadInsight>(value),
+    );
+  }
+}
+
+String _$readInsightHash() => r'd8512d926eb54e5607ca2536cb07f17e21a96f96';
+
+/// The live sessions of a folder (plan 10, F8).
+
+@ProviderFor(liveSessionRepository)
+final liveSessionRepositoryProvider = LiveSessionRepositoryProvider._();
+
+/// The live sessions of a folder (plan 10, F8).
+
+final class LiveSessionRepositoryProvider
+    extends $FunctionalProvider<LiveSessionRepository, LiveSessionRepository, LiveSessionRepository>
+    with $Provider<LiveSessionRepository> {
+  /// The live sessions of a folder (plan 10, F8).
+  LiveSessionRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'liveSessionRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$liveSessionRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<LiveSessionRepository> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  LiveSessionRepository create(Ref ref) {
+    return liveSessionRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(LiveSessionRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<LiveSessionRepository>(value),
+    );
+  }
+}
+
+String _$liveSessionRepositoryHash() => r'0a52ca959f9557a3fdb6c3a141c8acaaafa24b7b';
+
+/// Lists what runs in a folder.
+
+@ProviderFor(listLiveSessions)
+final listLiveSessionsProvider = ListLiveSessionsProvider._();
+
+/// Lists what runs in a folder.
+
+final class ListLiveSessionsProvider
+    extends $FunctionalProvider<ListLiveSessions, ListLiveSessions, ListLiveSessions>
+    with $Provider<ListLiveSessions> {
+  /// Lists what runs in a folder.
+  ListLiveSessionsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'listLiveSessionsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$listLiveSessionsHash();
+
+  @$internal
+  @override
+  $ProviderElement<ListLiveSessions> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ListLiveSessions create(Ref ref) {
+    return listLiveSessions(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ListLiveSessions value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ListLiveSessions>(value),
+    );
+  }
+}
+
+String _$listLiveSessionsHash() => r'96c01cab79f2f50d849f5a8dba363b19c4286d88';

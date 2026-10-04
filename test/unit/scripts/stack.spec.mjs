@@ -14,18 +14,21 @@ import {
   realPushEnvironment,
   PORT_VARIABLES,
   PROJECT_NAME,
+  REALM_PATH,
   boardRows,
   e2eDotEnv,
   e2eProjectName,
   projectOwner,
   ephemeralEnvironment,
-  lanAddress,
   limitsEnvironment,
   loadDotEnv,
   projectName,
+  issuerThrough,
   resolvePorts,
   serviceUrls,
   watchEnvironment,
+  webOrigin,
+  withWebIssuer,
   workspaceStatus,
 } from '../../../scripts/lib/stack.mjs';
 import { ALLOWLIST_FILE } from '../../../scripts/lib/workspaces.mjs';
@@ -92,6 +95,7 @@ describe('serviceUrls', () => {
     );
     expect(urls.backend).toBe('http://localhost:3000');
     expect(urls.web).toBe('http://localhost:5173');
+    expect(urls.webRealm).toBe('http://localhost:5173/realms/remote-claude');
   });
 
   it('follows a moved port everywhere it appears', () => {
@@ -102,44 +106,77 @@ describe('serviceUrls', () => {
   });
 });
 
-describe('lanAddress', () => {
-  /**
-   * @param {string} address
-   * @param {Partial<import('node:os').NetworkInterfaceInfo>} [extra]
-   * @returns {import('node:os').NetworkInterfaceInfo}
-   */
-  const entry = (address, extra = {}) =>
-    /** @type {import('node:os').NetworkInterfaceInfo} */ ({
-      address,
-      family: 'IPv4',
-      internal: false,
-      netmask: '255.255.255.0',
-      mac: '00:00:00:00:00:00',
-      cidr: null,
-      ...extra,
-    });
-
-  it('picks the first external IPv4 address, past loopback and IPv6', () => {
-    const address = lanAddress({
-      lo: [entry('127.0.0.1', { internal: true })],
-      eth0: [entry('fe80::1', { family: 'IPv6' }), entry('192.168.0.10')],
-      wlan0: [entry('10.0.0.5')],
-    });
-
-    expect(address).toBe('192.168.0.10');
+// Plan 10, B-27: the one origin of the stack, and the issuers the backend accepts.
+describe('the origin of the stack and its issuers', () => {
+  it('names the realm path and the web origin, the two halves of the app issuer (S-92)', () => {
+    expect(REALM_PATH).toBe('/realms/remote-claude');
+    expect(webOrigin(5173)).toBe('http://localhost:5173');
+    expect(webOrigin('51004')).toBe('http://localhost:51004');
+    expect(issuerThrough(webOrigin(5173))).toBe('http://localhost:5173/realms/remote-claude');
+    expect(issuerThrough('https://h.dev', '/realms/other')).toBe('https://h.dev/realms/other');
   });
 
-  it('answers null when the machine has only loopback', () => {
-    expect(lanAddress({ lo: [entry('127.0.0.1', { internal: true })], empty: undefined })).toBe(
-      null,
-    );
+  const ISSUER = 'http://localhost:8180/realms/remote-claude';
+  const WEB = 'http://localhost:5173/realms/remote-claude';
+
+  it.each([
+    ['nothing listed', undefined, WEB],
+    ['an empty list', '', WEB],
+    [
+      'another origin listed',
+      'https://h.dev/realms/remote-claude',
+      `https://h.dev/realms/remote-claude,${WEB}`,
+    ],
+    ['the web issuer already listed', ` ${WEB}/ `, `${WEB}/`],
+    ['stray commas and blanks', ` , ${WEB},`, WEB],
+  ])('adds the web issuer to %s, once', (_what, listed, expected) => {
+    const env = withWebIssuer({ OIDC_ISSUER: ISSUER, OIDC_ADDITIONAL_ISSUERS: listed }, 5173);
+
+    expect(env['OIDC_ADDITIONAL_ISSUERS']).toBe(expected);
+    expect(env['OIDC_ISSUER']).toBe(ISSUER);
   });
 
-  it('reads the real interfaces when none are given', () => {
-    const address = lanAddress();
+  it('follows the web port and the realm path of OIDC_ISSUER', () => {
+    const env = withWebIssuer({ OIDC_ISSUER: 'http://localhost:8180/realms/other/' }, 5999);
 
-    expect(address === null || /^\d+\.\d+\.\d+\.\d+$/.test(address)).toBe(true);
+    expect(env['OIDC_ADDITIONAL_ISSUERS']).toBe('http://localhost:5999/realms/other');
   });
+
+  it('adds nothing when OIDC_ISSUER is the web issuer already', () => {
+    expect(withWebIssuer({ OIDC_ISSUER: WEB }, 5173)['OIDC_ADDITIONAL_ISSUERS']).toBe('');
+  });
+
+  it('is stable under repetition', () => {
+    const once = withWebIssuer({ OIDC_ISSUER: ISSUER }, 5173);
+
+    expect(withWebIssuer(once, 5173)).toEqual(once);
+  });
+
+  it('S-130 · adds the web issuer on the local network too, after the loopback one, once', () => {
+    const lan = 'http://192.168.0.10:5173/realms/remote-claude';
+    const once = withWebIssuer({ OIDC_ISSUER: ISSUER }, 5173, '192.168.0.10');
+
+    expect(once['OIDC_ADDITIONAL_ISSUERS']).toBe(`${WEB},${lan}`);
+    expect(withWebIssuer(once, 5173, '192.168.0.10')).toEqual(once);
+    expect(
+      withWebIssuer(
+        { OIDC_ISSUER: ISSUER, OIDC_ADDITIONAL_ISSUERS: `${lan}/` },
+        5173,
+        '192.168.0.10',
+      )['OIDC_ADDITIONAL_ISSUERS'],
+    ).toBe(`${lan}/,${WEB}`);
+  });
+
+  it('adds no network issuer when the machine has no local network address', () => {
+    expect(withWebIssuer({ OIDC_ISSUER: ISSUER }, 5173, null)['OIDC_ADDITIONAL_ISSUERS']).toBe(WEB);
+  });
+
+  it.each([[{}], [{ OIDC_ISSUER: '' }], [{ OIDC_ISSUER: 'keycloak' }]])(
+    'leaves an environment without a readable issuer alone, for the backend to name: %j',
+    (env) => {
+      expect(withWebIssuer(env, 5173)).toEqual(env);
+    },
+  );
 });
 
 describe('boardRows', () => {
@@ -191,10 +228,44 @@ describe('boardRows', () => {
     ).not.toContain('s3cret');
   });
 
-  it('adds the network address of the backend when the machine has one', () => {
+  it('adds the network address of the backend and of the web when the machine has one', () => {
     const backend = boardRows(ports, { lan: '192.168.0.10' })[2];
+    const web = boardRows(ports, { lan: '192.168.0.10' })[3];
+
+    expect(web?.details).toEqual([['network', 'http://192.168.0.10:5173']]);
 
     expect(backend?.details).toContainEqual(['network', 'http://192.168.0.10:3000']);
+  });
+
+  it('adds the public addresses of the web, the API, the socket and the issuer under dev:public', () => {
+    const [, keycloak, backend, web] = boardRows(ports, {
+      lan: '192.168.0.10',
+      origin: 'https://name.ngrok-free.dev',
+    });
+
+    expect(keycloak?.details).toContainEqual([
+      'public issuer',
+      'https://name.ngrok-free.dev/realms/remote-claude',
+    ]);
+    expect(keycloak?.details.map(([label]) => label)).not.toContain('public admin console');
+    expect(backend?.details).toEqual(
+      expect.arrayContaining([
+        ['public API', 'https://name.ngrok-free.dev/api'],
+        ['public health', 'https://name.ngrok-free.dev/api/health'],
+        ['public WebSocket', 'wss://name.ngrok-free.dev/ws'],
+      ]),
+    );
+    expect(web?.details).toEqual([
+      ['network', 'http://192.168.0.10:5173'],
+      ['public', 'https://name.ngrok-free.dev'],
+    ]);
+  });
+
+  it('leaves the public addresses out of a local run', () => {
+    for (const rows of [boardRows(ports, { origin: null }), boardRows(ports)]) {
+      const labels = rows.flatMap((row) => row.details.map(([label]) => label));
+      expect(labels.filter((label) => label.startsWith('public'))).toEqual([]);
+    }
   });
 
   it('leaves the network address out when there is none', () => {
@@ -338,6 +409,12 @@ describe('the ephemeral stack of an e2e run', () => {
     );
   });
 
+  it('accepts the realm through the web origin too, the one the phone signs in through — plan 10, D-15', () => {
+    expect(ephemeralEnvironment(ports).OIDC_ADDITIONAL_ISSUERS).toBe(
+      'http://localhost:51004/realms/remote-claude',
+    );
+  });
+
   it('runs on the shipped allowlist and writes no pid file, whatever this machine freed — plan 06, S-59', () => {
     const env = ephemeralEnvironment(ports);
 
@@ -375,6 +452,7 @@ describe('the ephemeral stack of an e2e run', () => {
     expect(values['RC_BACKEND_URL']).toBe('http://localhost:51003');
     expect(values['RC_WS_URL']).toBe('ws://localhost:51003/ws');
     expect(values['RC_OIDC_ISSUER']).toBe('http://localhost:51002/realms/remote-claude');
+    expect(values['RC_OIDC_REALM_PATH']).toBe('/realms/remote-claude');
     expect(values['RC_DATABASE_URL']).toBe(ephemeralEnvironment(ports).DATABASE_URL);
   });
 
@@ -451,6 +529,8 @@ describe('the limits stack of an e2e run — plan 05, S-82', () => {
     expect(env.CLAUDE_CONFIG_DIR).not.toBe(main.CLAUDE_CONFIG_DIR);
     expect(env.RC_CHECKPOINT_DIR).not.toBe(main.RC_CHECKPOINT_DIR);
     expect(env.RC_PUSH_CREDENTIALS_FILE).not.toBe(main.RC_PUSH_CREDENTIALS_FILE);
+    // Its own web is the origin its phone signs in through (plan 10, D-15).
+    expect(env.OIDC_ADDITIONAL_ISSUERS).toBe('http://localhost:51006/realms/remote-claude');
   });
 
   it('is announced in e2e/.env when the run has one', () => {
@@ -506,12 +586,15 @@ describe('dartDefines', () => {
     expect(argv[0]).toBe('--dart-define');
   });
 
-  it('points the app at the same stack the browser suite reads from e2e/.env', () => {
+  it('S-92 · points the app at the web server of the stack the browser suite reads, one origin', () => {
     const { values } = definesOf();
 
-    expect(values['RC_API_URL']).toBe('http://localhost:51003');
-    expect(values['RC_WS_URL']).toBe('ws://localhost:51003/ws');
-    expect(values['RC_OIDC_ISSUER']).toBe('http://localhost:51002/realms/remote-claude');
+    expect(values['RC_INTERNAL_URL']).toBe(`http://localhost:${String(ports.web)}`);
+    expect(values['RC_EXTERNAL_URL']).toBe('');
+    expect(values['RC_OIDC_REALM_PATH']).toBe('/realms/remote-claude');
+    expect(values).not.toHaveProperty('RC_API_URL');
+    expect(values).not.toHaveProperty('RC_WS_URL');
+    expect(values).not.toHaveProperty('RC_OIDC_ISSUER');
   });
 
   it('signs in as the **mobile** client, not the browser one', () => {
@@ -540,8 +623,8 @@ describe('dartDefines', () => {
       '1.0.0',
     );
 
-    expect(argv).toContain('RC_LIMITS_API_URL=http://localhost:51005');
-    expect(argv).toContain('RC_LIMITS_WS_URL=ws://localhost:51005/ws');
+    // The web server of the limits stack: the origin the app is pointed at for those scenarios.
+    expect(argv).toContain('RC_LIMITS_ORIGIN=http://localhost:51006');
     expect(argv).toContain('RC_KEYCLOAK_URL=http://localhost:51002');
     expect(argv).toContain(`RC_KEYCLOAK_ADMIN=${E2E_KEYCLOAK_ADMIN.username}`);
     expect(argv).toContain(`RC_KEYCLOAK_ADMIN_PASSWORD=${E2E_KEYCLOAK_ADMIN.password}`);
@@ -552,8 +635,8 @@ describe('dartDefines', () => {
     // start with a URL that looks valid and points nowhere.
     const argv = dartDefines({}, '{}', '1.0.0');
 
-    expect(argv).not.toContain('RC_API_URL=undefined');
-    expect(argv).toContain('RC_API_URL=');
+    expect(argv).not.toContain('RC_INTERNAL_URL=undefined');
+    expect(argv).toContain('RC_INTERNAL_URL=');
   });
 });
 

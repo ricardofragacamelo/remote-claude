@@ -40,15 +40,37 @@ describe('the boot', () => {
     await expect(build()).resolves.toBeUndefined();
   });
 
-  it.each(['DATABASE_URL', 'OIDC_ISSUER', 'OIDC_AUDIENCE', 'LOG_LEVEL', 'RC_PID_FILE'])(
-    'refuses to come up with %s missing',
-    async (variable) => {
-      testEnvironment(database.url, identity.issuer);
-      delete process.env[variable];
+  it.each([
+    'DATABASE_URL',
+    'OIDC_ISSUER',
+    'OIDC_ADDITIONAL_ISSUERS',
+    'OIDC_AUDIENCE',
+    'LOG_LEVEL',
+    'RC_PID_FILE',
+  ])('refuses to come up with %s missing', async (variable) => {
+    testEnvironment(database.url, identity.issuer);
+    delete process.env[variable];
 
-      await expect(build()).rejects.toThrow(ConfigurationError);
-    },
-  );
+    await expect(build()).rejects.toThrow(ConfigurationError);
+  });
+
+  // ADR-021 · plan 10, S-88
+  it.each([
+    ['an accepted issuer that is not a URL', 'keycloak'],
+    ['OIDC_ISSUER listed again', 'OIDC_ISSUER'],
+  ])('refuses to come up with %s', async (_what, value) => {
+    testEnvironment(database.url, identity.issuer);
+    process.env['OIDC_ADDITIONAL_ISSUERS'] = value === 'OIDC_ISSUER' ? identity.issuer : value;
+
+    await expect(build()).rejects.toThrow(ConfigurationError);
+  });
+
+  it('comes up with more than one accepted issuer', async () => {
+    testEnvironment(database.url, identity.issuer);
+    process.env['OIDC_ADDITIONAL_ISSUERS'] = 'http://localhost:5173/realms/remote-claude';
+
+    await expect(build()).resolves.toBeUndefined();
+  });
 
   it('refuses to come up with a variable that is not a port', async () => {
     testEnvironment(database.url, identity.issuer);

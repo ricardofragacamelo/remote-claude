@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/navigation/routes.dart';
+import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_context.dart';
@@ -148,5 +150,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Entrar'), findsOneWidget);
+  });
+
+  testWidgets('S-108 · without signing in, the address screen is one tap away', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpRouted(
+      <RouteBase>[
+        GoRoute(
+          path: signInRoute,
+          builder: (BuildContext _, GoRouterState _) => const SignInPage(),
+        ),
+        GoRoute(
+          path: connectionRoute,
+          builder: (BuildContext _, GoRouterState _) => const Text('the address'),
+        ),
+      ],
+      initialLocation: signInRoute,
+      overrides: <Override>[
+        authRepositoryProvider.overrideWithValue(repository as AuthRepository),
+        appLoggerProvider.overrideWithValue(logger),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(l10n.connectionTitle));
+    await tester.pumpAndSettle();
+
+    expect(find.text('the address'), findsOneWidget);
   });
 }

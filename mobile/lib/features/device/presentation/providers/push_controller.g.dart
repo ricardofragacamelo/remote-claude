@@ -35,7 +35,7 @@ final class PushControllerProvider extends $AsyncNotifierProvider<PushController
   PushController create() => PushController();
 }
 
-String _$pushControllerHash() => r'de8f9ba68176b2818e7fdb60d3c0e7124fa2d675';
+String _$pushControllerHash() => r'88356c2ac800a670f9e721fc90b0ecca90c1476c';
 
 /// The notification side of this installation.
 

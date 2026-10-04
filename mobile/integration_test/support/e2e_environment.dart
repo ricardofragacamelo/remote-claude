@@ -13,36 +13,37 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/app/app.dart';
 import 'package:remote_claude/app/bootstrap.dart';
-import 'package:remote_claude/app/router_provider.dart';
 import 'package:remote_claude/core/config/app_config.dart';
+import 'package:remote_claude/core/config/app_config_provider.dart';
 import 'package:remote_claude/core/device/device_identity_provider.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
-import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/storage/credential_store_provider.dart';
 import 'package:remote_claude/features/auth/auth.dart';
 import 'package:remote_claude/features/auth/auth_providers.dart';
 import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/permission/domain/repositories/approval_lock.dart';
 import 'package:remote_claude/features/permission/permission_providers.dart';
-import 'package:remote_claude/features/session/session.dart';
-import 'package:remote_claude/features/workspace/workspace.dart';
 
 import 'direct_grant_data_source.dart';
 
-/// The configuration of the running stack.
+/// What this run was built with: the addresses of the running stack among it.
 ///
 /// It reads `appDefines` — the same list the entry point reads, so this run is configured exactly
-/// the way a real build is.
+/// the way a real build is. The internal address is the web server of the stack, which forwards the
+/// API, the socket and the login (plan 10, D-16), reached through `adb reverse`.
 ///
 /// @throws [ConfigurationError] naming every missing define, rather than failing later with a
 ///   connection refused that says nothing about the cause
-AppConfig e2eConfig() => AppConfig.from(appDefines);
+BuildConfig e2eConfig() => BuildConfig.from(appDefines);
+
+/// [build] talking through its internal address — what the app does on a first launch (D-17), and
+/// what the browser's side of a test talks through too.
+AppConfig talkingThrough(BuildConfig build) => AppConfig.at(build, build.origins.internal!);
 
 /// One scenario of `e2e/scenarios/`, handed over as JSON.
 ///
@@ -118,21 +119,24 @@ class ConfirmingLock implements ApprovalLock {
 ///
 /// Configuration **and** the logger come from the same helper the entry point uses: overriding
 /// only half of it leaves `appLoggerProvider` throwing on the first widget that reads it.
-ProviderContainer e2eContainer(AppConfig config, E2eScenario scenario) {
+///
+/// The address is chosen as on a phone: none saved, so the internal one — and the login follows
+/// whichever address is chosen afterwards, as the real one does (plan 10, B-28).
+ProviderContainer e2eContainer(BuildConfig build, E2eScenario scenario) {
   final AppLogger logger = buildLogger(
-    config: config,
+    appVersion: build.appVersion,
     platform: defaultTargetPlatform.name,
     isRelease: kReleaseMode,
   );
 
   return ProviderContainer(
     overrides: <Override>[
-      ...bootstrapOverrides(config: config, logger: logger),
+      ...bootstrapOverrides(build: build, logger: logger),
       // The operating system's external tab, the Keychain and the lock screen.
       credentialStoreProvider.overrideWithValue(MemoryCredentialStore()),
-      oidcAuthDataSourceProvider.overrideWithValue(
-        DirectGrantDataSource(
-          config: config,
+      oidcAuthDataSourceProvider.overrideWith(
+        (Ref ref) => DirectGrantDataSource(
+          config: ref.watch(appConfigProvider),
           username: scenario.user['username']!,
           password: scenario.user['password']!,
         ),
@@ -163,34 +167,15 @@ Future<void> signedInOnThisDevice(WidgetTester tester, ProviderContainer contain
   await pumpUntil(tester, () => container.read(deviceControllerProvider).value != null);
 }
 
-/// Opens a session on the first folder of the allowlist, through the list, and answers its id.
-Future<String> sessionOpenedFromTheList(WidgetTester tester, ProviderContainer container) async {
-  container.read(routerProvider).go(workspacesRoute);
-
-  // A tile **of the list**: the home screen being left has one too — the approval lock switch —
-  // and it is still in the tree while the transition runs.
-  final Finder folder = find.descendant(
-    of: find.byType(WorkspaceListPage),
-    matching: find.byType(ListTile),
-  );
-  await pumpUntil(tester, () => folder.evaluate().isNotEmpty);
-  await tester.pumpAndSettle();
-
-  await tester.tap(folder.first);
-  await pumpUntil(tester, () => find.byType(SessionPage).evaluate().isNotEmpty);
-
-  return tester.widget<SessionPage>(find.byType(SessionPage)).sessionId;
-}
-
 /// The browser's side of the backend, for what only a browser may do.
 ///
 /// Approving a phone is refused **to a phone** (S-06): it goes out without the installation header,
 /// exactly as the web front sends it. Nothing here is the app's own code.
 class BackendAsBrowser {
-  BackendAsBrowser(AppConfig config, String accessToken)
+  BackendAsBrowser(BuildConfig build, String accessToken)
     : _dio = Dio(
         BaseOptions(
-          baseUrl: config.apiBaseUrl,
+          baseUrl: talkingThrough(build).apiBaseUrl,
           headers: <String, Object?>{'authorization': 'Bearer $accessToken'},
         ),
       );
@@ -260,8 +245,8 @@ class BrowserSocket {
   final List<Map<String, Object?>> frames = <Map<String, Object?>>[];
 
   /// Opens the socket and completes the handshake, as a browser — no installation.
-  static Future<BrowserSocket> open(AppConfig config, String accessToken) async {
-    final WebSocket socket = await WebSocket.connect('${config.wsUrl}?v=1');
+  static Future<BrowserSocket> open(BuildConfig build, String accessToken) async {
+    final WebSocket socket = await WebSocket.connect('${talkingThrough(build).wsUrl}?v=1');
     final Stream<Map<String, Object?>> frames = socket
         .map((Object? raw) => jsonDecode(raw! as String) as Map<String, Object?>)
         .asBroadcastStream();

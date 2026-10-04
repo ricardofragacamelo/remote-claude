@@ -130,7 +130,11 @@ void main() {
 
       expect(before.cardOf('request-1'), isNotNull);
       expect(after.cardOf('request-1'), isNull);
-      expect(after.outcomeOf('request-1'), const PermissionOutcome.expired('request-1'));
+      // About its tool: the line of that tool says the deadline refused it (plan 10, B-20).
+      expect(
+        after.outcomeOf('request-1'),
+        const PermissionOutcome.expired('request-1', toolUseId: 'toolu-1'),
+      );
       expect(after.asOf, request.expiresAt);
     });
   });
@@ -274,5 +278,38 @@ void main() {
     expect(reset.pending, isEmpty);
     expect(reset.settled, isEmpty);
     expect(reset.asOf, t0);
+  });
+
+  group('the tool a settlement is about — plan 10, B-20', () {
+    test('a question on screen settles about its tool', () {
+      final PermissionQueue after = const PermissionQueue()
+          .apply(asked(aPermissionRequest(toolUseId: 'toolu-9')))
+          .apply(settled('request-1'));
+
+      expect(after.outcomeOf('request-1')?.toolUseId, 'toolu-9');
+    });
+
+    test('a settlement of a question never seen is about no tool — and a second one keeps it', () {
+      final PermissionQueue unseen = const PermissionQueue().apply(settled('request-1'));
+      expect(unseen.outcomeOf('request-1')?.toolUseId, isNull);
+
+      final PermissionQueue twice = const PermissionQueue()
+          .apply(asked(aPermissionRequest(toolUseId: 'toolu-9')))
+          .apply(settled('request-1'))
+          .apply(settled('request-1', origin: AnswerOrigin.mobile));
+      expect(twice.outcomeOf('request-1')?.toolUseId, 'toolu-9');
+    });
+
+    test('an outcome about a tool keeps what it said', () {
+      const PermissionOutcome outcome = PermissionOutcome(
+        requestId: 'r',
+        decision: PermissionDecision.allow,
+        auto: true,
+        toolUseId: 't',
+      );
+
+      expect(outcome.about(null), outcome);
+      expect(outcome.about('u').toolUseId, 'u');
+    });
   });
 }

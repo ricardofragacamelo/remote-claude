@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/app/app.dart';
+import 'package:remote_claude/core/config/app_config.dart';
+import 'package:remote_claude/core/config/app_config_provider.dart';
+import 'package:remote_claude/features/connection/connection.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_context.dart';
 import 'package:remote_claude/core/logging/logger_provider.dart';
@@ -15,6 +18,7 @@ import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../support/builders/config.dart';
 import '../../support/fakes/fake_auth_repository.dart';
 import '../../support/fakes/fake_session_repository.dart';
 import '../../support/fakes/recording_writer.dart';
@@ -67,10 +71,11 @@ void main() {
   /// which shows up in the coverage report as a declared line nothing reached.
   final Key appKey = UniqueKey();
 
-  Future<void> pumpAppUnderTest(WidgetTester tester) async {
+  Future<void> pumpAppUnderTest(WidgetTester tester, {BuildConfig? config}) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          buildConfigProvider.overrideWithValue(config ?? aBuildConfig()),
           ...permissionOverrides(),
           authRepositoryProvider.overrideWithValue(auth as AuthRepository),
           sessionRepositoryProvider.overrideWithValue(sessions),
@@ -95,6 +100,15 @@ void main() {
     expect(find.byKey(appKey), findsOneWidget);
   });
 
+  testWidgets('S-97 · with no address to talk through, the app opens on the address screen', (
+    WidgetTester tester,
+  ) async {
+    await pumpAppUnderTest(tester, config: aBuildConfig(internal: null));
+
+    expect(find.byType(ConnectionPage), findsOneWidget);
+    expect(find.text(l10n.connectionNone), findsOneWidget);
+  });
+
   testWidgets('sends an unauthenticated visitor to the sign-in screen', (
     WidgetTester tester,
   ) async {
@@ -103,22 +117,26 @@ void main() {
     expect(find.text(l10n.authSignInTitle), findsOneWidget);
   });
 
-  testWidgets('takes a signed-in user straight to the round trip', (WidgetTester tester) async {
+  // Plan 10, D-27 · S-146: the folders home is the first screen; the round trip moved to the
+  // diagnostics.
+  testWidgets('takes a signed-in user straight to the folders home', (WidgetTester tester) async {
     auth.stored = session();
 
     await pumpAppUnderTest(tester);
 
-    expect(find.text(l10n.sessionPingTitle), findsWidgets);
+    expect(find.text(l10n.foldersTitle), findsWidgets);
+    expect(find.text(l10n.sessionPingTitle), findsNothing);
   });
 
-  testWidgets('signing in moves the app to the round trip', (WidgetTester tester) async {
+  // Plan 10, D-27 · S-146: the folders home is where the app goes once signed in.
+  testWidgets('signing in moves the app to the folders home', (WidgetTester tester) async {
     auth.produced = session();
     await pumpAppUnderTest(tester);
 
     await tester.tap(find.text(l10n.authSignInAction));
     await tester.pumpAndSettle();
 
-    expect(find.text(l10n.sessionPingTitle), findsWidgets);
+    expect(find.text(l10n.foldersTitle), findsWidgets);
   });
 
   testWidgets('signing out brings the sign-in screen back', (WidgetTester tester) async {

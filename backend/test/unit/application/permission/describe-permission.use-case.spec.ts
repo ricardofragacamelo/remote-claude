@@ -93,6 +93,7 @@ describe('DescribePermissionUseCase', () => {
       auto: false,
       resolvedBy: PERMISSION_OWNER.value,
       resolvedFrom: 'mobile',
+      toolUseId: 'toolu-1',
     });
   });
 
@@ -121,6 +122,7 @@ describe('DescribePermissionUseCase', () => {
       decision: 'allow',
       auto: true,
       resolvedBy: PERMISSION_OWNER.value,
+      toolUseId: 'toolu-1',
     });
   });
 

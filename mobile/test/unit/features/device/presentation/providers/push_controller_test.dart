@@ -199,6 +199,23 @@ void main() {
       expect(written.withOp('push.opened').single['requestId'], 'request-3');
     });
 
+    // Plan 17, F3 · S-128: the browser approved this phone; it asks, and stops saying pending.
+    test('an approval of this phone asks where it stands, and is logged', () async {
+      final ProviderContainer container = build(
+        device: AsyncValue<RegisteredDevice?>.data(aRegisteredDevice(status: DeviceStatus.pending)),
+      );
+      await container.read(pushControllerProvider.future);
+      devices.checkedAs = aRegisteredDevice();
+
+      gateway.approve('dev_1');
+      await settle();
+
+      expect(devices.checks, 1);
+      expect(container.read(deviceControllerProvider).value?.status, DeviceStatus.approved);
+      expect(written.withOp('push.received').single['kind'], 'deviceApproved');
+      expect(container.read(deepLinkControllerProvider), isNull);
+    });
+
     test('nothing is listened to while nobody is signed in', () async {
       final ProviderContainer container = build(
         device: const AsyncValue<RegisteredDevice?>.data(null),

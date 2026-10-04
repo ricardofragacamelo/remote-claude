@@ -2,22 +2,16 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:remote_claude/features/workspace/data/datasources/workspace_api_data_source.dart';
 import 'package:remote_claude/features/workspace/data/repositories/workspace_repository_impl.dart';
 import 'package:remote_claude/features/workspace/domain/entities/workspace.dart';
 
+import '../../../../../support/fakes/fake_workspace_api.dart';
+
 /// A data source that answers what the test set.
-class _StubApi implements WorkspaceApiDataSource {
-  _StubApi(this._answer);
+class _StubApi extends FakeWorkspaceApi {
+  _StubApi(Object? answer) : super(answers: <String, Object?>{'list': answer});
 
-  final Object? _answer;
-  int calls = 0;
-
-  @override
-  Future<Object?> list() async {
-    calls += 1;
-    return _answer;
-  }
+  int get calls => asked.length;
 }
 
 void main() {

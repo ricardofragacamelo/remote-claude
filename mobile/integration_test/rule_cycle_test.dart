@@ -35,7 +35,7 @@ bool Function(Map<String, Object?>) ofType(String type) =>
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  final AppConfig config = e2eConfig();
+  final BuildConfig config = e2eConfig();
 
   /// The browser opens a session, and the phone opens it by its address — attached, watching.
   Future<(BrowserSocket, String)> openedInTheBrowser(WidgetTester tester, SignedInApp app) async {
@@ -103,12 +103,12 @@ void main() {
         final String requestId = app.queueOf(sessionId).pending.single.requestId;
         await extendedOnTheCard(tester, app, sessionId, requestId);
 
-        await tapOnScreen(tester, find.text(app.l10n.permissionScopeAlways).first);
+        await app.robot(tester).answer(app.l10n.permissionScopeAlways);
         await pumpUntil(
           tester,
           () => find.text(app.l10n.permissionPersistConfirm).evaluate().isNotEmpty,
         );
-        await tapOnScreen(tester, find.text(app.l10n.permissionPersistConfirm));
+        await app.robot(tester).answer(app.l10n.permissionPersistConfirm);
         await pumpUntil(tester, () => app.queueOf(sessionId).outcomeOf(requestId) != null);
       },
     );
@@ -137,10 +137,14 @@ void main() {
     );
     await pumpUntil(tester, () => app.queueOf(sessionId).lastOutcome?.auto ?? false);
     expect(app.queueOf(sessionId).pending, isEmpty);
-    await pumpUntil(
-      tester,
-      () => find.text(app.l10n.permissionOutcomeAllowedByRule).evaluate().isNotEmpty,
-    );
+    // Said on the line of the tool the rule answered (plan 10, B-20): the settlement names it.
+    final String? ruled = app.queueOf(sessionId).lastOutcome?.toolUseId;
+    final Iterable<String> lines = app
+        .conversationOf(sessionId)
+        .tools
+        .map((ToolExecution tool) => tool.toolUseId);
+    expect(lines, contains(ruled), reason: 'the tool the rule answered, among the lines: $lines');
+    await app.robot(tester).seeInConversation(find.text(app.l10n.permissionOutcomeAllowedByRule));
 
     // Taken back on the phone's own rules screen...
     final Finder revoke = await revokeButtonsOnTheRulesScreen(tester, app);

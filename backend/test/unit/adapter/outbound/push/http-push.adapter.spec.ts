@@ -3,7 +3,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { HttpPushSender, deliveryOf, retryAfterOf } from '@adapter/outbound/push/http-push.adapter';
+import {
+  DEVICE_STATUS_CHANNEL,
+  HttpPushSender,
+  deliveryOf,
+  retryAfterOf,
+} from '@adapter/outbound/push/http-push.adapter';
 import { PushAccessTokenCache } from '@adapter/outbound/push/push-access-token.cache';
 import { DeviceLocale } from '@domain/auth';
 import { PushMessage } from '@domain/notification';
@@ -194,6 +199,37 @@ describe('withdrawing one', () => {
       kind: 'permissionResolved',
       requestId: 'req-1',
     });
+  });
+});
+
+describe('telling a phone it was approved — plan 17, F3', () => {
+  const approval = (): PushMessage => PushMessage.deviceApproved(target);
+
+  // S-121 · the sentence in the device's language, and only the device in `data`.
+  it('carries the two sentences in the device language, and only the kind and the device', async () => {
+    await sender().send(approval());
+
+    const notification = provider.message['notification'] as Record<string, string>;
+    expect(notification).toEqual(new PushTranslator().deviceApproved('pt-BR'));
+    expect(provider.message['data']).toEqual({ kind: 'deviceApproved', deviceId: 'dev_1' });
+  });
+
+  it('goes on the channel of the device status, tagged by the device', async () => {
+    await sender().send(approval());
+
+    const android = provider.message['android'] as Record<string, Record<string, string>>;
+    expect(android['notification']).toEqual({
+      tag: 'device:dev_1',
+      channel_id: DEVICE_STATUS_CHANNEL,
+    });
+  });
+
+  it('logs the device, no request, and never the token', async () => {
+    await sender().send(approval());
+
+    const line = logger.withOp('push.send')[0];
+    expect(line).toMatchObject({ kind: 'deviceApproved', deviceId: 'dev_1', requestId: null });
+    expect(JSON.stringify(line)).not.toContain(target.token);
   });
 });
 

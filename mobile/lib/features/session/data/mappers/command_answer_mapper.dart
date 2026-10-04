@@ -28,6 +28,14 @@ SessionJoined? sessionJoinedFrom(Envelope frame) {
   );
 }
 
+/// The acceptance a `command.accepted` ack carries, or `null` when [frame] is not one that names a
+/// command.
+CommandAccepted? commandAcceptedFrom(Envelope frame) {
+  final String? commandId = frame.correlationId;
+
+  return frame.type == commandAcceptedType && commandId != null ? CommandAccepted(commandId) : null;
+}
+
 /// The refusal an `error` frame carries, or `null` when [frame] is not one that names a command.
 ///
 /// The payload is the error envelope of HTTP, so it is read by the same function: a refusal over
@@ -52,7 +60,7 @@ SessionFailed? sessionFailedFrom(Envelope frame) {
     return null;
   }
 
-  return SessionFailed(_failureOf(frame));
+  return SessionFailed(_failureOf(frame), sessionId: frame.sessionId);
 }
 
 Failure _failureOf(Envelope frame) =>

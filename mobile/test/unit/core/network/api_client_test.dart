@@ -87,6 +87,19 @@ void main() {
     expect(adapter.lastRequest!.path, '/permission-rules/rule_1');
   });
 
+  test('sends the body of a PUT, and a DELETE with its query', () async {
+    final _Adapter adapter = _Adapter();
+    final ApiClient client = clientWith(adapter);
+
+    await client.put('/workspaces/recent/pin', body: <String, Object?>{'pinned': true});
+    expect(adapter.lastRequest!.method, 'PUT');
+    expect(adapter.lastRequest!.data, <String, Object?>{'pinned': true});
+
+    await client.delete('/workspaces/open-folders', query: <String, Object?>{'path': '/w/a'});
+    expect(adapter.lastRequest!.method, 'DELETE');
+    expect(adapter.lastRequest!.queryParameters, <String, Object?>{'path': '/w/a'});
+  });
+
   test('a refusal reaches the caller as a Failure, never as a DioException', () async {
     final _Adapter adapter = _Adapter(
       status: 404,

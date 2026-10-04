@@ -60,14 +60,23 @@ String translateFailure(AppLocalizations l10n, Failure failure) {
       return l10n.sessionErrorUnknownCommand(failure.params['command'] ?? '');
     case 'session.error.locked':
       return l10n.sessionErrorLocked;
+    case 'session.error.queuedPromptStarted':
+      return l10n.sessionErrorQueuedPromptStarted;
+    case 'session.error.queuedPromptNotFound':
+      return l10n.sessionErrorQueuedPromptNotFound;
+    case 'session.error.effortUnsupported':
+      return l10n.sessionErrorEffortUnsupported(
+        failure.params['model'] ?? '',
+        failure.params['level'] ?? '',
+      );
+    case 'session.error.forkRejected':
+      return l10n.sessionErrorForkRejected;
+    case 'session.error.forkPointUnknown':
+      return l10n.sessionErrorForkPointUnknown;
     case 'session.error.rewindTargetUnknown':
       return l10n.sessionErrorRewindTargetUnknown;
     case 'session.error.rewindIncomplete':
       return l10n.sessionErrorRewindIncomplete(failure.params['failed'] ?? '');
-    case 'workspace.error.notAllowed':
-      return l10n.workspaceErrorNotAllowed(failure.params['path'] ?? '');
-    case 'workspace.error.forbidden':
-      return l10n.workspaceErrorForbidden;
     case 'transcript.error.notFound':
       return l10n.transcriptErrorNotFound;
     case 'transcript.error.invalidSessionId':
@@ -87,6 +96,22 @@ String translateFailure(AppLocalizations l10n, Failure failure) {
     case 'permission.error.ruleNotFound':
       return l10n.permissionErrorRuleNotFound;
     default:
-      return l10n.commonErrorUnexpected;
+      return _workspaceMessage(l10n, failure) ?? l10n.commonErrorUnexpected;
   }
 }
+
+/// The words of a refusal about a folder, or `null` when [failure] is not one — apart, so the switch
+/// above stays readable as the folder screens add theirs (plan 10, F7).
+String? _workspaceMessage(AppLocalizations l10n, Failure failure) => switch (failure.messageKey) {
+  'workspace.error.notAllowed' => l10n.workspaceErrorNotAllowed(failure.params['path'] ?? ''),
+  'workspace.error.forbidden' => l10n.workspaceErrorForbidden,
+  'workspace.error.notFound' => l10n.workspaceErrorNotFound,
+  'workspace.error.notADirectory' => l10n.workspaceErrorNotADirectory,
+  'workspace.error.directoryUnreadable' => l10n.workspaceErrorDirectoryUnreadable(
+    failure.params['path'] ?? '',
+  ),
+  'workspace.error.openFoldersLimitReached' => l10n.foldersLimitReached(
+    failure.params['limit'] ?? '',
+  ),
+  _ => null,
+};

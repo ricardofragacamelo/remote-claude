@@ -22,6 +22,9 @@ export type ResolvedPermissionPayload = {
   /** Who answered, when somebody did — or whose rule answered, when a rule did. */
   readonly resolvedBy?: string;
   readonly resolvedFrom?: PermissionOrigin;
+
+  /** The tool call it was about — what puts the decision on that tool's line, even when nobody was asked. */
+  readonly toolUseId?: string;
 };
 
 /**
@@ -106,14 +109,17 @@ function suggestionsFor(
  * types them as strings, and a generated client refuses a `null` where it expects one.
  */
 export function resolvedPayload(
-  requestId: string,
+  request: Pick<PermissionRequest, 'id' | 'toolUseId'>,
   resolution: PermissionResolution,
 ): ResolvedPermissionPayload {
   return {
-    requestId,
+    requestId: request.id,
     decision: resolution.decision,
     auto: resolution.auto,
     ...(resolution.resolvedBy === null ? {} : { resolvedBy: resolution.resolvedBy.value }),
     ...(resolution.resolvedFrom === null ? {} : { resolvedFrom: resolution.resolvedFrom }),
+    ...(request.toolUseId === null || request.toolUseId === ''
+      ? {}
+      : { toolUseId: request.toolUseId }),
   };
 }

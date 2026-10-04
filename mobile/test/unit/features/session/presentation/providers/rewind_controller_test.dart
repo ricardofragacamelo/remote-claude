@@ -330,7 +330,7 @@ void main() {
   test('the answer of an event is the domain’s, not the frame’s', () {
     expect(
       arrivalOf(sessionRewound(seq: 5, payload: rewoundPayload())),
-      EventReceived(FilesRewound(5, anOutcome())),
+      EventReceived(FilesRewound(5, anOutcome()), sessionId: 'session-1'),
     );
   });
 }

@@ -23,24 +23,37 @@ object PushNotifications {
     private const val TAG = "remote_claude.push"
     private const val ID = 0
 
-    /** Creates the channel permission requests arrive on. Idempotent, as Android makes it. */
+    /**
+     * Creates the channels: the one permission requests arrive on, and the one about the phone
+     * itself — apart, so muting one is not muting the other (plan 17, F3). Idempotent, as Android
+     * makes it.
+     */
     fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return
         }
 
-        val channel = NotificationChannel(
-            context.getString(R.string.push_channel_id),
-            context.getString(R.string.push_channel_name),
-            NotificationManager.IMPORTANCE_HIGH,
-        ).apply { description = context.getString(R.string.push_channel_description) }
-
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(
+            NotificationChannel(
+                context.getString(R.string.push_channel_id),
+                context.getString(R.string.push_channel_name),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply { description = context.getString(R.string.push_channel_description) },
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                context.getString(R.string.device_channel_id),
+                context.getString(R.string.device_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply { description = context.getString(R.string.device_channel_description) },
+        )
     }
 
     /**
-     * Shows a permission request. The words come from the backend, already translated into the
-     * device's locale — the operating system does not translate a notification (mobile/03).
+     * Shows a permission request, or the phone's approval. The words come from the backend, already
+     * translated into the device's locale — the operating system does not translate a notification
+     * (mobile/03).
      */
     fun show(context: Context, payload: Map<String, String>, title: String?, body: String?) {
         val manager = NotificationManagerCompat.from(context)
@@ -50,7 +63,8 @@ object PushNotifications {
         }
 
         val tag = PushPayload.tagOf(payload)
-        val notification = NotificationCompat.Builder(context, context.getString(R.string.push_channel_id))
+        val channel = if (PushPayload.isDeviceApproved(payload)) R.string.device_channel_id else R.string.push_channel_id
+        val notification = NotificationCompat.Builder(context, context.getString(channel))
             .setSmallIcon(context.applicationInfo.icon)
             .setContentTitle(title)
             .setContentText(body)

@@ -157,7 +157,7 @@ describe('a question reaching a phone', () => {
    * case about its own.
    */
   const sentFor = (sessionId: string): PushMessage[] =>
-    provider.sent.filter((message) => message.reference.sessionId === sessionId);
+    provider.sent.filter((message) => message.reference?.sessionId === sessionId);
 
   async function until(socket: TestSocket, type: string, limit = 400): Promise<Envelope> {
     const seen: string[] = [];
@@ -199,7 +199,7 @@ describe('a question reaching a phone', () => {
       (messages) => messages.length > 0,
     );
 
-    return { socket, sessionId, requestId: String(sent[0]?.reference.requestId) };
+    return { socket, sessionId, requestId: String(sent[0]?.reference?.requestId) };
   }
 
   /**
@@ -475,6 +475,58 @@ describe('a question reaching a phone', () => {
         (seen) => seen.includes('permissionResolved'),
       );
       expect(kinds).toEqual(['permissionRequested', 'permissionRequested', 'permissionResolved']);
+    });
+  });
+
+  // Plan 17, F3: approving the phone in the browser tells the phone.
+  describe('a phone approved in the browser', () => {
+    const approvals = (deviceId: string): PushMessage[] =>
+      provider.sent.filter(
+        (message) => message.kind === 'deviceApproved' && message.target.deviceId === deviceId,
+      );
+
+    // S-125 · the approval reaches that phone, and only that phone, once.
+    it('is told, once, in its own language — S-125', async () => {
+      const deviceId = await approvedDevice('install-approved', 'token-approved');
+
+      const told = await waitFor(
+        'the approval to reach the phone',
+        () => Promise.resolve(approvals(deviceId)),
+        (messages) => messages.length > 0,
+      );
+      expect(told.map((message) => message.target.token)).toEqual(['token-approved']);
+
+      const token = await identity.accessToken({ subject: SUBJECT });
+      const again = await http()
+        .post(`/devices/${deviceId}/approval`)
+        .set('authorization', `Bearer ${token}`)
+        .send({});
+      expect(again.status).toBe(200);
+      expect(approvals(deviceId)).toHaveLength(1);
+    });
+
+    // S-124 · a token the provider says is gone is erased; the approval stands, answered 200.
+    it('erases a token the provider refused, and stays approved — S-124', async () => {
+      provider.answer = (message) =>
+        message.kind === 'deviceApproved' ? 'tokenRejected' : 'delivered';
+
+      try {
+        const deviceId = await approvedDevice('install-gone', 'token-gone');
+
+        const row = await waitFor(
+          'the refused token to be erased',
+          async () =>
+            (
+              await context().db.execute(
+                `SELECT status, push_token FROM devices WHERE id = '${deviceId}'`,
+              )
+            ).rows[0] as { status: string; push_token: string | null } | undefined,
+          (found) => found?.push_token === null,
+        );
+        expect(row?.status).toBe('approved');
+      } finally {
+        provider.answer = () => 'delivered';
+      }
     });
   });
 });

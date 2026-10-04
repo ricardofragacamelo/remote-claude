@@ -42,3 +42,18 @@ describe('the push catalogue', () => {
     );
   });
 });
+
+describe('the approval of a device — plan 17, F3', () => {
+  // S-120 · in the device's language, with the same fallback as a question.
+  it('answers in the language of the device, and falls back to en', () => {
+    const english = translator.deviceApproved('en');
+    const portuguese = translator.deviceApproved('pt-BR');
+
+    expect(english.title).not.toBe(portuguese.title);
+    expect(translator.deviceApproved('fr')).toEqual(english);
+    for (const text of [english, portuguese]) {
+      expect(text.title).not.toContain('push.');
+      expect(text.body).not.toBe('');
+    }
+  });
+});

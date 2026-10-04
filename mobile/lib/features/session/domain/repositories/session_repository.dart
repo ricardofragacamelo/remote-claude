@@ -8,13 +8,18 @@ abstract interface class SessionRepository {
   /// Every update of the stream, from whichever session is being followed.
   Stream<SessionUpdate> get updates;
 
-  /// Starts following [sessionId].
+  /// Starts following [sessionId], in place of whatever was followed.
   ///
   /// [lastSeq] is read at attach time — including after a reconnect — so the server knows where
   /// the replay has to start.
-  void follow(String sessionId, int Function() lastSeq);
+  ///
+  /// @returns what stops **this** following — and nothing else: called after another screen
+  ///   followed in its place, it does nothing. A screen being left must never cut the session the
+  ///   next screen just followed (plan 10, F5: leaving the round trip for a session did exactly
+  ///   that, and the conversation stopped arriving).
+  void Function() follow(String sessionId, int Function() lastSeq);
 
-  /// Stops following.
+  /// Stops following, whoever followed.
   ///
   /// Not optional: without it, moving between sessions accumulates subscriptions and the screen
   /// starts receiving events for a session it no longer shows.

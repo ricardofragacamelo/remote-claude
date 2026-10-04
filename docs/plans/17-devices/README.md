@@ -74,7 +74,8 @@ magra.
 | O app informa modelo, versão do SO e permissão de notificação, mostra o código de verificação e recebe o push de teste | F1 |
 | A tela: lista densa com filtros, busca e ordenação, painel de detalhe, aprovar com segundo passo, lote, atualização viva, aviso global de pendente | F2 |
 | Usabilidade e ajuda da tela: gaveta de ajuda, tooltips, estados vazios que ensinam, atalhos, palette, axe | F2 |
-| E2E pela porta do usuário — web e app —, com as garantias do plano 02 como regressão | F3 |
+| Aprovado no navegador, o celular fica sabendo: o push `deviceApproved` e a atualização viva | F3 |
+| E2E pela porta do usuário — web e app —, com as garantias do plano 02 como regressão | F4 |
 
 ### Não entra
 
@@ -109,7 +110,8 @@ verde.
 | F0 | [Contrato](F0-contract.md) | normativos atualizados, contrato HTTP e do app, códigos de erro | B-01…B-04 | 🔲 |
 | F1 | [Backend de dispositivos](F1-devices-backend.md) | guarda no banco, estado do push, renomear, lote, teste, histórico, inativo, e o app informando | B-05…B-15 | 🔲 |
 | F2 | [Tela de dispositivos](F2-devices-screen.md) | a tela completa, com ajuda, atalhos e aviso global de pendente | B-16…B-23 | 🔲 |
-| F3 | [E2E](F3-e2e.md) | os fluxos pela porta do usuário, no web e no app, e as regressões do plano 02 | B-24…B-28 | 🔲 |
+| F3 | [O celular fica sabendo que foi aprovado](F3-approval-push.md) | o push `deviceApproved` e o app que se atualiza ao ser aprovado — antes da F0, pela D-13 | B-29…B-31 | 🔲 |
+| F4 | [E2E](F4-e2e.md) | os fluxos pela porta do usuário, no web e no app, e as regressões do plano 02 — sempre a última fase | B-24…B-28, B-32 | 🔲 |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 
@@ -143,6 +145,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Aparelho novo aparece sem recarregar, e o pendente é avisado fora da tela | B-22 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md) | S-102…S-105 |
 | Ajuda de verdade, tooltips, atalhos, teclado e axe | B-23 | [02-i18n](../../architecture/shared/02-i18n.md), [web/03-ui-system](../../architecture/web/03-ui-system.md#acessibilidade--não-é-opcional) | S-106…S-110 |
 | Os fluxos pela porta do usuário, e as garantias do plano 02 como regressão | B-24…B-28 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-111…S-118 |
+| Aprovado no navegador, o celular fica sabendo: push e atualização viva | B-29…B-32 | [mobile/03-state-and-data](../../architecture/mobile/03-state-and-data.md#push-notification--o-canal-que-torna-o-app-útil) | S-119…S-132 |
 
 Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 

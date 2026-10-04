@@ -2,10 +2,14 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/features/session/domain/entities/live_session_summary.dart';
+import 'package:remote_claude/features/session/data/repositories/live_session_repository_impl.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/data/datasources/session_api_data_source.dart';
 import 'package:remote_claude/features/session/data/repositories/checkpoint_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/command_repository_impl.dart';
+import 'package:remote_claude/features/session/data/repositories/insight_repository_impl.dart';
+import 'package:remote_claude/features/session/domain/entities/insight.dart';
 import 'package:remote_claude/features/session/domain/entities/checkpoint.dart';
 import 'package:remote_claude/features/session/domain/entities/slash_command.dart';
 
@@ -23,6 +27,30 @@ class ScriptedSessionApi implements SessionApiDataSource {
   @override
   Future<Object?> checkpoints(String sessionId) async {
     asked.add('checkpoints:$sessionId');
+    return body;
+  }
+
+  @override
+  Future<Object?> catalog(String workspacePath) async {
+    asked.add('catalog:$workspacePath');
+    return body;
+  }
+
+  @override
+  Future<Object?> models(String sessionId) async {
+    asked.add('models:$sessionId');
+    return body;
+  }
+
+  @override
+  Future<Object?> context(String sessionId) async {
+    asked.add('context:$sessionId');
+    return body;
+  }
+
+  @override
+  Future<Object?> liveSessions(String workspacePath) async {
+    asked.add('live:$workspacePath');
     return body;
   }
 }
@@ -78,6 +106,73 @@ void main() {
 
       await expectLater(
         CheckpointRepositoryImpl(api).list('s-1'),
+        throwsA(isA<UnexpectedFailure>()),
+      );
+    });
+  });
+
+  group('what the composer reads — plan 10, B-11, B-14', () {
+    test('the catalogue of a folder, the models of a session and its context', () async {
+      final InsightRepositoryImpl insight = InsightRepositoryImpl(api);
+
+      api.body = <String, Object?>{
+        'cliVersion': '2.1.277',
+        'commands': <Object?>[],
+        'models': <Object?>[
+          <String, Object?>{'value': 'sonnet'},
+        ],
+        'limits': <String, Object?>{},
+      };
+      final InstallationCatalog catalog = await insight.catalogOf('/w');
+
+      api.body = <String, Object?>{'current': 'sonnet', 'models': <Object?>[]};
+      final SessionModels models = await insight.modelsOf('s-1');
+
+      api.body = <String, Object?>{'totalTokens': 10, 'maxTokens': 100, 'percentage': 10};
+      final ContextUse use = await insight.contextOf('s-1');
+
+      expect(api.asked, <String>['catalog:/w', 'models:s-1', 'context:s-1']);
+      expect(catalog.models.single.value, 'sonnet');
+      expect(models.current, 'sonnet');
+      expect(use.percentage, 10);
+    });
+
+    test('a body this build cannot read is a failure, never an empty answer', () async {
+      final InsightRepositoryImpl insight = InsightRepositoryImpl(api);
+      api.body = '<html>';
+
+      await expectLater(insight.catalogOf('/w'), throwsA(isA<UnexpectedFailure>()));
+      await expectLater(insight.modelsOf('s'), throwsA(isA<UnexpectedFailure>()));
+      await expectLater(insight.contextOf('s'), throwsA(isA<UnexpectedFailure>()));
+    });
+  });
+
+  // Plan 10, B-41.
+  group('the live sessions of a folder', () {
+    test('S-153 · read from the folder asked about', () async {
+      final ScriptedSessionApi api = ScriptedSessionApi()
+        ..body = <String, Object?>{
+          'sessions': <Object?>[
+            <String, Object?>{
+              'sessionId': 's-1',
+              'workspacePath': '/w/a',
+              'status': 'idle',
+              'startedAt': '2026-10-04T10:00:00Z',
+            },
+          ],
+        };
+
+      final List<LiveSessionSummary> sessions = await LiveSessionRepositoryImpl(api).list('/w/a');
+
+      expect(sessions.single.sessionId, 's-1');
+      expect(api.asked, <String>['live:/w/a']);
+    });
+
+    test('S-154 · an answer that is not a list of sessions is a failure, not a crash', () async {
+      final ScriptedSessionApi api = ScriptedSessionApi()..body = 'nope';
+
+      await expectLater(
+        LiveSessionRepositoryImpl(api).list('/w/a'),
         throwsA(isA<UnexpectedFailure>()),
       );
     });

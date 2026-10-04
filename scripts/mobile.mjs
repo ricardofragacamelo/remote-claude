@@ -365,7 +365,9 @@ function deviceImageProblem() {
  * @returns {number[]}
  */
 function stackPorts(env) {
-  return ['RC_BACKEND_URL', 'RC_LIMITS_BACKEND_URL', 'RC_OIDC_ISSUER', 'RC_KEYCLOAK_URL']
+  // The web servers the app talks through — each forwards its backend and the login (plan 10,
+  // B-27) — and the provider, whose administration the limits scenarios use.
+  return ['RC_WEB_URL', 'RC_LIMITS_WEB_URL', 'RC_KEYCLOAK_URL']
     .map((name) => Number(new URL(env[name] ?? 'http://localhost').port))
     .filter((port) => Number.isInteger(port) && port > 0);
 }

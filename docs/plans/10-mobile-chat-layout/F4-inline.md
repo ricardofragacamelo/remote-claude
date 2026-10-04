@@ -25,7 +25,7 @@ A fila de permissão do topo deixa de existir. A tela que a notificação abre c
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-18 — O indicador de processamento na cauda 🔲
+### B-18 — O indicador de processamento na cauda ✅
 
 `WorkingIndicator`: a última entrada da conversa enquanto o turno roda (`thinking`, `running`,
 `waitingPermission`). Some no fim do turno, e o resumo do turno toma o lugar dele.
@@ -39,14 +39,14 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 - **`Semantics(liveRegion: true)`** anuncia **só a troca de estado**, nunca cada segundo (R-06). O
   relógio vive no widget, e a lista não se reconstrói a cada segundo.
 
-### B-19 — Thinking vivo e encerrado 🔲
+### B-19 — Thinking vivo e encerrado ✅
 
 A entrada de thinking da [B-05](F1-session-frame.md) ganha o desenho: enquanto chegam deltas, "Pensando…"
 com o glifo; quando o bloco fecha, "Pensou por *n* s", recolhida, e um toque expande para o texto.
 Thinking redigido diz que existiu, sem conteúdo inventado. No histórico, sem duração por bloco, diz só
 "Pensou". Vários blocos no mesmo turno são várias linhas, na ordem, entre as tools.
 
-### B-20 — A permissão no lugar da tool 🔲
+### B-20 — A permissão no lugar da tool ✅
 
 `InlinePermission`: o `PermissionCardView` de hoje desenhado **no lugar da linha da tool** cujo
 `toolUseId` o pedido traz, ou na cauda quando a linha ainda não chegou (09 · D-12). **Nada do card
@@ -65,13 +65,13 @@ ninguém respondeu a tempo", "aprovado no navegador por *X*" ou "por uma das sua
 sem dizer o escopo). O `ConstrainedBox` da fila no topo sai da `SessionPage`. O
 `PermissionQueueController` continua sendo a fonte.
 
-### B-21 — O plano para aprovar, inline 🔲
+### B-21 — O plano para aprovar, inline ✅
 
 O pedido de `ExitPlanMode` vira o cartão do plano, no lugar da tool, pela regra da B-20. O plano aparece
 como texto legível, e aprovar oferece os modos (08 · B-22). Aprovar com um modo troca o chip de modo da
 barra ([B-11](F2-composer.md)) no mesmo gesto. Recusar volta ao modo plan com o motivo.
 
-### B-22 — Nunca fora de vista, o teclado, e a tela da notificação 🔲
+### B-22 — Nunca fora de vista, o teclado, e a tela da notificação ✅
 
 - **`PendingPill`:** com um pedido aberto e o card fora da área visível, aparece uma pílula **sobre a
   caixa**: "Claude espera sua resposta (*n*)". Tocar rola até o pedido mais antigo e põe o foco nele.
@@ -81,10 +81,14 @@ barra ([B-11](F2-composer.md)) no mesmo gesto. Recusar volta ao modo plan com o 
   toque no próprio card responde a ele (R-04).
 - **A tela da notificação** ([D-02](decisions.md#f0--normas)): a `PermissionPage` continua como hoje,
   revalidando no servidor. "Abrir sessão" leva à conversa já rolada até o card.
-- **A notificação com a sessão aberta** ([D-10](decisions.md#f4--inline)): o que o app faz com o push de
-  um pedido da sessão que está na tela.
+- **A notificação com a sessão aberta** ([D-10](decisions.md#f4--inline)): com a tela daquela sessão
+  aberta, o pedido dela **não** gera notificação; o card, a pílula e o `liveRegion` bastam. Pedido de
+  outra sessão continua notificando. Hoje quem mostra a notificação em primeiro plano é o nativo
+  (`PushMessagingService` → `PushNotifications.show`), sempre: o Dart passa a dizer ao nativo, pelo
+  canal `remote_claude/push`, qual sessão está visível (e quando nenhuma está), e o nativo pula o
+  `show` dessa sessão — nunca o `withdraw`.
 
-### B-23 — As tarefas sobre a caixa, e as linhas de sistema 🔲
+### B-23 — As tarefas sobre a caixa, e as linhas de sistema ✅
 
 - **`TaskStrip`:** a lista do `TodoWrite` (o input da tool, como o web lê em `task-list.ts`) ancorada
   acima da caixa, recolhida numa linha ("3/7 · Rodando os testes"). Tocar expande para a lista inteira.
@@ -93,7 +97,7 @@ barra ([B-11](F2-composer.md)) no mesmo gesto. Recusar volta ao modo plan com o 
   replay parcial e o resultado do desfazer viram linhas de uma linha, em tom discreto, na ordem em que
   aconteceram.
 
-### B-24 — As ações da mensagem 🔲
+### B-24 — As ações da mensagem ✅
 
 Pela [D-09](decisions.md#f4--inline): pressionar e segurar o prompt do usuário abre as ações, que também
 existem como `Semantics` custom actions para o TalkBack (R-08):

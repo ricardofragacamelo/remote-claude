@@ -36,7 +36,7 @@ class SessionPingPage extends StatelessWidget {
   );
 }
 
-/// Opens the list of folders a session can be started in.
+/// Back to the folders home.
 class _WorkspacesAction extends StatelessWidget {
   const _WorkspacesAction();
 
@@ -45,7 +45,7 @@ class _WorkspacesAction extends StatelessWidget {
     icon: const Icon(Icons.folder_outlined),
     // An icon with no text needs a translated label, or it announces nothing.
     tooltip: AppLocalizations.of(context).workspaceListTitle,
-    onPressed: () => context.go(workspacesRoute),
+    onPressed: () => context.go(sessionRoute),
   );
 }
 

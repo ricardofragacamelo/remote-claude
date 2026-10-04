@@ -196,9 +196,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get workspaceListTitle => 'Pastas';
 
   @override
-  String get workspaceListDescription => 'Escolha uma pasta para abrir uma sessão.';
-
-  @override
   String get workspaceListLoading => 'Carregando as pastas';
 
   @override
@@ -207,12 +204,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get workspaceListEmptyBody =>
       'Não há nada na allowlist. Ela é definida na máquina que roda o backend, não daqui.';
-
-  @override
-  String get workspaceNeverOpened => 'Nunca aberta';
-
-  @override
-  String get workspaceStartRefused => 'A sessão não foi aberta: este aparelho não está conectado.';
 
   @override
   String get sessionTitle => 'Sessão';
@@ -224,37 +215,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionEmptyBody => 'Envie um prompt para começar.';
 
   @override
-  String get sessionPromptHint => 'Peça algo ao Claude';
-
-  @override
   String get sessionPromptAction => 'Enviar';
 
   @override
   String get sessionPromptRefused => 'Não enviado: este aparelho não está conectado.';
-
-  @override
-  String get sessionInterruptAction => 'Parar';
-
-  @override
-  String get sessionCloseAction => 'Encerrar sessão';
-
-  @override
-  String get sessionStatusStarting => 'Iniciando';
-
-  @override
-  String get sessionStatusIdle => 'Ociosa';
-
-  @override
-  String get sessionStatusThinking => 'Pensando';
-
-  @override
-  String get sessionStatusRunning => 'Executando uma tool';
-
-  @override
-  String get sessionStatusWaitingPermission => 'Aguardando aprovação';
-
-  @override
-  String get sessionStatusClosed => 'Encerrada';
 
   @override
   String get sessionToolStatusRunning => 'Executando';
@@ -270,11 +234,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get sessionToolOutputLabel => 'Saída';
-
-  @override
-  String sessionTurnCost(String costUsd, int durationMs) {
-    return '$costUsd USD em $durationMs ms';
-  }
 
   @override
   String get sessionClosedByUser => 'Encerrada por quem a abriu.';
@@ -298,13 +257,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get permissionPageTitle => 'Permissão';
-
-  @override
-  String get permissionQueueTitle => 'Esperando por você';
-
-  @override
-  String get permissionQueueDescription =>
-      'O Claude parou e não vai executar isto até você responder. Silêncio nega.';
 
   @override
   String permissionCardLabel(String tool) {
@@ -647,11 +599,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Esta conversa mudou enquanto você a lia. Recarregue a partir das mensagens mais recentes.';
 
   @override
-  String workspaceHistoryOpen(String label) {
-    return 'Histórico de $label';
-  }
-
-  @override
   String get historyListTitle => 'Histórico';
 
   @override
@@ -753,9 +700,6 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get sessionCommandsOpen => 'Comandos';
-
-  @override
   String get sessionCommandsTitle => 'Comandos';
 
   @override
@@ -785,9 +729,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String sessionCommandsNoMatch(String query) {
     return 'Nenhum comando corresponde a “$query”.';
   }
-
-  @override
-  String get sessionUndoOpen => 'Desfazer alterações de arquivos';
 
   @override
   String get sessionUndoTitle => 'Desfazer alterações de arquivos';
@@ -932,4 +873,974 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get diagnosticsDebugAlwaysOn => 'Sempre ligado em um build de desenvolvimento.';
+
+  @override
+  String get sessionEndedResumes =>
+      'Mandar um prompt a retoma, num novo processo do Claude nesta máquina.';
+
+  @override
+  String get sessionEndedResumeAndSend => 'Retomar e enviar';
+
+  @override
+  String get sessionEndedResuming => 'Retomando a conversa…';
+
+  @override
+  String get commonActionShowAll => 'Mostrar tudo';
+
+  @override
+  String sessionTurnLine(String costUsd, String seconds) {
+    return 'Turno encerrado: $costUsd USD · $seconds s';
+  }
+
+  @override
+  String get sessionCompactedManual => 'Compactada a pedido: o que veio antes agora é um resumo';
+
+  @override
+  String get sessionCompactedAuto =>
+      'Compactada sozinha, o contexto encheu: o que veio antes agora é um resumo';
+
+  @override
+  String sessionCompactedManualTokens(String tokens) {
+    return 'Compactada a pedido: $tokens tokens de antes agora são um resumo';
+  }
+
+  @override
+  String sessionCompactedAutoTokens(String tokens) {
+    return 'Compactada sozinha, o contexto encheu: $tokens tokens de antes agora são um resumo';
+  }
+
+  @override
+  String get thinkingLive => 'Pensando…';
+
+  @override
+  String get thinkingDone => 'Pensou';
+
+  @override
+  String thinkingTook(String seconds) {
+    return 'Pensou por $seconds s';
+  }
+
+  @override
+  String get thinkingHidden => 'Pensou — o modelo não mostrou';
+
+  @override
+  String get thinkingNothingShown => 'O modelo pensou aqui e não mostrou o que pensou.';
+
+  @override
+  String get draftTitle => 'Uma nova conversa';
+
+  @override
+  String get draftDescription =>
+      'Nada roda até você enviar o primeiro prompt: então uma sessão do Claude abre nesta pasta, com o que você escolheu abaixo.';
+
+  @override
+  String get draftCommands => 'Digite / para os comandos e skills desta instalação.';
+
+  @override
+  String get draftDefaultModel =>
+      'Os modelos desta instalação aparecem depois que uma sessão desta pasta rodou; até lá, usa-se o padrão da instalação.';
+
+  @override
+  String get draftStarting => 'Abrindo a sessão…';
+
+  @override
+  String draftCatalogFailed(String reason) {
+    return 'As escolhas desta instalação não puderam ser lidas, então a conversa começa com os padrões dela: $reason';
+  }
+
+  @override
+  String get composerBoxLabel => 'Prompt';
+
+  @override
+  String get composerPlaceholder => 'Peça ao Claude algo nesta pasta…';
+
+  @override
+  String get composerQueue => 'Pôr na fila';
+
+  @override
+  String get composerQueued =>
+      'O Claude está trabalhando: o que você enviar agora espera na fila e roda em seguida.';
+
+  @override
+  String get composerStop => 'Parar';
+
+  @override
+  String get composerEmpty => 'Escreva um prompt para enviar.';
+
+  @override
+  String get composerSlash => 'Comandos e skills (/)';
+
+  @override
+  String get composerMore => 'Mais escolhas: o modelo, o esforço e o contexto';
+
+  @override
+  String get composerRefusalClose => 'Fechar esta mensagem';
+
+  @override
+  String composerBlocked(String reason) {
+    return 'Nada pode ser enviado agora: $reason';
+  }
+
+  @override
+  String composerChoice(String label, String value) {
+    return '$label: $value';
+  }
+
+  @override
+  String get composerChoicePending => 'Trocando…';
+
+  @override
+  String get modeLabel => 'Modo';
+
+  @override
+  String get modeDefault => 'Perguntar';
+
+  @override
+  String get modeDefaultDescription =>
+      'O Claude pergunta antes de cada tool que precisa da sua palavra.';
+
+  @override
+  String get modeAcceptEdits => 'Aceitar edições';
+
+  @override
+  String get modeAcceptEditsDescription =>
+      'O Claude edita e grava arquivos sem perguntar; ainda pergunta antes do resto.';
+
+  @override
+  String get modeAcceptEditsWarning =>
+      'O Claude vai editar e gravar arquivos sem perguntar — e sem a prévia da alteração.';
+
+  @override
+  String get modePlan => 'Plan';
+
+  @override
+  String get modePlanDescription =>
+      'O Claude planeja sem mudar nada, e pede que você aprove o plano.';
+
+  @override
+  String get modelLabel => 'Modelo';
+
+  @override
+  String get modelDefault => 'Padrão da instalação';
+
+  @override
+  String modelsFailed(String reason) {
+    return 'Os modelos desta instalação não puderam ser lidos: $reason';
+  }
+
+  @override
+  String get modelsLoading => 'Carregando os modelos';
+
+  @override
+  String get effortLabel => 'Esforço';
+
+  @override
+  String get effortDefault => 'Esforço padrão';
+
+  @override
+  String get effortLow => 'Baixo';
+
+  @override
+  String get effortMedium => 'Médio';
+
+  @override
+  String get effortHigh => 'Alto';
+
+  @override
+  String get effortXhigh => 'Muito alto';
+
+  @override
+  String get effortMax => 'Máximo';
+
+  @override
+  String get effortReadOnly =>
+      'O esforço se escolhe quando a conversa começa. Trocá-lo com ela rodando faria o Claude parar de perguntar antes de cada tool.';
+
+  @override
+  String get effortUnknown => 'O do início';
+
+  @override
+  String get queueTitle => 'Prompts na fila';
+
+  @override
+  String get queueDescription =>
+      'Estes rodam um depois do outro, como turnos próprios, quando o turno em execução terminar.';
+
+  @override
+  String queueCancel(String position) {
+    return 'Tirar o prompt $position da fila';
+  }
+
+  @override
+  String queuePosition(String position) {
+    return '#$position';
+  }
+
+  @override
+  String get queueFromWeb => 'de um navegador';
+
+  @override
+  String get queueFromMobile => 'do celular';
+
+  @override
+  String get queueFromOther => 'de outro cliente';
+
+  @override
+  String contextLabel(String percentage) {
+    return 'Janela de contexto $percentage% usada';
+  }
+
+  @override
+  String contextPercentage(String percentage) {
+    return '$percentage%';
+  }
+
+  @override
+  String contextWindow(String total, String max) {
+    return '$total de $max tokens';
+  }
+
+  @override
+  String contextTokens(String tokens) {
+    return '$tokens tokens';
+  }
+
+  @override
+  String get contextNear =>
+      'A conversa está perto do limite do contexto. Compactá-la a mantém andando.';
+
+  @override
+  String get contextCompact => 'Compactar a conversa (/compact)';
+
+  @override
+  String get contextCompacting => 'Compactando…';
+
+  @override
+  String get contextUnavailable => 'O uso do contexto não pôde ser lido.';
+
+  @override
+  String get contextLoading => 'Lendo o contexto';
+
+  @override
+  String get contextSystemPrompt => 'Prompt de sistema';
+
+  @override
+  String get contextSystemTools => 'Tools do sistema';
+
+  @override
+  String get contextMcpTools => 'Tools de MCP';
+
+  @override
+  String get contextMessages => 'Mensagens';
+
+  @override
+  String get contextMemoryFiles => 'Arquivos de memória';
+
+  @override
+  String get contextSkills => 'Skills';
+
+  @override
+  String get contextFreeSpace => 'Espaço livre';
+
+  @override
+  String get contextBuffer => 'Reservado para compactação';
+
+  @override
+  String get sessionErrorQueuedPromptStarted =>
+      'Esse prompt já começou. Interrompa o turno para pará-lo.';
+
+  @override
+  String get sessionErrorQueuedPromptNotFound => 'Esse prompt não está mais na fila.';
+
+  @override
+  String sessionErrorEffortUnsupported(String model, String level) {
+    return '$model não aceita o nível de esforço $level.';
+  }
+
+  @override
+  String get sessionStandingConnected => 'Conectado';
+
+  @override
+  String get sessionStandingReconnecting => 'Reconectando';
+
+  @override
+  String get sessionStandingRunning => 'Rodando';
+
+  @override
+  String get sessionStandingWaiting => 'Esperando você';
+
+  @override
+  String get sessionStandingEnded => 'Encerrada';
+
+  @override
+  String sessionStandingOpen(String standing) {
+    return 'Status: $standing. Abrir os detalhes da sessão';
+  }
+
+  @override
+  String get sessionDotConnected => 'Conectado — nada rodando';
+
+  @override
+  String get sessionDotReconnecting => 'Reconectando…';
+
+  @override
+  String get sessionDotRunning => 'O Claude está trabalhando';
+
+  @override
+  String get sessionDotWaiting => 'O Claude espera sua resposta';
+
+  @override
+  String get sessionDotEnded => 'A sessão terminou';
+
+  @override
+  String sessionDotSession(String sessionId) {
+    return 'Sessão $sessionId';
+  }
+
+  @override
+  String get sessionStatusTitle => 'A sessão';
+
+  @override
+  String get sessionStatusDescription =>
+      'Como ela está, qual sessão é, e quanto custou desde que abriu.';
+
+  @override
+  String sessionStatusCost(String cost, String turns) {
+    return 'Esta sessão custou $cost desde que abriu, em $turns turno(s)';
+  }
+
+  @override
+  String get sessionStatusNoCost => 'Nenhum turno terminou ainda, então não há custo a dizer.';
+
+  @override
+  String get sessionMenuOpen => 'Mais ações da sessão';
+
+  @override
+  String get sessionMenuRules => 'Regras de permissão';
+
+  @override
+  String get sessionMenuUndo => 'Desfazer alterações de arquivo…';
+
+  @override
+  String get sessionMenuCopyId => 'Copiar o id da sessão';
+
+  @override
+  String get sessionMenuCopied => 'O id da sessão foi copiado.';
+
+  @override
+  String sessionMenuCopyFailed(String sessionId) {
+    return 'Não foi possível copiar o id. Selecione e copie à mão: $sessionId';
+  }
+
+  @override
+  String get sessionMenuHelp => 'Ajuda sobre esta tela';
+
+  @override
+  String get sessionMenuEnd => 'Encerrar sessão';
+
+  @override
+  String get sessionMenuEndNotOwner => 'Só o app que abriu esta sessão pode encerrá-la.';
+
+  @override
+  String get sessionMenuEndEnded => 'A sessão já terminou.';
+
+  @override
+  String get sessionCloseTitle => 'Encerrar esta sessão?';
+
+  @override
+  String get sessionCloseDescription =>
+      'O Claude para nesta máquina. O que ele escreveu fica no disco, mas o desfazer das alterações de arquivo vai embora com a sessão. A conversa fica no histórico e pode ser retomada.';
+
+  @override
+  String get sessionCloseKeep => 'Manter rodando';
+
+  @override
+  String get sessionCloseConfirm => 'Encerrar a sessão';
+
+  @override
+  String get sessionHistoryOpen => 'Conversas desta pasta';
+
+  @override
+  String get sessionHistoryUnknown => 'A pasta desta sessão ainda não é conhecida';
+
+  @override
+  String get sessionHelpTitle => 'A tela de sessão';
+
+  @override
+  String get sessionHelpIntro =>
+      'Só a conversa rola. A caixa fica embaixo, acima do teclado, com o que vale para o próximo prompt sob ela; o que a sessão está fazendo aparece na própria conversa, na ordem em que aconteceu.';
+
+  @override
+  String get sessionHelpBarHeading => 'A barra sob a caixa';
+
+  @override
+  String get sessionHelpBar =>
+      'Nesta ordem: / lista os comandos e skills; depois o modo, o modelo, o esforço e a parte da janela de contexto em uso — com Compactar dentro dela — e enviar. Enquanto o Claude trabalha, enviar põe o que você escreveu na fila, e Parar fica ao lado; com a caixa vazia, o próprio botão é Parar. O esforço só se escolhe numa conversa nova. Numa tela estreita, o modelo, o esforço e o contexto vão para o … da barra.';
+
+  @override
+  String get sessionHelpMenuHeading => 'O menu da sessão';
+
+  @override
+  String get sessionHelpMenu =>
+      'O … da barra de cima reúne o que se faz com a sessão inteira, e raramente: encerrá-la — só o app que a abriu pode, e ele pergunta antes —, desfazer as alterações de arquivo, copiar o id; e as regras de permissão e esta ajuda. O relógio ao lado abre as conversas desta pasta.';
+
+  @override
+  String get sessionHelpStatusHeading => 'O status';
+
+  @override
+  String get sessionHelpStatus =>
+      'O chip da barra de cima diz como a sessão está, por cor e por palavra: conectada, reconectando, rodando, esperando você ou encerrada. Toque nele para ver o id da sessão, com o jeito de copiá-lo, e quanto ela custou desde que abriu.';
+
+  @override
+  String get sessionHelpWorkingHeading => 'Enquanto o Claude trabalha';
+
+  @override
+  String get sessionHelpWorking =>
+      'Enquanto um turno roda, a última linha dele se mexe: um asterisco, o que o Claude está fazendo — a tool que executa, que espera você, ou uma palavra para o turno — e há quanto tempo. O raciocínio é uma linha própria, na ordem: \"Pensando…\" enquanto chega, \"Pensou por n s\" quando termina, recolhido — toque para ler. Quando o turno acaba, a linha dá lugar ao que o turno custou.';
+
+  @override
+  String get sessionHelpInlineHeading => 'Perguntas na conversa';
+
+  @override
+  String get sessionHelpInline =>
+      'Quando o Claude pergunta antes de executar uma tool, a pergunta fica na conversa, no lugar dessa tool: o comando exato, o risco, o tempo que resta e até onde vai um sim. Respondida, a linha da tool diz como — por você, no navegador, por uma regra sua, ou recusada porque ninguém respondeu a tempo. Uma pergunta nunca fecha o teclado nem tira a caixa de você: enviar continua enviando o seu prompt, e só um toque no card responde a ela.';
+
+  @override
+  String get sessionHelpPillHeading => 'Esperando sua resposta';
+
+  @override
+  String get sessionHelpPill =>
+      'Com uma pergunta fora de vista — a conversa rolada para cima —, uma pílula sobre a caixa diz que o Claude espera, e quantas perguntas. Tocar nela leva à mais antiga.';
+
+  @override
+  String get sessionHelpTasksHeading => 'A lista de tarefas';
+
+  @override
+  String get sessionHelpTasks =>
+      'Quando o Claude mantém uma lista de tarefas, ela fica sobre a caixa, recolhida numa linha — quantas estão feitas e o que está sendo feito agora. Toque nela para a lista inteira; ela muda enquanto o Claude trabalha, sem mexer no que você está lendo.';
+
+  @override
+  String get sessionHelpActionsHeading => 'A partir de um prompt';
+
+  @override
+  String get sessionHelpActions =>
+      'Pressione e segure um prompt seu para o que dá para fazer a partir dele: editar e reenviar, bifurcar de antes dele, e devolver os arquivos a antes do turno dele — com o alcance mostrado arquivo a arquivo antes. O leitor de tela oferece as mesmas três como ações da mensagem. Enquanto o Claude trabalha, o desfazer espera o turno acabar; com a sessão encerrada não há desfazer.';
+
+  @override
+  String get permissionPlanLabel => 'O plano que o Claude propõe';
+
+  @override
+  String get permissionPlanTitle => 'Aprovar o plano?';
+
+  @override
+  String get permissionPlanModeLegend => 'Depois de aprovado, seguir';
+
+  @override
+  String get permissionPlanApprove => 'Aprovar o plano';
+
+  @override
+  String get permissionPlanCommentLabel => 'Ou diga o que mudar, e continue planejando';
+
+  @override
+  String get permissionPlanKeepPlanning => 'Continuar planejando';
+
+  @override
+  String get permissionPlanModeDefault => 'perguntando antes de cada edição';
+
+  @override
+  String get permissionPlanModeAcceptEdits => 'aceitando edições sem perguntar';
+
+  @override
+  String get sessionWorkingWaiting => 'Esperando sua resposta';
+
+  @override
+  String sessionWorkingRunningTool(String tool) {
+    return 'Executando $tool…';
+  }
+
+  @override
+  String sessionWorkingSeconds(String seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String sessionWorkingMinutes(String minutes, String seconds) {
+    return '$minutes min $seconds s';
+  }
+
+  @override
+  String get sessionWorkingVerbPondering => 'Ponderando…';
+
+  @override
+  String get sessionWorkingVerbDeciphering => 'Decifrando…';
+
+  @override
+  String get sessionWorkingVerbMulling => 'Matutando…';
+
+  @override
+  String get sessionWorkingVerbReasoning => 'Raciocinando…';
+
+  @override
+  String get sessionWorkingVerbWeighing => 'Pesando as opções…';
+
+  @override
+  String get sessionWorkingVerbSketching => 'Rascunhando…';
+
+  @override
+  String get sessionWorkingVerbUntangling => 'Desembaraçando…';
+
+  @override
+  String get sessionWorkingVerbAssembling => 'Montando…';
+
+  @override
+  String get sessionWorkingVerbTinkering => 'Ajustando…';
+
+  @override
+  String get sessionWorkingVerbExploring => 'Explorando…';
+
+  @override
+  String get sessionWorkingVerbConnecting => 'Ligando os pontos…';
+
+  @override
+  String get sessionWorkingVerbDistilling => 'Destilando…';
+
+  @override
+  String get sessionWorkingVerbBrewing => 'Preparando…';
+
+  @override
+  String get sessionWorkingVerbCrafting => 'Elaborando…';
+
+  @override
+  String get sessionWorkingVerbInvestigating => 'Investigando…';
+
+  @override
+  String get sessionWorkingVerbPuzzling => 'Quebrando a cabeça…';
+
+  @override
+  String get sessionWorkingVerbConsidering => 'Considerando…';
+
+  @override
+  String get sessionWorkingVerbComputing => 'Calculando…';
+
+  @override
+  String get sessionWorkingVerbWorking => 'Trabalhando…';
+
+  @override
+  String get sessionWorkingVerbMusing => 'Refletindo…';
+
+  @override
+  String sessionPendingPill(String count) {
+    return 'O Claude espera sua resposta ($count)';
+  }
+
+  @override
+  String get sessionInlineTail => 'Perguntas esperando você';
+
+  @override
+  String get sessionTasksLabel => 'A lista de tarefas que o Claude mantém nesta conversa';
+
+  @override
+  String sessionTasksHeadline(String done, String total, String task) {
+    return '$done/$total · $task';
+  }
+
+  @override
+  String sessionTasksAllDone(String done, String total) {
+    return '$done/$total · Tudo feito';
+  }
+
+  @override
+  String get sessionTaskPending => 'Pendente';
+
+  @override
+  String get sessionTaskInProgress => 'Em andamento';
+
+  @override
+  String get sessionTaskCompleted => 'Concluída';
+
+  @override
+  String sessionRewoundSummary(String restored, String kept) {
+    return 'Arquivos devolvidos: $restored voltaram, $kept ficaram como estavam';
+  }
+
+  @override
+  String sessionRewoundFailed(String restored, String kept, String failed) {
+    return 'Arquivos devolvidos: $restored voltaram, $kept ficaram como estavam, $failed não puderam voltar';
+  }
+
+  @override
+  String get sessionReplayPartial =>
+      'Isto é só o que o servidor ainda tinha em memória, não a conversa inteira.';
+
+  @override
+  String get sessionMessageActions => 'O que fazer com este prompt';
+
+  @override
+  String get sessionMessageEdit => 'Editar e reenviar';
+
+  @override
+  String get sessionMessageForkFrom => 'Bifurcar daqui — reenviar sem mudar, numa nova conversa';
+
+  @override
+  String get sessionMessageUndo => 'Devolver os arquivos a antes deste prompt';
+
+  @override
+  String get sessionMessageUndoBusy =>
+      'Devolver os arquivos a antes deste prompt — não enquanto o Claude trabalha';
+
+  @override
+  String get sessionMessageHold => 'Pressione e segure para o que fazer com este prompt';
+
+  @override
+  String get sessionEditEditing => 'Editando uma mensagem';
+
+  @override
+  String get sessionEditCancel => 'Parar de editar';
+
+  @override
+  String get sessionEditExplain =>
+      'Você está editando um prompt: enviá-lo abre uma nova conversa a partir de antes dele. A conversa original fica como estava.';
+
+  @override
+  String get sessionEditResumeInstead => 'Retomar a conversa em vez disso';
+
+  @override
+  String get sessionForkStarting => 'Abrindo a nova conversa…';
+
+  @override
+  String get sessionErrorForkRejected =>
+      'O Claude não conseguiu continuar a conversa a partir dessa mensagem. Retome a conversa e edite a partir dela.';
+
+  @override
+  String get sessionErrorForkPointUnknown =>
+      'Essa mensagem não é um prompt desta conversa. Recarregue a conversa e tente de novo.';
+
+  @override
+  String get connectionTitle => 'Endereço do servidor';
+
+  @override
+  String get connectionDescription =>
+      'Escolha como este celular chega ao seu servidor: o endereço da sua rede, o da internet ou outro. A API, a conexão ao vivo e o login passam todos por ele.';
+
+  @override
+  String get connectionInternal => 'Interno';
+
+  @override
+  String get connectionInternalHint => 'Na sua rede local';
+
+  @override
+  String get connectionExternal => 'Externo';
+
+  @override
+  String get connectionExternalHint => 'Pela internet';
+
+  @override
+  String get connectionOther => 'Outro';
+
+  @override
+  String get connectionOtherLabel => 'Endereço do servidor';
+
+  @override
+  String get connectionOtherHint => 'https://meu-servidor.example';
+
+  @override
+  String get connectionUndefined => 'Esta versão do app foi gerada sem este endereço.';
+
+  @override
+  String connectionInUse(String origin) {
+    return 'Em uso: $origin';
+  }
+
+  @override
+  String get connectionNone =>
+      'Ainda não há endereço para chegar ao servidor: escolha um para entrar.';
+
+  @override
+  String get connectionNoticeUnavailable =>
+      'O endereço salvo antes não é oferecido por esta versão do app, então o padrão está em uso.';
+
+  @override
+  String get connectionTest => 'Testar conexão';
+
+  @override
+  String get connectionTesting => 'Testando…';
+
+  @override
+  String connectionResultOk(String origin) {
+    return 'O servidor e o login responderam em $origin.';
+  }
+
+  @override
+  String connectionResultServerUnreachable(String origin) {
+    return 'Nada respondeu em $origin: o servidor está fora do ar, fora do alcance desta rede, ou este não é o endereço dele.';
+  }
+
+  @override
+  String connectionResultLoginUnavailable(String origin) {
+    return 'O servidor respondeu em $origin, mas o login não.';
+  }
+
+  @override
+  String get connectionSave => 'Salvar';
+
+  @override
+  String get connectionSwitchTitle => 'Trocar o endereço?';
+
+  @override
+  String get connectionSwitchBody =>
+      'Trocar o endereço encerra o seu login: o próximo é com o servidor do novo endereço.';
+
+  @override
+  String get connectionSwitchConfirm => 'Trocar e sair';
+
+  @override
+  String get connectionSwitchCancel => 'Manter este endereço';
+
+  @override
+  String get connectionProblemEmpty => 'Escreva o endereço do servidor.';
+
+  @override
+  String get connectionProblemNotAnAddress => 'Isto não é um endereço: comece com https://';
+
+  @override
+  String get connectionProblemScheme => 'Só endereços https:// são aceitos.';
+
+  @override
+  String get connectionProblemPlainText =>
+      'Aqui só https:// é aceito: http:// é só para o próprio celular (localhost) e, no app de desenvolvimento, para um IP da rede local (10.x, 172.16–31.x, 192.168.x), porque o login viajaria em texto aberto.';
+
+  @override
+  String get connectionProblemPath => 'Só o endereço do servidor: nada depois da /.';
+
+  @override
+  String get connectionProblemQuery => 'Só o endereço do servidor: sem ? depois dele.';
+
+  @override
+  String get connectionProblemFragment => 'Só o endereço do servidor: sem # depois dele.';
+
+  @override
+  String get connectionProblemUserInfo => 'O endereço não pode levar usuário nem senha.';
+
+  @override
+  String get connectionHelpOpen => 'Ajuda sobre o endereço do servidor';
+
+  @override
+  String get connectionHelpBody =>
+      'O app chega ao seu servidor por um endereço só, e tudo passa por ele: a API, a conexão ao vivo e o login. Interno é o endereço da sua rede; externo é o da internet, quando o servidor está exposto; outro é qualquer endereço que você digitar. Só https:// é aceito, exceto para localhost. Teste a conexão antes de salvar: ela pergunta ao servidor e ao login, e diz qual não respondeu. A escolha fica neste celular mesmo depois de reiniciar ou sair. Trocá-la encerra o seu login, porque o próximo é com o servidor do novo endereço. Esta tela abre sem login, pela tela de entrada, para que um endereço errado nunca deixe você do lado de fora.';
+
+  @override
+  String get foldersTitle => 'Pastas';
+
+  @override
+  String get foldersOpenSection => 'Abertas';
+
+  @override
+  String get foldersRecentSection => 'Recentes';
+
+  @override
+  String get foldersOpenAnother => 'Abrir outra pasta';
+
+  @override
+  String get foldersNoneOpenTitle => 'Nenhuma pasta aberta';
+
+  @override
+  String get foldersNoneOpenBody =>
+      'Abra uma pasta para começar uma sessão nela. As pastas abertas aqui são as mesmas das abas no navegador.';
+
+  @override
+  String get foldersNoRecent => 'Nenhuma outra pasta aberta antes.';
+
+  @override
+  String get foldersLoading => 'Lendo suas pastas…';
+
+  @override
+  String get foldersMissing => 'Esta pasta não existe mais no computador.';
+
+  @override
+  String get foldersNotAllowed => 'Esta pasta não está mais dentro de uma raiz liberada para você.';
+
+  @override
+  String foldersSessions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sessões abertas',
+      one: '1 sessão aberta',
+      zero: 'Nenhuma sessão aberta',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String foldersPending(int count) {
+    return '$count esperando você';
+  }
+
+  @override
+  String get foldersLoadFailed => 'Não foi possível ler as sessões desta pasta.';
+
+  @override
+  String foldersActions(String name) {
+    return 'Ações de $name';
+  }
+
+  @override
+  String get foldersClose => 'Fechar pasta';
+
+  @override
+  String get foldersClosed => 'Pasta fechada. Nenhuma sessão foi encerrada.';
+
+  @override
+  String get foldersPin => 'Fixar';
+
+  @override
+  String get foldersUnpin => 'Desafixar';
+
+  @override
+  String get foldersForget => 'Tirar das recentes';
+
+  @override
+  String foldersLimitReached(String limit) {
+    return 'Você já tem $limit pastas abertas. Feche uma para abrir outra.';
+  }
+
+  @override
+  String get foldersHelpOpen => 'Ajuda sobre as pastas';
+
+  @override
+  String get foldersHelpBody =>
+      'Abertas: as pastas em que você está trabalhando — as mesmas das abas de pasta no navegador. Cada uma diz quantas sessões estão abertas nela e quantos pedidos esperam você. Toque numa para ver as sessões e o histórico dela, ou para começar uma sessão nova.\n\nRecentes: pastas que você abriu antes. Toque numa para abri-la de novo; fixe as que você volta sempre.\n\nAbrir outra pasta: percorra as raízes em que este computador deixa o Claude rodar, um nível por vez, e abra a pasta que quiser.\n\nFechar uma pasta só a tira da lista: as sessões dela continuam rodando.';
+
+  @override
+  String get folderPickerTitle => 'Abrir uma pasta';
+
+  @override
+  String get folderPickerRoots => 'As raízes em que este computador deixa o Claude rodar';
+
+  @override
+  String get folderPickerOpenThis => 'Abrir esta pasta';
+
+  @override
+  String get folderPickerUp => 'Subir um nível';
+
+  @override
+  String get folderPickerEmpty => 'Nenhuma subpasta aqui.';
+
+  @override
+  String get folderPickerTruncated => 'Há pastas demais aqui: só as primeiras aparecem.';
+
+  @override
+  String get folderPickerLoading => 'Lendo a pasta…';
+
+  @override
+  String get folderNewSession => 'Nova sessão';
+
+  @override
+  String get folderOpenSessions => 'Sessões abertas';
+
+  @override
+  String get folderNoOpenSessions => 'Nenhuma sessão aberta nesta pasta';
+
+  @override
+  String get folderNoOpenSessionsBody =>
+      'Comece uma com Nova sessão, ou abra uma do histórico abaixo.';
+
+  @override
+  String get folderSessionsLoading => 'Lendo as sessões abertas…';
+
+  @override
+  String get folderHistory => 'Histórico';
+
+  @override
+  String get folderHistorySeeAll => 'Ver todas';
+
+  @override
+  String get folderHistoryEmpty => 'Nenhuma conversa nesta pasta ainda.';
+
+  @override
+  String folderSessionDetails(String status, String model) {
+    return '$status · $model';
+  }
+
+  @override
+  String folderSessionStarted(String when) {
+    return 'Iniciada $when';
+  }
+
+  @override
+  String folderSessionBelow(String path) {
+    return 'Em $path';
+  }
+
+  @override
+  String get folderOpenedFromWeb => 'Aberta num navegador';
+
+  @override
+  String get folderOpenedFromMobile => 'Aberta num celular';
+
+  @override
+  String get folderHelpOpen => 'Ajuda sobre esta pasta';
+
+  @override
+  String get folderHelpBody =>
+      'Nova sessão: um rascunho nesta pasta. Nada roda até você mandar o primeiro prompt.\n\nSessões abertas: o que roda agora nesta pasta e abaixo dela, aberto aqui, em outro celular ou num navegador. Toque numa para acompanhá-la; ela entra no painel de sessões desta pasta.\n\nHistórico: as conversas que o Claude guardou desta pasta. Abra uma para ler ou continuar.';
+
+  @override
+  String get liveStatusStarting => 'Iniciando';
+
+  @override
+  String get liveStatusIdle => 'Parada';
+
+  @override
+  String get liveStatusThinking => 'Pensando';
+
+  @override
+  String get liveStatusRunning => 'Executando uma ferramenta';
+
+  @override
+  String get liveStatusWaiting => 'Esperando você';
+
+  @override
+  String get liveStatusClosed => 'Encerrada';
+
+  @override
+  String get liveStatusUnknown => 'Status desconhecido';
+
+  @override
+  String get folderPanelOpen => 'Sessões desta pasta';
+
+  @override
+  String folderPanelTitle(String folder) {
+    return 'Sessões de $folder';
+  }
+
+  @override
+  String get folderPanelAll => 'Todas as sessões da pasta';
+
+  @override
+  String get folderPanelCurrent => 'Na tela';
+
+  @override
+  String get folderPanelWaitingElsewhere => 'Outra sessão desta pasta está esperando você';
+
+  @override
+  String get sessionCloseInApp => 'Fechar no app';
+
+  @override
+  String get sessionCloseInAppNote =>
+      'Ela continua rodando; só sai desta lista. Abra de novo pela pasta.';
+
+  @override
+  String get workspaceErrorNotFound => 'Essa pasta não existe mais.';
+
+  @override
+  String get workspaceErrorNotADirectory => 'Isso é um arquivo, não uma pasta.';
+
+  @override
+  String workspaceErrorDirectoryUnreadable(String path) {
+    return 'Este computador não consegue ler $path.';
+  }
+
+  @override
+  String get folderNewSessionOffline => 'Esperando a conexão para começar uma sessão.';
 }

@@ -28,6 +28,7 @@ import 'package:remote_claude/core/navigation/deep_link_controller.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/permission/permission.dart';
+import 'package:remote_claude/features/session/presentation/widgets/conversation_view.dart';
 
 import 'support/e2e_environment.dart';
 import 'support/signed_in_app.dart';
@@ -35,27 +36,24 @@ import 'support/signed_in_app.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  final AppConfig config = e2eConfig();
+  final BuildConfig config = e2eConfig();
 
   Future<SignedInApp> signedIn(WidgetTester tester, E2eScenario scenario) =>
       signedInApp(tester, config, scenario);
 
-  /// Opens a session on the first folder of the allowlist, through the list, and answers its id.
-  Future<String> openedSession(WidgetTester tester, SignedInApp app) =>
-      sessionOpenedFromTheList(tester, app.container);
-
-  /// Prompts the recorded turn that asks for permission, and answers the request id it asked.
-  Future<String> asked(
+  /// Opens a session on the first folder of the allowlist, through the list, with the recorded turn
+  /// that asks for permission as its first prompt; answers the session and the request it asked.
+  Future<(String, String)> openedAsking(
     WidgetTester tester,
     SignedInApp app,
-    String sessionId,
     String fixture,
   ) async {
-    await tester.enterText(find.byType(TextField), 'do the work [fixture:$fixture]');
-    await tester.tap(find.text(app.l10n.sessionPromptAction));
+    final String sessionId = await app
+        .robot(tester)
+        .startSession(app.container, 'do the work [fixture:$fixture]');
     await pumpUntil(tester, () => app.queueOf(sessionId).pending.isNotEmpty);
 
-    return app.queueOf(sessionId).pending.single.requestId;
+    return (sessionId, app.queueOf(sessionId).pending.single.requestId);
   }
 
   /// A phone approved from the browser, with a session open and its question on screen.
@@ -65,9 +63,13 @@ void main() {
   ) async {
     final SignedInApp app = await signedIn(tester, scenario);
     await approvedFromTheBrowser(tester, app);
-    final String sessionId = await openedSession(tester, app);
+    final (String sessionId, String requestId) = await openedAsking(
+      tester,
+      app,
+      scenario.text('fixture'),
+    );
 
-    return (app, sessionId, await asked(tester, app, sessionId, scenario.text('fixture')));
+    return (app, sessionId, requestId);
   }
 
   /// What a tap on the notification of [requestId] does: ask the app to open its address.
@@ -85,7 +87,7 @@ void main() {
 
   /// Taps "allow once", and waits for what the server published: answered from a phone.
   Future<void> allowedOnce(WidgetTester tester, SignedInApp app) async {
-    await tapOnScreen(tester, find.text(app.l10n.permissionScopeOnce).first);
+    await app.robot(tester).answer(app.l10n.permissionScopeOnce);
     await pumpUntil(
       tester,
       () => find.text(app.l10n.permissionOutcomeAllowedPhone).evaluate().isNotEmpty,
@@ -96,9 +98,8 @@ void main() {
 
   testWidgets('${pending.id} — ${pending.title}', (WidgetTester tester) async {
     final SignedInApp app = await signedIn(tester, pending);
-    final String sessionId = await openedSession(tester, app);
-
-    await asked(tester, app, sessionId, pending.text('fixture'));
+    await openedAsking(tester, app, pending.text('fixture'));
+    await app.robot(tester).openQuestions();
 
     // The question is on screen, the controls are off, and the reason is written down — twice:
     // on the card, and in the banner that says what this phone may do.
@@ -144,6 +145,18 @@ void main() {
     // described.
     await openedFromTheNotification(tester, app, sessionId, requestId);
     await pumpUntil(tester, () => find.text(app.l10n.permissionScopeOnce).evaluate().isNotEmpty);
+
+    // Plan 10, S-74 — "open the session" lands on the conversation, scrolled to this same card, in
+    // the place of its tool; it is answered there.
+    await tester.tap(find.text(app.l10n.permissionOpenSession));
+    await pumpUntil(
+      tester,
+      () => find
+          .descendant(of: find.byType(ConversationView), matching: find.byType(PermissionPanel))
+          .hitTestable()
+          .evaluate()
+          .isNotEmpty,
+    );
 
     await allowedOnce(tester, app);
   });

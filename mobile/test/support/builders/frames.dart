@@ -4,6 +4,7 @@ library;
 import 'dart:convert';
 
 import 'package:remote_claude/core/network/contracts/frame_codec.dart';
+import 'package:remote_claude/core/network/contracts/protocol.g.dart';
 import 'package:remote_claude/features/session/data/mappers/session_event_mapper.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
@@ -17,12 +18,15 @@ String frame({
   String? sessionId,
   int? seq,
   Map<String, Object?>? payload,
+  String? correlationId,
+  String ts = '2026-09-14T12:00:00.000Z',
 }) => jsonEncode(<String, Object?>{
   'v': v,
   'id': id,
   'kind': kind,
   'type': type,
-  'ts': '2026-09-14T12:00:00.000Z',
+  'ts': ts,
+  'correlationId': ?correlationId,
   'sessionId': ?sessionId,
   'seq': ?seq,
   'payload': ?payload,
@@ -90,17 +94,115 @@ String sessionStarted({
   int seq = 1,
   String? claudeSessionId,
   String? resumedFrom,
+  String? model,
+  String? permissionMode,
+  String? correlationId,
+  String workspacePath = '/tmp/work',
 }) => frame(
   kind: 'event',
   type: 'session.started',
   sessionId: sessionId,
   seq: seq,
+  correlationId: correlationId,
   payload: <String, Object?>{
     'sessionId': sessionId,
-    'workspacePath': '/tmp/work',
+    'workspacePath': workspacePath,
     'claudeSessionId': ?claudeSessionId,
     'resumedFrom': ?resumedFrom,
+    'model': ?model,
+    'permissionMode': ?permissionMode,
   },
+);
+
+/// A command accepted — not finished.
+String commandAccepted({required String correlationId, String command = 'session.setModel'}) =>
+    frame(
+      kind: 'ack',
+      type: 'command.accepted',
+      correlationId: correlationId,
+      payload: <String, Object?>{'command': command},
+    );
+
+/// One fragment of what the model thought.
+String thinkingDelta({
+  required String messageId,
+  required String delta,
+  required int seq,
+  String sessionId = 'session-1',
+  String ts = '2026-09-14T12:00:00.000Z',
+}) => frame(
+  kind: 'event',
+  type: 'message.delta',
+  sessionId: sessionId,
+  seq: seq,
+  ts: ts,
+  payload: <String, Object?>{'messageId': messageId, 'delta': delta, 'blockType': 'thinking'},
+);
+
+/// A message — or a block of one — finished, with the blocks given.
+String messageBlocks({
+  required String messageId,
+  required List<Map<String, Object?>> content,
+  required int seq,
+  String role = 'assistant',
+  String sessionId = 'session-1',
+  String ts = '2026-09-14T12:00:00.000Z',
+}) => frame(
+  kind: 'event',
+  type: 'message.completed',
+  sessionId: sessionId,
+  seq: seq,
+  ts: ts,
+  payload: <String, Object?>{'messageId': messageId, 'role': role, 'content': content},
+);
+
+/// A prompt waiting in the queue.
+String promptQueued({
+  required String queueId,
+  required int seq,
+  int position = 1,
+  String promptedBy = 'mobile',
+  String preview = 'and the tests?',
+  String sessionId = 'session-1',
+}) => frame(
+  kind: 'event',
+  type: 'prompt.queued',
+  sessionId: sessionId,
+  seq: seq,
+  payload: <String, Object?>{
+    'queueId': queueId,
+    'position': position,
+    'promptedBy': promptedBy,
+    'preview': preview,
+  },
+);
+
+/// A prompt leaving the queue.
+String promptDequeued({
+  required String queueId,
+  required int seq,
+  String reason = 'started',
+  String sessionId = 'session-1',
+}) => frame(
+  kind: 'event',
+  type: 'prompt.dequeued',
+  sessionId: sessionId,
+  seq: seq,
+  payload: <String, Object?>{'queueId': queueId, 'reason': reason},
+);
+
+/// The conversation compacted.
+String sessionCompacted({
+  required int seq,
+  String trigger = 'manual',
+  int? preTokens,
+  String sessionId = 'session-1',
+}) => frame(
+  kind: 'event',
+  type: 'session.compacted',
+  sessionId: sessionId,
+  seq: seq,
+  payload: <String, Object?>{'trigger': trigger, 'preTokens': ?preTokens},
 );
 
 /// One fragment of a message.
@@ -109,11 +211,13 @@ String messageDelta({
   required String delta,
   required int seq,
   String sessionId = 'session-1',
+  String ts = '2026-09-14T12:00:00.000Z',
 }) => frame(
   kind: 'event',
   type: 'message.delta',
   sessionId: sessionId,
   seq: seq,
+  ts: ts,
   payload: <String, Object?>{'messageId': messageId, 'delta': delta},
 );
 
@@ -145,12 +249,18 @@ String toolStarted({
   String toolName = 'Bash',
   Map<String, Object?> input = const <String, Object?>{'command': 'ls'},
   String sessionId = 'session-1',
+  String? parentToolUseId,
 }) => frame(
   kind: 'event',
   type: 'tool.started',
   sessionId: sessionId,
   seq: seq,
-  payload: <String, Object?>{'toolUseId': toolUseId, 'toolName': toolName, 'input': input},
+  payload: <String, Object?>{
+    'toolUseId': toolUseId,
+    'toolName': toolName,
+    'input': input,
+    'parentToolUseId': ?parentToolUseId,
+  },
 );
 
 /// Something a tool printed.
@@ -173,13 +283,19 @@ String toolCompleted({
   required int seq,
   String status = 'succeeded',
   String? summary,
+  String? taskId,
   String sessionId = 'session-1',
 }) => frame(
   kind: 'event',
   type: 'tool.completed',
   sessionId: sessionId,
   seq: seq,
-  payload: <String, Object?>{'toolUseId': toolUseId, 'status': status, 'summary': ?summary},
+  payload: <String, Object?>{
+    'toolUseId': toolUseId,
+    'status': status,
+    'summary': ?summary,
+    'taskId': ?taskId,
+  },
 );
 
 /// Where the session is now.
@@ -187,11 +303,13 @@ String sessionStatusChanged({
   required String status,
   required int seq,
   String sessionId = 'session-1',
+  String ts = '2026-09-14T12:00:00.000Z',
 }) => frame(
   kind: 'event',
   type: 'session.statusChanged',
   sessionId: sessionId,
   seq: seq,
+  ts: ts,
   payload: <String, Object?>{'status': status},
 );
 
@@ -227,7 +345,11 @@ String sessionClosed({
 ///
 /// The wire goes through the real mapper rather than being hand-assembled into an event: a test
 /// that built the event itself would pass while the mapper read the frame wrongly.
-SessionUpdate arrivalOf(String raw) => EventReceived(sessionEventFrom(decodeEnvelope(raw)!)!);
+SessionUpdate arrivalOf(String raw) {
+  final Envelope envelope = decodeEnvelope(raw)!;
+  // Stamped with the session the frame names, as the data source does (plan 10, S-172).
+  return EventReceived(sessionEventFrom(envelope)!, sessionId: envelope.sessionId);
+}
 
 /// The payload of `permission.requested`, complete, with [overrides] applied on top.
 ///
@@ -274,12 +396,14 @@ String commandError({
   String id = 'err-1',
   String? traceId,
   Map<String, Object?>? params,
+  String? sessionId,
 }) => jsonEncode(<String, Object?>{
   'v': 1,
   'id': id,
   'kind': 'error',
   'type': 'error',
   'ts': '2026-09-14T12:00:00.000Z',
+  'sessionId': ?sessionId,
   'correlationId': ?correlationId,
   'traceId': ?traceId,
   'payload': <String, Object?>{

@@ -136,3 +136,23 @@ export function waitForHttp(url, options = {}) {
     },
   });
 }
+
+/**
+ * Whether an endpoint of a stack that should already be up answers below 400 within [timeoutMs].
+ *
+ * A yes or a no, for a script to report in its own words: `waitForHttp` only ever gives up at its
+ * deadline, so a no means the service is not there — not an error with more to say.
+ *
+ * @param {string} url
+ * @param {number} timeoutMs
+ * @returns {Promise<boolean>}
+ */
+export async function answers(url, timeoutMs) {
+  try {
+    await waitForHttp(url, { timeoutMs, intervalMs: 500, accept: (status) => status < 400 });
+    return true;
+  } catch {
+    // The deadline passed: the answer is "no", and the caller says so.
+    return false;
+  }
+}

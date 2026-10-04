@@ -9,6 +9,8 @@
  * It also keeps `docs/plans/progress.md` — the general progress, across plans — in sync: a plan
  * that only updates its own diary leaves the project-wide answer wrong. The counters cover the
  * open decisions too, because a decision nobody tracks is a decision taken by omission.
+ * And the state column of the plan index, `docs/plans/README.md`, which nothing moved before: it
+ * said "não iniciado" of plans long finished.
  *
  * `--at <nn>` creates the plan in the middle of the sequence: every plan from `<nn>` on moves up
  * by one — its directory and every explicit reference to it, across the repository — and the
@@ -26,6 +28,7 @@ import process from 'node:process';
 
 import { repoRoot } from './lib/paths.mjs';
 import {
+  applyIndexStates,
   applyOverallProgress,
   applyProgress,
   summarizeOverall,
@@ -392,6 +395,13 @@ function recalculateOverall() {
     path.relative(repoRoot, overallPath),
     `${overall.taskDone}/${overall.taskTotal} tasks · ${overall.scenarioDone}/${overall.scenarioTotal} scenarios`,
   );
+
+  const indexPath = path.join(plansDir, 'README.md');
+  if (!rewriteProgress(indexPath, (content) => applyIndexStates(content, overall))) {
+    return 1;
+  }
+
+  ok(path.relative(repoRoot, indexPath), 'the state of each plan in the index');
   return 0;
 }
 

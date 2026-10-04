@@ -190,6 +190,7 @@ class RewindController extends _$RewindController {
       case EventReceived():
       case StreamGap():
       case SessionJoined():
+      case CommandAccepted():
       case CommandRefused():
       case SessionFailed():
         return;

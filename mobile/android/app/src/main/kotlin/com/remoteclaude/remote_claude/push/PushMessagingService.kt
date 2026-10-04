@@ -21,7 +21,7 @@ class PushMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val payload = PushPayload.of(message.data)
         if (payload == null) {
-            Log.d(TAG, "push.message.ignored reason=not-a-permission-payload")
+            Log.d(TAG, "push.message.ignored reason=not-one-of-ours")
             return
         }
 
@@ -30,6 +30,9 @@ class PushMessagingService : FirebaseMessagingService() {
 
         if (withdrawal) {
             PushNotifications.withdraw(this, PushPayload.tagOf(payload))
+        } else if (VisibleSession.hides(payload)) {
+            // The session is on screen: its card says it, inline (D-10).
+            Log.d(TAG, "push.message.notShown reason=session-on-screen")
         } else {
             message.notification?.let { PushNotifications.show(this, payload, it.title, it.body) }
         }

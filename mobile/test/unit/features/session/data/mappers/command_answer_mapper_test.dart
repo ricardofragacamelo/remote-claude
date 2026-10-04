@@ -123,4 +123,39 @@ void main() {
       expect(sessionFailedFrom(envelope(sessionAttached(sessionId: 's-1'))), isNull);
     });
   });
+
+  group('accepting — plan 10, B-11', () {
+    test('names the command it accepts', () {
+      expect(
+        commandAcceptedFrom(envelope(commandAccepted(correlationId: 'cmd-3'))),
+        const CommandAccepted('cmd-3'),
+      );
+    });
+
+    test('an acceptance of nobody, or anything else, is not one', () {
+      expect(commandAcceptedFrom(envelope(frame(kind: 'ack', type: 'command.accepted'))), isNull);
+      expect(
+        commandAcceptedFrom(
+          envelope(frame(kind: 'ack', type: 'session.attached', correlationId: 'cmd-3')),
+        ),
+        isNull,
+      );
+    });
+  });
+
+  test('S-82 · a failure the session reports names the session', () {
+    final SessionFailed? failed = sessionFailedFrom(
+      envelope(
+        commandError(
+          correlationId: null,
+          sessionId: 'session-2',
+          code: 'SESSION_FORK_REJECTED',
+          messageKey: 'session.error.forkRejected',
+        ),
+      ),
+    );
+
+    expect(failed?.sessionId, 'session-2');
+    expect(failed?.failure.code, 'SESSION_FORK_REJECTED');
+  });
 }

@@ -229,6 +229,7 @@ describe('RequestPermissionUseCase', () => {
               decision: 'allow',
               auto: true,
               resolvedBy: PERMISSION_OWNER.value,
+              toolUseId: 'toolu-1',
             },
           },
         },

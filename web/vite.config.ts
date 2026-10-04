@@ -16,7 +16,7 @@ if (fs.existsSync(dotEnv)) {
   process.loadEnvFile(dotEnv);
 }
 
-/** The dev server, and behind the public origin of `pnpm dev:public` its forwarding too. */
+/** The dev server and its forwarding — locally, and behind the public origin of `pnpm dev:public`. */
 const server = devServer(process.env);
 
 /**

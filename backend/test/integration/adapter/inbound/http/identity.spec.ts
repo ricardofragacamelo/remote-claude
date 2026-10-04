@@ -1,8 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 
-import { IDENTITY_JWKS } from '@adapter/outbound/identity/identity.tokens';
-import { JwksCache } from '@adapter/outbound/identity/jwks-cache';
 import { ROTATION_GRACE_MS } from '@application/auth/renew-session.use-case';
 import { CLOCK } from '@application/shared';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
@@ -44,12 +42,10 @@ describe('the identity edge', () => {
     // The clock is the one thing the suite moves: the key set's reload cooldown is a minute long and
     // a rotation's grace ten seconds, and a scenario that waited for either would be the suite doing
     // nothing for that long.
+    // The key sets of the accepted issuers are built on the product's `CLOCK`, so moving it moves
+    // them too.
     harness = await startTestApp(database.url, identity, (builder) =>
-      builder
-        .overrideProvider(CLOCK)
-        .useValue(keys)
-        .overrideProvider(IDENTITY_JWKS)
-        .useValue(new JwksCache(keys)),
+      builder.overrideProvider(CLOCK).useValue(keys),
     );
   });
 

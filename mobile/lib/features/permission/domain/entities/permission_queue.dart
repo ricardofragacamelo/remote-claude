@@ -224,7 +224,7 @@ class PermissionQueue extends Equatable {
 
     for (final PermissionCard card in pending) {
       if (card.request.isExpiredAt(now)) {
-        ended.add(PermissionOutcome.expired(card.requestId));
+        ended.add(PermissionOutcome.expired(card.requestId, toolUseId: card.request.toolUseId));
       } else {
         open.add(card);
       }
@@ -271,7 +271,11 @@ class PermissionQueue extends Equatable {
         .toList(growable: false),
     settled: <PermissionOutcome>[
       ...settled.where((PermissionOutcome known) => known.requestId != outcome.requestId),
-      outcome,
+      // About the tool the question was about, when it was on screen — and, when it was not, about
+      // whatever an earlier settlement of it knew.
+      outcome.about(
+        cardOf(outcome.requestId)?.request.toolUseId ?? outcomeOf(outcome.requestId)?.toolUseId,
+      ),
     ],
   );
 

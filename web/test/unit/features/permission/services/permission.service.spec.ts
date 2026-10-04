@@ -161,6 +161,16 @@ describe('reading the permission frames', () => {
     });
   });
 
+  it('reads the tool a settled request was about — a rule answered it, nobody was asked (plan 10, B-20)', () => {
+    expect(
+      toOutcome(
+        frame({
+          payload: { requestId: 'req-1', decision: 'allow', auto: true, toolUseId: 'toolu-9' },
+        }),
+      )?.toolUseId,
+    ).toBe('toolu-9');
+  });
+
   it.each([
     ['mobile', 'mobile'],
     ['web', 'web'],

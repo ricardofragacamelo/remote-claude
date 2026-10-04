@@ -13,26 +13,23 @@ library;
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:remote_claude/app/router_provider.dart';
 import 'package:remote_claude/core/config/app_config.dart';
-import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/features/auth/auth.dart';
 import 'package:remote_claude/features/session/session.dart';
-import 'package:remote_claude/features/workspace/workspace.dart';
 
 import 'support/e2e_environment.dart';
 import 'support/limits.dart';
+import 'support/session_robot.dart';
 import 'support/signed_in_app.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  final AppConfig config = limitsConfig();
+  final BuildConfig config = limitsConfig();
 
   final E2eScenario ceiling = E2eScenario.named('limits-ceiling');
   final E2eScenario freed = E2eScenario.named('limits-slot-freed');
@@ -58,45 +55,22 @@ void main() {
     return (browser, opened);
   }
 
-  /// The folders of the list, once it is on screen.
-  Future<Finder> theFolders(WidgetTester tester, SignedInApp app) async {
-    app.container.read(routerProvider).go(workspacesRoute);
-
-    final Finder folders = find.descendant(
-      of: find.byType(WorkspaceListPage),
-      matching: find.byType(ListTile),
-    );
-    await pumpUntil(tester, () => folders.evaluate().isNotEmpty);
-    await tester.pumpAndSettle();
-
-    return folders;
-  }
-
-  /// The session screen the app is on, once it is on one.
-  String? sessionOnScreen(WidgetTester tester) {
-    final Finder page = find.byType(SessionPage);
-    return page.evaluate().isEmpty ? null : tester.widget<SessionPage>(page).sessionId;
-  }
+  /// The prompt a session of these tests is opened with: a recorded turn that only answers.
+  const String plainTurn = 'do the work [fixture:text-turn]';
 
   /// Sends a turn through the composer, naming the recording the scripted backend replays — once
   /// the composer takes one, and only done when the box has been emptied by the send.
-  Future<void> prompted(WidgetTester tester, SignedInApp app, String fixture) async {
-    final Finder box = find.byType(TextField);
-    await pumpUntil(tester, () => tester.widget<TextField>(box).enabled ?? true);
+  Future<void> prompted(WidgetTester tester, SignedInApp app, String fixture) =>
+      app.robot(tester).prompt('do the work [fixture:$fixture]');
 
-    await tester.enterText(box, 'do the work [fixture:$fixture]');
-    await tester.pump();
-    await tapOnScreen(tester, find.text(app.l10n.sessionPromptAction));
-    await pumpUntil(tester, () => tester.widget<TextField>(box).controller?.text.isEmpty ?? true);
-  }
-
-  Conversation conversationOf(SignedInApp app, String sessionId) =>
-      app.container.read(liveSessionControllerProvider(sessionId)).conversation;
-
-  /// A session opened from the list, and ended after the test.
-  Future<String> openedOnScreen(WidgetTester tester, SignedInApp app) async {
+  /// A session opened from the list with [prompt] as its first turn, and ended after the test.
+  Future<String> openedOnScreen(
+    WidgetTester tester,
+    SignedInApp app, {
+    String prompt = plainTurn,
+  }) async {
     final (_, List<String> opened) = await browserOf(app);
-    final String sessionId = await sessionOpenedFromTheList(tester, app.container);
+    final String sessionId = await app.robot(tester).startSession(app.container, prompt);
     opened.add(sessionId);
     return sessionId;
   }
@@ -114,8 +88,11 @@ void main() {
     final SignedInApp app = await signedInApp(tester, config, scenario);
     await approvedFromTheBrowser(tester, app);
 
-    final String sessionId = await openedOnScreen(tester, app);
-    await prompted(tester, app, scenario.text('fixture'));
+    final String sessionId = await openedOnScreen(
+      tester,
+      app,
+      prompt: 'do the work [fixture:${scenario.text('fixture')}]',
+    );
     await pumpUntil(tester, () => app.queueOf(sessionId).pending.isNotEmpty);
 
     return (app, sessionId, admin);
@@ -138,18 +115,21 @@ void main() {
     expect(opened, hasLength(ceiling.integer('ceiling')));
     expect(refusedWith, ceiling.text('code'));
 
-    // S-41: the tap on the folder says why nothing opened, translated — beside the folder.
-    final Finder folders = await theFolders(tester, app);
-    await tester.tap(folders.first);
+    // S-41: the first send of a draft says why nothing opened, translated — above the box, with
+    // what was written still in it (plan 10, D-05: the folder itself opens nothing).
+    final SessionRobot robot = app.robot(tester);
+    await robot.openDraft(app.container);
+    await robot.write(plainTurn);
+    await robot.tapSend();
     final String refusal = app.l10n.sessionErrorLimitReached('${ceiling.integer('ceiling')}');
     await pumpUntil(tester, () => find.text(refusal).evaluate().isNotEmpty);
-    expect(sessionOnScreen(tester), isNull);
+    expect(robot.sessionOnScreen, isNull);
 
-    // S-78: one ends, and the next tap opens.
+    // S-78: one ends, and the next send opens.
     await endOnLimits(browser, opened.removeAt(0));
-    await tester.tap(folders.first);
-    await pumpUntil(tester, () => sessionOnScreen(tester) != null);
-    opened.add(sessionOnScreen(tester)!);
+    await robot.tapSend();
+    await pumpUntil(tester, () => robot.sessionOnScreen != null);
+    opened.add(robot.sessionOnScreen!);
   });
 
   testWidgets('${lastSlot.id} — ${lastSlot.title}', (WidgetTester tester) async {
@@ -162,20 +142,22 @@ void main() {
     }
 
     // The browser and the phone ask for the last slot at the same moment.
-    final Finder folders = await theFolders(tester, app);
+    final SessionRobot robot = app.robot(tester);
+    await robot.openDraft(app.container);
+    await robot.write(plainTurn);
     final Future<({String? sessionId, String? refusedWith})> fromTheBrowser = browser
         .startOrRefusal(workspace);
-    await tester.tap(folders.first);
+    await robot.tapSend();
 
     final String refusal = app.l10n.sessionErrorLimitReached('${lastSlot.integer('ceiling')}');
     await pumpUntil(
       tester,
-      () => sessionOnScreen(tester) != null || find.text(refusal).evaluate().isNotEmpty,
+      () => robot.sessionOnScreen != null || find.text(refusal).evaluate().isNotEmpty,
     );
     final ({String? sessionId, String? refusedWith}) browsers = await fromTheBrowser;
 
     // Exactly one of the two opened; the other was told why, and is not waiting.
-    final String? phones = sessionOnScreen(tester);
+    final String? phones = robot.sessionOnScreen;
     expect(<String?>[phones, browsers.sessionId].nonNulls, hasLength(1));
     opened.addAll(<String>[?phones, ?browsers.sessionId]);
 
@@ -189,20 +171,22 @@ void main() {
   testWidgets('${idle.id} — ${idle.title}', (WidgetTester tester) async {
     final SignedInApp app = await signedInApp(tester, config, idle);
 
-    final String sessionId = await sessionOpenedFromTheList(tester, app.container);
-    await prompted(tester, app, idle.text('fixture'));
-    await pumpUntil(tester, () => conversationOf(app, sessionId).lastTurn != null);
+    final String sessionId = await app
+        .robot(tester)
+        .startSession(app.container, 'do the work [fixture:${idle.text('fixture')}]');
+    await pumpUntil(tester, () => app.conversationOf(sessionId).lastTurn != null);
 
     // Then nothing — for longer than the TTL, plus the quarter of it the reaper may take to look.
     await pumpUntil(
       tester,
-      () => find.text(app.l10n.sessionClosedIdleTimeout).evaluate().isNotEmpty,
+      () => app.robot(tester).endedBecause(app.l10n.sessionClosedIdleTimeout).evaluate().isNotEmpty,
       timeout: Duration(seconds: idle.integer('idleTtlSeconds') * 2),
     );
-    expect(conversationOf(app, sessionId).ending?.reason, SessionCloseReason.idleTimeout);
+    expect(app.conversationOf(sessionId).ending?.reason, SessionCloseReason.idleTimeout);
 
-    // What only a live session can do is off.
-    expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+    // What only a live session can do is off: no stop, and the box only resumes it, in a new
+    // process (09 · D-05 — until plan 10 the box was off altogether).
+    expect(app.robot(tester).canOnlyResume, isTrue);
   });
 
   testWidgets('${rate.id} — ${rate.title}', (WidgetTester tester) async {
@@ -239,7 +223,7 @@ void main() {
 
     // And the session is watched again: a turn sent now is seen through.
     await prompted(tester, app, 'text-turn');
-    await pumpUntil(tester, () => conversationOf(app, sessionId).lastTurn != null);
+    await pumpUntil(tester, () => app.conversationOf(sessionId).lastTurn != null);
   });
 
   testWidgets('${expiry.id} — ${expiry.title}', (WidgetTester tester) async {
@@ -261,8 +245,8 @@ void main() {
     );
 
     // The turn carries on to its end, answered from the same screen.
-    await tapOnScreen(tester, find.text(app.l10n.permissionScopeOnce).first);
-    await pumpUntil(tester, () => conversationOf(app, sessionId).lastTurn != null);
+    await app.robot(tester).answer(app.l10n.permissionScopeOnce);
+    await pumpUntil(tester, () => app.conversationOf(sessionId).lastTurn != null);
 
     // And the person saw nothing: the connection never left `ready`, and nobody was signed out.
     expect(statuses.where((ConnectionStatus status) => status != ConnectionStatus.ready), isEmpty);

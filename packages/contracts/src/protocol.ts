@@ -438,6 +438,8 @@ export interface PermissionResolvedPayload {
   readonly resolvedBy?: string;
   /** Which client answered. */
   readonly resolvedFrom?: 'web' | 'mobile';
+  /** The tool call the request was about, when the SDK named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`. */
+  readonly toolUseId?: string;
 }
 
 /** A prompt left the queue: it started, or somebody took it out. The positions of the ones behind it move up by one. */

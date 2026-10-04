@@ -39,6 +39,10 @@ class PushChannel(private val activity: Activity) : MethodChannel.MethodCallHand
                 call.argument<String>("tag")?.let { PushNotifications.withdraw(activity, it) }
                 result.success(null)
             }
+            "visibleSession" -> {
+                VisibleSession.id = call.argument<String>("sessionId")
+                result.success(null)
+            }
             "openSettings" -> {
                 openSettings()
                 result.success(null)

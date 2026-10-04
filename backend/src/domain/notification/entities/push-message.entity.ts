@@ -38,18 +38,21 @@ export type PushParams = Readonly<Record<string, string>>;
  * product that a third party sees. The rule is enforced by construction rather than by review —
  * the only way to build one is through the factories below, which take a
  * {@link PermissionReference} and a closed set of parameters, so there is no field a caller could
- * put an output into (S-19, S-20).
+ * put an output into (S-19, S-20). The one message that is not about a request — the device was
+ * approved — carries nothing at all but the device it is going to.
  *
  * The **tag** is the `requestId`, and that is what makes one notification per request work: the
  * operating system replaces a notification with the same tag rather than stacking a second, and
  * the cancellation that follows names the same tag
  * ([D-15](../../../../docs/plans/02-mobile-approval/decisions.md#d-15--três-pedidos-na-bandeja)).
+ * The approval's tag is the device's, apart from every request's.
  */
 export class PushMessage {
   private constructor(
     readonly kind: PushKind,
     readonly target: PushTarget,
-    readonly reference: PermissionReference,
+    /** The request it is about, or `null` for a message about the device itself. */
+    readonly reference: PermissionReference | null,
     readonly params: PushParams,
   ) {}
 
@@ -76,9 +79,19 @@ export class PushMessage {
     return new PushMessage('permissionResolved', target, reference, {});
   }
 
+  /**
+   * The phone it is going to may decide from now on (plan 17, F3).
+   *
+   * Seen, not silent, and wordless beyond the fact: the sentence is the device's language, and
+   * nothing else crosses.
+   */
+  static deviceApproved(target: PushTarget): PushMessage {
+    return new PushMessage('deviceApproved', target, null, {});
+  }
+
   /** What the operating system replaces, and what the cancellation names. */
   get tag(): string {
-    return this.reference.requestId;
+    return this.reference === null ? `device:${this.target.deviceId}` : this.reference.requestId;
   }
 
   /** Whether this message is meant to be seen. The cancellation is not. */

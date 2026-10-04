@@ -59,14 +59,28 @@ pnpm dev            # em um terminal: a stack
 pnpm dev:mobile     # em outro: o app, com hot reload
 ```
 
-À mão, o mesmo `flutter run` fica assim (com `adb reverse tcp:3000 tcp:3000` e
-`adb reverse tcp:8180 tcp:8180` feitos antes, para o `localhost` do aparelho chegar à máquina):
+O app abre nas **Pastas**: as pastas abertas — as mesmas das abas do navegador —, cada uma com as
+sessões que rodam nela e os pedidos que esperam, as recentes e "Abrir outra pasta". Tocar numa pasta
+mostra Nova sessão, as sessões abertas (de qualquer aparelho) e o histórico. Na tela da sessão, o ícone
+da pasta abre o **painel lateral** com as sessões da pasta abertas no app — todas continuam anexadas, e
+o ícone acende quando outra espera resposta ([plano 10, F7…F9](../docs/plans/10-mobile-chat-layout/F7-open-folders.md)).
+
+Para deixar o app **instalado** no celular e usá-lo sem o cabo, pela rede local — o interno vira
+`http://<IP desta máquina>:5173` e o externo, a origem do `pnpm dev:public` —, use
+`pnpm mobile:install` ([README](../README.md#o-app-no-celular-sem-o-cabo--pnpm-mobileinstall)). Ele
+diz no console quais endereços usou.
+
+À mão, o mesmo `flutter run` fica assim (com `adb reverse tcp:5173 tcp:5173` feito antes, para o
+`localhost` do aparelho chegar à máquina). O app fala com o servidor por **uma origem só** — o
+servidor do web, que encaminha `/api`, `/ws`, `/realms` e `/resources` ([plano 10, D-13 e D-16](../docs/plans/10-mobile-chat-layout/decisions.md#f5--endereço-de-conexão))
+— e dela derivam a API, o socket e o issuer. `RC_INTERNAL_URL` e `RC_EXTERNAL_URL` são os dois
+endereços que a tela de endereço oferece; vazio desliga o radio. O **Outro** cobre o resto:
 
 ```bash
 flutter run \
-  --dart-define=RC_API_URL=http://localhost:3000 \
-  --dart-define=RC_WS_URL=ws://localhost:3000/ws \
-  --dart-define=RC_OIDC_ISSUER=http://localhost:8180/realms/remote-claude \
+  --dart-define=RC_INTERNAL_URL=http://localhost:5173 \
+  --dart-define=RC_EXTERNAL_URL= \
+  --dart-define=RC_OIDC_REALM_PATH=/realms/remote-claude \
   --dart-define=RC_OIDC_CLIENT_ID=remote-claude-mobile \
   --dart-define="RC_OIDC_SCOPES=openid profile email offline_access" \
   --dart-define=RC_OIDC_REDIRECT_URL=br.com.remoteclaude.app://oauth/callback \

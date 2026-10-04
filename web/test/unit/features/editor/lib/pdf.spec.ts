@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const pdfjs = vi.hoisted(() => {
-  const render = vi.fn(() => ({ promise: Promise.resolve() }));
+  const render = vi.fn(() => ({ promise: Promise.resolve(), cancel: vi.fn() }));
   const page = { getViewport: vi.fn(() => ({ width: 100.7, height: 200.2 })), render };
   const proxy = { numPages: 4, getPage: vi.fn(() => Promise.resolve(page)) };
   const task = { promise: Promise.resolve(proxy), destroy: vi.fn(() => Promise.resolve()) };
@@ -41,7 +41,7 @@ describe('the pdf.js of our build — plan 07, S-311', () => {
     expect(doc.pageCount).toBe(4);
 
     const canvas = document.createElement('canvas');
-    await doc.renderPage(2, canvas, 1.5);
+    await doc.renderPage(2, canvas, 1.5, new AbortController().signal);
     expect(pdfjs.proxy.getPage).toHaveBeenCalledWith(2);
     expect(pdfjs.page.getViewport).toHaveBeenCalledWith({ scale: 1.5 });
     expect([canvas.width, canvas.height]).toEqual([100, 200]);
@@ -52,6 +52,60 @@ describe('the pdf.js of our build — plan 07, S-311', () => {
 
     doc.destroy();
     expect(pdfjs.task.destroy).toHaveBeenCalled();
+  });
+
+  it('draws nothing for a page given up on while it was fetched', async () => {
+    pdfjs.render.mockClear();
+    const doc = await createPdfjsEngine().open(new Uint8Array([1]));
+    const drawing = new AbortController();
+    const canvas = document.createElement('canvas');
+
+    const drawn = doc.renderPage(1, canvas, 1, drawing.signal);
+    drawing.abort();
+
+    await expect(drawn).resolves.toBeUndefined();
+    expect(pdfjs.render).not.toHaveBeenCalled();
+    expect([canvas.width, canvas.height]).toEqual([300, 150]);
+  });
+
+  it('cancels a drawing given up on, which frees the canvas and is no failure', async () => {
+    const cancel = vi.fn();
+    let fail: (error: Error) => void = () => undefined;
+    const promise = new Promise<void>((_resolve, reject) => {
+      fail = reject;
+    });
+    cancel.mockImplementation(() => {
+      fail(new Error('Rendering cancelled, page 1'));
+    });
+    pdfjs.render.mockReturnValueOnce({ promise, cancel });
+    const doc = await createPdfjsEngine().open(new Uint8Array([1]));
+    const drawing = new AbortController();
+
+    const drawn = doc.renderPage(1, document.createElement('canvas'), 1, drawing.signal);
+    await vi.waitFor(() => {
+      expect(pdfjs.render).toHaveBeenCalled();
+    });
+    drawing.abort();
+    drawing.abort();
+
+    await expect(drawn).resolves.toBeUndefined();
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes on a drawing that failed on its own, and cancels nothing after it', async () => {
+    const cancel = vi.fn();
+    pdfjs.render.mockReturnValueOnce({
+      promise: Promise.reject(new Error('bad page')),
+      cancel,
+    });
+    const doc = await createPdfjsEngine().open(new Uint8Array([1]));
+    const drawing = new AbortController();
+
+    await expect(
+      doc.renderPage(1, document.createElement('canvas'), 1, drawing.signal),
+    ).rejects.toThrow('bad page');
+    drawing.abort();
+    expect(cancel).not.toHaveBeenCalled();
   });
 
   it('is loaded on demand and once, by the default loader', async () => {

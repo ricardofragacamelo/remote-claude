@@ -91,7 +91,9 @@ void main() {
     expect(EventReceived(arrival), EventReceived(arrival));
     expect(StreamGap(), StreamGap());
     expect(EventReceived(arrival), isNot(StreamGap()));
-    expect(StreamGap().props, <Object?>[null]);
+    expect(StreamGap().props, <Object?>[null, null]);
+    expect(StreamGap(sessionId: 's-1'), isNot(StreamGap(sessionId: 's-2')));
+    expect(EventReceived(arrival, sessionId: 's-1'), isNot(EventReceived(arrival)));
     expect(StreamGap(claudeSessionId: 'c-1'), isNot(StreamGap()));
     expect(
       SessionJoined(sessionId: 's-1', claudeSessionId: 'c-1'),

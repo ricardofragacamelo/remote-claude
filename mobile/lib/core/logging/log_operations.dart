@@ -65,6 +65,10 @@ abstract final class LogOp {
   /// Specific to mobile, and it matters more than it looks: half of the socket and push bugs are
   /// explained by the lifecycle transition immediately before them.
   static const String lifecycleChanged = 'lifecycle.changed';
+
+  /// The live sessions of a folder were read, and what in them this build could not name
+  /// (plan 10, S-154).
+  static const String sessionList = 'session.list';
 }
 
 /// How many trailing characters of a push token may be logged.

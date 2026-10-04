@@ -3,6 +3,12 @@
     "permission": {
       "title": "O Claude está esperando por você",
       "body": "Ele quer executar {{toolName}}. Abra para permitir ou recusar."
+    },
+    "device": {
+      "approved": {
+        "title": "Este celular foi liberado",
+        "body": "Agora você pode responder aos pedidos do Claude por aqui."
+      }
     }
   }
 }

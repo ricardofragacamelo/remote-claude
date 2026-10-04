@@ -15,6 +15,13 @@ class ScriptedAdapter implements HttpClientAdapter {
   /// The body to answer with, as it would arrive on the wire.
   String body = '{}';
 
+  /// A status of its own for a path, over [status] — what an endpoint that answers differently
+  /// from the others looks like.
+  final Map<String, int> statusByPath = <String, int>{};
+
+  /// The paths nothing answers at: the request fails as a connection that could not be made.
+  final Set<String> unreachable = <String>{};
+
   /// Every request that was made, in order.
   final List<RequestOptions> requests = <RequestOptions>[];
 
@@ -26,9 +33,13 @@ class ScriptedAdapter implements HttpClientAdapter {
   ) async {
     requests.add(options);
 
+    if (unreachable.contains(options.uri.path)) {
+      throw DioException.connectionError(requestOptions: options, reason: 'nothing answered');
+    }
+
     return ResponseBody.fromString(
       body,
-      status,
+      statusByPath[options.uri.path] ?? status,
       headers: <String, List<String>>{
         Headers.contentTypeHeader: <String>[Headers.jsonContentType],
       },

@@ -5,15 +5,15 @@ import 'package:logging/logging.dart';
 import 'package:remote_claude/app/bootstrap.dart';
 import 'package:remote_claude/core/config/app_config.dart';
 import 'package:remote_claude/core/config/app_config_provider.dart';
+import 'package:remote_claude/core/config/connection_choice.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/logger_provider.dart';
 
 import '../../support/fakes/recording_writer.dart';
 
-AppConfig config() => const AppConfig(
-  apiBaseUrl: 'http://localhost:3000',
-  wsUrl: 'ws://localhost:3000/ws',
-  oidcIssuer: 'http://localhost:8180/realms/remote-claude',
+BuildConfig build() => const BuildConfig(
+  origins: DefinedOrigins(internal: 'http://localhost:5173'),
+  realmPath: '/realms/remote-claude',
   oidcClientId: 'remote-claude-mobile',
   oidcScopes: 'openid',
   oidcRedirectUrl: 'com.remoteclaude://callback',
@@ -39,7 +39,7 @@ void main() {
     test('stamps the version and the platform on every line', () {
       final RecordingWriter recorder = RecordingWriter();
       final AppLogger logger = buildLogger(
-        config: config(),
+        appVersion: '0.0.1',
         platform: 'android',
         isRelease: false,
         writer: recorder.writer,
@@ -56,7 +56,7 @@ void main() {
     test('a release logger drops the debug lines', () {
       final RecordingWriter recorder = RecordingWriter();
       final AppLogger logger = buildLogger(
-        config: config(),
+        appVersion: '0.0.1',
         platform: 'iOS',
         isRelease: true,
         writer: recorder.writer,
@@ -69,7 +69,11 @@ void main() {
     });
 
     test('writes to the developer console when nobody supplied a destination', () {
-      final AppLogger logger = buildLogger(config: config(), platform: 'android', isRelease: false);
+      final AppLogger logger = buildLogger(
+        appVersion: '0.0.1',
+        platform: 'android',
+        isRelease: false,
+      );
       addTearDown(logger.dispose);
 
       expect(() => logger.info('up', op: 'lifecycle.changed'), returnsNormally);
@@ -80,7 +84,7 @@ void main() {
     test('an uncaught Flutter error becomes a fatal line', () {
       final RecordingWriter recorder = RecordingWriter();
       final AppLogger logger = buildLogger(
-        config: config(),
+        appVersion: '0.0.1',
         platform: 'android',
         isRelease: false,
         writer: recorder.writer,
@@ -100,7 +104,7 @@ void main() {
     test('an uncaught platform error becomes a fatal line and is swallowed', () {
       final RecordingWriter recorder = RecordingWriter();
       final AppLogger logger = buildLogger(
-        config: config(),
+        appVersion: '0.0.1',
         platform: 'android',
         isRelease: false,
         writer: recorder.writer,
@@ -126,7 +130,7 @@ void main() {
     test('a container built with them holds the real configuration and logger', () {
       final RecordingWriter recorder = RecordingWriter();
       final AppLogger logger = buildLogger(
-        config: config(),
+        appVersion: '0.0.1',
         platform: 'android',
         isRelease: false,
         writer: recorder.writer,
@@ -134,11 +138,16 @@ void main() {
       addTearDown(logger.dispose);
 
       final ProviderContainer container = ProviderContainer(
-        overrides: bootstrapOverrides(config: config(), logger: logger),
+        overrides: bootstrapOverrides(
+          build: build(),
+          logger: logger,
+          saved: const ConnectionChoice(ConnectionKind.other, other: 'https://x.example'),
+        ),
       );
       addTearDown(container.dispose);
 
-      expect(container.read(appConfigProvider), config());
+      expect(container.read(buildConfigProvider), build());
+      expect(container.read(appConfigProvider).apiBaseUrl, 'https://x.example/api');
       expect(container.read(appLoggerProvider), same(logger));
     });
 
@@ -148,6 +157,7 @@ void main() {
 
       // Riverpod wraps whatever the provider threw; the point is that it refuses rather than
       // inventing a configuration nobody supplied.
+      expect(() => container.read(buildConfigProvider), throwsA(isA<Object>()));
       expect(() => container.read(appConfigProvider), throwsA(isA<Object>()));
       expect(() => container.read(appLoggerProvider), throwsA(isA<Object>()));
     });

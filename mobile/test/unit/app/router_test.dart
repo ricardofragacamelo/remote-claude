@@ -13,6 +13,38 @@ AuthSession session() => AuthSession(
 );
 
 void main() {
+  group('redirectFor — the address screen (plan 10, B-29)', () {
+    test('S-108 · the address screen is never redirected away from, signed in or not', () {
+      for (final AsyncValue<AuthSession?> state in <AsyncValue<AuthSession?>>[
+        const AsyncValue<AuthSession?>.loading(),
+        const AsyncValue<AuthSession?>.data(null),
+        AsyncValue<AuthSession?>.data(session()),
+      ]) {
+        expect(redirectFor(session: state, location: connectionRoute), isNull);
+        expect(redirectFor(session: state, location: connectionRoute, hasOrigin: false), isNull);
+      }
+    });
+
+    test('S-97 · with no address at all, everything goes to the address screen', () {
+      expect(
+        redirectFor(
+          session: const AsyncValue<AuthSession?>.data(null),
+          location: signInRoute,
+          hasOrigin: false,
+        ),
+        connectionRoute,
+      );
+      expect(
+        redirectFor(
+          session: const AsyncValue<AuthSession?>.loading(),
+          location: sessionRoute,
+          hasOrigin: false,
+        ),
+        connectionRoute,
+      );
+    });
+  });
+
   group('redirectFor', () {
     test('stays put while the session is still being restored', () {
       expect(

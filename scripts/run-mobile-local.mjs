@@ -46,10 +46,10 @@ import {
   pubspecVersion,
 } from './lib/mobile-local.mjs';
 import { repoRoot } from './lib/paths.mjs';
-import { cleanupOnce, kill, onTermination, startProc } from './lib/proc.mjs';
+import { cleanupOnce, kill, onTermination, runToExit, startProc } from './lib/proc.mjs';
 import { HEALTH_PATH, loadDotEnv } from './lib/stack.mjs';
 import { bold, cyan, dim, fail, fatal, hint, info, line, ok, title, warn } from './lib/ui.mjs';
-import { waitForHttp } from './lib/wait.mjs';
+import { answers } from './lib/wait.mjs';
 
 /** How long each part of the stack gets to answer. It is either up already or it is not. */
 const STACK_PROBE_TIMEOUT_MS = 5_000;
@@ -120,36 +120,31 @@ const teardown = cleanupOnce(async () => {
 });
 
 /**
- * Answers whether the stack `pnpm dev` keeps up is there: the API and the issuer.
+ * Answers whether the stack `pnpm dev` keeps up is there, through the origin the app talks
+ * through: the API and the login, both forwarded by the web server (plan 10, B-27).
  *
  * @param {Record<string, string>} defines
  * @returns {Promise<boolean>}
  */
 async function stackAnswers(defines) {
   const probes = {
-    backend: `${String(defines['RC_API_URL'])}${HEALTH_PATH}`,
-    issuer: `${String(defines['RC_OIDC_ISSUER'])}/.well-known/openid-configuration`,
+    backend: `${String(defines['RC_INTERNAL_URL'])}/api${HEALTH_PATH}`,
+    issuer: `${String(defines['RC_INTERNAL_URL'])}${String(defines['RC_OIDC_REALM_PATH'])}/.well-known/openid-configuration`,
   };
 
-  const answers = await Promise.all(
+  const results = await Promise.all(
     Object.entries(probes).map(async ([name, url]) => {
-      try {
-        await waitForHttp(url, {
-          timeoutMs: STACK_PROBE_TIMEOUT_MS,
-          intervalMs: 500,
-          accept: (status) => status < 400,
-        });
+      const up = await answers(url, STACK_PROBE_TIMEOUT_MS);
+      if (up) {
         ok(name, url);
-        return true;
-      } catch {
-        // waitForHttp only ever gives up at its deadline: the service is not there.
+      } else {
         fail(name, `${url} did not answer`);
-        return false;
       }
+      return up;
     }),
   );
 
-  return answers.every(Boolean);
+  return results.every(Boolean);
 }
 
 /**
@@ -257,8 +252,8 @@ async function main() {
   ok('forwarded to the device', ports.map((port) => `tcp:${String(port)}`).join(' '));
 
   line();
-  line(`  ${dim('API')}     ${cyan(String(built.defines['RC_API_URL']))}`);
-  line(`  ${dim('issuer')}  ${cyan(String(built.defines['RC_OIDC_ISSUER']))}`);
+  line(`  ${dim('origin')}  ${cyan(String(built.defines['RC_INTERNAL_URL']))}`);
+  line(`  ${dim('realm')}   ${cyan(String(built.defines['RC_OIDC_REALM_PATH']))}`);
   line(`  ${dim('device')}  ${cyan(serial)}`);
   line();
   info(`building and starting the app — ${bold('r')} reloads, ${bold('q')} or Ctrl+C ends the run`);
@@ -269,12 +264,4 @@ async function main() {
 // Ctrl+C is the documented way to stop it, so stopping cleanly is a success.
 onTermination(teardown, 0);
 
-try {
-  const code = await main();
-  await teardown();
-  process.exitCode = code;
-} catch (error) {
-  fail(error instanceof Error ? error.message : String(error));
-  await teardown();
-  process.exitCode = 1;
-}
+process.exitCode = await runToExit(main, teardown, fail);

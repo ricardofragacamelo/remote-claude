@@ -66,6 +66,16 @@ class DeviceController extends _$DeviceController {
     );
   }
 
+  /// Asks again only while this phone waits for approval — what coming back to the foreground
+  /// does, so an approval that arrived without a push still shows (plan 17, D-16).
+  ///
+  /// Approved, revoked or unknown, nothing is asked: there is nothing an approval could change.
+  Future<void> recheckIfPending() async {
+    if (state.value?.status == DeviceStatus.pending) {
+      await recheck();
+    }
+  }
+
   /// Registers again, with the push token the provider has just handed over.
   ///
   /// Re-sending is the normal path rather than the exceptional one: the provider rotates the token

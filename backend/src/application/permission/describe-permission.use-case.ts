@@ -100,6 +100,6 @@ export class DescribePermissionUseCase {
       throw new PermissionRequestExpiredError(query.requestId);
     }
 
-    return { status: 'resolved', ...resolvedPayload(request.id, resolution) };
+    return { status: 'resolved', ...resolvedPayload(request, resolution) };
   }
 }

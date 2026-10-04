@@ -111,7 +111,7 @@ class _PermissionCardViewState extends State<PermissionCardView> {
             const SizedBox(height: Tokens.spaceSm),
             _Command(command: request.command),
             const SizedBox(height: Tokens.spaceSm),
-            _Countdown(remaining: request.remainingAt(widget.now)),
+            PermissionCountdown(remaining: request.remainingAt(widget.now)),
             const SizedBox(height: Tokens.spaceMd),
             if (card.phase == CardPhase.confirming)
               _Confirmation(
@@ -134,11 +134,7 @@ class _PermissionCardViewState extends State<PermissionCardView> {
                   widget.onAnswer(PermissionDecision.allow, scope);
                 },
               ),
-            _Extension(
-              extendable: card.isExtendable,
-              enabled: widget.block == null && card.phase != CardPhase.sending,
-              onExtend: widget.onExtend,
-            ),
+            ExtendAction.forCard(card, blocked: widget.block != null, onExtend: widget.onExtend),
             ..._reasons(l10n, scheme),
           ],
         ),
@@ -247,8 +243,8 @@ class _Command extends StatelessWidget {
 }
 
 /// How long is left before silence refuses.
-class _Countdown extends StatelessWidget {
-  const _Countdown({required this.remaining});
+class PermissionCountdown extends StatelessWidget {
+  const PermissionCountdown({required this.remaining, super.key});
 
   final Duration remaining;
 
@@ -452,8 +448,22 @@ class _Confirmation extends StatelessWidget {
 }
 
 /// More time, or the reason there is no more.
-class _Extension extends StatelessWidget {
-  const _Extension({required this.extendable, required this.enabled, required this.onExtend});
+class ExtendAction extends StatelessWidget {
+  const ExtendAction({
+    required this.extendable,
+    required this.enabled,
+    required this.onExtend,
+    super.key,
+  });
+
+  /// The action of [card]: off while its answers are blocked, or while an answer is leaving.
+  ExtendAction.forCard(
+    PermissionCard card, {
+    required bool blocked,
+    required this.onExtend,
+    super.key,
+  }) : extendable = card.isExtendable,
+       enabled = !blocked && card.phase != CardPhase.sending;
 
   final bool extendable;
   final bool enabled;

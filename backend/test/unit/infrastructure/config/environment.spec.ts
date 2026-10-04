@@ -19,6 +19,7 @@ const complete: RawEnvironment = {
   RC_WEB_PORT: '5173',
   DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
   OIDC_ISSUER: 'http://localhost:8180/realms/remote-claude',
+  OIDC_ADDITIONAL_ISSUERS: '',
   OIDC_AUDIENCE: 'https://api.remote-claude.local',
   OIDC_CLIENT_ID_WEB: 'remote-claude-web',
   OIDC_CLIENT_ID_MOBILE: 'remote-claude-mobile',
@@ -165,7 +166,7 @@ describe('loadConfig', () => {
         },
       },
       oidc: {
-        issuer: 'http://localhost:8180/realms/remote-claude',
+        issuers: ['http://localhost:8180/realms/remote-claude'],
         audience: 'https://api.remote-claude.local',
         webClientId: 'remote-claude-web',
         mobileClientId: 'remote-claude-mobile',
@@ -181,6 +182,7 @@ describe('loadConfig', () => {
     'RC_WEB_PORT',
     'DATABASE_URL',
     'OIDC_ISSUER',
+    'OIDC_ADDITIONAL_ISSUERS',
     'OIDC_AUDIENCE',
     'OIDC_CLIENT_ID_WEB',
     'OIDC_CLIENT_ID_MOBILE',
@@ -301,6 +303,54 @@ describe('loadConfig', () => {
     ['RC_CONTEXT_MAX_BYTES', '1023'],
   ] as const)('refuses %s set to %s', (variable, value) => {
     expect(() => loadConfig(withChange({ [variable]: value }))).toThrow(ConfigurationError);
+  });
+
+  // ADR-021 · plan 10, S-88
+  describe('the accepted issuers', () => {
+    const KEYCLOAK = 'http://localhost:8180/realms/remote-claude';
+    const THROUGH_WEB = 'http://localhost:5173/realms/remote-claude';
+    const PUBLIC = 'https://name.example.dev/realms/remote-claude';
+
+    it('is OIDC_ISSUER alone when no other is listed, exactly the single issuer of before', () => {
+      for (const none of ['', '   ']) {
+        expect(loadConfig(withChange({ OIDC_ADDITIONAL_ISSUERS: none })).oidc.issuers).toEqual([
+          KEYCLOAK,
+        ]);
+      }
+    });
+
+    it('accepts the others after OIDC_ISSUER, in order and trimmed, the primary first', () => {
+      const { issuers } = loadConfig(
+        withChange({ OIDC_ADDITIONAL_ISSUERS: ` ${THROUGH_WEB} ,${PUBLIC}` }),
+      ).oidc;
+
+      expect(issuers).toEqual([KEYCLOAK, THROUGH_WEB, PUBLIC]);
+    });
+
+    it.each([
+      ['an entry that is not a URL', 'keycloak'],
+      ['an empty entry between two', `${THROUGH_WEB},,${PUBLIC}`],
+      ['a trailing comma', `${THROUGH_WEB},`],
+      ['a scheme that is not http(s)', 'ftp://localhost/realms/remote-claude'],
+      ['OIDC_ISSUER again', KEYCLOAK],
+      ['OIDC_ISSUER again, with a trailing slash', `${KEYCLOAK}/`],
+      ['the same issuer twice', `${THROUGH_WEB},${THROUGH_WEB}/`],
+    ])('refuses to boot with %s, and names the variable', (_what, value) => {
+      expect.assertions(2);
+
+      try {
+        loadConfig(withChange({ OIDC_ADDITIONAL_ISSUERS: value }));
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConfigurationError);
+        expect(String((error as ConfigurationError).problems)).toContain('OIDC_ADDITIONAL_ISSUERS');
+      }
+    });
+
+    it('refuses to boot with no issuer at all', () => {
+      expect(() =>
+        loadConfig(withChange({ OIDC_ISSUER: '', OIDC_ADDITIONAL_ISSUERS: THROUGH_WEB })),
+      ).toThrow(ConfigurationError);
+    });
   });
 
   describe('the capacity of the machine — D-01', () => {

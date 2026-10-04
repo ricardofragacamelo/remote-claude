@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -6,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ORIGIN_REFUSALS,
+  PUBLIC_ORIGIN_FILE,
   PUBLIC_URL_VARIABLE,
   composeFiles,
   localEnvironment,
@@ -13,6 +15,8 @@ import {
   parseStartArgs,
   publicEnvironment,
   publicIssuer,
+  readRecordedOrigin,
+  recordPublicOrigin,
 } from '../../../scripts/lib/public-url.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -155,6 +159,14 @@ describe('the compose files of a run', () => {
     expect(composeFiles(false)).toEqual([]);
   });
 
+  it('leaves the provider of the base file without a fixed hostname, behind proxy headers — plan 10, D-15', () => {
+    const base = fs.readFileSync(path.join(repoRoot, 'docker-compose.yml'), 'utf8');
+    const settings = base.split('\n').filter((row) => !row.trimStart().startsWith('#'));
+
+    expect(settings).toContain('      KC_PROXY_HEADERS: xforwarded');
+    expect(settings.some((row) => row.includes('KC_HOSTNAME'))).toBe(false);
+  });
+
   it('keeps the override to the identity provider, and to its two settings (S-26)', () => {
     const override = fs.readFileSync(path.join(repoRoot, 'docker-compose.public.yml'), 'utf8');
     const settings = override
@@ -168,5 +180,42 @@ describe('the compose files of a run', () => {
       '      KC_HOSTNAME: ${RC_PUBLIC_URL:?RC_PUBLIC_URL is set by pnpm dev:public}',
       '      KC_PROXY_HEADERS: xforwarded',
     ]);
+  });
+});
+
+describe('the origin the tunnel opened, kept for `pnpm mobile:install` (plan 10, B-35)', () => {
+  /** @returns {string} a file in a fresh folder that does not exist yet */
+  const fresh = () =>
+    path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rc-origin-')), 'nested', 'public-origin');
+
+  it('S-132 · lives under .run/, which git ignores', () => {
+    expect(PUBLIC_ORIGIN_FILE).toBe('.run/public-origin');
+    expect(fs.readFileSync(path.join(repoRoot, '.gitignore'), 'utf8')).toMatch(/^\/\.run\/$/m);
+  });
+
+  it('S-132 · reads back what was written, creating the folder; written again, the last one', () => {
+    const file = fresh();
+
+    recordPublicOrigin(file, 'https://a.ngrok-free.dev');
+    expect(readRecordedOrigin(file)).toBe('https://a.ngrok-free.dev');
+
+    recordPublicOrigin(file, 'https://b.ngrok-free.dev');
+    expect(readRecordedOrigin(file)).toBe('https://b.ngrok-free.dev');
+  });
+
+  it.each([
+    ['', 'empty'],
+    ['http://a.example\n', 'not https'],
+    ['https://a.example/x', 'a path'],
+  ])('S-132 · reads %j (%s) as nothing recorded', (content) => {
+    const file = fresh();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, content);
+
+    expect(readRecordedOrigin(file)).toBe(null);
+  });
+
+  it('S-132 · reads a missing file as nothing recorded', () => {
+    expect(readRecordedOrigin(fresh())).toBe(null);
   });
 });

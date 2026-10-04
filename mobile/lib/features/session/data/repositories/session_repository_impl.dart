@@ -15,7 +15,8 @@ class SessionRepositoryImpl implements SessionRepository {
   Stream<SessionUpdate> get updates => _source.updates;
 
   @override
-  void follow(String sessionId, int Function() lastSeq) => _source.follow(sessionId, lastSeq);
+  void Function() follow(String sessionId, int Function() lastSeq) =>
+      _source.follow(sessionId, lastSeq);
 
   @override
   void unfollow() => _source.unfollow();

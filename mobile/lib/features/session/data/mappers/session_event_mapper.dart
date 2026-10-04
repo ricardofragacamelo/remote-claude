@@ -45,6 +45,7 @@ SessionEvent? sessionEventFrom(Envelope frame) {
     seq,
     frame.payload ?? const <String, Object?>{},
     sessionId: frame.sessionId,
+    commandId: frame.correlationId,
     at: frame.ts,
     pong: () => pongFrom(frame),
   );
@@ -82,6 +83,48 @@ SessionEvent? historyEventFrom(Object? entry) {
   return event is UnreadEvent ? null : event;
 }
 
+/// What the reader of one event type needs from the frame around the payload.
+class _Frame {
+  const _Frame(
+    this.seq,
+    this.payload, {
+    required this.at,
+    required this.pong,
+    this.sessionId,
+    this.commandId,
+  });
+
+  final int seq;
+  final Map<String, Object?> payload;
+
+  /// When, by the server's clock — empty for the history.
+  final String at;
+  final Pong? Function() pong;
+  final String? sessionId;
+
+  /// The `correlationId` of the frame: the command it answers, when it answers one.
+  final String? commandId;
+}
+
+/// One reader per event type. A table rather than a `switch`, so adding an event adds a row, not a
+/// branch to a function that already reads a dozen.
+const Map<String, SessionEvent Function(_Frame frame)> _readers =
+    <String, SessionEvent Function(_Frame frame)>{
+      'session.started': _opened,
+      'session.statusChanged': _status,
+      'message.delta': _fragment,
+      'message.completed': _finished,
+      'tool.started': _invoked,
+      'tool.progress': _output,
+      'tool.completed': _toolOutcome,
+      'turn.completed': _turn,
+      'prompt.queued': _queued,
+      'prompt.dequeued': _dequeued,
+      'session.compacted': _compacted,
+      'session.closed': _closed,
+      'session.rewound': _rewound,
+    };
+
 SessionEvent _eventOf(
   String type,
   int seq,
@@ -89,40 +132,48 @@ SessionEvent _eventOf(
   required String at,
   required Pong? Function() pong,
   String? sessionId,
-}) => switch (type) {
-  'session.started' => _opened(seq, payload, sessionId),
-  'session.statusChanged' => _status(seq, payload),
-  'message.delta' => _fragment(seq, payload),
-  'message.completed' => _finished(seq, payload),
-  'tool.started' => _invoked(seq, payload),
-  'tool.progress' => _output(seq, payload),
-  'tool.completed' => _toolOutcome(seq, payload),
-  'turn.completed' => _turn(seq, payload),
-  'session.closed' => _closed(seq, payload, at),
-  'session.rewound' => _rewound(seq, payload),
-  _ => _pongOr(seq, pong()),
-};
+  String? commandId,
+}) {
+  final _Frame frame = _Frame(
+    seq,
+    payload,
+    at: at,
+    pong: pong,
+    sessionId: sessionId,
+    commandId: commandId,
+  );
 
-SessionEvent _opened(int seq, Map<String, Object?> payload, String? onFrame) {
+  return (_readers[type] ?? _pongOr)(frame);
+}
+
+SessionEvent _opened(_Frame frame) {
+  final Map<String, Object?> payload = frame.payload;
+
   // The payload names it, and the envelope names it too. Either will do; a frame that names it
   // nowhere is one this build cannot act on.
-  final String? sessionId = _text(payload, 'sessionId') ?? onFrame;
+  final String? sessionId = _text(payload, 'sessionId') ?? frame.sessionId;
 
   return sessionId == null
-      ? UnreadEvent(seq)
+      ? UnreadEvent(frame.seq)
       : SessionOpened(
-          seq,
+          frame.seq,
           sessionId,
           claudeSessionId: _text(payload, 'claudeSessionId'),
           resumedFrom: _text(payload, 'resumedFrom'),
+          workspacePath: _text(payload, 'workspacePath'),
+          model: _text(payload, 'model'),
+          permissionMode: _text(payload, 'permissionMode'),
+          commandId: frame.commandId,
         );
 }
 
-SessionEvent _pongOr(int seq, Pong? pong) =>
-    pong == null ? UnreadEvent(seq) : PongArrived(seq, pong);
+SessionEvent _pongOr(_Frame frame) {
+  final Pong? pong = frame.pong();
+  return pong == null ? UnreadEvent(frame.seq) : PongArrived(frame.seq, pong);
+}
 
-SessionEvent _status(int seq, Map<String, Object?> payload) {
-  final SessionStatus? status = switch (_text(payload, 'status')) {
+SessionEvent _status(_Frame frame) {
+  final SessionStatus? status = switch (_text(frame.payload, 'status')) {
     'starting' => SessionStatus.starting,
     'idle' => SessionStatus.idle,
     'thinking' => SessionStatus.thinking,
@@ -132,82 +183,112 @@ SessionEvent _status(int seq, Map<String, Object?> payload) {
     _ => null,
   };
 
-  return status == null ? UnreadEvent(seq) : SessionStatusReported(seq, status);
+  return status == null
+      ? UnreadEvent(frame.seq)
+      : SessionStatusReported(frame.seq, status, at: frame.at);
 }
 
-SessionEvent _fragment(int seq, Map<String, Object?> payload) {
+/// The block kinds of a fragment this app draws: the answer, and the thinking before it.
+///
+/// Anything else — a kind added to the contract after this build shipped — is unread: its `seq`
+/// still moves past it, and nothing of it reaches the answer (S-09).
+const Set<String> _drawnFragments = <String>{'text', 'thinking'};
+
+SessionEvent _fragment(_Frame frame) {
+  final Map<String, Object?> payload = frame.payload;
   final String? messageId = _text(payload, 'messageId');
   final String? delta = _text(payload, 'delta');
+  final String blockType = blockTypeOf(payload);
 
-  return messageId == null || delta == null || !_isAnswer(payload)
-      ? UnreadEvent(seq)
-      : MessageFragment(seq, messageId: messageId, delta: delta);
-}
-
-/// Whether a fragment or a message is the answer of the main conversation.
-///
-/// Thinking and what a subagent says reach the web panel, which folds the one and nests the other
-/// (plan 08, B-02); this app shows neither. Read as the answer, a thinking fragment would put the
-/// model's reasoning into the reply on screen, and a subagent's text would interleave with it.
-/// Neither is dropped from the numbering: the event is unread, and its `seq` still moves past.
-bool _isAnswer(Map<String, Object?> payload) {
-  final String blockType = _text(payload, 'blockType') ?? 'text';
-
-  return blockType == 'text' && payload['parentToolUseId'] == null;
-}
-
-SessionEvent _finished(int seq, Map<String, Object?> payload) {
-  final String? messageId = _text(payload, 'messageId');
-
-  if (messageId == null || !_isAnswer(payload)) {
-    return UnreadEvent(seq);
+  if (messageId == null ||
+      delta == null ||
+      _isSubagent(payload) ||
+      !_drawnFragments.contains(blockType)) {
+    return UnreadEvent(frame.seq);
   }
 
-  final List<Object?> blocks = payload['content'] is List<Object?>
-      ? payload['content']! as List<Object?>
-      : const <Object?>[];
+  return blockType == 'thinking'
+      ? ThinkingFragment(frame.seq, messageId: messageId, delta: delta, at: frame.at)
+      : MessageFragment(frame.seq, messageId: messageId, delta: delta, at: frame.at);
+}
+
+/// What a fragment is part of, as the frame says — absent reads as the answer.
+String blockTypeOf(Map<String, Object?> payload) => _text(payload, 'blockType') ?? 'text';
+
+/// Whether a fragment or a message is a subagent's.
+///
+/// What a subagent says reaches the web panel, which nests it under the `Task` that opened it (plan
+/// 08, B-02); this app does not. Read as the answer, a subagent's text would interleave with it. It
+/// is not dropped from the numbering: the event is unread, and its `seq` still moves past.
+bool _isSubagent(Map<String, Object?> payload) => payload['parentToolUseId'] != null;
+
+SessionEvent _finished(_Frame frame) {
+  final Map<String, Object?> payload = frame.payload;
+  final String? messageId = _text(payload, 'messageId');
+
+  if (messageId == null || _isSubagent(payload)) {
+    return UnreadEvent(frame.seq);
+  }
+
+  final List<Map<String, Object?>> blocks = payload['content'] is List<Object?>
+      ? (payload['content']! as List<Object?>).whereType<Map<String, Object?>>().toList()
+      : const <Map<String, Object?>>[];
 
   return MessageFinished(
-    seq,
+    frame.seq,
     messageId: messageId,
+    // Only the `text` blocks are the answer. Thinking has a field of its own, and a block that
+    // calls a tool is drawn as the tool — joined into the text it would erase the answer before it.
     text: blocks
-        .map((Object? block) => block is Map<String, Object?> ? (_text(block, 'text') ?? '') : '')
+        .where((Map<String, Object?> block) => block['type'] == 'text')
+        .map((Map<String, Object?> block) => _text(block, 'text') ?? '')
         .join(),
     isFromUser: _text(payload, 'role') == 'user',
+    thoughts: <Thought>[for (final Map<String, Object?> block in blocks) ?_thoughtOf(block)],
+    at: frame.at,
   );
 }
 
-SessionEvent _invoked(int seq, Map<String, Object?> payload) {
+/// A block of thinking, or `null` for any other kind.
+Thought? _thoughtOf(Map<String, Object?> block) => switch (block['type']) {
+  'thinking' => Thought(_text(block, 'thinking') ?? ''),
+  'redacted_thinking' => const Thought('', isRedacted: true),
+  _ => null,
+};
+
+SessionEvent _invoked(_Frame frame) {
+  final Map<String, Object?> payload = frame.payload;
   final String? toolUseId = _text(payload, 'toolUseId');
   final String? toolName = _text(payload, 'toolName');
 
   if (toolUseId == null || toolName == null) {
-    return UnreadEvent(seq);
+    return UnreadEvent(frame.seq);
   }
 
   return ToolInvoked(
-    seq,
+    frame.seq,
     toolUseId: toolUseId,
     toolName: toolName,
     input: payload['input'] is Map<String, Object?>
         ? payload['input']! as Map<String, Object?>
         : const <String, Object?>{},
+    isSubagent: _isSubagent(payload),
   );
 }
 
-SessionEvent _output(int seq, Map<String, Object?> payload) {
-  final String? toolUseId = _text(payload, 'toolUseId');
-  final String? chunk = _text(payload, 'chunk');
+SessionEvent _output(_Frame frame) {
+  final String? toolUseId = _text(frame.payload, 'toolUseId');
+  final String? chunk = _text(frame.payload, 'chunk');
 
   return toolUseId == null || chunk == null
-      ? UnreadEvent(seq)
-      : ToolOutput(seq, toolUseId: toolUseId, chunk: chunk);
+      ? UnreadEvent(frame.seq)
+      : ToolOutput(frame.seq, toolUseId: toolUseId, chunk: chunk);
 }
 
-SessionEvent _toolOutcome(int seq, Map<String, Object?> payload) {
-  final String? toolUseId = _text(payload, 'toolUseId');
+SessionEvent _toolOutcome(_Frame frame) {
+  final String? toolUseId = _text(frame.payload, 'toolUseId');
 
-  final ToolStatus? status = switch (_text(payload, 'status')) {
+  final ToolStatus? status = switch (_text(frame.payload, 'status')) {
     'succeeded' => ToolStatus.succeeded,
     'failed' => ToolStatus.failed,
     'denied' => ToolStatus.denied,
@@ -215,24 +296,63 @@ SessionEvent _toolOutcome(int seq, Map<String, Object?> payload) {
   };
 
   return toolUseId == null || status == null
-      ? UnreadEvent(seq)
-      : ToolFinished(seq, toolUseId: toolUseId, status: status, summary: _text(payload, 'summary'));
+      ? UnreadEvent(frame.seq)
+      : ToolFinished(
+          frame.seq,
+          toolUseId: toolUseId,
+          status: status,
+          summary: _text(frame.payload, 'summary'),
+          taskId: _text(frame.payload, 'taskId'),
+        );
 }
 
-SessionEvent _turn(int seq, Map<String, Object?> payload) {
-  final String? turnId = _text(payload, 'turnId');
-  final String? costUsd = _text(payload, 'costUsd');
-  final Object? durationMs = payload['durationMs'];
+SessionEvent _turn(_Frame frame) {
+  final String? turnId = _text(frame.payload, 'turnId');
+  final String? costUsd = _text(frame.payload, 'costUsd');
+  final Object? durationMs = frame.payload['durationMs'];
 
   if (turnId == null || costUsd == null || durationMs is! int) {
-    return UnreadEvent(seq);
+    return UnreadEvent(frame.seq);
   }
 
-  return TurnFinished(seq, TurnSummary(turnId: turnId, costUsd: costUsd, durationMs: durationMs));
+  return TurnFinished(
+    frame.seq,
+    TurnSummary(turnId: turnId, costUsd: costUsd, durationMs: durationMs),
+  );
 }
 
-SessionEvent _closed(int seq, Map<String, Object?> payload, String at) {
-  final SessionCloseReason? reason = switch (_text(payload, 'reason')) {
+SessionEvent _queued(_Frame frame) {
+  final String? queueId = _text(frame.payload, 'queueId');
+
+  return queueId == null
+      ? UnreadEvent(frame.seq)
+      : PromptQueued(
+          frame.seq,
+          QueuedPrompt(
+            queueId: queueId,
+            promptedBy: _text(frame.payload, 'promptedBy') ?? '',
+            preview: _text(frame.payload, 'preview') ?? '',
+          ),
+        );
+}
+
+SessionEvent _dequeued(_Frame frame) {
+  final String? queueId = _text(frame.payload, 'queueId');
+  return queueId == null ? UnreadEvent(frame.seq) : PromptDequeued(frame.seq, queueId: queueId);
+}
+
+SessionEvent _compacted(_Frame frame) {
+  final Object? preTokens = frame.payload['preTokens'];
+
+  return ContextCompacted(
+    frame.seq,
+    trigger: _text(frame.payload, 'trigger') ?? 'auto',
+    preTokens: preTokens is int ? preTokens : null,
+  );
+}
+
+SessionEvent _closed(_Frame frame) {
+  final SessionCloseReason? reason = switch (_text(frame.payload, 'reason')) {
     'closedByUser' => SessionCloseReason.closedByUser,
     'completed' => SessionCloseReason.completed,
     'failed' => SessionCloseReason.failed,
@@ -243,14 +363,14 @@ SessionEvent _closed(int seq, Map<String, Object?> payload, String at) {
   };
 
   return reason == null
-      ? UnreadEvent(seq)
-      : SessionFinished(seq, SessionEnding(reason: reason, at: at));
+      ? UnreadEvent(frame.seq)
+      : SessionFinished(frame.seq, SessionEnding(reason: reason, at: frame.at));
 }
 
-SessionEvent _rewound(int seq, Map<String, Object?> payload) {
-  final RewindOutcome? outcome = rewindOutcomeFrom(payload);
+SessionEvent _rewound(_Frame frame) {
+  final RewindOutcome? outcome = rewindOutcomeFrom(frame.payload);
 
-  return outcome == null ? UnreadEvent(seq) : FilesRewound(seq, outcome);
+  return outcome == null ? UnreadEvent(frame.seq) : FilesRewound(frame.seq, outcome);
 }
 
 /// A string field, or `null` when it is absent or is something else.

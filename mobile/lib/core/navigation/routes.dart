@@ -6,13 +6,41 @@
 /// The generator does not enjoy that cycle, and neither does anybody reading it.
 library;
 
-/// Where the app goes when nobody said otherwise.
+/// Where the app goes when nobody said otherwise: the folders home (plan 10, D-27).
 const String sessionRoute = '/';
+
+/// The round trip of the walking skeleton, reachable from the diagnostics (plan 10, D-27).
+const String pingRoute = '/ping';
+
+/// One folder: a new session, the sessions open in it, and its history (plan 10, F8).
+const String folderRoute = '/folder';
+
+/// The screen of [workspacePath]. The folder is a query parameter, for the reason the history's is.
+String folderRouteFor(String workspacePath) => Uri(
+  path: folderRoute,
+  queryParameters: <String, String>{workspacePathParameter: workspacePath},
+).toString();
+
+/// One level of a folder, in the picker that opens one (plan 10, F7).
+const String folderBrowseRoute = '/workspaces/browse';
+
+/// The query parameter that names the folder being browsed.
+const String browsePathParameter = 'path';
+
+/// The listing of [path] in the picker.
+String folderBrowseRouteFor(String path) => Uri(
+  path: folderBrowseRoute,
+  queryParameters: <String, String>{browsePathParameter: path},
+).toString();
 
 /// Where an unauthenticated visitor is sent.
 const String signInRoute = '/sign-in';
 
-/// The folders a session can be opened in.
+/// Through which address the phone talks to the server — reachable with or without a login, and
+/// where the app opens when it has no address at all (plan 10, B-29, D-17).
+const String connectionRoute = '/connection';
+
+/// The roots a folder can be opened from — the first level of the picker (plan 10, F7).
 const String workspacesRoute = '/workspaces';
 
 /// What the user authorised in advance, and where it is taken back — a screen of its own, as on the
@@ -22,11 +50,31 @@ const String rulesRoute = '/rules';
 /// What a person looks at, and switches `debug` on from, when something is not working.
 const String diagnosticsRoute = '/diagnostics';
 
+/// A new conversation in one folder, before it is a session — the draft (plan 10, D-05).
+const String draftRoute = '/draft';
+
+/// The draft of [workspacePath]. The folder is a query parameter, for the reason the history's is.
+String draftRouteFor(String workspacePath) => Uri(
+  path: draftRoute,
+  queryParameters: <String, String>{workspacePathParameter: workspacePath},
+).toString();
+
 /// The address of one session.
 ///
 /// Built rather than written out at each call site: it is the target of a deep link, and a link
 /// spelled two ways is a link that works from one of them.
-String sessionRouteFor(String sessionId) => '/sessions/$sessionId';
+///
+/// With [request], the conversation opens scrolled to the card of that question — where "open the
+/// session" from a notification's screen lands (plan 10, B-22).
+String sessionRouteFor(String sessionId, {String? request}) => request == null
+    ? '/sessions/$sessionId'
+    : Uri(
+        path: '/sessions/$sessionId',
+        queryParameters: <String, String>{requestParameter: request},
+      ).toString();
+
+/// The query parameter that names the question a session screen opens on.
+const String requestParameter = 'request';
 
 /// The address of one permission request, which is what a notification opens.
 ///

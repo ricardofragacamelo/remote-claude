@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  applyIndexStates,
   applyOverallProgress,
   applyProgress,
   parseDecisions,
@@ -392,6 +393,51 @@ describe('applyOverallProgress', () => {
 
     expect(() => applyOverallProgress(withoutSecond, overall, { date: '2026-09-15' })).toThrow(
       /docs\/plans\/progress\.md is not in the normative format.*01-b/s,
+    );
+  });
+});
+
+const indexDocument = [
+  '# Planos — índice e formato normativo',
+  '',
+  '| # | Plano | Estado | Critério de conclusão |',
+  '|---|---|---|---|',
+  '| 00 | [A](00-a/README.md) | 🔄 em andamento | `pnpm verify:full` sai com código 0 |',
+  '| 01 | [B](01-b/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm x` saem com código 0 |',
+  '',
+  'A prosa cita o [plano A](00-a/README.md), e fica como está.',
+  '',
+].join('\n');
+
+describe('applyIndexStates', () => {
+  const overall = summarizeOverall(twoPlans);
+  const updated = applyIndexStates(indexDocument, overall);
+
+  it('rewrites the state of each plan from its tasks, keeping title and criterion', () => {
+    expect(updated).toContain(
+      '| 00 | [A](00-a/README.md) | ✅ concluído | `pnpm verify:full` sai com código 0 |',
+    );
+    expect(updated).toContain(
+      '| 01 | [B](01-b/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm x` saem com código 0 |',
+    );
+  });
+
+  it('leaves prose that links to a plan untouched', () => {
+    expect(updated).toContain('A prosa cita o [plano A](00-a/README.md), e fica como está.');
+  });
+
+  it('is idempotent — running it again changes nothing', () => {
+    expect(applyIndexStates(updated, overall)).toBe(updated);
+  });
+
+  it('refuses to half-update, naming the plan missing from the index', () => {
+    const withoutSecond = indexDocument
+      .split('\n')
+      .filter((text) => !text.startsWith('| 01 |'))
+      .join('\n');
+
+    expect(() => applyIndexStates(withoutSecond, overall)).toThrow(
+      /docs\/plans\/README\.md is not in the normative format.*01-b/s,
     );
   });
 });

@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:remote_claude/core/config/app_config.dart';
 import 'package:remote_claude/core/config/app_config_provider.dart';
+import 'package:remote_claude/core/config/connection_choice.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_context.dart';
 import 'package:remote_claude/core/logging/log_level.dart';
@@ -27,13 +28,13 @@ LogWriter consoleWriter() =>
 
 /// Builds the app's logger.
 AppLogger buildLogger({
-  required AppConfig config,
+  required String appVersion,
   required String platform,
   required bool isRelease,
   bool debugRequested = false,
   LogWriter? writer,
 }) => AppLogger(
-  context: LogContext(appVersion: config.appVersion, platform: platform),
+  context: LogContext(appVersion: appVersion, platform: platform),
   writer: writer ?? consoleWriter(),
   level: levelFor(isRelease: isRelease, debugRequested: debugRequested),
 );
@@ -58,9 +59,14 @@ void installErrorHandlers(AppLogger logger) {
   };
 }
 
-/// The overrides the container needs to hold a real app.
-List<Override> bootstrapOverrides({required AppConfig config, required AppLogger logger}) =>
-    <Override>[
-      appConfigProvider.overrideWithValue(config),
-      appLoggerProvider.overrideWithValue(logger),
-    ];
+/// The overrides the container needs to hold a real app: what the build was compiled with, the
+/// address the phone had saved — read before the first frame —, and the logger.
+List<Override> bootstrapOverrides({
+  required BuildConfig build,
+  required AppLogger logger,
+  ConnectionChoice? saved,
+}) => <Override>[
+  buildConfigProvider.overrideWithValue(build),
+  savedConnectionProvider.overrideWithValue(saved),
+  appLoggerProvider.overrideWithValue(logger),
+];

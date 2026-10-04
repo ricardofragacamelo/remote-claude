@@ -10,6 +10,7 @@ class FakePushGateway implements PushGateway {
   final StreamController<String> _tokens = StreamController<String>.broadcast();
   final StreamController<PushArrival> _arrivals = StreamController<PushArrival>.broadcast();
   final StreamController<PushArrival> _openings = StreamController<PushArrival>.broadcast();
+  final StreamController<String> _approvals = StreamController<String>.broadcast();
 
   /// What [permission] answers.
   PushPermission current = PushPermission.notAsked;
@@ -28,6 +29,9 @@ class FakePushGateway implements PushGateway {
 
   /// How many times the settings screen was opened.
   int settingsOpened = 0;
+
+  /// The sessions said to be on screen, in order — `null` for none.
+  final List<String?> shown = <String?>[];
 
   @override
   Future<PushPermission> permission() async => current;
@@ -52,10 +56,16 @@ class FakePushGateway implements PushGateway {
   Stream<PushArrival> get openings => _openings.stream;
 
   @override
+  Stream<String> get deviceApprovals => _approvals.stream;
+
+  @override
   Future<void> withdraw(String requestId) async => withdrawn.add(requestId);
 
   @override
   Future<void> openSettings() async => settingsOpened += 1;
+
+  @override
+  Future<void> showingSession(String? sessionId) async => shown.add(sessionId);
 
   /// Hands over a rotated token.
   void rotate(String token) => _tokens.add(token);
@@ -66,11 +76,15 @@ class FakePushGateway implements PushGateway {
   /// Delivers a tap.
   void open(PushArrival arrival) => _openings.add(arrival);
 
+  /// A push saying [deviceId] was just approved.
+  void approve(String deviceId) => _approvals.add(deviceId);
+
   /// Closes every stream.
   Future<void> dispose() async {
     await _tokens.close();
     await _arrivals.close();
     await _openings.close();
+    await _approvals.close();
   }
 }
 

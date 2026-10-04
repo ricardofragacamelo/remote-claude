@@ -47,15 +47,30 @@ export class PushTranslator {
    * the person actually receives (S-18).
    */
   permission(locale: string, params: PushTextParams): PushText {
-    const language = (DEVICE_LOCALES as readonly string[]).includes(locale)
-      ? (locale as DeviceLocaleValue)
-      : FALLBACK_DEVICE_LOCALE;
+    const language = languageOf(locale);
 
     return {
       title: this.instance.t('push.permission.title', { lng: language, ...params }),
       body: this.instance.t('push.permission.body', { lng: language, ...params }),
     };
   }
+
+  /** The phone may decide now (plan 17, F3) — in its language, with the same fallback. */
+  deviceApproved(locale: string): PushText {
+    const language = languageOf(locale);
+
+    return {
+      title: this.instance.t('push.device.approved.title', { lng: language }),
+      body: this.instance.t('push.device.approved.body', { lng: language }),
+    };
+  }
+}
+
+/** A language this build speaks, or the fallback. */
+function languageOf(locale: string): DeviceLocaleValue {
+  return (DEVICE_LOCALES as readonly string[]).includes(locale)
+    ? (locale as DeviceLocaleValue)
+    : FALLBACK_DEVICE_LOCALE;
 }
 
 /**

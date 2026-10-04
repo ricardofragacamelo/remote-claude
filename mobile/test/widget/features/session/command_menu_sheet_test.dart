@@ -31,11 +31,19 @@ void main() {
 
   setUp(() => screen = SessionScreen()..commands.answer = aMenu);
 
-  Finder composer() => find.widgetWithText(TextField, l10n.sessionPromptHint);
+  Finder composer() => find.widgetWithText(TextField, l10n.composerBoxLabel);
   Finder search() => find.widgetWithText(TextField, l10n.sessionCommandsSearch);
 
+  /// Types a command into the empty box. The `/` opens the menu (D-07); closing it keeps the text.
+  Future<void> typeCommand(WidgetTester tester, String text) async {
+    await tester.enterText(composer(), text);
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+  }
+
   Future<void> openMenu(WidgetTester tester) async {
-    await tester.tap(find.byTooltip(l10n.sessionCommandsOpen));
+    await tester.tap(find.byTooltip(l10n.composerSlash));
     await tester.pumpAndSettle();
   }
 
@@ -126,7 +134,7 @@ void main() {
     expect(box?.selection.baseOffset, '/init '.length);
 
     // Sending it is sending a prompt: no shortcut and no privilege.
-    await tester.tap(find.text(l10n.sessionPromptAction));
+    await tester.tap(find.byTooltip(l10n.sessionPromptAction));
     await tester.pumpAndSettle();
     expect(screen.sessions.commands.single.$1, 'session.prompt');
     expect(screen.sessions.commands.single.$2['text'], '/init');
@@ -148,7 +156,7 @@ void main() {
   testWidgets('says it is loading while the installation is asked', (WidgetTester tester) async {
     screen.commands.gate = Completer<void>();
     await screen.pump(tester);
-    await tester.tap(find.byTooltip(l10n.sessionCommandsOpen));
+    await tester.tap(find.byTooltip(l10n.composerSlash));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -187,8 +195,8 @@ void main() {
     // Closed, the composer sends whatever was typed — the menu was never a boundary.
     await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
-    await tester.enterText(composer(), '/anything-at-all');
-    await tester.tap(find.text(l10n.sessionPromptAction));
+    await typeCommand(tester, '/anything-at-all');
+    await tester.tap(find.byTooltip(l10n.sessionPromptAction));
     await tester.pumpAndSettle();
     expect(screen.sessions.commands.single.$2['text'], '/anything-at-all');
   });
@@ -216,8 +224,8 @@ void main() {
       WidgetTester tester,
     ) async {
       await screen.pump(tester);
-      await tester.enterText(composer(), '/heapdumb');
-      await tester.tap(find.text(l10n.sessionPromptAction));
+      await typeCommand(tester, '/heapdumb');
+      await tester.tap(find.byTooltip(l10n.sessionPromptAction));
       await tester.pumpAndSettle();
 
       screen.sessions.emit(const CommandRefused(commandId: 'command-1', failure: unknown));
@@ -225,8 +233,8 @@ void main() {
 
       expect(find.text(l10n.sessionErrorUnknownCommand('/heapdumb')), findsOneWidget);
 
-      await tester.enterText(composer(), '/init');
-      await tester.tap(find.text(l10n.sessionPromptAction));
+      await typeCommand(tester, '/init');
+      await tester.tap(find.byTooltip(l10n.sessionPromptAction));
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.sessionErrorUnknownCommand('/heapdumb')), findsNothing);
@@ -236,8 +244,8 @@ void main() {
       WidgetTester tester,
     ) async {
       await screen.pump(tester);
-      await tester.enterText(composer(), '/init');
-      await tester.tap(find.text(l10n.sessionPromptAction));
+      await typeCommand(tester, '/init');
+      await tester.tap(find.byTooltip(l10n.sessionPromptAction));
       await tester.pumpAndSettle();
 
       screen.sessions.emit(const CommandRefused(commandId: 'command-42', failure: unknown));
@@ -255,5 +263,36 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     semantics.dispose();
+  });
+
+  testWidgets('S-36 · a / typed at the start of the box opens the menu, searching what follows', (
+    WidgetTester tester,
+  ) async {
+    await screen.pump(tester);
+
+    await tester.enterText(composer(), '/rev');
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.sessionCommandsTitle), findsOneWidget);
+    expect(tester.widget<TextField>(search()).controller?.text, 'rev');
+    expect(find.text('/review [pr-number]'), findsOneWidget);
+    expect(find.text('/init'), findsNothing);
+
+    await tester.tap(find.text('/review [pr-number]'));
+    await tester.pumpAndSettle();
+
+    // Nothing is sent: the box holds the command, ready for its argument.
+    expect(tester.widget<TextField>(composer()).controller?.text, '/review ');
+    expect(screen.sessions.commands, isEmpty);
+  });
+
+  testWidgets('a / typed after something else is only a character', (WidgetTester tester) async {
+    await screen.pump(tester);
+
+    await tester.enterText(composer(), 'path a');
+    await tester.enterText(composer(), 'path a/b');
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.sessionCommandsTitle), findsNothing);
   });
 }

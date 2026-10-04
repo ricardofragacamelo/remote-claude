@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/core/error/failure.dart';
-import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_rule.dart';
 import 'package:remote_claude/features/permission/domain/repositories/permission_rule_repository.dart';
 import 'package:remote_claude/features/permission/permission.dart';

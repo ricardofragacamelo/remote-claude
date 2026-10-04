@@ -14,13 +14,13 @@ import 'package:remote_claude/core/config/app_config.dart';
 import 'direct_grant_data_source.dart';
 import 'e2e_environment.dart';
 
-/// The app's configuration, pointed at the limits stack instead of the main one.
+/// The app's build, its internal address pointed at the limits stack — the web server of that
+/// stack, which forwards to its backend and to the shared login (plan 10, B-27).
 ///
 /// @throws [ConfigurationError] when the run compiled no limits stack in — the live run has none
-AppConfig limitsConfig() => AppConfig.from(<String, String>{
+BuildConfig limitsConfig() => BuildConfig.from(<String, String>{
   ...appDefines,
-  'RC_API_URL': const String.fromEnvironment('RC_LIMITS_API_URL'),
-  'RC_WS_URL': const String.fromEnvironment('RC_LIMITS_WS_URL'),
+  'RC_INTERNAL_URL': const String.fromEnvironment('RC_LIMITS_ORIGIN'),
 });
 
 /// The expiry of an access token, read from its own claims.

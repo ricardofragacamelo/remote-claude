@@ -97,7 +97,7 @@ export const BRACE = /\{\s*([A-Za-z0-9_]+)\s*\}/g;
 
 /**
  * @typedef {object} Problem
- * @property {'missing' | 'extra' | 'params' | 'orphan' | 'untranslated' | 'undeclared' | 'help'} kind
+ * @property {'missing' | 'extra' | 'params' | 'orphan' | 'untranslated' | 'undeclared' | 'help' | 'shared'} kind
  * @property {string} key
  * @property {string} detail
  */
@@ -433,4 +433,82 @@ function absent(declared, keys, kind, detail) {
     .filter((key) => !declared.has(key))
     .sort()
     .map((key) => ({ kind, key, detail }));
+}
+
+/**
+ * A text the web and the app both show, written in the placeholder form of ARB — `{{name}}` read as
+ * `{name}` — so the two families can be compared character by character.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function asBraces(text) {
+  return text.replace(MUSTACHE, (_match, /** @type {string} */ name) => `{${name.trim()}}`);
+}
+
+/**
+ * @typedef {object} SharedLocale
+ * @property {string} web the locale of the web catalogue — `pt-BR`
+ * @property {string} app the locale of the app catalogue — `pt`
+ */
+
+/**
+ * The texts the web and the app both show, compared across the two families (plan 10, B-03, D-04).
+ *
+ * The parity check above compares a family with itself; nothing compared the web with the app, and
+ * "the same words on both ends" was a rule only a reviewer could keep. [map] declares which key of
+ * the web is which key of the app; a key of the map that one end lacks, or a text that differs —
+ * in any language — fails, naming both keys and both texts.
+ *
+ * @param {readonly Catalogue[]} web the web catalogues, flattened
+ * @param {readonly Catalogue[]} app the app catalogues, read from ARB
+ * @param {Readonly<Record<string, string>>} map web key → app key
+ * @param {readonly SharedLocale[]} locales which locale of one family is which of the other
+ * @returns {Problem[]}
+ */
+export function compareShared(web, app, map, locales) {
+  return locales.flatMap(({ web: webLocale, app: appLocale }) => {
+    const webEntries = web.find((each) => each.locale === webLocale)?.entries ?? new Map();
+    const appEntries = app.find((each) => each.locale === appLocale)?.entries ?? new Map();
+
+    return Object.entries(map).flatMap(([webKey, appKey]) =>
+      sharedProblem(
+        { locale: webLocale, key: webKey, text: webEntries.get(webKey) },
+        { locale: appLocale, key: appKey, text: appEntries.get(appKey) },
+      ),
+    );
+  });
+}
+
+/**
+ * @typedef {object} SharedText
+ * @property {string} locale
+ * @property {string} key
+ * @property {string | undefined} text
+ */
+
+/**
+ * What is wrong with one pair of the map in one language, if anything.
+ *
+ * @param {SharedText} web
+ * @param {SharedText} app
+ * @returns {Problem[]}
+ */
+function sharedProblem(web, app) {
+  const key = `${web.key} ↔ ${app.key}`;
+
+  if (web.text === undefined || app.text === undefined) {
+    const lacking = web.text === undefined ? `web ${web.locale}` : `app ${app.locale}`;
+    return [{ kind: 'shared', key, detail: `${lacking} has no such key` }];
+  }
+
+  return asBraces(web.text) === app.text
+    ? []
+    : [
+        {
+          kind: 'shared',
+          key,
+          detail: `${web.locale} "${web.text}" ≠ ${app.locale} "${app.text}"`,
+        },
+      ];
 }

@@ -41,7 +41,9 @@ void main() {
       ..devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.tap(find.byTooltip(l10n.sessionUndoOpen));
+    await tester.tap(find.byTooltip(l10n.sessionMenuOpen));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.sessionMenuUndo));
     await tester.pumpAndSettle();
   }
 
@@ -326,7 +328,9 @@ void main() {
   testWidgets('says it is loading while the points are read', (WidgetTester tester) async {
     screen.checkpoints.gate = Completer<void>();
     await screen.pump(tester);
-    await tester.tap(find.byTooltip(l10n.sessionUndoOpen));
+    await tester.tap(find.byTooltip(l10n.sessionMenuOpen));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.sessionMenuUndo));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 

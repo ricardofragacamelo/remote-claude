@@ -88,7 +88,7 @@ final class LiveSessionControllerProvider
   }
 }
 
-String _$liveSessionControllerHash() => r'f7c0d5f4fbcb019c3b795e2f90054f28f98690d1';
+String _$liveSessionControllerHash() => r'927f72750c510a1841d89a1a262ff519e6e99e33';
 
 /// The live conversation of one session.
 ///

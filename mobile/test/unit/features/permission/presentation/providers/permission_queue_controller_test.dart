@@ -93,6 +93,36 @@ void main() {
       },
     );
 
+    test(
+      'B-21 · a plan sent back carries what to change; a blank one is the phone’s refusal',
+      () async {
+        final ProviderContainer container = build();
+        repository.feed.emit(asked(aPermissionRequest()));
+        repository.feed.emit(asked(aPermissionRequest(requestId: 'request-2'), frameId: 'frame-2'));
+        await settle();
+
+        await controller(container).answer(
+          'request-1',
+          PermissionDecision.deny,
+          PermissionScope.once,
+          lockReason: 'confirm it is you',
+          reason: '  skip step 2 ',
+        );
+        await controller(container).answer(
+          'request-2',
+          PermissionDecision.deny,
+          PermissionScope.once,
+          lockReason: 'confirm it is you',
+          reason: '   ',
+        );
+
+        expect(repository.feed.answers.map((SentAnswer each) => each.reason), <String?>[
+          'skip step 2',
+          refusedFromThePhone,
+        ]);
+      },
+    );
+
     // The queue reacts to events, never to its own optimism: the card stays, sending, until the
     // server says how the request ended.
     test('keeps the card, sending, until the server settles it', () async {
@@ -284,7 +314,10 @@ void main() {
       now = t0.add(const Duration(seconds: 3));
       async.elapse(permissionTick);
       expect(queue(container).cardOf('request-1'), isNull);
-      expect(queue(container).outcomeOf('request-1'), const PermissionOutcome.expired('request-1'));
+      expect(
+        queue(container).outcomeOf('request-1'),
+        const PermissionOutcome.expired('request-1', toolUseId: 'toolu-1'),
+      );
 
       // Nothing left to count down: the tick stops rather than spinning for nothing.
       expect(async.periodicTimerCount, 0);

@@ -10,7 +10,10 @@
   "x-required-when": [
     {
       "field": "resolvedBy",
-      "when": { "field": "auto", "equals": false },
+      "when": {
+        "field": "auto",
+        "equals": false
+      },
       "because": "a decision a human made has an author; only the automatic deny has none"
     }
   ],
@@ -36,6 +39,10 @@
       "type": "string",
       "enum": ["web", "mobile"],
       "description": "Which client answered."
+    },
+    "toolUseId": {
+      "type": "string",
+      "description": "The tool call the request was about, when the SDK named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`."
     }
   }
 }

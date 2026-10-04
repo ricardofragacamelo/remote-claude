@@ -306,3 +306,24 @@ export function onTermination(cleanup, code) {
     });
   }
 }
+
+/**
+ * Runs a script's `main` to its exit code, and its teardown whatever the way out — a code, or an
+ * error nobody expected, which is told through [report] and exits 1.
+ *
+ * @param {() => Promise<number>} main
+ * @param {() => Promise<void>} teardown
+ * @param {(message: string) => void} report
+ * @returns {Promise<number>} the exit code
+ */
+export async function runToExit(main, teardown, report) {
+  try {
+    const code = await main();
+    await teardown();
+    return code;
+  } catch (error) {
+    report(error instanceof Error ? error.message : String(error));
+    await teardown();
+    return 1;
+  }
+}

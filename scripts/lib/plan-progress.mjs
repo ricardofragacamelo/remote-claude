@@ -569,3 +569,32 @@ export function applyOverallProgress(content, overall, options) {
 
   return rewriter.finish();
 }
+
+/**
+ * Rewrites the state column of the plan index, `docs/plans/README.md`, from the same summary.
+ *
+ * The index carried the state written when each plan was created, and nothing ever moved it: it
+ * said "não iniciado" of plans long finished while the general progress, derived, said otherwise.
+ * Only the state cell changes — the title and the conclusion criterion are prose.
+ *
+ * @param {string} content
+ * @param {OverallSummary} overall
+ * @returns {string}
+ */
+export function applyIndexStates(content, overall) {
+  const rewriter = rewriterOf(content, 'docs/plans/README.md');
+
+  for (const plan of overall.plans) {
+    rewriter.replace(
+      new RegExp(
+        `^(\\|\\s*\\d+\\s*\\|\\s*\\[[^\\]]*\\]\\(${plan.dir}/README\\.md\\)\\s*\\|)\\s*[🔲🔄✅⛔][^|]*(\\|.*)$`,
+        'mu',
+      ),
+      // `stateOf` answers one of the four states, and PLAN_LABEL carries all four.
+      `$1 ${plan.state} ${String(PLAN_LABEL[plan.state])} $2`,
+      `index row for ${plan.dir}`,
+    );
+  }
+
+  return rewriter.finish();
+}

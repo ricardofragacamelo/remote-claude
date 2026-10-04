@@ -82,6 +82,51 @@ function aPdfEngine(
   };
 }
 
+/**
+ * A PDF engine that keeps the rule of pdf.js: one drawing on a canvas at a time, a second one
+ * refused until the first is done or given up on. A drawing ends when the test says so.
+ */
+function aStrictPdfEngine(pages: number): {
+  engine: PdfEngine;
+  finish: () => void;
+  givenUp: () => number[];
+} {
+  const inUse = new WeakSet<HTMLCanvasElement>();
+  const pending: (() => void)[] = [];
+  const givenUp: number[] = [];
+  const doc: PdfDocument = {
+    pageCount: pages,
+    renderPage: (page, canvas, _scale, signal) => {
+      if (inUse.has(canvas)) {
+        return Promise.reject(new Error('Cannot use the same canvas during multiple render()'));
+      }
+      inUse.add(canvas);
+      return new Promise<void>((resolve) => {
+        const done = (): void => {
+          inUse.delete(canvas);
+          resolve();
+        };
+        signal.addEventListener('abort', () => {
+          givenUp.push(page);
+          done();
+        });
+        pending.push(done);
+      });
+    },
+    destroy: () => undefined,
+  };
+
+  return {
+    engine: { open: () => Promise.resolve(doc) },
+    finish: () => {
+      for (const done of pending.splice(0)) {
+        done();
+      }
+    },
+    givenUp: () => givenUp,
+  };
+}
+
 describe('previews — plan 07, B-50', () => {
   it('renders markdown safely: raw HTML never runs, a link to a file opens it, a relative image loads through raw (S-308)', async () => {
     const user = userEvent.setup();
@@ -229,6 +274,33 @@ describe('previews — plan 07, B-50', () => {
     await waitFor(() => {
       expect(pdf.destroyed()).toBe(1);
     });
+  });
+
+  it('gives up the drawing of a page left behind, so the next one has the canvas', async () => {
+    const user = userEvent.setup();
+    const pdf = aStrictPdfEngine(3);
+    setPdfLoader(() => Promise.resolve(pdf.engine));
+    fakeDisk(FOLDER, {});
+    fakeRaw(FOLDER, { 'doc.pdf': '%PDF-1.7' });
+    renderEditor();
+    open('doc.pdf');
+
+    const preview = await previewOf('doc.pdf');
+    const next = await within(preview).findByRole('button', {
+      name: t('editor.preview.pdfNext'),
+    });
+    // Page 1 still being drawn when page 2 is asked for, and page 2 when page 3 is.
+    await user.click(next);
+    await user.click(next);
+    expect(
+      await within(preview).findByText(t('editor.preview.pdfPage', { page: 3, pages: 3 })),
+    ).toBeVisible();
+    act(() => {
+      pdf.finish();
+    });
+
+    expect(pdf.givenUp()).toEqual([1, 2]);
+    expect(within(preview).queryByRole('alert')).toBeNull();
   });
 
   it('says so when a PDF cannot be read, or the viewer did not load — and tries again', async () => {

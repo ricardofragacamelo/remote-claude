@@ -84,6 +84,36 @@ void main() {
     });
   });
 
+  // Plan 17, F3 · S-127: the approval names the device, and is never read as a request.
+  group('reading an approval of this phone', () {
+    test('names the device of an approval', () {
+      expect(
+        deviceApprovalFrom(<Object?, Object?>{'kind': 'deviceApproved', 'deviceId': 'dev_1'}),
+        'dev_1',
+      );
+    });
+
+    test('is nothing without a device, with an empty one, or for another kind', () {
+      for (final Map<Object?, Object?> data in <Map<Object?, Object?>>[
+        <Object?, Object?>{'kind': 'deviceApproved'},
+        <Object?, Object?>{'kind': 'deviceApproved', 'deviceId': ''},
+        <Object?, Object?>{'kind': 'deviceApproved', 'deviceId': 7},
+        <Object?, Object?>{'kind': 'permissionRequested', 'deviceId': 'dev_1'},
+        <Object?, Object?>{'kind': 'somethingNew', 'deviceId': 'dev_1'},
+      ]) {
+        expect(deviceApprovalFrom(data), isNull, reason: '$data');
+      }
+    });
+
+    // S-129 · an approval is not a request, so its tap opens the app and goes nowhere.
+    test('is never read as an arrival or a tap', () {
+      expect(
+        arrivalFrom(<Object?, Object?>{'kind': 'deviceApproved', 'deviceId': 'dev_1'}),
+        isNull,
+      );
+    });
+  });
+
   group('talking to the platform', () {
     test('asks for the permission and the token, and passes the tag on a withdrawal', () async {
       final List<MethodCall> calls = install(
@@ -112,6 +142,21 @@ void main() {
         'openSettings',
       ]);
       expect(calls[3].arguments, <String, Object?>{'tag': 'request-1'});
+    });
+
+    test('S-76 · says which session is on screen, and that none is', () async {
+      final List<MethodCall> calls = install((MethodCall call) => null);
+      final PlatformPushGateway gateway = PlatformPushGateway(channel: channel);
+
+      await gateway.showingSession('session-1');
+      await gateway.showingSession(null);
+
+      expect(calls.map((MethodCall call) => call.method), <String>[
+        'visibleSession',
+        'visibleSession',
+      ]);
+      expect(calls.first.arguments, <String, Object?>{'sessionId': 'session-1'});
+      expect(calls.last.arguments, <String, Object?>{'sessionId': null});
     });
 
     test('an empty token is no token', () async {
@@ -170,6 +215,7 @@ void main() {
       final Future<String> token = gateway.tokens.first;
       final Future<PushArrival> arrival = gateway.arrivals.first;
       final Future<PushArrival> opening = gateway.openings.first;
+      final Future<String> approval = gateway.deviceApprovals.first;
 
       await emit(name, <Object?>[
         <Object?, Object?>{
@@ -186,6 +232,10 @@ void main() {
           },
         },
         <Object?, Object?>{
+          'kind': 'arrival',
+          'data': <Object?, Object?>{'kind': 'deviceApproved', 'deviceId': 'dev_1'},
+        },
+        <Object?, Object?>{
           'kind': 'opening',
           'data': <Object?, Object?>{
             'kind': 'permissionRequested',
@@ -199,6 +249,7 @@ void main() {
       expect(await token, 'token-999999');
       expect((await arrival).requestId, 'r1');
       expect((await opening).sessionId, 's2');
+      expect(await approval, 'dev_1');
     });
   });
 }

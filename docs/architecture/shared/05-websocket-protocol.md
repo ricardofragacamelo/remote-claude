@@ -157,7 +157,7 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `tool.progress` | `{ toolUseId, chunk, parentToolUseId? }` | `tool_progress` |
 | `tool.completed` | `{ toolUseId, status, summary?, parentToolUseId?, taskId? }` — `succeeded`·`failed`·`denied`; `taskId` só de `TaskCreate`/`TaskUpdate` (a lista de tarefas, plano 08) | `user` (tool_result) |
 | `permission.requested` | ver abaixo | `canUseTool` |
-| `permission.resolved` | `{ requestId, decision, auto, resolvedBy?, resolvedFrom? }` | derivado |
+| `permission.resolved` | `{ requestId, decision, auto, resolvedBy?, resolvedFrom?, toolUseId? }` — `toolUseId` é a chamada de tool do pedido, quando o SDK a nomeou: o que põe a decisão na linha daquela tool, inclusive a de uma regra que respondeu sem perguntar ninguém ([plano 10, B-20](../../plans/10-mobile-chat-layout/F4-inline.md)). A correspondência continua sendo pelo `requestId` | derivado |
 | `turn.completed` | `{ turnId, usage, costUsd, durationMs, promptedBy? }` | `result` |
 | `session.closed` | `{ sessionId, reason }` — `closedByUser`·`completed`·`failed`·`auditUnavailable`·`shutdown`·`idleTimeout` | fim do generator · TTL de ociosa (`idleTimeout`) · shutdown |
 | `diag.pong` | `{ sessionId, pingedAt, pingCount, nonce }` | resposta do `diag.ping` |
@@ -224,8 +224,10 @@ Dois campos opcionais, e nenhum muda o que um cliente antigo entende do resto
   resposta; ausente é `text`. No `message.completed`, o bloco é `{ type: 'thinking', thinking }` — o
   texto num campo **próprio**, nunca em `text`, para que um cliente que junta o `text` de cada bloco
   nunca o mostre como resposta — e `{ type: 'redacted_thinking' }` diz que houve raciocínio sem dizer
-  qual. O web o mostra recolhido ([08 · D-17](../../plans/08-claude-panel/decisions.md#d-17--thinking));
-  o app o descarta, e o `seq` dele anda do mesmo jeito. No log, só o tamanho.
+  qual. O web o mostra recolhido ([08 · D-17](../../plans/08-claude-panel/decisions.md#d-17--thinking)),
+  e o app também, como entrada própria da conversa, nunca no texto da resposta
+  ([10 · B-05](../../plans/10-mobile-chat-layout/F1-session-frame.md)). Um `blockType` que o cliente
+  não conhece é ignorado, e o `seq` dele anda do mesmo jeito. No log, só o tamanho.
 - **`parentToolUseId`** em `message.*` e `tool.*` diz que o evento vem de um **subagent**: o
   `toolUseId` do `Task`/`Agent` que o abriu. O cliente o aninha ali; ausente é a conversa principal
   ([08 · D-15](../../plans/08-claude-panel/decisions.md#d-15--subagents-o-que-encaminhar)).

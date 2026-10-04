@@ -296,6 +296,20 @@ void main() {
       );
     });
 
+    test('reads the tool a settled request was about — plan 10, B-20', () {
+      final PermissionEvent? event = permissionEventFrom(
+        resolved(const <String, Object?>{
+          'requestId': 'req-1',
+          'decision': 'allow',
+          'auto': true,
+          'resolvedBy': 'user-1',
+          'toolUseId': 'toolu-9',
+        }),
+      );
+
+      expect((event! as PermissionSettled).outcome.toolUseId, 'toolu-9');
+    });
+
     test('reads a deny answered on a phone', () {
       expect(
         permissionEventFrom(

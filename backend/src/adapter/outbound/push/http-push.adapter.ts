@@ -25,6 +25,13 @@ const TRANSIENT_CLIENT_ERRORS = new Set([401, 408, 429]);
 const TOKEN_TAIL = 6;
 
 /**
+ * The Android channel of the messages about the phone itself, apart from the permission requests'
+ * — muting one is not muting the other. The app creates it; an app too old to have created it
+ * falls back to the default channel, and still shows the sentence (plan 17, D-14).
+ */
+export const DEVICE_STATUS_CHANNEL = 'device_status';
+
+/**
  * The push provider, and the only thing in this backend that has met it.
  *
  * It knows an endpoint, a credential file and a scope — all three from configuration — and it
@@ -97,11 +104,28 @@ export class HttpPushSender implements PushSender {
    * notification saying the first one is over, which is worse than the one it was withdrawing.
    */
   private body(message: PushMessage): Readonly<Record<string, unknown>> {
+    const reference = message.reference;
+
+    if (reference === null) {
+      // About the phone itself: the device it is going to, and nothing else crosses.
+      const text = this.text.deviceApproved(message.target.locale.value);
+
+      return {
+        token: message.target.token,
+        notification: { title: text.title, body: text.body },
+        data: { kind: message.kind, deviceId: message.target.deviceId },
+        android: {
+          priority: 'high',
+          notification: { tag: message.tag, channel_id: DEVICE_STATUS_CHANNEL },
+        },
+      };
+    }
+
     const data = {
       kind: message.kind,
-      sessionId: message.reference.sessionId,
-      requestId: message.reference.requestId,
-      expiresAt: message.reference.expiresAt,
+      sessionId: reference.sessionId,
+      requestId: reference.requestId,
+      expiresAt: reference.expiresAt,
     };
 
     if (message.isSilent) {
@@ -153,7 +177,7 @@ export class HttpPushSender implements PushSender {
       layer: 'adapter',
       module: 'notification',
       kind: message.kind,
-      requestId: message.reference.requestId,
+      requestId: message.reference?.requestId ?? null,
       deviceId: message.target.deviceId,
       pushTokenTail: message.target.token.slice(-TOKEN_TAIL),
       delivery,

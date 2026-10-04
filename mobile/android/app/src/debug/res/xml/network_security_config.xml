@@ -2,13 +2,13 @@
 <!-- Debug builds only: the local stack of `pnpm dev` speaks plain HTTP, and Android refuses
      cleartext by default. The app's own calls go through Dart, which ignores that policy; the login
      does not — AppAuth fetches the discovery document and the token through the platform, and is
-     refused with "Cleartext HTTP traffic to localhost not permitted".
+     refused with "Cleartext HTTP traffic to … not permitted".
 
-     Only this machine, as `adb reverse` exposes it inside the device: `localhost` and `127.0.0.1`.
-     Everything else keeps the platform default, and release builds never see this file. -->
+     The stack is reached through this machine as `adb reverse` exposes it (`localhost`), or, in the
+     build `pnpm mobile:install` puts on a phone, through its address on the local network. Android
+     cannot name a range of addresses here, so cleartext is permitted to the platform as a whole, and
+     the host is decided by the app: `checkOrigin` takes `http://` to the loopback and to the private
+     network only (plan 10, D-20). Release builds never see this file. -->
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">localhost</domain>
-        <domain includeSubdomains="false">127.0.0.1</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="true"/>
 </network-security-config>

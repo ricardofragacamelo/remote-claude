@@ -18,7 +18,7 @@ permissão do topo ainda ficam onde estão. Saem na F2, na F3 e na F4.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-05 — A conversa na ordem real 🔲
+### B-05 — A conversa na ordem real ✅
 
 Hoje o [`Conversation`](../../../mobile/lib/features/session/domain/entities/conversation.dart) guarda
 `messages` e `tools` em listas separadas, e a
@@ -34,11 +34,13 @@ deixa de descartar o thinking: um fragmento com `blockType: thinking` vira entra
 texto da resposta. O texto de subagent continua fora do app, e um `blockType` que o app não conhece é
 ignorado com log em `debug`. Os testes do stream migram junto (R-05).
 
-### B-06 — `SessionPage` em três faixas 🔲
+### B-06 — `SessionPage` em três faixas ✅
 
-A `AppBar`, a conversa e o composer. A conversa é o **único** scroll: um `ListView.builder` com
-`reverse: true`, que acompanha o fim só quando a pessoa já está no fim
-([mobile/04](../../architecture/mobile/04-ui.md#transcript-e-stream)). O composer fica ancorado embaixo,
+A `AppBar`, a conversa e o composer. A conversa é o **único** scroll: um `ListView.builder` **não**
+invertido, com `ScrollController`, que acompanha o fim só quando a pessoa já está no fim
+([mobile/04](../../architecture/mobile/04-ui.md#transcript-e-stream)). Com `reverse: true`, a mensagem
+que cresce na cauda empurrava o texto de quem rolou um pouco para cima, o oposto da S-12 — a troca está
+no [progresso](progress.md#decisões-tomadas-durante-a-execução). O composer fica ancorado embaixo,
 dentro da `SafeArea` e acima do teclado (`viewInsets`, `resizeToAvoidBottomInset`), e a `AppBar` não sai
 da tela quando o teclado abre (R-02).
 
@@ -46,7 +48,7 @@ O `ConstrainedBox` de meia altura acima da conversa ainda guarda a fila de permi
 **recolhido** numa linha ("*n* pedidos esperando"), que expande sob demanda. Ele some na
 [B-20](F4-inline.md), quando o card vai para o lugar da tool.
 
-### B-07 — Os estados em faixas, e a sessão encerrada que retoma 🔲
+### B-07 — Os estados em faixas, e a sessão encerrada que retoma ✅
 
 `StateStrip`: cada estado numa linha, sem empurrar o composer:
 
@@ -61,7 +63,7 @@ O `ConstrainedBox` de meia altura acima da conversa ainda guarda a fila de permi
   retoma, porque retomar abre um subprocesso que conta no teto. Com o teto cheio, a recusa aparece acima
   da caixa, e o texto fica.
 
-### B-08 — O rascunho no app 🔲
+### B-08 — O rascunho no app ✅
 
 Pela [D-05](decisions.md#f1--moldura-da-sessão): tocar numa pasta abre o **rascunho**, sem sessão. O
 `SessionStarterController` deixa de mandar `session.start` no toque. O rascunho usa a mesma moldura da
@@ -71,7 +73,7 @@ B-06: as dicas no lugar da conversa vazia e a caixa ancorada. Os chips de modelo
 chega (a S-75 do plano 04 continua). Até o envio, nenhum subprocesso existe. Sair do rascunho não deixa
 nada aberto.
 
-### B-09 — Tela pequena, fonte grande, rotação e background 🔲
+### B-09 — Tela pequena, fonte grande, rotação e background ✅
 
 - **360×640 e 360×400** (o teclado aberto): a caixa está inteira na tela, e a conversa continua com área
   visível;

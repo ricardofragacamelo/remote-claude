@@ -18,6 +18,7 @@ import {
   BRACE,
   MUSTACHE,
   compareCatalogues,
+  compareShared,
   emittedMessageKeys,
   findOrphans,
   findMissingHelp,
@@ -125,13 +126,13 @@ function isGenerated(name) {
 }
 
 /**
- * Checks one family.
+ * The catalogues of one family, read as flat keys.
  *
  * @param {Family} family
- * @returns {import('./lib/i18n.mjs').Problem[]}
+ * @returns {import('./lib/i18n.mjs').Catalogue[]}
  */
-export function checkFamily(family) {
-  const catalogues = family.catalogues.map((catalogue) => {
+function cataloguesOf(family) {
+  return family.catalogues.map((catalogue) => {
     const parsed = /** @type {Record<string, unknown>} */ (
       JSON.parse(fs.readFileSync(path.join(repoRoot, catalogue.file), 'utf8'))
     );
@@ -141,6 +142,35 @@ export function checkFamily(family) {
       entries: catalogue.arb === true ? fromArb(parsed) : flatten(parsed),
     };
   });
+}
+
+/** The texts the web and the app both show — plan 10, B-03. */
+export const SHARED_TEXTS = 'scripts/i18n-shared.json';
+
+/**
+ * The texts both ends show, compared across the web and the app.
+ *
+ * @returns {import('./lib/i18n.mjs').Problem[]}
+ */
+export function checkShared() {
+  const shared =
+    /** @type {{ locales: import('./lib/i18n.mjs').SharedLocale[], texts: Record<string, string> }} */ (
+      JSON.parse(fs.readFileSync(path.join(repoRoot, SHARED_TEXTS), 'utf8'))
+    );
+  const family = (/** @type {string} */ name) =>
+    cataloguesOf(/** @type {Family} */ (FAMILIES.find((each) => each.name === name)));
+
+  return compareShared(family('web'), family('mobile'), shared.texts, shared.locales);
+}
+
+/**
+ * Checks one family.
+ *
+ * @param {Family} family
+ * @returns {import('./lib/i18n.mjs').Problem[]}
+ */
+export function checkFamily(family) {
+  const catalogues = cataloguesOf(family);
 
   const sources = filesUnder(
     path.join(repoRoot, family.sourceDir),
@@ -214,6 +244,18 @@ for (const family of FAMILIES) {
 
   failures += problems.length;
 }
+
+const shared = checkShared();
+
+for (const problem of shared) {
+  fail(`web ↔ mobile · ${problem.key}`, problem.detail);
+}
+
+if (shared.length === 0) {
+  ok('web ↔ mobile', dim('the texts both ends show are the same, in every language'));
+}
+
+failures += shared.length;
 
 line();
 

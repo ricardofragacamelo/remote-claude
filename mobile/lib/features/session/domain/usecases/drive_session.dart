@@ -24,6 +24,27 @@ abstract final class SessionCommands {
 
   /// Puts the files the session wrote back to how they were before one of its turns.
   static const String rewindFiles = 'session.rewindFiles';
+
+  /// Changes the model of a running session.
+  static const String setModel = 'session.setModel';
+
+  /// Changes the permission mode of a running session.
+  static const String setPermissionMode = 'session.setPermissionMode';
+
+  /// Takes a prompt out of the session's queue before it starts.
+  static const String cancelQueuedPrompt = 'session.cancelQueuedPrompt';
+}
+
+/// What a session opens with, chosen before it exists — the draft (D-05). `null` is the
+/// installation's default.
+class SessionChoices {
+  const SessionChoices({this.model, this.permissionMode, this.effort});
+
+  final String? model;
+  final String? permissionMode;
+
+  /// Only here: changing it on a live session drops the hook that asks before each tool (08 · D-16).
+  final String? effort;
 }
 
 /// What the screen can ask of a session.
@@ -41,8 +62,13 @@ class DriveSession {
   /// @returns the id the command left with — what a refusal of it names: the machine already at
   ///   its ceiling (`SESSION_LIMIT_REACHED`), a folder no longer allowed — or `null` when nothing
   ///   left
-  String? start(String workspacePath) =>
-      _repository.issue(SessionCommands.start, <String, Object?>{'workspacePath': workspacePath});
+  String? start(String workspacePath, {SessionChoices choices = const SessionChoices()}) =>
+      _repository.issue(SessionCommands.start, <String, Object?>{
+        'workspacePath': workspacePath,
+        'model': ?choices.model,
+        'permissionMode': ?choices.permissionMode,
+        'effort': ?choices.effort,
+      });
 
   /// Continues [conversationId] — a conversation of Claude's store — in [workspacePath], which is
   /// where it ran.
@@ -55,6 +81,20 @@ class DriveSession {
     SessionCommands.start,
     <String, Object?>{'workspacePath': workspacePath, 'resumeSessionId': conversationId},
   );
+
+  /// Continues [conversationId] in a **new** conversation, from before the prompt [messageId] — the
+  /// edit and resend, and the fork from a prompt (08 · D-19). Never a truncation: the original stays
+  /// as it was.
+  ///
+  /// @returns the id the command left with — what the `session.started` of the fork and a refusal
+  ///   name: a point that is not a prompt of the conversation (`INVALID_INPUT`) — or `null` when
+  ///   nothing left
+  String? fork(String workspacePath, String conversationId, String messageId) =>
+      _repository.issue(SessionCommands.start, <String, Object?>{
+        'workspacePath': workspacePath,
+        'resumeSessionId': conversationId,
+        'forkAt': messageId,
+      });
 
   /// Sends one turn. A prompt arriving mid-turn is queued by the backend, never refused.
   ///
@@ -75,6 +115,30 @@ class DriveSession {
   String? rewindFiles(String sessionId, String promptId) => _repository.issue(
     SessionCommands.rewindFiles,
     <String, Object?>{'sessionId': sessionId, 'promptId': promptId},
+  );
+
+  /// Changes the model of [sessionId].
+  ///
+  /// @returns the id the command left with — what a refusal names (`INVALID_INPUT`) — or `null`
+  ///   when nothing left. The server acknowledges; it never echoes the change.
+  String? setModel(String sessionId, String model) => _repository.issue(
+    SessionCommands.setModel,
+    <String, Object?>{'sessionId': sessionId, 'model': model},
+  );
+
+  /// Changes the permission mode of [sessionId]. @returns as [setModel]
+  String? setPermissionMode(String sessionId, String mode) => _repository.issue(
+    SessionCommands.setPermissionMode,
+    <String, Object?>{'sessionId': sessionId, 'mode': mode},
+  );
+
+  /// Takes [queueId] out of the queue of [sessionId].
+  ///
+  /// @returns the id the command left with — what a refusal names: the prompt already started
+  ///   (`CONFLICT`), or no longer queued (`QUEUED_PROMPT_NOT_FOUND`) — or `null` when nothing left
+  String? cancelQueuedPrompt(String sessionId, String queueId) => _repository.issue(
+    SessionCommands.cancelQueuedPrompt,
+    <String, Object?>{'sessionId': sessionId, 'queueId': queueId},
   );
 
   /// Interrupts the turn that is running.

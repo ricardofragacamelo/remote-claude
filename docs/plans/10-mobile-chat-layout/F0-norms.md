@@ -19,7 +19,7 @@ que concentra os seletores do `integration_test`.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — A tela de sessão nova em `mobile/04-ui` e `mobile/03-state-and-data` 🔲
+### B-01 — A tela de sessão nova em `mobile/04-ui` e `mobile/03-state-and-data` ✅
 
 Em [mobile/04-ui](../../architecture/mobile/04-ui.md):
 
@@ -43,7 +43,7 @@ ordenada de entradas**, o mesmo modelo do web, com as três regras do stream val
 rascunho que vira sessão no primeiro prompt ([D-05](decisions.md#f1--moldura-da-sessão), 08 · D-07); e
 as rotas que o app passa a ler (`GET /catalog`, `GET /sessions/:id/models`, `GET /sessions/:id/context`).
 
-### B-02 — Chaves ARB e o inventário da ajuda 🔲
+### B-02 — Chaves ARB e o inventário da ajuda ✅
 
 As chaves que saem (`sessionStatus*` do `_Header`, `sessionInterruptAction` e `sessionCloseAction` da
 `AppBar`, e as que a F1…F4 deixarem órfãs) e as que entram (verbos, pílula, menu, faixas, chips,
@@ -52,7 +52,7 @@ uso. Chave órfã reprova o `i18n:check`
 ([shared/02-i18n](../../architecture/shared/02-i18n.md#garantias-automatizadas)). O inventário do que a
 ajuda da tela descreve vai para a [B-17](F3-header.md).
 
-### B-03 — Os verbos e os textos compartilhados iguais nas duas pontas 🔲
+### B-03 — Os verbos e os textos compartilhados iguais nas duas pontas ✅
 
 O `i18n:check` compara as chaves **dentro** de cada família (o web com o web, o app com o app), nunca uma
 família com a outra. A lista de verbos do indicador (09 · D-16) e os textos que o usuário lê nas duas
@@ -62,7 +62,7 @@ declarado de chave do web para chave do app (`sessions.working.verbs.*` ↔ `ses
 `i18n:check` lê e compara texto a texto, por idioma. Chave do mapa que falta numa ponta, ou texto que
 diverge, reprova o portão. É código em `scripts/lib/i18n.mjs`, com o teste em `test/unit/scripts/`.
 
-### B-04 — O robô da tela de sessão 🔲
+### B-04 — O robô da tela de sessão ✅
 
 `integration_test/support/session_robot.dart`, que acha a tela por **semântica** (`Semantics` label,
 tooltip, papel), nunca por tipo interno ([mobile/06](../../architecture/mobile/06-testing.md#widget)): a

@@ -14,8 +14,8 @@ class WatchSession {
   Stream<SessionUpdate> call() => _repository.updates;
 
   /// Starts following [sessionId], resuming from what [lastSeq] answers.
-  void follow(String sessionId, int Function() lastSeq) => _repository.follow(sessionId, lastSeq);
-
-  /// Stops following.
-  void unfollow() => _repository.unfollow();
+  ///
+  /// @returns what stops this following, and only this one
+  void Function() follow(String sessionId, int Function() lastSeq) =>
+      _repository.follow(sessionId, lastSeq);
 }

@@ -13,7 +13,9 @@ import 'package:remote_claude/features/session/domain/entities/history_page.dart
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 import 'package:remote_claude/features/session/domain/repositories/history_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/session_repository.dart';
+import 'package:remote_claude/features/session/presentation/providers/first_prompts.dart';
 import 'package:remote_claude/features/session/presentation/providers/live_session_controller.dart';
+import 'package:remote_claude/features/session/presentation/providers/open_sessions.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 
 import '../../../../../support/builders/frames.dart';
@@ -116,6 +118,67 @@ void main() {
     expect(repository.unfollows, greaterThan(0));
   });
 
+  // Plan 10, F9 · S-172: several sessions are followed at once, and each screen keeps its own.
+  test('S-172 · what another session says, and its gap, leave this one as it was', () async {
+    final ProviderContainer container = build();
+    hold(container, 'session-1');
+
+    repository.emit(arrivalOf(messageDelta(messageId: 'm1', delta: 'mine', seq: 1)));
+    repository.emit(
+      arrivalOf(messageDelta(messageId: 'm2', delta: 'theirs', seq: 1, sessionId: 'session-2')),
+    );
+    await settle();
+    expect(read(container).conversation.messages, hasLength(1));
+
+    repository.emit(const StreamGap(sessionId: 'session-2'));
+    await settle();
+    expect(read(container).conversation.messages, hasLength(1));
+
+    repository.emit(const StreamGap(sessionId: 'session-1'));
+    await settle();
+    expect(read(container).conversation.messages, isEmpty);
+  });
+
+  // Plan 10, F9 · S-165: open in the app, a session stays followed with another one on screen.
+  group('open in the app', () {
+    test(
+      'S-165 · leaving its screen keeps it followed; closing it in the app lets it go',
+      () async {
+        final ProviderContainer container = build();
+        container.read(openSessionsProvider.notifier).open('/w/a', 'session-1');
+        final ProviderSubscription<LiveSession> screen = container.listen(
+          liveSessionControllerProvider('session-1'),
+          (LiveSession? previous, LiveSession next) {},
+        );
+
+        screen.close();
+        await settle();
+        expect(repository.unfollows, 0);
+
+        // Still applying what arrives, with nobody looking.
+        repository.emit(arrivalOf(messageDelta(messageId: 'm1', delta: 'later', seq: 1)));
+        await settle();
+        expect(read(container).conversation.messages, hasLength(1));
+
+        container.read(openSessionsProvider.notifier).close('session-1');
+        await settle();
+        expect(repository.unfollows, 1);
+      },
+    );
+
+    // S-166 · an ended session stays in the list, ended, until it is closed in the app.
+    test('S-166 · a session that ends stays open in the app', () async {
+      final ProviderContainer container = build();
+      container.read(openSessionsProvider.notifier).open('/w/a', 'session-1');
+      hold(container, 'session-1');
+
+      repository.emit(arrivalOf(sessionStatusChanged(status: 'closed', seq: 1)));
+      await settle();
+
+      expect(container.read(openSessionsProvider.notifier).contains('session-1'), isTrue);
+    });
+  });
+
   test('S-29 · a gap clears everything rather than stitching the hole', () async {
     final ProviderContainer container = build();
     hold(container, 'session-1');
@@ -133,6 +196,53 @@ void main() {
     // A stream that is not a conversation has nothing to reload from, and asks for nothing.
     expect(history.reads, isEmpty);
     expect(after.isLoadingHistory, isFalse);
+  });
+
+  test(
+    'S-79 · a gap with no conversation to read starts again with the line that says so',
+    () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+
+      repository.emit(arrivalOf(messageDelta(messageId: 'm1', delta: 'before', seq: 1)));
+      repository.emit(const StreamGap());
+      await settle();
+
+      expect(read(container).conversation.entries, <ConversationEntry>[const ReplayGapLine()]);
+    },
+  );
+
+  group('the fork the CLI refused — S-82', () {
+    const Failure rejected = ServerFailure(
+      code: 'SESSION_FORK_REJECTED',
+      messageKey: 'session.error.forkRejected',
+      traceId: 'trace-f',
+    );
+
+    test('this session’s is kept to say, and the person closing it forgets it', () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+
+      repository.emit(const SessionFailed(rejected, sessionId: 'session-1'));
+      await settle();
+      expect(read(container).forkRejection, rejected);
+
+      container.read(liveSessionControllerProvider('session-1').notifier).dismissFailures();
+      expect(read(container).forkRejection, isNull);
+    });
+
+    test('another session’s, or any other failure, is not this screen’s', () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+
+      repository
+        ..emit(const SessionFailed(rejected, sessionId: 'session-2'))
+        ..emit(const SessionFailed(unavailable, sessionId: 'session-1'))
+        ..emit(const SessionFailed(rejected));
+      await settle();
+
+      expect(read(container).forkRejection, isNull);
+    });
   });
 
   test('applies the stream in order, and shows a tool with its command', () async {
@@ -419,6 +529,44 @@ void main() {
       );
     });
 
+    test('S-49 · ending it twice sends one close', () {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+      final LiveSessionController controller = container.read(
+        liveSessionControllerProvider('session-1').notifier,
+      );
+
+      expect(controller.close(), isTrue);
+      expect(controller.close(), isFalse);
+
+      expect(repository.commands.map(((String, Map<String, Object?>) c) => c.$1), <String>[
+        'session.close',
+      ]);
+    });
+
+    test('S-52 · a session that already ended is not ended again', () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+      repository.emit(arrivalOf(sessionClosed(seq: 1)));
+      await pumpEventQueue();
+
+      expect(container.read(liveSessionControllerProvider('session-1').notifier).close(), isFalse);
+      expect(repository.commands, isEmpty);
+    });
+
+    test('a close the socket could not send can be asked again', () {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+      final LiveSessionController controller = container.read(
+        liveSessionControllerProvider('session-1').notifier,
+      );
+      repository.accepts = false;
+
+      expect(controller.close(), isFalse);
+      repository.accepts = true;
+      expect(controller.close(), isTrue);
+    });
+
     test('S-76 · a socket that is not ready sends nothing, and says so', () {
       final ProviderContainer container = build();
       hold(container, 'session-1');
@@ -430,5 +578,243 @@ void main() {
         isFalse,
       );
     });
+  });
+
+  group('plan 10 · what the composer asks of the session', () {
+    const Failure refused = ServerFailure(
+      code: 'INVALID_INPUT',
+      messageKey: 'common.error.invalidInput',
+      traceId: 'trace-4',
+    );
+    const Failure started = ServerFailure(
+      code: 'CONFLICT',
+      messageKey: 'session.error.queuedPromptStarted',
+      traceId: 'trace-5',
+    );
+
+    LiveSessionController controllerOf(ProviderContainer container) =>
+        container.read(liveSessionControllerProvider('session-1').notifier);
+
+    test(
+      'the model and the mode are where the session started, until this screen changes them',
+      () async {
+        final ProviderContainer container = build();
+        hold(container, 'session-1');
+
+        repository.emit(
+          arrivalOf(
+            sessionStarted(sessionId: 'session-1', model: 'sonnet', permissionMode: 'plan'),
+          ),
+        );
+        await settle();
+
+        expect(read(container).model, 'sonnet');
+        expect(read(container).permissionMode, 'plan');
+      },
+    );
+
+    test('S-32 · a change shows at once, and stops being pending when it is accepted', () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+
+      controllerOf(container).setModel('opus');
+
+      expect(read(container).model, 'opus');
+      expect(read(container).isChoosing, isTrue);
+      expect(repository.commands.single.$1, 'session.setModel');
+
+      repository.emit(const CommandAccepted('command-1'));
+      await settle();
+
+      expect(read(container).isChoosing, isFalse);
+      expect(read(container).model, 'opus');
+    });
+
+    test('S-32 · a refusal puts the chip back, and says why', () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+      repository.emit(arrivalOf(sessionStarted(sessionId: 'session-1', permissionMode: 'default')));
+      await settle();
+
+      controllerOf(container).setPermissionMode('acceptEdits');
+      expect(read(container).permissionMode, 'acceptEdits');
+
+      repository.emit(const CommandRefused(commandId: 'command-1', failure: refused));
+      await settle();
+
+      expect(read(container).permissionMode, 'default');
+      expect(read(container).choiceFailure, refused);
+      expect(read(container).isChoosing, isFalse);
+    });
+
+    test('S-35 · a second change while one is pending sends nothing', () {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+
+      controllerOf(container)
+        ..setModel('opus')
+        ..setModel('haiku')
+        ..setPermissionMode('plan');
+
+      expect(repository.commands, hasLength(1));
+      expect(read(container).model, 'opus');
+    });
+
+    test('a change that could not leave changes nothing', () {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+      repository.accepts = false;
+
+      controllerOf(container).setModel('opus');
+
+      expect(read(container).model, isNull);
+      expect(read(container).isChoosing, isFalse);
+    });
+
+    test('an acceptance of another command leaves the change pending', () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+
+      controllerOf(container).setModel('opus');
+      repository.emit(const CommandAccepted('command-9'));
+      await settle();
+
+      expect(read(container).isChoosing, isTrue);
+    });
+
+    test('S-39 · taking a prompt out of the queue twice sends one cancel', () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+      repository.emit(arrivalOf(promptQueued(queueId: 'q-1', seq: 2)));
+      await settle();
+
+      controllerOf(container)
+        ..cancelQueued('q-1')
+        ..cancelQueued('q-1');
+
+      expect(repository.commands.single.$2, <String, Object?>{
+        'sessionId': 'session-1',
+        'queueId': 'q-1',
+      });
+
+      repository.emit(arrivalOf(promptDequeued(queueId: 'q-1', seq: 3, reason: 'cancelled')));
+      await settle();
+
+      expect(read(container).conversation.queue, isEmpty);
+    });
+
+    test(
+      'S-40 · a prompt that already started: the refusal, translated, and the row leaves',
+      () async {
+        final ProviderContainer container = build();
+        hold(container, 'session-1');
+        repository.emit(arrivalOf(promptQueued(queueId: 'q-1', seq: 2)));
+        await settle();
+
+        controllerOf(container).cancelQueued('q-1');
+        repository.emit(const CommandRefused(commandId: 'command-1', failure: started));
+        await settle();
+
+        expect(read(container).queueFailure, started);
+        expect(read(container).conversation.queue, isEmpty);
+
+        // The stream says so too, later; nothing comes back.
+        repository.emit(arrivalOf(promptDequeued(queueId: 'q-1', seq: 3)));
+        await settle();
+        expect(read(container).conversation.queue, isEmpty);
+
+        controllerOf(container).dismissFailures();
+        expect(read(container).queueFailure, isNull);
+      },
+    );
+
+    test('a cancel that could not leave can be asked again', () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+      repository.accepts = false;
+
+      controllerOf(container).cancelQueued('q-1');
+      repository.accepts = true;
+      controllerOf(container).cancelQueued('q-1');
+
+      expect(repository.commands, hasLength(2));
+    });
+
+    test(
+      'S-28 · two taps on stop interrupt once, and the next turn can be stopped again',
+      () async {
+        final ProviderContainer container = build();
+        hold(container, 'session-1');
+        repository.emit(arrivalOf(sessionStatusChanged(status: 'running', seq: 1)));
+        await settle();
+
+        controllerOf(container)
+          ..interrupt()
+          ..interrupt();
+
+        expect(repository.commands.single.$1, 'session.interrupt');
+        expect(read(container).isInterrupting, isTrue);
+
+        repository.emit(arrivalOf(sessionStatusChanged(status: 'idle', seq: 2)));
+        repository.emit(arrivalOf(sessionStatusChanged(status: 'running', seq: 3)));
+        await settle();
+
+        expect(read(container).isInterrupting, isFalse);
+        controllerOf(container).interrupt();
+        expect(repository.commands, hasLength(2));
+      },
+    );
+
+    test('S-44 · compacting twice sends one /compact, and the compaction ends the wait', () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+
+      expect(controllerOf(container).compact(), isTrue);
+      expect(controllerOf(container).compact(), isTrue);
+
+      expect(repository.commands.single.$2['text'], '/compact');
+      expect(read(container).isCompacting, isTrue);
+
+      repository.emit(arrivalOf(sessionCompacted(seq: 4)));
+      await settle();
+
+      expect(read(container).isCompacting, isFalse);
+      expect(read(container).conversation.entries.single, isA<CompactionLine>());
+    });
+
+    test('a /compact the server refused is said like any prompt, and can be asked again', () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+
+      controllerOf(container).compact();
+      repository.emit(const CommandRefused(commandId: 'command-1', failure: refused));
+      await settle();
+
+      expect(read(container).promptFailure, refused);
+      expect(read(container).isCompacting, isFalse);
+    });
+
+    test('a /compact that could not leave says so', () {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+      repository.accepts = false;
+
+      expect(controllerOf(container).compact(), isFalse);
+      expect(read(container).isCompacting, isFalse);
+    });
+
+    test(
+      'S-34 · the first prompt a draft sent for this session is this screen’s to refuse',
+      () async {
+        final ProviderContainer container = build();
+        container.read(firstPromptsProvider.notifier).send('session-1', '/heapdumb');
+        hold(container, 'session-1');
+
+        repository.emit(const CommandRefused(commandId: 'command-1', failure: refused));
+        await settle();
+
+        expect(read(container).promptFailure, refused);
+      },
+    );
   });
 }

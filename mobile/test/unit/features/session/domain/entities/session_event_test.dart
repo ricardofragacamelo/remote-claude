@@ -126,4 +126,47 @@ void main() {
       expect(event.seq, 7, reason: '${event.runtimeType}');
     }
   });
+
+  test('the events of plan 10 compare by every field they carry', () {
+    expect(
+      ThinkingFragment(1, messageId: 'm', delta: 'a', at: 't'),
+      ThinkingFragment(1, messageId: 'm', delta: 'a', at: 't'),
+    );
+    expect(
+      ThinkingFragment(1, messageId: 'm', delta: 'a'),
+      isNot(ThinkingFragment(1, messageId: 'm', delta: 'b')),
+    );
+    expect(Thought('a', isRedacted: true), Thought('a', isRedacted: true));
+    expect(Thought('a'), isNot(Thought('a', isRedacted: true)));
+    expect(
+      MessageFinished(
+        1,
+        messageId: 'm',
+        text: '',
+        isFromUser: false,
+        thoughts: <Thought>[Thought('x')],
+      ),
+      isNot(MessageFinished(1, messageId: 'm', text: '', isFromUser: false)),
+    );
+    expect(
+      PromptQueued(1, QueuedPrompt(queueId: 'q', promptedBy: 'web', preview: 'p')),
+      PromptQueued(1, QueuedPrompt(queueId: 'q', promptedBy: 'web', preview: 'p')),
+    );
+    expect(PromptDequeued(1, queueId: 'q'), isNot(PromptDequeued(1, queueId: 'r')));
+    expect(
+      ContextCompacted(1, trigger: 'auto', preTokens: 3),
+      isNot(ContextCompacted(1, trigger: 'auto')),
+    );
+    expect(
+      SessionOpened(
+        1,
+        's',
+        model: 'a',
+        permissionMode: 'plan',
+        workspacePath: '/w',
+        commandId: 'c',
+      ),
+      isNot(SessionOpened(1, 's', model: 'a', permissionMode: 'plan', workspacePath: '/w')),
+    );
+  });
 }

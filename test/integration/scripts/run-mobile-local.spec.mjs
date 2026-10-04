@@ -38,8 +38,9 @@ afterEach(async () => {
 });
 
 /**
- * A stand-in for the stack `pnpm dev` keeps up: it answers the backend's health route and the
- * issuer's discovery document — or refuses everything, when `up` is false.
+ * A stand-in for the stack `pnpm dev` keeps up, as the app reaches it — through the web server,
+ * which forwards the backend's health route and the issuer's discovery document (plan 10, B-27) —
+ * or refusing everything, when `up` is false.
  *
  * @param {boolean} up
  * @returns {Promise<number>} the port it listens on
@@ -70,13 +71,13 @@ function runMobileLocal(env) {
 }
 
 /**
- * The variables of a `.env` pointing at a stack on `port`.
+ * The variables of a `.env` pointing at a stack whose web server is on `port`.
  *
  * @param {number} port
  */
 function stackAt(port) {
   return {
-    RC_BACKEND_PORT: String(port),
+    RC_WEB_PORT: String(port),
     OIDC_ISSUER: `http://localhost:${String(port)}/realms/remote-claude`,
     OIDC_CLIENT_ID_MOBILE: 'remote-claude-mobile',
     OIDC_SCOPES: 'openid profile email offline_access',
@@ -93,11 +94,11 @@ describe('run-mobile-local.mjs', () => {
     expect(result.stdout).not.toContain('starting the emulator');
   });
 
-  it('refuses a backend port that is not a port, rather than building against the default', async () => {
-    const result = await runMobileLocal({ ...stackAt(1), RC_BACKEND_PORT: 'nope' });
+  it('refuses a web port that is not a port, rather than building against the default', async () => {
+    const result = await runMobileLocal({ ...stackAt(1), RC_WEB_PORT: 'nope' });
 
     expect(result.code).toBe(1);
-    expect(result.stdout).toContain('RC_BACKEND_PORT="nope" is not a valid TCP port');
+    expect(result.stdout).toContain('RC_WEB_PORT="nope" is not a valid TCP port');
   });
 
   it('says to start `pnpm dev` when the stack does not answer, before any device', async () => {
@@ -123,7 +124,8 @@ describe('run-mobile-local.mjs', () => {
     });
 
     expect(result.code).toBe(1);
-    expect(result.stdout).toContain(`http://localhost:${String(port)}/health`);
+    // S-92 · the app's one origin: the health of the backend, through the web server.
+    expect(result.stdout).toContain(`http://localhost:${String(port)}/api/health`);
     expect(result.stderr).toContain('flutter is not on PATH');
     expect(result.stdout).toContain('docs.flutter.dev');
     expect(result.stdout).not.toContain('starting the emulator');

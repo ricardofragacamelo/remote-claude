@@ -104,6 +104,8 @@ export function testEnvironment(
   process.env['RC_WEB_PORT'] = '5173';
   process.env['DATABASE_URL'] = databaseUrl;
   process.env['OIDC_ISSUER'] = issuer;
+  // None: one issuer, as every suite but the one about the list (ADR-021) wants.
+  process.env['OIDC_ADDITIONAL_ISSUERS'] = '';
   process.env['OIDC_AUDIENCE'] = AUDIENCE;
   process.env['OIDC_CLIENT_ID_WEB'] = 'remote-claude-web';
   process.env['OIDC_CLIENT_ID_MOBILE'] = 'remote-claude-mobile';

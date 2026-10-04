@@ -7,9 +7,13 @@
 /// (docs/architecture/mobile/05-logging.md).
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/config/app_config_provider.dart';
+import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/network/credentials_provider.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
@@ -25,6 +29,15 @@ class DiagnosticsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AppScreen(
     title: AppLocalizations.of(context).diagnosticsTitle,
+    actions: <Widget>[
+      // The round trip of the walking skeleton, which was the first screen until the folders
+      // home took its place (plan 10, D-27): a check of the socket, so it lives with the checks.
+      IconButton(
+        tooltip: AppLocalizations.of(context).sessionPingTitle,
+        icon: const Icon(Icons.swap_vert),
+        onPressed: () => unawaited(context.push(pingRoute)),
+      ),
+    ],
     body: const SingleChildScrollView(child: _Diagnostics()),
   );
 }

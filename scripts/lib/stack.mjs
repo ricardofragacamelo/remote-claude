@@ -103,6 +103,7 @@ export const E2E_POSTGRES = {
  * @property {string} RC_POSTGRES_DB
  * @property {string} DATABASE_URL
  * @property {string} OIDC_ISSUER
+ * @property {string} OIDC_ADDITIONAL_ISSUERS
  * @property {string} OIDC_AUDIENCE
  * @property {string} OIDC_CLIENT_ID_WEB
  * @property {string} OIDC_CLIENT_ID_MOBILE
@@ -204,6 +205,10 @@ export function ephemeralEnvironment(ports, options = {}) {
     DATABASE_URL: `postgresql://${E2E_POSTGRES.user}:${E2E_POSTGRES.password}@${urls.postgres}/${E2E_POSTGRES.db}`,
 
     OIDC_ISSUER: urls.realm,
+    // The realm through the web's forwarding too, the origin the phone signs in through over
+    // `adb reverse` (plan 10, D-15 and D-16). The provider writes the origin into `iss`, so the
+    // backend lists both; the limits stack, on its own web port, lists its own.
+    OIDC_ADDITIONAL_ISSUERS: urls.webRealm,
     OIDC_AUDIENCE: 'https://api.remote-claude.local',
     OIDC_CLIENT_ID_WEB: 'remote-claude-web',
     OIDC_CLIENT_ID_MOBILE: 'remote-claude-mobile',
@@ -412,6 +417,9 @@ export function e2eDotEnv(ports, options = {}) {
     RC_WS_URL: `${urls.backend.replace(/^http/, 'ws')}/ws`,
     RC_KEYCLOAK_URL: urls.keycloak,
     RC_OIDC_ISSUER: urls.realm,
+    // Where the realm lives on any origin of the stack — the app derives its issuer from the origin
+    // it talks to and this path (plan 10, D-13).
+    RC_OIDC_REALM_PATH: REALM_PATH,
     RC_OIDC_CLIENT_ID: environment.OIDC_CLIENT_ID_WEB,
 
     // The Flutter end reads the same file, and needs the two values the browser does not.
@@ -492,6 +500,92 @@ export const SERVICES = ['postgres', 'keycloak'];
 /** Realm imported from infra/keycloak/realm-remote-claude.json. */
 export const REALM = 'remote-claude';
 
+/**
+ * Where the realm lives on any origin that serves it: the provider's own port, or the web server
+ * that forwards `/realms` to it (plan 10, D-13). The issuer is an origin plus this path.
+ */
+export const REALM_PATH = `/realms/${REALM}`;
+
+/**
+ * The origin of the web server on a port.
+ *
+ * What the browser opens, and — since the web forwards the API, the WebSocket and the realm in
+ * local mode too (plan 10, D-16) — the one origin a phone reaches the whole stack through, with
+ * `adb reverse` on this port.
+ *
+ * @param {number | string} port
+ * @returns {string}
+ */
+export function webOrigin(port) {
+  return `http://localhost:${String(port)}`;
+}
+
+/**
+ * The origin of the web dev server on the local network: what a phone on the same Wi-Fi talks
+ * through, with no cable (plan 10, D-22).
+ *
+ * @param {string} lan this machine's address on the local network
+ * @param {number} port
+ * @returns {string}
+ */
+export function lanOrigin(lan, port) {
+  return `http://${lan}:${String(port)}`;
+}
+
+/**
+ * The issuer of the realm as seen through an origin that serves `/realms`.
+ *
+ * The provider has no fixed hostname and writes into `iss` the origin it was called through
+ * (plan 10, B-25), so each origin is an issuer of its own.
+ *
+ * @param {string} origin without a trailing slash, as {@link webOrigin} returns it
+ * @param {string} [realmPath] the path of the realm, {@link REALM_PATH} unless the `.env` names another
+ * @returns {string}
+ */
+export function issuerThrough(origin, realmPath = REALM_PATH) {
+  return `${origin}${realmPath}`;
+}
+
+/** An issuer without its trailing slash, the form two issuers are compared in. */
+const bareIssuer = (/** @type {string} */ issuer) => issuer.replace(/\/$/, '');
+
+/**
+ * The environment of `pnpm dev` with the issuers seen through the web server accepted too.
+ *
+ * The phone signs in through the web's origin (plan 10, D-16) — `localhost` over `adb reverse`, or
+ * this machine's address on the local network (D-23) — and the backend accepts an explicit list of
+ * issuers (D-15, ADR-021). Each web issuer is derived from the port and the realm path of
+ * `OIDC_ISSUER`, never written twice in `.env`, and **added** to whatever `OIDC_ADDITIONAL_ISSUERS`
+ * already lists — once. An unreadable `OIDC_ISSUER` is left alone: the backend's own validation
+ * names it better than this would.
+ *
+ * Pure and stable under repetition.
+ *
+ * @param {NodeJS.ProcessEnv} env
+ * @param {number} webPort
+ * @param {string | null} [lan] this machine's address on the local network, when it has one
+ * @returns {NodeJS.ProcessEnv}
+ */
+export function withWebIssuer(env, webPort, lan = null) {
+  const issuer = env['OIDC_ISSUER']?.trim() ?? '';
+  if (!URL.canParse(issuer)) {
+    return { ...env };
+  }
+
+  const realmPath = bareIssuer(new URL(issuer).pathname);
+  const origins = [webOrigin(webPort), ...(lan === null ? [] : [lanOrigin(lan, webPort)])];
+  const listed = (env['OIDC_ADDITIONAL_ISSUERS'] ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== '');
+  const known = new Set([issuer, ...listed].map(bareIssuer));
+  const missing = origins
+    .map((origin) => issuerThrough(origin, realmPath))
+    .filter((web) => !known.has(bareIssuer(web)));
+
+  return { ...env, OIDC_ADDITIONAL_ISSUERS: [...listed, ...missing].join(',') };
+}
+
 /** The fixed ports, and the variable that moves each one. Mirrors .env.example. */
 export const PORT_VARIABLES = [
   { key: 'postgres', variable: 'RC_POSTGRES_PORT', fallback: 5432 },
@@ -541,13 +635,17 @@ export function resolvePorts(env) {
 /**
  * Where each part of the stack answers.
  *
+ * `webRealm` is the same realm through the web server's forwarding — the issuer of a token the
+ * phone signs in for through `adb reverse` (plan 10, D-16).
+ *
  * @param {StackPorts} ports
  * @returns {{ postgres: string, keycloak: string, realm: string, discovery: string,
- *            backend: string, web: string }}
+ *            backend: string, web: string, webRealm: string }}
  */
 export function serviceUrls(ports) {
   const keycloak = `http://localhost:${String(ports.keycloak)}`;
-  const realm = `${keycloak}/realms/${REALM}`;
+  const realm = issuerThrough(keycloak);
+  const web = webOrigin(ports.web);
 
   return {
     postgres: `localhost:${String(ports.postgres)}`,
@@ -555,7 +653,8 @@ export function serviceUrls(ports) {
     realm,
     discovery: `${realm}/.well-known/openid-configuration`,
     backend: `http://localhost:${String(ports.backend)}`,
-    web: `http://localhost:${String(ports.web)}`,
+    web,
+    webRealm: issuerThrough(web),
   };
 }
 
@@ -564,27 +663,6 @@ export const HEALTH_PATH = '/health';
 
 /** The path the backend's WebSocket gateway listens on. */
 export const WS_PATH = '/ws';
-
-/**
- * The first IPv4 address of this machine that another device on the network can reach.
- *
- * The backend binds every interface, so a phone on the same network talks to it through this
- * address — `localhost` on the phone is the phone.
- *
- * @param {NodeJS.Dict<import('node:os').NetworkInterfaceInfo[]>} [interfaces]
- * @returns {string | null} null when the machine has no external IPv4 interface
- */
-export function lanAddress(interfaces = os.networkInterfaces()) {
-  for (const entries of Object.values(interfaces)) {
-    const external = (entries ?? []).find((entry) => entry.family === 'IPv4' && !entry.internal);
-
-    if (external !== undefined) {
-      return external.address;
-    }
-  }
-
-  return null;
-}
 
 /**
  * @typedef {object} BoardRow
@@ -603,8 +681,10 @@ export function lanAddress(interfaces = os.networkInterfaces()) {
  * paste into chats and issues.
  *
  * @param {StackPorts} ports
- * @param {{ env?: NodeJS.ProcessEnv, lan?: string | null }} [options] `lan` is the address a
- *   phone reaches the backend through, or null when there is none
+ * @param {{ env?: NodeJS.ProcessEnv, lan?: string | null, origin?: string | null }} [options]
+ *   `lan` is the address a phone reaches the backend through, or null when there is none;
+ *   `origin` is the public one of `pnpm dev:public`, through which the web forwards the API, the
+ *   socket and the login — the admin console stays out (plan 20, D-06)
  * @returns {BoardRow[]}
  */
 export function boardRows(ports, options = {}) {
@@ -620,8 +700,29 @@ export function boardRows(ports, options = {}) {
     ['WebSocket', ws],
   ];
 
+  /** @type {[string, string][]} */
+  const webDetails = [];
+
   if (options.lan !== undefined && options.lan !== null) {
     backendDetails.push(['network', `http://${options.lan}:${String(ports.backend)}`]);
+    webDetails.push(['network', lanOrigin(options.lan, ports.web)]);
+  }
+
+  /** @type {[string, string][]} */
+  const keycloakDetails = [
+    ['admin console', `${urls.keycloak}/admin`],
+    ['OIDC issuer', urls.realm],
+  ];
+
+  if (options.origin !== undefined && options.origin !== null) {
+    const origin = options.origin;
+    keycloakDetails.push(['public issuer', issuerThrough(origin)]);
+    backendDetails.push(
+      ['public API', `${origin}/api`],
+      ['public health', `${origin}/api${HEALTH_PATH}`],
+      ['public WebSocket', `${origin.replace(/^http/, 'ws')}${WS_PATH}`],
+    );
+    webDetails.push(['public', origin]);
   }
 
   return [
@@ -635,10 +736,7 @@ export function boardRows(ports, options = {}) {
       name: 'Keycloak',
       port: ports.keycloak,
       address: urls.keycloak,
-      details: [
-        ['admin console', `${urls.keycloak}/admin`],
-        ['OIDC issuer', urls.realm],
-      ],
+      details: keycloakDetails,
     },
     {
       name: 'Backend',
@@ -647,7 +745,7 @@ export function boardRows(ports, options = {}) {
       details: backendDetails,
       workspace: 'backend',
     },
-    { name: 'Web', port: ports.web, address: urls.web, details: [], workspace: 'web' },
+    { name: 'Web', port: ports.web, address: urls.web, details: webDetails, workspace: 'web' },
   ];
 }
 
@@ -786,17 +884,19 @@ export function realPushEnvironment(dotEnvText, options = {}) {
  * The defines the app is compiled with that come straight from `e2e/.env`, and the variable each
  * is read from. A value missing there is compiled in empty — never as the text "undefined".
  *
- * The last five are for the limits scenarios: the limits stack, and the provider's administrator.
- * Compiled in like everything else, because on a device there is no `e2e/.env` to read them from.
+ * The app talks through **one origin** (plan 10, D-13): the web server of the stack, which forwards
+ * the API, the socket and the login, reached through `adb reverse` — the internal address. The
+ * external one is empty here: the e2e stack has no public origin. The last four are for the limits
+ * scenarios: the origin of the limits stack, and the provider's administrator. Compiled in like
+ * everything else, because on a device there is no `e2e/.env` to read them from.
  */
 const DART_DEFINES_FROM_DOT_ENV = {
-  RC_API_URL: 'RC_BACKEND_URL',
-  RC_WS_URL: 'RC_WS_URL',
-  RC_OIDC_ISSUER: 'RC_OIDC_ISSUER',
+  RC_INTERNAL_URL: 'RC_WEB_URL',
+  RC_EXTERNAL_URL: 'RC_EXTERNAL_URL',
+  RC_OIDC_REALM_PATH: 'RC_OIDC_REALM_PATH',
   RC_OIDC_CLIENT_ID: 'RC_OIDC_CLIENT_ID_MOBILE',
   RC_OIDC_SCOPES: 'RC_OIDC_SCOPES',
-  RC_LIMITS_API_URL: 'RC_LIMITS_BACKEND_URL',
-  RC_LIMITS_WS_URL: 'RC_LIMITS_WS_URL',
+  RC_LIMITS_ORIGIN: 'RC_LIMITS_WEB_URL',
   RC_KEYCLOAK_URL: 'RC_KEYCLOAK_URL',
   RC_KEYCLOAK_ADMIN: 'RC_KEYCLOAK_ADMIN',
   RC_KEYCLOAK_ADMIN_PASSWORD: 'RC_KEYCLOAK_ADMIN_PASSWORD',

@@ -22,7 +22,6 @@ import 'package:remote_claude/features/auth/domain/repositories/auth_repository.
 import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/device/device_providers.dart';
 import 'package:remote_claude/features/device/domain/repositories/device_repository.dart';
-import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 
 import '../../support/builders/frames.dart';

@@ -6,8 +6,17 @@ export interface PdfDocument {
   /** How many pages it has. */
   readonly pageCount: number;
 
-  /** Draws a page, from 1, on a canvas — at `scale` times its size. */
-  renderPage(page: number, canvas: HTMLCanvasElement, scale: number): Promise<void>;
+  /**
+   * Draws a page, from 1, on a canvas — at `scale` times its size. Aborting `signal` gives the
+   * drawing up and frees the canvas for the next one; a drawing given up on resolves, it is no
+   * failure.
+   */
+  renderPage(
+    page: number,
+    canvas: HTMLCanvasElement,
+    scale: number,
+    signal: AbortSignal,
+  ): Promise<void>;
 
   /** Lets go of the document: its worker's memory, its pages. */
   destroy(): void;

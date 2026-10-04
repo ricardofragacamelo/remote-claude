@@ -51,6 +51,16 @@ Uma leitura dedicada do que fica alcançável, com o que cada porta permite faze
 Não é cerimônia: é a última chance de alguém olhar para o conjunto antes de o produto ficar
 alcançável pela rede.
 
+O caminho revisado inclui o **encaminhamento por caminho**, registrado pelo
+[plano 10 · B-27](../10-mobile-chat-layout/F5-connection-address.md) para esta fase: a infraestrutura
+que publica o endereço externo ([D-04](decisions.md)) faz o que o servidor do web faz no dev e no e2e
+([10 · D-16](../10-mobile-chat-layout/decisions.md#f5--endereço-de-conexão)) — numa origem só,
+`/api` (sem o prefixo, com o cookie de refresh de `/auth` movido para `/api/auth`), `/ws` (com
+upgrade), `/realms` e `/resources` do provedor, e **nunca** o console admin. O provedor fica sem
+hostname fixo, atrás dos `X-Forwarded-*` que essa infraestrutura manda, e a origem externa entra em
+`OIDC_ADDITIONAL_ISSUERS`
+([ADR-021](../../architecture/shared/00-decisions.md#adr-021--o-backend-aceita-uma-lista-explícita-de-issuers-do-mesmo-realm)).
+
 ### B-11 — Configuração insegura impede a subida 🔲
 
 Escutar em `0.0.0.0` sem TLS, origem curinga, ou TLS com certificado ilegível: o processo

@@ -186,7 +186,7 @@ A única mudança no app, e nenhuma tela nova:
   Conferir o lado Android com o app **antigo** ([R-06](README.md#riscos-e-decisões-em-aberto)) e
   fixar a versão mínima que o backend usa para recusar o teste com `appTooOld`.
 
-Testes de widget e unit no Dart; o caminho real fica para a F3 (`pnpm test:e2e:mobile`).
+Testes de widget e unit no Dart; o caminho real fica para a F4 (`pnpm test:e2e:mobile`).
 
 ---
 

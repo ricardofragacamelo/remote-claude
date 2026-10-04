@@ -37,6 +37,18 @@ Três razões, e todas importam:
 Pacote: `flutter_appauth` ou `oauth2_client` — ambos falam OIDC padrão, sem conhecer o
 provedor.
 
+### O issuer vem da origem escolhida
+
+O issuer não é um define próprio: é a origem que a pessoa escolheu na tela de endereço mais o caminho do
+realm (`RC_OIDC_REALM_PATH`) — [plano 10, D-13](../../plans/10-mobile-chat-layout/decisions.md#f5--endereço-de-conexão).
+O Keycloak escreve no `iss` a origem por onde foi chamado, e o backend aceita uma **lista explícita**
+de issuers ([ADR-021](../shared/00-decisions.md)), cada um com o seu discovery e o seu JWKS. Por isso:
+
+- **trocar de origem encerra o login** antes de salvar a escolha: o refresh token de uma origem é
+  recusado pela outra (medido no spike da B-25), e o token velho não pode chegar à origem nova;
+- a escolha de endereço fica em `rc.connection.*`, fora de `CredentialKeys.all`: o logout limpa as
+  credenciais e **não** a escolha (D-18).
+
 ---
 
 ## Onde a credencial mora

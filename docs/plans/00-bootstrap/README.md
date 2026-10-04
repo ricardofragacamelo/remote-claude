@@ -197,7 +197,7 @@ Todos em `.mjs`, executados direto pelo `node`, sem build.
 | `scan-security.mjs` | B-44 | segredo, dependência vulnerável, padrão inseguro e as regras próprias do produto | `pnpm scan:security` |
 | `verify-workspace.mjs` | B-15, B-24 | os mesmos portões, de um workspace só, parando no primeiro vermelho | `pnpm --filter backend verify` |
 | `contracts.mjs` | B-12…B-14 | gera TS e Dart do schema; `--check` falha se dessincronizado | `pnpm contracts:generate` · `:check` |
-| `i18n-check.mjs` | B-45 | paridade de chaves, órfãs, params entre idiomas | `pnpm i18n:check` |
+| `i18n-check.mjs` | B-45 | paridade de chaves, órfãs, params entre idiomas; desde o plano 10 (B-03), os textos compartilhados web ↔ app de `i18n-shared.json` | `pnpm i18n:check` |
 | `docs-check.mjs` | B-49 | links e âncoras internas quebradas, documento órfão do índice | `pnpm docs:check` |
 | `secrets-scan.mjs` | B-04 | `gitleaks` no repositório ou só no que está no índice; cai na imagem Docker quando o binário não existe | `pnpm scan:secrets` |
 | `db.mjs` | B-51, [03 · B-18](../03-rules-and-audit/F3-retention.md) | `migrate`, `reset`, `seed`, e `purge` — a purga da trilha, a mesma rotina do job do backend, com o relatório do que saiu e do que ficou | `pnpm db migrate` · `pnpm db purge` |

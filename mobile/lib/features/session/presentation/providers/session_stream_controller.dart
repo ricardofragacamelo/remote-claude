@@ -54,6 +54,9 @@ class SessionScreenState extends Equatable {
 /// The live stream of the session on screen.
 @riverpod
 class SessionStreamController extends _$SessionStreamController {
+  /// Stops the following this screen started — and only that one, when it started one.
+  void Function()? _stop;
+
   @override
   SessionScreenState build() {
     final WatchSession watch = ref.watch(watchSessionProvider);
@@ -63,7 +66,7 @@ class SessionStreamController extends _$SessionStreamController {
     // the screen starts receiving events for a session it no longer shows.
     ref.onDispose(() {
       unawaited(subscription.cancel());
-      watch.unfollow();
+      _stop?.call();
     });
 
     return const SessionScreenState();
@@ -99,7 +102,9 @@ class SessionStreamController extends _$SessionStreamController {
         if (before == null && next.sessionId != null) {
           // The notifier's own state is the resume point. Reading it back through the provider
           // would be this provider depending on itself.
-          ref.read(watchSessionProvider).follow(next.sessionId!, () => state.stream.lastSeq);
+          _stop = ref
+              .read(watchSessionProvider)
+              .follow(next.sessionId!, () => state.stream.lastSeq);
         }
 
         state = state.copyWith(stream: next);
@@ -109,6 +114,7 @@ class SessionStreamController extends _$SessionStreamController {
 
       // Answers to the commands of a conversation. The round trip sends none of them.
       case SessionJoined():
+      case CommandAccepted():
       case CommandRefused():
       case SessionFailed():
         return;

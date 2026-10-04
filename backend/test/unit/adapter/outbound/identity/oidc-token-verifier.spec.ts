@@ -1,7 +1,7 @@
+import { generateKeyPair, SignJWT } from 'jose';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { JwksCache } from '@adapter/outbound/identity/jwks-cache';
-import { OidcDiscovery } from '@adapter/outbound/identity/oidc-discovery';
+import { AcceptedIssuers } from '@adapter/outbound/identity/accepted-issuers';
 import { OidcTokenVerifier } from '@adapter/outbound/identity/oidc-token-verifier.adapter';
 import { TokenExpiredError, UnauthenticatedError } from '@domain/auth';
 import type { AppConfig } from '@infra/config/environment';
@@ -31,8 +31,7 @@ describe('OidcTokenVerifier', () => {
 
     log = new RecordingLogger();
     verifier = new OidcTokenVerifier(
-      new OidcDiscovery(ISSUER, clock, http.fetch),
-      new JwksCache(clock, http.fetch),
+      new AcceptedIssuers([ISSUER], clock, http.fetch),
       config,
       log.logger,
     );
@@ -145,5 +144,136 @@ describe('OidcTokenVerifier', () => {
     await verifier.verify(token).catch(() => undefined);
 
     expect(JSON.stringify(log.lines)).not.toContain(token);
+  });
+
+  // ADR-021 · plan 10, B-26
+  describe('one realm through two origins', () => {
+    /** The same realm, reached through the web server that forwards `/realms` (B-25). */
+    const THROUGH_WEB = 'http://localhost:5173/realms/remote-claude';
+    const WEB_WELL_KNOWN = `${THROUGH_WEB}/.well-known/openid-configuration`;
+    const WEB_JWKS_URI = `${THROUGH_WEB}/protocol/openid-connect/certs`;
+
+    let clock: FixedClock;
+    let http: StubFetch;
+    let both: OidcTokenVerifier;
+
+    beforeEach(() => {
+      clock = new FixedClock(new Date());
+      // The key set is the realm's, not the origin's — the same keys answer at both (B-25).
+      http = new StubFetch()
+        .on(WELL_KNOWN, { body: provider.discoveryDocument() })
+        .on(JWKS_URI, { body: provider.jwks() })
+        .on(WEB_WELL_KNOWN, { body: provider.discoveryDocument(THROUGH_WEB) })
+        .on(WEB_JWKS_URI, { body: provider.jwks() });
+      both = new OidcTokenVerifier(
+        new AcceptedIssuers([ISSUER, THROUGH_WEB], clock, http.fetch),
+        config,
+        log.logger,
+      );
+    });
+
+    const fromWeb = (): Promise<string> =>
+      provider.accessToken({ issuer: THROUGH_WEB, subject: 'auth|web' });
+
+    it('accepts a token of each listed issuer, each against its own discovery (S-86)', async () => {
+      await expect(both.verify(await provider.accessToken())).resolves.toMatchObject({
+        subject: 'auth|42',
+      });
+      await expect(both.verify(await fromWeb())).resolves.toMatchObject({ subject: 'auth|web' });
+
+      expect(http.countOf(WELL_KNOWN)).toBe(1);
+      expect(http.countOf(WEB_WELL_KNOWN)).toBe(1);
+    });
+
+    it('refuses an issuer outside the list before fetching anything for it, and says so only in the log (S-87)', async () => {
+      const outsider = 'http://localhost:9999/realms/remote-claude';
+
+      await expect(both.verify(await provider.accessToken({ issuer: outsider }))).rejects.toThrow(
+        UnauthenticatedError,
+      );
+
+      expect(http.calls.some((url) => url.startsWith('http://localhost:9999'))).toBe(false);
+      expect(log.withOp('auth.verify')[0]?.['err']).toMatchObject({
+        message: expect.stringContaining('"iss"'),
+      });
+    });
+
+    it('refuses a token that carries no issuer at all (S-87)', async () => {
+      const anonymous = await new SignJWT({
+        email: 'dev@remote-claude.local',
+        email_verified: true,
+      })
+        .setProtectedHeader({ alg: 'RS256', kid: provider.keyId })
+        .setSubject('auth|42')
+        .setAudience(AUDIENCE)
+        .setExpirationTime('15m')
+        .sign((await generateKeyPair('RS256')).privateKey);
+
+      await expect(both.verify(anonymous)).rejects.toThrow(UnauthenticatedError);
+      expect(http.calls).toEqual([]);
+    });
+
+    it('does not let a token of one origin pass as the other: `iss` is still compared byte for byte', async () => {
+      // A document that names the other origin is the wrong provider for this issuer, and is refused.
+      const lying = new StubFetch()
+        .on(WEB_WELL_KNOWN, { body: provider.discoveryDocument(ISSUER) })
+        .on(JWKS_URI, { body: provider.jwks() });
+      const verifier = new OidcTokenVerifier(
+        new AcceptedIssuers([ISSUER, THROUGH_WEB], clock, lying.fetch),
+        config,
+        log.logger,
+      );
+
+      await expect(verifier.verify(await fromWeb())).rejects.toThrow(UnauthenticatedError);
+    });
+
+    it('reads each discovery and each key set once for a burst of both issuers at boot (S-89)', async () => {
+      const tokens = [await provider.accessToken(), await fromWeb()];
+
+      const verified = await Promise.all(
+        Array.from({ length: 12 }, (_, index) => both.verify(tokens[index % 2] ?? '')),
+      );
+
+      expect(verified).toHaveLength(12);
+      expect(http.countOf(WELL_KNOWN)).toBe(1);
+      expect(http.countOf(JWKS_URI)).toBe(1);
+      expect(http.countOf(WEB_WELL_KNOWN)).toBe(1);
+      expect(http.countOf(WEB_JWKS_URI)).toBe(1);
+    });
+
+    it('keeps the last good document of the issuer whose revalidation fails, and leaves the other alone (S-90)', async () => {
+      http.on(WEB_WELL_KNOWN, { status: 503 });
+      await both.verify(await provider.accessToken());
+      await both.verify(await fromWeb());
+
+      clock.advance(3_600_001);
+
+      // The web origin's revalidation answers 503: its last good document still serves.
+      await expect(both.verify(await fromWeb())).resolves.toMatchObject({ subject: 'auth|web' });
+      // The provider's own origin revalidates on its own, untouched by the other's failure.
+      await expect(both.verify(await provider.accessToken())).resolves.toMatchObject({
+        subject: 'auth|42',
+      });
+
+      expect(http.countOf(WEB_WELL_KNOWN)).toBe(2);
+      expect(http.countOf(WELL_KNOWN)).toBe(2);
+    });
+
+    it('refuses the issuer whose first discovery fails, and still accepts the other (S-90)', async () => {
+      const halfway = new StubFetch()
+        .on(WELL_KNOWN, { body: provider.discoveryDocument() })
+        .on(JWKS_URI, { body: provider.jwks() })
+        .on(WEB_WELL_KNOWN, { status: 503 });
+      const verifier = new OidcTokenVerifier(
+        new AcceptedIssuers([ISSUER, THROUGH_WEB], clock, halfway.fetch),
+        config,
+        log.logger,
+      );
+
+      await expect(verifier.verify(await fromWeb())).rejects.toThrow(UnauthenticatedError);
+      await expect(verifier.verify(await provider.accessToken())).resolves.toMatchObject({
+        subject: 'auth|42',
+      });
+    });
   });
 });

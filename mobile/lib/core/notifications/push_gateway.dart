@@ -91,9 +91,17 @@ abstract interface class PushGateway {
   /// Notifications the user **tapped**, including the one that started the app.
   Stream<PushArrival> get openings;
 
+  /// The id of this installation's device, each time a push says it was just approved — from the
+  /// browser, while the phone waited (plan 17, F3). It carries nothing else.
+  Stream<String> get deviceApprovals;
+
   /// Takes down whatever is showing for [requestId].
   Future<void> withdraw(String requestId);
 
   /// Opens the operating system's notification settings for this app.
   Future<void> openSettings();
+
+  /// Tells the platform which session is on screen — `null` when none is — so a question of that
+  /// session is not notified on top of its own card (plan 10, D-10). Another session's still is.
+  Future<void> showingSession(String? sessionId);
 }

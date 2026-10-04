@@ -55,6 +55,11 @@ services:
       # Health lives on the management port (9000) since Keycloak 25; the healthcheck below is
       # the only thing that reads it, so it is not published to the host.
       KC_HEALTH_ENABLED: 'true'
+      # No `KC_HOSTNAME`: the realm answers on every origin that reaches it — its own port and the
+      # web server that forwards `/realms` — and writes into `iss` the origin it was called
+      # through, which the backend accepts from an explicit list (plan 10, D-15, measured in B-25).
+      # Behind a proxy, the origin is the one its `X-Forwarded-*` say.
+      KC_PROXY_HEADERS: xforwarded
     volumes:
       - keycloak-data:/opt/keycloak/data
       - ./infra/keycloak:/opt/keycloak/data/import:ro

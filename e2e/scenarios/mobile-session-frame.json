@@ -1,0 +1,12 @@
+{
+  "id": "10·S-26",
+  "title": "the session screen of the phone goes to the background and back: the socket reconnects, replays, nothing appears twice, and the box keeps what was written",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "text-turn",
+    "written": "half a thought, kept across the background"
+  }
+}

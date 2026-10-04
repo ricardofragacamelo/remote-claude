@@ -9,7 +9,7 @@ import {
   ResolveDeviceUseCase,
   RevokeDeviceUseCase,
 } from '@application/auth';
-import type { DeviceConnections, DeviceContext } from '@application/auth';
+import type { DeviceApprovedEvent, DeviceConnections, DeviceContext } from '@application/auth';
 import {
   DeviceApprovalForbiddenError,
   DeviceNotFoundError,
@@ -139,7 +139,39 @@ describe('ListDevicesUseCase', () => {
 });
 
 describe('ApproveDeviceUseCase', () => {
-  const approve = (): ApproveDeviceUseCase => new ApproveDeviceUseCase(context());
+  const published: DeviceApprovedEvent[] = [];
+  const approve = (): ApproveDeviceUseCase =>
+    new ApproveDeviceUseCase(context(), {
+      approved: (event) => {
+        published.push(event);
+      },
+    });
+
+  beforeEach(() => {
+    published.length = 0;
+  });
+
+  // S-122 · a real approval is published once, with the device as it is now.
+  it('publishes the approval, once, with the approved device', async () => {
+    devices.seed(aDevice());
+
+    await approve().execute({ userId: deviceOwner, deviceId: 'dev_1', callerInstallId: null });
+
+    expect(published).toHaveLength(1);
+    expect(published[0]?.device.canDecide).toBe(true);
+  });
+
+  // S-122 · approving an approved device is not an approval: nothing is published.
+  it('publishes nothing when the device was already approved, or the approval was refused', async () => {
+    devices.seed(anApprovedDevice());
+    await approve().execute({ userId: deviceOwner, deviceId: 'dev_1', callerInstallId: null });
+
+    await expect(
+      approve().execute({ userId: deviceOwner, deviceId: 'dev_1', callerInstallId: 'install-1' }),
+    ).rejects.toThrow(DeviceApprovalForbiddenError);
+
+    expect(published).toHaveLength(0);
+  });
 
   it('lets a pending device decide, and writes it to the trail', async () => {
     devices.seed(aDevice());

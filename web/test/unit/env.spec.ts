@@ -4,7 +4,7 @@ import { API_PREFIX, browserEnvironment, devServer } from '../../env';
 
 /**
  * The browser settings and the dev server, locally and behind the public origin of
- * `pnpm dev:public` (plan 20, B-05).
+ * `pnpm dev:public` (plan 20, B-05) — the forwarding in both (plan 10, B-27).
  */
 
 const PUBLIC = { RC_PUBLIC_URL: 'https://name.ngrok-free.dev' };
@@ -35,11 +35,31 @@ describe('browserEnvironment', () => {
 });
 
 describe('devServer', () => {
-  it('is the port alone locally (S-29)', () => {
-    expect(devServer({})).toEqual({ port: 5173, strictPort: true });
-    expect(devServer({ RC_WEB_PORT: '5999', RC_PUBLIC_URL: '' })).toEqual({
-      port: 5999,
-      strictPort: true,
+  it('is the port and the forwarding locally, with no public host and no HMR detour (S-29, S-91)', () => {
+    for (const source of [{}, { RC_PUBLIC_URL: '' }]) {
+      const server = devServer(source);
+
+      expect(server).toMatchObject({ port: 5173, strictPort: true });
+      // S-131 · every interface: the phone reaches it by the local network (plan 10, D-23).
+      expect(server.host).toBe(true);
+      expect(server).not.toHaveProperty('allowedHosts');
+      expect(server).not.toHaveProperty('hmr');
+      expect(Object.keys(server.proxy ?? {})).toEqual(Object.keys(devServer(PUBLIC).proxy ?? {}));
+    }
+    expect(devServer({ RC_WEB_PORT: '5999', RC_PUBLIC_URL: '' }).port).toBe(5999);
+  });
+
+  it('forwards the same four paths locally, to the ports of the stack (S-91)', () => {
+    const server = devServer({ RC_BACKEND_PORT: '3999', RC_KEYCLOAK_PORT: '8999' });
+
+    expect(server.proxy).toEqual({
+      '^/api(/|\\?|$)': expect.objectContaining({
+        target: 'http://localhost:3999',
+        cookiePathRewrite: { '/auth': '/api/auth' },
+      }),
+      '^/ws(\\?|$)': { target: 'http://localhost:3999', ws: true },
+      '^/realms/': { target: 'http://localhost:8999' },
+      '^/resources/': { target: 'http://localhost:8999' },
     });
   });
 
@@ -52,6 +72,8 @@ describe('devServer', () => {
       allowedHosts: ['name.ngrok-free.dev'],
       hmr: { protocol: 'wss', clientPort: 443 },
     });
+    // S-131 · behind the tunnel, the loopback the tunnel connects to: no local network.
+    expect(server).not.toHaveProperty('host');
     expect(server.proxy).toEqual({
       '^/api(/|\\?|$)': expect.objectContaining({
         target: 'http://localhost:3999',
@@ -71,9 +93,18 @@ describe('devServer', () => {
     expect(rewrite?.('/api')).toBe('/');
   });
 
-  it('forwards nothing that leads to the admin console (D-06)', () => {
-    const paths = Object.keys(devServer(PUBLIC).proxy ?? {});
+  it.each([
+    ['public', PUBLIC],
+    ['local', {}],
+  ])(
+    'forwards nothing that leads to the admin console in %s mode (D-06, S-91)',
+    (_mode, source) => {
+      const paths = Object.keys(devServer(source).proxy ?? {});
 
-    expect(paths.some((key) => new RegExp(key).test('/admin/master/console/'))).toBe(false);
-  });
+      expect(paths.some((key) => new RegExp(key).test('/admin/master/console/'))).toBe(false);
+      expect(paths.some((key) => new RegExp(key).test('/admin/remote-claude/console/'))).toBe(
+        false,
+      );
+    },
+  );
 });

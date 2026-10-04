@@ -3,10 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/core/error/failure.dart';
+import 'package:remote_claude/core/logging/app_logger.dart';
+import 'package:remote_claude/core/logging/log_context.dart';
+import 'package:remote_claude/core/logging/logger_provider.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/notifications/push_gateway.dart';
+import 'package:remote_claude/core/notifications/push_providers.dart';
 import 'package:remote_claude/features/device/device.dart';
+import 'package:remote_claude/features/device/device_providers.dart';
+import 'package:remote_claude/features/device/domain/repositories/device_repository.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/fakes/fake_device_repository.dart';
+import '../../../support/fakes/fake_push_gateway.dart';
+import '../../../support/fakes/recording_writer.dart';
 import '../../../support/fakes/stub_device_controller.dart';
 import '../../../support/pump_app.dart';
 
@@ -135,5 +145,79 @@ void main() {
     expect(announced, contains(l10n.deviceStatusPendingBody));
 
     handle.dispose();
+  });
+
+  group('S-16 · on the session screen, a line that opens the whole explanation', () {
+    testWidgets('pending: one line, and the card in a sheet', (WidgetTester tester) async {
+      await tester.pumpApp(
+        const DeviceStatusLine(),
+        overrides: <Override>[
+          deviceControllerAnswering(AsyncData<RegisteredDevice?>(device(DeviceStatus.pending))),
+        ],
+      );
+
+      expect(find.text(l10n.deviceStatusPendingTitle), findsOneWidget);
+      expect(find.text(l10n.deviceStatusPendingBody), findsNothing);
+
+      await tester.tap(find.text(l10n.deviceStatusPendingTitle));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.deviceStatusPendingBody), findsOneWidget);
+    });
+
+    testWidgets('approved: nothing', (WidgetTester tester) async {
+      await tester.pumpApp(
+        const DeviceStatusLine(),
+        overrides: <Override>[
+          deviceControllerAnswering(AsyncData<RegisteredDevice?>(device(DeviceStatus.approved))),
+        ],
+      );
+
+      expect(find.byType(Text), findsNothing);
+    });
+  });
+
+  // Plan 17, F3 · S-128: approved in the browser, the banner stops saying "waiting" — no restart.
+  testWidgets('stops saying pending when a push says this phone was approved', (
+    WidgetTester tester,
+  ) async {
+    final FakePushGateway gateway = FakePushGateway();
+    final FakeDeviceRepository devices = FakeDeviceRepository(
+      produced: device(DeviceStatus.pending),
+    )..checkedAs = device(DeviceStatus.approved);
+    addTearDown(gateway.dispose);
+
+    await tester.pumpApp(
+      Consumer(
+        builder: (BuildContext context, WidgetRef ref, Widget? child) {
+          // Alive, as the session scope keeps it in the app.
+          ref.watch(pushControllerProvider);
+          return const DeviceStatusBanner();
+        },
+      ),
+      overrides: <Override>[
+        deviceControllerAnswering(AsyncData<RegisteredDevice?>(device(DeviceStatus.pending))),
+        pushGatewayProvider.overrideWithValue(gateway as PushGateway),
+        deviceRepositoryProvider.overrideWithValue(devices as DeviceRepository),
+        deviceNameProvider.overrideWithValue('android 14'),
+        appLoggerProvider.overrideWithValue(
+          AppLogger(
+            context: const LogContext(appVersion: '0.0.1', platform: 'android'),
+            writer: RecordingWriter().writer,
+          ),
+        ),
+      ],
+    );
+    // The push side subscribes once the device is known and the permission is read.
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.deviceStatusPendingTitle), findsOneWidget);
+
+    // Approved in the browser: from now on the server answers approved, to a check and to the
+    // registration the push side re-sends when the device changes.
+    devices.produced = device(DeviceStatus.approved);
+    gateway.approve('dev_1');
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.deviceStatusPendingTitle), findsNothing);
+    expect(find.byType(Card), findsNothing);
   });
 }

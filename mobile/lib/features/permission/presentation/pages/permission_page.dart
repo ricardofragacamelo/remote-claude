@@ -72,6 +72,7 @@ class PermissionPage extends ConsumerWidget {
                   )
                 : _Focus(
                     sessionId: sessionId,
+                    requestId: requestId,
                     now: queue.asOf ?? DateTime.now(),
                     focus: focusOf(lookup: lookup.value, queue: queue, requestId: requestId),
                   ),
@@ -84,9 +85,15 @@ class PermissionPage extends ConsumerWidget {
 
 /// What the screen shows, once it knows.
 class _Focus extends StatelessWidget {
-  const _Focus({required this.sessionId, required this.now, required this.focus});
+  const _Focus({
+    required this.sessionId,
+    required this.requestId,
+    required this.now,
+    required this.focus,
+  });
 
   final String sessionId;
+  final String requestId;
   final DateTime now;
   final PermissionFocus focus;
 
@@ -96,27 +103,35 @@ class _Focus extends StatelessWidget {
 
     return switch (focus) {
       FocusChecking() => LoadingView(label: l10n.permissionCheckingTitle),
+      // Open: answerable here, and "open the session" lands on the conversation scrolled to this
+      // same card, in the place of its tool (plan 10, S-74).
       FocusOpen(:final PermissionCard card) => SingleChildScrollView(
-        padding: const EdgeInsets.all(Tokens.spaceMd),
-        child: PermissionPanel(sessionId: sessionId, card: card, now: now),
+        child: _Over(
+          sessionId: sessionId,
+          requestId: requestId,
+          child: PermissionPanel(sessionId: sessionId, card: card, now: now),
+        ),
       ),
       FocusSettled(:final PermissionOutcome outcome) => _Over(
         sessionId: sessionId,
+        requestId: requestId,
         child: PermissionOutcomeLine(outcome: outcome),
       ),
       FocusGone() => _Over(
         sessionId: sessionId,
+        requestId: requestId,
         child: EmptyView(title: l10n.permissionGoneTitle, description: l10n.permissionGoneBody),
       ),
     };
   }
 }
 
-/// A request that is over, and the way to the session it belonged to.
+/// A request, and the way to the session it belongs to.
 class _Over extends StatelessWidget {
-  const _Over({required this.sessionId, required this.child});
+  const _Over({required this.sessionId, required this.requestId, required this.child});
 
   final String sessionId;
+  final String requestId;
   final Widget child;
 
   @override
@@ -126,7 +141,7 @@ class _Over extends StatelessWidget {
       child,
       const SizedBox(height: Tokens.spaceMd),
       FilledButton(
-        onPressed: () => context.go(sessionRouteFor(sessionId)),
+        onPressed: () => context.go(sessionRouteFor(sessionId, request: requestId)),
         child: Text(AppLocalizations.of(context).permissionOpenSession),
       ),
     ],

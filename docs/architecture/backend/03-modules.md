@@ -791,6 +791,12 @@ estender ao HTTP.
   push de permissão traz `expiresAt` e é cancelado quando a permissão resolve; payload já
   vai **traduzido**, no `Device.locale` — é a única exceção da regra de i18n
 - **Nunca** coloque conteúdo de arquivo ou output de comando no push.
+- **O aparelho aprovado fica sabendo** ([17 · F3](../../plans/17-devices/F3-approval-push.md)): o
+  `auth` publica o fato pela porta `DeviceEvents` (o `notification` já depende do `auth`, então a
+  seta não volta), e um listener do `notification` manda o push `deviceApproved` — `{ kind, deviceId }`,
+  com a frase no idioma do aparelho, tag `device:<id>` e o canal `device_status` do Android. **Uma**
+  tentativa, só para o aparelho aprovado, e só numa aprovação de verdade; token recusado é esquecido.
+  A falha nunca desfaz nem atrasa a aprovação.
 - **Vai para todos os aparelhos aprovados** do usuário, não só para o último ativo: notificar só
   o mais recente falha exatamente quando o aparelho ficou para trás, e permissão que ninguém vê
   é sessão parada até o timeout negar sozinho.

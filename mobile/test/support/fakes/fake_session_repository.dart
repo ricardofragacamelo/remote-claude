@@ -35,9 +35,17 @@ class FakeSessionRepository implements SessionRepository {
   Stream<SessionUpdate> get updates => _updates.stream;
 
   @override
-  void follow(String sessionId, int Function() lastSeq) {
+  void Function() follow(String sessionId, int Function() lastSeq) {
     followed.add(sessionId);
     this.lastSeq = lastSeq;
+    final int mine = followed.length;
+
+    // Stops this following only while it is still the current one, as the real one does.
+    return () {
+      if (followed.length == mine) {
+        unfollow();
+      }
+    };
   }
 
   @override

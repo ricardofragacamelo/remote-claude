@@ -19,12 +19,13 @@ class PermissionOutcome extends Equatable {
     required this.auto,
     this.origin = AnswerOrigin.unknown,
     this.expired = false,
+    this.toolUseId,
   });
 
   /// The deadline passed with nobody answering — on the server, or on this screen's countdown.
   ///
   /// Silence never authorises, so it is always a refusal, and it carries no author.
-  const PermissionOutcome.expired(this.requestId)
+  const PermissionOutcome.expired(this.requestId, {this.toolUseId})
     : decision = PermissionDecision.deny,
       auto = true,
       origin = AnswerOrigin.unknown,
@@ -43,6 +44,20 @@ class PermissionOutcome extends Equatable {
   /// The deadline refused it.
   final bool expired;
 
+  /// The tool the request was about, when the queue knew the question — what lets the conversation
+  /// say the decision on that tool's line (plan 10, B-20). The settlement itself does not carry it.
+  final String? toolUseId;
+
+  /// The same settlement, about [tool].
+  PermissionOutcome about(String? tool) => PermissionOutcome(
+    requestId: requestId,
+    decision: decision,
+    auto: auto,
+    origin: origin,
+    expired: expired,
+    toolUseId: tool ?? toolUseId,
+  );
+
   @override
-  List<Object?> get props => <Object?>[requestId, decision, auto, origin, expired];
+  List<Object?> get props => <Object?>[requestId, decision, auto, origin, expired, toolUseId];
 }

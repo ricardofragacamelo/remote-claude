@@ -35,6 +35,19 @@ abstract final class PushEventKind {
 /// What the payload calls a withdrawal.
 const String withdrawalKind = 'permissionResolved';
 
+/// What the payload calls the phone's own approval (plan 17, F3).
+const String deviceApprovedKind = 'deviceApproved';
+
+/// The device an approval names, or `null` when [data] is not an approval — as defensive as
+/// [arrivalFrom], and for the same reason.
+String? deviceApprovalFrom(Map<Object?, Object?> data) {
+  final Object? deviceId = data['deviceId'];
+
+  return data['kind'] == deviceApprovedKind && deviceId is String && deviceId.isNotEmpty
+      ? deviceId
+      : null;
+}
+
 /// Reads an arrival out of what the platform sent, or `null` when it is not one.
 ///
 /// Defensive on purpose. This data crossed a third party's server and an operating system before
@@ -106,6 +119,11 @@ class PlatformPushGateway implements PushGateway {
   Stream<PushArrival> get openings => _arrivals(PushEventKind.opening);
 
   @override
+  Stream<String> get deviceApprovals => _of(
+    PushEventKind.arrival,
+  ).map(deviceApprovalFrom).where((String? deviceId) => deviceId != null).cast<String>();
+
+  @override
   Future<void> withdraw(String requestId) async {
     await _invoke('withdraw', <String, Object?>{'tag': requestId});
   }
@@ -113,6 +131,11 @@ class PlatformPushGateway implements PushGateway {
   @override
   Future<void> openSettings() async {
     await _invoke('openSettings');
+  }
+
+  @override
+  Future<void> showingSession(String? sessionId) async {
+    await _invoke('visibleSession', <String, Object?>{'sessionId': sessionId});
   }
 
   Stream<PushArrival> _arrivals(String kind) => _of(

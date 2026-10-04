@@ -1966,6 +1966,7 @@ class PermissionResolvedPayload {
     required this.auto,
     this.resolvedBy,
     this.resolvedFrom,
+    this.toolUseId,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -1975,6 +1976,7 @@ class PermissionResolvedPayload {
         auto: json['auto']! as bool,
         resolvedBy: json['resolvedBy'] as String?,
         resolvedFrom: json['resolvedFrom'] as String?,
+        toolUseId: json['toolUseId'] as String?,
       );
 
   /// The request that was settled. A client matches it against the card it is showing, never against `toolUseId`.
@@ -1992,6 +1994,9 @@ class PermissionResolvedPayload {
   /// Which client answered.
   final String? resolvedFrom;
 
+  /// The tool call the request was about, when the SDK named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`.
+  final String? toolUseId;
+
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
@@ -2006,6 +2011,10 @@ class PermissionResolvedPayload {
 
     if (resolvedFrom != null) {
       json['resolvedFrom'] = resolvedFrom;
+    }
+
+    if (toolUseId != null) {
+      json['toolUseId'] = toolUseId;
     }
 
     return json;

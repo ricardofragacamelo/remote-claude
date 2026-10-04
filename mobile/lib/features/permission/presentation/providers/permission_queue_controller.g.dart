@@ -85,7 +85,7 @@ final class PermissionQueueControllerProvider
   }
 }
 
-String _$permissionQueueControllerHash() => r'90eedcba91d98906ed9b6ef9b0c0a9eb382df364';
+String _$permissionQueueControllerHash() => r'8e4e590630a1cc38c944a2bfcd3b7bd2e03ec876';
 
 /// The permission queue of one session.
 ///

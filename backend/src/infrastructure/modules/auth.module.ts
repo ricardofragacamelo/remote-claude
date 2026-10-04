@@ -5,6 +5,7 @@ import {
   ApproveDeviceUseCase,
   AuthenticateUseCase,
   DEVICE_CONNECTIONS,
+  DEVICE_EVENTS,
   DEVICE_CONTEXT,
   DEVICE_REPOSITORY,
   EstablishSessionUseCase,
@@ -21,6 +22,7 @@ import {
 import type {
   AccessTokenVerifier,
   DeviceConnections,
+  DeviceEvents,
   DeviceContext,
   DeviceRepository,
   IdentityProvider,
@@ -30,10 +32,10 @@ import { CLOCK, ID_GENERATOR } from '@application/shared';
 import type { Clock, IdGenerator } from '@domain/shared';
 import { AuthController } from '@adapter/inbound/http/auth/auth.controller';
 import { DevicesController } from '@adapter/inbound/http/devices/devices.controller';
+import { EmitterDeviceEvents } from '@adapter/outbound/auth/emitter-device.events';
 import { RegistryDeviceConnections } from '@adapter/outbound/auth/registry-device-connections';
-import { IDENTITY_DISCOVERY, IDENTITY_JWKS } from '@adapter/outbound/identity/identity.tokens';
-import { JwksCache } from '@adapter/outbound/identity/jwks-cache';
-import { OidcDiscovery } from '@adapter/outbound/identity/oidc-discovery';
+import { AcceptedIssuers } from '@adapter/outbound/identity/accepted-issuers';
+import { IDENTITY_DISCOVERY, IDENTITY_ISSUERS } from '@adapter/outbound/identity/identity.tokens';
 import { OidcIdentityProvider } from '@adapter/outbound/identity/oidc-identity-provider.adapter';
 import { OidcTokenVerifier } from '@adapter/outbound/identity/oidc-token-verifier.adapter';
 import { DrizzleDeviceRepository } from '@adapter/outbound/persistence/auth/drizzle-device.repository';
@@ -58,14 +60,18 @@ import { WebsocketModule } from './websocket.module';
   controllers: [AuthController, DevicesController],
   providers: [
     {
-      provide: IDENTITY_DISCOVERY,
+      // Every accepted issuer, each with its own discovery and key set (ADR-021).
+      provide: IDENTITY_ISSUERS,
       inject: [APP_CONFIG, CLOCK],
-      useFactory: (config: AppConfig, clock: Clock) => new OidcDiscovery(config.oidc.issuer, clock),
+      useFactory: (config: AppConfig, clock: Clock) =>
+        new AcceptedIssuers(config.oidc.issuers, clock),
     },
     {
-      provide: IDENTITY_JWKS,
-      inject: [CLOCK],
-      useFactory: (clock: Clock) => new JwksCache(clock),
+      // The primary issuer's discovery — the same instance the verifier reads, so the token
+      // endpoint of the web's exchange shares its cache and its read in flight.
+      provide: IDENTITY_DISCOVERY,
+      inject: [IDENTITY_ISSUERS],
+      useFactory: (issuers: AcceptedIssuers) => issuers.primary.discovery,
     },
     { provide: ACCESS_TOKEN_VERIFIER, useClass: OidcTokenVerifier },
     { provide: IDENTITY_PROVIDER, useClass: OidcIdentityProvider },
@@ -112,9 +118,12 @@ import { WebsocketModule } from './websocket.module';
     },
     {
       provide: ApproveDeviceUseCase,
-      inject: [DEVICE_CONTEXT],
-      useFactory: (context: DeviceContext) => new ApproveDeviceUseCase(context),
+      inject: [DEVICE_CONTEXT, DEVICE_EVENTS],
+      useFactory: (context: DeviceContext, events: DeviceEvents) =>
+        new ApproveDeviceUseCase(context, events),
     },
+    // Who tells the phone it was approved is `notification`'s business, over the bus (plan 17, F3).
+    { provide: DEVICE_EVENTS, useClass: EmitterDeviceEvents },
     {
       provide: RevokeDeviceUseCase,
       inject: [DEVICE_CONTEXT, DEVICE_CONNECTIONS],

@@ -6,15 +6,22 @@ package com.remoteclaude.remote_claude.push
  * The keys are the three the backend's payload is allowed to carry, plus its `kind`. Everything
  * else the supplier adds to a message (its own bookkeeping keys) is dropped here rather than
  * handed to Dart: the Dart side reads defensively, but it should not have to (S-19, S-20).
+ *
+ * One message is not about a request: [DEVICE_APPROVED], which carries the device and nothing else
+ * (plan 17, F3). What a payload must carry depends on its kind.
  */
 object PushPayload {
     const val KIND = "kind"
     const val SESSION_ID = "sessionId"
     const val REQUEST_ID = "requestId"
     const val EXPIRES_AT = "expiresAt"
+    const val DEVICE_ID = "deviceId"
 
     /** What the payload calls a withdrawal — `withdrawalKind` on the Dart side. */
     const val WITHDRAWAL = "permissionResolved"
+
+    /** What the payload calls the phone's own approval — `deviceApprovedKind` on the Dart side. */
+    const val DEVICE_APPROVED = "deviceApproved"
 
     /** The event kinds the Dart side filters on — `PushEventKind`. */
     const val EVENT_TOKEN = "token"
@@ -23,6 +30,7 @@ object PushPayload {
 
     private val KEYS = listOf(KIND, SESSION_ID, REQUEST_ID, EXPIRES_AT)
     private val REQUIRED = listOf(SESSION_ID, REQUEST_ID, EXPIRES_AT)
+    private val DEVICE_KEYS = listOf(KIND, DEVICE_ID)
 
     /** How much of a token may reach a log line: the last six characters, never the whole. */
     private const val TOKEN_TAIL = 6
@@ -34,18 +42,31 @@ object PushPayload {
      * as a tap on a notification.
      */
     fun of(source: Map<String, String?>): Map<String, String>? {
-        if (REQUIRED.any { source[it].isNullOrBlank() }) {
+        val (keys, required) = if (source[KIND] == DEVICE_APPROVED) {
+            DEVICE_KEYS to listOf(DEVICE_ID)
+        } else {
+            KEYS to REQUIRED
+        }
+
+        if (required.any { source[it].isNullOrBlank() }) {
             return null
         }
 
-        return KEYS.mapNotNull { key -> source[key]?.let { key to it } }.toMap()
+        return keys.mapNotNull { key -> source[key]?.let { key to it } }.toMap()
     }
+
+    /** Whether this message tells the phone it was approved, rather than asking it anything. */
+    fun isDeviceApproved(payload: Map<String, String>): Boolean = payload[KIND] == DEVICE_APPROVED
 
     /** Whether this message exists to take a notification down rather than show one. */
     fun isWithdrawal(payload: Map<String, String>): Boolean = payload[KIND] == WITHDRAWAL
 
-    /** The notification tag: the request, so a second delivery replaces the first (D-15). */
-    fun tagOf(payload: Map<String, String>): String = payload.getValue(REQUEST_ID)
+    /**
+     * The notification tag: the request, so a second delivery replaces the first (D-15) — or, for
+     * the approval, the device, the same tag the backend gives it.
+     */
+    fun tagOf(payload: Map<String, String>): String =
+        if (isDeviceApproved(payload)) "device:${payload.getValue(DEVICE_ID)}" else payload.getValue(REQUEST_ID)
 
     /** One event on the stream, in the shape `PlatformPushGateway` reads. */
     fun event(kind: String, data: Map<String, String>): Map<String, Any> =

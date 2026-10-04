@@ -11,7 +11,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/features/session/domain/repositories/insight_repository.dart';
 import 'package:remote_claude/app/app.dart';
+import 'package:remote_claude/core/config/app_config_provider.dart';
 import 'package:remote_claude/app/router_provider.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_context.dart';
@@ -31,11 +33,13 @@ import 'package:remote_claude/features/transcript/domain/repositories/transcript
 import 'package:remote_claude/features/transcript/transcript.dart';
 import 'package:remote_claude/features/transcript/transcript_providers.dart';
 import 'package:remote_claude/features/workspace/domain/repositories/workspace_repository.dart';
-import 'package:remote_claude/features/workspace/presentation/pages/workspace_list_page.dart';
+import 'package:remote_claude/features/workspace/workspace.dart';
 import 'package:remote_claude/features/workspace/workspace_providers.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
 
+import '../../support/builders/config.dart';
+import '../../support/fakes/fake_insight_repository.dart';
 import '../../support/fakes/fake_auth_repository.dart';
 import '../../support/fakes/fake_history_repository.dart';
 import '../../support/fakes/fake_transcript_repository.dart';
@@ -84,12 +88,14 @@ void main() {
 
     container = ProviderContainer(
       overrides: <Override>[
+        buildConfigProvider.overrideWithValue(aBuildConfig()),
         ...permissionOverrides(repository: permissions),
         authRepositoryProvider.overrideWithValue(
           FakeAuthRepository(stored: signedIn()) as AuthRepository,
         ),
         sessionRepositoryProvider.overrideWithValue(sessions),
         historyRepositoryProvider.overrideWithValue(FakeHistoryRepository() as HistoryRepository),
+        insightRepositoryProvider.overrideWithValue(FakeInsightRepository() as InsightRepository),
         transcriptRepositoryProvider.overrideWithValue(
           FakeTranscriptRepository() as TranscriptRepository,
         ),
@@ -120,6 +126,26 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(WorkspaceListPage), findsOneWidget);
+  });
+
+  // Plan 10, F7…F9: the home, a folder, one level of the picker, and the round trip.
+  testWidgets('the home, a folder, the picker and the round trip live at their own address', (
+    WidgetTester tester,
+  ) async {
+    await pumpApp(tester);
+    expect(find.byType(FoldersPage), findsOneWidget);
+
+    container.read(routerProvider).go(folderRouteFor('/w/a'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<FolderPage>(find.byType(FolderPage)).workspacePath, '/w/a');
+
+    container.read(routerProvider).go(folderBrowseRouteFor('/w'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<FolderBrowsePage>(find.byType(FolderBrowsePage)).path, '/w');
+
+    container.read(routerProvider).go(pingRoute);
+    await tester.pumpAndSettle();
+    expect(find.byType(SessionPingPage), findsOneWidget);
   });
 
   testWidgets('a session opens at its own address, carrying its id', (WidgetTester tester) async {
@@ -161,6 +187,20 @@ void main() {
 
     expect(
       tester.widget<ConversationListPage>(find.byType(ConversationListPage)).workspacePath,
+      '/home/someone/my project',
+    );
+  });
+
+  testWidgets('plan 10 · the draft of a folder lives at an address that names the folder', (
+    WidgetTester tester,
+  ) async {
+    await pumpApp(tester);
+
+    container.read(routerProvider).go(draftRouteFor('/home/someone/my project'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<DraftPage>(find.byType(DraftPage)).workspacePath,
       '/home/someone/my project',
     );
   });

@@ -4,4 +4,8 @@
     <string name="push_channel_id" translatable="false">permission_requests</string>
     <string name="push_channel_name">Permission requests</string>
     <string name="push_channel_description">Claude is waiting for you to approve or deny a tool.</string>
+    <!-- The channel about the phone itself (plan 17, F3) — the backend names it in the payload. -->
+    <string name="device_channel_id" translatable="false">device_status</string>
+    <string name="device_channel_name">Device status</string>
+    <string name="device_channel_description">Whether this phone may answer Claude\'s requests.</string>
 </resources>

@@ -10,6 +10,7 @@ import {
   isFinished,
   kill,
   onTermination,
+  runToExit,
   signalPlan,
   startProc,
   taskkillArgv,
@@ -396,5 +397,43 @@ describe('onTermination', () => {
 
     expect(order).toEqual(['torn down', 'exit 130']);
     exit.mockRestore();
+  });
+});
+
+describe('runToExit', () => {
+  it("answers main's code, after the teardown", async () => {
+    /** @type {string[]} */
+    const order = [];
+    const report = vi.fn();
+
+    const code = await runToExit(
+      () => {
+        order.push('main');
+        return Promise.resolve(3);
+      },
+      () => {
+        order.push('teardown');
+        return Promise.resolve();
+      },
+      report,
+    );
+
+    expect(code).toBe(3);
+    expect(order).toEqual(['main', 'teardown']);
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [new Error('boom'), 'boom'],
+    ['plain', 'plain'],
+  ])('tells an unexpected %j, tears down all the same, and answers 1', async (thrown, told) => {
+    const teardown = vi.fn(() => Promise.resolve());
+    const report = vi.fn();
+
+    const code = await runToExit(() => Promise.reject(thrown), teardown, report);
+
+    expect(code).toBe(1);
+    expect(report).toHaveBeenCalledWith(told);
+    expect(teardown).toHaveBeenCalledTimes(1);
   });
 });

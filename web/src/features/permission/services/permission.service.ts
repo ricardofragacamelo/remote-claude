@@ -186,7 +186,9 @@ export function toOutcome(frame: Envelope): PermissionOutcome | null {
     auto: payload['auto'] === true,
     resolvedBy: text(payload, 'resolvedBy'),
     resolvedFrom: resolvedFrom !== null && ORIGINS.has(resolvedFrom) ? resolvedFrom : null,
-    toolUseId: null,
+    // The tool it was about, when the server said — a request a rule settled was never asked here,
+    // and this is the only way its tool's line learns how it ended (plan 10, B-20).
+    toolUseId: text(payload, 'toolUseId'),
     answeredHere: false,
   };
 }

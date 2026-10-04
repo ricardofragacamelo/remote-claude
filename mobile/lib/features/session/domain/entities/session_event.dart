@@ -31,7 +31,16 @@ sealed class SessionEvent extends Equatable {
 /// It **names** the session, and that is the point of it: `session.start` carries no id — it is
 /// what creates one — so this is where the screen that asked learns which session answered.
 final class SessionOpened extends SessionEvent {
-  const SessionOpened(super.seq, this.sessionId, {this.claudeSessionId, this.resumedFrom});
+  const SessionOpened(
+    super.seq,
+    this.sessionId, {
+    this.claudeSessionId,
+    this.resumedFrom,
+    this.workspacePath,
+    this.model,
+    this.permissionMode,
+    this.commandId,
+  });
 
   final String sessionId;
 
@@ -44,46 +53,110 @@ final class SessionOpened extends SessionEvent {
   /// session said (B-11).
   final String? resumedFrom;
 
+  /// The folder it runs in — where a resume of it has to run too.
+  final String? workspacePath;
+
+  /// The model and the permission mode it opened with. The server acknowledges a change of either,
+  /// it never echoes one, so these are where the session **started**.
+  final String? model;
+  final String? permissionMode;
+
+  /// The id of the `session.start` this answers — the frame's `correlationId`. It is how the screen
+  /// that asked tells its own session from one another command opened on the same socket (S-22).
+  final String? commandId;
+
   @override
-  List<Object?> get props => <Object?>[seq, sessionId, claudeSessionId, resumedFrom];
+  List<Object?> get props => <Object?>[
+    seq,
+    sessionId,
+    claudeSessionId,
+    resumedFrom,
+    workspacePath,
+    model,
+    permissionMode,
+    commandId,
+  ];
 }
 
 /// The session moved.
 final class SessionStatusReported extends SessionEvent {
-  const SessionStatusReported(super.seq, this.status);
+  const SessionStatusReported(super.seq, this.status, {this.at = ''});
 
   final SessionStatus status;
 
+  /// When, by the server's clock — what a turn that starts here is timed from. Empty when unknown.
+  final String at;
+
   @override
-  List<Object?> get props => <Object?>[seq, status];
+  List<Object?> get props => <Object?>[seq, status, at];
 }
 
-/// A fragment of a message.
-final class MessageFragment extends SessionEvent {
-  const MessageFragment(super.seq, {required this.messageId, required this.delta});
+/// A fragment of a message, of the answer or of the thinking before it — accumulated by
+/// `messageId`, never in arrival order across messages.
+sealed class Fragment extends SessionEvent {
+  const Fragment(super.seq, {required this.messageId, required this.delta, this.at = ''});
 
   final String messageId;
   final String delta;
 
+  /// When it arrived, by the server's clock — empty from the history. The answer starting is when
+  /// the thinking before it stopped; the thinking starting is what its time is measured from.
+  final String at;
+
   @override
-  List<Object?> get props => <Object?>[seq, messageId, delta];
+  List<Object?> get props => <Object?>[seq, messageId, delta, at];
 }
 
-/// A message, whole. It replaces whatever the fragments built.
+/// A fragment of the answer.
+final class MessageFragment extends Fragment {
+  const MessageFragment(super.seq, {required super.messageId, required super.delta, super.at});
+}
+
+/// A fragment of what the model thought before answering. Never part of the answer.
+final class ThinkingFragment extends Fragment {
+  const ThinkingFragment(super.seq, {required super.messageId, required super.delta, super.at});
+}
+
+/// A message — or, from the CLI, one block of it — finished. It completes whatever the fragments
+/// of that block built.
 final class MessageFinished extends SessionEvent {
   const MessageFinished(
     super.seq, {
     required this.messageId,
     required this.text,
     required this.isFromUser,
+    this.thoughts = const <Thought>[],
+    this.at = '',
   });
 
   final String messageId;
+
+  /// The text blocks that finished, joined. Empty when what finished was thinking or a tool call.
   final String text;
   final bool isFromUser;
 
+  /// The thinking blocks that finished, in order.
+  final List<Thought> thoughts;
+
+  /// When, by the server's clock — empty from the history.
+  final String at;
+
   @override
-  List<Object?> get props => <Object?>[seq, messageId, text, isFromUser];
+  List<Object?> get props => <Object?>[seq, messageId, text, isFromUser, thoughts, at];
+}
+
+/// One finished block of thinking.
+class Thought extends Equatable {
+  const Thought(this.text, {this.isRedacted = false});
+
+  /// What the model thought — empty when it would not show it.
+  final String text;
+
+  /// The model thought here and did not show what (`redacted_thinking`).
+  final bool isRedacted;
+
+  @override
+  List<Object?> get props => <Object?>[text, isRedacted];
 }
 
 /// A tool started running on the user's machine.
@@ -93,6 +166,7 @@ final class ToolInvoked extends SessionEvent {
     required this.toolUseId,
     required this.toolName,
     required this.input,
+    this.isSubagent = false,
   });
 
   final String toolUseId;
@@ -101,8 +175,11 @@ final class ToolInvoked extends SessionEvent {
   /// Exactly what the tool was asked to do. Never a summary of it.
   final Map<String, Object?> input;
 
+  /// A subagent ran it, not the main conversation — its task list is its own.
+  final bool isSubagent;
+
   @override
-  List<Object?> get props => <Object?>[seq, toolUseId, toolName, input];
+  List<Object?> get props => <Object?>[seq, toolUseId, toolName, input, isSubagent];
 }
 
 /// Something a tool printed.
@@ -118,14 +195,23 @@ final class ToolOutput extends SessionEvent {
 
 /// How a tool ended.
 final class ToolFinished extends SessionEvent {
-  const ToolFinished(super.seq, {required this.toolUseId, required this.status, this.summary});
+  const ToolFinished(
+    super.seq, {
+    required this.toolUseId,
+    required this.status,
+    this.summary,
+    this.taskId,
+  });
 
   final String toolUseId;
   final ToolStatus status;
   final String? summary;
 
+  /// The task a `TaskCreate` made or a `TaskUpdate` changed — what the task list keys it by.
+  final String? taskId;
+
   @override
-  List<Object?> get props => <Object?>[seq, toolUseId, status, summary];
+  List<Object?> get props => <Object?>[seq, toolUseId, status, summary, taskId];
 }
 
 /// What a finished turn cost.
@@ -136,6 +222,40 @@ final class TurnFinished extends SessionEvent {
 
   @override
   List<Object?> get props => <Object?>[seq, turn];
+}
+
+/// A prompt waits for the running turn to end, in the backend's queue.
+final class PromptQueued extends SessionEvent {
+  const PromptQueued(super.seq, this.prompt);
+
+  final QueuedPrompt prompt;
+
+  @override
+  List<Object?> get props => <Object?>[seq, prompt];
+}
+
+/// A prompt left the queue: its turn began, or somebody took it out.
+final class PromptDequeued extends SessionEvent {
+  const PromptDequeued(super.seq, {required this.queueId});
+
+  final String queueId;
+
+  @override
+  List<Object?> get props => <Object?>[seq, queueId];
+}
+
+/// The conversation was compacted: what came before is now a summary.
+final class ContextCompacted extends SessionEvent {
+  const ContextCompacted(super.seq, {required this.trigger, this.preTokens});
+
+  /// `manual` — somebody sent `/compact`; `auto` — the context was full.
+  final String trigger;
+
+  /// How many tokens the context held before, when the SDK said.
+  final int? preTokens;
+
+  @override
+  List<Object?> get props => <Object?>[seq, trigger, preTokens];
 }
 
 /// The session ended.

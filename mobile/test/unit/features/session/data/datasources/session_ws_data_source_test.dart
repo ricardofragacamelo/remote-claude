@@ -23,12 +23,14 @@ void main() {
   late WsClient client;
   late SessionWsDataSource source;
   late SessionRepository repository;
+  late RecordingWriter written;
 
   setUp(() {
     opened = <FakeFrameSocket>[];
+    written = RecordingWriter();
     logger = AppLogger(
       context: const LogContext(appVersion: '0.0.1', platform: 'android'),
-      writer: RecordingWriter().writer,
+      writer: written.writer,
     );
 
     client = WsClient(
@@ -46,7 +48,7 @@ void main() {
       traceIds: TraceIds(random: Random(3)),
     );
 
-    source = SessionWsDataSource(client);
+    source = SessionWsDataSource(client, logger: logger);
     repository = SessionRepositoryImpl(source);
   });
 
@@ -180,13 +182,53 @@ void main() {
     expect(repository.ping(nonce: 'n-1'), isFalse);
   });
 
-  test('following twice leaves the first subscription behind', () async {
+  // Plan 10, F9 (D-26): every session open in the app stays attached with another on screen.
+  test('following a second session keeps the first one attached', () async {
     await ready();
 
-    repository.follow('ses-1', () => 5);
+    final void Function() first = repository.follow('ses-1', () => 5);
     repository.follow('ses-2', () => 0);
 
-    expect(socket().sent.where((String frame) => frame.contains('session.detach')), hasLength(1));
+    expect(socket().sent.where((String frame) => frame.contains('session.detach')), isEmpty);
+
+    first();
+    expect(socket().sent.last, contains('session.detach'));
+    expect(socket().sent.last, contains('ses-1'));
+  });
+
+  // S-173 · on the handshake — the first one and every reconnection — each session open in the app
+  // is attached again, each from its own point.
+  test(
+    'every session followed is attached once the socket is ready, each from its own point',
+    () async {
+      repository.follow('ses-1', () => 4);
+      repository.follow('ses-2', () => 9);
+
+      await ready();
+
+      final List<String> attaches = socket().sent
+          .where((String frame) => frame.contains('session.attach'))
+          .toList();
+      expect(attaches, hasLength(2));
+      expect(
+        attaches.any((String frame) => frame.contains('ses-1') && frame.contains('4')),
+        isTrue,
+      );
+      expect(
+        attaches.any((String frame) => frame.contains('ses-2') && frame.contains('9')),
+        isTrue,
+      );
+    },
+  );
+
+  test('unfollowing stops every session being followed', () async {
+    await ready();
+    repository.follow('ses-1', () => 0);
+    repository.follow('ses-2', () => 0);
+
+    repository.unfollow();
+
+    expect(socket().sent.where((String frame) => frame.contains('session.detach')), hasLength(2));
   });
 
   test('the resume point is read at attach time, not at follow time', () async {
@@ -214,6 +256,23 @@ void main() {
     expect(socket().sent.last, contains('session.detach'));
   });
 
+  test('stopping a following that another one replaced cuts nothing — plan 10, F5', () async {
+    await ready();
+    final void Function() leaving = repository.follow('ses-1', () => 0);
+    final void Function() arriving = repository.follow('ses-1', () => 0);
+    final int sentBefore = socket().sent.length;
+
+    // The screen being left goes away after the next one followed: the session stays attached.
+    leaving();
+    expect(
+      socket().sent.skip(sentBefore).where((String frame) => frame.contains('session.detach')),
+      isEmpty,
+    );
+
+    arriving();
+    expect(socket().sent.last, contains('session.detach'));
+  });
+
   test('an update after disposal is dropped rather than thrown', () async {
     await ready();
     await source.dispose();
@@ -238,7 +297,8 @@ void main() {
 
     socket().deliver(sessionAttached(sessionId: 'ses-1', gap: true, claudeSessionId: 'conv-1'));
 
-    expect(await first, const StreamGap(claudeSessionId: 'conv-1'));
+    // S-172 · the gap names its session, so only that session's screen reloads.
+    expect(await first, const StreamGap(sessionId: 'ses-1', claudeSessionId: 'conv-1'));
   });
 
   test('S-24 · joining a live session reaches the stream, naming what it continues', () async {
@@ -343,5 +403,47 @@ void main() {
   test('a command sent before the handshake answers false rather than vanishing', () {
     // The screen has to be able to say the prompt did not leave (S-76).
     expect(repository.send('session.prompt', <String, Object?>{'sessionId': 'ses-1'}), isFalse);
+  });
+
+  test('S-09 · a fragment the app does not draw is ignored, and the reason is logged', () async {
+    await ready();
+    final Future<SessionUpdate> first = repository.updates.first;
+
+    socket().deliver(
+      frame(
+        kind: 'event',
+        type: 'message.delta',
+        sessionId: 'ses-1',
+        seq: 4,
+        payload: <String, Object?>{'messageId': 'm', 'delta': 'x', 'blockType': 'hologram'},
+      ),
+    );
+
+    expect(await first, const EventReceived(UnreadEvent(4), sessionId: 'ses-1'));
+    final Map<String, Object?> line = written.withOp('session.fragment.ignored').single;
+    expect(line['blockType'], 'hologram');
+    expect(line['subagent'], false);
+    expect(line['level'], 'debug');
+  });
+
+  test('an event that is unread for another reason is not logged as an ignored fragment', () async {
+    await ready();
+    final Future<SessionUpdate> first = repository.updates.first;
+
+    socket().deliver(
+      frame(kind: 'event', type: 'session.somethingNew', sessionId: 'ses-1', seq: 5),
+    );
+    await first;
+
+    expect(written.withOp('session.fragment.ignored'), isEmpty);
+  });
+
+  test('plan 10 · an acceptance reaches the stream as one, naming its command', () async {
+    await ready();
+    final Future<SessionUpdate> first = repository.updates.first;
+
+    socket().deliver(commandAccepted(correlationId: 'cmd-9'));
+
+    expect(await first, const CommandAccepted('cmd-9'));
   });
 }

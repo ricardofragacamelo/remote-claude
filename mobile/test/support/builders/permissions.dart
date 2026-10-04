@@ -12,6 +12,7 @@ final DateTime t0 = DateTime.utc(2026, 9, 24, 12);
 PermissionRequest aPermissionRequest({
   String requestId = 'request-1',
   String sessionId = 'session-1',
+  String toolUseId = 'toolu-1',
   String toolName = 'Bash',
   String? description = 'rm -rf build/',
   Map<String, Object?> input = const <String, Object?>{'command': 'rm -rf build/'},
@@ -26,7 +27,7 @@ PermissionRequest aPermissionRequest({
 }) => PermissionRequest(
   requestId: requestId,
   sessionId: sessionId,
-  toolUseId: 'toolu-1',
+  toolUseId: toolUseId,
   toolName: toolName,
   description: description,
   input: input,

@@ -62,4 +62,32 @@ void main() {
       throwsA(isA<Failure>().having((Failure f) => f.code, 'code', 'UNAUTHENTICATED')),
     );
   });
+
+  // Plan 10, B-38: the folder travels in the body or the query, never in the path.
+  test('S-141 · the open folders, the recent ones and the picker, each at its endpoint', () async {
+    final WorkspaceApiDataSource api = build();
+
+    await api.openFolders();
+    await api.openFolder('/w/a b');
+    await api.closeFolder('/w/a b');
+    await api.recent();
+    await api.pinRecent('/w/a', pinned: true);
+    await api.forgetRecent('/w/a');
+    await api.directories('/w');
+
+    expect(adapter.requests.map((RequestOptions r) => '${r.method} ${r.path}'), <String>[
+      'GET /workspaces/open-folders',
+      'POST /workspaces/open-folders',
+      'DELETE /workspaces/open-folders',
+      'GET /workspaces/recent',
+      'PUT /workspaces/recent/pin',
+      'DELETE /workspaces/recent',
+      'GET /workspaces/directories',
+    ]);
+    expect(adapter.requests[1].data, <String, Object?>{'path': '/w/a b'});
+    expect(adapter.requests[2].queryParameters, <String, Object?>{'path': '/w/a b'});
+    expect(adapter.requests[4].data, <String, Object?>{'path': '/w/a', 'pinned': true});
+    expect(adapter.requests[5].queryParameters, <String, Object?>{'path': '/w/a'});
+    expect(adapter.requests[6].queryParameters, <String, Object?>{'path': '/w'});
+  });
 }

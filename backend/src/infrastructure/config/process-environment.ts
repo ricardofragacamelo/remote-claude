@@ -15,6 +15,7 @@ export function processEnvironment(): RawEnvironment {
     RC_WEB_PORT: process.env['RC_WEB_PORT'],
     DATABASE_URL: process.env['DATABASE_URL'],
     OIDC_ISSUER: process.env['OIDC_ISSUER'],
+    OIDC_ADDITIONAL_ISSUERS: process.env['OIDC_ADDITIONAL_ISSUERS'],
     OIDC_AUDIENCE: process.env['OIDC_AUDIENCE'],
     OIDC_CLIENT_ID_WEB: process.env['OIDC_CLIENT_ID_WEB'],
     OIDC_CLIENT_ID_MOBILE: process.env['OIDC_CLIENT_ID_MOBILE'],

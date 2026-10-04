@@ -1,10 +1,14 @@
+/// What the build is compiled with, and the configuration it gives on one origin (plan 10, B-28).
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/core/config/app_config.dart';
+import 'package:remote_claude/core/config/connection_choice.dart';
 
 Map<String, String> validDefines() => <String, String>{
-  'RC_API_URL': 'http://localhost:3000',
-  'RC_WS_URL': 'ws://localhost:3000/ws',
-  'RC_OIDC_ISSUER': 'http://localhost:8180/realms/remote-claude',
+  'RC_INTERNAL_URL': 'http://localhost:5173',
+  'RC_EXTERNAL_URL': 'https://claude.example.dev',
+  'RC_OIDC_REALM_PATH': '/realms/remote-claude',
   'RC_OIDC_CLIENT_ID': 'remote-claude-mobile',
   'RC_OIDC_SCOPES': 'openid profile email offline_access',
   'RC_OIDC_REDIRECT_URL': 'com.remoteclaude://callback',
@@ -12,78 +16,106 @@ Map<String, String> validDefines() => <String, String>{
 };
 
 void main() {
-  group('AppConfig.from', () {
-    test('reads a complete set of defines', () {
-      final AppConfig config = AppConfig.from(validDefines());
+  group('BuildConfig.from', () {
+    test('reads a complete set of defines, the origins normalised', () {
+      final BuildConfig build = BuildConfig.from(
+        validDefines()..['RC_EXTERNAL_URL'] = 'https://Claude.Example.dev/',
+      );
 
-      expect(config.apiBaseUrl, 'http://localhost:3000');
-      expect(config.wsUrl, 'ws://localhost:3000/ws');
-      expect(config.oidcClientId, 'remote-claude-mobile');
-      expect(config.appVersion, '0.0.1');
+      expect(
+        build.origins,
+        const DefinedOrigins(
+          internal: 'http://localhost:5173',
+          external: 'https://claude.example.dev',
+        ),
+      );
+      expect(build.realmPath, '/realms/remote-claude');
+      expect(build.oidcClientId, 'remote-claude-mobile');
+      expect(build.appVersion, '0.0.1');
     });
 
-    test('splits the scopes into the list the OIDC package wants', () {
-      expect(AppConfig.from(validDefines()).scopeList, <String>[
-        'openid',
-        'profile',
-        'email',
-        'offline_access',
-      ]);
+    test('S-104 · an empty address is a radio that is off, never an error', () {
+      final BuildConfig build = BuildConfig.from(
+        validDefines()
+          ..['RC_INTERNAL_URL'] = ''
+          ..remove('RC_EXTERNAL_URL'),
+      );
+
+      expect(build.origins, const DefinedOrigins());
     });
 
-    test('ignores the empty segments of a scope string', () {
-      final Map<String, String> defines = validDefines()..['RC_OIDC_SCOPES'] = 'openid  profile ';
+    test('S-121 · an internal address on the private network is compiled in, in a debug build', () {
+      final BuildConfig build = BuildConfig.from(
+        validDefines()..['RC_INTERNAL_URL'] = 'http://192.168.0.10:5173/',
+      );
 
-      expect(AppConfig.from(defines).scopeList, <String>['openid', 'profile']);
+      expect(build.origins.internal, 'http://192.168.0.10:5173');
     });
 
-    test('refuses to build when a value is missing', () {
-      final Map<String, String> defines = validDefines()..remove('RC_API_URL');
-
-      expect(() => AppConfig.from(defines), throwsA(isA<ConfigurationError>()));
+    test('an address compiled in that is not an origin stops the build, saying which', () {
+      try {
+        BuildConfig.from(validDefines()..['RC_EXTERNAL_URL'] = 'http://203.0.113.10');
+        fail('expected a ConfigurationError');
+      } on ConfigurationError catch (error) {
+        expect(error.toString(), contains('RC_EXTERNAL_URL'));
+        expect(error.toString(), contains('plainText'));
+      }
     });
 
-    test('refuses to build when a value is blank', () {
-      final Map<String, String> defines = validDefines()..['RC_APP_VERSION'] = '   ';
-
-      expect(() => AppConfig.from(defines), throwsA(isA<ConfigurationError>()));
-    });
-
-    test('refuses a websocket URL that is not one', () {
-      final Map<String, String> defines = validDefines()..['RC_WS_URL'] = 'http://localhost';
-
-      expect(() => AppConfig.from(defines), throwsA(isA<ConfigurationError>()));
+    test('a realm path that is not a path stops the build', () {
+      expect(
+        () => BuildConfig.from(validDefines()..['RC_OIDC_REALM_PATH'] = 'realms/x'),
+        throwsA(isA<ConfigurationError>()),
+      );
     });
 
     test('lists every problem at once, not just the first', () {
-      final Map<String, String> defines = <String, String>{};
-
       expect(
-        () => AppConfig.from(defines),
+        () => BuildConfig.from(<String, String>{}),
         throwsA(
           isA<ConfigurationError>().having(
             (ConfigurationError error) => error.problems.length,
             'problems',
-            7,
+            5,
           ),
         ),
       );
     });
 
-    test('says what is wrong with each value', () {
-      final Map<String, String> defines = validDefines()..['RC_WS_URL'] = 'http://x';
-
-      try {
-        AppConfig.from(defines);
-        fail('expected a ConfigurationError');
-      } on ConfigurationError catch (error) {
-        expect(error.toString(), contains('RC_WS_URL'));
-        expect(error.toString(), contains('ws'));
-      }
+    test('a blank value is a missing one', () {
+      expect(
+        () => BuildConfig.from(validDefines()..['RC_APP_VERSION'] = '   '),
+        throwsA(isA<ConfigurationError>()),
+      );
     });
 
-    test('two configurations built from the same defines are equal', () {
-      expect(AppConfig.from(validDefines()), AppConfig.from(validDefines()));
+    test('two builds from the same defines are equal', () {
+      expect(BuildConfig.from(validDefines()), BuildConfig.from(validDefines()));
+    });
+  });
+
+  group('AppConfig.at', () {
+    test('S-93 · everything derives from the one origin', () {
+      final AppConfig config = AppConfig.at(
+        BuildConfig.from(validDefines()),
+        'https://claude.example.dev',
+      );
+
+      expect(config.apiBaseUrl, 'https://claude.example.dev/api');
+      expect(config.wsUrl, 'wss://claude.example.dev/ws');
+      expect(config.oidcIssuer, 'https://claude.example.dev/realms/remote-claude');
+      expect(config.oidcClientId, 'remote-claude-mobile');
+      expect(config.appVersion, '0.0.1');
+    });
+
+    test('splits the scopes into the list the OIDC package wants, ignoring empty segments', () {
+      final AppConfig config = AppConfig.at(
+        BuildConfig.from(validDefines()..['RC_OIDC_SCOPES'] = 'openid  profile '),
+        'http://localhost:5173',
+      );
+
+      expect(config.scopeList, <String>['openid', 'profile']);
+      expect(config.wsUrl, 'ws://localhost:5173/ws');
     });
   });
 }

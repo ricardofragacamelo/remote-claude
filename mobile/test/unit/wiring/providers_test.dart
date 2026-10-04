@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/features/session/domain/usecases/list_live_sessions.dart';
+import 'package:remote_claude/features/session/domain/repositories/live_session_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:remote_claude/app/bootstrap.dart';
 import 'package:remote_claude/app/router_provider.dart';
 import 'package:remote_claude/core/config/app_config.dart';
+import 'package:remote_claude/core/config/connection_choice.dart';
 import 'package:remote_claude/core/device/device_identity_provider.dart';
 import 'package:remote_claude/core/device/install_id.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
@@ -73,10 +76,9 @@ import '../../support/fakes/recording_writer.dart';
 /// Every provider is built for real, with only the two things a running process supplies —
 /// configuration and the logger — overridden. A container that cannot assemble itself is a
 /// failure nobody would see until the app was launched on a device.
-AppConfig config() => const AppConfig(
-  apiBaseUrl: 'http://localhost:3000',
-  wsUrl: 'ws://localhost:3000/ws',
-  oidcIssuer: 'http://localhost:8180/realms/remote-claude',
+BuildConfig build() => const BuildConfig(
+  origins: DefinedOrigins(internal: 'http://localhost:5173'),
+  realmPath: '/realms/remote-claude',
   oidcClientId: 'remote-claude-mobile',
   oidcScopes: 'openid profile email offline_access',
   oidcRedirectUrl: 'com.remoteclaude://callback',
@@ -91,14 +93,14 @@ void main() {
     FlutterSecureStorage.setMockInitialValues(<String, String>{});
 
     logger = buildLogger(
-      config: config(),
+      appVersion: '0.0.1',
       platform: 'android',
       isRelease: false,
       writer: RecordingWriter().writer,
     );
 
     container = ProviderContainer(
-      overrides: bootstrapOverrides(config: config(), logger: logger),
+      overrides: bootstrapOverrides(build: build(), logger: logger),
     );
   });
 
@@ -169,6 +171,8 @@ void main() {
     expect(container.read(listCommandsProvider), isA<ListCommands>());
     expect(container.read(checkpointRepositoryProvider), isA<CheckpointRepository>());
     expect(container.read(listCheckpointsProvider), isA<ListCheckpoints>());
+    expect(container.read(liveSessionRepositoryProvider), isA<LiveSessionRepository>());
+    expect(container.read(listLiveSessionsProvider), isA<ListLiveSessions>());
   });
 
   test('the transcript feature assembles end to end', () {
@@ -233,13 +237,28 @@ void main() {
 
     expect(paths, <String>[
       sessionRoute,
+      pingRoute,
       signInRoute,
+      connectionRoute,
       workspacesRoute,
       diagnosticsRoute,
       rulesRoute,
       historyRoute,
-      '/sessions/:sessionId',
+      draftRoute,
     ]);
+
+    /// The children of the top-level route at [path].
+    Iterable<String> under(String path) => router.configuration.routes
+        .whereType<GoRoute>()
+        .firstWhere((GoRoute route) => route.path == path)
+        .routes
+        .whereType<GoRoute>()
+        .map((GoRoute route) => route.path);
+
+    // What is reached by link sits under the home, so "back" from it lands somewhere (B-43).
+    expect(under(sessionRoute), <String>['folder', 'sessions/:sessionId']);
+    // One level of a folder hangs under the roots of the picker.
+    expect(under(workspacesRoute), <String>['browse']);
 
     // One conversation hangs under the list of its workspace, so "back" lands on that list.
     final GoRoute history = router.configuration.routes.whereType<GoRoute>().firstWhere(
@@ -249,9 +268,12 @@ void main() {
       ':conversationId',
     ]);
 
-    final GoRoute live = router.configuration.routes.whereType<GoRoute>().firstWhere(
-      (GoRoute route) => route.path == '/sessions/:sessionId',
-    );
+    final GoRoute live = router.configuration.routes
+        .whereType<GoRoute>()
+        .firstWhere((GoRoute route) => route.path == sessionRoute)
+        .routes
+        .whereType<GoRoute>()
+        .firstWhere((GoRoute route) => route.path == 'sessions/:sessionId');
 
     expect(live.routes.whereType<GoRoute>().map((GoRoute route) => route.path), <String>[
       'permissions/:requestId',

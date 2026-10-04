@@ -169,10 +169,25 @@ void main() {
     expect(state().stream.pongs, hasLength(1));
   });
 
-  test('disposing the screen leaves the stream — no subscription outlives it', () {
+  test(
+    'disposing the screen leaves the stream it followed — no subscription outlives it',
+    () async {
+      repository.emit(pongUpdate(seq: 1));
+      await settle();
+
+      container.dispose();
+
+      expect(repository.unfollows, 1);
+    },
+  );
+
+  test('a screen that followed nothing cuts nothing when it goes — plan 10, F5', () async {
+    // Another screen follows a session; this one, never pinged, is left: the session stays followed.
+    repository.follow('session-9', () => 0);
+
     container.dispose();
 
-    expect(repository.unfollows, greaterThanOrEqualTo(1));
+    expect(repository.unfollows, 0);
   });
 
   test('two states with the same contents are equal', () {

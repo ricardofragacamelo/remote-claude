@@ -374,6 +374,18 @@ void main() {
       expect(other.gaps, 0);
     });
 
+    test('plan 10 · an acceptance answers a command, and reaches the observers', () async {
+      await connectAndHandshake();
+      final List<Envelope> seen = <Envelope>[];
+      client.observe(seen.add);
+
+      socket().deliver(commandAccepted(correlationId: 'cmd-1'));
+      await settle();
+
+      expect(seen.single.type, 'command.accepted');
+      expect(seen.single.correlationId, 'cmd-1');
+    });
+
     test('an attach ack for a watched session is not handed to the observers', () async {
       await connectAndHandshake();
       client.attach('ses-1', _Subscriber());

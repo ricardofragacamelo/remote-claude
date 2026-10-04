@@ -1,9 +1,13 @@
 /// The screen that asks who you are.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/error/failure.dart';
+import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/error_view.dart';
@@ -45,6 +49,14 @@ class SignInPage extends ConsumerWidget {
                     child: Text(l10n.authSignInAction),
                   ),
                 },
+                const SizedBox(height: Tokens.spaceMd),
+                // The address screen, without signing in: a wrong address must never lock anybody
+                // out of the one screen that fixes it (plan 10, R-13).
+                TextButton.icon(
+                  onPressed: () => unawaited(context.push(connectionRoute)),
+                  icon: const Icon(Icons.dns_outlined),
+                  label: Text(l10n.connectionTitle),
+                ),
               ],
             ),
           ),

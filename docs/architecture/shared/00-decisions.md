@@ -603,3 +603,76 @@ publicada, outra ferramenta de duplicação, ou uma emenda a esta ADR com outra 
 **O que não muda.** Aviso **com** versão corrigida continua sendo atualizado, nunca aceito — a regra
 não ganha uma porta, ganha uma exceção para o caso em que a porta não existe.
 
+
+## ADR-021 — O backend aceita uma lista explícita de issuers, do mesmo realm
+
+**Status:** aceita · 2026-10-03 · decisão do usuário, na
+[D-15 do plano 10](../../plans/10-mobile-chat-layout/decisions.md#f5--endereço-de-conexão),
+condicionada ao spike da B-25 — que a confirmou. **Emenda a regra "um issuer"** da
+[validação no backend](08-authentication.md#validação-no-backend).
+
+**Contexto.** O app passa a escolher, em tempo de execução, por qual origem fala com o servidor — a
+interna, a externa ou outra —, e dessa origem saem a API, o WebSocket e o login
+([plano 10 · D-13](../../plans/10-mobile-chat-layout/decisions.md#f5--endereço-de-conexão)). O mesmo
+realm é alcançado por mais de uma origem: a porta do próprio provedor e o servidor que encaminha
+`/realms` até ele. Sem hostname fixo, o provedor escreve no `iss` a origem pela qual foi chamado. O
+backend validava o `iss` contra **um** issuer, então só a origem configurada passava.
+
+**O que o spike mediu** (B-25, Keycloak 26.2.5, sem `KC_HOSTNAME`, com `KC_PROXY_HEADERS=xforwarded`,
+o realm do repositório, o encaminhamento do Vite com `changeOrigin` desligado):
+
+| | direto na porta (`:18181`) | pelo encaminhamento do Vite (`:39031`) |
+|---|---|---|
+| `issuer` do discovery | `http://localhost:18181/realms/remote-claude` | `http://localhost:39031/realms/remote-claude` |
+| endpoints do discovery (`authorization`, `token`, `jwks_uri`, `end_session`) | na origem `:18181` | na origem `:39031` |
+| JWKS | 2 chaves, `kid` `3908f50I…`, `3KS5AZ8O…` | **byte a byte a mesma** (mesmo md5) |
+| `iss` de um token pedido ali | `http://localhost:18181/realms/remote-claude` | `http://localhost:39031/realms/remote-claude` |
+| `kid` / `alg` / `aud` do token | `3KS5AZ8O…` / `RS256` / `https://api.remote-claude.local` | os mesmos |
+
+Mais três medidas: com `X-Forwarded-Proto: https` e `X-Forwarded-Host` pelo encaminhamento, o
+discovery sai na origem pública (`https://<host>/realms/…`), que é o caminho do túnel e o da
+infraestrutura de produção; a página de login pelo encaminhamento manda o formulário para a origem do
+encaminhamento e pede o tema por `/resources/…` relativo; e um refresh token emitido por uma origem e
+apresentado na outra é recusado pelo provedor (`invalid_grant`, "Invalid token issuer") — quem renova
+renova na mesma origem em que entrou, o que o app e o web já fazem.
+
+**Decisão.** A configuração do backend ganha a **lista explícita** dos issuers aceitos:
+`OIDC_ISSUER` (o primário — o do web, cujo token endpoint o backend chama pelo navegador) e
+`OIDC_ADDITIONAL_ISSUERS` (os outros, separados por vírgula; vazio é nenhum). Para cada issuer da
+lista:
+
+- **o seu discovery e o seu cache de JWKS**, cada um com a leitura em voo compartilhada e a regra
+  de manter o último documento bom — **por issuer**: a revalidação que falha num não toca no outro;
+- a **mesma `aud`**: é a mesma API, e o realm é um só.
+
+O `iss` do token, ainda não verificado, apenas **escolhe** uma entrada da lista; ele nunca acrescenta
+uma. Fora da lista → `401 UNAUTHENTICATED` antes de qualquer leitura de rede, e o motivo só no log.
+Dentro dela, a assinatura é conferida com as chaves **daquele** issuer, e o `iss` comparado byte a
+byte com o que o discovery dele declara — um `iss` forjado não compra nada.
+
+Lista com um issuer só (`OIDC_ADDITIONAL_ISSUERS` vazio) é exatamente o comportamento de antes. Lista
+inválida — entrada que não é URL `http(s)`, entrada vazia, issuer repetido (com ou sem a barra final,
+o `OIDC_ISSUER` incluído) — não deixa o processo subir.
+
+**Alternativas consideradas.**
+
+| Alternativa | Por que não |
+|---|---|
+| `KC_HOSTNAME` fixo, um issuer só, todas as origens emitindo o mesmo `iss` | o issuer fixo é uma origem que o celular precisa alcançar para o login; com a origem escolhida no app, o login sairia por um endereço diferente do que ele escolheu |
+| aceitar qualquer `iss` cujo caminho seja o do realm | é confiar no token sobre de onde ele vem: qualquer provedor com um realm de mesmo nome passaria a ser candidato |
+| um cache de JWKS só, compartilhado | a JWKS medida é a mesma, mas o documento de cada issuer aponta o seu `jwks_uri`, e cache por issuer é o que mantém a falha de uma origem longe da outra |
+
+**Consequências.**
+
+- O provedor fica **sem hostname fixo e atrás dos cabeçalhos de proxy** (`KC_PROXY_HEADERS=xforwarded`)
+  no `docker-compose.yml`. O modo público do plano 20 continua passando o `KC_HOSTNAME` dele
+  ([20 · D-08](../../plans/20-dev-public/decisions.md)).
+- O dev e o e2e listam os dois issuers: o direto, que o web usa, e o do servidor do web
+  (`http://localhost:<porta do web>/realms/<realm>`), por onde o celular entra pelo `adb reverse`
+  ([plano 10 · D-16](../../plans/10-mobile-chat-layout/decisions.md#f5--endereço-de-conexão)).
+- A infraestrutura de produção que publica o endereço externo
+  ([19 · D-04](../../plans/19-distribution/decisions.md)) encaminha os mesmos caminhos e manda os
+  `X-Forwarded-*`; a origem externa entra na lista.
+- Trocar de origem no app é um login novo: o token e o refresh são do issuer de onde vieram.
+
+Detalhes: [08-authentication.md](08-authentication.md#validação-no-backend).

@@ -423,6 +423,14 @@ class WsClient {
       return;
     }
 
+    // An acceptance answers a command, like an `error`, and belongs to no session: whoever sent the
+    // command is the one listening. A change of model or mode has no event of its own, and this is
+    // the only word that it went through.
+    if (frame.type == commandAcceptedType) {
+      _notifyObservers(frame);
+      return;
+    }
+
     // An `event` is a fact of the conversation; a `request` is the server asking a question and
     // holding the agent loop open until somebody answers — `permission.requested` is one, and a
     // client that dropped it would never show the card. An `error` answers a command.

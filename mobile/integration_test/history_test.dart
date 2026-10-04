@@ -23,7 +23,7 @@ import 'support/signed_in_app.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  final AppConfig config = e2eConfig();
+  final BuildConfig config = e2eConfig();
   final E2eScenario onThePhone = E2eScenario.named('mobile-history');
 
   testWidgets('${onThePhone.id} — ${onThePhone.title}', (WidgetTester tester) async {

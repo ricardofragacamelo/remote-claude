@@ -63,7 +63,7 @@ O porquê de cada uma, e as alternativas descartadas, está em
 | Ver o que está sendo construído agora | [docs/plans/](docs/plans/README.md) |
 | Entender a arquitetura | [docs/architecture/](docs/architecture/README.md) |
 | Saber como o backend fala com o Claude | [Descoberta do Agent SDK](docs/discovery/01-descoberta-claude-agent-sdk.md) |
-| Ver uma proposta que ainda vai virar plano | [Workflow de sessões](docs/propostas/workflow-de-sessoes.md) · [Múltiplos motores de agente](docs/propostas/multiplos-motores-de-agente.md) |
+| Ver uma proposta que ainda vai virar plano | [Workflow de sessões](docs/propostas/workflow-de-sessoes.md) · [Múltiplos motores de agente](docs/propostas/multiplos-motores-de-agente.md) · [Perguntas estruturadas](docs/propostas/perguntas-estruturadas.md) · [Histórico ao vivo e fiel](docs/propostas/historico-ao-vivo-e-fiel.md) |
 
 A documentação é fragmentada de propósito, com índices que roteiam por situação
 (*"vai fazer X → leia Y"*), para que se carregue só o necessário.
@@ -123,6 +123,7 @@ silencioso.
 | `pnpm dev` | sobe a stack de desenvolvimento em **portas fixas** |
 | `pnpm dev:public` | a mesma stack atrás de um **túnel HTTPS**, num domínio só: login, API e WebSocket funcionam de um navegador fora desta máquina. Ver [abaixo](#a-stack-num-endereço-público--pnpm-devpublic) |
 | `pnpm dev:mobile` | roda o **app Flutter** num Android apontando para a stack do `pnpm dev` (que precisa estar de pé em outro terminal): usa o aparelho conectado ou sobe a AVD `remote_claude_api35` **com janela**, e fica de pé com o `flutter run` (hot reload). Ao sair — `q`, Ctrl+C ou queda — desliga o emulador que ligou e limpa o resto. Argumentos depois de `--` vão para o `flutter run` |
+| `pnpm mobile:install` | instala o **app Flutter** (APK de debug) no celular ligado por **USB**, para usar **sem o cabo**: o endereço interno é o IP desta máquina na rede local (`http://<IP>:<RC_WEB_PORT>`), o externo é a origem do `pnpm dev:public`, e o console diz os dois e de onde veio cada um. `-- --dry-run` só mostra os endereços; `-- --device <serial>` escolhe o aparelho |
 | `pnpm allowlist add <pasta>` | libera uma pasta da máquina para o Claude sem editar YAML: grava na cópia local `infra/workspace-allowlist.local.yaml` (ignorada pelo git, validada pelo schema do boot), recusa `/`, pergunta antes do `$HOME` e manda `SIGHUP` ao backend do `pnpm dev`, que recarrega sem reiniciar. `remove <pasta>` tira; `list` diz qual arquivo está ativo e as raízes dele |
 | `pnpm db reset` | derruba, recria, migra e popula — a sequência que ninguém lembra na ordem certa |
 | `pnpm db seed` | só popula; rodar duas vezes não muda nada |
@@ -186,7 +187,8 @@ recebeu e o script diz qual é; `pnpm dev:public --url <host>` pede outro. O `pn
 - Quem tiver a URL chega à tela de login de um backend que executa `Bash` nesta máquina, e os
   usuários do realm de desenvolvimento têm senha conhecida.
 - O primeiro acesso de cada navegador passa pela página de aviso do plano gratuito do túnel.
-- O app mobile continua no `pnpm dev:mobile`, com `localhost`; ele não usa a URL pública.
+- O `pnpm dev:mobile` continua com `localhost`. O app instalado pelo `pnpm mobile:install` usa a URL
+  pública como endereço **externo** — o `pnpm dev:public` a grava em `.run/public-origin` para isso.
 
 O porquê de cada escolha está no [plano 20](docs/plans/20-dev-public/decisions.md).
 
@@ -207,8 +209,10 @@ porque o issuer do token precisa ser byte a byte o que o backend espera.
 
 Duas coisas do Android que só o login de verdade revela, e que a suíte e2e (que entra sem
 navegador) não vê, estão travadas por `test/unit/android-manifest.spec.mjs`: o build de **debug**
-libera HTTP sem TLS só para `localhost` e `127.0.0.1` (`src/debug/res/xml/network_security_config.xml`
-— o AppAuth busca o issuer pela rede da plataforma, que recusa cleartext), e a `MainActivity` **não**
+libera HTTP sem TLS na plataforma (`src/debug/res/xml/network_security_config.xml` — o AppAuth busca
+o issuer pela rede da plataforma, que recusa cleartext; quem escolhe o host é o `checkOrigin` do app:
+`localhost` e a rede privada, [plano 10, D-20](docs/plans/10-mobile-chat-layout/decisions.md#f6--instalação-por-usb)),
+e o release não tem o arquivo; e a `MainActivity` **não**
 tem `android:taskAffinity=""` — com ele, o redirect do Keycloak volta para uma activity do AppAuth
 sem o estado da requisição, e o login fica parado na tela do provedor.
 
@@ -228,6 +232,43 @@ Antes de qualquer coisa cara, ele recusa com código 1 e diz o que fazer: variá
 ou malformada (todas de uma vez), stack que não responde (`pnpm dev`), `flutter` fora do PATH. A
 primeira vez cria a AVD como descrito em [Testes](#testes). Argumentos depois de `--` vão para o
 `flutter run` — `pnpm dev:mobile -- --release`, por exemplo.
+
+#### O app no celular, sem o cabo — `pnpm mobile:install`
+
+O `pnpm dev:mobile` só alcança a máquina enquanto o cabo e o `flutter run` estão de pé. Para usar o app
+de verdade, `pnpm mobile:install` instala um **APK de debug** no celular ligado por USB, e o app passa a
+falar com a stack **pela rede**:
+
+```
+.env → os endereços, ditos no console  →  flutter no PATH?  →  o celular no USB
+     →  flutter build apk --debug  →  adb install -r  →  os endereços de novo, e o aparelho
+```
+
+| Endereço | De onde vem, nesta ordem |
+|---|---|
+| **interno** | `RC_INTERNAL_URL` do `.env`; senão `http://<IP da rede>:<RC_WEB_PORT>` — o IP é o `RC_LAN_ADDRESS`, ou o IPv4 privado da interface física (Docker, bridges e VPN de fora) |
+| **externo** | `RC_EXTERNAL_URL`; senão `RC_PUBLIC_URL`; senão a origem que o último `pnpm dev:public` abriu (`.run/public-origin`); senão fica desligado |
+
+```bash
+pnpm mobile:install -- --dry-run          # só mostra os endereços e de onde vieram
+pnpm mobile:install                       # compila e instala no celular do cabo
+pnpm mobile:install -- --device R58M123   # com mais de um celular no USB
+```
+
+- O `pnpm dev` precisa estar de pé para o app **entrar**, não para instalar: ele escuta em todas as
+  interfaces e aceita o login pela origem da rede local. O celular precisa estar na mesma rede.
+- `http://` para a rede privada (`10/8`, `172.16/12`, `192.168/16`) só vale no build de debug — o
+  release continua só com `https`
+  ([plano 10, D-20](docs/plans/10-mobile-chat-layout/decisions.md#f6--instalação-por-usb)).
+- O IP vai **dentro** do APK. Trocou de rede, o IP mudou: rode de novo. O `adb install -r` substitui o
+  app e mantém o login e o endereço escolhido.
+- Com o `pnpm dev:public` de pé, só o **externo** entra: o Keycloak público fixa o issuer
+  ([plano 10, D-19](docs/plans/10-mobile-chat-layout/decisions.md#f5--endereço-de-conexão)).
+
+Antes do build, ele recusa com código 1 e diz o que fazer: `.env` incompleto, nenhum endereço, externo
+que não é `https`, `flutter` fora do PATH, nenhum celular no USB, celular que não autorizou a
+depuração, mais de um sem `--device`. Ao sair, derruba o servidor `adb` que ele mesmo subiu e os
+daemons do Gradle.
 
 ### Validação — o que define "pronto"
 
@@ -337,7 +378,7 @@ e `functions` não existem para medir nesta ponta. Está registrado no
 | `pnpm scan:secrets` | `gitleaks` sobre o repositório; `--staged` só sobre o que está no índice |
 | `pnpm scan:security` | segredo, dependência vulnerável (`pnpm audit` **e** `osv-scanner` sobre `pnpm-lock.yaml` e `mobile/pubspec.lock`, qualquer severidade), padrão inseguro **e as regras do produto** |
 | `node scripts/record-osv-fixtures.mjs` | regrava o que o `osv-scanner` responde para os lockfiles de `test/fixtures/osv/` — depois de trocar a imagem fixada, para a suíte dizer se a leitura ainda vale |
-| `pnpm i18n:check` | paridade de chaves `en` ↔ `pt-BR`, chave órfã, params que não sobrevivem à tradução |
+| `pnpm i18n:check` | paridade de chaves `en` ↔ `pt-BR`, chave órfã, params que não sobrevivem à tradução, e o mesmo texto no web e no app para cada par de `scripts/i18n-shared.json` |
 | `node scripts/mobile.mjs <tarefa>` | os mesmos portões só do Flutter: `generate`, `format`, `format:check`, `analyze`, `arch`, `test:unit`, `test:widget`, `test:native`, `coverage`, `test:e2e` |
 
 `pnpm scan:secrets` é o que o hook de pre-commit roda. Se o `gitleaks` não estiver instalado,
@@ -371,7 +412,7 @@ não faz parte do build e quem esquecer de rodá-la é pego pelo `pnpm verify` n
 |---|---|
 | `pnpm contracts:generate` | JSON Schema → tipos TS + código Dart |
 | `pnpm contracts:check` | falha se o gerado estiver fora de sincronia |
-| `pnpm i18n:check` | paridade `en` ↔ `pt-BR`, chave órfã, params que não casam |
+| `pnpm i18n:check` | paridade `en` ↔ `pt-BR`, chave órfã, params que não casam, texto compartilhado web ↔ app que diverge |
 
 `contracts:check` cobre **os dois alvos**. O Dart não é importado por ninguém em TypeScript,
 então este portão é o único que o protege.

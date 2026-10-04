@@ -27,18 +27,22 @@ import 'package:remote_claude/features/session/presentation/providers/rewind_con
 import 'package:remote_claude/features/session/presentation/widgets/session_sheet.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
-/// Opens the undo of [sessionId] over the session screen.
-Future<void> showRewindSheet(BuildContext context, String sessionId) =>
-    showSessionSheet<void>(context, RewindSheet(sessionId: sessionId));
+/// Opens the undo of [sessionId] over the session screen — on the point of the prompt that said
+/// [label], when it came from one (plan 10, B-24): its reach first, then the button.
+Future<void> showRewindSheet(BuildContext context, String sessionId, {String? label}) =>
+    showSessionSheet<void>(context, RewindSheet(sessionId: sessionId, label: label));
 
 /// The undo of one session.
 ///
 /// A closed session reads nothing: undo is not available there by policy (S-39), and asking the
 /// backend for the points of a session that is gone would only answer "not found".
 class RewindSheet extends ConsumerWidget {
-  const RewindSheet({required this.sessionId, super.key});
+  const RewindSheet({required this.sessionId, super.key, this.label});
 
   final String sessionId;
+
+  /// What the prompt it was opened from said — the label of its point.
+  final String? label;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,17 +56,18 @@ class RewindSheet extends ConsumerWidget {
       description: l10n.sessionUndoDescription,
       child: status == SessionStatus.closed
           ? ContentColumn(children: <Widget>[Text(l10n.sessionUndoClosed)])
-          : _Points(sessionId: sessionId, status: status),
+          : _Points(sessionId: sessionId, status: status, label: label),
     );
   }
 }
 
 /// The points, and the step the person is on.
 class _Points extends ConsumerStatefulWidget {
-  const _Points({required this.sessionId, required this.status});
+  const _Points({required this.sessionId, required this.status, this.label});
 
   final String sessionId;
   final SessionStatus status;
+  final String? label;
 
   @override
   ConsumerState<_Points> createState() => _PointsState();
@@ -71,6 +76,10 @@ class _Points extends ConsumerStatefulWidget {
 class _PointsState extends ConsumerState<_Points> {
   /// The point being confirmed. Local to the sheet: it is where the person is looking, not data.
   String? _selected;
+
+  /// The person went back to the list: the point of the prompt the sheet opened from is no longer
+  /// chosen for them.
+  bool _backedOut = false;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +97,10 @@ class _PointsState extends ConsumerState<_Points> {
 
     void back() {
       controller.dismiss();
-      setState(() => _selected = null);
+      setState(() {
+        _selected = null;
+        _backedOut = true;
+      });
     }
 
     return LoadedView<RewindBoard>(
@@ -103,7 +115,14 @@ class _PointsState extends ConsumerState<_Points> {
       builder: (RewindBoard board) {
         final RewindOutcome? outcome = board.outcome;
         final Checkpoint? chosen = board.checkpoints
-            .where((Checkpoint point) => point.promptId == _selected)
+            .where(
+              (Checkpoint point) =>
+                  point.promptId == _selected ||
+                  (_selected == null &&
+                      !_backedOut &&
+                      widget.label != null &&
+                      point.label == widget.label),
+            )
             .firstOrNull;
 
         if (outcome != null) {

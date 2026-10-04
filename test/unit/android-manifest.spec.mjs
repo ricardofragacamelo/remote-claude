@@ -17,8 +17,8 @@ const appSrc = path.join(repoRoot, 'mobile/android/app/src');
  * `pnpm dev:mobile` runs the app against the local stack, which has no TLS. The app's own calls go
  * through Dart and are not affected, but the login is: AppAuth reaches the issuer through the
  * platform, which refuses cleartext unless a network security config allows it. Allowed too
- * widely, or in the release build, it would let a phone talk to anything over plain HTTP; this is
- * what notices either.
+ * widely in the release build, it would let a phone talk to anything over plain HTTP; this is what
+ * notices it. In the debug build the platform allows it and the app decides where (plan 10, D-20).
  *
  * @param {string} relative
  * @returns {string}
@@ -30,16 +30,11 @@ function read(relative) {
 describe('cleartext on Android', () => {
   const config = read('debug/res/xml/network_security_config.xml');
 
-  it('is allowed in debug builds, to this machine only', () => {
-    const domains = [...config.matchAll(/<domain\b[^>]*>([^<]+)<\/domain>/g)].map((m) => m[1]);
-
-    expect(config).toMatch(/<domain-config cleartextTrafficPermitted="true">/);
-    expect(domains).toEqual(['localhost', '127.0.0.1']);
-    expect(config).not.toMatch(/includeSubdomains="true"/);
-  });
-
-  it('never becomes the default for every host', () => {
-    expect(config).not.toMatch(/<base-config/);
+  // S-126 · Android cannot name the private network as a range, so the debug build permits
+  // cleartext to the platform and `checkOrigin` picks the hosts (plan 10, D-20).
+  it('is allowed in debug builds, as a whole, with no list to drift from the app', () => {
+    expect(config).toMatch(/<base-config cleartextTrafficPermitted="true"\s*\/>/);
+    expect(config).not.toMatch(/<domain-config/);
   });
 
   it('is what the debug manifest points the app at', () => {

@@ -129,6 +129,70 @@ void main() {
     });
   });
 
+  // Plan 17, D-16: back in the foreground, a phone that waits for approval asks again.
+  group('coming back to the foreground', () {
+    // S-130
+    test('asks again while the phone waits for approval, and shows the answer', () async {
+      final ProviderContainer container = build(signedIn: session());
+      await container.read(deviceControllerProvider.future);
+      devices.checkedAs = const RegisteredDevice(
+        id: 'dev_1',
+        name: 'android 14',
+        status: DeviceStatus.approved,
+        pushEnabled: false,
+      );
+
+      await container.read(deviceControllerProvider.notifier).recheckIfPending();
+
+      expect(devices.checks, 1);
+      expect(container.read(deviceControllerProvider).value?.canDecide, isTrue);
+    });
+
+    // S-130 · approved, there is nothing an approval could change.
+    test('asks nothing once the phone is approved', () async {
+      final ProviderContainer container = build(signedIn: session());
+      await container.read(deviceControllerProvider.future);
+      devices.checkedAs = const RegisteredDevice(
+        id: 'dev_1',
+        name: 'android 14',
+        status: DeviceStatus.approved,
+        pushEnabled: false,
+      );
+      await container.read(deviceControllerProvider.notifier).recheck();
+
+      await container.read(deviceControllerProvider.notifier).recheckIfPending();
+
+      expect(devices.checks, 1);
+    });
+
+    // S-131 · the push and the return to the foreground together end in the same state.
+    test('two asks at once end in the same state', () async {
+      final ProviderContainer container = build(signedIn: session());
+      await container.read(deviceControllerProvider.future);
+      devices.checkedAs = const RegisteredDevice(
+        id: 'dev_1',
+        name: 'android 14',
+        status: DeviceStatus.approved,
+        pushEnabled: false,
+      );
+      final DeviceController controller = container.read(deviceControllerProvider.notifier);
+
+      await Future.wait(<Future<void>>[controller.recheck(), controller.recheckIfPending()]);
+
+      expect(container.read(deviceControllerProvider).value?.status, DeviceStatus.approved);
+      expect(container.read(deviceControllerProvider).hasError, isFalse);
+    });
+
+    test('with nobody signed in there is nothing to ask', () async {
+      final ProviderContainer container = build();
+      await container.read(deviceControllerProvider.future);
+
+      await container.read(deviceControllerProvider.notifier).recheckIfPending();
+
+      expect(devices.checks, 0);
+    });
+  });
+
   test('registers nothing while nobody is signed in', () async {
     final ProviderContainer container = build();
 

@@ -12,11 +12,13 @@ import 'package:remote_claude/core/network/credentials_provider.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/features/device/device.dart';
-import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';
 import 'package:remote_claude/features/permission/permission.dart';
+import 'package:remote_claude/features/session/domain/entities/conversation.dart';
+import 'package:remote_claude/features/session/presentation/providers/live_session_controller.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 import 'e2e_environment.dart';
+import 'session_robot.dart';
 
 /// One signed-in app on this device, and the browser's side of the same account.
 class SignedInApp {
@@ -33,13 +35,24 @@ class SignedInApp {
 
   PermissionQueue queueOf(String sessionId) =>
       container.read(permissionQueueControllerProvider(sessionId));
+
+  /// The conversation of [sessionId], as the app has it.
+  Conversation conversationOf(String sessionId) =>
+      container.read(liveSessionControllerProvider(sessionId)).conversation;
+
+  /// The session screen of this app, driven by its semantics.
+  SessionRobot robot(WidgetTester tester) => SessionRobot(tester, l10n);
 }
 
 /// Mounts the app, signs in, and waits for the installation to be registered and the socket up.
 ///
 /// A fresh secure store per test is a fresh installation: every test starts from a phone the
 /// backend has never seen, pending, and approves it only when the scenario says so.
-Future<SignedInApp> signedInApp(WidgetTester tester, AppConfig config, E2eScenario scenario) async {
+Future<SignedInApp> signedInApp(
+  WidgetTester tester,
+  BuildConfig config,
+  E2eScenario scenario,
+) async {
   final ProviderContainer container = e2eContainer(config, scenario);
   addTearDown(container.dispose);
 
@@ -78,7 +91,7 @@ Future<void> extendedOnTheCard(
   String sessionId,
   String requestId,
 ) async {
-  await tapOnScreen(tester, find.text(app.l10n.permissionExtend).first);
+  await app.robot(tester).answer(app.l10n.permissionExtend);
   await pumpUntil(
     tester,
     () => app.queueOf(sessionId).cardOf(requestId)?.remainingExtensions != null,

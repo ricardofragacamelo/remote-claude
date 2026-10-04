@@ -1,14 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { decodeProtectedHeader, errors, jwtVerify } from 'jose';
+import { decodeJwt, decodeProtectedHeader, errors, jwtVerify } from 'jose';
 import type { JWTPayload } from 'jose';
 
 import type { AccessTokenVerifier, VerifiedAccessToken } from '@application/auth';
 import { TokenExpiredError, UnauthenticatedError } from '@domain/auth';
 import { APP_CONFIG, type AppConfig } from '@infra/config/environment';
 import { LOGGER, type Logger } from '@shared/logging/logger';
-import { IDENTITY_DISCOVERY, IDENTITY_JWKS } from './identity.tokens';
-import type { JwksCache } from './jwks-cache';
-import type { OidcDiscovery } from './oidc-discovery';
+import type { AcceptedIssuers } from './accepted-issuers';
+import { IDENTITY_ISSUERS } from './identity.tokens';
 
 /**
  * The algorithms this backend accepts.
@@ -22,7 +21,11 @@ const ALGORITHMS = ['RS256', 'ES256'];
 const CLOCK_TOLERANCE = '60s';
 
 /**
- * Validates an access token locally, against the issuer's key set.
+ * Validates an access token locally, against the key set of the issuer it comes from.
+ *
+ * The issuer is one of an explicit list (ADR-021): the token's `iss` picks the entry, and that
+ * entry's discovery and key set do the rest. A token naming an issuer outside the list is refused
+ * before anything is fetched for it.
  *
  * Local validation and not remote introspection: introspecting on every call would put the
  * provider on the critical path of every request this system serves.
@@ -32,8 +35,7 @@ const CLOCK_TOLERANCE = '60s';
 @Injectable()
 export class OidcTokenVerifier implements AccessTokenVerifier {
   constructor(
-    @Inject(IDENTITY_DISCOVERY) private readonly discovery: OidcDiscovery,
-    @Inject(IDENTITY_JWKS) private readonly jwks: JwksCache,
+    @Inject(IDENTITY_ISSUERS) private readonly issuers: AcceptedIssuers,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     @Inject(LOGGER) private readonly logger: Logger,
   ) {}
@@ -71,8 +73,9 @@ export class OidcTokenVerifier implements AccessTokenVerifier {
       throw new UnauthenticatedError('token carries no key id');
     }
 
-    const document = await this.discovery.document();
-    const key = await this.jwks.keyFor(document.jwksUri, header.kid);
+    const accepted = this.issuers.of(decodeJwt(token).iss);
+    const document = await accepted.discovery.document();
+    const key = await accepted.jwks.keyFor(document.jwksUri, header.kid);
 
     const { payload } = await jwtVerify(token, key, {
       algorithms: ALGORITHMS,

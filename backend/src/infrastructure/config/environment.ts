@@ -67,6 +67,21 @@ export const SESSION_IDLE_TTL_FLOOR_MS = 1_000;
 const pidFile = z.union([z.literal('off'), z.string().min(1)]);
 
 /**
+ * The other origins the realm of `OIDC_ISSUER` is reached through, whose tokens are accepted too
+ * (ADR-021): comma-separated issuers, each an `http(s)` URL. Empty is "none", which is exactly the
+ * single issuer of before — and still a value someone wrote, not a variable left out.
+ */
+const additionalIssuers = z
+  .string()
+  .transform((value) => (value.trim() === '' ? [] : value.split(',').map((entry) => entry.trim())))
+  .pipe(z.array(z.url({ protocol: /^https?$/ })));
+
+/** Whether no issuer is listed twice — with or without its trailing slash, it is the same one. */
+function distinctIssuers(issuers: readonly string[]): boolean {
+  return new Set(issuers.map((issuer) => issuer.replace(/\/$/, ''))).size === issuers.length;
+}
+
+/**
  * The largest an attachment of a prompt may be configured to: what the Messages API takes of one
  * image. Above it, the model refuses what the backend would have held (plan 08, D-02).
  */
@@ -82,6 +97,7 @@ export const environmentSchema = z.object({
   RC_WEB_PORT: port,
   DATABASE_URL: z.string().min(1).startsWith('postgres'),
   OIDC_ISSUER: z.url(),
+  OIDC_ADDITIONAL_ISSUERS: additionalIssuers,
   OIDC_AUDIENCE: z.string().min(1),
   OIDC_CLIENT_ID_WEB: z.string().min(1),
   OIDC_CLIENT_ID_MOBILE: z.string().min(1),
@@ -163,6 +179,11 @@ export const environmentSchema = z.object({
  * installation refuses — the product would be configured to reject its own default.
  */
 const consistentEnvironment = environmentSchema
+  // An issuer listed twice is a list somebody got wrong — refused, not deduplicated in silence.
+  .refine((env) => distinctIssuers([env.OIDC_ISSUER, ...env.OIDC_ADDITIONAL_ISSUERS]), {
+    path: ['OIDC_ADDITIONAL_ISSUERS'],
+    message: 'must not repeat an issuer, OIDC_ISSUER included',
+  })
   .refine(
     (env) => env.RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS <= env.RC_PERMISSION_RULE_MAX_LIFETIME_MS,
     {
@@ -344,7 +365,11 @@ export interface AppConfig {
   };
 
   readonly oidc: {
-    readonly issuer: string;
+    /**
+     * Every issuer whose tokens are accepted (ADR-021), never empty. The first is `OIDC_ISSUER`:
+     * the one the web signs in with, and whose token endpoint the backend calls for it.
+     */
+    readonly issuers: readonly [string, ...string[]];
     readonly audience: string;
     readonly webClientId: string;
     readonly mobileClientId: string;
@@ -459,7 +484,7 @@ export function loadConfig(source: RawEnvironment): AppConfig {
       },
     },
     oidc: {
-      issuer: env.OIDC_ISSUER,
+      issuers: [env.OIDC_ISSUER, ...env.OIDC_ADDITIONAL_ISSUERS],
       audience: env.OIDC_AUDIENCE,
       webClientId: env.OIDC_CLIENT_ID_WEB,
       mobileClientId: env.OIDC_CLIENT_ID_MOBILE,

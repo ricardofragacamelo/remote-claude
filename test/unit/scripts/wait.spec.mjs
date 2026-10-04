@@ -1,6 +1,14 @@
+import http from 'node:http';
+
 import { describe, expect, it, vi } from 'vitest';
 
-import { WaitError, processAbort, waitForHttp, waitUntil } from '../../../scripts/lib/wait.mjs';
+import {
+  WaitError,
+  answers,
+  processAbort,
+  waitForHttp,
+  waitUntil,
+} from '../../../scripts/lib/wait.mjs';
 
 /** A clock the test drives, so a 120 s timeout costs no wall-clock time. */
 function fakeClock() {
@@ -172,5 +180,49 @@ describe('waitForHttp', () => {
     );
 
     expect(failure.died).toBe(true);
+  });
+});
+
+describe('answers', () => {
+  /**
+   * @param {number} status
+   * @returns {Promise<{ url: string, close: () => Promise<void> }>}
+   */
+  async function serving(status) {
+    const server = http.createServer((_request, response) => {
+      response.statusCode = status;
+      response.end();
+    });
+    await new Promise((resolve) => {
+      server.listen(0, '127.0.0.1', () => {
+        resolve(undefined);
+      });
+    });
+    const { port } = /** @type {import('node:net').AddressInfo} */ (server.address());
+
+    return {
+      url: `http://127.0.0.1:${String(port)}/health`,
+      close: () =>
+        new Promise((resolve) => {
+          server.close(() => {
+            resolve();
+          });
+        }),
+    };
+  }
+
+  it('says yes to an endpoint that answers below 400', async () => {
+    const stack = await serving(204);
+
+    await expect(answers(stack.url, 2_000)).resolves.toBe(true);
+    await stack.close();
+  });
+
+  it('says no to one that answers 400 or more, or not at all, by the deadline', async () => {
+    const broken = await serving(503);
+
+    await expect(answers(broken.url, 150)).resolves.toBe(false);
+    await broken.close();
+    await expect(answers('http://127.0.0.1:1/health', 150)).resolves.toBe(false);
   });
 });

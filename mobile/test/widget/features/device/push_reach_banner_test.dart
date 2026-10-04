@@ -115,4 +115,34 @@ void main() {
 
     expect(find.text(l10n.pushRotationFailedTitle), findsOneWidget);
   });
+
+  group('S-16 · on the session screen, a line that opens the whole explanation', () {
+    testWidgets('denied: one line, and the card with its action in a sheet', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpApp(
+        const PushReachLine(),
+        overrides: <Override>[
+          pushControllerAnswering(AsyncData<PushReach>(aReach(permission: PushPermission.denied))),
+        ],
+      );
+
+      expect(find.text(l10n.pushDeniedTitle), findsOneWidget);
+      expect(find.text(l10n.pushDeniedBody), findsNothing);
+
+      await tester.tap(find.text(l10n.pushDeniedTitle));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.pushDeniedBody), findsOneWidget);
+      expect(find.text(l10n.pushDeniedAction), findsOneWidget);
+    });
+
+    testWidgets('working: nothing', (WidgetTester tester) async {
+      await tester.pumpApp(
+        const PushReachLine(),
+        overrides: <Override>[pushControllerAnswering(AsyncData<PushReach>(aReach()))],
+      );
+
+      expect(find.byType(Text), findsNothing);
+    });
+  });
 }

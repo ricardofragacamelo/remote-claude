@@ -72,10 +72,18 @@ class ApiClient {
   Future<Object?> post(String path, {Object? body}) =>
       _send(() => _dio.post<Object?>(path, data: body));
 
-  /// A `DELETE`.
+  /// A `PUT`.
   ///
   /// @throws [Failure] always, for the same reason as [get]
-  Future<Object?> delete(String path) => _send(() => _dio.delete<Object?>(path));
+  Future<Object?> put(String path, {Object? body}) =>
+      _send(() => _dio.put<Object?>(path, data: body));
+
+  /// A `DELETE`, with [query] as its query string — where a folder travels, never in the path, so
+  /// a proxy that normalises `%2F` cannot change it (backend `workspace` routes).
+  ///
+  /// @throws [Failure] always, for the same reason as [get]
+  Future<Object?> delete(String path, {Map<String, Object?>? query}) =>
+      _send(() => _dio.delete<Object?>(path, queryParameters: query));
 
   Future<Object?> _send(Future<Response<Object?>> Function() call) async {
     final String fallbackTraceId = _traceIds.next();

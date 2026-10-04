@@ -70,7 +70,7 @@ export class PermissionSettlement {
     if (options.announce) {
       this.broadcaster.publish(request.sessionId, {
         type: 'permission.resolved',
-        payload: resolvedPayload(request.id, answer),
+        payload: resolvedPayload(request, answer),
       });
     }
 

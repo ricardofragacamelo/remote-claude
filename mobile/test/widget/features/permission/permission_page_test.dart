@@ -12,8 +12,6 @@ import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
-import 'package:remote_claude/features/permission/domain/entities/permission_outcome.dart';
-import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
@@ -46,7 +44,11 @@ void main() {
         ),
         GoRoute(
           path: '/sessions/:sessionId',
-          builder: (BuildContext context, GoRouterState state) => const Text(sessionMarker),
+          builder: (BuildContext context, GoRouterState state) => Text(
+            state.uri.queryParameters[requestParameter] == null
+                ? sessionMarker
+                : '$sessionMarker on ${state.uri.queryParameters[requestParameter]}',
+          ),
           routes: <RouteBase>[
             GoRoute(
               path: 'permissions/:requestId',
@@ -248,6 +250,7 @@ void main() {
     await tester.tap(find.text(l10n.permissionOpenSession));
     await tester.pumpAndSettle();
 
-    expect(find.text(sessionMarker), findsOneWidget);
+    // S-74 — the session opens on the question, scrolled to its card.
+    expect(find.text('$sessionMarker on request-1'), findsOneWidget);
   });
 }

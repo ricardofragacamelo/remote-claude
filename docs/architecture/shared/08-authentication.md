@@ -73,15 +73,21 @@ renovado por refresh token em cookie que o JS não alcança.
 
 ## Validação no backend
 
-Toda requisição HTTP e todo handshake WS validam o access token, **na ordem**:
+Toda requisição HTTP, todo handshake WS e todo `connection.reauthenticate` validam o access token,
+**na ordem**:
 
-1. Assinatura, contra a JWKS do `issuer` — chaves buscadas do `jwks_uri` e **cacheadas com
+0. O `iss` do token, ainda não verificado, **escolhe** um issuer da lista configurada
+   ([ADR-021](00-decisions.md#adr-021--o-backend-aceita-uma-lista-explícita-de-issuers-do-mesmo-realm)).
+   Fora da lista → recusado aqui, sem nenhuma leitura de rede. Ele só escolhe: nunca acrescenta um
+   issuer, e os passos abaixo valem contra o escolhido.
+1. Assinatura, contra a JWKS **daquele** issuer — chaves buscadas do `jwks_uri` e **cacheadas com
    rotação** (o provedor gira chave sem avisar; recarregue ao ver `kid` desconhecido). A recarga
    tem um intervalo mínimo de 60 s — senão uma rajada de tokens com `kid` inventado vira uma
    rajada de requisições ao provedor — e é **compartilhada**: quem chega enquanto ela está em voo
    espera por ela, em vez de ser recusado pelo intervalo que ela acabou de abrir
-   ([plano 05 · S-71](../../plans/05-hardening-operations/scenarios.md)).
-2. `iss` bate com o issuer configurado.
+   ([plano 05 · S-71](../../plans/05-hardening-operations/scenarios.md)). Cada issuer tem o seu
+   cache.
+2. `iss` bate, byte a byte, com o issuer que o discovery daquele issuer declara.
 3. `aud` contém o identificador desta API.
 4. `exp` e `nbf`, com tolerância de relógio de no máximo 60 s.
 5. Algoritmo está na allowlist (`RS256` / `ES256`). **Nunca aceite `alg` do token**, e
@@ -95,10 +101,27 @@ diga no log.
 O backend **não** faz introspecção remota a cada request — valida a assinatura localmente.
 Introspecção síncrona colocaria o provedor no caminho crítico de cada chamada.
 
+### Uma lista de issuers, um realm
+
+O mesmo realm é alcançado por mais de uma origem — a porta do provedor e o servidor que encaminha
+`/realms` até ele —, e o provedor, sem hostname fixo, escreve no `iss` a origem pela qual foi chamado.
+Cada origem é, portanto, um issuer, e o backend aceita uma **lista explícita** deles
+([ADR-021](00-decisions.md#adr-021--o-backend-aceita-uma-lista-explícita-de-issuers-do-mesmo-realm),
+medido no spike da [B-25 do plano 10](../../plans/10-mobile-chat-layout/F5-connection-address.md)):
+
+- cada issuer tem **o seu discovery e o seu cache de JWKS**; a leitura em voo é compartilhada **por
+  issuer**, e a revalidação que falha mantém o último documento bom **daquele** issuer, sem tocar
+  no outro;
+- a `aud` é a mesma para todos — é a mesma API;
+- o primeiro da lista é o do web: é pelo token endpoint dele que o backend troca o código e renova
+  em nome do navegador. Um refresh token só renova na origem que o emitiu (o provedor recusa os
+  outros), por isso trocar de origem é um login novo;
+- lista com um issuer só é o comportamento de antes.
+
 ### Discovery
 
 A configuração é descoberta em `${issuer}/.well-known/openid-configuration`, não escrita à
-mão. Endpoints são cacheados e revalidados periodicamente (a cada hora). Isso é o que torna a troca
+mão — para cada issuer da lista. Endpoints são cacheados e revalidados periodicamente (a cada hora). Isso é o que torna a troca
 de provedor uma mudança de variável de ambiente.
 
 - **Revalidação que falha mantém o último documento bom.** Endpoint de provedor não muda de uma
@@ -242,7 +265,8 @@ Dois pontos que só existem por causa do WS:
 ## Configuração
 
 ```bash
-OIDC_ISSUER=https://<tenant>.auth0.com/    # trocar isto troca de provedor
+OIDC_ISSUER=https://<tenant>.auth0.com/    # trocar isto troca de provedor; é o issuer do web
+OIDC_ADDITIONAL_ISSUERS=                   # outras origens do mesmo realm, separadas por vírgula
 OIDC_AUDIENCE=https://api.remote-claude.local
 OIDC_CLIENT_ID_WEB=…
 OIDC_CLIENT_ID_MOBILE=…
@@ -252,6 +276,25 @@ OIDC_SCOPES="openid profile email offline_access"
 Validado no boot com schema. Faltando ou inválido, **o processo não sobe** — backend no ar
 sem autenticação configurada é pior que backend fora do ar.
 
+Os issuers aceitos são `OIDC_ISSUER` seguido de `OIDC_ADDITIONAL_ISSUERS`
+([ADR-021](00-decisions.md#adr-021--o-backend-aceita-uma-lista-explícita-de-issuers-do-mesmo-realm)).
+`OIDC_ADDITIONAL_ISSUERS` é obrigatória como as outras, e vazia quer dizer "nenhum outro". Entrada que
+não é URL `http(s)`, entrada vazia entre vírgulas, ou issuer repetido — com ou sem a barra final, o
+`OIDC_ISSUER` incluído — não deixa o processo subir.
+
+- **`pnpm dev`** acrescenta sozinho o realm visto pelo servidor do web,
+  `http://localhost:<RC_WEB_PORT>/realms/<realm>` (o caminho do realm sai do `OIDC_ISSUER`), por onde
+  o celular entra pelo `adb reverse`
+  ([plano 10 · D-16](../../plans/10-mobile-chat-layout/decisions.md#f5--endereço-de-conexão)), e o
+  mesmo realm pelo IP desta máquina na rede local, `http://<IP>:<RC_WEB_PORT>/realms/<realm>`, por onde
+  entra o app que o `pnpm mobile:install` instala
+  ([plano 10 · D-23](../../plans/10-mobile-chat-layout/decisions.md#f6--instalação-por-usb)).
+- **O e2e** lista o direto e o do servidor do web da sua porta; a pilha de limites, o do seu próprio
+  web.
+- **Em produção**, a infraestrutura que publica o endereço externo
+  ([19 · D-04](../../plans/19-distribution/decisions.md)) encaminha os mesmos caminhos e manda os
+  `X-Forwarded-*`; a origem externa (`https://<host>/realms/<realm>`) entra na lista.
+
 Nenhuma URL de endpoint em variável: vem do discovery.
 
 ---
@@ -260,7 +303,7 @@ Nenhuma URL de endpoint em variável: vem do discovery.
 
 | `code` | HTTP | Quando |
 |---|---|---|
-| `UNAUTHENTICATED` | 401 | sem token, inválido, assinatura ruim, `aud`/`iss` errado |
+| `UNAUTHENTICATED` | 401 | sem token, inválido, assinatura ruim, `aud`/`iss` errado, issuer fora da lista |
 | `TOKEN_EXPIRED` | 401 | expirado — cliente deve renovar e repetir |
 | `DEVICE_NOT_REGISTERED` | 403 | token válido, device não aprovado |
 | `DEVICE_REVOKED` | 403 | device revogado |

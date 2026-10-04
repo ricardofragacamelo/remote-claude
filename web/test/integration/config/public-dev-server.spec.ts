@@ -9,13 +9,15 @@ import readline from 'node:readline';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 /**
- * The dev server of `pnpm dev:public`, for real (plan 20, B-05).
+ * The dev server of `pnpm dev:public` and of `pnpm dev`, for real (plan 20, B-05; plan 10, B-27).
  *
- * A Vite server with the public configuration, in front of a stand-in backend and identity
- * provider that record what reaches them. The server runs in a process of its own
- * (`test/support/public-dev-server.mjs`): esbuild does not start inside jsdom. What is checked is what only the real forwarder shows:
- * the prefix gone, the refresh cookie moved under it, the WebSocket upgraded, the realm reached,
- * the admin console not — and the `Host` check that lets the tunnel's host in and nobody else.
+ * A Vite server in front of a stand-in backend and identity provider that record what reaches
+ * them — once with the public configuration, once with the local one. The servers run in processes
+ * of their own (`test/support/public-dev-server.mjs`): esbuild does not start inside jsdom. What is
+ * checked is what only the real forwarder shows: the prefix gone, the refresh cookie moved under
+ * it, the WebSocket upgraded, the realm reached, the admin console not — in both modes, since the
+ * phone reaches the local stack through the web's origin too (plan 10, D-16) — and the `Host` check
+ * that lets the tunnel's host in only in public mode.
  */
 
 const PUBLIC_HOST = 'name.ngrok-free.dev';
@@ -25,9 +27,16 @@ const seen: { backend: string[]; keycloak: string[] } = { backend: [], keycloak:
 
 let backend: http.Server;
 let keycloak: http.Server;
-let vite: ChildProcess;
-let viteUrl: string;
 let root: string;
+
+/** One dev server, as a process of its own. */
+interface Forwarder {
+  readonly proc: ChildProcess;
+  readonly url: string;
+}
+
+/** The public dev server and the local one, both in front of the same stand-ins. */
+const forwarders: { public?: Forwarder; local?: Forwarder } = {};
 
 async function listen(server: http.Server): Promise<number> {
   await new Promise<void>((resolve) => {
@@ -44,13 +53,23 @@ async function close(server: http.Server): Promise<void> {
   });
 }
 
-/** A request through the dev server, as the tunnel would send it unless told otherwise. */
+/** The address of a started dev server. */
+function urlOf(mode: keyof typeof forwarders): string {
+  const forwarder = forwarders[mode];
+  if (forwarder === undefined) {
+    throw new Error(`the ${mode} dev server did not start`);
+  }
+  return forwarder.url;
+}
+
+/** A request through a dev server, with the `Host` the tunnel (or the phone) would send. */
 async function through(
+  mode: keyof typeof forwarders,
   pathname: string,
-  host = PUBLIC_HOST,
+  host: string,
 ): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: string }> {
   return new Promise((resolve, reject) => {
-    const request = http.request(`${viteUrl}${pathname}`, { headers: { host } }, (response) => {
+    const request = http.request(`${urlOf(mode)}${pathname}`, { headers: { host } }, (response) => {
       let body = '';
       response.on('data', (chunk) => (body += String(chunk)));
       response.on('end', () => {
@@ -60,6 +79,39 @@ async function through(
     request.on('error', reject);
     request.end();
   });
+}
+
+/** Starts a dev server with the given environment, and resolves once it listens. */
+async function startForwarder(env: Record<string, string>): Promise<Forwarder> {
+  const script = path.join(import.meta.dirname, '..', '..', 'support', 'public-dev-server.mjs');
+  const proc = spawn(process.execPath, [script, root], {
+    stdio: ['ignore', 'pipe', 'inherit'],
+    env: { ...process.env, ...env },
+  });
+
+  const port = await new Promise<string>((resolve, reject) => {
+    proc.on('exit', (code) => {
+      reject(new Error(`the dev server exited with ${String(code)} before it listened`));
+    });
+    readline.createInterface({ input: proc.stdout as NodeJS.ReadableStream }).on('line', (line) => {
+      const match = /^listening (\d+)$/.exec(line);
+      if (match?.[1] !== undefined) {
+        resolve(match[1]);
+      }
+    });
+  });
+
+  return { proc, url: `http://127.0.0.1:${port}` };
+}
+
+/** Stops a dev server and waits for it to be gone. */
+async function stopForwarder(forwarder: Forwarder | undefined): Promise<void> {
+  if (forwarder === undefined) {
+    return;
+  }
+  const exited = new Promise((resolve) => forwarder.proc.once('exit', resolve));
+  forwarder.proc.kill('SIGTERM');
+  await exited;
 }
 
 beforeAll(async () => {
@@ -81,7 +133,9 @@ beforeAll(async () => {
     );
   });
   keycloak = http.createServer((request, response) => {
-    seen.keycloak.push(`${String(request.method)} ${String(request.url)}`);
+    seen.keycloak.push(
+      `${String(request.method)} ${String(request.url)} ${String(request.headers.host)}`,
+    );
     response.end('keycloak');
   });
 
@@ -91,95 +145,98 @@ beforeAll(async () => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'rc-public-vite-'));
   fs.writeFileSync(path.join(root, 'index.html'), '<!doctype html><title>app</title>');
 
-  const script = path.join(import.meta.dirname, '..', '..', 'support', 'public-dev-server.mjs');
-  vite = spawn(process.execPath, [script, root], {
-    stdio: ['ignore', 'pipe', 'inherit'],
-    env: {
-      ...process.env,
-      RC_PUBLIC_URL: `https://${PUBLIC_HOST}`,
-      RC_BACKEND_PORT: String(backendPort),
-      RC_KEYCLOAK_PORT: String(keycloakPort),
-    },
-  });
-
-  const port = await new Promise<string>((resolve, reject) => {
-    vite.on('exit', (code) => {
-      reject(new Error(`the dev server exited with ${String(code)} before it listened`));
-    });
-    readline.createInterface({ input: vite.stdout as NodeJS.ReadableStream }).on('line', (line) => {
-      const match = /^listening (\d+)$/.exec(line);
-      if (match?.[1] !== undefined) {
-        resolve(match[1]);
-      }
-    });
-  });
-  viteUrl = `http://127.0.0.1:${port}`;
+  const env = { RC_BACKEND_PORT: String(backendPort), RC_KEYCLOAK_PORT: String(keycloakPort) };
+  [forwarders.public, forwarders.local] = await Promise.all([
+    startForwarder({ ...env, RC_PUBLIC_URL: `https://${PUBLIC_HOST}` }),
+    startForwarder({ ...env, RC_PUBLIC_URL: '' }),
+  ]);
 }, 60_000);
 
 afterAll(async () => {
-  const exited = new Promise((resolve) => vite.once('exit', resolve));
-  vite.kill('SIGTERM');
-  await exited;
+  await Promise.all([stopForwarder(forwarders.public), stopForwarder(forwarders.local)]);
   await close(backend);
   await close(keycloak);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
-describe('the public dev server', () => {
-  it('forwards the API without its prefix, and moves the refresh cookie under it (S-32)', async () => {
-    const response = await through('/api/auth/refresh?x=1');
+/** An upgrade through a dev server, answered with the status the backend's handshake sent. */
+async function upgrade(mode: keyof typeof forwarders, host: string): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    const request = http.request(`${urlOf(mode)}/ws`, {
+      headers: {
+        host,
+        connection: 'Upgrade',
+        upgrade: 'websocket',
+        'sec-websocket-version': '13',
+        // The sample nonce of RFC 6455, §1.3 — any 16 bytes in base64 will do for the handshake.
+        'sec-websocket-key': Buffer.from('the sample nonce').toString('base64'),
+      },
+    });
+    request.on('upgrade', (response, socket) => {
+      socket.destroy();
+      resolve(response.statusCode ?? 0);
+    });
+    request.on('error', reject);
+    request.end();
+  });
+}
+
+describe.each([
+  // The tunnel sends the public host (plan 20, S-31…S-33).
+  ['public', PUBLIC_HOST],
+  // The phone, through `adb reverse`, and the browser send `localhost` (plan 10, S-91).
+  ['local', 'localhost:5173'],
+] as const)('the %s dev server', (mode, host) => {
+  it('forwards the API without its prefix, and moves the refresh cookie under it (S-32, S-91)', async () => {
+    const response = await through(mode, '/api/auth/refresh?x=1', host);
 
     expect(response.body).toBe('backend');
-    expect(seen.backend).toContain(`GET /auth/refresh?x=1 ${PUBLIC_HOST}`);
+    expect(seen.backend).toContain(`GET /auth/refresh?x=1 ${host}`);
     expect(String(response.headers['set-cookie'])).toContain('Path=/api/auth');
   });
 
-  it('upgrades the WebSocket on the backend (S-32)', async () => {
-    const upgraded = await new Promise<number>((resolve, reject) => {
-      const request = http.request(`${viteUrl}/ws`, {
-        headers: {
-          host: PUBLIC_HOST,
-          connection: 'Upgrade',
-          upgrade: 'websocket',
-          'sec-websocket-version': '13',
-          // The sample nonce of RFC 6455, §1.3 — any 16 bytes in base64 will do for the handshake.
-          'sec-websocket-key': Buffer.from('the sample nonce').toString('base64'),
-        },
-      });
-      request.on('upgrade', (response, socket) => {
-        socket.destroy();
-        resolve(response.statusCode ?? 0);
-      });
-      request.on('error', reject);
-      request.end();
-    });
+  it('upgrades the WebSocket on the backend (S-32, S-91)', async () => {
+    seen.backend.length = 0;
 
-    expect(upgraded).toBe(101);
+    expect(await upgrade(mode, host)).toBe(101);
     expect(seen.backend).toContain('UPGRADE /ws');
   });
 
-  it('forwards the realm and the theme files to the identity provider (S-32)', async () => {
-    expect((await through('/realms/remote-claude/.well-known/openid-configuration')).body).toBe(
-      'keycloak',
-    );
-    expect((await through('/resources/abc/login/keycloak.v2/css/styles.css')).body).toBe(
-      'keycloak',
+  it('forwards the realm and the theme files to the identity provider, Host untouched (S-32, S-91)', async () => {
+    seen.keycloak.length = 0;
+
+    expect(
+      (await through(mode, '/realms/remote-claude/.well-known/openid-configuration', host)).body,
+    ).toBe('keycloak');
+    expect(
+      (await through(mode, '/resources/abc/login/keycloak.v2/css/styles.css', host)).body,
+    ).toBe('keycloak');
+    // The provider writes the origin it was called through into `iss` (plan 10, B-25): the Host
+    // reaching it has to be the client's, never rewritten to the provider's own.
+    expect(seen.keycloak).toContain(
+      `GET /realms/remote-claude/.well-known/openid-configuration ${host}`,
     );
   });
 
-  it('keeps the admin console off the tunnel (S-31)', async () => {
-    const response = await through('/admin/master/console/');
+  it('keeps the admin console out (S-31, S-91)', async () => {
+    const response = await through(mode, '/admin/master/console/', host);
 
     expect(response.body).not.toBe('keycloak');
     expect(seen.keycloak.some((entry) => entry.includes('/admin'))).toBe(false);
   });
 
-  it('serves the app for everything else, on the public host and on localhost', async () => {
-    expect((await through('/')).body).toContain('<title>app</title>');
-    expect((await through('/', 'localhost')).status).toBe(200);
+  it('serves the app for everything else, on its host and on localhost', async () => {
+    expect((await through(mode, '/', host)).body).toContain('<title>app</title>');
+    expect((await through(mode, '/', 'localhost')).status).toBe(200);
   });
 
-  it('refuses a host that is neither the public one nor this machine (S-33)', async () => {
-    expect((await through('/', 'attacker.example')).status).toBe(403);
+  it('refuses a host that is neither its own nor this machine (S-33)', async () => {
+    expect((await through(mode, '/', 'attacker.example')).status).toBe(403);
+  });
+});
+
+describe('the local dev server', () => {
+  it('does not let the tunnel host in when there is no tunnel (D-02)', async () => {
+    expect((await through('local', '/', PUBLIC_HOST)).status).toBe(403);
   });
 });

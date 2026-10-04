@@ -34,7 +34,7 @@ import 'support/e2e_environment.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  final AppConfig config = e2eConfig();
+  final BuildConfig config = e2eConfig();
   final E2eScenario scenario = E2eScenario.named('vertical-ping');
 
   testWidgets('${scenario.id} — ${scenario.title}', (WidgetTester tester) async {

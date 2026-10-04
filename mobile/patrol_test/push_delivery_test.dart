@@ -33,9 +33,11 @@ import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/core/notifications/push_gateway.dart';
 import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/permission/permission.dart';
+import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 import '../integration_test/support/e2e_environment.dart';
+import '../integration_test/support/session_robot.dart';
 
 /// The "allow" button of the operating system's notification permission dialog, in `en`.
 final Selector allowButton = Selector(text: 'Allow');
@@ -44,7 +46,7 @@ final Selector allowButton = Selector(text: 'Allow');
 const String notificationTitle = 'Claude is waiting for you';
 
 void main() {
-  final AppConfig config = e2eConfig();
+  final BuildConfig config = e2eConfig();
   final E2eScenario scenario = E2eScenario.named('mobile-push');
 
   patrolTest('${scenario.id} — ${scenario.title}', ($) async {
@@ -56,7 +58,7 @@ void main() {
     // What `main.dart` also does before the first frame: the listener that closes the socket when
     // the app leaves the screen — which is what leaves nobody watching once it is in the pocket.
     final SocketLifecycle lifecycle = SocketLifecycle(
-      client: container.read(wsClientProvider),
+      client: () => currentSocket(container),
       logger: container.read(appLoggerProvider),
     );
     addTearDown(lifecycle.dispose);
@@ -87,8 +89,16 @@ void main() {
       return device != null && device.canDecide && device.pushEnabled;
     });
 
-    // A session of this phone, opened through the list.
-    final String sessionId = await sessionOpenedFromTheList(tester, container);
+    // A session of this phone, opened through the list: a draft, whose first prompt opens it
+    // (plan 10, D-05) — a turn that only answers, seen through before the phone goes away.
+    final String sessionId = await SessionRobot(
+      tester,
+      l10n,
+    ).startSession(container, 'do the work [fixture:text-turn]');
+    await pumpUntil(
+      tester,
+      () => container.read(liveSessionControllerProvider(sessionId)).conversation.lastTurn != null,
+    );
 
     // The phone goes back in the pocket: the socket closes, and nobody is watching any more.
     await $.platform.mobile.pressHome();

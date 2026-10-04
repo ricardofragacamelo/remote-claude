@@ -17,7 +17,7 @@ lugares novos.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-15 — A `AppBar`: título, status e histórico 🔲
+### B-15 — A `AppBar`: título, status e histórico ✅
 
 - **Status:** um `StatusChip` com cor **e** texto (conectado, reconectando, rodando, esperando você,
   encerrada), anunciado pelo `Semantics`. O texto de status do `_Header` de hoje sai: o estado do turno é
@@ -27,7 +27,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
   Voltar devolve a sessão com a rolagem e o texto da caixa.
 - A `ConnectionLine` deixa a `AppBar` e vai para a faixa da [B-07](F1-session-frame.md).
 
-### B-16 — O menu `⋯` 🔲
+### B-16 — O menu `⋯` ✅
 
 `SessionMenu`, uma folha de baixo com:
 
@@ -42,7 +42,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 No rascunho, o menu mostra só o que vale sem sessão (regras e ajuda). Os `IconButton` de desfazer e
 encerrar saem da `AppBar`.
 
-### B-17 — A ajuda da tela de sessão 🔲
+### B-17 — A ajuda da tela de sessão ✅
 
 Uma folha que descreve os lugares novos: a barra da caixa, o menu `⋯`, o status, o indicador na cauda, o
 card inline, a pílula, as tarefas e as ações da mensagem (pressionar e segurar). É a regra de "ajuda em

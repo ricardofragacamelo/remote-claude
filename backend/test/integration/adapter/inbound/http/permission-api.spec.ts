@@ -147,6 +147,7 @@ describe('the permission HTTP surface', () => {
       auto: false,
       resolvedBy: SUBJECT,
       resolvedFrom: 'web',
+      toolUseId: 'toolu-request-answered',
     });
   });
 

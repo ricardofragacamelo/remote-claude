@@ -11,14 +11,15 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-27
+**Última atualização:** 2026-10-04
 **Bloqueios:** nenhum em execução — as decisões D-01…D-07 precisam fechar antes de a F0 começar, e a F2 depende do [plano 06](../06-workbench/README.md) entregue
 
 ```
 F0 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 F1 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 F2 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
-F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
+F3 ████████████████████ 100%   ✅ concluída
+F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 ```
 
 ---
@@ -32,8 +33,9 @@ F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 | [F0](F0-contract.md) | B-01…B-04 | 0/4 | 🔲 |
 | [F1](F1-devices-backend.md) | B-05…B-15 | 0/11 | 🔲 |
 | [F2](F2-devices-screen.md) | B-16…B-23 | 0/8 | 🔲 |
-| [F3](F3-e2e.md) | B-24…B-28 | 0/5 | 🔲 |
-| **Total** | **B-01…B-28** | **0/28** | 🔲 |
+| [F3](F3-approval-push.md) | B-29…B-31 | 3/3 | ✅ |
+| [F4](F4-e2e.md) | B-24…B-28, B-32 | 0/6 | 🔲 |
+| **Total** | **B-01…B-32** | **3/32** | 🔄 |
 
 ---
 
@@ -41,7 +43,7 @@ F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 118 | 118 | 0 | 0 | 0 |
+| [Matriz](scenarios.md) | 132 | 119 | 0 | 13 | 0 |
 
 ---
 
@@ -52,7 +54,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 12 | 12 | 0 | 0 | 0 |
+| [Decisões](decisions.md) | 16 | 12 | 0 | 4 | 0 |
 
 ---
 
@@ -73,7 +75,8 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-10-04 | **O plano ganhou a F4 — o celular fica sabendo que foi aprovado**, antes da F0 (D-13): o push `deviceApproved` e o app que se atualiza ao ser aprovado. Quatro tarefas (B-29…B-32), 14 cenários (S-119…S-132), quatro decisões (D-13…D-16) | pedido do usuário: aprovou o celular no navegador e o celular não ficou sabendo | F4 nova, README (fases e rastreio), decisions, scenarios |
+| 2026-10-04 | **O E2E voltou a ser a última fase**: a fase do aviso de aprovação virou a F3, e o E2E, a F4, com a B-32 (o e2e do aviso) dentro dele | regra do usuário: o e2e é sempre a última fase; fase nova entra antes dele | F3-approval-push.md, F4-e2e.md, README, decisions, F1 (a referência ao caminho real) |
 
 ---
 

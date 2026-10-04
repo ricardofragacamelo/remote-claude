@@ -26,6 +26,7 @@ describe('processEnvironment', () => {
       'DATABASE_URL',
       'LOG_LEVEL',
       'NODE_ENV',
+      'OIDC_ADDITIONAL_ISSUERS',
       'OIDC_AUDIENCE',
       'OIDC_CLIENT_ID_MOBILE',
       'OIDC_CLIENT_ID_WEB',

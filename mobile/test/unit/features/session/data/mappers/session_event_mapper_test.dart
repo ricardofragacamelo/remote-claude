@@ -244,16 +244,16 @@ void main() {
     });
 
     test(
-      'plan 08 · thinking and a subagent are not the answer, and still move the resume point',
+      'S-09 · a subagent and a block kind this build does not know are unread, with the seq',
       () {
-        // The web panel folds thinking and nests a subagent (B-02); this app shows neither, and a
-        // thinking fragment read as the answer would put the model's reasoning in the reply.
-        final List<String> notTheAnswer = <String>[
+        // The web panel nests a subagent (B-02); this app does not, and its text read as the answer
+        // would interleave with it. A block kind added later reaches nothing either.
+        final List<String> notDrawn = <String>[
           frame(
             kind: 'event',
             type: 'message.delta',
             seq: 21,
-            payload: <String, Object?>{'messageId': 'm', 'delta': 'hm', 'blockType': 'thinking'},
+            payload: <String, Object?>{'messageId': 'm', 'delta': 'hm', 'blockType': 'hologram'},
           ),
           frame(
             kind: 'event',
@@ -274,7 +274,7 @@ void main() {
           ),
         ];
 
-        for (final String line in notTheAnswer) {
+        for (final String line in notDrawn) {
           final SessionEvent? event = read(line);
 
           expect(event, isA<UnreadEvent>(), reason: line);
@@ -282,6 +282,23 @@ void main() {
         }
       },
     );
+
+    test('S-08 · a fragment of thinking is thinking, with when it arrived — never the answer', () {
+      final SessionEvent? event = read(
+        thinkingDelta(messageId: 'm', delta: 'hm', seq: 22, ts: '2026-09-14T12:00:03.000Z'),
+      );
+
+      expect(
+        event,
+        const ThinkingFragment(22, messageId: 'm', delta: 'hm', at: '2026-09-14T12:00:03.000Z'),
+      );
+    });
+
+    test('the kind of a fragment is the answer when it says nothing', () {
+      expect(blockTypeOf(const <String, Object?>{}), 'text');
+      expect(blockTypeOf(const <String, Object?>{'blockType': 'thinking'}), 'thinking');
+      expect(blockTypeOf(const <String, Object?>{'blockType': 3}), 'text');
+    });
 
     test('plan 08 · a delta that names its block as text is the answer', () {
       final SessionEvent? event = read(
@@ -296,43 +313,119 @@ void main() {
       expect(event, isA<MessageFragment>());
     });
 
-    test('plan 08 · a finished message keeps its thinking out of the text', () {
-      final SessionEvent? event = read(
-        frame(
-          kind: 'event',
-          type: 'message.completed',
-          seq: 4,
-          payload: <String, Object?>{
-            'messageId': 'm',
-            'role': 'assistant',
-            'content': <Object?>[
+    test(
+      'S-08 · a finished message keeps its thinking out of the text, as thoughts of its own',
+      () {
+        final SessionEvent? event = read(
+          messageBlocks(
+            messageId: 'm',
+            seq: 4,
+            ts: '2026-09-14T12:00:09.000Z',
+            content: <Map<String, Object?>>[
               <String, Object?>{'type': 'thinking', 'thinking': 'let me see'},
               <String, Object?>{'type': 'redacted_thinking'},
+              <String, Object?>{'type': 'thinking'},
               <String, Object?>{'type': 'text', 'text': 'Done.'},
             ],
-          },
+          ),
+        );
+
+        final MessageFinished finished = event! as MessageFinished;
+        expect(finished.text, 'Done.');
+        expect(finished.thoughts, const <Thought>[
+          Thought('let me see'),
+          Thought('', isRedacted: true),
+          Thought(''),
+        ]);
+        expect(finished.at, '2026-09-14T12:00:09.000Z');
+      },
+    );
+
+    test('a block that calls a tool, or one of an unknown kind, is no text of the answer', () {
+      final SessionEvent? event = read(
+        messageBlocks(
+          messageId: 'm',
+          seq: 5,
+          content: <Map<String, Object?>>[
+            <String, Object?>{'type': 'tool_use', 'toolUseId': 't1', 'text': 'not this'},
+            <String, Object?>{'type': 'hologram', 'text': 'nor this'},
+          ],
         ),
       );
 
-      expect((event! as MessageFinished).text, 'Done.');
+      final MessageFinished finished = event! as MessageFinished;
+      expect(finished.text, isEmpty);
+      expect(finished.thoughts, isEmpty);
     });
 
-    test('plan 08 · the events of the panel are unread here, with their seq', () {
-      for (final (String type, Map<String, Object?> payload) in <(String, Map<String, Object?>)>[
-        ('session.compacted', <String, Object?>{'trigger': 'auto'}),
-        (
-          'prompt.queued',
-          <String, Object?>{'queueId': 'q', 'position': 1, 'promptedBy': 'u', 'preview': 'p'},
-        ),
-        ('prompt.dequeued', <String, Object?>{'queueId': 'q', 'reason': 'started'}),
-      ]) {
+    test('S-38 · the queue and the compaction are read with their seq', () {
+      expect(
+        read(promptQueued(queueId: 'q', seq: 30, preview: 'p', promptedBy: 'web')),
+        const PromptQueued(30, QueuedPrompt(queueId: 'q', promptedBy: 'web', preview: 'p')),
+      );
+      expect(read(promptDequeued(queueId: 'q', seq: 31)), const PromptDequeued(31, queueId: 'q'));
+      expect(
+        read(sessionCompacted(seq: 32, preTokens: 120000)),
+        const ContextCompacted(32, trigger: 'manual', preTokens: 120000),
+      );
+    });
+
+    test(
+      'a queue entry with only its id reads with empty words, and a bare compaction as automatic',
+      () {
+        expect(
+          read(
+            frame(
+              kind: 'event',
+              type: 'prompt.queued',
+              seq: 1,
+              payload: <String, Object?>{'queueId': 'q'},
+            ),
+          ),
+          const PromptQueued(1, QueuedPrompt(queueId: 'q', promptedBy: '', preview: '')),
+        );
+        expect(
+          read(
+            frame(
+              kind: 'event',
+              type: 'session.compacted',
+              seq: 2,
+              payload: <String, Object?>{'preTokens': 'many'},
+            ),
+          ),
+          const ContextCompacted(2, trigger: 'auto'),
+        );
+      },
+    );
+
+    test('a queue event that names no prompt is unread, with its seq', () {
+      for (final String type in <String>['prompt.queued', 'prompt.dequeued']) {
         final SessionEvent? event = read(
-          frame(kind: 'event', type: type, seq: 30, payload: payload),
+          frame(kind: 'event', type: type, seq: 33, payload: <String, Object?>{}),
         );
 
         expect(event, isA<UnreadEvent>(), reason: type);
-        expect(event!.seq, 30, reason: type);
+        expect(event!.seq, 33);
       }
+    });
+
+    test('S-22 · a session opening says what it started with and which command opened it', () {
+      final SessionOpened opened =
+          read(
+                sessionStarted(
+                  sessionId: 's',
+                  model: 'sonnet',
+                  permissionMode: 'plan',
+                  correlationId: 'cmd-7',
+                  workspacePath: '/home/someone/project',
+                ),
+              )!
+              as SessionOpened;
+
+      expect(opened.model, 'sonnet');
+      expect(opened.permissionMode, 'plan');
+      expect(opened.commandId, 'cmd-7');
+      expect(opened.workspacePath, '/home/someone/project');
     });
 
     test('a frame with no seq is not part of the history at all', () {
@@ -423,6 +516,28 @@ void main() {
       expect(
         historyEventFrom(historyEntry(sessionRewound(seq: 3, payload: rewoundPayload()))),
         FilesRewound(historySeq, anOutcome()),
+      );
+    });
+  });
+
+  group('plan 10, F4', () {
+    test('B-18 · a status carries when it happened — what a turn is timed from', () {
+      expect(
+        read(sessionStatusChanged(status: 'thinking', seq: 3, ts: '2026-09-14T12:00:05.000Z')),
+        const SessionStatusReported(3, SessionStatus.thinking, at: '2026-09-14T12:00:05.000Z'),
+      );
+    });
+
+    test('B-23 · a tool of a subagent says so; a task call ends with its task', () {
+      final SessionEvent? started = read(
+        toolStarted(toolUseId: 't1', seq: 1, toolName: 'TaskCreate', parentToolUseId: 'task-0'),
+      );
+      expect((started! as ToolInvoked).isSubagent, isTrue);
+      expect((read(toolStarted(toolUseId: 't2', seq: 2))! as ToolInvoked).isSubagent, isFalse);
+
+      expect(
+        read(toolCompleted(toolUseId: 't1', seq: 3, taskId: '7')),
+        const ToolFinished(3, toolUseId: 't1', status: ToolStatus.succeeded, taskId: '7'),
       );
     });
   });

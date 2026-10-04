@@ -92,11 +92,13 @@ describe('permission rules', () => {
       await ask();
 
       expect(harness.broadcaster.frames.map((entry) => entry.kind)).toEqual(['event']);
+      // The tool it was about, so the screen says the rule answered on that tool's line (10 · B-20).
       expect(harness.broadcaster.last('permission.resolved')).toEqual({
         requestId: 'request-1',
         decision: 'allow',
         auto: true,
         resolvedBy: PERMISSION_OWNER.value,
+        toolUseId: 'toolu-1',
       });
       // `requested` is what the push listens to: nothing was asked, so nobody is notified.
       expect(harness.events.askedIds).toEqual([]);

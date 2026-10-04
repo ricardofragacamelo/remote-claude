@@ -137,6 +137,9 @@ PermissionOutcome? permissionOutcomeFrom(Map<String, Object?> payload) {
       'mobile' => AnswerOrigin.mobile,
       _ => AnswerOrigin.unknown,
     },
+    // The tool it was about: a request a rule settled was never asked here, and this is how the line
+    // of its tool still says so (plan 10, B-20).
+    toolUseId: wireText(payload, 'toolUseId'),
   );
 }
 

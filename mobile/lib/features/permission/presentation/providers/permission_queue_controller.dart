@@ -83,11 +83,15 @@ class PermissionQueueController extends _$PermissionQueueController {
   ///
   /// [lockReason] is what the system prompt says, already translated — the controller has no
   /// catalogue, and the prompt is shown by the operating system rather than by a widget.
+  ///
+  /// [reason] is what a refusal tells Claude — what to change in a plan, say. Without one, the
+  /// refusal says it came from the phone.
   Future<AnswerResult> answer(
     String requestId,
     PermissionDecision decision,
     PermissionScope scope, {
     required String lockReason,
+    String? reason,
   }) async {
     switch (state.stepFor(requestId, decision, scope)) {
       case AnswerStep.ignored:
@@ -108,7 +112,7 @@ class PermissionQueueController extends _$PermissionQueueController {
         ? await _unlock(requestId, lockReason)
         : null;
 
-    return stopped ?? _send(requestId, decision, scope);
+    return stopped ?? _send(requestId, decision, scope, reason);
   }
 
   /// Asks the owner of the phone to confirm it is them, before a yes on [requestId] leaves.
@@ -134,7 +138,12 @@ class PermissionQueueController extends _$PermissionQueueController {
   }
 
   /// Sends [decision] on [requestId] to the frame the request is on **now**.
-  AnswerResult _send(String requestId, PermissionDecision decision, PermissionScope scope) {
+  AnswerResult _send(
+    String requestId,
+    PermissionDecision decision,
+    PermissionScope scope,
+    String? reason,
+  ) {
     // Read again after the prompt: the request may have been answered elsewhere while the owner
     // was touching the sensor, and a reconnect may have re-delivered it under another frame.
     final String? frameId = state.cardOf(requestId)?.frameId;
@@ -148,7 +157,9 @@ class PermissionQueueController extends _$PermissionQueueController {
           requestId: requestId,
           decision: decision,
           scope: scope,
-          reason: decision == PermissionDecision.deny ? refusedFromThePhone : null,
+          reason: decision == PermissionDecision.deny
+              ? (reason == null || reason.trim().isEmpty ? refusedFromThePhone : reason.trim())
+              : null,
         ) ??
         false;
 

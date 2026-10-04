@@ -21,6 +21,7 @@ import 'package:remote_claude/features/permission/domain/entities/permission_req
 import 'package:remote_claude/features/permission/presentation/providers/permission_lookup_controller.dart';
 import 'package:remote_claude/features/permission/presentation/providers/permission_queue_controller.dart';
 import 'package:remote_claude/features/permission/presentation/widgets/permission_card_view.dart';
+import 'package:remote_claude/features/permission/presentation/widgets/plan_approval_card.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// One open request of [sessionId], answerable from here.
@@ -30,11 +31,16 @@ class PermissionPanel extends ConsumerStatefulWidget {
     required this.card,
     required this.now,
     super.key,
+    this.onPlanApproved,
   });
 
   final String sessionId;
   final PermissionCard card;
   final DateTime now;
+
+  /// A plan was approved and its answer left: the session goes on in [mode] — the screen changes the
+  /// chip of the mode in the same gesture (plan 10, B-21).
+  final void Function(String mode)? onPlanApproved;
 
   @override
   ConsumerState<PermissionPanel> createState() => _PermissionPanelState();
@@ -69,44 +75,77 @@ class _PermissionPanelState extends ConsumerState<PermissionPanel> {
         ? AnswerBlock.connecting
         : null;
 
+    final String? notice = switch (_last) {
+      AnswerResult.lockRefused => l10n.permissionLockRefused,
+      AnswerResult.notSent => l10n.permissionNotSent,
+      AnswerResult.noLock when widget.card.request.toolName == planTool =>
+        l10n.permissionNoLockTitle,
+      _ => null,
+    };
+
+    if (widget.card.request.toolName == planTool) {
+      return PlanApprovalCard(
+        card: widget.card,
+        now: widget.now,
+        block: block,
+        notice: notice,
+        onApprove: (String mode) => unawaited(_approvePlan(l10n, mode)),
+        onKeepPlanning: (String comment) => unawaited(
+          _answer(l10n, PermissionDecision.deny, PermissionScope.once, reason: comment),
+        ),
+        onExtend: _extend,
+      );
+    }
+
     return PermissionCardView(
       card: widget.card,
       now: widget.now,
       block: block,
       canApprove: hasLock && _last != AnswerResult.noLock,
-      notice: switch (_last) {
-        AnswerResult.lockRefused => l10n.permissionLockRefused,
-        AnswerResult.notSent => l10n.permissionNotSent,
-        _ => null,
-      },
+      notice: notice,
       onAnswer: (PermissionDecision decision, PermissionScope scope) =>
-          _answer(l10n, decision, scope),
+          unawaited(_answer(l10n, decision, scope)),
       onDisarm: () => _controller().disarm(widget.card.requestId),
       // Pushed, not gone to: "back" from the rules lands on the question that is still open.
       onOpenRules: () => unawaited(context.push(rulesRoute)),
-      onExtend: () {
-        if (!_controller().extend(widget.card.requestId)) {
-          setState(() => _last = AnswerResult.notSent);
-        }
-      },
+      onExtend: _extend,
     );
   }
 
-  Future<void> _answer(
+  void _extend() {
+    if (!_controller().extend(widget.card.requestId)) {
+      setState(() => _last = AnswerResult.notSent);
+    }
+  }
+
+  /// Approves the plan, and — once the yes left — goes on in [mode].
+  Future<void> _approvePlan(AppLocalizations l10n, String mode) async {
+    final AnswerResult result = await _answer(l10n, PermissionDecision.allow, PermissionScope.once);
+
+    if (result == AnswerResult.sent) {
+      widget.onPlanApproved?.call(mode);
+    }
+  }
+
+  Future<AnswerResult> _answer(
     AppLocalizations l10n,
     PermissionDecision decision,
-    PermissionScope scope,
-  ) async {
+    PermissionScope scope, {
+    String? reason,
+  }) async {
     final AnswerResult result = await _controller().answer(
       widget.card.requestId,
       decision,
       scope,
       lockReason: l10n.permissionLockReason,
+      reason: reason,
     );
 
     if (mounted) {
       setState(() => _last = result);
     }
+
+    return result;
   }
 
   PermissionQueueController _controller() =>

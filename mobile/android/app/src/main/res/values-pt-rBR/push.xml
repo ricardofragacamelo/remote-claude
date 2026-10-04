@@ -2,4 +2,6 @@
 <resources>
     <string name="push_channel_name">Pedidos de permissão</string>
     <string name="push_channel_description">O Claude está esperando você aprovar ou negar uma tool.</string>
+    <string name="device_channel_name">Estado do aparelho</string>
+    <string name="device_channel_description">Se este celular pode responder aos pedidos do Claude.</string>
 </resources>

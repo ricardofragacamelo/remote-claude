@@ -6,6 +6,7 @@ import {
   MarkNotificationsReadUseCase,
   NOTIFICATION_HISTORY_REPOSITORY,
   NotificationRegistry,
+  NotifyDeviceApprovedUseCase,
   NotifyPermissionUseCase,
   PurgeNotificationsUseCase,
   PUSH_AUDIENCE,
@@ -31,6 +32,7 @@ import {
   CancelOnPermissionResolved,
   NotifyOnPermissionRequested,
 } from '@adapter/outbound/notification/permission-notification.listeners';
+import { NotifyOnDeviceApproved } from '@adapter/outbound/notification/device-notification.listener';
 import { RegistryPushAudience } from '@adapter/outbound/notification/registry-push.audience';
 import { RepositoryPushTokenRegistry } from '@adapter/outbound/notification/repository-push-token.registry';
 import { HttpPushSender } from '@adapter/outbound/push/http-push.adapter';
@@ -136,8 +138,15 @@ import { WebsocketModule } from './websocket.module';
           permissionMessage(target, command),
         ),
     },
+    {
+      provide: NotifyDeviceApprovedUseCase,
+      inject: [PUSH_SENDER, PUSH_TOKEN_REGISTRY],
+      useFactory: (sender: PushSender, tokens: PushTokenRegistry) =>
+        new NotifyDeviceApprovedUseCase(sender, tokens),
+    },
     NotifyOnPermissionRequested,
     CancelOnPermissionResolved,
+    NotifyOnDeviceApproved,
   ],
 })
 export class NotificationModule {}

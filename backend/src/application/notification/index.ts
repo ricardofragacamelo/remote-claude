@@ -1,5 +1,7 @@
 /** Public surface of the `notification` use cases. */
 export { NotificationRegistry } from './notification-registry';
+export { NotifyDeviceApprovedUseCase } from './notify-device-approved.use-case';
+export type { DeviceApprovedOutcome } from './notify-device-approved.use-case';
 export { NotifyPermissionUseCase } from './notify-permission.use-case';
 export type { NotifyOutcome, NotifyPermissionCommand } from './notify-permission.use-case';
 export type { PushAudience } from './ports/push-audience.port';

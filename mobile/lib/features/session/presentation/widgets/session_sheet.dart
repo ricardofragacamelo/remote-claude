@@ -70,12 +70,27 @@ class SessionSheet extends StatelessWidget {
 
 /// The name of one group inside a sheet, announced as a heading.
 class SheetHeading extends StatelessWidget {
-  const SheetHeading(this.text, {super.key});
+  const SheetHeading(this.text, {super.key, this.large = false, this.padding = EdgeInsets.zero});
 
   /// Already translated.
   final String text;
 
+  /// The title of the whole sheet, rather than of one of its groups.
+  final bool large;
+
+  /// Room around it, where the sheet puts it.
+  final EdgeInsetsGeometry padding;
+
   @override
-  Widget build(BuildContext context) =>
-      Semantics(header: true, child: Text(text, style: Theme.of(context).textTheme.titleSmall));
+  Widget build(BuildContext context) {
+    final TextTheme theme = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: padding,
+      child: Semantics(
+        header: true,
+        child: Text(text, style: large ? theme.titleLarge : theme.titleSmall),
+      ),
+    );
+  }
 }

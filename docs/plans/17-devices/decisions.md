@@ -248,7 +248,18 @@ linha no progresso daquele plano, não uma reabertura deste.
 
 ---
 
-## F3 — E2E
+## F3 — O celular fica sabendo que foi aprovado
+
+Nasceram em 2026-10-04, quando o usuário aprovou o celular no navegador e o celular não ficou sabendo.
+
+| ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
+|---|---|---|---|---|---|
+| D-13 | A F3 começa antes da F0 | a ordem das fases é dependência; a F3 não depende de nada da F0…F2 | F3 | **2026-10-04 — começa já**, pedido do usuário. Exceção declarada à ordem, porque nada da F3 usa o contrato, o banco ou a tela das outras fases | ✅ |
+| D-14 | Push visível ou silencioso, e o app antigo | um kind novo num app antigo (R-06): em segundo plano o Android mostra o bloco `notification` sozinho; em primeiro plano o app antigo descarta o que não tem `sessionId`/`requestId` | B-29, B-30 | **2026-10-04 — visível, com bloco `notification`**, decisão do usuário com a recomendação ("push + atualização viva"). O app antigo em segundo plano mostra a frase certa e o toque só abre o app; em primeiro plano, descarta, e a volta ao primeiro plano (D-16) cobre. Por isso a D-06 (versão mínima) não se aplica a este kind | ✅ |
+| D-15 | Quantas tentativas, e por onde | o `PushDispatcher` é de pedidos: chave, prazo e retentativas pensadas para um `requestId` | B-29 | **2026-10-04 — uma tentativa, pelo `PushSender`**, tomada pelo agente: o aviso é conveniência — a volta ao primeiro plano é a rede de segurança — e um aviso que chega minutos depois, por retentativa, só confunde | ✅ |
+| D-16 | O que atualiza o app sem push | aberto e pendente, nada pergunta de novo ao servidor | B-30 | **2026-10-04 — voltar ao primeiro plano confere**, decisão do usuário com a recomendação, só enquanto o aparelho está pendente. Sem polling em primeiro plano | ✅ |
+
+## F4 — E2E
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|

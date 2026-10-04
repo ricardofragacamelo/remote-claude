@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   BRACE,
   MUSTACHE,
+  asBraces,
   compareCatalogues,
+  compareShared,
   emittedMessageKeys,
   findMissingHelp,
   findOrphans,
@@ -346,5 +348,158 @@ describe('the help of a screen frame — plan 06, S-94', () => {
     expect(compareCatalogues([en, ptBR], MUSTACHE)).toEqual([
       { kind: 'missing', key: 'audit.help.what', detail: 'absent from pt-BR' },
     ]);
+  });
+});
+
+describe('the texts the web and the app both show — plan 10, B-03', () => {
+  const locales = [
+    { web: 'en', app: 'en' },
+    { web: 'pt-BR', app: 'pt' },
+  ];
+  const verbs = Array.from({ length: 20 }, (_, index) => `verb${String(index)}`);
+
+  /** @param {(verb: string) => string} text */
+  function webOf(text) {
+    return Object.fromEntries(verbs.map((verb) => [`sessions.workingVerb.${verb}`, text(verb)]));
+  }
+
+  /** @param {(verb: string) => string} text */
+  function appOf(text) {
+    return Object.fromEntries(verbs.map((verb) => [`sessionWorkingVerb${verb}`, text(verb)]));
+  }
+
+  const map = Object.fromEntries(
+    verbs.map((verb) => [`sessions.workingVerb.${verb}`, `sessionWorkingVerb${verb}`]),
+  );
+
+  it('reads the mustache form as the brace form, so a placeholder is not a difference', () => {
+    expect(asBraces('Thought for {{seconds}} s')).toBe('Thought for {seconds} s');
+    expect(asBraces('Thought for {{ seconds }} s')).toBe('Thought for {seconds} s');
+    expect(asBraces('no placeholder')).toBe('no placeholder');
+  });
+
+  it('S-04 · the whole map, the same on both ends and in both languages, passes', () => {
+    expect(
+      compareShared(
+        [
+          catalogue(
+            'en',
+            webOf((verb) => `${verb}…`),
+          ),
+          catalogue(
+            'pt-BR',
+            webOf((verb) => `${verb}!`),
+          ),
+        ],
+        [
+          catalogue(
+            'en',
+            appOf((verb) => `${verb}…`),
+          ),
+          catalogue(
+            'pt',
+            appOf((verb) => `${verb}!`),
+          ),
+        ],
+        map,
+        locales,
+      ),
+    ).toEqual([]);
+  });
+
+  it('S-04 · the twentieth verb on the web and missing in the app fails, in each language', () => {
+    const app = appOf((verb) => `${verb}…`);
+    delete app['sessionWorkingVerbverb19'];
+
+    const problems = compareShared(
+      [
+        catalogue(
+          'en',
+          webOf((verb) => `${verb}…`),
+        ),
+        catalogue(
+          'pt-BR',
+          webOf((verb) => `${verb}…`),
+        ),
+      ],
+      [catalogue('en', app), catalogue('pt', app)],
+      map,
+      locales,
+    );
+
+    expect(problems).toEqual([
+      {
+        kind: 'shared',
+        key: 'sessions.workingVerb.verb19 ↔ sessionWorkingVerbverb19',
+        detail: 'app en has no such key',
+      },
+      {
+        kind: 'shared',
+        key: 'sessions.workingVerb.verb19 ↔ sessionWorkingVerbverb19',
+        detail: 'app pt has no such key',
+      },
+    ]);
+  });
+
+  it('a key of the map the web lacks fails too', () => {
+    const problems = compareShared(
+      [catalogue('en', {})],
+      [catalogue('en', { thinkingLive: 'Thinking…' })],
+      { 'sessions.thinking.live': 'thinkingLive' },
+      [{ web: 'en', app: 'en' }],
+    );
+
+    expect(problems).toEqual([
+      {
+        kind: 'shared',
+        key: 'sessions.thinking.live ↔ thinkingLive',
+        detail: 'web en has no such key',
+      },
+    ]);
+  });
+
+  it('S-03 · a text that differs in pt-BR fails, naming both keys and both texts', () => {
+    const problems = compareShared(
+      [
+        catalogue('en', { 'sessions.thinking.took': 'Thought for {{seconds}} s' }),
+        catalogue('pt-BR', { 'sessions.thinking.took': 'Pensou por {{seconds}} s' }),
+      ],
+      [
+        catalogue('en', { thinkingTook: 'Thought for {seconds} s' }),
+        catalogue('pt', { thinkingTook: 'Pensou durante {seconds} s' }),
+      ],
+      { 'sessions.thinking.took': 'thinkingTook' },
+      locales,
+    );
+
+    expect(problems).toEqual([
+      {
+        kind: 'shared',
+        key: 'sessions.thinking.took ↔ thinkingTook',
+        detail: 'pt-BR "Pensou por {{seconds}} s" ≠ pt "Pensou durante {seconds} s"',
+      },
+    ]);
+  });
+
+  it('S-03 · a text that differs in en fails as well, and a locale nobody declared is not read', () => {
+    const problems = compareShared(
+      [catalogue('en', { 'session.composer.send': 'Send' }), catalogue('fr', {})],
+      [catalogue('en', { sessionPromptAction: 'Submit' })],
+      { 'session.composer.send': 'sessionPromptAction' },
+      [{ web: 'en', app: 'en' }],
+    );
+
+    expect(problems.map((problem) => problem.detail)).toEqual(['en "Send" ≠ en "Submit"']);
+  });
+
+  it('a language one family does not carry at all fails every pair of the map', () => {
+    const problems = compareShared(
+      [catalogue('en', { 'sessions.thinking.done': 'Thought' })],
+      [catalogue('en', { thinkingDone: 'Thought' })],
+      { 'sessions.thinking.done': 'thinkingDone' },
+      [{ web: 'de', app: 'de' }],
+    );
+
+    expect(problems.map((problem) => problem.detail)).toEqual(['web de has no such key']);
   });
 });

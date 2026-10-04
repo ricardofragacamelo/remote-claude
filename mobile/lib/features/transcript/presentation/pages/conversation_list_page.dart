@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/date_and_time.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/failure_line.dart';
 import 'package:remote_claude/core/widgets/loaded_view.dart';
@@ -101,8 +102,6 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final MaterialLocalizations dates = MaterialLocalizations.of(context);
-    final DateTime at = conversation.lastModified.toLocal();
     final String? branch = conversation.gitBranch;
     final bool isOurs = conversation.origin == ConversationOrigin.ours;
 
@@ -114,11 +113,7 @@ class _Row extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(isOurs ? l10n.historyOriginOurs : l10n.historyOriginExternal),
-          Text(
-            l10n.historyLastActive(
-              '${dates.formatMediumDate(at)} ${dates.formatTimeOfDay(TimeOfDay.fromDateTime(at))}',
-            ),
-          ),
+          Text(l10n.historyLastActive(dateAndTime(context, conversation.lastModified))),
           if (branch != null) Text(l10n.historyBranch(branch), style: identifierStyle(context)),
         ],
       ),

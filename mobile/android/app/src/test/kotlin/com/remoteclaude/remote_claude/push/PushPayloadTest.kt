@@ -74,4 +74,32 @@ class PushPayloadTest {
         assertEquals("none", PushPayload.tail(""))
         assertEquals("none", PushPayload.tail(null))
     }
+
+    // Plan 17, F3 · S-126: the approval carries the device, and nothing a request carries.
+    private val approval = mapOf("kind" to "deviceApproved", "deviceId" to "dev_1")
+
+    @Test
+    fun `keeps the kind and the device of an approval, and nothing else`() {
+        assertEquals(approval, PushPayload.of(approval + mapOf("requestId" to "r-1", "from" to "123")))
+        assertTrue(PushPayload.isDeviceApproved(approval))
+        assertFalse(PushPayload.isWithdrawal(approval))
+    }
+
+    @Test
+    fun `an approval without its device is not a payload`() {
+        assertNull(PushPayload.of(mapOf("kind" to "deviceApproved")))
+        assertNull(PushPayload.of(approval + ("deviceId" to " ")))
+    }
+
+    @Test
+    fun `a request still needs its three keys, even next to a device`() {
+        assertNull(PushPayload.of(mapOf("kind" to "permissionRequested", "deviceId" to "dev_1")))
+        assertFalse(PushPayload.isDeviceApproved(complete))
+    }
+
+    @Test
+    fun `an approval is tagged by its device, as the backend tags it`() {
+        assertEquals("device:dev_1", PushPayload.tagOf(approval))
+        assertEquals("r-1", PushPayload.tagOf(complete))
+    }
 }

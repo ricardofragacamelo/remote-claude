@@ -61,11 +61,11 @@ describe('pubspecVersion', () => {
 });
 
 describe('localDefines', () => {
-  it('points the app at the stack the .env describes — every value the app requires', () => {
-    expect(definesOf({ ...OIDC, RC_BACKEND_PORT: '3100' })).toEqual({
-      RC_API_URL: 'http://localhost:3100',
-      RC_WS_URL: 'ws://localhost:3100/ws',
-      RC_OIDC_ISSUER: OIDC.OIDC_ISSUER,
+  it('S-92 · points the app at one origin — the web server — and the realm path, nothing else', () => {
+    expect(definesOf({ ...OIDC, RC_WEB_PORT: '5273' })).toEqual({
+      RC_INTERNAL_URL: 'http://localhost:5273',
+      RC_EXTERNAL_URL: '',
+      RC_OIDC_REALM_PATH: '/realms/remote-claude',
       RC_OIDC_CLIENT_ID: 'remote-claude-mobile',
       RC_OIDC_SCOPES: 'openid profile email offline_access',
       RC_OIDC_REDIRECT_URL: MOBILE_REDIRECT_URL,
@@ -73,24 +73,45 @@ describe('localDefines', () => {
     });
   });
 
-  it('uses the fixed backend port when the .env leaves it unset or empty', () => {
-    expect(definesOf(OIDC)['RC_API_URL']).toBe('http://localhost:3000');
-    expect(definesOf({ ...OIDC, RC_BACKEND_PORT: ' ' })['RC_API_URL']).toBe(
-      'http://localhost:3000',
+  it('S-92 · no API, socket or issuer of its own any more: they derive from the origin', () => {
+    const defines = definesOf(OIDC);
+
+    expect(Object.keys(defines)).not.toContain('RC_API_URL');
+    expect(Object.keys(defines)).not.toContain('RC_WS_URL');
+    expect(Object.keys(defines)).not.toContain('RC_OIDC_ISSUER');
+  });
+
+  it('uses the fixed web port when the .env leaves it unset or empty', () => {
+    expect(definesOf(OIDC)['RC_INTERNAL_URL']).toBe('http://localhost:5173');
+    expect(definesOf({ ...OIDC, RC_WEB_PORT: ' ' })['RC_INTERNAL_URL']).toBe(
+      'http://localhost:5173',
     );
   });
 
-  it('keeps the issuer byte for byte — the token is checked against it', () => {
-    const issuer = 'http://localhost:8180/realms/remote-claude';
+  it('takes the addresses the .env names, as they are written', () => {
+    const defines = definesOf({
+      ...OIDC,
+      RC_INTERNAL_URL: ' https://claude.lan ',
+      RC_EXTERNAL_URL: 'https://claude.example.dev',
+    });
 
-    expect(definesOf({ ...OIDC, OIDC_ISSUER: `  ${issuer}  ` })['RC_OIDC_ISSUER']).toBe(issuer);
+    expect(defines['RC_INTERNAL_URL']).toBe('https://claude.lan');
+    expect(defines['RC_EXTERNAL_URL']).toBe('https://claude.example.dev');
+  });
+
+  it('reads the realm path off the issuer, without a trailing slash', () => {
+    expect(
+      definesOf({ ...OIDC, OIDC_ISSUER: '  http://localhost:8180/realms/other/  ' })[
+        'RC_OIDC_REALM_PATH'
+      ],
+    ).toBe('/realms/other');
   });
 
   it('names every missing variable at once', () => {
     expect(problemsOf({})).toEqual([
-      'OIDC_ISSUER is not set in the .env',
       'OIDC_CLIENT_ID_MOBILE is not set in the .env',
       'OIDC_SCOPES is not set in the .env',
+      'OIDC_ISSUER is not set in the .env',
     ]);
   });
 
@@ -106,43 +127,46 @@ describe('localDefines', () => {
     ]);
   });
 
-  it('refuses a backend port that is not a port, alongside the other problems', () => {
-    expect(problemsOf({ RC_BACKEND_PORT: '70000', OIDC_ISSUER: OIDC.OIDC_ISSUER })).toEqual([
+  it('refuses a port that is not a port, alongside the other problems', () => {
+    expect(problemsOf({ RC_WEB_PORT: '70000', OIDC_ISSUER: OIDC.OIDC_ISSUER })).toEqual([
       'OIDC_CLIENT_ID_MOBILE is not set in the .env',
       'OIDC_SCOPES is not set in the .env',
-      'RC_BACKEND_PORT="70000" is not a valid TCP port',
+      'RC_WEB_PORT="70000" is not a valid TCP port',
     ]);
   });
 });
 
 describe('forwardedPorts', () => {
-  it('forwards the API port and the issuer port, in that order', () => {
-    expect(forwardedPorts(definesOf({ ...OIDC, RC_BACKEND_PORT: '3100' }))).toEqual([3100, 8180]);
+  it('S-92 · forwards the port of the web server the app talks through', () => {
+    expect(forwardedPorts(definesOf({ ...OIDC, RC_WEB_PORT: '5273' }))).toEqual([5273]);
   });
 
-  it('forwards a port once when both share it', () => {
-    const defines = definesOf({ ...OIDC, OIDC_ISSUER: 'http://127.0.0.1:3000/realms/x' });
-
-    expect(forwardedPorts(defines)).toEqual([3000]);
+  it('forwards a port once when both addresses share it', () => {
+    expect(
+      forwardedPorts({
+        RC_INTERNAL_URL: 'http://localhost:5173',
+        RC_EXTERNAL_URL: 'http://127.0.0.1:5173',
+      }),
+    ).toEqual([5173]);
   });
 
-  it('leaves an issuer on another machine to be reached directly', () => {
-    const defines = definesOf({ ...OIDC, OIDC_ISSUER: 'https://id.example.com/realms/x' });
+  it('leaves an address on another machine to be reached directly', () => {
+    const defines = definesOf({ ...OIDC, RC_EXTERNAL_URL: 'https://claude.example.dev' });
 
-    expect(forwardedPorts(defines)).toEqual([3000]);
+    expect(forwardedPorts(defines)).toEqual([5173]);
   });
 
-  it('uses the scheme default when the issuer names no port', () => {
-    expect(forwardedPorts({ RC_OIDC_ISSUER: 'http://localhost/realms/x' })).toEqual([80]);
-    expect(forwardedPorts({ RC_OIDC_ISSUER: 'https://localhost/realms/x' })).toEqual([443]);
+  it('uses the scheme default when the address names no port', () => {
+    expect(forwardedPorts({ RC_INTERNAL_URL: 'http://localhost' })).toEqual([80]);
+    expect(forwardedPorts({ RC_INTERNAL_URL: 'https://localhost' })).toEqual([443]);
   });
 
   it('forwards the IPv6 loopback too', () => {
-    expect(forwardedPorts({ RC_API_URL: 'http://[::1]:3001' })).toEqual([3001]);
+    expect(forwardedPorts({ RC_INTERNAL_URL: 'http://[::1]:3001' })).toEqual([3001]);
   });
 
   it('answers nothing for values that are absent or not URLs', () => {
-    expect(forwardedPorts({ RC_API_URL: 'nope' })).toEqual([]);
+    expect(forwardedPorts({ RC_INTERNAL_URL: 'nope', RC_EXTERNAL_URL: '' })).toEqual([]);
   });
 });
 

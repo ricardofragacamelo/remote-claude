@@ -3,6 +3,7 @@
 /// Same reason as the auth feature's — see `auth_providers.dart`.
 library;
 
+import 'package:remote_claude/core/logging/logger_provider.dart';
 import 'package:remote_claude/core/network/api_client_provider.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/features/session/data/datasources/history_api_data_source.dart';
@@ -11,16 +12,22 @@ import 'package:remote_claude/features/session/data/datasources/session_ws_data_
 import 'package:remote_claude/features/session/data/repositories/checkpoint_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/command_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/history_repository_impl.dart';
+import 'package:remote_claude/features/session/data/repositories/insight_repository_impl.dart';
+import 'package:remote_claude/features/session/data/repositories/live_session_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/session_repository_impl.dart';
 import 'package:remote_claude/features/session/domain/repositories/checkpoint_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/command_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/history_repository.dart';
+import 'package:remote_claude/features/session/domain/repositories/insight_repository.dart';
+import 'package:remote_claude/features/session/domain/repositories/live_session_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/session_repository.dart';
 import 'package:remote_claude/features/session/domain/usecases/drive_session.dart';
 import 'package:remote_claude/features/session/domain/usecases/list_checkpoints.dart';
 import 'package:remote_claude/features/session/domain/usecases/list_commands.dart';
+import 'package:remote_claude/features/session/domain/usecases/list_live_sessions.dart';
 import 'package:remote_claude/features/session/domain/usecases/ping_session.dart';
 import 'package:remote_claude/features/session/domain/usecases/read_history.dart';
+import 'package:remote_claude/features/session/domain/usecases/read_insight.dart';
 import 'package:remote_claude/features/session/domain/usecases/watch_session.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -29,7 +36,10 @@ part 'session_providers.g.dart';
 /// The session's edge of the socket.
 @Riverpod(keepAlive: true)
 SessionWsDataSource sessionWsDataSource(Ref ref) {
-  final SessionWsDataSource source = SessionWsDataSource(ref.watch(wsClientProvider));
+  final SessionWsDataSource source = SessionWsDataSource(
+    ref.watch(wsClientProvider),
+    logger: ref.watch(appLoggerProvider),
+  );
   ref.onDispose(source.dispose);
   return source;
 }
@@ -88,3 +98,22 @@ CheckpointRepository checkpointRepository(Ref ref) =>
 @Riverpod(keepAlive: true)
 ListCheckpoints listCheckpoints(Ref ref) =>
     ListCheckpoints(ref.watch(checkpointRepositoryProvider));
+
+/// The insight repository: the catalogue, the models and the context.
+@Riverpod(keepAlive: true)
+InsightRepository insightRepository(Ref ref) =>
+    InsightRepositoryImpl(ref.watch(sessionApiDataSourceProvider));
+
+/// Reads the catalogue of a folder, and the models and context of a session.
+@Riverpod(keepAlive: true)
+ReadInsight readInsight(Ref ref) => ReadInsight(ref.watch(insightRepositoryProvider));
+
+/// The live sessions of a folder (plan 10, F8).
+@Riverpod(keepAlive: true)
+LiveSessionRepository liveSessionRepository(Ref ref) =>
+    LiveSessionRepositoryImpl(ref.watch(sessionApiDataSourceProvider));
+
+/// Lists what runs in a folder.
+@Riverpod(keepAlive: true)
+ListLiveSessions listLiveSessions(Ref ref) =>
+    ListLiveSessions(ref.watch(liveSessionRepositoryProvider));

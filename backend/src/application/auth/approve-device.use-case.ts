@@ -5,6 +5,7 @@ import {
 } from '@domain/auth';
 import type { Device, UserId } from '@domain/auth';
 import type { DeviceContext } from './device-context';
+import type { DeviceEvents } from './ports/device-events.port';
 
 /** Who is asking, and from where. */
 export interface ApproveDeviceCommand {
@@ -30,10 +31,15 @@ export interface ApproveDeviceCommand {
  *
  * Approving twice changes nothing (two tabs, one slow page). Approving a revoked device is
  * refused by the entity: bringing a phone back is registering it again, deliberately.
+ *
+ * A real approval is also **published**, so the phone can be told it may decide now — without it,
+ * the phone found out only the next time it registered (plan 17, F3). Publishing never fails the
+ * approval: the bus swallows what its consumers throw.
  */
 export class ApproveDeviceUseCase {
   constructor(
     private readonly context: DeviceContext,
+    private readonly events: DeviceEvents,
     private readonly ttlMs: number = PENDING_DEVICE_TTL_MS,
   ) {}
 
@@ -76,6 +82,7 @@ export class ApproveDeviceUseCase {
       subjectLabel: approved.snapshot().name,
       at,
     });
+    this.events.approved({ device: approved });
 
     return approved;
   }

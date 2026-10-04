@@ -107,6 +107,7 @@ class PushController extends _$PushController {
       gateway.tokens.listen(_onToken),
       gateway.arrivals.listen(_onArrival),
       gateway.openings.listen(_onOpening),
+      gateway.deviceApprovals.listen(_onDeviceApproved),
     ];
 
     ref.onDispose(() {
@@ -141,6 +142,18 @@ class PushController extends _$PushController {
     if (arrival.isWithdrawal) {
       unawaited(ref.read(pushGatewayProvider).withdraw(arrival.requestId));
     }
+  }
+
+  /// The browser approved this phone (plan 17, F3): ask where it stands, and the banner that said
+  /// "waiting for approval" says approved — without restarting the app.
+  void _onDeviceApproved(String deviceId) {
+    _log().info(
+      'push received',
+      op: LogOp.pushReceived,
+      fields: <String, Object?>{'kind': 'deviceApproved', 'deviceId': deviceId},
+    );
+
+    unawaited(ref.read(deviceControllerProvider.notifier).recheck());
   }
 
   /// The tap. It navigates, and it never renders from the payload.

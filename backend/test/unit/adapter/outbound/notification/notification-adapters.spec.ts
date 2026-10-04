@@ -1,12 +1,16 @@
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { NotifyPermissionUseCase } from '@application/notification';
+import { NotifyDeviceApprovedUseCase, NotifyPermissionUseCase } from '@application/notification';
 import { ForgetPushTokenUseCase, ListApprovedDevicesUseCase } from '@application/auth';
 import type { DeviceContext } from '@application/auth';
 import { RecordAuditEventUseCase } from '@application/audit';
 import { PermissionRequest } from '@domain/permission';
 import { SessionId } from '@domain/session';
 import { UserId } from '@domain/auth';
+import type { Device } from '@domain/auth';
+import { DEVICE_APPROVED, EmitterDeviceEvents } from '@adapter/outbound/auth/emitter-device.events';
+import { NotifyOnDeviceApproved } from '@adapter/outbound/notification/device-notification.listener';
 import {
   CancelOnPermissionResolved,
   NotifyOnPermissionRequested,
@@ -217,5 +221,71 @@ describe('the consumers on the bus', () => {
     await settle();
 
     expect(logger.withOp('push.send').at(-1)).toMatchObject({ level: 'warn' });
+  });
+});
+
+describe('the approval of a device, on the bus — plan 17, F3', () => {
+  /** The use case, recording the devices it was asked about. */
+  class RecordingDeviceNotify {
+    readonly told: Device[] = [];
+    failure: Error | null = null;
+
+    execute(device: Device): Promise<string> {
+      this.told.push(device);
+      return this.failure === null ? Promise.resolve('delivered') : Promise.reject(this.failure);
+    }
+  }
+
+  const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it('tells the approved device, and logs how it went', async () => {
+    const notify = new RecordingDeviceNotify();
+    const device = anApprovedDevice();
+
+    new NotifyOnDeviceApproved(
+      notify as unknown as NotifyDeviceApprovedUseCase,
+      logger.logger,
+    ).handle({ device });
+    await settle();
+
+    expect(notify.told).toEqual([device]);
+    expect(logger.withOp('push.send').at(-1)).toMatchObject({
+      level: 'debug',
+      kind: 'deviceApproved',
+      deviceId: device.id,
+      outcome: 'delivered',
+    });
+  });
+
+  it('logs a failure and goes no further', async () => {
+    const notify = new RecordingDeviceNotify();
+    notify.failure = new Error('the provider is away');
+
+    new NotifyOnDeviceApproved(
+      notify as unknown as NotifyDeviceApprovedUseCase,
+      logger.logger,
+    ).handle({ device: anApprovedDevice() });
+    await settle();
+
+    expect(logger.withOp('push.send').at(-1)).toMatchObject({ level: 'warn' });
+  });
+
+  it('is published on the bus, and a consumer that throws never reaches the approval', () => {
+    const bus = new EventEmitter2();
+    const heard: unknown[] = [];
+    bus.on(DEVICE_APPROVED, (event: unknown) => heard.push(event));
+    const events = new EmitterDeviceEvents(bus, logger.logger);
+    const event = { device: anApprovedDevice() };
+
+    events.approved(event);
+    expect(heard).toEqual([event]);
+
+    bus.on(DEVICE_APPROVED, () => {
+      throw new Error('a consumer broke');
+    });
+    expect(() => {
+      events.approved(event);
+    }).not.toThrow();
+    expect(logger.withOp('device.approve').at(-1)).toMatchObject({ level: 'error' });
   });
 });

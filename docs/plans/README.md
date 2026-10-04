@@ -20,22 +20,23 @@ Voltar para o [índice geral](../architecture/README.md).
 | 02 | [Aprovação pelo celular](02-mobile-approval/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saíram com código 0 |
 | 03 | [Regras e trilha](03-rules-and-audit/README.md) | ✅ concluído | `pnpm verify:full` saiu com código 0 |
 | 04 | [Histórico e retomada](04-transcript-and-resume/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:live` saíram com código 0 |
-| 05 | [Endurecimento e operação](05-hardening-operations/README.md) | 🔄 em andamento | `pnpm verify:full` **e** `pnpm test:e2e:live` saem com código 0 |
-| 06 | [Workbench](06-workbench/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
-| 07 | [Explorer e editor](07-explorer-and-editor/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
-| 08 | [Painel do Claude](08-claude-panel/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
-| 09 | [Layout do chat](09-chat-layout/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
-| 10 | [Layout do chat no app](10-mobile-chat-layout/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
+| 05 | [Endurecimento e operação](05-hardening-operations/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:live` saem com código 0 |
+| 06 | [Workbench](06-workbench/README.md) | ✅ concluído | `pnpm verify:full` sai com código 0 |
+| 07 | [Explorer e editor](07-explorer-and-editor/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
+| 08 | [Painel do Claude](08-claude-panel/README.md) | ✅ concluído | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
+| 09 | [Layout do chat](09-chat-layout/README.md) | ✅ concluído | `pnpm verify:full` sai com código 0 |
+| 10 | [Layout do chat no app](10-mobile-chat-layout/README.md) | 🔄 em andamento | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 | 11 | [Busca](11-search/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
-| 12 | [Terminal integrado](12-integrated-terminal/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
+| 12 | [Terminal integrado](12-integrated-terminal/README.md) | 🔄 em andamento | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
 | 13 | [Configuração do Claude](13-claude-settings/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
 | 14 | [Auditoria explicada](14-audit-explained/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
-| 15 | [Gestão de regras](15-rules-management/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 15 | [Gestão de regras](15-rules-management/README.md) | 🔄 em andamento | `pnpm verify:full` sai com código 0 |
 | 16 | [Uso e custo](16-usage-and-cost/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
-| 17 | [Dispositivos](17-devices/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
+| 17 | [Dispositivos](17-devices/README.md) | 🔄 em andamento | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 | 18 | [Logs e diagnóstico](18-logs-and-diagnostics/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
 | 19 | [Distribuição](19-distribution/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm dist:verify` saem com código 0 |
-| 20 | [Dev public](20-dev-public/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
+| 20 | [Dev public](20-dev-public/README.md) | 🔄 em andamento | `pnpm verify:full` sai com código 0 |
+| 21 | [Rich previews](21-rich-previews/README.md) | 🔄 em andamento | `pnpm verify:full` sai com código 0 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -189,7 +190,8 @@ de marcos.
 daquele trabalho; o outro é o mapa de todos.
 
 Os contadores dos dois saem do **mesmo** comando, lidos das mesmas marcas de task e da mesma
-coluna de estado: `pnpm plan progress` atualiza o do plano **e** o geral, na mesma execução. E
+coluna de estado: `pnpm plan progress` atualiza o do plano **e** o geral, na mesma execução — e a
+coluna **Estado** do índice de planos, no topo deste documento, que ninguém mantém à mão. E
 `pnpm plan new` já cria a linha do plano novo no índice e no progresso geral — plano fora do
 mapa é plano que ninguém acompanha.
 

@@ -104,6 +104,12 @@ precisam provar o mesmo comportamento. Ver
 `patrol` quando o cenário exige o SO: permissão de notificação, toque na notificação, aba de
 login externa do OIDC.
 
+**A tela de sessão tem um robô.** `integration_test/support/session_robot.dart` concentra os seletores
+dela — a caixa, enviar, parar, os chips, o menu `⋯`, o card de uma tool, a pílula, o indicador — e os
+acha por **semântica** (`Semantics` label, tooltip, papel), nunca por tipo interno, pela mesma regra do
+[widget](#widget). As suítes usam o robô; quando o layout muda, muda o robô, não o que os testes
+afirmam (R-01 do [plano 10](../../plans/10-mobile-chat-layout/README.md#riscos-e-decisões-em-aberto)).
+
 **A suíte roda em Android, e só.** O app continua compilando para iOS, mas push, biometria e
 `integration_test` **nunca são exercitados lá** — é escopo declarado, não descuido: iOS exigiria
 conta de desenvolvedor paga, certificado APNs e um runner próprio. Tratar iOS como coberto

@@ -68,6 +68,7 @@ describe('ResolvePermissionUseCase', () => {
             auto: false,
             resolvedBy: PERMISSION_OWNER.value,
             resolvedFrom: 'web',
+            toolUseId: 'toolu-1',
           },
         },
       },

@@ -57,7 +57,7 @@ export function browserDefine(environment: BrowserEnvironment): Record<string, s
 }
 
 /**
- * Where the dev server forwards the API to, in public mode: one origin for everything
+ * Where the dev server forwards the API to: one origin for everything
  * (docs/plans/20-dev-public/decisions.md, D-01). The backend has no global prefix, so the
  * forwarder strips this one.
  */
@@ -78,47 +78,62 @@ function publicOrigin(source: Record<string, string | undefined>): URL | null {
 }
 
 /**
- * The dev server: the port alone locally; behind the public origin, also what lets one domain
- * serve the whole stack.
+ * The paths the web server forwards, so that its origin alone serves the whole stack: the API
+ * (without the prefix, and with the refresh cookie's path moved under it, or the browser would
+ * never send it back), the WebSocket, and the identity provider's realm and theme files. The admin
+ * console is **not** forwarded (docs/plans/20-dev-public/decisions.md, D-06).
  *
+ * In public mode the tunnel reaches the stack through it (D-01); in local mode too, since plan 10
+ * (D-16): the phone reaches `localhost:<web port>` through `adb reverse`, and that one origin is its
+ * API, its WebSocket and its login. The preview server of the end-to-end run inherits it.
+ *
+ * `changeOrigin` stays off: the identity provider writes the origin it was called through into
+ * `iss` (plan 10, B-25), and keeping the request as the client sent it — `Host`, and the
+ * `X-Forwarded-*` a tunnel set (D-08) — is what makes that origin the right one.
+ */
+function forwarding(source: Record<string, string | undefined>): Record<string, ProxyOptions> {
+  const backend = `http://localhost:${read(source, 'RC_BACKEND_PORT', '3000')}`;
+  const keycloak = `http://localhost:${read(source, 'RC_KEYCLOAK_PORT', '8180')}`;
+
+  return {
+    [`^${API_PREFIX}(/|\\?|$)`]: {
+      target: backend,
+      rewrite: (path) => path.slice(API_PREFIX.length) || '/',
+      cookiePathRewrite: { [REFRESH_COOKIE_PATH]: `${API_PREFIX}${REFRESH_COOKIE_PATH}` },
+    },
+    '^/ws(\\?|$)': { target: backend, ws: true },
+    '^/realms/': { target: keycloak },
+    '^/resources/': { target: keycloak },
+  };
+}
+
+/**
+ * The dev server: the port and the forwarding; behind the public origin, also what lets the
+ * tunnel's host in.
+ *
+ * - `host`: locally, every interface, as the backend and the identity provider already listen —
+ *   the app `pnpm mobile:install` puts on a phone reaches this origin by the machine's address on
+ *   the local network (plan 10, D-23). Behind the tunnel, the loopback the tunnel connects to.
  * - `allowedHosts`: Vite refuses a `Host` it does not know, and the tunnel sends the public one.
+ *   Locally Vite's own default lets in `localhost` and any IP address, the local network's too.
  * - `hmr`: the page is on HTTPS through the tunnel's 443, not on the dev server's own port.
- * - `proxy`: the API (without the prefix, and with the refresh cookie's path moved under it, or
- *   the browser would never send it back), the WebSocket, and the identity provider's realm and
- *   theme files. The admin console is **not** forwarded (D-06).
- *
- * `changeOrigin` stays off: the identity provider trusts the `X-Forwarded-*` the tunnel set
- * (D-08), and keeping the request as the browser sent it is what makes those headers true.
  */
 export function devServer(
   source: Record<string, string | undefined>,
 ): ServerOptions & { port: number } {
   const port = Number(read(source, 'RC_WEB_PORT', '5173'));
   const origin = publicOrigin(source);
+  const proxy = forwarding(source);
 
   if (origin === null) {
-    return { port, strictPort: true };
+    return { port, strictPort: true, host: true, proxy };
   }
-
-  const backend = `http://localhost:${read(source, 'RC_BACKEND_PORT', '3000')}`;
-  const keycloak = `http://localhost:${read(source, 'RC_KEYCLOAK_PORT', '8180')}`;
-
-  const api: ProxyOptions = {
-    target: backend,
-    rewrite: (path) => path.slice(API_PREFIX.length) || '/',
-    cookiePathRewrite: { [REFRESH_COOKIE_PATH]: `${API_PREFIX}${REFRESH_COOKIE_PATH}` },
-  };
 
   return {
     port,
     strictPort: true,
     allowedHosts: [origin.hostname],
     hmr: { protocol: 'wss', clientPort: 443 },
-    proxy: {
-      [`^${API_PREFIX}(/|\\?|$)`]: api,
-      '^/ws(\\?|$)': { target: backend, ws: true },
-      '^/realms/': { target: keycloak },
-      '^/resources/': { target: keycloak },
-    },
+    proxy,
   };
 }
