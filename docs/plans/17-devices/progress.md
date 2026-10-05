@@ -10,8 +10,8 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-10-04
+**Fase corrente:** F0 ainda por começar; a F3 — o celular fica sabendo que foi aprovado — foi feita antes dela, em 2026-10-04, por pedido do usuário ([D-13](decisions.md#f3--o-celular-fica-sabendo-que-foi-aprovado))
+**Última atualização:** 2026-10-05
 **Bloqueios:** nenhum em execução — as decisões D-01…D-07 precisam fechar antes de a F0 começar, e a F2 depende do [plano 06](../06-workbench/README.md) entregue
 
 ```

@@ -269,26 +269,26 @@ app desabilita, com o motivo.
 | S-172 | eventos de duas sessões abertas chegando juntos vão cada um para a sua conversa, sem mistura | conc | unit | — | B-46 | ✅ |
 | S-173 | reconectar o socket refaz o `follow` de todas as sessões do registro, cada uma do seu ponto | est | unit | — | B-46 | ✅ |
 | S-174 | as chaves novas nos dois ARB, sem órfã, e a ajuda das três telas | eq | unit | — | B-47 | ✅ |
-| S-175 | e2e: abrir uma pasta pelo seletor a abre no app e nas abas do navegador; fechar no app tira das duas e não encerra sessão | conc | e2e | — | B-48 | ⬜ |
-| S-176 | e2e: a tela da pasta lista a sessão aberta no navegador, e tocar nela anexa | eq | e2e | — | B-48 | ⬜ |
-| S-177 | e2e: duas sessões da pasta no painel lateral; um pedido na que não está na tela acende a linha dela, e trocar leva ao card | conc | e2e | — | B-48 | ⬜ |
-| S-178 | e2e: no teto de pastas abertas, abrir mais uma é recusado com o teto e a saída | err | e2e | `OPEN_FOLDERS_LIMIT_REACHED` | B-48 | ⬜ |
+| S-175 | e2e: abrir uma pasta pelo seletor a abre no app e nas abas do navegador; fechar no app tira das duas e não encerra sessão | conc | e2e | — | B-48 | ✅ |
+| S-176 | e2e: a tela da pasta lista a sessão aberta no navegador, e tocar nela anexa | eq | e2e | — | B-48 | ✅ |
+| S-177 | e2e: duas sessões da pasta no painel lateral; um pedido na que não está na tela acende a linha dela, e trocar leva ao card | conc | e2e | — | B-48 | ✅ |
+| S-178 | e2e: no teto de pastas abertas, abrir mais uma é recusado com o teto e a saída | err | e2e | `OPEN_FOLDERS_LIMIT_REACHED` | B-48 | ✅ |
 
 ## E2E — B-30…B-33
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-110 | primeira abertura no emulador: o interno, pelo encaminhamento, entra e abre uma sessão | eq | e2e | — | B-30 | ⬜ |
-| S-111 | **Outro** com a mesma origem: o login encerra, entrar de novo funciona, e depois de fechar e reabrir o app o **Outro** continua escolhido, com o texto | est | e2e | — | B-30 | ⬜ |
-| S-112 | `http://` para um IP público ou um nome é recusado com o motivo (o IP da rede privada passa no debug, [D-20](decisions.md#f6--instalação-por-usb)), e testar uma origem fora do alcance mostra o erro | err | e2e | — | B-30 | ⬜ |
-| S-113 | todas as suítes do app verdes com a forma nova de subir, rodadas duas vezes seguidas com o mesmo resultado | idem | e2e | — | B-30 | ⬜ |
-| S-114 | `vertical_slice`, `permission_flow`, `rule_cycle`, `limits` e `history` verdes no layout novo, pelo robô, sem `skip` | eq | e2e | — | B-31 | ⬜ |
-| S-115 | 360×640 e teclado aberto, com conversa longa: a caixa na tela no topo e no fim da rolagem, e só a conversa rola | fron | e2e | — | B-32 | ⬜ |
-| S-116 | rascunho → escolher modelo, modo e esforço → enviar → a sessão nasce com eles | est | e2e | — | B-32 | ⬜ |
-| S-117 | prompt → indicador → "Pensando…" → "Pensou por *n* s" → tool → card inline → aprovar (com o segundo passo, se destrutivo) → linha decidida → resumo, com a caixa visível o tempo todo | est | e2e | — | B-32 | ⬜ |
-| S-118 | pedido respondido no navegador vira a linha com quem respondeu; o app vai para background no meio do pedido e volta sem duplicar nada | conc | e2e | — | B-32 | ⬜ |
-| S-119 | `meetsGuideline` (alvo de toque, contraste, rótulo) sem violação em rascunho, rodando, pedindo permissão e encerrada | err | integração | — | B-33 | ⬜ |
-| S-120 | rodar o `chat_layout_test` duas vezes seguidas dá o mesmo resultado, e o ciclo da S-117 em fonte de 200 % não corta o comando | idem | e2e | — | B-33 | ⬜ |
+| S-110 | primeira abertura no emulador: o interno, pelo encaminhamento, entra e abre uma sessão | eq | e2e | — | B-30 | ✅ |
+| S-111 | **Outro** com outra origem da mesma stack ([D-30](decisions.md#f10--e2e)): o login encerra, entrar de novo funciona, e depois de fechar e reabrir o app o **Outro** continua escolhido, com o texto | est | e2e | — | B-30 | ✅ |
+| S-112 | `http://` para um IP público ou um nome é recusado com o motivo (o IP da rede privada passa no debug, [D-20](decisions.md#f6--instalação-por-usb)), e testar uma origem fora do alcance mostra o erro | err | e2e | — | B-30 | ✅ |
+| S-113 | todas as suítes do app verdes com a forma nova de subir, rodadas duas vezes seguidas com o mesmo resultado | idem | e2e | — | B-30 | ✅ |
+| S-114 | `vertical_slice`, `permission_flow`, `rule_cycle`, `limits` e `history` verdes no layout novo, pelo robô, sem `skip` | eq | e2e | — | B-31 | ✅ |
+| S-115 | 360×640 e teclado aberto, com conversa longa: a caixa na tela no topo e no fim da rolagem, e só a conversa rola | fron | e2e | — | B-32 | ✅ |
+| S-116 | rascunho → escolher modelo, modo e esforço → enviar → a sessão nasce com eles | est | e2e | — | B-32 | ✅ |
+| S-117 | prompt → indicador → "Pensando…" → "Pensou por *n* s" → tool → card inline → aprovar (com o segundo passo, se destrutivo) → linha decidida → resumo, com a caixa visível o tempo todo | est | e2e | — | B-32 | ✅ |
+| S-118 | pedido respondido no navegador vira a linha com quem respondeu; o app vai para background no meio do pedido e volta sem duplicar nada | conc | e2e | — | B-32 | ✅ |
+| S-119 | `meetsGuideline` (alvo de toque, contraste, rótulo) sem violação em rascunho, rodando, pedindo permissão e encerrada — o contraste no teste de widget ([D-31](decisions.md#f10--e2e)) | err | integração | — | B-33 | ✅ |
+| S-120 | rodar o `chat_layout_test` duas vezes seguidas dá o mesmo resultado, e o ciclo da S-117 em fonte de 200 % não corta o comando | idem | e2e | — | B-33 | ✅ |
 
 ---
 

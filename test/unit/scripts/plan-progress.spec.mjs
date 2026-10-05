@@ -3,11 +3,18 @@ import { describe, expect, it } from 'vitest';
 import {
   applyIndexStates,
   applyOverallProgress,
+  applyPhaseStates,
   applyProgress,
+  changedBeyondTheDate,
+  openDecisionIds,
+  openDecisionsBlock,
+  overallProblems,
   parseDecisions,
   formatTaskRange,
   parseScenarios,
   parseTasks,
+  planProgressProblems,
+  sortPlanRows,
   summarizeOverall,
   summarizePlan,
 } from '../../../scripts/lib/plan-progress.mjs';
@@ -340,9 +347,15 @@ const overallDocument = [
   '',
   '| Plano | Fases | Tarefas | Cenários | Decisões | Estado |',
   '|---|---|---|---|---|---|',
-  '| [00 — A](00-a/README.md) | 0/0 | 0/0 | 0/0 | 0/0 | 🔲 |',
   '| [01 — B](01-b/README.md) | 0/0 | 0/0 | 0/0 | 0/0 | 🔲 |',
+  '| [00 — A](00-a/README.md) | 0/0 | 0/0 | 0/0 | 0/0 | 🔲 |',
   '| **Total** | **0/0** | **0/0** | **0/0** | **0/0** | 🔲 |',
+  '',
+  '## Decisões em aberto',
+  '',
+  '<!-- open-decisions:start -->',
+  'stale, written by hand',
+  '<!-- open-decisions:end -->',
   '',
   '## Onde o projeto está',
   '',
@@ -367,6 +380,17 @@ describe('applyOverallProgress', () => {
     expect(updated).toContain('| **Total** | **1/2** | **1/3** | **1/2** | **1/2** | 🔄 |');
   });
 
+  it('puts the plans in the order of their numbers — a plan created later is not left last', () => {
+    expect(updated.indexOf('[00 — A](00-a/README.md) | 1/1')).toBeLessThan(
+      updated.indexOf('[01 — B](01-b/README.md) | 0/1'),
+    );
+  });
+
+  it('writes the decisions still open in place of whatever was between the markers', () => {
+    expect(updated).not.toContain('stale, written by hand');
+    expect(updated).toContain('| [01-b](01-b/decisions.md) | D-01 | 1 |');
+  });
+
   it('draws one bar per plan, aligned by the widest name', () => {
     expect(updated).toContain('00-a ████████████████████ 100%   ✅ concluído');
     expect(updated).toContain('01-b ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado');
@@ -383,6 +407,14 @@ describe('applyOverallProgress', () => {
 
   it('is idempotent — running it again changes nothing', () => {
     expect(applyOverallProgress(updated, overall, { date: '2026-09-15' })).toBe(updated);
+  });
+
+  it('refuses a document without the markers of the open decisions', () => {
+    const withoutMarkers = overallDocument.replace('<!-- open-decisions:end -->', '');
+
+    expect(() => applyOverallProgress(withoutMarkers, overall, { date: '2026-09-15' })).toThrow(
+      /open decisions block/,
+    );
   });
 
   it('refuses to half-update, naming the plan whose row is missing', () => {
@@ -438,6 +470,181 @@ describe('applyIndexStates', () => {
 
     expect(() => applyIndexStates(withoutSecond, overall)).toThrow(
       /docs\/plans\/README\.md is not in the normative format.*01-b/s,
+    );
+  });
+});
+
+// The hand-written parts of the progress documents, checked against the counters.
+describe('openDecisionIds', () => {
+  it('lists the decisions not yet taken — 🔲 and 🔄 — once each, in the order of the file', () => {
+    const decisions = [
+      '| D-03 | a | b | F0 | — | 🔄 |',
+      '| D-01 | a | b | F0 | — | 🔲 |',
+      '| D-02 | a | b | F0 | feita | ✅ |',
+      '| D-04 | a | b | F0 | — | ⛔ |',
+      '| D-01 | repeated | b | F0 | — | 🔲 |',
+      '| — | nenhuma decisão em aberto | — | — | — | — |',
+    ].join('\n');
+
+    expect(openDecisionIds(decisions)).toEqual(['D-03', 'D-01']);
+  });
+
+  it('answers none for a plan without decisions', () => {
+    expect(openDecisionIds('')).toEqual([]);
+  });
+});
+
+describe('formatTaskRange with another prefix', () => {
+  it('collapses decisions the way it collapses tasks', () => {
+    expect(formatTaskRange(['D-01', 'D-02', 'D-03', 'D-07'], 'D-')).toBe('D-01…D-03, D-07');
+  });
+});
+
+describe('openDecisionsBlock', () => {
+  it('says so when no plan has an open decision', () => {
+    expect(openDecisionsBlock(summarizeOverall([donePlan]).plans)).toBe(
+      'Nenhuma decisão em aberto em plano nenhum.',
+    );
+  });
+});
+
+describe('sortPlanRows', () => {
+  it('leaves a document with no plan row as it is', () => {
+    expect(sortPlanRows('# nothing here\n')).toBe('# nothing here\n');
+  });
+});
+
+const planReadme = [
+  '| Fase | Arquivo | Entrega | Tarefas | Estado |',
+  '|---|---|---|---|---|',
+  '| F0 | [Normas](F0-norms.md) | as normas | B-01 | 🔲 |',
+  '| F1 | [E2E](F1-e2e.md) | o e2e | B-02 | 🔄 |',
+  '',
+  'A [F0](F0-norms.md) é citada em prosa, e fica como está.',
+  '',
+].join('\n');
+
+describe('applyPhaseStates', () => {
+  const summary = summarizePlan(
+    [
+      { index: 0, file: 'F0-norms.md', content: '### B-01 — x ✅' },
+      { index: 1, file: 'F1-e2e.md', content: '### B-02 — y 🔲' },
+    ],
+    '',
+  );
+  const updated = applyPhaseStates(planReadme, summary, '00-a');
+
+  it('rewrites the state of each phase from its tasks, and nothing else', () => {
+    expect(updated).toContain('| F0 | [Normas](F0-norms.md) | as normas | B-01 | ✅ |');
+    expect(updated).toContain('| F1 | [E2E](F1-e2e.md) | o e2e | B-02 | 🔲 |');
+    expect(updated.split('\n')).toHaveLength(planReadme.split('\n').length);
+    expect(updated).toContain('A [F0](F0-norms.md) é citada em prosa, e fica como está.');
+  });
+
+  it('is idempotent — running it again changes nothing', () => {
+    expect(applyPhaseStates(updated, summary, '00-a')).toBe(updated);
+  });
+
+  it('refuses a README without the row of a phase, naming the plan and the phase', () => {
+    const withoutF1 = planReadme.replace(/^\| F1 .*$/m, '');
+
+    expect(() => applyPhaseStates(withoutF1, summary, '00-a')).toThrow(/00-a\/README\.md.*F1/s);
+  });
+});
+
+describe('planProgressProblems', () => {
+  const progressSaying = (/** @type {string} */ current) =>
+    `## Estado atual\n\n**Fase corrente:** ${current}\n`;
+
+  it('finds nothing to say about a plan whose line agrees with its tasks', () => {
+    expect(
+      planProgressProblems(progressSaying('nenhuma — o plano fechou'), donePlan.summary),
+    ).toEqual([]);
+    expect(
+      planProgressProblems(progressSaying('nenhuma — plano não iniciado'), openPlan.summary),
+    ).toEqual([]);
+  });
+
+  it('a plan with every task done that does not say it is concluded', () => {
+    expect(planProgressProblems(progressSaying('F2 — em andamento'), donePlan.summary)).toEqual([
+      'every task is done, and "Fase corrente" does not say the plan is concluded',
+    ]);
+  });
+
+  it('a plan that says it has not started, with tasks done', () => {
+    expect(
+      planProgressProblems(progressSaying('nenhuma — plano não iniciado'), donePlan.summary),
+    ).toEqual([
+      'every task is done, and "Fase corrente" does not say the plan is concluded',
+      '"Fase corrente" says it has not started, and 1 task(s) are done',
+    ]);
+  });
+
+  it('a progress with no line of the current phase says nothing of a plan not started', () => {
+    expect(planProgressProblems('', openPlan.summary)).toEqual([]);
+  });
+});
+
+describe('overallProblems', () => {
+  const overall = summarizeOverall(twoPlans);
+  const generalProgress = (/** @type {string[]} */ ...lines) => lines.join('\n');
+  const delivers = [
+    '| Plano | Entrega | Depende de |',
+    '|---|---|---|',
+    '| [00 — A](00-a/README.md) | a | — |',
+    '| [01 — B](01-b/README.md) | b | 00 |',
+  ];
+
+  it('finds nothing when every plan delivers something and the concluded one has its milestone', () => {
+    const content = generalProgress(
+      ...delivers,
+      '## Histórico',
+      '| 2026-01-01 | **Plano 00 — A concluído** | tudo |',
+    );
+
+    expect(overallProblems(content, overall)).toEqual([]);
+  });
+
+  it('a plan with no row in the table of what each plan delivers', () => {
+    const content = generalProgress(
+      String(delivers[0]),
+      '| [00 — A](00-a/README.md) | a | — |',
+      '## Histórico',
+      '| 2026-01-01 | **Plano 00 — A concluído** | tudo |',
+    );
+
+    expect(overallProblems(content, overall)).toEqual([
+      '01-b has no row in the table of what each plan delivers',
+    ]);
+  });
+
+  it('a concluded plan whose milestone the history never wrote — mentions elsewhere do not count', () => {
+    const content = generalProgress(
+      ...delivers,
+      '| prose before the history: Plano 00 concluído |',
+      '## Histórico',
+      '| 2026-01-01 | **Plano 00 — A criado** | o começo |',
+    );
+
+    expect(overallProblems(content, overall)).toEqual([
+      '00-a is concluded, and the history has no "Plano 00 … concluído"',
+    ]);
+  });
+});
+
+describe('changedBeyondTheDate', () => {
+  const at = (/** @type {string} */ date, /** @type {string} */ body) =>
+    `# P\n\n**Última atualização:** ${date}\n\n${body}\n`;
+
+  it('a new date alone is no change — the date says when the counters moved', () => {
+    expect(changedBeyondTheDate(at('2026-01-01', '| 1/2 |'), at('2026-02-02', '| 1/2 |'))).toBe(
+      false,
+    );
+  });
+
+  it('a counter that moved is a change', () => {
+    expect(changedBeyondTheDate(at('2026-01-01', '| 1/2 |'), at('2026-02-02', '| 2/2 |'))).toBe(
+      true,
     );
   });
 });

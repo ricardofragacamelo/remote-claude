@@ -116,20 +116,28 @@ class ComposerBar extends StatelessWidget {
                 icon: const Icon(Icons.terminal),
                 onPressed: onSlash,
               ),
-              Flexible(child: ChoiceChipButton(choice: mode)),
-              if (fits)
-                for (final ComposerChoice choice in choices)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(start: barGap),
-                    child: ChoiceChipButton(choice: choice),
-                  )
-              else if (choices.isNotEmpty)
-                IconButton(
-                  tooltip: l10n.composerMore,
-                  icon: const Icon(Icons.more_horiz),
-                  onPressed: () => unawaited(_openMore(context, l10n)),
+              // The chips in a space of their own, where the mode is the only thing that gives:
+              // beside a `Spacer`, the free space was split in half between the two, and the mode
+              // was squeezed below its icon with the bar still "fitting" (plan 10, S-116).
+              Expanded(
+                child: Row(
+                  children: <Widget>[
+                    Flexible(child: ChoiceChipButton(choice: mode)),
+                    if (fits)
+                      for (final ComposerChoice choice in choices)
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(start: barGap),
+                          child: ChoiceChipButton(choice: choice),
+                        )
+                    else if (choices.isNotEmpty)
+                      IconButton(
+                        tooltip: l10n.composerMore,
+                        icon: const Icon(Icons.more_horiz),
+                        onPressed: () => unawaited(_openMore(context, l10n)),
+                      ),
+                  ],
                 ),
-              const Spacer(),
+              ),
               ...actions,
             ],
           ),

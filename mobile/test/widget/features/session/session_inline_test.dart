@@ -76,6 +76,33 @@ void main() {
     description: 'cat notes.txt',
   );
 
+  testWidgets('S-119 · running, asking and ended, the screen meets the tap-target, label and '
+      'contrast guidelines', (WidgetTester tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    Future<void> guidelinesHold() async {
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+    }
+
+    await screen.pump(tester);
+    await emit(tester, messageCompleted(messageId: 'u1', text: 'go', role: 'user', seq: 2));
+    await emit(tester, toolStarted(toolUseId: 'toolu-1', seq: 3));
+    await emit(tester, sessionStatusChanged(status: 'running', seq: 4));
+    expect(working(), findsOneWidget);
+    await guidelinesHold();
+
+    await ask(tester, about('toolu-1'));
+    await emit(tester, sessionStatusChanged(status: 'waitingPermission', seq: 5));
+    expect(find.text(l10n.sessionWorkingWaiting), findsOneWidget);
+    await guidelinesHold();
+
+    await emit(tester, sessionClosed(seq: 6, reason: 'idleTimeout'));
+    expect(working(), findsNothing);
+    await guidelinesHold();
+    semantics.dispose();
+  });
+
   group('the line of the turn — B-18', () {
     testWidgets(
       'S-54 · a turn running ends the conversation with its line; its end takes it away',
@@ -167,6 +194,36 @@ void main() {
       expect(find.text(l10n.sessionWorkingSeconds('6')), findsOneWidget);
     });
   });
+
+  testWidgets(
+    'S-119 · the line that waits for an answer, a link to the card, is legible and named',
+    (WidgetTester tester) async {
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      final DateTime t0 = DateTime.utc(2026, 10, 4, 12);
+
+      await tester.pumpApp(
+        Scaffold(
+          body: WorkingIndicator(
+            label: l10n.sessionWorkingWaiting,
+            since: t0,
+            clock: () => t0,
+            onGoToRequest: () {},
+          ),
+        ),
+      );
+
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      // Its own node, the sentence alone — not the row with the glyph and the clock.
+      final SemanticsData node = tester
+          .getSemantics(find.text(l10n.sessionWorkingWaiting))
+          .getSemanticsData();
+      expect(node.label, l10n.sessionWorkingWaiting);
+      expect(node.flagsCollection.isLiveRegion, isTrue);
+      semantics.dispose();
+    },
+  );
 
   group('thinking — B-19', () {
     testWidgets('S-59 · "Thinking…" while it arrives; "Thought for n s", folded, once it stopped', (
@@ -438,6 +495,27 @@ void main() {
       expect(find.byType(PermissionPanel), findsOneWidget);
       expect(pill, findsNothing);
       expect(Focus.of(tester.element(find.byType(PermissionPanel))).hasFocus, isTrue);
+    });
+
+    testWidgets('S-71 · away again, past what the list keeps drawn: the pill comes back, and the '
+        'card the list let go of is not measured', (WidgetTester tester) async {
+      await longConversation(tester);
+      await tester.tap(find.text(l10n.sessionPendingPill('1')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PermissionPanel), findsOneWidget);
+
+      // To the end: the card's row leaves the lazy list, and its node stays behind.
+      final ScrollableState scroller = tester.state<ScrollableState>(
+        find.descendant(of: find.byType(ConversationView), matching: find.byType(Scrollable)).first,
+      );
+      scroller.position.jumpTo(scroller.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      scroller.position.jumpTo(scroller.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PermissionPanel), findsNothing);
+      expect(tester.takeException(), isNull);
+      expect(find.text(l10n.sessionPendingPill('1')), findsOneWidget);
     });
 
     testWidgets('S-73 · sending, scrolling and the pill never answer the question', (
@@ -837,6 +915,9 @@ void main() {
       await withPrompt(tester);
 
       final SemanticsData data = tester.getSemantics(find.byType(PromptHold)).getSemanticsData();
+      // Named by its own words, on the node that acts (S-119).
+      expect(data.label, 'fix it');
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       final List<String> labels = <String>[
         for (final int id in data.customSemanticsActionIds ?? const <int>[])
           CustomSemanticsAction.getAction(id)!.label!,

@@ -105,7 +105,7 @@ verde.
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
 | F0 | [Decisão e contrato](F0-decision.md) | ADR-017, interruptor, step-up, só do web, contrato e redação | B-01…B-05 | 🔲 |
-| F1 | [PTY](F1-pty.md) | o módulo `terminal`, o ambiente filtrado (também o do Claude), perfis e shell integration | B-06…B-15 | 🔲 |
+| F1 | [PTY](F1-pty.md) | o módulo `terminal`, o ambiente filtrado (também o do Claude), perfis e shell integration | B-06…B-15 | 🔄 |
 | F2 | [Interface do terminal](F2-terminal-ui.md) | o painel inferior completo, as recusas na tela, as Configurações e a ajuda | B-16…B-22 | 🔲 |
 | F3 | [E2E](F3-e2e.md) | o ciclo e as recusas pela porta do usuário, e o app verde | B-23…B-26 | 🔲 |
 

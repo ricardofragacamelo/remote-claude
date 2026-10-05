@@ -1,0 +1,15 @@
+{
+  "id": "10·S-175…S-178",
+  "title": "folders and sessions on the emulator, with the browser as the second client: a folder opened on the phone is a tab of the browser and closing it ends nothing; the folder lists and attaches what the browser opened; two sessions of one folder in the side panel, a question in the one away lights its row; past the ceiling of open folders, a refusal with the ceiling",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "text-turn",
+    "answer": "pong",
+    "askingFixture": "tool-turn",
+    "ceiling": 8,
+    "code": "OPEN_FOLDERS_LIMIT_REACHED"
+  }
+}

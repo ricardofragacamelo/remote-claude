@@ -110,7 +110,7 @@ verde.
 | F0 | [Contrato](F0-contract.md) | normativos atualizados, contrato HTTP e do app, códigos de erro | B-01…B-04 | 🔲 |
 | F1 | [Backend de dispositivos](F1-devices-backend.md) | guarda no banco, estado do push, renomear, lote, teste, histórico, inativo, e o app informando | B-05…B-15 | 🔲 |
 | F2 | [Tela de dispositivos](F2-devices-screen.md) | a tela completa, com ajuda, atalhos e aviso global de pendente | B-16…B-23 | 🔲 |
-| F3 | [O celular fica sabendo que foi aprovado](F3-approval-push.md) | o push `deviceApproved` e o app que se atualiza ao ser aprovado — antes da F0, pela D-13 | B-29…B-31 | 🔲 |
+| F3 | [O celular fica sabendo que foi aprovado](F3-approval-push.md) | o push `deviceApproved` e o app que se atualiza ao ser aprovado — antes da F0, pela D-13 | B-29…B-31 | ✅ |
 | F4 | [E2E](F4-e2e.md) | os fluxos pela porta do usuário, no web e no app, e as regressões do plano 02 — sempre a última fase | B-24…B-28, B-32 | 🔲 |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada

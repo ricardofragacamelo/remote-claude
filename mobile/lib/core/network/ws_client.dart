@@ -252,10 +252,14 @@ class WsClient {
     (_subscribers[sessionId] ??= <SessionSubscriber>{}).add(subscriber);
 
     if (_status == ConnectionStatus.ready) {
-      _requestAttach(sessionId);
+      final String? attachId = _requestAttach(sessionId);
+      if (attachId != null) {
+        _joining[subscriber] = attachId;
+      }
     }
 
     return () {
+      _joining.remove(subscriber);
       final Set<SessionSubscriber>? remaining = _subscribers[sessionId];
       remaining?.remove(subscriber);
 
@@ -436,6 +440,8 @@ class WsClient {
     // client that dropped it would never show the card. An `error` answers a command.
     if (frame.kind == 'error') {
       _remember(frame);
+      // A refused attach is answered too: nothing is coming, and nothing is held back any more.
+      _joined(frame);
     }
 
     if (frame.kind == 'event' || frame.kind == 'request' || frame.kind == 'error') {
@@ -483,19 +489,44 @@ class WsClient {
   /// what brings back what the buffer holds — or the `gap` that sends it to the transcript when the
   /// buffer has lost the start. An attach with no `resumeFromSeq` asks for nothing past, and a
   /// session opened on the phone after it began in the browser would show only what came after.
-  void _requestAttach(String sessionId) {
+  ///
+  /// @returns the id the attach left with — what its `session.attached` names — or `null` when
+  ///   nothing left
+  String? _requestAttach(String sessionId) {
     final Iterable<int> applied = (_subscribers[sessionId] ?? const <SessionSubscriber>{}).map(
       (SessionSubscriber subscriber) => subscriber.lastSeq,
     );
     final int resumeFromSeq = applied.isEmpty ? 0 : applied.reduce(min);
 
-    command('session.attach', <String, Object?>{
+    return send('session.attach', <String, Object?>{
       'sessionId': sessionId,
       'resumeFromSeq': resumeFromSeq,
     });
   }
 
+  /// Subscribers that asked to attach and are not attached yet, with the id of their attach.
+  ///
+  /// A session this socket opened is already streaming to it, so between a new subscriber asking
+  /// and the server answering, live events of that session arrive — and reaching the subscriber
+  /// first, they would make it discard as already seen the replay that comes after, from
+  /// `session.started` on: the screen of a session the app had just opened lost its folder, its
+  /// model, its mode and its first prompt (found by the e2e of plan 10, S-116 and S-177). Every
+  /// event that arrives before the answer was published before the server read the attach, so the
+  /// replay brings it, in order: until the answer, the subscriber is given none.
+  final Map<SessionSubscriber, String> _joining = <SessionSubscriber, String>{};
+
+  /// The attach [frame] answers is over: its subscribers take events from now on.
+  void _joined(Envelope frame) {
+    final String? attachId = frame.correlationId;
+
+    if (attachId != null) {
+      _joining.removeWhere((SessionSubscriber _, String id) => id == attachId);
+    }
+  }
+
   void _attached(Envelope frame) {
+    _joined(frame);
+
     final Object? sessionId = frame.payload?['sessionId'];
     final Set<SessionSubscriber>? watching = sessionId is String ? _subscribers[sessionId] : null;
 
@@ -528,6 +559,10 @@ class WsClient {
 
     if (watching != null) {
       for (final SessionSubscriber subscriber in watching.toList(growable: false)) {
+        // Only numbered events are held back: they are what the replay brings again.
+        if (frame.kind == 'event' && _joining.containsKey(subscriber)) {
+          continue;
+        }
         subscriber.onEvent(frame);
       }
       return;
@@ -545,6 +580,8 @@ class WsClient {
   void _dropped(int code) {
     _socket = null;
     _inbound = null;
+    // A new socket attaches every session again, from where each subscriber got to.
+    _joining.clear();
 
     if (code == closeAuthenticationFailed && !_rejections.isClosed) {
       _rejections.add(null);

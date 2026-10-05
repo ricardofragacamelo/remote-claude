@@ -82,6 +82,8 @@ void main() {
     await ready();
     repository.follow('ses-1', () => 0);
     final Future<SessionUpdate> first = repository.updates.first;
+    socket().answerAttaches();
+    await settle();
 
     socket().deliver(diagPong(sessionId: 'ses-1', seq: 2));
 
@@ -119,6 +121,9 @@ void main() {
       final List<SessionUpdate> seen = <SessionUpdate>[];
       final StreamSubscription<SessionUpdate> subscription = repository.updates.listen(seen.add);
       addTearDown(subscription.cancel);
+      socket().answerAttaches();
+      await settle();
+      seen.clear();
 
       socket().deliver(
         frame(

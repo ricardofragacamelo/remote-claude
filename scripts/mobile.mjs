@@ -10,7 +10,7 @@
  *
  * Usage: `node scripts/mobile.mjs <task>`
  *   generate · format · format:check · analyze · arch · test:unit · test:widget · test:native ·
- *   coverage · test:e2e · test:e2e:push
+ *   coverage · test:e2e [suite…] · test:e2e:push
  */
 
 import fs from 'node:fs';
@@ -18,7 +18,14 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 
-import { EMULATOR_API_LEVEL, apiLevelProblem, suiteProblem } from './lib/android.mjs';
+import {
+  EMULATOR_API_LEVEL,
+  INTEGRATION_DIR,
+  apiLevelProblem,
+  suiteFailures,
+  suiteProblem,
+  suiteTargets,
+} from './lib/android.mjs';
 import { COVERAGE_THRESHOLDS } from './lib/coverage.mjs';
 import { complexityVerdict } from './lib/dart-metrics.mjs';
 import { commandExists, run, runAttached } from './lib/exec.mjs';
@@ -391,6 +398,11 @@ function reported(runner, command, args) {
   }
 
   if (result.code !== 0) {
+    if (runner === 'flutter') {
+      for (const { test, reason } of suiteFailures(`${result.stdout}\n${result.stderr}`)) {
+        fail(test, reason);
+      }
+    }
     return result.code;
   }
 
@@ -460,13 +472,27 @@ function preparedDevice() {
  * and a check that expensive on every validation cycle is one that ends up switched off. It is
  * run on purpose — see docs/plans/00-bootstrap/F6-scripts-e2e.md#o-e2e-do-mobile-não-é-portão.
  *
+ * Every suite, unless suites are named after the task (`test:e2e folders connection`): then only
+ * those — see {@link suiteTargets}.
+ *
  * @returns {number}
  */
 function endToEnd() {
+  // Checked before the device: a suite that does not exist is known without a build.
+  const { targets, problem } = suiteTargets(
+    process.argv.slice(3),
+    fs
+      .readdirSync(path.join(mobileDir, INTEGRATION_DIR))
+      .filter((file) => file.endsWith('_test.dart')),
+  );
+
+  if (problem !== null) {
+    fatal(problem);
+    return 1;
+  }
+
   const defines = preparedDevice();
-  return defines === null
-    ? 1
-    : reported('flutter', 'flutter', ['test', 'integration_test', ...defines]);
+  return defines === null ? 1 : reported('flutter', 'flutter', ['test', ...targets, ...defines]);
 }
 
 /**

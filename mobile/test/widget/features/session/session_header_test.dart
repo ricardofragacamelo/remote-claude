@@ -309,6 +309,26 @@ void main() {
       expect(find.text(l10n.sessionUndoTitle), findsOneWidget);
     });
 
+    testWidgets('S-49 · confirmed, and the close arrives while the question leaves: the session '
+        'stays on screen, ended', (WidgetTester tester) async {
+      await screen.pump(tester, routed: true);
+      container(tester).read(ownedSessionsProvider.notifier).claim('session-1');
+      await openMenu(tester);
+      await tester.tap(find.text(l10n.sessionMenuEnd));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.sessionCloseConfirm));
+      await tester.pump();
+      // The server is fast: the close lands before the question has finished leaving.
+      screen.sessions.emit(arrivalOf(sessionClosed(seq: 2, reason: 'closedByUser')));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SessionPage), findsOneWidget);
+      expect(find.textContaining(l10n.sessionEndedResumes), findsOneWidget);
+    });
+
     testWidgets('S-52 · ended elsewhere with the question up: it closes, and nothing is sent', (
       WidgetTester tester,
     ) async {

@@ -227,6 +227,22 @@ void main() {
     });
   });
 
+  /// Answers every `session.attach` the client sent so far, the way the server does: an ack that
+  /// names the attach it answers.
+  Future<void> attachesAnswered() async {
+    for (final Map<String, Object?> sent in socket().sent.map(decode)) {
+      if (sent['type'] == 'session.attach') {
+        socket().deliver(
+          sessionAttached(
+            sessionId: (sent['payload']! as Map<String, Object?>)['sessionId']! as String,
+            correlationId: sent['id']! as String,
+          ),
+        );
+      }
+    }
+    await settle();
+  }
+
   group('sessions', () {
     test('attaching while ready asks the server straight away', () async {
       await connectAndHandshake();
@@ -291,12 +307,92 @@ void main() {
       await connectAndHandshake();
       final _Subscriber subscriber = _Subscriber();
       client.attach('ses-1', subscriber);
+      await attachesAnswered();
 
       socket().deliver(diagPong(sessionId: 'ses-1', seq: 1));
       await settle();
 
       expect(subscriber.events.single.seq, 1);
     });
+
+    // Plan 10, F10 — a session this socket opened streams to it before a new subscriber is answered.
+    test('a live event before the attach is answered is held from the new subscriber; the replay '
+        'after the answer brings everything, in order', () async {
+      await connectAndHandshake();
+      final _Subscriber screen = _Subscriber();
+      client.attach('ses-1', screen);
+
+      socket().deliver(diagPong(sessionId: 'ses-1', seq: 3));
+      await settle();
+      expect(screen.events, isEmpty);
+
+      await attachesAnswered();
+      for (final int seq in <int>[1, 2, 3, 4]) {
+        socket().deliver(diagPong(sessionId: 'ses-1', seq: seq));
+      }
+      await settle();
+
+      expect(screen.events.map((Envelope frame) => frame.seq), <int>[1, 2, 3, 4]);
+    });
+
+    test('a question is never held: it is not part of any replay', () async {
+      await connectAndHandshake();
+      final _Subscriber screen = _Subscriber();
+      client.attach('session-1', screen);
+
+      socket().deliver(permissionRequested());
+      await settle();
+
+      expect(screen.events.single.type, 'permission.requested');
+    });
+
+    test('a refused attach holds nothing back any more', () async {
+      await connectAndHandshake();
+      final _Subscriber screen = _Subscriber();
+      client.attach('ses-1', screen);
+      final String attachId = decode(socket().sent.last)['id']! as String;
+
+      socket().deliver(commandError(correlationId: attachId));
+      socket().deliver(diagPong(sessionId: 'ses-1', seq: 1));
+      await settle();
+
+      expect(screen.events.single.seq, 1);
+    });
+
+    test('an answer to another attach releases nobody', () async {
+      await connectAndHandshake();
+      final _Subscriber screen = _Subscriber();
+      client.attach('ses-1', screen);
+
+      socket().deliver(sessionAttached(sessionId: 'ses-1', correlationId: 'someone-else'));
+      socket().deliver(diagPong(sessionId: 'ses-1', seq: 1));
+      await settle();
+
+      expect(screen.events, isEmpty);
+    });
+
+    test(
+      'a subscriber that leaves while joining is forgotten, and a new socket starts clean',
+      () async {
+        await connectAndHandshake();
+        final _Subscriber screen = _Subscriber();
+        client.attach('ses-1', screen)();
+        final _Subscriber after = _Subscriber();
+        client.attach('ses-1', after);
+
+        await socket().drop(1006);
+        await settle();
+        scheduler.fire();
+        await settle();
+        socket().deliver(connectionReady());
+        await settle();
+        socket().deliver(diagPong(sessionId: 'ses-1', seq: 1));
+        await settle();
+
+        expect(screen.events, isEmpty);
+        expect(after.events.single.seq, 1);
+      },
+    );
 
     test('an event for a session nobody attached reaches the observers', () async {
       await connectAndHandshake();
@@ -447,6 +543,7 @@ void main() {
       final _Subscriber queue = _Subscriber();
       client.attach('ses-1', conversation);
       client.attach('ses-1', queue);
+      await attachesAnswered();
 
       socket().deliver(diagPong(sessionId: 'ses-1', seq: 1));
       await settle();
@@ -490,6 +587,7 @@ void main() {
       final void Function() leaveConversation = client.attach('ses-1', _Subscriber());
       final _Subscriber queue = _Subscriber();
       client.attach('ses-1', queue);
+      await attachesAnswered();
 
       leaveConversation();
       socket().deliver(diagPong(sessionId: 'ses-1', seq: 1));

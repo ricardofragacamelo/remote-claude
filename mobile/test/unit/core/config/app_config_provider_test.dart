@@ -1,6 +1,7 @@
 /// The address the app talks through, and the configuration that follows from it (plan 10, B-28).
 library;
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -79,7 +80,8 @@ void main() {
     'S-101 · a new address: saved on the phone, and the HTTP client and the socket rebuilt on it',
     () async {
       final ProviderContainer container = build();
-      final ApiClient before = container.read(apiClientProvider);
+      final ApiClient client = container.read(apiClientProvider);
+      final Dio before = container.read(httpTransportProvider);
       final WsClient socketBefore = container.read(wsClientProvider);
 
       expect(
@@ -92,8 +94,14 @@ void main() {
         container.read(appConfigProvider).oidcIssuer,
         'https://claude.example.dev/realms/remote-claude',
       );
-      // S-102 · nothing of the old origin answers any more: both were built again, on the new one.
-      expect(container.read(apiClientProvider), isNot(same(before)));
+      // S-102 · nothing of the old origin answers any more: the transport and the socket were built
+      // again, on the new one — under the same client, so nothing built over it has to be.
+      expect(container.read(httpTransportProvider), isNot(same(before)));
+      expect(
+        container.read(httpTransportProvider).options.baseUrl,
+        startsWith('https://claude.example.dev'),
+      );
+      expect(container.read(apiClientProvider), same(client));
       expect(container.read(wsClientProvider), isNot(same(socketBefore)));
     },
   );
@@ -102,7 +110,7 @@ void main() {
     final ProviderContainer container = build(
       saved: const ConnectionChoice(ConnectionKind.internal),
     );
-    final ApiClient before = container.read(apiClientProvider);
+    final Dio before = container.read(httpTransportProvider);
 
     expect(
       await controller(container).save(const ConnectionChoice(ConnectionKind.internal)),
@@ -110,7 +118,7 @@ void main() {
     );
 
     expect(storage.writes, 0);
-    expect(container.read(apiClientProvider), same(before));
+    expect(container.read(httpTransportProvider), same(before));
   });
 
   test('another text in the third radio, on the same address, is kept without moving', () async {

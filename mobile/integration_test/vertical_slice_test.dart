@@ -39,7 +39,7 @@ void main() {
 
   testWidgets('${scenario.id} — ${scenario.title}', (WidgetTester tester) async {
     final ProviderContainer container = e2eContainer(config, scenario);
-    addTearDown(container.dispose);
+    disposedAfterTheTest(tester, container);
     await container.read(deviceIdentityProvider).ensure();
 
     final AppLocalizations l10n = await AppLocalizations.delegate.load(const Locale('en'));
@@ -56,6 +56,14 @@ void main() {
     // `main.dart` opens the socket once the app starts; the test does the same, after the
     // credential exists — the handshake is what needs it.
     container.read(wsClientProvider).connect();
+
+    // The round trip lives with the checks since the folders home took its place (plan 10, D-27):
+    // from the home, the diagnostics, and from there the ping — the way a person gets to it.
+    await pumpUntil(tester, () => find.byTooltip(l10n.diagnosticsTitle).evaluate().isNotEmpty);
+    await tester.tap(find.byTooltip(l10n.diagnosticsTitle));
+    await pumpUntil(tester, () => find.byTooltip(l10n.sessionPingTitle).evaluate().isNotEmpty);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip(l10n.sessionPingTitle));
     await pumpUntil(tester, () => find.text(l10n.sessionPingAction).evaluate().isNotEmpty);
 
     await pumpUntil(

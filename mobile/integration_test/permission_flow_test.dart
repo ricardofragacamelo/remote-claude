@@ -28,7 +28,6 @@ import 'package:remote_claude/core/navigation/deep_link_controller.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/permission/permission.dart';
-import 'package:remote_claude/features/session/presentation/widgets/conversation_view.dart';
 
 import 'support/e2e_environment.dart';
 import 'support/signed_in_app.dart';
@@ -51,6 +50,7 @@ void main() {
     final String sessionId = await app
         .robot(tester)
         .startSession(app.container, 'do the work [fixture:$fixture]');
+    app.endsAfterTheTest(config, sessionId);
     await pumpUntil(tester, () => app.queueOf(sessionId).pending.isNotEmpty);
 
     return (sessionId, app.queueOf(sessionId).pending.single.requestId);
@@ -149,14 +149,7 @@ void main() {
     // Plan 10, S-74 — "open the session" lands on the conversation, scrolled to this same card, in
     // the place of its tool; it is answered there.
     await tester.tap(find.text(app.l10n.permissionOpenSession));
-    await pumpUntil(
-      tester,
-      () => find
-          .descendant(of: find.byType(ConversationView), matching: find.byType(PermissionPanel))
-          .hitTestable()
-          .evaluate()
-          .isNotEmpty,
-    );
+    await app.robot(tester).cardOnScreen();
 
     await allowedOnce(tester, app);
   });

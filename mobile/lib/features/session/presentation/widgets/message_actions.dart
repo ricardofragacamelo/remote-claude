@@ -62,7 +62,12 @@ class PromptHold extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
 
+    // The prompt's own words are the node's label, on the node that holds its actions: the bubble
+    // is a card, a node of its own, and a node that acts with no label is a button a screen reader
+    // cannot name (`labeledTapTargetGuideline`, found by the e2e of plan 10, S-119).
     return Semantics(
+      label: prompt.text,
+      excludeSemantics: true,
       hint: l10n.sessionMessageHold,
       customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
         for (final (String label, IconData _, VoidCallback? run) in actions.of(l10n, prompt))

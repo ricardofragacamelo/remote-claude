@@ -207,8 +207,10 @@ export function ephemeralEnvironment(ports, options = {}) {
     OIDC_ISSUER: urls.realm,
     // The realm through the web's forwarding too, the origin the phone signs in through over
     // `adb reverse` (plan 10, D-15 and D-16). The provider writes the origin into `iss`, so the
-    // backend lists both; the limits stack, on its own web port, lists its own.
-    OIDC_ADDITIONAL_ISSUERS: urls.webRealm,
+    // backend lists both; the limits stack, on its own web port, lists its own. And the same web
+    // by its loopback address: a second origin of the same server, which is how the app's suite
+    // switches address and signs in again without a second stack (plan 10, B-30).
+    OIDC_ADDITIONAL_ISSUERS: [urls.webRealm, issuerThrough(webLoopbackOrigin(ports.web))].join(','),
     OIDC_AUDIENCE: 'https://api.remote-claude.local',
     OIDC_CLIENT_ID_WEB: 'remote-claude-web',
     OIDC_CLIENT_ID_MOBILE: 'remote-claude-mobile',
@@ -518,6 +520,19 @@ export const REALM_PATH = `/realms/${REALM}`;
  */
 export function webOrigin(port) {
   return `http://localhost:${String(port)}`;
+}
+
+/**
+ * The same web server as {@link webOrigin}, by its loopback address rather than its name.
+ *
+ * Another origin of the same server — another `iss`, and on a device the same `adb reverse` — which
+ * is what lets the app's suite prove a change of address end to end with one stack (plan 10, B-30).
+ *
+ * @param {number | string} port
+ * @returns {string}
+ */
+export function webLoopbackOrigin(port) {
+  return `http://127.0.0.1:${String(port)}`;
 }
 
 /**

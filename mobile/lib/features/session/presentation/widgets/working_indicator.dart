@@ -190,10 +190,22 @@ class _WorkingIndicatorState extends State<WorkingIndicator> {
           ),
           const SizedBox(width: Tokens.spaceSm),
           Expanded(
+            // A node of its own: what is announced and tapped is the sentence alone, not the row
+            // the list item would otherwise merge it into — glyph, clock and all (S-119).
             child: Semantics(
+              container: true,
               liveRegion: true,
               button: goTo != null,
-              child: goTo == null ? label : InkWell(onTap: goTo, child: label),
+              child: goTo == null
+                  ? label
+                  : InkWell(
+                      onTap: goTo,
+                      // The whole height of the line is the target, as a touch target owes.
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: Tokens.touchTarget),
+                        child: Align(alignment: AlignmentDirectional.centerStart, child: label),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: Tokens.spaceSm),

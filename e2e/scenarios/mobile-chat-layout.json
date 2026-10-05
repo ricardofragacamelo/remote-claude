@@ -1,0 +1,22 @@
+{
+  "id": "10·S-115…S-120",
+  "title": "the chat layout on the emulator: in 360×640 with the keyboard open the box stays whole at the top and the end of a long conversation; the draft opens a session with its model, mode and effort; the turn inline, from the prompt to its summary, the box in view at every step; the pill, the question answered in the browser, the background and back; the guidelines in every state, and the cycle in 200 % type",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "phone": { "width": 360, "height": 640 },
+    "keyboard": 240,
+    "turn": "text-turn",
+    "turns": 8,
+    "model": "sonnet",
+    "modelLabel": "Sonnet",
+    "mode": "plan",
+    "effort": "high",
+    "inlineTurn": "long-tool-turn",
+    "thoughtTurn": "tool-turn",
+    "command": "node -e \"setTimeout(() => console.log('waited'), 40000)\"",
+    "textScale": 2.0
+  }
+}

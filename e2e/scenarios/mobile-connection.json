@@ -1,0 +1,15 @@
+{
+  "id": "10·S-110…S-112",
+  "title": "the address of the phone on the emulator: the first launch talks through the internal one and opens a session; another address is kept across a restart and signs in again; plain text to the internet is refused, and an address nobody answers at says so",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "text-turn",
+    "publicAddress": "http://8.8.8.8:8080",
+    "namedAddress": "http://example.com",
+    "privateAddress": "http://192.168.0.10:8080",
+    "unreachable": "http://127.0.0.1:9"
+  }
+}

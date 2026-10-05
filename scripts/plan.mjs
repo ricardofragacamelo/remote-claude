@@ -18,7 +18,7 @@
  *
  * Usage:
  *   pnpm plan new <name> [--phases foundation,backend,web] [--at <nn>]
- *   pnpm plan progress [<plan>]      # also accepts --progress
+ *   pnpm plan progress [<plan>]      # every plan without one; also accepts --progress
  */
 
 import { execFileSync } from 'node:child_process';
@@ -30,7 +30,11 @@ import { repoRoot } from './lib/paths.mjs';
 import {
   applyIndexStates,
   applyOverallProgress,
+  applyPhaseStates,
   applyProgress,
+  changedBeyondTheDate,
+  overallProblems,
+  planProgressProblems,
   summarizeOverall,
   summarizePlan,
 } from './lib/plan-progress.mjs';
@@ -264,18 +268,11 @@ function createPlan(args) {
 }
 
 /**
- * @param {string | undefined} wanted plan directory name, or just its number
+ * @param {string} wanted plan directory name, or just its number
  * @returns {string | null} absolute path
  */
 function resolvePlanDir(wanted) {
-  const plans = existingPlans();
-
-  if (wanted === undefined) {
-    const latest = plans.at(-1);
-    return latest === undefined ? null : path.join(plansDir, latest.name);
-  }
-
-  const match = plans.find(
+  const match = existingPlans().find(
     (plan) =>
       plan.name === wanted || plan.name.startsWith(`${wanted}-`) || `${plan.number}` === wanted,
   );
@@ -295,16 +292,20 @@ function resolvePlanDir(wanted) {
  * @returns {boolean} whether it was written
  */
 function rewriteProgress(file, rewrite) {
+  const before = fs.readFileSync(file, 'utf8');
   let updated;
 
   try {
-    updated = rewrite(fs.readFileSync(file, 'utf8'));
+    updated = rewrite(before);
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));
     return false;
   }
 
-  fs.writeFileSync(file, updated);
+  // Only what moved is written: the date of a document whose counters did not change stays.
+  if (changedBeyondTheDate(before, updated)) {
+    fs.writeFileSync(file, updated);
+  }
   return true;
 }
 
@@ -362,6 +363,8 @@ function recalculateOverall() {
 
   /** @type {Array<{ dir: string, summary: ReturnType<typeof summarizePlan> }>} */
   const entries = [];
+  /** @type {string[]} */
+  const problems = [];
 
   for (const plan of existingPlans()) {
     const planDir = path.join(plansDir, plan.name);
@@ -372,14 +375,26 @@ function recalculateOverall() {
       return 1;
     }
 
-    entries.push({
-      dir: plan.name,
-      summary: summarizePlan(
-        phaseFiles,
-        planFile(planDir, 'scenarios.md'),
-        planFile(planDir, 'decisions.md'),
+    const summary = summarizePlan(
+      phaseFiles,
+      planFile(planDir, 'scenarios.md'),
+      planFile(planDir, 'decisions.md'),
+    );
+    entries.push({ dir: plan.name, summary });
+
+    // The plan's own index of phases says what its tasks say, and its diary does not contradict it.
+    if (
+      !rewriteProgress(path.join(planDir, 'README.md'), (content) =>
+        applyPhaseStates(content, summary, plan.name),
+      )
+    ) {
+      return 1;
+    }
+    problems.push(
+      ...planProgressProblems(planFile(planDir, 'progress.md'), summary).map(
+        (problem) => `${plan.name}/progress.md: ${problem}`,
       ),
-    });
+    );
   }
 
   const overall = summarizeOverall(entries);
@@ -402,6 +417,24 @@ function recalculateOverall() {
   }
 
   ok(path.relative(repoRoot, indexPath), 'the state of each plan in the index');
+
+  problems.push(
+    ...overallProblems(fs.readFileSync(overallPath, 'utf8'), overall).map(
+      (problem) => `docs/plans/progress.md: ${problem}`,
+    ),
+  );
+
+  // The counters are written either way; what is written by hand and contradicts them is the
+  // author's to fix — and the command fails until it is, so the gap cannot pass unnoticed.
+  for (const problem of problems) {
+    fail(problem);
+  }
+  if (problems.length > 0) {
+    hint('write it in the plan, then run pnpm plan progress again');
+    return 1;
+  }
+
+  ok('the hand-written parts', 'agree with the counters');
   return 0;
 }
 
@@ -410,7 +443,34 @@ function recalculateOverall() {
  * @returns {number}
  */
 function recalculateProgress(args) {
-  const planDir = resolvePlanDir(args.find((arg) => !arg.startsWith('--')));
+  const wanted = args.find((arg) => !arg.startsWith('--'));
+
+  return wanted === undefined ? recalculateEveryPlan() : recalculatePlan(wanted);
+}
+
+/**
+ * Every plan, one after the other. Without a plan, every plan: recalculating only the last one left
+ * the diaries of the others behind, while the general progress — derived from all of them — moved on.
+ *
+ * @returns {number}
+ */
+function recalculateEveryPlan() {
+  for (const plan of existingPlans()) {
+    title(plan.name);
+    const code = recalculatePlan(plan.name);
+    if (code !== 0) {
+      return code;
+    }
+  }
+  return 0;
+}
+
+/**
+ * @param {string} wanted the plan's directory, or its number
+ * @returns {number}
+ */
+function recalculatePlan(wanted) {
+  const planDir = resolvePlanDir(wanted);
 
   if (planDir === null) {
     fail('no plan found', 'pass the plan directory, e.g. pnpm plan progress 00-bootstrap');

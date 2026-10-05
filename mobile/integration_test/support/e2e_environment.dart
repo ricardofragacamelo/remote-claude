@@ -13,6 +13,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,8 +21,10 @@ import 'package:remote_claude/app/app.dart';
 import 'package:remote_claude/app/bootstrap.dart';
 import 'package:remote_claude/core/config/app_config.dart';
 import 'package:remote_claude/core/config/app_config_provider.dart';
+import 'package:remote_claude/core/config/connection_choice.dart';
 import 'package:remote_claude/core/device/device_identity_provider.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
+import 'package:remote_claude/core/storage/credential_store.dart';
 import 'package:remote_claude/core/storage/credential_store_provider.dart';
 import 'package:remote_claude/features/auth/auth.dart';
 import 'package:remote_claude/features/auth/auth_providers.dart';
@@ -122,7 +125,16 @@ class ConfirmingLock implements ApprovalLock {
 ///
 /// The address is chosen as on a phone: none saved, so the internal one — and the login follows
 /// whichever address is chosen afterwards, as the real one does (plan 10, B-28).
-ProviderContainer e2eContainer(BuildConfig build, E2eScenario scenario) {
+///
+/// [store] is the phone's secure storage: a fresh one is a fresh installation, and the same one
+/// handed to a second container is the same phone opened again — with [saved], the address it had
+/// stored, read before the first frame as `main.dart` reads it (plan 10, S-111).
+ProviderContainer e2eContainer(
+  BuildConfig build,
+  E2eScenario scenario, {
+  CredentialStore? store,
+  ConnectionChoice? saved,
+}) {
   final AppLogger logger = buildLogger(
     appVersion: build.appVersion,
     platform: defaultTargetPlatform.name,
@@ -131,9 +143,9 @@ ProviderContainer e2eContainer(BuildConfig build, E2eScenario scenario) {
 
   return ProviderContainer(
     overrides: <Override>[
-      ...bootstrapOverrides(build: build, logger: logger),
+      ...bootstrapOverrides(build: build, logger: logger, saved: saved),
       // The operating system's external tab, the Keychain and the lock screen.
-      credentialStoreProvider.overrideWithValue(MemoryCredentialStore()),
+      credentialStoreProvider.overrideWithValue(store ?? MemoryCredentialStore()),
       oidcAuthDataSourceProvider.overrideWith(
         (Ref ref) => DirectGrantDataSource(
           config: ref.watch(appConfigProvider),
@@ -145,6 +157,22 @@ ProviderContainer e2eContainer(BuildConfig build, E2eScenario scenario) {
     ],
   );
 }
+
+/// Disposes [container] once the test is over — after the app is unmounted and what its screens had
+/// asked has been answered.
+///
+/// A screen further down the stack — the folder's, under the draft and the session — reads the
+/// server again when a session changes, and a test often ends on such a change. Disposing the
+/// container closes the HTTP client, and a connection still being made is cancelled; `dart:io`
+/// reports that cancellation as an error nobody can catch, and the test fails after it passed.
+/// Unmounted first, nothing asks anything new; on this machine's loopback, what is in flight is
+/// answered well within the pause.
+void disposedAfterTheTest(WidgetTester tester, ProviderContainer container) =>
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await Future<void>.delayed(const Duration(seconds: 1));
+      container.dispose();
+    });
 
 /// Mounts the app over [container], and lets its first frames settle.
 Future<void> mountApp(WidgetTester tester, ProviderContainer container) async {
@@ -196,6 +224,84 @@ class BackendAsBrowser {
     final List<Object?> roots = response.data!['workspaces']! as List<Object?>;
 
     return (roots.first! as Map<String, Object?>)['path']! as String;
+  }
+
+  /// The folder tabs of this account — the same set the app's folders home shows (plan 10, D-25).
+  Future<List<String>> openFolders() async {
+    final Response<Map<String, Object?>> response = await _dio.get<Map<String, Object?>>(
+      '/workspaces/open-folders',
+    );
+
+    return (response.data!['folders']! as List<Object?>)
+        .map((Object? folder) => (folder! as Map<String, Object?>)['path']! as String)
+        .toList();
+  }
+
+  /// Opens [path] in a tab, and answers the status and the code of the answer — a refusal is an
+  /// answer here, not an exception.
+  Future<(int, String?)> openFolder(String path) async {
+    final Response<Map<String, Object?>> response = await _dio.post<Map<String, Object?>>(
+      '/workspaces/open-folders',
+      data: <String, Object?>{'path': path},
+      options: Options(validateStatus: (_) => true),
+    );
+
+    final Object? error = response.data?['error'];
+    return (response.statusCode!, error is Map<String, Object?> ? error['code'] as String? : null);
+  }
+
+  /// Closes the tab of [path] — closing one that is not open is not an error.
+  Future<void> closeFolder(String path) => _dio.delete<Object?>(
+    '/workspaces/open-folders',
+    queryParameters: <String, Object?>{'path': path},
+  );
+
+  /// Makes the folder [name] inside [root], as the browser's explorer does, and answers its path.
+  ///
+  /// The app runs on a device, where the machine's disk is not there to write to: a test that
+  /// needs folders of its own asks the backend for them, through a door the product has.
+  Future<String> makeFolder(String root, String name) async {
+    await _dio.post<Object?>(
+      '/files',
+      data: <String, Object?>{'folder': root, 'path': name, 'kind': 'directory'},
+    );
+
+    return '$root/$name';
+  }
+
+  /// Removes the folder [name] of [root] that [makeFolder] made — with whatever a session left in
+  /// it, saying back the count the server asks for, as the explorer's confirmation does.
+  Future<void> removeFolder(String root, String name) async {
+    final Map<String, Object?> where = <String, Object?>{'folder': root, 'path': name};
+    final Response<Map<String, Object?>> first = await _dio.delete<Map<String, Object?>>(
+      '/files',
+      queryParameters: where,
+      options: Options(validateStatus: (int? status) => status == 204 || status == 409),
+    );
+
+    if (first.statusCode == 409) {
+      final Map<String, Object?> error = first.data!['error']! as Map<String, Object?>;
+      final Map<String, Object?> params = error['params']! as Map<String, Object?>;
+      await _dio.delete<Object?>(
+        '/files',
+        queryParameters: <String, Object?>{
+          ...where,
+          'recursive': 'true',
+          'expectedEntries': '${params['entryCount']}',
+        },
+      );
+    }
+  }
+
+  /// The sessions alive in [workspacePath] and below it, as the server lists them — each with the
+  /// model and the mode it was opened with.
+  Future<List<Map<String, Object?>>> liveSessions(String workspacePath) async {
+    final Response<Map<String, Object?>> response = await _dio.get<Map<String, Object?>>(
+      '/sessions',
+      queryParameters: <String, Object?>{'workspacePath': workspacePath},
+    );
+
+    return (response.data!['sessions']! as List<Object?>).cast<Map<String, Object?>>();
   }
 
   /// The standing rules of this account, as the browser lists them.
@@ -339,6 +445,30 @@ class BrowserSocket {
     <String, Object?>{'sessionId': sessionId, 'text': '$text [fixture:$fixture]'},
   );
 
+  /// Answers the question [asked] — a `permission.requested` this socket received — as the browser
+  /// does: a response naming the request's frame.
+  void respond(Map<String, Object?> asked, Map<String, Object?> answer) {
+    final Map<String, Object?> payload = asked['payload']! as Map<String, Object?>;
+    _socket.add(
+      jsonEncode(<String, Object?>{
+        'v': 1,
+        'id': '${DateTime.now().microsecondsSinceEpoch}-permission.resolve',
+        'kind': 'response',
+        'type': 'permission.resolve',
+        'ts': DateTime.now().toUtc().toIso8601String(),
+        'correlationId': asked['id'],
+        'payload': <String, Object?>{'requestId': payload['requestId'], ...answer},
+      }),
+    );
+  }
+
+  /// Prompts [sessionId] with the recording [fixture], and waits for the turn to end.
+  Future<void> turn(String sessionId, String fixture, {String text = 'do the work'}) async {
+    final int mark = frames.length;
+    prompt(sessionId, fixture, text: text);
+    await waitFor((Map<String, Object?> frame) => frame['type'] == 'turn.completed', from: mark);
+  }
+
   /// Closes the socket the way a browser does.
   Future<void> close() => _socket.close(1000);
 
@@ -383,16 +513,20 @@ Future<void> waitUntil(
 /// `pumpAndSettle` cannot be used to wait for the network: it settles as soon as no animation is
 /// pending, which happens long before a frame comes back over the socket. And a fixed delay is a
 /// flaky test by construction — see docs/architecture/shared/06-testing-strategy.md.
+///
+/// [what] says what was waited for, and is asked only when it never came — it may describe the
+/// state the app was left in.
 Future<void> pumpUntil(
   WidgetTester tester,
   bool Function() ready, {
   Duration timeout = const Duration(seconds: 30),
+  String Function()? what,
 }) async {
   final DateTime deadline = DateTime.now().add(timeout);
 
   while (!ready()) {
     if (DateTime.now().isAfter(deadline)) {
-      fail('the condition never held within ${timeout.inSeconds}s');
+      fail('${what?.call() ?? 'the condition'} never held within ${timeout.inSeconds}s');
     }
     await tester.pump(const Duration(milliseconds: 50));
   }

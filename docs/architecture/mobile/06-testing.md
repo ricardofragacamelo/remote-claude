@@ -110,6 +110,23 @@ acha por **semântica** (`Semantics` label, tooltip, papel), nunca por tipo inte
 [widget](#widget). As suítes usam o robô; quando o layout muda, muda o robô, não o que os testes
 afirmam (R-01 do [plano 10](../../plans/10-mobile-chat-layout/README.md#riscos-e-decisões-em-aberto)).
 
+**As suítes dividem uma stack, e cada teste deixa ela como achou** (plano 10, F10):
+
+- **o navegador é o segundo cliente** — `BackendAsBrowser` (HTTP) e `BrowserSocket` (WebSocket, sem
+  instalação) abrem sessões, pastas e respondem pedidos como o web faria;
+- **sessão aberta é encerrada no fim** (`endsAfterTheTest`): a stack tem teto de sessões, e um slot
+  esquecido é a recusa do teste seguinte;
+- **pasta própria, criada pelo backend** (`makeFolder`, o `POST /files` do explorador), fechada e
+  removida no fim — o aparelho não alcança o disco da máquina, e a raiz é de todas as suítes;
+- **o container sai depois do app** (`disposedAfterTheTest`): desmontado primeiro, e o que as telas
+  pediram é respondido antes de o cliente HTTP fechar — uma conexão cancelada no meio vira erro não
+  tratado do `dart:io`, e o teste falha depois de passar;
+- **trocar de endereço usa a mesma stack por outra origem**: `http://127.0.0.1:<web>`, que a stack do e2e
+  aceita como issuer ao lado de `http://localhost:<web>`.
+
+`pnpm test:e2e:mobile <suíte…>` roda só as suítes nomeadas (`folders`, `chat_layout_test`…) — para
+escrever uma; a validação roda todas.
+
 **A suíte roda em Android, e só.** O app continua compilando para iOS, mas push, biometria e
 `integration_test` **nunca são exercitados lá** — é escopo declarado, não descuido: iOS exigiria
 conta de desenvolvedor paga, certificado APNs e um runner próprio. Tratar iOS como coberto

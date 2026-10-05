@@ -27,6 +27,7 @@ import {
   resolvePorts,
   serviceUrls,
   watchEnvironment,
+  webLoopbackOrigin,
   webOrigin,
   withWebIssuer,
   workspaceStatus,
@@ -113,6 +114,7 @@ describe('the origin of the stack and its issuers', () => {
     expect(webOrigin(5173)).toBe('http://localhost:5173');
     expect(webOrigin('51004')).toBe('http://localhost:51004');
     expect(issuerThrough(webOrigin(5173))).toBe('http://localhost:5173/realms/remote-claude');
+    expect(webLoopbackOrigin(5173)).toBe('http://127.0.0.1:5173');
     expect(issuerThrough('https://h.dev', '/realms/other')).toBe('https://h.dev/realms/other');
   });
 
@@ -410,8 +412,14 @@ describe('the ephemeral stack of an e2e run', () => {
   });
 
   it('accepts the realm through the web origin too, the one the phone signs in through — plan 10, D-15', () => {
-    expect(ephemeralEnvironment(ports).OIDC_ADDITIONAL_ISSUERS).toBe(
+    expect(ephemeralEnvironment(ports).OIDC_ADDITIONAL_ISSUERS.split(',')).toContain(
       'http://localhost:51004/realms/remote-claude',
+    );
+  });
+
+  it('accepts the same web by its loopback address, the second origin the app switches to — plan 10, B-30', () => {
+    expect(ephemeralEnvironment(ports).OIDC_ADDITIONAL_ISSUERS).toBe(
+      'http://localhost:51004/realms/remote-claude,http://127.0.0.1:51004/realms/remote-claude',
     );
   });
 
@@ -530,7 +538,9 @@ describe('the limits stack of an e2e run — plan 05, S-82', () => {
     expect(env.RC_CHECKPOINT_DIR).not.toBe(main.RC_CHECKPOINT_DIR);
     expect(env.RC_PUSH_CREDENTIALS_FILE).not.toBe(main.RC_PUSH_CREDENTIALS_FILE);
     // Its own web is the origin its phone signs in through (plan 10, D-15).
-    expect(env.OIDC_ADDITIONAL_ISSUERS).toBe('http://localhost:51006/realms/remote-claude');
+    expect(env.OIDC_ADDITIONAL_ISSUERS).toBe(
+      'http://localhost:51006/realms/remote-claude,http://127.0.0.1:51006/realms/remote-claude',
+    );
   });
 
   it('is announced in e2e/.env when the run has one', () => {

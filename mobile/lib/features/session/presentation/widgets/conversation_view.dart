@@ -171,7 +171,11 @@ class _ConversationViewState extends State<ConversationView> {
 
     final Rect view = list.localToGlobal(Offset.zero) & list.size;
     final bool away = inline.queue.pending.any((PermissionCard card) {
-      final RenderObject? drawn = inline.inView.cardOf(card.requestId)?.findRenderObject();
+      // A card the lazy list let go of still has its node, and its context is gone with it.
+      final BuildContext? context = inline.inView.cardOf(card.requestId);
+      final RenderObject? drawn = context != null && context.mounted
+          ? context.findRenderObject()
+          : null;
 
       if (drawn is! RenderBox || !drawn.attached) {
         return true;

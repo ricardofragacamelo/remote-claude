@@ -3,6 +3,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/features/session/presentation/widgets/chat_composer.dart';
 import 'package:remote_claude/features/session/presentation/widgets/composer_bar.dart';
@@ -294,6 +295,30 @@ void main() {
       expect(find.byTooltip(l10n.composerMore), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+      'S-30 · at every width nothing overflows, and where the bar fits the mode is whole: '
+      'the chips have a space of their own, not half of what is left',
+      (WidgetTester tester) async {
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        for (double width = 300; width <= 520; width += 2) {
+          tester.view.physicalSize = Size(width, 640);
+          await pump(tester, state: const ComposerState(isTurnRunning: true));
+          box.text = 'queued';
+          await tester.pump();
+
+          expect(tester.takeException(), isNull, reason: 'at $width');
+          // Where the bar says everything fits, the mode is whole; narrower, its words may give.
+          if (find.byTooltip(l10n.composerMore).evaluate().isEmpty) {
+            final RenderParagraph mode = tester.renderObject<RenderParagraph>(find.text('Ask me'));
+            expect(mode.didExceedMaxLines, isFalse, reason: 'the mode cut at $width');
+          }
+          box.clear();
+        }
+      },
+    );
 
     test('the measure: icon buttons, chips and the gaps between them', () {
       final List<ComposerChoice> chips = <ComposerChoice>[

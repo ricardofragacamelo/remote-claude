@@ -55,7 +55,8 @@ O encaminhamento por caminho é do servidor (o do web no dev e no e2e, a infraes
 | `checkOrigin` · `ConnectionEndpoints` | `core/config/connection_origin.dart` | valida e normaliza a origem — só `https`, exceto `http://localhost` e `http://127.0.0.1` (D-14) e, fora do release, `http://` para um IPv4 literal da rede privada — `10/8`, `172.16/12`, `192.168/16` ([D-20](../../plans/10-mobile-chat-layout/decisions.md#f6--instalação-por-usb)); sem caminho, query, fragmento nem usuário — e deriva os três endereços |
 | `ConnectionChoice` · `DefinedOrigins.resolve` | `core/config/connection_choice.dart` | interno, externo ou outro; sem escolha, o interno, senão o externo, senão nenhum (D-17); escolha que o build não oferece mais volta ao padrão, dizendo por quê |
 | `ConnectionStore` | `core/config/connection_store.dart` | a escolha e o texto do **Outro** no `flutter_secure_storage`, em `rc.connection.*` — fora de `CredentialKeys.all`, então o logout não os apaga (D-18); valor ilegível vale o padrão, com `warn` |
-| `ConnectionController` · `appConfigProvider` | `core/config/app_config_provider.dart` | a escolha em memória; o `AppConfig` é **derivado** dela, e o cliente HTTP, o socket e o OIDC o observam — trocar de origem reconstrói os três |
+| `ConnectionController` · `appConfigProvider` | `core/config/app_config_provider.dart` | a escolha em memória; o `AppConfig` é **derivado** dela, e o transporte HTTP (`httpTransportProvider`), o socket e o OIDC o observam — trocar de origem reconstrói os três |
+| `apiClientProvider` · `httpTransportProvider` | `core/network/api_client_provider.dart` | o `ApiClient` **não** segue a origem: pede o transporte (o `Dio` da origem em uso) a cada requisição. Se ele fosse refeito, todo data source, repositório e caso de uso sobre ele ficaria por refazer — preguiçosamente, na primeira leitura, no meio do build de uma tela —, e o Riverpod marca o escopo sujo durante o frame (achado pelo e2e do plano 10, S-111) |
 
 **Trocar de origem com login aberto encerra o login antes de salvar**: o token é de outro issuer, e
 nenhuma credencial velha chega à origem nova (S-101, S-102). Salvar a mesma escolha não faz nada. Sem
@@ -105,6 +106,15 @@ Idênticas às do web, porque o problema é o mesmo:
    `messageId`, e fecha o bloco em curso: o texto dele entra como bloco terminado, no lugar do que os
    deltas daquele bloco acumularam, e se **soma** aos blocos que a mensagem já tem. O bloco que fecha
    como `tool_use` ou thinking nunca apaga a resposta.
+
+**Assinante novo só recebe evento depois da resposta ao `attach` dele.** A regra 1 supõe que o replay
+chega antes do ao vivo. Na sessão que o próprio app abriu não chega: o socket já recebe a sessão desde o
+`session.start`, e os eventos que caem entre o `attach` e o `session.attached` fariam o replay — a partir
+do `session.started` — ser descartado como já visto. A tela perdia pasta, modelo, modo e o primeiro
+prompt ([plano 10 · F10](../../plans/10-mobile-chat-layout/progress.md)). O `WsClient` segura os
+`event` de um assinante até o `session.attached` que responde **ao `attach` dele** (pelo
+`correlationId`), ou até a recusa desse comando: tudo o que chegou antes foi publicado antes de o
+servidor ler o `attach`, e o replay traz, na ordem. `request` nunca é segurado — não faz parte de replay.
 
 ### A conversa como lista ordenada
 

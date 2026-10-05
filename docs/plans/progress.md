@@ -27,7 +27,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 07-explorer-and-editor   ████████████████████ 100%   ✅ concluído
 08-claude-panel          ████████████████████ 100%   ✅ concluído
 09-chat-layout           ████████████████████ 100%   ✅ concluído
-10-mobile-chat-layout    ██████████████████░░  90%   🔄 em andamento
+10-mobile-chat-layout    ████████████████████ 100%   ✅ concluído
 11-search                ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 12-integrated-terminal   ░░░░░░░░░░░░░░░░░░░░   0%   🔄 em andamento
 13-claude-settings       ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
@@ -59,6 +59,8 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [06 — Workbench](06-workbench/README.md) | 7/7 | 40/40 | 210/210 | 33/33 | ✅ |
 | [07 — Explorer e editor](07-explorer-and-editor/README.md) | 9/9 | 61/61 | 360/360 | 26/26 | ✅ |
 | [08 — Painel do Claude](08-claude-panel/README.md) | 7/7 | 58/58 | 275/275 | 25/25 | ✅ |
+| [09 — Layout do chat](09-chat-layout/README.md) | 6/6 | 32/32 | 92/92 | 19/19 | ✅ |
+| [10 — Layout do chat no app](10-mobile-chat-layout/README.md) | 11/11 | 48/48 | 177/178 | 30/31 | ✅ |
 | [11 — Busca](11-search/README.md) | 0/4 | 0/25 | 0/174 | 8/8 | 🔲 |
 | [12 — Terminal integrado](12-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 13/13 | 🔄 |
 | [13 — Configuração do Claude](13-claude-settings/README.md) | 0/5 | 0/47 | 0/213 | 22/22 | 🔲 |
@@ -69,17 +71,35 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [18 — Logs e diagnóstico](18-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 2/16 | 🔲 |
 | [19 — Distribuição](19-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/8 | 🔲 |
 | [20 — Dev public](20-dev-public/README.md) | 0/1 | 6/7 | 38/41 | 8/8 | 🔄 |
-| [09 — Layout do chat](09-chat-layout/README.md) | 6/6 | 32/32 | 92/92 | 19/19 | ✅ |
-| [10 — Layout do chat no app](10-mobile-chat-layout/README.md) | 10/11 | 43/48 | 162/178 | 28/29 | 🔄 |
 | [21 — Rich previews](21-rich-previews/README.md) | 0/5 | 1/23 | 2/74 | 15/15 | 🔄 |
 | [22 — Histórico ao vivo](22-live-history/README.md) | 0/8 | 0/37 | 0/130 | 17/17 | 🔲 |
-| **Total** | **76/132** | **447/799** | **1733/3278** | **314/395** | 🔄 |
+| **Total** | **77/132** | **452/799** | **1748/3278** | **316/397** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
 ---
 
 ## Onde o projeto está
+
+**Em 2026-10-05, onze planos estão concluídos — 00 a 10.** O produto (00…05), o cliente no molde do
+VS Code (06…09) e o app no mesmo molde (10): conversar com o Claude da máquina pelo navegador e pelo
+celular, com toda tool auditada e aprovável, regras, histórico e retomada, pastas em abas, explorer e
+editor, o painel do Claude como o plugin do VS Code e o app que abre pastas e sessões como o web.
+
+Em andamento: o [17](17-devices/README.md) (a F3 — o celular fica sabendo que foi aprovado — está
+feita), o [20](20-dev-public/README.md) (a F0 espera a verificação à mão da B-06), o
+[21](21-rich-previews/README.md) (a B-03 entrou antes do plano), e o [12](12-integrated-terminal/README.md)
+e o [15](15-rules-management/README.md), que têm cenários escritos e nenhuma tarefa. Não iniciados: 11,
+13, 14, 16, 18, 19 e o [22](22-live-history/README.md), criado em 2026-10-04. Cada marco está no
+[histórico](#histórico); os parágrafos abaixo são o relato de quando cada um dos primeiros planos fechou.
+
+Em 2026-09-30 o [plano 06](06-workbench/README.md) fechou, e em 2026-10-01 o
+[07](07-explorer-and-editor/README.md): pastas em abas, o explorer e o editor que não perdem trabalho
+quando o Claude escreve junto. Em 2026-10-02 fechou o [08](08-claude-panel/README.md), o painel do
+Claude ao lado do editor; o usuário reprovou a disposição dele, e o [09](09-chat-layout/README.md) a
+refez no molde do plugin do VS Code — fechado em 2026-10-03. O [10](10-mobile-chat-layout/README.md)
+pôs o app no mesmo molde, ganhou no caminho o endereço de conexão, a instalação por USB e as pastas e
+sessões do web, e fechou em 2026-10-05 com o e2e no emulador, que achou e corrigiu cinco defeitos do app.
 
 **O produto conversa com o Claude, e nenhuma tool sensível roda sem um humano dizer sim.**
 
@@ -242,7 +262,8 @@ empacota o que todos eles entregam, e por isso é o último:
 
 | Plano | Entrega a capacidade de… | Depende de |
 |---|---|---|
-| [01 — Sessão viva](01-live-session/README.md) | conversar com o Claude, com toda tool auditada e aprovável pela web ✅ | 00 |
+| [00 — Bootstrap](00-bootstrap/README.md) | o trilho: autenticação, contrato WS, as quatro camadas do backend, o banco, o web e o app atravessados por um walking skeleton, e os onze portões | — |
+| [01 — Sessão viva](01-live-session/README.md) | conversar com o Claude, com toda tool auditada e aprovável pela web | 00 |
 | [02 — Aprovação pelo celular](02-mobile-approval/README.md) | decidir de longe, com device aprovado e push | 01 |
 | [03 — Regras e trilha](03-rules-and-audit/README.md) | não repetir a mesma aprovação, e consultar o que foi executado | 01, 02 |
 | [04 — Histórico e retomada](04-transcript-and-resume/README.md) | continuar o que começou antes, inclusive no VSCode | 01 |
@@ -261,6 +282,9 @@ empacota o que todos eles entregam, e por isso é o último:
 | [17 — Dispositivos](17-devices/README.md) | gerir os aparelhos que respondem permissão | 06 |
 | [18 — Logs e diagnóstico](18-logs-and-diagnostics/README.md) | ler os logs por `traceId` e ver a saúde da instalação | 06 |
 | [19 — Distribuição](19-distribution/README.md) | instalar e atualizar na máquina de quem usa | 05…17 |
+| [20 — Dev public](20-dev-public/README.md) | abrir o `pnpm dev` atrás de um túnel HTTPS, num domínio só, e usar o web e o app de fora desta máquina | 05 |
+| [21 — Rich previews](21-rich-previews/README.md) | ler PDF como num leitor de verdade, e markdown com tabelas largas e diagramas `mermaid` | 07 |
+| [22 — Histórico ao vivo](22-live-history/README.md) | ver ao vivo, no web e no app, a conversa conduzida em outro cliente, como o Claude Code a mostra | 04 |
 
 ---
 
@@ -269,13 +293,27 @@ empacota o que todos eles entregam, e por isso é o último:
 Decisão em aberto não impede planejar; impede **começar a fase** que depende dela. Cada uma
 está registrada no risco do seu plano.
 
-**Nenhuma decisão trava plano hoje.** As cinco que travavam foram decididas pelo usuário em
+**Em 2026-09-26, nenhuma decisão travava plano:** as cinco que travavam foram decididas pelo usuário em
 2026-09-26: o provedor OIDC (Keycloak próprio — 05 · D-05), a exposição e o certificado (da
 infraestrutura — 19 · D-04, D-05), os sistemas operacionais (os três, teste só em Linux — 19 · D-01),
 o workbench em React (06 · D-01) e o terminal com as travas (12 · D-01). O que trava os planos 06 a
 18 agora não é decisão, é ordem: eles esperam o 05 fechar ([06 · D-02](06-workbench/decisions.md)).
 
-O [plano 09](09-chat-layout/README.md) teve as 16 decisões respondidas em 2026-10-02. A F0 espera a F6 do 08 ([D-01](09-chat-layout/decisions.md#f0--normas)) ; o plano já foi revisado para as três que divergem da recomendação (D-01, D-02, D-05). O [plano 10](10-mobile-chat-layout/README.md), o app no mesmo molde, nasceu na mesma data; as oito decisões dele foram respondidas em 2026-10-03, e o 09, que ele esperava, fechou na mesma data: a F0 pode começar. Na mesma data ele ganhou a F5 (endereço de conexão), antes do e2e, que passou a ser a F6; a D-15 — uma lista explícita de issuers no backend — foi decidida na mesma data, condicionada ao spike da B-25.
+O que está em aberto **hoje** é a tabela gerada abaixo — uma linha por plano com decisão 🔲, tirada do
+`decisions.md` de cada um pelo `pnpm plan progress`. Decisão em aberto trava a fase que ela diz bloquear
+(coluna **Bloqueia** do `decisions.md`): é o que falta responder antes de essa fase começar.
+
+<!-- open-decisions:start -->
+| Plano | Em aberto | Quantas |
+|---|---|---|
+| [10-mobile-chat-layout](10-mobile-chat-layout/decisions.md) | D-19 | 1 |
+| [14-audit-explained](14-audit-explained/decisions.md) | D-01…D-14 | 14 |
+| [15-rules-management](15-rules-management/decisions.md) | D-01…D-06, D-08…D-19 | 18 |
+| [16-usage-and-cost](16-usage-and-cost/decisions.md) | D-01…D-15 | 15 |
+| [17-devices](17-devices/decisions.md) | D-01…D-12 | 12 |
+| [18-logs-and-diagnostics](18-logs-and-diagnostics/decisions.md) | D-02…D-10, D-12…D-16 | 14 |
+| [19-distribution](19-distribution/decisions.md) | D-02, D-03, D-06…D-08 | 5 |
+<!-- open-decisions:end -->
 
 Este é o recorte do que **trava** trabalho. A lista inteira, por fase e com o gap de
 cada uma, vive no `decisions.md` de cada plano — e o contador de decisões do painel sai de lá.
@@ -325,6 +363,12 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-10-05 | **Plano 10 — Layout do chat no app concluído** (F10, o e2e) | 48/48 tarefas e 177 de 178 cenários — a S-140, o APK num celular de verdade pelo cabo, é verificação manual que fica com o usuário; `pnpm test:e2e:mobile` 28/28 em duas rodadas seguidas e `pnpm verify:full` verde. Três suítes novas no emulador: o endereço de conexão (com a troca para outra origem da mesma stack, que a stack do e2e passou a aceitar), as pastas e sessões com o navegador como segundo cliente, e o layout do chat em 360×640 com teclado, em 200 % e nas diretrizes de acessibilidade. O e2e achou e a F10 corrigiu cinco defeitos do app — o `ApiClient` refeito no meio de um build depois de trocar de endereço, o replay perdido da sessão aberta pelo próprio app (sem pasta, modelo, modo e às vezes o primeiro prompt), a pílula que media um card descartado, o chip do modo espremido na barra e o "Encerrar" que tirava a tela da sessão — e dois de acessibilidade. Duas decisões do agente esperam o usuário: D-30 e D-31 |
+| 2026-10-04 | **Plano 22 — Histórico ao vivo criado** | a partir da [proposta](../propostas/historico-ao-vivo-e-fiel.md): tudo o que o Claude Code mostra de uma conversa chega ao vivo ao web e ao app, mesmo conduzida em outro cliente, e como ele mostra. 8 fases, 37 tarefas, 130 cenários e 17 decisões, respondidas na criação |
+| 2026-10-04 | **Plano 10 ganhou as pastas e sessões do web (F7…F9) e a instalação por USB (F6); o E2E voltou a ser a última fase (F10)** | por pedido do usuário: várias pastas abertas (as mesmas abas do web), a tela da pasta e várias sessões com um painel que troca entre elas; e `pnpm mobile:install`, o APK de debug no celular do cabo com os endereços da rede e do `pnpm dev:public`. As fases entraram antes do E2E, que foi renumerado para o fim; F6…F9 concluídas na mesma data |
+| 2026-10-04 | **Plano 17 — a F3 concluída: o celular fica sabendo que foi aprovado** | o push `deviceApproved` e o app que se atualiza ao ser aprovado, por pedido do usuário (ele aprovou o celular no navegador, e o celular não ficou sabendo); a fase entrou antes do E2E, que passou a ser a F4 |
+| 2026-10-03 | **Plano 21 — Rich previews criado** | o PDF como num leitor de verdade e o markdown com tabelas largas e diagramas `mermaid`, em todo lugar onde markdown aparece. 5 fases, 23 tarefas, 74 cenários e 15 decisões respondidas pelo usuário; a B-03 (o desenho cancelado) entrou antes do plano, ao investigar o defeito |
+| 2026-10-02 | **Plano 20 — Dev public criado** | `pnpm dev:public`: a stack do `pnpm dev` atrás de um túnel HTTPS, num domínio só, para usar o web — e depois o app — de fora desta máquina. A F0 ficou com a B-06, a verificação à mão, pendente |
 | 2026-10-03 | **Plano 10 ganhou a F5 — Endereço de conexão; o e2e passou a ser a F6** | por pedido do usuário: a tela do app com três radios (interno, externo e outro, com campo de texto), a escolha guardada no aparelho para não se perder. Do endereço, uma origem só, saem API, WS e login; só `https` fora do `localhost`; o encaminhamento do plano 20 passa a valer no modo local, e o backend passa a aceitar uma lista explícita de issuers (D-15, condicionada ao spike da B-25; se ele reprovar, a decisão volta ao usuário). O e2e da F6 prova o layout e o endereço juntos. 6 tarefas, 29 cenários, 8 decisões |
 | 2026-10-03 | **Plano 10: as 8 decisões em aberto respondidas pelo usuário** | todas seguem a recomendação, e nenhuma muda tarefa ou cenário: o plano começa agora que o 09 fechou (D-03), um mapa declarado prova que os textos comuns são iguais no web e no app (D-04), o rascunho no toque na pasta (D-05), a regra de barra do 09 medida em 360 dp (D-06), `/` abre a folha de comandos (D-07), id e custo na folha do status (D-08), pressionar e segurar para as ações da mensagem (D-09) e o push da sessão na tela suprimido (D-10, que fechou o gap: em primeiro plano quem notifica é o nativo) |
 | 2026-10-03 | **Plano 09 — Layout do chat concluído** (F4, inline; F5, e2e) | 32/32 tarefas e 92 cenários; `verify:full` com os onze portões verdes (e2e 122/122), e o `chat-layout.spec` duas vezes seguidas, 36/36. Inline: o indicador do turno na cauda, o thinking vivo, a permissão e o plano no lugar da tool (ou na cauda até a linha chegar), a linha da decisão, a pílula e o comando `Mod+Alt+P`, a lista de tarefas sobre a caixa, editar, bifurcar e desfazer pela mensagem. Achados: a norma do 03 de foco no negar nunca tinha sido implementada no web; a resposta atrasada não era vigiada (o `respond` passou a devolver o id do frame). A 360×400 o card se responde com o teclado fechado (ver o progresso do plano). O contrato não mudou: o plano 10 começa sem `test:e2e:mobile` pendente deste |

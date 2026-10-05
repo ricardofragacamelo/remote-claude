@@ -37,6 +37,7 @@ void main() {
       app.container,
       'do the work [fixture:${background.text('fixture')}]',
     );
+    app.endsAfterTheTest(config, sessionId);
     Conversation conversation() =>
         app.container.read(liveSessionControllerProvider(sessionId)).conversation;
     await pumpUntil(tester, () => conversation().lastTurn != null);

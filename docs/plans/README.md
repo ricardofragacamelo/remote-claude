@@ -25,7 +25,7 @@ Voltar para o [índice geral](../architecture/README.md).
 | 07 | [Explorer e editor](07-explorer-and-editor/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 | 08 | [Painel do Claude](08-claude-panel/README.md) | ✅ concluído | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
 | 09 | [Layout do chat](09-chat-layout/README.md) | ✅ concluído | `pnpm verify:full` sai com código 0 |
-| 10 | [Layout do chat no app](10-mobile-chat-layout/README.md) | 🔄 em andamento | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
+| 10 | [Layout do chat no app](10-mobile-chat-layout/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 | 11 | [Busca](11-search/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
 | 12 | [Terminal integrado](12-integrated-terminal/README.md) | 🔄 em andamento | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
 | 13 | [Configuração do Claude](13-claude-settings/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
@@ -195,6 +195,19 @@ coluna de estado: `pnpm plan progress` atualiza o do plano **e** o geral, na mes
 coluna **Estado** do índice de planos, no topo deste documento, que ninguém mantém à mão. E
 `pnpm plan new` já cria a linha do plano novo no índice e no progresso geral — plano fora do
 mapa é plano que ninguém acompanha.
+
+**Sem argumento, `pnpm plan progress` recalcula todos os planos**, e além dos contadores:
+
+- reescreve a coluna de estado da tabela de fases do `README.md` de cada plano;
+- põe a tabela "Por plano" do progresso geral na ordem dos números;
+- gera a lista das decisões em aberto, entre `<!-- open-decisions:start -->` e
+  `<!-- open-decisions:end -->`;
+- só grava o que mudou além da data — a data diz quando os contadores **andaram**;
+- **falha** quando o que é escrito à mão contradiz os contadores: plano sem linha na tabela do que cada
+  plano entrega, plano concluído sem o marco "Plano NN … concluído" no histórico, "Fase corrente" que
+  diz "não iniciado" com task feita, ou que não diz que o plano fechou quando todas as tasks fecharam.
+  Os contadores são escritos assim mesmo; o texto é de quem escreve, e o comando não passa até ele
+  concordar.
 
 ### `progress.md` do plano — o diário
 

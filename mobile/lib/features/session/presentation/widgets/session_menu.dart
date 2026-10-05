@@ -189,7 +189,10 @@ class EndDialog extends ConsumerWidget {
         sessionId,
       ).select((LiveSession live) => live.conversation.status),
       (SessionStatus? previous, SessionStatus next) {
-        if (next == SessionStatus.closed) {
+        // Only while the question is still the route on top: confirmed, it is already leaving, and
+        // the close it asked for arrives while it animates out — a second pop then took the
+        // session's own screen away (found by the e2e of plan 10, S-119).
+        if (next == SessionStatus.closed && (ModalRoute.of(context)?.isCurrent ?? false)) {
           Navigator.of(context).pop(false);
         }
       },

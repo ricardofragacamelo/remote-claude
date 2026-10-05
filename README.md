@@ -300,7 +300,7 @@ Isso não é entregar; é esconder.
 | `pnpm test:unit` | unit das três pontas **e dos scripts de `scripts/`** — rápido, sem I/O |
 | `pnpm test:integration` | **exige Docker**: Postgres real via testcontainers, nunca SQLite, nunca mock; e o contrato de saída dos scripts de `scripts/` |
 | `pnpm test:e2e` | sobe stack **efêmera em portas aleatórias**, roda Playwright, derruba tudo |
-| `pnpm test:e2e:mobile` | a mesma stack, com o `integration_test` do Flutter — **roda na imagem API 35**: usa o aparelho já conectado ou, sem nenhum, sobe a AVD `remote_claude_api35` sem janela e a desliga no fim; não é portão |
+| `pnpm test:e2e:mobile` | a mesma stack, com o `integration_test` do Flutter — **roda na imagem API 35**: usa o aparelho já conectado ou, sem nenhum, sobe a AVD `remote_claude_api35` sem janela e a desliga no fim; não é portão. `pnpm test:e2e:mobile folders connection` roda só as suítes nomeadas (`integration_test/<nome>_test.dart`) |
 | `pnpm test:e2e:mobile:push` | a mesma suíte do app com **push de verdade**: lê do `.env` só as três `RC_PUSH_*`, roda pelo `patrol` (`dart pub global activate patrol_cli 4.8.0`), responde o diálogo de notificação do SO, manda o app para o fundo e toca a notificação — sai da máquina, e não é portão |
 | `pnpm test:e2e:live` | a mesma stack contra o **Claude de verdade** — exige o Claude logado (ou `CLAUDE_CODE_OAUTH_TOKEN`, de `claude setup-token`), custa dinheiro, e não é portão |
 | `pnpm test:e2e:live:report` | o `test:e2e:live`, com a falha registrada: falhou, **abre issue** `smoke-live` (ou comenta na aberta); passou, não faz nada. Sob demanda, nunca agendado — não há credencial do Claude no CI. Exige o `gh` autenticado; sai ≠ 0 só quando a falha não pôde ser registrada |
@@ -424,7 +424,7 @@ então este portão é o único que o protege.
 | `pnpm docs:check` | link quebrado, âncora inexistente, documento fora do índice |
 | `pnpm plan new <nome>` | cria pasta de plano no formato normativo, já indexada e no progresso geral |
 | `pnpm plan new <nome> --at <nn>` | cria o plano no meio da sequência: os planos de `<nn>` em diante sobem um número, com pastas e referências explícitas reescritas no repositório; lista as linhas que precisam de leitura (número solto, história de renumeração) |
-| `pnpm plan progress` | recalcula os contadores do `progress.md` do plano **e** do progresso geral |
+| `pnpm plan progress [<plano>]` | recalcula os contadores do `progress.md` do plano — de todos, sem argumento — **e** do progresso geral, os estados das fases no `README.md` de cada plano e a lista de decisões em aberto; falha quando o texto escrito à mão contradiz os contadores (ver [docs/plans](docs/plans/README.md)) |
 
 `docs:check` existe porque nenhum outro portão pega isso, e a documentação **é** a interface
 do agente de IA com o projeto: um índice desatualizado a torna inútil em silêncio.

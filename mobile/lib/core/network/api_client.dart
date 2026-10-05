@@ -50,9 +50,14 @@ Dio buildDio({
 
 /// The client the data sources call.
 class ApiClient {
-  ApiClient(this._dio, this._traceIds);
+  ApiClient(Dio dio, TraceIds traceIds) : this.over(() => dio, traceIds);
 
-  final Dio _dio;
+  /// A client that asks [transport] for the Dio on every request — the one of the origin in use
+  /// now. It is what lets the client outlive a change of address while the transport does not
+  /// (plan 10, F10).
+  ApiClient.over(this._transport, this._traceIds);
+
+  final Dio Function() _transport;
   final TraceIds _traceIds;
 
   /// A `GET`, with [query] as its query string.
@@ -64,26 +69,26 @@ class ApiClient {
   /// @throws [Failure] always — a problem never reaches a caller as a `DioException`, because
   ///   then every caller would have to know what Dio is
   Future<Object?> get(String path, {Map<String, Object?>? query}) =>
-      _send(() => _dio.get<Object?>(path, queryParameters: query));
+      _send(() => _transport().get<Object?>(path, queryParameters: query));
 
   /// A `POST`.
   ///
   /// @throws [Failure] always, for the same reason as [get]
   Future<Object?> post(String path, {Object? body}) =>
-      _send(() => _dio.post<Object?>(path, data: body));
+      _send(() => _transport().post<Object?>(path, data: body));
 
   /// A `PUT`.
   ///
   /// @throws [Failure] always, for the same reason as [get]
   Future<Object?> put(String path, {Object? body}) =>
-      _send(() => _dio.put<Object?>(path, data: body));
+      _send(() => _transport().put<Object?>(path, data: body));
 
   /// A `DELETE`, with [query] as its query string — where a folder travels, never in the path, so
   /// a proxy that normalises `%2F` cannot change it (backend `workspace` routes).
   ///
   /// @throws [Failure] always, for the same reason as [get]
   Future<Object?> delete(String path, {Map<String, Object?>? query}) =>
-      _send(() => _dio.delete<Object?>(path, queryParameters: query));
+      _send(() => _transport().delete<Object?>(path, queryParameters: query));
 
   Future<Object?> _send(Future<Response<Object?>> Function() call) async {
     final String fallbackTraceId = _traceIds.next();

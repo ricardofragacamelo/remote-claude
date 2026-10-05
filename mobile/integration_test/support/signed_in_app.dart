@@ -42,6 +42,17 @@ class SignedInApp {
 
   /// The session screen of this app, driven by its semantics.
   SessionRobot robot(WidgetTester tester) => SessionRobot(tester, l10n);
+
+  /// Ends [sessionId] once the test is over, from a browser of the same person.
+  ///
+  /// The stack runs ten sessions at most, and every suite shares it: a session a test leaves
+  /// running is a slot the next one does not have.
+  void endsAfterTheTest(BuildConfig config, String sessionId) => addTearDown(() async {
+    final BrowserSocket closer = await BrowserSocket.open(config, accessToken);
+    closer.attach(sessionId);
+    await closer.closeSession(sessionId);
+    await closer.close();
+  });
 }
 
 /// Mounts the app, signs in, and waits for the installation to be registered and the socket up.
@@ -54,7 +65,7 @@ Future<SignedInApp> signedInApp(
   E2eScenario scenario,
 ) async {
   final ProviderContainer container = e2eContainer(config, scenario);
-  addTearDown(container.dispose);
+  disposedAfterTheTest(tester, container);
 
   await signedInOnThisDevice(tester, container);
   await pumpUntil(tester, () => container.read(wsClientProvider).status == ConnectionStatus.ready);
@@ -64,6 +75,34 @@ Future<SignedInApp> signedInApp(
     await AppLocalizations.delegate.load(const Locale('en')),
     BackendAsBrowser(config, container.read(credentialsProvider).accessToken!),
   );
+}
+
+/// A browser of the same person — its socket — with every session it opens ended once the test
+/// is over: attached first, so it is told each one closed.
+Future<(BrowserSocket, List<String>)> aBrowserOf(BuildConfig config, SignedInApp app) async {
+  final BrowserSocket browser = await BrowserSocket.open(config, app.accessToken);
+  final List<String> opened = <String>[];
+
+  addTearDown(() async {
+    for (final String sessionId in opened) {
+      browser.attach(sessionId);
+      await browser.closeSession(sessionId);
+    }
+    await browser.close();
+  });
+
+  return (browser, opened);
+}
+
+/// Signed in and approved: a phone that may answer.
+Future<SignedInApp> anApprovedApp(
+  WidgetTester tester,
+  BuildConfig config,
+  E2eScenario scenario,
+) async {
+  final SignedInApp app = await signedInApp(tester, config, scenario);
+  await approvedFromTheBrowser(tester, app);
+  return app;
 }
 
 /// Approves this installation from the browser, and has the app read its status again.

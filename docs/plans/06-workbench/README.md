@@ -126,7 +126,7 @@ verde.
 | F3 | [Moldura e casca](F3-layout.md) | sistema visual, navegação global, moldura de tela, abas de pasta, casca responsiva | B-17…B-22 | ✅ |
 | F4 | [Comandos e notificações](F4-commands.md) | registro, paleta, menu Arquivo, notificações, estado por aba | B-23…B-27 | ✅ |
 | F5 | [Telas separadas](F5-screens.md) | uma tela por assunto, home desmontada, rotas antigas removidas, ajuda | B-28…B-34 | ✅ |
-| F6 | [E2E](F6-e2e.md) | o workbench pela porta do usuário | B-35…B-39 | 🔲 |
+| F6 | [E2E](F6-e2e.md) | o workbench pela porta do usuário | B-35…B-39 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 

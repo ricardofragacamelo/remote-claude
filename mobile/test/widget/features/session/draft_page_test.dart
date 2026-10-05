@@ -96,6 +96,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('S-119 · the draft meets the tap-target, label and contrast guidelines', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await pumpDraft(tester);
+
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(textContrastGuideline));
+    semantics.dispose();
+  });
+
   testWidgets('S-19 · the draft teaches, reads the folder’s catalogue, and opens nothing', (
     WidgetTester tester,
   ) async {

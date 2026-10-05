@@ -38,12 +38,7 @@ void main() {
       await browser.close();
     });
 
-    final int mark = browser.frames.length;
-    browser.prompt(sessionId, onThePhone.text('fixture'), text: onThePhone.text('prompt'));
-    await browser.waitFor(
-      (Map<String, Object?> frame) => frame['type'] == 'turn.completed',
-      from: mark,
-    );
+    await browser.turn(sessionId, onThePhone.text('fixture'), text: onThePhone.text('prompt'));
 
     // Opened on the phone after the turn ended. The app says it has nothing — and gets what the
     // buffer holds, the answer included, instead of a screen that waits for what comes next.

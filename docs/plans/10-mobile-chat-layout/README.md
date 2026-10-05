@@ -109,11 +109,11 @@ conclusão. A ordem é dependência, não preferência. Uma fase só começa com
 | F3 | [Cabeçalho](F3-header.md) | a `AppBar` com status e histórico, o menu `⋯` e a ajuda | B-15…B-17 | ✅ |
 | F4 | [Inline](F4-inline.md) | processamento, thinking, permissão, plano, pílula, tarefas e ações da mensagem dentro da conversa | B-18…B-24 | ✅ |
 | F5 | [Endereço de conexão](F5-connection-address.md) | a tela de endereço, a origem única, a escolha guardada, o login de cada origem e o encaminhamento local, com testes unit e de integração | B-25…B-29 | ✅ |
-| F6 | [Instalação por USB](F6-usb-install.md) | `pnpm mobile:install`: o APK de debug no celular do cabo, com o interno pela rede local e o externo do túnel | B-34…B-37 | 🔄 |
-| F7 | [Pastas abertas](F7-open-folders.md) | a tela inicial com as pastas abertas (as do web), as recentes e o seletor, com as sessões e os pedidos de cada pasta | B-38…B-40 | 🔲 |
-| F8 | [A tela da pasta](F8-folder-screen.md) | nova sessão, as sessões abertas e o histórico de uma pasta | B-41…B-43 | 🔲 |
-| F9 | [Várias sessões abertas](F9-open-sessions.md) | o registro das sessões abertas no app e o painel lateral da pasta que troca entre elas | B-44…B-47 | 🔲 |
-| F10 | [E2E](F10-e2e.md) | o layout, o endereço, as pastas e as sessões provados no emulador, em tela pequena, com teclado e com fonte grande — sempre a última fase | B-30…B-33, B-48 | 🔲 |
+| F6 | [Instalação por USB](F6-usb-install.md) | `pnpm mobile:install`: o APK de debug no celular do cabo, com o interno pela rede local e o externo do túnel | B-34…B-37 | ✅ |
+| F7 | [Pastas abertas](F7-open-folders.md) | a tela inicial com as pastas abertas (as do web), as recentes e o seletor, com as sessões e os pedidos de cada pasta | B-38…B-40 | ✅ |
+| F8 | [A tela da pasta](F8-folder-screen.md) | nova sessão, as sessões abertas e o histórico de uma pasta | B-41…B-43 | ✅ |
+| F9 | [Várias sessões abertas](F9-open-sessions.md) | o registro das sessões abertas no app e o painel lateral da pasta que troca entre elas | B-44…B-47 | ✅ |
+| F10 | [E2E](F10-e2e.md) | o layout, o endereço, as pastas e as sessões provados no emulador, em tela pequena, com teclado e com fonte grande — sempre a última fase | B-30…B-33, B-48 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 

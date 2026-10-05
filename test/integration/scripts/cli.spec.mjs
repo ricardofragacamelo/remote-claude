@@ -108,6 +108,15 @@ describe('plan.mjs', () => {
     expect(first.code).toBe(0);
     expect(second.stdout).toBe(first.stdout);
   });
+
+  it('without a plan, recalculates every plan and checks the hand-written parts against them', () => {
+    const result = runScript('plan.mjs', ['progress']);
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain('docs/plans/00-bootstrap/progress.md');
+    expect(result.stdout).toContain('docs/plans/09-chat-layout/progress.md');
+    expect(result.stdout).toContain('agree with the counters');
+  });
 });
 
 describe('clean.mjs', () => {

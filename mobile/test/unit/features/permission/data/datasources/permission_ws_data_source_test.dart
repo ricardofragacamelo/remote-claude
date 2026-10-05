@@ -137,6 +137,7 @@ void main() {
     test('a settlement becomes PermissionSettled', () async {
       await connectAndHandshake();
       watch();
+      socket().answerAttaches();
 
       await deliver(
         frame(
@@ -155,6 +156,7 @@ void main() {
     test('a moved deadline becomes PermissionDeadlineMoved', () async {
       await connectAndHandshake();
       watch();
+      socket().answerAttaches();
 
       await deliver(
         frame(

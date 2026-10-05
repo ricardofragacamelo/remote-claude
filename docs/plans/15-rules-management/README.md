@@ -128,7 +128,7 @@ verde.
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
 | F0 | [Contrato](F0-contract.md) | o contrato inteiro nos documentos normativos: rotas, campos, códigos, kinds, gramática, a tela | B-01…B-07 | 🔲 |
-| F1 | [Backend de regras](F1-rules-backend.md) | casamento endurecido, criação segura, listagem com uso, validade, lote, desfazer, teste, análise, simulação, modelos, importação, lembrete | B-08…B-19 | 🔲 |
+| F1 | [Backend de regras](F1-rules-backend.md) | casamento endurecido, criação segura, listagem com uso, validade, lote, desfazer, teste, análise, simulação, modelos, importação, lembrete | B-08…B-19 | 🔄 |
 | F2 | [Tela de regras](F2-rules-screen.md) | a tela de gestão: abas, filtros, tabela, detalhe, validade, lote, lembrete e ajuda | B-20…B-26 | 🔲 |
 | F3 | [Criação de regras](F3-rule-authoring.md) | criar pela tela com prévia, teste e simulação; modelos, duplicar, exportar e importar | B-27…B-32 | 🔲 |
 | F4 | [E2E](F4-e2e.md) | o ciclo, a segurança e as regressões pela porta do usuário | B-33…B-36 | 🔲 |

@@ -60,8 +60,8 @@
  * point. An end-to-end suite has to be deterministic and Claude is not; a suite that talked to
  * the real model on every pull request would be a suite that is eventually deleted.
  *
- * Usage: `pnpm test:e2e` · `pnpm test:e2e:mobile` · `pnpm test:e2e:live` — other arguments go to
- * Playwright.
+ * Usage: `pnpm test:e2e` · `pnpm test:e2e:mobile [suite…]` · `pnpm test:e2e:live` — other
+ * arguments go to Playwright, or, for the app, name the suites of `integration_test/` to run.
  */
 
 import fs from 'node:fs';
@@ -490,7 +490,10 @@ async function runSuite(env) {
   const suite = await (mobile
     ? runAsync(
         process.execPath,
-        [path.join(repoRoot, 'scripts/mobile.mjs'), push ? 'test:e2e:push' : 'test:e2e'],
+        // The other arguments of an app run name its suites (`pnpm test:e2e:mobile folders`).
+        push
+          ? [path.join(repoRoot, 'scripts/mobile.mjs'), 'test:e2e:push']
+          : [path.join(repoRoot, 'scripts/mobile.mjs'), 'test:e2e', ...playwrightArgs],
         {
           cwd: repoRoot,
           env,

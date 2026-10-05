@@ -49,6 +49,8 @@ String connectionReady({String connectionId = 'conn-1'}) => frame(
 );
 
 /// The answer to `session.attach` — or to a `session.start` that joined a live conversation.
+///
+/// [correlationId] is the id of the `session.attach` it answers.
 String sessionAttached({
   required String sessionId,
   bool gap = false,
@@ -56,9 +58,11 @@ String sessionAttached({
   int oldestAvailableSeq = 0,
   String? claudeSessionId,
   String? resumedFrom,
+  String? correlationId,
 }) => frame(
   kind: 'ack',
   type: 'session.attached',
+  correlationId: correlationId,
   payload: <String, Object?>{
     'sessionId': sessionId,
     'replayed': replayed,

@@ -10,9 +10,9 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F6 — Instalação por USB (F0…F2 concluídas em 2026-10-03; F3, F4 e F5 em 2026-10-04); depois F7…F9, e o E2E (F10) por último
-**Última atualização:** 2026-10-04
-**Bloqueios:** nenhum. A [D-15](decisions.md#f5--endereço-de-conexão) foi confirmada pelo spike da B-25; a D-19 (o `iss` no modo público) está aberta e não bloqueia a F10
+**Fase corrente:** nenhuma — o plano está **concluído**: F10 (E2E) em 2026-10-05, com `pnpm test:e2e:mobile` 28 de 28 em duas rodadas seguidas e `pnpm verify:full` verde; F6…F9 em 2026-10-04, F3…F5 em 2026-10-04, F0…F2 em 2026-10-03
+**Última atualização:** 2026-10-05
+**Bloqueios:** nenhum. Abertas e sem bloquear nada: a D-19 (o `iss` no modo público) e a confirmação, pelo usuário, de três decisões tomadas pelo agente na execução ([D-29](decisions.md#f7f9--pastas-e-sessões-no-app), [D-30 e D-31](decisions.md#f10--e2e)). A S-140 (o celular de verdade no cabo) é verificação manual, ainda por fazer
 
 ```
 F0  ████████████████████ 100%   ✅ concluída
@@ -25,7 +25,7 @@ F6  ████████████████████ 100%   ✅ conc
 F7  ████████████████████ 100%   ✅ concluída
 F8  ████████████████████ 100%   ✅ concluída
 F9  ████████████████████ 100%   ✅ concluída
-F10 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
+F10 ████████████████████ 100%   ✅ concluída
 ```
 
 ---
@@ -46,8 +46,8 @@ F10 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 nã
 | [F7](F7-open-folders.md) | B-38…B-40 | 3/3 | ✅ |
 | [F8](F8-folder-screen.md) | B-41…B-43 | 3/3 | ✅ |
 | [F9](F9-open-sessions.md) | B-44…B-47 | 4/4 | ✅ |
-| **Total** | **B-01…B-48** | **43/48** | 🔄 |
-| [F10](F10-e2e.md) | B-30…B-33, B-48 | 0/5 | 🔲 |
+| **Total** | **B-01…B-48** | **48/48** | ✅ |
+| [F10](F10-e2e.md) | B-30…B-33, B-48 | 5/5 | ✅ |
 
 ---
 
@@ -55,7 +55,7 @@ F10 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 nã
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 178 | 16 | 0 | 162 | 0 |
+| [Matriz](scenarios.md) | 178 | 1 | 0 | 177 | 0 |
 
 ---
 
@@ -66,7 +66,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 29 | 1 | 0 | 28 | 0 |
+| [Decisões](decisions.md) | 31 | 1 | 0 | 30 | 0 |
 
 ---
 
@@ -104,6 +104,18 @@ Um registro por **ciclo**, conforme o
 | 25 | 2026-10-04 | F3…F5 | 1 (formatação) | a geração de código depois da correção do ciclo 24 deixou 31 `.g.dart` sem `dart format`; o e2e do app da mesma rodada, já com a correção: **16 de 16 verdes** (o `rule_cycle` e a S-74 inclusive) | `dart format` | — |
 | 26 | 2026-10-04 | F3…F5 | 7 (cobertura) | `watch_session.dart` com 80 % de linhas: o `unfollow()` do caso de uso ficou sem uso depois do ciclo 24 | o código morto saiu (quem para é o "parar" que o `follow` devolve) | — |
 | 27 | 2026-10-04 | F3…F5 | — | `pnpm verify:full` final; o `pnpm test:e2e:mobile` da rodada anterior, já com a correção do ciclo 24, deu 16 de 16 (o ciclo 26 só tirou código sem uso) | — | **portões 1-11 verdes**, `exit 0` |
+| 28 | 2026-10-04 | F10 (B-31) | e2e do app | depois da F7, o robô abria o rascunho pela lista de raízes (que virou o seletor) e o `vertical_slice` procurava o ping na home (que virou Pastas): com o robô novo — seletor → "Abrir esta pasta" → tela da pasta → "Nova sessão" — e o ping pelos diagnósticos, 15 de 16; a 02·S-55 falhou **depois** de passar, com um `SocketException` do `dart:io`: a tela da pasta (agora por baixo da sessão) relê as sessões quando o pedido expira, e o descarte do container cancelava a conexão em andamento | `disposedAfterTheTest`: desmonta o app e deixa o que estava em voo responder antes de descartar o container; as suítes antigas passaram a encerrar as sessões que abrem (o teto da stack é 10) | — |
+| 29 | 2026-10-04 | F10 | e2e do app (suítes novas) | 4 de 12. **Defeito do app (S-111):** depois de trocar de endereço, a primeira abertura do seletor refazia, no meio do build, a cadeia de data sources sobre o `ApiClient` refeito, e o Riverpod marcava o escopo sujo durante o frame (`setState() called during build`). **Defeito do app (S-119):** o prompt da pessoa tinha ações e nenhum rótulo para o leitor de tela. Do teste: duas telas de sessão empilhadas (`sessionOnScreen`), o envelope de erro (`error.code`), o JSON que chega `2` em vez de `2.0` | o `ApiClient` deixou de seguir a origem e pede o transporte (`httpTransportProvider`) a cada requisição; `PromptHold` leva o texto do prompt como rótulo; o robô pega a sessão do topo | — |
+| 30 | 2026-10-04 | F10 | e2e do app | 7 de 12. **Defeito do app (S-118):** o `_measure` da pílula pedia o `RenderObject` de um card que a lista preguiçosa já tinha descartado (o contexto continuava no registro), e o erro no callback de pós-frame impedia a pílula de aparecer. Do teste: o modelo e o esforço do rascunho vão para o `⋯` quando não cabem | o `_measure` checa `mounted`, com teste de widget que reproduz; o robô escolhe pelo `⋯` | — |
+| 31 | 2026-10-04 | F10 | e2e do app | 9 de 12. **Defeito do app (S-116, S-177):** a sessão aberta pelo rascunho do app já transmitia para este socket, e os eventos que chegavam entre o `attach` da tela e o `session.attached` faziam o replay, a partir do `session.started`, ser descartado como já visto — a tela ficava sem pasta (sem painel, sem histórico), sem modelo, sem modo e às vezes sem o primeiro prompt | o `WsClient` segura os `event` de um assinante até a resposta ao `attach` dele (pelo `correlationId`) ou a recusa; regra nova em `mobile/03` | — |
+| 32 | 2026-10-04 | F10 | e2e do app (tudo) | 25 de 28. **Defeito do app (S-116):** na barra do composer, o chip do modo (`Flexible`) dividia a sobra ao meio com o `Spacer`, e era espremido abaixo do próprio ícone com a barra "cabendo" (transbordava 7,5 px). S-117 sem a linha decidida (2 de 3 rodadas); S-119 com contraste 1,7:1 no indicador | os chips ganharam um `Expanded` só deles, com teste de widget que varre as larguras; o indicador ganhou nó semântico próprio e alvo de 48 dp; a S-117 passou a afirmar o estado (desfecho, origem, linha da tool) antes da frase | — |
+| 33 | 2026-10-04 | F10 | e2e do app (`chat_layout`) | 5 de 6: a S-117 verde com as asserções novas; a S-119 medida por dentro — sob o texto, o fundo e cinzas que são 25 % e 50 % da cor do texto: o guia de contraste captura em pixels lógicos, e no aparelho o anti-aliasing da fonte de verdade vira a cor "escura" mais frequente | [D-31](decisions.md#f10--e2e): contraste dos quatro estados no teste de widget; no emulador, alvo e rótulo | — |
+| 34 | 2026-10-04 | F10 | e2e do app (tudo, e depois `chat_layout`) | 27 de 28 e depois 4 de 6. **Defeito do app (S-119):** confirmado o "Encerrar", o diálogo já saía da pilha, e o `session.closed`, que chega rápido, disparava o fechamento dele por "outro cliente encerrou" — um segundo `pop`, que tirava a tela da sessão e deixava a pessoa nas Pastas. Do teste: a S-119 esperava o fim do turno pelo indicador, que pode só estar fora da parte montada da lista; a S-117 procurava a linha decidida só para cima de onde a tela estava | o diálogo só se fecha sozinho enquanto é a rota do topo, com teste de widget que reproduz a ordem; as esperas pelo estado da conversa; o `seeInConversation` vai ao fim antes de subir; o resumo de falhas do runner corta o nome no `.dart:` (os títulos têm `:`) | — |
+| 35 | 2026-10-05 | F10 | e2e do app, duas rodadas | **28 de 28 nas duas**, seguidas, sem mudar nada entre elas (S-113, S-120) — depois de liberar o `SemanticsHandle` no corpo da S-119 | — | verde |
+| 36 | 2026-10-05 | F10 | 5 (duplicação, limiar 0), no `verify:full` | 11 clones, todos no código de teste novo: o cabeçalho das suítes, o navegador que encerra o que abre, o prompt que espera o turno, o card tocável na conversa, a tela de endereço com o Outro, e repetições dentro do `chat_layout_test` | apoios compartilhados (`aBrowserOf`, `anApprovedApp`, `BrowserSocket.turn`, `SessionRobot.cardOnScreen` e `sentFromTheDraft`), usados também pela `limits`, `history` e `permission_flow` | 0 clones |
+| 37 | 2026-10-05 | F10 | 2 (lint — complexidade, ESLint), no `verify:full` | `recalculateProgress` (`scripts/plan.mjs`) com complexidade 13, depois de ganhar o modo "todos os planos" | o caso sem plano saiu para `recalculateEveryPlan`, e o de um plano para `recalculatePlan` | lint verde |
+| 38 | 2026-10-05 | F10 | 7 (cobertura — scripts) | `scripts/lib/android.mjs` com 86,2 % de branches: os `?? ''` sobre grupos de captura que sempre casam (ramos que nada alcança) e o motivo vazio de um bloco que só diz o que foi lançado, sem teste | `String(...)` no lugar dos `??` inalcançáveis, e o teste do bloco sem motivo | `android.mjs` e `plan-progress.mjs` 100 % |
+| 39 | 2026-10-05 | F10 | — | `pnpm verify:full` final, depois do `pnpm test:e2e:mobile` 28/28 com o código de teste refatorado | — | **portões 1-11 verdes**, `exit 0` |
 
 ---
 
@@ -149,6 +161,11 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 | 2026-10-04 | **`pnpm dev:public` mostra no quadro os endereços públicos** (web, API, health, WebSocket e issuer), ao lado dos de rede | pedido do usuário | `scripts/lib/stack.mjs` (`boardRows`), F6 (B-35) |
 | 2026-10-03 | **A S-42 do plano 05 mudou o que afirma num ponto**: depois da sessão ociosa, a caixa não fica mais desligada — ela só retoma (sem parar, com "Retomar e enviar") | 09 · D-05, que este plano herda: na sessão encerrada, enviar retoma. O resto do cenário (o motivo dito, traduzido) continua igual | `limits_test`, B-07 |
 | 2026-10-04 | **O conteúdo das folhas de baixo fica acima da barra de navegação do sistema**: o `showSheet` envolve o que a folha contém em `SafeArea(top: false)`, e o `showSessionSheet` passa a abrir por ele | defeito achado pelo usuário num celular de verdade, antes da F10: na folha do status, o custo ficava sob os botões de voltar e início. O `useSafeArea` do `showModalBottomSheet` só desvia do topo e das laterais, e os testes de widget rodavam sem inset embaixo | `message_strip.dart`, `session_sheet.dart`, `mobile/04` (Responsividade); testes em `message_strip_test` e `session_sheet_test` com uma barra de 48 dp |
+| 2026-10-04 | **A S-111 troca para outra origem da mesma stack** (`http://127.0.0.1:<web>`), e a stack do e2e aceita esse issuer ao lado do de `localhost` | a mesma origem digitada não encerra o login (S-103) — a troca não provaria nada ([D-30](decisions.md#f10--e2e), a confirmar) | `scripts/lib/stack.mjs` (`webLoopbackOrigin`), B-30 |
+| 2026-10-04 | **O contraste da S-119 é provado no teste de widget**; no emulador, alvo de toque e rótulo | o guia de contraste captura em pixels lógicos e lê o anti-aliasing da fonte de verdade como a cor do texto ([D-31](decisions.md#f10--e2e), a confirmar) | B-33, `draft_page_test`, `session_inline_test` |
+| 2026-10-04 | **`pnpm test:e2e:mobile <suíte…>` roda só as suítes nomeadas**, e o runner do app diz no fim quais testes falharam e por quê (`suiteTargets`, `suiteFailures`) | uma rodada inteira custa ~10 min; e ler milhares de linhas de log para achar a falha virou tarefa repetida (regra 10) | `scripts/lib/android.mjs`, `scripts/mobile.mjs`, `scripts/run-e2e-local.mjs` |
+| 2026-10-04 | **Cada teste do app deixa a stack como achou**: encerra as sessões que abre, trabalha em pastas próprias criadas pelo `POST /files` e removidas no fim, e descarta o container depois de desmontar o app | as suítes dividem uma stack com teto de 10 sessões e uma raiz só; uma sessão esquecida é a recusa do teste seguinte | `mobile/06` (E2E), `support/` |
+| 2026-10-04 | **Cinco defeitos do app achados pelo e2e e corrigidos na F10**, cada um com teste unitário ou de widget que falha sem a correção: o `ApiClient` refeito na troca de origem (S-111), o replay descartado da sessão aberta pelo próprio app (S-116, S-177), a pílula medindo um card descartado (S-118), o chip do modo espremido na barra (S-116) e o diálogo de encerrar que, confirmado, tirava a própria tela da sessão quando o `session.closed` chegava antes de ele sair (S-119); e dois de acessibilidade: o prompt sem rótulo e o indicador fundido na linha da lista (S-119) | um e2e que acha defeito e o contorna no teste é um e2e que esconde o defeito | `mobile/03`, `ws_client.dart`, `api_client_provider.dart`, `conversation_view.dart`, `composer_bar.dart`, `session_menu.dart`, `message_actions.dart`, `working_indicator.dart` |
 
 ---
 
@@ -161,6 +178,7 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 | 2026-10-04 | **A linha decidida da tool diz de onde veio a resposta, não o nome de quem respondeu** ("Allowed in the browser.") | o app não lê o `resolvedBy`; as frases do plano 02 já existiam e o card nunca mostrou o autor | se o usuário pedir, uma tarefa do plano 10 ou de outro |
 | 2026-10-04 | **A lista de tarefas não diz "era *estado*"** de cada tarefa que mudou, e as chamadas do `TodoWrite`/`Task*` continuam como linhas de tool | a B-23 pede a linha recolhida e a lista; o web marca a transição e absorve as linhas, e a matriz não tem cenário para isso | idem |
 | 2026-10-04 | **Editar e reenviar não oferece "devolver também os arquivos"**, como o web oferece | fora da B-24; o desfazer "até aqui" faz o mesmo em dois toques | idem |
+| 2026-10-05 | **A S-140 — o APK de debug num celular de verdade, pelo cabo e pela rede — não foi verificada** | é verificação manual (um aparelho físico, o cabo, a rede de casa e o `pnpm dev:public`), e o agente não tem um celular; o caminho automatizado dela (o instalador, os endereços, o `http://` da rede privada) está provado em unit, integração e no e2e (S-112) | ao usuário: `pnpm mobile:install` com o celular no cabo, e marcar a S-140 |
 
 ---
 
@@ -170,19 +188,19 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 
 | # | Risco | Estado | Observação |
 |---|---|---|---|
-| R-01 | testes de integração acoplados ao layout | 🔲 aberto | robô na B-04 |
-| R-02 | teclado cobre o composer no Android | 🔲 aberto | B-06, S-11 |
-| R-03 | card inline fora de vista | 🔲 aberto | pílula e `liveRegion` na B-22 |
-| R-04 | pedido que fecha o teclado ou rouba o envio | 🔲 aberto | 09 · D-13, S-72, S-73 |
-| R-05 | a lista ordenada quebra replay e `gap` | 🔲 aberto | B-05 migra os testes do stream |
-| R-06 | relógio do indicador re-renderiza a lista | 🔲 aberto | relógio isolado, S-56 |
-| R-07 | e2e do app lento e disputando a máquina | 🔲 aberto | um e2e de cada vez |
-| R-08 | pressionar e segurar invisível ao TalkBack | 🔲 aberto | custom actions, S-84 |
-| R-09 | decisões do 09 pensadas para mouse | 🔲 aberto | cada uma com o gesto do celular na F0 |
-| R-10 | mais de um issuer alarga a confiança | 🔲 aberto | lista explícita, spike B-25, ADR |
-| R-11 | encaminhamento local muda o dev do web | 🔲 aberto | S-91 e o e2e do web |
-| R-12 | troca de origem deixa resto | 🔲 aberto | S-101, S-102 |
-| R-13 | endereço errado tranca o app | 🔲 aberto | tela sem login, testar antes (S-106, S-108) |
+| R-01 | testes de integração acoplados ao layout | ✅ fechado | o robô concentrou os seletores; a F7 mudou a home e o rascunho, e só o robô mudou — as cinco suítes de antes verdes sem afrouxar nada (B-31) |
+| R-02 | teclado cobre o composer no Android | ✅ fechado | S-115: 360×640 com o teclado aberto, a caixa inteira no topo e no fim de uma conversa longa, no emulador |
+| R-03 | card inline fora de vista | ✅ fechado | S-118 no emulador: rolado para cima, a pílula leva ao card — e ela achou o `_measure` que travava com um card descartado (ciclo 30) |
+| R-04 | pedido que fecha o teclado ou rouba o envio | ✅ fechado | S-72, S-73 nos testes de widget; o ciclo da S-117 no emulador com a caixa inteira em cada passo |
+| R-05 | a lista ordenada quebra replay e `gap` | ✅ fechado | o replay e o `gap` no emulador (S-26, S-118); e o replay da sessão aberta pelo próprio app, que se perdia, corrigido no `WsClient` (ciclo 31) |
+| R-06 | relógio do indicador re-renderiza a lista | ✅ fechado | relógio no `WorkingIndicator`, S-56 |
+| R-07 | e2e do app lento e disputando a máquina | ✅ fechado | uma rodada de cada vez, suíte por nome (`pnpm test:e2e:mobile <suíte>`) para iterar; a completa leva ~9 min |
+| R-08 | pressionar e segurar invisível ao TalkBack | ✅ fechado | custom actions (S-84), e o nó do prompt ganhou o rótulo que faltava (S-119) |
+| R-09 | decisões do 09 pensadas para mouse | ✅ fechado | cada decisão herdada do 09 com o gesto do celular na F0 |
+| R-10 | mais de um issuer alarga a confiança | ✅ fechado | lista explícita (ADR-021); o e2e lista dois issuers da mesma stack e prova a troca (S-111) |
+| R-11 | encaminhamento local muda o dev do web | ✅ fechado | S-91 e o e2e do web verdes no `verify:full` |
+| R-12 | troca de origem deixa resto | ✅ fechado | S-101, S-102 e a S-111 no emulador — que achou a cadeia HTTP refeita no meio do build (ciclo 29) |
+| R-13 | endereço errado tranca o app | ✅ fechado | S-112 no emulador: a tela de endereço sem login, a recusa e o teste antes de salvar |
 
 ---
 

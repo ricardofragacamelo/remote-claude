@@ -58,6 +58,7 @@ const PLAN_LABEL = {
  * @property {string} state
  * @property {Tally} scenarios
  * @property {Tally} decisions
+ * @property {string[]} openDecisions the decisions still open, by ID
  */
 
 /**
@@ -154,17 +155,43 @@ export function parseDecisions(content) {
 }
 
 /**
+ * The decisions still open — 🔲 or 🔄 — by ID, in the order the file lists them.
+ *
+ * What the general progress lists as open, so the sentence that says nothing is open cannot outlive
+ * the day it was true.
+ *
+ * @param {string} content `decisions.md`
+ * @returns {string[]}
+ */
+export function openDecisionIds(content) {
+  /** @type {string[]} */
+  const open = [];
+
+  for (const rawLine of content.split('\n')) {
+    const row = DECISION_ROW.exec(rawLine);
+    const id = String(row?.[1]);
+
+    if (row !== null && (row[2] === '🔲' || row[2] === '🔄') && !open.includes(id)) {
+      open.push(id);
+    }
+  }
+
+  return open;
+}
+
+/**
  * `[B-01, B-02, B-03, B-07]` → `B-01…B-03, B-07`.
  *
  * Only runs of three or more collapse: `B-48, B-49` reads better than `B-48…B-49`, and that is
  * the convention the existing plans already use.
  *
  * @param {readonly string[]} ids
+ * @param {string} [prefix] what each id starts with — `B-` for tasks, `D-` for decisions
  * @returns {string}
  */
-export function formatTaskRange(ids) {
+export function formatTaskRange(ids, prefix = 'B-') {
   const numbers = ids
-    .map((id) => Number(id.replace('B-', '')))
+    .map((id) => Number(id.replace(prefix, '')))
     .filter((value) => Number.isFinite(value))
     .sort((left, right) => left - right);
 
@@ -173,7 +200,7 @@ export function formatTaskRange(ids) {
   }
 
   /** @param {number} value */
-  const label = (value) => `B-${String(value).padStart(2, '0')}`;
+  const label = (value) => `${prefix}${String(value).padStart(2, '0')}`;
 
   /**
    * @param {number} start
@@ -263,6 +290,7 @@ export function summarizePlan(phaseFiles, scenariosContent, decisionsContent = '
     state: stateOf(allTasks),
     scenarios: parseScenarios(scenariosContent),
     decisions: parseDecisions(decisionsContent),
+    openDecisions: openDecisionIds(decisionsContent),
   };
 }
 
@@ -335,6 +363,24 @@ function countsRow(link, tally, states) {
   return `| ${link} | ${tally.total} | ${cells} |`;
 }
 
+/** The date line every progress document carries, and the counters stamp. */
+const DATE_LINE = /^\*\*Última atualização:\*\*.*$/m;
+
+/**
+ * Whether [after] says anything [before] did not, other than the date.
+ *
+ * The date says when the counters last **moved**. Stamped on every run, every plan of a
+ * recalculation of all of them would change by its date alone — a diff of twenty files saying
+ * nothing.
+ *
+ * @param {string} before
+ * @param {string} after
+ * @returns {boolean}
+ */
+export function changedBeyondTheDate(before, after) {
+  return before.replace(DATE_LINE, '') !== after.replace(DATE_LINE, '');
+}
+
 /**
  * A rewriter over one progress document, collecting the anchors it could not find.
  *
@@ -361,6 +407,11 @@ function rewriterOf(content, what) {
         return;
       }
       result = result.replace(pattern, replacement);
+    },
+
+    /** @param {(content: string) => string} change a rewrite that needs no anchor */
+    transform(change) {
+      result = change(result);
     },
 
     /** @returns {string} */
@@ -449,6 +500,7 @@ export function applyProgress(content, summary, options) {
  * @property {number} scenarioDone scenarios in the ✅ state
  * @property {number} decisionTotal
  * @property {number} decisionDone decisions already taken
+ * @property {string[]} openDecisions the decisions still open, by ID
  * @property {string} state
  */
 
@@ -484,6 +536,7 @@ export function summarizeOverall(plans) {
     scenarioDone: Number(plan.summary.scenarios.counts['✅']),
     decisionTotal: plan.summary.decisions.total,
     decisionDone: Number(plan.summary.decisions.counts['✅']),
+    openDecisions: plan.summary.openDecisions,
     state: plan.summary.state,
   }));
 
@@ -558,6 +611,14 @@ export function applyOverallProgress(content, overall, options) {
     );
   }
 
+  rewriter.transform(sortPlanRows);
+
+  replaceOnce(
+    /(<!-- open-decisions:start -->\n)[\s\S]*?(<!-- open-decisions:end -->)/,
+    `$1${openDecisionsBlock(overall.plans)}\n$2`,
+    'open decisions block (<!-- open-decisions:start --> … <!-- open-decisions:end -->)',
+  );
+
   replaceOnce(
     /^\|\s*\*\*Total\*\*\s*\|.*$/m,
     `| **Total** | **${overall.phasesDone}/${overall.phaseTotal}** | ` +
@@ -568,6 +629,159 @@ export function applyOverallProgress(content, overall, options) {
   );
 
   return rewriter.finish();
+}
+
+/** A row of the "Por plano" table: a plan's link, four counters and its state. */
+const PLAN_ROW =
+  /^\|\s*\[[^\]]*\]\((\d+)-[^/)]+\/README\.md\)\s*\|(?:[^|]*\|){4}\s*[🔲🔄✅⛔]\s*\|\s*$/u;
+
+/**
+ * The rows of the "Por plano" table in the order of the plans' numbers.
+ *
+ * A plan created with `pnpm plan new` is appended, and one created between two others (`--at`)
+ * lands after the last: the table read 00…08, 11…20, 09, 10. Only the run of plan rows moves; the
+ * header above it and the total below stay where they are.
+ *
+ * @param {string} content
+ * @returns {string}
+ */
+export function sortPlanRows(content) {
+  const lines = content.split('\n');
+  const at = lines.flatMap((line, index) => (PLAN_ROW.test(line) ? [index] : []));
+
+  if (at.length === 0) {
+    return content;
+  }
+
+  const number = (/** @type {string} */ line) => Number(PLAN_ROW.exec(line)?.[1]);
+  const sorted = at.map((index) => String(lines[index])).sort((a, b) => number(a) - number(b));
+  at.forEach((index, position) => {
+    lines[index] = String(sorted[position]);
+  });
+
+  return lines.join('\n');
+}
+
+/**
+ * The decisions still open, one row per plan that has any — generated, so it is never older than
+ * the decisions it lists.
+ *
+ * @param {readonly OverallPlan[]} plans
+ * @returns {string}
+ */
+export function openDecisionsBlock(plans) {
+  const open = plans.filter((plan) => plan.openDecisions.length > 0);
+
+  if (open.length === 0) {
+    return 'Nenhuma decisão em aberto em plano nenhum.';
+  }
+
+  return [
+    '| Plano | Em aberto | Quantas |',
+    '|---|---|---|',
+    ...open.map(
+      (plan) =>
+        `| [${plan.dir}](${plan.dir}/decisions.md) | ${formatTaskRange(plan.openDecisions, 'D-')} | ${String(plan.openDecisions.length)} |`,
+    ),
+  ].join('\n');
+}
+
+/** A row of a plan's own phase table: `| F3 | [Name](F3-name.md) | … | state |`. */
+const phaseRowOf = (/** @type {number} */ index) =>
+  new RegExp(
+    `^(\\|[ \\t]*F${String(index)}[ \\t]*\\|[ \\t]*\\[[^\\]\\n]*\\]\\(F${String(index)}-[^)\\n]*\\)[ \\t]*\\|.*\\|)[ \\t]*[🔲🔄✅⛔][ \\t]*\\|[ \\t]*$`,
+    'mu',
+  );
+
+/**
+ * Rewrites the state of each phase in the plan's own README, from its tasks.
+ *
+ * The phase table of a plan's README was written when the plan was, and nothing moved it: plan 10
+ * closed its F9 with the README still saying 🔲 for F6…F10.
+ *
+ * @param {string} content the plan's `README.md`
+ * @param {PlanSummary} summary
+ * @param {string} plan the plan's directory, for the error message
+ * @returns {string}
+ */
+export function applyPhaseStates(content, summary, plan) {
+  const rewriter = rewriterOf(content, `${plan}/README.md`);
+
+  for (const phase of summary.phases) {
+    rewriter.replace(
+      phaseRowOf(phase.index),
+      `$1 ${phase.state} |`,
+      `phase row for F${String(phase.index)}`,
+    );
+  }
+
+  return rewriter.finish();
+}
+
+/**
+ * What the hand-written part of a plan's `progress.md` says that its counters contradict.
+ *
+ * The line of the current phase is prose, and it is the first thing read: plan 17 said "não
+ * iniciado" with a phase done.
+ *
+ * @param {string} content the plan's `progress.md`
+ * @param {PlanSummary} summary
+ * @returns {string[]} one sentence per contradiction
+ */
+export function planProgressProblems(content, summary) {
+  const current = /^\*\*Fase corrente:\*\*(.*)$/m.exec(content)?.[1] ?? '';
+  /** @type {string[]} */
+  const problems = [];
+
+  if (summary.state === '✅' && !/conclu|encerrad|fechou|fechad|pronto|complet/iu.test(current)) {
+    problems.push('every task is done, and "Fase corrente" does not say the plan is concluded');
+  }
+
+  if (summary.taskDone > 0 && /não iniciad/iu.test(current)) {
+    problems.push(
+      `"Fase corrente" says it has not started, and ${String(summary.taskDone)} task(s) are done`,
+    );
+  }
+
+  return problems;
+}
+
+/**
+ * What the hand-written part of the general progress is missing, given the counters.
+ *
+ * - every plan has a row in the table of what each one delivers — a plan created without one is a
+ *   plan the reader of the general progress does not know exists;
+ * - every concluded plan has its milestone in the history — "Plano NN … concluído".
+ *
+ * @param {string} content `docs/plans/progress.md`
+ * @param {OverallSummary} overall
+ * @returns {string[]} one sentence per gap
+ */
+export function overallProblems(content, overall) {
+  const history = content.slice(Math.max(0, content.indexOf('## Histórico')));
+  /** @type {string[]} */
+  const problems = [];
+
+  for (const plan of overall.plans) {
+    const number = plan.dir.slice(0, 2);
+    const delivers = new RegExp(
+      `^\\|[ \\t]*\\[[^\\]\\n]*\\]\\(${plan.dir}/README\\.md\\)[ \\t]*\\|[^|\\n]*\\|[^|\\n]*\\|[ \\t]*$`,
+      'mu',
+    );
+
+    if (!delivers.test(content)) {
+      problems.push(`${plan.dir} has no row in the table of what each plan delivers`);
+    }
+
+    const milestone = new RegExp(`^\\|.*Plano ${number}\\b.*conclu`, 'imu');
+    if (plan.state === '✅' && !milestone.test(history)) {
+      problems.push(
+        `${plan.dir} is concluded, and the history has no "Plano ${number} … concluído"`,
+      );
+    }
+  }
+
+  return problems;
 }
 
 /**

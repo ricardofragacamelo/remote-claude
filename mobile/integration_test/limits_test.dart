@@ -39,21 +39,9 @@ void main() {
   final E2eScenario expiry = E2eScenario.named('limits-token-expiry');
   final E2eScenario refused = E2eScenario.named('limits-renewal-refused');
 
-  /// A browser of the same person on the limits stack, with every session it knows of ended after
-  /// the test — the next one counts slots.
-  Future<(BrowserSocket, List<String>)> browserOf(SignedInApp app) async {
-    final BrowserSocket browser = await BrowserSocket.open(config, app.accessToken);
-    final List<String> opened = <String>[];
-
-    addTearDown(() async {
-      for (final String sessionId in opened) {
-        await endOnLimits(browser, sessionId);
-      }
-      await browser.close();
-    });
-
-    return (browser, opened);
-  }
+  /// A browser of the same person on the limits stack — the next test counts slots, so what it
+  /// opens is ended after the test.
+  Future<(BrowserSocket, List<String>)> browserOf(SignedInApp app) => aBrowserOf(config, app);
 
   /// The prompt a session of these tests is opened with: a recorded turn that only answers.
   const String plainTurn = 'do the work [fixture:text-turn]';

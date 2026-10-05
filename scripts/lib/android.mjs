@@ -59,3 +59,83 @@ export function suiteProblem(runner, output) {
 
   return count > 0 ? null : `the ${runner} run exited 0, and its report shows no test that passed`;
 }
+
+/** Where the app's end-to-end suites live, relative to the Flutter module. */
+export const INTEGRATION_DIR = 'integration_test';
+
+/**
+ * What `flutter test` is given: the whole directory, or only the suites [names] names.
+ *
+ * A suite is named the way a person says it — `folders`, `folders_test`, `folders_test.dart` or
+ * `integration_test/folders_test.dart` are the same one — so working on one suite does not cost
+ * the minutes of all of them. A name that matches no suite is refused, saying which exist: a run
+ * limited to a typo would build the app and test nothing.
+ *
+ * @param {readonly string[]} names
+ * @param {readonly string[]} available the `*_test.dart` file names of {@link INTEGRATION_DIR}
+ * @returns {{ targets: string[], problem: null } | { targets: null, problem: string }}
+ */
+export function suiteTargets(names, available) {
+  if (names.length === 0) {
+    return { targets: [INTEGRATION_DIR], problem: null };
+  }
+
+  const files = names.map(
+    (name) =>
+      `${name
+        .replace(new RegExp(`^(\\./)?${INTEGRATION_DIR}/`), '')
+        .replace(/\.dart$/, '')
+        .replace(/_test$/, '')}_test.dart`,
+  );
+  const unknown = files.filter((file) => !available.includes(file));
+
+  if (unknown.length > 0) {
+    return {
+      targets: null,
+      problem: `no suite ${unknown.join(', ')} in ${INTEGRATION_DIR}/ — there are ${[...available].sort().join(', ')}`,
+    };
+  }
+
+  return { targets: files.map((file) => `${INTEGRATION_DIR}/${file}`), problem: null };
+}
+
+/**
+ * The tests a `flutter test` run failed, each with the first words of what failed it.
+ *
+ * A device run prints thousands of lines — the backend's log among them when the runner relays it —
+ * and the one thing a reader needs after a red run is which tests and why. Each failed test is the
+ * line `flutter test` ends with ` [E]`; its reason is the exception block whose "test description"
+ * starts that name: the line after "The following … was thrown", or the expectation that failed.
+ *
+ * @param {string} output everything the runner printed
+ * @returns {{ test: string, reason: string }[]} in the order they failed, each test once
+ */
+export function suiteFailures(output) {
+  const blocks = [
+    ...output.matchAll(
+      // Never across into the next block; the description on the line after, or on the same one.
+      /══╡ EXCEPTION CAUGHT[^\n]*\n((?:(?!══╡ EXCEPTION)[\s\S])*?)\n\s*The test description was:[ \t]*\n?\s*([^\n]+)/g,
+    ),
+  ].map(([, body, description]) => ({
+    description: String(description).trim(),
+    reason:
+      String(body)
+        .split('\n')
+        .map((each) => each.trim())
+        .find((each) => each !== '' && !each.startsWith('The following ')) ?? '',
+  }));
+
+  /** @type {Map<string, string>} */
+  const failed = new Map();
+  for (const [, test] of output.matchAll(
+    /^[\d:]+ \+\d+(?: ~\d+)? -\d+: (?:\S+\.dart: )?(.+) \[E\]$/gm,
+  )) {
+    const name = String(test).trim();
+    if (!failed.has(name)) {
+      const block = blocks.find((each) => name.startsWith(each.description));
+      failed.set(name, block?.reason ?? 'see the output above');
+    }
+  }
+
+  return [...failed].map(([test, reason]) => ({ test, reason }));
+}
