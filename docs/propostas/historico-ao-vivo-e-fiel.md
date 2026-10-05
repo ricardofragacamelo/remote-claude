@@ -1,6 +1,6 @@
 # Proposta — Histórico ao vivo e fiel ao Claude Code
 
-**Estado:** rascunho, em discussão. Nenhum código escrito.
+**Estado:** virou o [plano 22 — Histórico ao vivo](../plans/22-live-history/README.md) em 2026-10-04. As decisões em aberto do §11 foram decididas lá ([decisions.md](../plans/22-live-history/decisions.md)), com IDs novos. Nenhum código escrito.
 **Criada em:** 2026-10-04, a partir de uma conversa com o usuário. Ele abriu, ao mesmo tempo, a mesma
 sessão no painel do remote-claude ("Do histórico") e na extensão do Claude Code no VS Code, e disse:
 "não estão aparecendo as mesmas mensagens, eu queria que tudo chegasse no remote-claude"; "e parou de

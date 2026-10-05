@@ -7,18 +7,15 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/message_strip.dart';
 
 /// How much of the screen a sheet takes: enough for a list, with the session still visible above.
 const double sessionSheetHeight = 0.9;
 
 /// Opens [sheet] over the session screen and answers what it closed with.
-Future<T?> showSessionSheet<T>(BuildContext context, Widget sheet) => showModalBottomSheet<T>(
-  context: context,
-  isScrollControlled: true,
-  useSafeArea: true,
-  showDragHandle: true,
-  builder: (BuildContext context) =>
-      FractionallySizedBox(heightFactor: sessionSheetHeight, child: sheet),
+Future<T?> showSessionSheet<T>(BuildContext context, Widget sheet) => showSheet<T>(
+  context,
+  (BuildContext _) => FractionallySizedBox(heightFactor: sessionSheetHeight, child: sheet),
 );
 
 /// A title, what the sheet is for, and what fills the rest.

@@ -14,13 +14,17 @@ import 'package:remote_claude/core/widgets/message_banner.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// Opens [builder] in a sheet from the bottom, the shape every sheet of the session screen has:
-/// inside the safe area, with a handle, as tall as what it holds.
-Future<void> showSheet(BuildContext context, WidgetBuilder builder) => showModalBottomSheet<void>(
+/// inside the safe area, with a handle, as tall as what it holds — and answers what it closed with.
+///
+/// `useSafeArea` keeps the sheet off the top and the sides only: its surface is meant to run under
+/// the system's navigation bar, so what it **holds** has to stay above that bar on its own. Without
+/// the bottom inset, the last line of a sheet sits under the phone's back and home buttons.
+Future<T?> showSheet<T>(BuildContext context, WidgetBuilder builder) => showModalBottomSheet<T>(
   context: context,
   useSafeArea: true,
   showDragHandle: true,
   isScrollControlled: true,
-  builder: builder,
+  builder: (BuildContext sheet) => SafeArea(top: false, child: builder(sheet)),
 );
 
 /// What an explanation says, before anybody decides how much room it gets.

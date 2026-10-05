@@ -79,4 +79,55 @@ void main() {
     expect(pressed, 1);
     expect(find.byIcon(Icons.chevron_right), findsNothing);
   });
+
+  testWidgets('what a sheet holds stays above the system navigation bar', (
+    WidgetTester tester,
+  ) async {
+    // A phone drawn edge to edge: 48 dp of back, home and recents at the bottom of the screen.
+    tester.view.padding = FakeViewPadding(bottom: 48 * tester.view.devicePixelRatio);
+    tester.view.viewPadding = FakeViewPadding(bottom: 48 * tester.view.devicePixelRatio);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpApp(
+      Builder(
+        builder: (BuildContext context) => TextButton(
+          onPressed: () => showSheet<void>(
+            context,
+            (BuildContext _) =>
+                const Column(mainAxisSize: MainAxisSize.min, children: <Widget>[Text('last line')]),
+          ),
+          child: const Text('open'),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final double screen = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    expect(tester.getBottomLeft(find.text('last line')).dy, lessThanOrEqualTo(screen - 48));
+  });
+
+  testWidgets('a sheet answers what it closed with', (WidgetTester tester) async {
+    String? answered;
+    await tester.pumpApp(
+      Builder(
+        builder: (BuildContext context) => TextButton(
+          onPressed: () async => answered = await showSheet<String>(
+            context,
+            (BuildContext sheet) => TextButton(
+              onPressed: () => Navigator.of(sheet).pop('picked'),
+              child: const Text('pick'),
+            ),
+          ),
+          child: const Text('open'),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('pick'));
+    await tester.pumpAndSettle();
+
+    expect(answered, 'picked');
+  });
 }

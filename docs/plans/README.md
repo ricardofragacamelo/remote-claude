@@ -37,6 +37,7 @@ Voltar para o [índice geral](../architecture/README.md).
 | 19 | [Distribuição](19-distribution/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm dist:verify` saem com código 0 |
 | 20 | [Dev public](20-dev-public/README.md) | 🔄 em andamento | `pnpm verify:full` sai com código 0 |
 | 21 | [Rich previews](21-rich-previews/README.md) | 🔄 em andamento | `pnpm verify:full` sai com código 0 |
+| 22 | [Histórico ao vivo](22-live-history/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 

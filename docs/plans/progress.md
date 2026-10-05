@@ -14,7 +14,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 
 ## Panorama
 
-**Última atualização:** 2026-10-04
+**Última atualização:** 2026-10-05
 
 ```
 00-bootstrap             ████████████████████ 100%   ✅ concluído
@@ -39,6 +39,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 19-distribution          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 20-dev-public            █████████████████░░░  86%   🔄 em andamento
 21-rich-previews         █░░░░░░░░░░░░░░░░░░░   4%   🔄 em andamento
+22-live-history          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 ```
 
 ---
@@ -71,7 +72,8 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [09 — Layout do chat](09-chat-layout/README.md) | 6/6 | 32/32 | 92/92 | 19/19 | ✅ |
 | [10 — Layout do chat no app](10-mobile-chat-layout/README.md) | 10/11 | 43/48 | 162/178 | 28/29 | 🔄 |
 | [21 — Rich previews](21-rich-previews/README.md) | 0/5 | 1/23 | 2/74 | 15/15 | 🔄 |
-| **Total** | **76/124** | **447/762** | **1733/3148** | **297/378** | 🔄 |
+| [22 — Histórico ao vivo](22-live-history/README.md) | 0/8 | 0/37 | 0/130 | 17/17 | 🔲 |
+| **Total** | **76/132** | **447/799** | **1733/3278** | **314/395** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
