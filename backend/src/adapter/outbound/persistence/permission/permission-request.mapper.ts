@@ -1,3 +1,4 @@
+import { answersPayload } from '@application/permission';
 import type { PermissionRequest, PermissionResolution } from '@domain/permission';
 import type { permissionRequests } from '@infra/database/schema';
 
@@ -6,7 +7,15 @@ type PermissionRequestInsert = typeof permissionRequests.$inferInsert;
 /** The columns only a settled request fills. */
 type SettlementColumns = Pick<
   PermissionRequestInsert,
-  'decision' | 'reason' | 'scope' | 'resolvedBy' | 'resolvedFrom' | 'auto' | 'ruleId' | 'resolvedAt'
+  | 'decision'
+  | 'reason'
+  | 'scope'
+  | 'resolvedBy'
+  | 'resolvedFrom'
+  | 'auto'
+  | 'ruleId'
+  | 'answers'
+  | 'resolvedAt'
 >;
 
 /** A request still waiting on its answer: the settlement is written as nothing at all. */
@@ -18,6 +27,7 @@ const UNSETTLED: SettlementColumns = {
   resolvedFrom: null,
   auto: null,
   ruleId: null,
+  answers: null,
   resolvedAt: null,
 };
 
@@ -61,6 +71,8 @@ function settlementOf(resolution: PermissionResolution | null): SettlementColumn
     resolvedFrom: resolution.resolvedFrom,
     auto: resolution.auto,
     ruleId: resolution.ruleId ?? null,
+    // As the contract carries them — what the history of a session hands a screen as it is.
+    answers: resolution.answers === undefined ? null : answersPayload(resolution.answers),
     resolvedAt: resolution.at,
   };
 }

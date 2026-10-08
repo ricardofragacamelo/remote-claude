@@ -1,3 +1,4 @@
+import type { QuestionAnswer } from '@domain/permission';
 import type { PermissionMode, SessionId } from '@domain/session';
 
 /** One question the SDK is holding its loop open for. */
@@ -26,6 +27,13 @@ export interface PermissionVerdict {
 
   /** Why it was refused. It goes back to Claude as a message, so it is never empty on a `deny`. */
   readonly reason: string | null;
+
+  /**
+   * What the person answered, on an `allow` of a question — by the id of each question, as the
+   * product carries it. The SDK's shape is the runner's to build: this port does not know it
+   * ([24 · D-03](../../../../../docs/plans/24-structured-questions/decisions.md)). `null` otherwise.
+   */
+  readonly answers: readonly QuestionAnswer[] | null;
 }
 
 /**

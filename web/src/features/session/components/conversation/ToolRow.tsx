@@ -13,11 +13,11 @@ import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import { formatBytes } from '@/features/editor';
-import { PermissionOutcomeLine } from '@/features/permission';
+import { AnsweredQuestions, PermissionOutcomeLine } from '@/features/permission';
 import { Button } from '@/shared/components/ui/button';
 import { useToolResult } from '../../hooks/useToolResult';
 import type { ToolOutput, ToolResult } from '../../hooks/useToolResult';
-import { opensSubagent, toolLabel } from '../../lib/tool-labels';
+import { opensSubagent, questionLabel, toolLabel } from '../../lib/tool-labels';
 import type { ToolLabel } from '../../lib/tool-labels';
 import type { ToolExecution, ToolStatus } from '../../types/live-session';
 import { AnsiText } from './AnsiText';
@@ -25,6 +25,8 @@ import { ScrollingPre } from './ScrollingPre';
 import { SubagentChildren } from './SubagentChildren';
 import type { TimelineContext } from './timeline-context';
 import { ToolDiffView } from './ToolDiffView';
+import { questionOf } from './question-of';
+import type { QuestionView } from './question-of';
 
 /** The tools whose change the chat shows as a diff (plan 08, B-27). */
 const DIFFABLE = new Set(['Edit', 'MultiEdit', 'Write']);
@@ -87,16 +89,24 @@ export interface ToolRowProps {
  */
 export function ToolRow({ tool, context }: ToolRowProps): React.JSX.Element {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const label = toolLabel(tool, context.folder, context.taskList.absorbed);
-  const text = t(label.key, label.params);
-  const status = t(`session.toolStatus.${tool.status}`);
-  const name = accessibleName(label, text, status, t);
+  const outcome = context.inline?.requests.settledByTool.get(tool.toolUseId);
+  // A question of Claude is its questions and what was answered, open, in the place of the generic
+  // input and output — and its decision is the answers, not "allowed by you" (plan 24, B-15).
+  const question = questionOf(tool, outcome);
+  // The decision in words, under the line — a question says it with its answers instead.
+  const decision = question === null ? outcome : undefined;
+  // Open by default once it is a question — which, read from the history, it becomes only when its
+  // end arrives — until the person folds or unfolds it.
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const open = toggled ?? question !== null;
+  const { text, name, status } = lineOf(tool, question, context, t);
   // Here, and not in the details: the answer lives as long as the row, so folding it and unfolding
   // it again asks for nothing (S-113).
-  const result = useToolResult(context.conversationId, tool.toolUseId, open && hasResult(tool));
-  const outcome = context.inline?.requests.settledByTool.get(tool.toolUseId);
-  const diffable = DIFFABLE.has(tool.toolName) && tool.status === 'succeeded';
+  const result = useToolResult(
+    context.conversationId,
+    tool.toolUseId,
+    open && question === null && hasResult(tool),
+  );
 
   return (
     <li className="flex flex-col gap-1">
@@ -107,16 +117,69 @@ export function ToolRow({ tool, context }: ToolRowProps): React.JSX.Element {
         state={runningFor(tool) ?? status}
         open={open}
         onToggle={() => {
-          setOpen(!open);
+          setToggled(!open);
         }}
       />
-      {outcome !== undefined && <PermissionOutcomeLine outcome={outcome} />}
-      {diffable && context.sessionId !== null && (
-        <ToolDiffView tool={tool} sessionId={context.sessionId} folder={context.folder} />
-      )}
-      {open && <ToolDetails tool={tool} context={context} result={result} />}
+      {decision !== undefined && <PermissionOutcomeLine outcome={decision} />}
+      <DiffOf tool={tool} context={context} />
+      {open && <ToolBody tool={tool} context={context} result={result} question={question} />}
     </li>
   );
+}
+
+/** The diff of a tool that changed a file and succeeded, under its line (plan 08, B-27). */
+function DiffOf({ tool, context }: ToolRowProps): React.JSX.Element | null {
+  return DIFFABLE.has(tool.toolName) &&
+    tool.status === 'succeeded' &&
+    context.sessionId !== null ? (
+    <ToolDiffView tool={tool} sessionId={context.sessionId} folder={context.folder} />
+  ) : null;
+}
+
+/** What the line says, its state, and its accessible name — a question's from its questions. */
+function lineOf(
+  tool: ToolExecution,
+  question: QuestionView | null,
+  context: TimelineContext,
+  t: TFunction,
+): { readonly text: string; readonly name: string; readonly status: string } {
+  const label =
+    question === null
+      ? toolLabel(tool, context.folder, context.taskList.absorbed)
+      : questionLabel(question.interaction.questions);
+  const text = t(label.key, label.params);
+  const status = stateOf(tool, question, t);
+
+  return { text, status, name: accessibleName(label, text, status, t) };
+}
+
+/** The row opened: the questions answered, or the input and what the tool said. */
+function ToolBody({
+  tool,
+  context,
+  result,
+  question,
+}: ToolRowProps & {
+  readonly result: ToolResult;
+  readonly question: QuestionView | null;
+}): React.JSX.Element {
+  return question === null ? (
+    <ToolDetails tool={tool} context={context} result={result} />
+  ) : (
+    <div className="ml-5 border-l border-border pl-2">
+      <AnsweredQuestions {...question} />
+    </div>
+  );
+}
+
+/**
+ * The state of the line in words. A question still open says it waits for an answer — "running" is
+ * not what a question does.
+ */
+function stateOf(tool: ToolExecution, question: QuestionView | null, t: TFunction): string {
+  return tool.toolName === 'AskUserQuestion' && tool.status === 'running' && question === null
+    ? t('permission.question.pending')
+    : t(`session.toolStatus.${tool.status}`);
 }
 
 /** The line itself: the fold, the state by icon, what the tool is, and the state by word. */

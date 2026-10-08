@@ -7,7 +7,7 @@ Plano: [22 — Histórico ao vivo](README.md) · Cenários: [scenarios.md](scena
 widgets (R-09).
 **Entrega:** o app mostra a conversa com as mesmas regras do web: pensamento, ferramenta num card recolhível com
 título, IN/OUT e saída completa sob demanda, e a imagem do prompt marcada e aberta sob demanda. O app não tem
-cabeçalho de autor, e continua sem ([proposta §4.6](../../propostas/historico-ao-vivo-e-fiel.md#46-o-cabeçalho-claude-a-cada-resposta)).
+cabeçalho de autor, e continua sem ([proposta §4.6](../../discovery/04-historico-ao-vivo-e-fiel.md#46-o-cabeçalho-claude-a-cada-resposta)).
 
 **Decisões que precisam estar fechadas para começar:** as da F5 que valem para o app — D-09, D-14, D-15
 ([decisions.md](decisions.md#f6--fidelidade-no-mobile)).

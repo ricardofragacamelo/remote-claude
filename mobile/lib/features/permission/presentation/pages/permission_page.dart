@@ -22,6 +22,7 @@ import 'package:remote_claude/features/permission/domain/entities/permission_out
 import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';
 import 'package:remote_claude/features/permission/presentation/providers/permission_lookup_controller.dart';
 import 'package:remote_claude/features/permission/presentation/providers/permission_queue_controller.dart';
+import 'package:remote_claude/features/permission/presentation/widgets/answered_questions.dart';
 import 'package:remote_claude/features/permission/presentation/widgets/permission_outcome_line.dart';
 import 'package:remote_claude/features/permission/presentation/widgets/permission_panel.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
@@ -115,7 +116,14 @@ class _Focus extends StatelessWidget {
       FocusSettled(:final PermissionOutcome outcome) => _Over(
         sessionId: sessionId,
         requestId: requestId,
-        child: PermissionOutcomeLine(outcome: outcome),
+        child: outcome.interaction == null
+            ? PermissionOutcomeLine(outcome: outcome)
+            // A question answered elsewhere shows what was answered (plan 24, S-94).
+            : AnsweredQuestions(
+                interaction: outcome.interaction!,
+                answers: outcome.answers,
+                end: questionEndOf(outcome),
+              ),
       ),
       FocusGone() => _Over(
         sessionId: sessionId,

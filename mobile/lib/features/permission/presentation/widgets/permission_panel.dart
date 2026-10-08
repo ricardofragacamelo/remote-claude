@@ -18,10 +18,12 @@ import 'package:remote_claude/core/widgets/connection_line.dart';
 import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/question.dart';
 import 'package:remote_claude/features/permission/presentation/providers/permission_lookup_controller.dart';
 import 'package:remote_claude/features/permission/presentation/providers/permission_queue_controller.dart';
 import 'package:remote_claude/features/permission/presentation/widgets/permission_card_view.dart';
 import 'package:remote_claude/features/permission/presentation/widgets/plan_approval_card.dart';
+import 'package:remote_claude/features/permission/presentation/widgets/question_card.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// One open request of [sessionId], answerable from here.
@@ -67,13 +69,7 @@ class _PermissionPanelState extends ConsumerState<PermissionPanel> {
       ),
     );
 
-    final AnswerBlock? block = !mayDecide
-        ? AnswerBlock.device
-        : !online
-        ? AnswerBlock.offline
-        : widget.card.frameId == null
-        ? AnswerBlock.connecting
-        : null;
+    final AnswerBlock? block = _blockOf(mayDecide: mayDecide, online: online);
 
     final String? notice = switch (_last) {
       AnswerResult.lockRefused => l10n.permissionLockRefused,
@@ -82,6 +78,12 @@ class _PermissionPanelState extends ConsumerState<PermissionPanel> {
         l10n.permissionNoLockTitle,
       _ => null,
     };
+
+    final QuestionInteraction? interaction = widget.card.request.interaction;
+
+    if (interaction != null) {
+      return _question(interaction, block, notice);
+    }
 
     if (widget.card.request.toolName == planTool) {
       return PlanApprovalCard(
@@ -111,6 +113,43 @@ class _PermissionPanelState extends ConsumerState<PermissionPanel> {
       onExtend: _extend,
     );
   }
+
+  /// Why no answer can leave this phone now, or `null` when one can.
+  AnswerBlock? _blockOf({required bool mayDecide, required bool online}) => !mayDecide
+      ? AnswerBlock.device
+      : !online
+      ? AnswerBlock.offline
+      : widget.card.frameId == null
+      ? AnswerBlock.connecting
+      : null;
+
+  /// A question of Claude: its card, its draft — kept by the queue — and its two answers. Neither asks
+  /// the lock: answering authorises nothing (D-11).
+  Widget _question(QuestionInteraction interaction, AnswerBlock? block, String? notice) {
+    final String requestId = widget.card.requestId;
+    final QuestionDraft draft = ref.watch(
+      permissionQueueControllerProvider(
+        widget.sessionId,
+      ).select((PermissionQueue queue) => queue.draftOf(requestId)),
+    );
+
+    return QuestionCard(
+      card: widget.card,
+      interaction: interaction,
+      draft: draft,
+      now: widget.now,
+      block: block,
+      notice: notice,
+      onDraft: (QuestionDraft next) => _controller().saveDraft(requestId, next),
+      onSubmit: (List<QuestionAnswer> answers) =>
+          _settled(_controller().answerQuestion(requestId, answers)),
+      onDecline: (String reason) => _settled(_controller().declineQuestion(requestId, reason)),
+      onExtend: _extend,
+    );
+  }
+
+  /// Remembers what a tap on a question came to, to say it when it did not leave.
+  void _settled(AnswerResult result) => setState(() => _last = result);
 
   void _extend() {
     if (!_controller().extend(widget.card.requestId)) {

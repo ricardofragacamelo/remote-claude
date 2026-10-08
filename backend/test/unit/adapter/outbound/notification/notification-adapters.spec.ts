@@ -5,7 +5,7 @@ import { NotifyDeviceApprovedUseCase, NotifyPermissionUseCase } from '@applicati
 import { ForgetPushTokenUseCase, ListApprovedDevicesUseCase } from '@application/auth';
 import type { DeviceContext } from '@application/auth';
 import { RecordAuditEventUseCase } from '@application/audit';
-import { PermissionRequest } from '@domain/permission';
+import { PermissionRequest, normalizeQuestion } from '@domain/permission';
 import { SessionId } from '@domain/session';
 import { UserId } from '@domain/auth';
 import type { Device } from '@domain/auth';
@@ -185,9 +185,34 @@ describe('the consumers on the bus', () => {
         requestId: 'req-1',
         expiresAt: new Date(at.getTime() + 120_000),
         toolName: 'Bash',
+        question: false,
       },
     ]);
     expect(JSON.stringify(notify.announced)).not.toContain('rm -rf');
+  });
+
+  it('announces a question of Claude as one, with nothing of what it asks — plan 24, S-52', async () => {
+    const question = PermissionRequest.open({
+      id: 'req-2',
+      sessionId: SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ'),
+      userId: deviceOwner,
+      projectPath: null,
+      toolUseId: 'toolu_2',
+      toolName: 'AskUserQuestion',
+      input: { questions: [{ question: 'Which secret plan?' }] },
+      interaction: normalizeQuestion({ questions: [] }),
+      riskHint: 'read',
+      requestedAt: at,
+      expiresAt: new Date(at.getTime() + 600_000),
+    });
+
+    new NotifyOnPermissionRequested(asNotify(), logger.logger).handle({ request: question });
+    await settle();
+
+    expect(notify.announced).toEqual([
+      expect.objectContaining({ requestId: 'req-2', question: true }),
+    ]);
+    expect(JSON.stringify(notify.announced)).not.toContain('secret');
   });
 
   it('withdraws by the request that is over', async () => {

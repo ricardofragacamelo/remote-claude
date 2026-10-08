@@ -270,6 +270,60 @@
 
   "permissionErrorRuleNotFound": "Essa regra não existe.",
 
+  "permissionToolAskUserQuestion": "Responder à pergunta do Claude",
+
+  "permissionQuestionLabel": "Pergunta do Claude",
+
+  "permissionQuestionProgress": "Pergunta {n} de {total}",
+
+  "permissionQuestionAnswered": "respondida",
+
+  "permissionQuestionOther": "Outro",
+
+  "permissionQuestionOtherPlaceholder": "Digite sua resposta…",
+
+  "permissionQuestionRecommended": "Recomendada",
+
+  "permissionQuestionPreview": "Prévia",
+
+  "permissionQuestionSeePreview": "Ver prévia",
+
+  "permissionQuestionBack": "Voltar",
+
+  "permissionQuestionNext": "Próxima",
+
+  "permissionQuestionSubmit": "Enviar respostas",
+
+  "permissionQuestionDecline": "Não responder",
+
+  "permissionQuestionDeclineReason": "Por quê? O Claude lê isto (opcional)",
+
+  "permissionQuestionDeclineConfirm": "Enviar sem responder",
+
+  "permissionQuestionDeclineBack": "Voltar às perguntas",
+
+  "permissionQuestionExpired": "Esta pergunta expirou. Nada foi enviado.",
+
+  "permissionQuestionMalformed": "Não foi possível ler a pergunta do Claude, então ela não pode ser respondida aqui. Recusar avisa o Claude disso.",
+
+  "permissionQuestionWaiting": "Aguardando sua resposta a uma pergunta",
+
+  "permissionQuestionPill": "O Claude te perguntou algo ({count})",
+
+  "permissionQuestionAsked": "Perguntou: {header}",
+
+  "permissionQuestionAskedMany": "Fez {count} perguntas",
+
+  "permissionQuestionPending": "Aguardando resposta",
+
+  "permissionQuestionDeclined": "Não respondida: {reason}",
+
+  "permissionQuestionAnsweredElsewhere": "Respondida em outro lugar",
+
+  "permissionErrorAnswersInvalid": "Essas respostas não servem para a pergunta. Confira cada uma e envie de novo.",
+
+  "permissionQuestionOtherAnswer": "Outro: {text}",
+
   "rulesTitle": "Suas regras",
 
   "rulesOpen": "Regras que você concedeu",

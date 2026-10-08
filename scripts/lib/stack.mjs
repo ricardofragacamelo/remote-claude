@@ -125,6 +125,7 @@ export const E2E_POSTGRES = {
  * @property {string} RC_SESSION_DEFAULT_MODEL
  * @property {string} RC_SESSION_DEFAULT_PERMISSION_MODE
  * @property {string} RC_PERMISSION_TIMEOUT_MS
+ * @property {string} RC_QUESTION_TIMEOUT_MS
  * @property {string} RC_PERMISSION_EXTENSION_MS
  * @property {string} RC_PERMISSION_MAX_EXTENSIONS
  * @property {string} RC_PERMISSION_RULE_LIFETIME_MS
@@ -254,6 +255,8 @@ export function ephemeralEnvironment(ports, options = {}) {
     // Short, because an e2e that waits two minutes for a permission to expire is an e2e nobody
     // runs. The scenario that needs the deadline to pass says so; the others answer long before.
     RC_PERMISSION_TIMEOUT_MS: '5000',
+    // A question is answered in several steps — the scenario that lets one run out waits for it.
+    RC_QUESTION_TIMEOUT_MS: '15000',
     RC_PERMISSION_EXTENSION_MS: '10000',
     RC_PERMISSION_MAX_EXTENSIONS: '2',
     RC_PERMISSION_RULE_LIFETIME_MS: '600000',

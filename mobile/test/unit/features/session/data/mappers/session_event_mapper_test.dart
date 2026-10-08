@@ -137,6 +137,23 @@ void main() {
     });
   });
 
+  test(
+    'S-103 · keeps the question an end carries, as the wire said it — none when it has none',
+    () {
+      const Map<String, Object?> question = <String, Object?>{
+        'interaction': <String, Object?>{'kind': 'question'},
+        'outcome': 'answered',
+      };
+
+      expect(
+        (read(toolCompleted(toolUseId: 't1', seq: 1, question: question))! as ToolFinished)
+            .question,
+        question,
+      );
+      expect((read(toolCompleted(toolUseId: 't1', seq: 1))! as ToolFinished).question, isNull);
+    },
+  );
+
   test('reads what a turn cost, and each reason a session can end with', () {
     final TurnFinished turn =
         read(turnCompleted(seq: 1, costUsd: '0.2740', durationMs: 4200))! as TurnFinished;

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { wsClient } from '@/shared/api/ws';
 import { folderName } from '@/shared/lib/folder-name';
+import { isRecord } from '@/shared/lib/json';
 import { notify } from '@/shared/lib/notify';
 import { folderOfSession } from '../store/session-folders.store';
 
@@ -41,7 +42,10 @@ export function usePermissionNotices(
 
         notify({
           severity: 'warning',
-          messageKey: 'notification.permission.waiting',
+          // A question says it is one, and never what it asks (plan 24, B-16).
+          messageKey: isRecord(frame.payload?.['interaction'])
+            ? 'permission.question.notice'
+            : 'notification.permission.waiting',
           params: { folder: folderName(folder) },
           actions: [
             {

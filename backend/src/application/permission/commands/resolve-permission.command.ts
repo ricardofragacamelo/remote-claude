@@ -1,4 +1,9 @@
-import type { PermissionDecision, PermissionOrigin, RuleReachKind } from '@domain/permission';
+import type {
+  PermissionDecision,
+  PermissionOrigin,
+  QuestionAnswer,
+  RuleReachKind,
+} from '@domain/permission';
 import type { Answerer } from '../answerable-request';
 
 /** One answer, as it arrived from a client. */
@@ -20,6 +25,12 @@ export interface ResolvePermissionCommand extends Answerer {
    * refused.
    */
   readonly reach?: RuleReachKind | null;
+
+  /**
+   * The answers to a question, by the id of each — required for an `allow` of one, and refused
+   * anywhere else. Checked against the questions the server published, never trusted.
+   */
+  readonly answers?: readonly QuestionAnswer[] | null;
 
   readonly resolvedFrom: PermissionOrigin;
 }

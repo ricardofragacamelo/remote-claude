@@ -10,6 +10,14 @@ export interface PermissionSettings {
   /** How long a request waits for a human before the deadline denies it. */
   readonly timeoutMs: number;
 
+  /**
+   * How long a **question** of Claude waits instead — reading and choosing take longer than saying
+   * yes or no, and the person may be answering from a phone
+   * ([24 · D-07](../../../../docs/plans/24-structured-questions/decisions.md#f1--backend)). Extended
+   * by the same step, to the same ceiling.
+   */
+  readonly questionTimeoutMs: number;
+
   /** How much further out one extension pushes the deadline. */
   readonly extensionMs: number;
 

@@ -26,11 +26,11 @@ No [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md):
   ack `transcript.following { followId, conversationId, activity }` e os eventos
   `transcript.appended { followId, conversationId, seq, events[], lastMessageId, activity, working }` e
   `transcript.reset { followId, conversationId, reason: 'rewritten' | 'gone' }`
-  ([proposta §7](../../propostas/historico-ao-vivo-e-fiel.md#7-contrato));
+  ([proposta §7](../../discovery/04-historico-ao-vivo-e-fiel.md#7-contrato));
 - uma seção **Acompanhar um transcript**, no molde de [A pasta assistida](../../architecture/shared/05-websocket-protocol.md#a-pasta-assistida--workspace):
   sem lacuna entre a página e a assinatura, ack antes de tudo, reconexão é reassinar (sem replay), cadeia
   reescrita é reset, uma sondagem por conversa, o mesmo cercado de leitura, tetos, só a cadeia principal, e
-  `liveHere` recusado ([proposta §5.3](../../propostas/historico-ao-vivo-e-fiel.md#53-regras-do-acompanhamento));
+  `liveHere` recusado ([proposta §5.3](../../discovery/04-historico-ao-vivo-e-fiel.md#53-regras-do-acompanhamento));
 - os campos aditivos: `blockId` nos blocos de conteúdo ([D-06](decisions.md#f1--mapeamento-e-leituras)), `at`
   nos eventos do histórico, `title` em `tool.started` passando a ser preenchido ([D-05](decisions.md#f1--mapeamento-e-leituras)),
   e `mediaType`/`size` no bloco `image`; sem subir `v` ([D-03](decisions.md#f0--normas-e-contrato)).
@@ -81,7 +81,7 @@ falhas da imagem; as mensagens de `TRANSCRIPT_FOLLOW_LIMIT` e `TRANSCRIPT_FOLLOW
 No app, "Retomar" passa a "Continuar esta conversa" e "Concluída" a "Pronto", como o web
 ([D-04](decisions.md#f0--normas-e-contrato)). No [i18n-shared.json](../../../scripts/i18n-shared.json): os pares
 `history.screen.resume` ↔ `historyResumeAction`, `session.toolStatus.*` ↔ `sessionToolStatus*`, e as chaves
-novas que as duas pontas mostram ([proposta §4.9](../../propostas/historico-ao-vivo-e-fiel.md#49-outras-divergências-entre-web-e-mobile-e-a-relação-com-o-plano-10)).
+novas que as duas pontas mostram ([proposta §4.9](../../discovery/04-historico-ao-vivo-e-fiel.md#49-outras-divergências-entre-web-e-mobile-e-a-relação-com-o-plano-10)).
 Ver [shared/02-i18n](../../architecture/shared/02-i18n.md).
 
 > **Na execução (2026-10-07):** entraram as chaves que o backend emite (os quatro erros novos), as duas

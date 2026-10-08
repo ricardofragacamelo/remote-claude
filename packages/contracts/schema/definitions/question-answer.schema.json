@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/question-answer.json",
+  "title": "QuestionAnswer",
+  "description": "The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the SDK's joined string.",
+  "type": "object",
+  "required": ["questionId", "selected"],
+  "properties": {
+    "questionId": {
+      "type": "string",
+      "maxLength": 8,
+      "description": "The `id` of the question in the request's `interaction`."
+    },
+    "selected": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "string"
+      },
+      "description": "The labels chosen, exactly as the request gave them. Empty when only the free answer was given."
+    },
+    "other": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "The free answer (\"Other\"), when there is one. Never blank."
+    }
+  }
+}

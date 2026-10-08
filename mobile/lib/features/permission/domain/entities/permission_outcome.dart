@@ -3,6 +3,7 @@ library;
 
 import 'package:equatable/equatable.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/question.dart';
 
 /// Which client answered, as far as the backend can honestly tell.
 enum AnswerOrigin { web, mobile, unknown }
@@ -24,17 +25,20 @@ class PermissionOutcome extends Equatable {
     this.expired = false,
     this.toolUseId,
     this.via,
+    this.interaction,
+    this.answers,
   });
 
   /// The deadline passed with nobody answering — on the server, or on this screen's countdown.
   ///
   /// Silence never authorises, so it is always a refusal, and it carries no author.
-  const PermissionOutcome.expired(this.requestId, {this.toolUseId})
+  const PermissionOutcome.expired(this.requestId, {this.toolUseId, this.interaction})
     : decision = PermissionDecision.deny,
       auto = true,
       origin = AnswerOrigin.unknown,
       expired = true,
-      via = null;
+      via = null,
+      answers = null;
 
   final String requestId;
   final PermissionDecision decision;
@@ -56,8 +60,15 @@ class PermissionOutcome extends Equatable {
   /// What answered when nobody was asked, when the server said: a rule, or Permitir tudo.
   final AnswerVia? via;
 
-  /// The same settlement, about [tool].
-  PermissionOutcome about(String? tool) => PermissionOutcome(
+  /// The questions, when the request was one — what the line of its tool draws (plan 24, B-19). The
+  /// settlement does not carry them; the card it was does, and the server's revalidation.
+  final QuestionInteraction? interaction;
+
+  /// What was answered, when the request was a question and the decision a yes.
+  final List<QuestionAnswer>? answers;
+
+  /// The same settlement, about [tool] — and the questions of [questions], when it had any.
+  PermissionOutcome about(String? tool, {QuestionInteraction? questions}) => PermissionOutcome(
     requestId: requestId,
     decision: decision,
     auto: auto,
@@ -65,8 +76,20 @@ class PermissionOutcome extends Equatable {
     expired: expired,
     toolUseId: tool ?? toolUseId,
     via: via,
+    interaction: questions ?? interaction,
+    answers: answers,
   );
 
   @override
-  List<Object?> get props => <Object?>[requestId, decision, auto, origin, expired, toolUseId, via];
+  List<Object?> get props => <Object?>[
+    requestId,
+    decision,
+    auto,
+    origin,
+    expired,
+    toolUseId,
+    via,
+    interaction,
+    answers,
+  ];
 }

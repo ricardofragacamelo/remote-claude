@@ -4,6 +4,7 @@ import {
   isPermissionScope,
   isPersistedPermissionScope,
   reachesFor,
+  validateAnswers,
 } from '@domain/permission';
 import type {
   PermissionDecision,
@@ -38,6 +39,11 @@ import type { PermissionSettlement } from './settle-permission';
  * request settled before its rule was refused would have let the agent loop go on a promise that
  * was then broken. Granted first, a refusal leaves the question open for the person to answer again.
  *
+ * **A question is answered, and the answer is checked first** (plan 24). The answers are validated
+ * against the questions the server published before anything is settled, so wrong ones leave the
+ * question open for the person to answer again (S-43). Scope and reach say nothing about a
+ * question: it is `once`, and no rule is left (D-09).
+ *
  * **Losing the race is not an error.** The second answer gets an ordinary outcome carrying the
  * decision that actually reached the SDK, so the client can show who won rather than a failure
  * (docs/architecture/web/04-state-and-data.md#a-fila-de-permissão). A rule asked for about a question
@@ -65,6 +71,8 @@ export class ResolvePermissionUseCase {
    * @throws {import('@domain/permission').PermissionNotOwnedError} not watching that session
    * @throws {PermissionScopeUnsupportedError} a scope that cannot be honoured for this invocation
    * @throws {PermissionReasonRequiredError} a refusal with no reason
+   * @throws {import('@domain/permission').PermissionAnswersInvalidError} answers that do not fit the
+   *   question — or any answers on a request that is not one
    */
   async execute(command: ResolvePermissionCommand): Promise<PermissionSettling> {
     const before = this.answering.get(command.requestId);
@@ -83,12 +91,12 @@ export class ResolvePermissionUseCase {
 
   private async answer(command: ResolvePermissionCommand): Promise<PermissionSettling> {
     const request = answerableRequest(this.registry, command);
-    const scope = command.scope ?? 'once';
-    if (!isPermissionScope(scope)) {
-      throw new PermissionScopeUnsupportedError(scope);
-    }
-
-    const patterns = request.isPending ? patternsOf(request, scope, command.reach ?? null) : [];
+    const { scope, reach } = reachOf(request, command);
+    // A request already settled is the silent ack it has always been, whatever the answers say.
+    const answers = request.isPending
+      ? validateAnswers(request.interaction, command.decision, command.answers ?? null)
+      : null;
+    const patterns = request.isPending ? patternsOf(request, scope, reach) : [];
 
     if (isPersistedPermissionScope(scope) && request.isPending) {
       await this.grantFrom(
@@ -110,6 +118,7 @@ export class ResolvePermissionUseCase {
         resolvedBy: command.userId,
         resolvedFrom: command.resolvedFrom,
         auto: false,
+        ...(answers === null ? {} : { answers }),
         at: this.clock.now(),
       },
       { announce: true, ...(scope === 'session' ? { sessionPatterns: patterns } : {}) },
@@ -149,6 +158,28 @@ export class ResolvePermissionUseCase {
 
 function noop(): void {
   // Nothing: see `execute`.
+}
+
+/**
+ * How far an answer reaches. A question is answered, never authorised: whatever scope and reach say,
+ * it is `once`, and no rule is left (D-09, S-28).
+ *
+ * @throws {PermissionScopeUnsupportedError} a scope this build does not know
+ */
+function reachOf(
+  request: PermissionRequest,
+  command: ResolvePermissionCommand,
+): { readonly scope: PermissionScope; readonly reach: RuleReachKind | null } {
+  if (request.interaction !== null) {
+    return { scope: 'once', reach: null };
+  }
+
+  const scope = command.scope ?? 'once';
+  if (!isPermissionScope(scope)) {
+    throw new PermissionScopeUnsupportedError(scope);
+  }
+
+  return { scope, reach: command.reach ?? null };
 }
 
 /**

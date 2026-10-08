@@ -10,7 +10,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
-import 'package:remote_claude/core/widgets/note_line.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';
 import 'package:remote_claude/features/permission/presentation/widgets/permission_card_view.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
@@ -126,9 +125,12 @@ class _PlanApprovalCardState extends State<PlanApprovalCard> {
               onPressed: answerable ? () => widget.onKeepPlanning(_comment.text) : null,
               child: Text(l10n.permissionPlanKeepPlanning),
             ),
-            ExtendAction.forCard(card, blocked: widget.block != null, onExtend: widget.onExtend),
-            if (card.phase == CardPhase.sending) NoteLine(l10n.permissionSending),
-            if (notice != null) Text(notice, style: TextStyle(color: theme.colorScheme.error)),
+            CardFooter(
+              card: card,
+              blocked: widget.block != null,
+              notice: notice,
+              onExtend: widget.onExtend,
+            ),
           ],
         ),
       ),

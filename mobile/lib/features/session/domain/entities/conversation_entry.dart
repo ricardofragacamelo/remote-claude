@@ -203,10 +203,14 @@ class ToolExecution extends ConversationEntry {
     this.taskId,
     this.isSubagent = false,
     this.title,
+    this.question,
   });
 
   final String toolUseId;
   final String toolName;
+
+  /// The question of an `AskUserQuestion`, as `tool.completed` carried it (plan 24, B-22).
+  final Map<String, Object?>? question;
 
   /// What the model said the call is for — the `description` of a shell command —, when it said
   /// (plan 22, D-05).
@@ -233,18 +237,24 @@ class ToolExecution extends ConversationEntry {
   String get entryId => 'tool:$toolUseId';
 
   /// A copy with some fields replaced.
-  ToolExecution copyWith({ToolStatus? status, String? output, String? summary, String? taskId}) =>
-      ToolExecution(
-        toolUseId: toolUseId,
-        toolName: toolName,
-        input: input,
-        status: status ?? this.status,
-        output: output ?? this.output,
-        summary: summary ?? this.summary,
-        taskId: taskId ?? this.taskId,
-        isSubagent: isSubagent,
-        title: title,
-      );
+  ToolExecution copyWith({
+    ToolStatus? status,
+    String? output,
+    String? summary,
+    String? taskId,
+    Map<String, Object?>? question,
+  }) => ToolExecution(
+    toolUseId: toolUseId,
+    toolName: toolName,
+    input: input,
+    status: status ?? this.status,
+    output: output ?? this.output,
+    summary: summary ?? this.summary,
+    taskId: taskId ?? this.taskId,
+    isSubagent: isSubagent,
+    title: title,
+    question: question ?? this.question,
+  );
 
   @override
   List<Object?> get props => <Object?>[
@@ -257,6 +267,7 @@ class ToolExecution extends ConversationEntry {
     taskId,
     isSubagent,
     title,
+    question,
   ];
 }
 

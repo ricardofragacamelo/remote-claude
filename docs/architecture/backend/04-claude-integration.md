@@ -251,6 +251,26 @@ o pedido lê.
 | ligar resolve os cards abertos da sessão | cada pendente passa de novo pelas regras e pelo modo: quem uma regra recusa é recusado, quem é pergunta fica, o resto é aprovado |
 | desligar não faz nada além de trocar o modo | o modo é lido a cada pedido; a próxima tool pergunta |
 
+### A pergunta estruturada — `AskUserQuestion`
+
+O CLI devolve **sempre** `ask` para `AskUserQuestion`: ela passa pelo `canUseTool` em qualquer modo,
+inclusive `plan` ([descoberta §10.9](../../discovery/01-descoberta-claude-agent-sdk.md)). Devolver
+o próprio `input` num `allow` faz o Claude receber `The user did not answer the questions.` — era o
+defeito que o [plano 24](../../plans/24-structured-questions/README.md) corrigiu.
+
+| Regra | Onde | Por quê |
+|---|---|---|
+| a pergunta é um pedido de permissão com uma `interaction`, normalizada por `normalizeQuestion` | `domain/permission` | o cliente nunca lê o input do SDK; ids pela posição, textos truncados, `malformed` para o que não se lê com segurança ([05](../shared/05-websocket-protocol.md#a-pergunta--interaction)) |
+| a resposta é validada por `validateAnswers` **antes** de liquidar | `domain/permission` | resposta inválida é `PERMISSION_ANSWERS_INVALID` e não chega ao Claude; é a mesma validação que um respondedor automático vai usar |
+| `riskHint: 'read'`, `defaultToNo: false`, sem sugestões nem alcances, prazo `RC_QUESTION_TIMEOUT_MS` | `application/permission` | a tool não tem efeito colateral; responder não deixa regra; ler e refletir pede mais que os 120 s de uma permissão |
+| nenhuma regra de **allow** responde `HUMAN_ONLY_TOOLS`, nem Permitir tudo | `rule-precedence`, `mode-approval` | uma regra "respondendo" faria o Claude receber uma pergunta que ninguém respondeu; um `deny` continua valendo |
+| o veredito leva `answers` (por id de pergunta), e o **runner** traduz | `session-runner.ts` | a porta não conhece o SDK. `updatedInput = { ...input, answers }`, com a chave pelo texto **original** da pergunta e o valor `[...rótulos originais, ...(other ? [other] : [])].join(', ')` — o rótulo truncado na normalização volta ao original pela posição |
+| no vencimento, o `deny` diz "The user did not answer in time. Do not assume an answer; ask again or stop." | `permission-bridge.ts` | o "ninguém respondeu" genérico de uma permissão não diz ao Claude que ele não deve presumir uma resposta |
+
+As respostas ficam em `permission_requests.answers` e na linha de decisão da trilha (no `input`
+dela; a linha `recorded` do hook continua com o input original). O histórico as junta à linha da
+tool pelo `toolUseId` — nunca pelo texto do `tool_result`, que é formato não documentado.
+
 ### A regra fala a gramática do Claude, não uma nossa
 
 A `PermissionRule` que persistimos e o `PermissionUpdate` que devolvemos ao SDK descrevem **o

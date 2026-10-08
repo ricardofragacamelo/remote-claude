@@ -8,6 +8,9 @@ export interface PendingPillProps {
   /** The card of one of them is not in view. */
   readonly outOfView: boolean;
 
+  /** Every one of them is a question of Claude — "Claude asked you something (n)" (plan 24, B-16). */
+  readonly questionsOnly?: boolean;
+
   /** Takes the person to the oldest. */
   onGoTo(): void;
 }
@@ -21,9 +24,16 @@ export interface PendingPillProps {
  * ([D-13](../../../../../docs/plans/09-chat-layout/decisions.md#f4--inline)): the live region
  * announces it — and is there, empty, before anything is asked, so the first announcement is heard.
  */
-export function PendingPill({ count, outOfView, onGoTo }: PendingPillProps): React.JSX.Element {
+export function PendingPill({
+  count,
+  outOfView,
+  questionsOnly = false,
+  onGoTo,
+}: PendingPillProps): React.JSX.Element {
   const { t } = useTranslation();
-  const label = t('sessions.pending.pill', { count });
+  const label = questionsOnly
+    ? t('permission.question.pill', { count })
+    : t('sessions.pending.pill', { count });
 
   return (
     <>

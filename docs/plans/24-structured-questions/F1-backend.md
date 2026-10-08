@@ -2,8 +2,8 @@
 
 Plano: [24 — Perguntas estruturadas](README.md) · Cenários: [scenarios.md](scenarios.md) · Progresso: [progress.md](progress.md)
 
-**Depende de:** [F0](F0-norms.md), e das decisões 🔲 da [F1](decisions.md#f1--backend): D-04,
-D-07 e D-08.
+**Depende de:** [F0](F0-norms.md), e das decisões da [F1](decisions.md#f1--backend): D-04,
+D-07 e D-08 (todas ✅).
 **Entrega:** o backend publica a pergunta normalizada, recusa resposta inválida, grava e audita as
 respostas, e o Claude as recebe no formato do SDK. Regra de allow não responde mais pergunta.
 
@@ -14,7 +14,7 @@ respostas, e o Claude as recebe no formato do SDK. Regra de allow não responde 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-04 — Normalizar 🔲
+### B-04 — Normalizar ✅
 
 Em `domain/permission`, sem framework:
 
@@ -29,7 +29,7 @@ Em `domain/permission`, sem framework:
 A `interaction` guarda, por opção, o rótulo original junto do exibido, para a tradução da B-09
 achar o original pela posição (S-49).
 
-### B-05 — Validar a resposta 🔲
+### B-05 — Validar a resposta ✅
 
 `validateAnswers(interaction, decision, answers)`, função pura no domínio, com
 `PermissionAnswersInvalidError` (`PERMISSION_ANSWERS_INVALID`, 422). Recusa: `allow` sem
@@ -39,9 +39,9 @@ pergunta; escolha única com mais de uma escolha; "Outro" vazio depois de `trim`
 malformado. `details[]` diz a regra e o `questionId`, nunca o texto digitado.
 
 É a mesma validação que um respondedor automático vai usar
-([workflow §13.2](../../propostas/workflow-de-sessoes.md)); por isso é do domínio, e não do handler.
+([workflow §13.2](../../discovery/02-workflow-de-sessoes.md)); por isso é do domínio, e não do handler.
 
-### B-06 — O pedido de pergunta 🔲
+### B-06 — O pedido de pergunta ✅
 
 No `RequestPermissionUseCase` e no `permission-payloads`, quando a tool é `AskUserQuestion`:
 `interaction` normalizada, `riskHint: 'read'` (o `risk.classifier` ganha a tool na lista de
@@ -55,19 +55,19 @@ documentado no `.env.example`. A extensão usa o passo e o teto de hoje.
 Na resolução, `scope` e `reach` de uma pergunta são ignorados: vale `once`, e nenhuma regra nasce
 (S-28).
 
-### B-07 — Regras não respondem perguntas 🔲
+### B-07 — Regras não respondem perguntas ✅
 
 - `rule-precedence.answeringRule`: um `allow` que casa com uma tool de `HUMAN_ONLY_TOOLS` não
   responde ([D-25](decisions.md#f1--backend)); um `deny` continua recusando. A regra ignorada é
   logada em `debug` ([D-26](decisions.md#f1--backend)).
 - `POST /permission-rules` recusa allow para essas tools com `PermissionRuleToolInteractiveError`
   (`PERMISSION_RULE_TOOL_INTERACTIVE`, 422).
-- Se a [D-08](decisions.md#f1--backend) tirar o `ExitPlanMode`, a regra usa uma lista menor
-  derivada da constante, e não uma segunda constante solta.
+- A [D-08](decisions.md#f1--backend) manteve o `ExitPlanMode`: a regra usa a constante inteira,
+  e uma regra de allow deixa de aprovar planos sem ninguém ver.
 
 Permitir tudo já pergunta (`answeredByMode`); S-33 é a regressão que prova que continua.
 
-### B-08 — Resolver com respostas 🔲
+### B-08 — Resolver com respostas ✅
 
 - WS: o zod do `permission.resolve` em `permission-commands.ts` aceita `answers`, e o handler as
   repassa. Hoje um campo a mais é descartado em silêncio.
@@ -84,7 +84,7 @@ Permitir tudo já pergunta (`answeredByMode`); S-33 é a regressão que prova qu
 A serialização das respostas a um mesmo pedido, que o plano 23 introduziu (ciclo 6 do
 [diário do 23](../23-fluid-permissions/progress.md)), vale aqui sem mudança: é ela que garante S-38.
 
-### B-09 — O veredito chega ao SDK 🔲
+### B-09 — O veredito chega ao SDK ✅
 
 - `PermissionVerdict` ganha `answers: ReadonlyArray<QuestionAnswer> | null`
   ([D-03](decisions.md#f0--normas-e-contrato)).
@@ -95,12 +95,16 @@ A serialização das respostas a um mesmo pedido, que o plano 23 introduziu (cic
 - No vencimento de uma pergunta, o `deny` leva a mensagem de "não respondida a tempo"
   ([D-07](decisions.md#f1--backend)), em inglês, porque é para o Claude.
 
-### B-10 — Push e estado 🔲
+### B-10 — Push e estado ✅
 
 - `PushMessage.permissionRequested` ganha a variante de pergunta pela `interaction`, com
   `push.question.*`, sem texto do Claude ([D-22](decisions.md#f0--normas-e-contrato)).
 - `GET /sessions/:id/permissions/:requestId` devolve a `interaction` e, resolvido, as `answers`.
 - Pergunta de subagente (`parentToolUseId`) segue o mesmo caminho; S-55 prova.
+
+**Na execução:** S-55 é provado no runner, com um `canUseTool` que traz `agentID` — nenhuma gravação
+tem uma pergunta dentro de subagente, e o backend não distingue o caminho. A prova de que o SDK recebe
+as respostas por inteiro (S-38, S-50 no nível de integração) lê o registro do fake SDK, da B-12.
 
 ---
 

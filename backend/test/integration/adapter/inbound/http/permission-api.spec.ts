@@ -195,6 +195,118 @@ describe('the permission HTTP surface', () => {
     expect(response.body.error.httpEquivalent).toBe(410);
   });
 
+  describe('a question of Claude — plan 24', () => {
+    const QUESTIONS = {
+      questions: [
+        {
+          question: 'Which library?',
+          header: 'Library',
+          multiSelect: false,
+          options: [
+            { label: 'date-fns', description: 'small' },
+            { label: 'luxon', description: 'zones' },
+          ],
+        },
+      ],
+    };
+
+    async function questioned(requestId: string): Promise<void> {
+      await harness.app.get(RequestPermissionUseCase).execute({
+        requestId,
+        sessionId: SESSION,
+        userId: UserId.create(SUBJECT),
+        projectPath: null,
+        permissionMode: 'default',
+        toolUseId: `toolu-${requestId}`,
+        toolName: 'AskUserQuestion',
+        input: QUESTIONS,
+      });
+    }
+
+    it('answers a pending question with its interaction, for the card a push opens — S-53', async () => {
+      await questioned('question-pending');
+
+      const response = await revalidate('question-pending');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({
+        status: 'pending',
+        request: {
+          toolName: 'AskUserQuestion',
+          riskHint: 'read',
+          defaultToNo: false,
+          interaction: {
+            kind: 'question',
+            malformed: false,
+            questions: [
+              { id: 'q1', header: 'Library', options: [{ label: 'date-fns' }, { label: 'luxon' }] },
+            ],
+          },
+        },
+      });
+    });
+
+    it('answers an answered question with what was answered — S-53', async () => {
+      await questioned('question-answered');
+      await harness.app.get(ResolvePermissionUseCase).execute({
+        requestId: 'question-answered',
+        decision: 'allow',
+        reason: null,
+        scope: 'once',
+        answers: [{ questionId: 'q1', selected: ['luxon'], other: null }],
+        userId: UserId.create(SUBJECT),
+        resolvedFrom: 'mobile',
+        watchesSession: () => true,
+      });
+
+      const response = await revalidate('question-answered');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        status: 'resolved',
+        requestId: 'question-answered',
+        decision: 'allow',
+        auto: false,
+        resolvedBy: SUBJECT,
+        resolvedFrom: 'mobile',
+        toolUseId: 'toolu-question-answered',
+        answers: [{ questionId: 'q1', selected: ['luxon'] }],
+        // What the phone a push opened draws the answers with (S-94).
+        interaction: {
+          kind: 'question',
+          malformed: false,
+          questions: [
+            {
+              id: 'q1',
+              header: 'Library',
+              prompt: 'Which library?',
+              multiSelect: false,
+              options: [
+                { label: 'date-fns', description: 'small' },
+                { label: 'luxon', description: 'zones' },
+              ],
+            },
+          ],
+        },
+      });
+    });
+
+    it('answers 410 for a question nobody answered in time, and 404 for one never asked — S-54', async () => {
+      await questioned('question-expired');
+      const expired = harness.app
+        .get(PermissionRegistry)
+        .find('question-expired') as PermissionRequest;
+      await harness.app
+        .get(PermissionSettlement)
+        .settle(expired, PermissionRequest.expiry(new Date()), { announce: true });
+
+      expect((await revalidate('question-expired')).status).toBe(410);
+      expect((await revalidate('question-never-asked')).body.error.code).toBe(
+        'PERMISSION_REQUEST_NOT_FOUND',
+      );
+    });
+  });
+
   it('answers 404 for an id this process never saw', async () => {
     const response = await revalidate('request-never-asked');
 

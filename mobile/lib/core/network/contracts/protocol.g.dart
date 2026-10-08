@@ -458,6 +458,233 @@ bool envelopeConditionalsHold(Map<String, Object?> json) {
   return true;
 }
 
+/// The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the SDK's joined string.
+class QuestionAnswer {
+  const QuestionAnswer({
+    required this.questionId,
+    required this.selected,
+    this.other,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory QuestionAnswer.fromJson(Map<String, Object?> json) => QuestionAnswer(
+        questionId: json['questionId']! as String,
+        selected: (json['selected']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        other: json['other'] as String?,
+      );
+
+  /// The `id` of the question in the request's `interaction`.
+  final String questionId;
+
+  /// The labels chosen, exactly as the request gave them. Empty when only the free answer was given.
+  final List<String> selected;
+
+  /// The free answer ("Other"), when there is one. Never blank.
+  final String? other;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'questionId': questionId,
+      'selected': selected,
+    };
+
+    if (other != null) {
+      json['other'] = other;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [QuestionAnswer].
+bool questionAnswerLimitsHold(Map<String, Object?> json) {
+  if (json['questionId'] is String && (json['questionId']! as String).length > 8) {
+    return false;
+  }
+
+  if (json['selected'] is List<Object?> && (json['selected']! as List<Object?>).length > 4) {
+    return false;
+  }
+
+  if (json['other'] is String && (json['other']! as String).length > 2000) {
+    return false;
+  }
+
+  return true;
+}
+
+class QuestionInteractionQuestionsItemOptionsItem {
+  const QuestionInteractionQuestionsItemOptionsItem({
+    required this.label,
+    required this.description,
+    this.preview,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory QuestionInteractionQuestionsItemOptionsItem.fromJson(Map<String, Object?> json) => QuestionInteractionQuestionsItemOptionsItem(
+        label: json['label']! as String,
+        description: json['description']! as String,
+        preview: json['preview'] as String?,
+      );
+
+  /// Shown and answered exactly as it is — a label ending in "(Recommended)" keeps it, and a screen may highlight it but never pre-select it.
+  final String label;
+
+  final String description;
+
+  /// A mockup or a snippet, in markdown, rendered with the safe renderer — never HTML. Absent when the option has none.
+  final String? preview;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'label': label,
+      'description': description,
+    };
+
+    if (preview != null) {
+      json['preview'] = preview;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [QuestionInteractionQuestionsItemOptionsItem].
+bool questionInteractionQuestionsItemOptionsItemLimitsHold(Map<String, Object?> json) {
+  if (json['label'] is String && (json['label']! as String).length > 200) {
+    return false;
+  }
+
+  if (json['description'] is String && (json['description']! as String).length > 1000) {
+    return false;
+  }
+
+  if (json['preview'] is String && (json['preview']! as String).length > 20000) {
+    return false;
+  }
+
+  return true;
+}
+
+class QuestionInteractionQuestionsItem {
+  const QuestionInteractionQuestionsItem({
+    required this.id,
+    required this.header,
+    required this.prompt,
+    required this.multiSelect,
+    required this.options,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory QuestionInteractionQuestionsItem.fromJson(Map<String, Object?> json) => QuestionInteractionQuestionsItem(
+        id: json['id']! as String,
+        header: json['header']! as String,
+        prompt: json['prompt']! as String,
+        multiSelect: json['multiSelect']! as bool,
+        options: (json['options']! as List<Object?>).map((item) => QuestionInteractionQuestionsItemOptionsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// `q1`…`q4`, by position — stable within the request, and what an answer names.
+  final String id;
+
+  /// The short chip of the question (the SDK asks for 12 characters; the model does not always obey). Cut, never refused.
+  final String header;
+
+  /// The question itself, as Claude wrote it. Text to show, never markup. Cut, never refused.
+  final String prompt;
+
+  /// Several options may be chosen. A single choice is one label, or the free answer (`other`).
+  final bool multiSelect;
+
+  /// What Claude offers. The free answer ("Other") is not here: the screen offers it.
+  final List<QuestionInteractionQuestionsItemOptionsItem> options;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'header': header,
+      'prompt': prompt,
+      'multiSelect': multiSelect,
+      'options': options.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [QuestionInteractionQuestionsItem].
+bool questionInteractionQuestionsItemLimitsHold(Map<String, Object?> json) {
+  if (json['id'] is String && (json['id']! as String).length > 8) {
+    return false;
+  }
+
+  if (json['header'] is String && (json['header']! as String).length > 60) {
+    return false;
+  }
+
+  if (json['prompt'] is String && (json['prompt']! as String).length > 2000) {
+    return false;
+  }
+
+  if (json['options'] is List<Object?> && (json['options']! as List<Object?>).length > 4) {
+    return false;
+  }
+
+  if (json['options'] is List<Object?> && (json['options']! as List<Object?>).length < 2) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Claude asking the person something (`AskUserQuestion`) rather than asking leave to run a tool, with the questions the backend normalised out of the SDK's input. A client renders this and never reads the SDK's `input` (plan 24).
+class QuestionInteraction {
+  const QuestionInteraction({
+    required this.kind,
+    required this.malformed,
+    required this.questions,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory QuestionInteraction.fromJson(Map<String, Object?> json) => QuestionInteraction(
+        kind: json['kind']! as String,
+        malformed: json['malformed']! as bool,
+        questions: (json['questions']! as List<Object?>).map((item) => QuestionInteractionQuestionsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// The only variant for now. `plan` (for `ExitPlanMode`) would be the second, and the generator has no `oneOf` yet.
+  final String kind;
+
+  /// The SDK's input could not be read safely — no questions or more than four, fewer than two or more than four options, an option with no label, a question with no options, a question repeated, a label repeated within a question. `questions` is then empty, the card offers only a refusal, and an `allow` is refused with `PERMISSION_ANSWERS_INVALID`.
+  final bool malformed;
+
+  /// One to four, in the order Claude asked them; empty when `malformed`.
+  final List<QuestionInteractionQuestionsItem> questions;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'kind': kind,
+      'malformed': malformed,
+      'questions': questions.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [QuestionInteraction].
+bool questionInteractionLimitsHold(Map<String, Object?> json) {
+  if (json['questions'] is List<Object?> && (json['questions']! as List<Object?>).length > 4) {
+    return false;
+  }
+
+  return true;
+}
+
 /// A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream.
 class CommandAcceptedPayload {
   const CommandAcceptedPayload({
@@ -2082,6 +2309,7 @@ class PermissionRequestedPayload {
     required this.expiresAt,
     this.suggestions,
     this.reaches,
+    this.interaction,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -2097,6 +2325,7 @@ class PermissionRequestedPayload {
         expiresAt: json['expiresAt']! as String,
         suggestions: json['suggestions'] == null ? null : (json['suggestions']! as List<Object?>).map((item) => PermissionRequestedPayloadSuggestionsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
         reaches: json['reaches'] == null ? null : (json['reaches']! as List<Object?>).map((item) => PermissionRequestedPayloadReachesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        interaction: json['interaction'] == null ? null : QuestionInteraction.fromJson(json['interaction']! as Map<String, Object?>),
       );
 
   /// Idempotency is by **this** field, never by `toolUseId`.
@@ -2119,17 +2348,20 @@ class PermissionRequestedPayload {
   /// Derived in the backend, by a per-tool list **plus** a heuristic over the input, and it fails closed: a command the heuristic does not recognise is marked `destructive`. A false positive is an annoyance; a false negative is the accident.
   final String riskHint;
 
-  /// The UI pre-selects refusal. Silence never authorises.
+  /// The UI pre-selects refusal. Silence never authorises. `false` only on a question (`interaction`), where the focus goes to the first option.
   final bool defaultToNo;
 
   /// When the request is denied automatically, ISO 8601 in UTC. Ours is the only timeout there is — the CLI imposes none.
   final String expiresAt;
 
-  /// Scopes the UI may offer beyond a one-off yes. `project` and `always` come whenever the request has at least one reach in `reaches` (and `project` only with a workspace).
+  /// Scopes the UI may offer beyond a one-off yes. `project` and `always` come whenever the request has at least one reach in `reaches` (and `project` only with a workspace). Empty on a question: answering one leaves no rule.
   final List<PermissionRequestedPayloadSuggestionsItem>? suggestions;
 
-  /// How far a rule left by this answer may reach, computed by the server from the invocation. The client picks one and answers with its `reach`, never with a pattern: the server computes the patterns again and refuses a reach it did not offer. Applies to `session`, `project` and `always`.
+  /// How far a rule left by this answer may reach, computed by the server from the invocation. The client picks one and answers with its `reach`, never with a pattern: the server computes the patterns again and refuses a reach it did not offer. Applies to `session`, `project` and `always`. Empty on a question.
   final List<PermissionRequestedPayloadReachesItem>? reaches;
+
+  /// Set when the request is a question rather than a permission. Absent on every other request.
+  final QuestionInteraction? interaction;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -2156,6 +2388,10 @@ class PermissionRequestedPayload {
       json['reaches'] = reaches?.map((item) => item.toJson()).toList(growable: false);
     }
 
+    if (interaction != null) {
+      json['interaction'] = interaction?.toJson();
+    }
+
     return json;
   }
 }
@@ -2170,6 +2406,7 @@ class PermissionResolvedPayload {
     this.resolvedFrom,
     this.toolUseId,
     this.via,
+    this.answers,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -2181,6 +2418,7 @@ class PermissionResolvedPayload {
         resolvedFrom: json['resolvedFrom'] as String?,
         toolUseId: json['toolUseId'] as String?,
         via: json['via'] as String?,
+        answers: json['answers'] == null ? null : (json['answers']! as List<Object?>).map((item) => QuestionAnswer.fromJson(item! as Map<String, Object?>)).toList(growable: false),
       );
 
   /// The request that was settled. A client matches it against the card it is showing, never against `toolUseId`.
@@ -2203,6 +2441,9 @@ class PermissionResolvedPayload {
 
   /// Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), or the session running in Permitir tudo (`allowAll`). Absent when a human answered or the deadline passed.
   final String? via;
+
+  /// What the person answered, when the request was a question and the decision `allow` — what lets another screen show the question answered, and the tool's line say what was chosen.
+  final List<QuestionAnswer>? answers;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -2228,6 +2469,10 @@ class PermissionResolvedPayload {
       json['via'] = via;
     }
 
+    if (answers != null) {
+      json['answers'] = answers?.map((item) => item.toJson()).toList(growable: false);
+    }
+
     return json;
   }
 }
@@ -2238,6 +2483,15 @@ class PermissionResolvedPayload {
 /// is `false` — a decision a human made has an author; only the automatic deny has none.
 bool permissionResolvedPayloadConditionalsHold(Map<String, Object?> json) {
   if (json['auto'] == false && json['resolvedBy'] is! String) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionResolvedPayload].
+bool permissionResolvedPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['answers'] is List<Object?> && (json['answers']! as List<Object?>).length > 4) {
     return false;
   }
 
@@ -2613,6 +2867,66 @@ class SessionStatusChangedPayload {
   }
 }
 
+/// On an `AskUserQuestion` of the **history** (`transcript.appended`, the follower): the questions, normalised, and how they ended — joined by `toolUseId` with what the backend recorded. Live, a screen already has the `permission.requested` and `permission.resolved`, and this is absent.
+class ToolCompletedPayloadQuestion {
+  const ToolCompletedPayloadQuestion({
+    required this.interaction,
+    this.outcome,
+    this.answers,
+    this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ToolCompletedPayloadQuestion.fromJson(Map<String, Object?> json) => ToolCompletedPayloadQuestion(
+        interaction: QuestionInteraction.fromJson(json['interaction']! as Map<String, Object?>),
+        outcome: json['outcome'] as String?,
+        answers: json['answers'] == null ? null : (json['answers']! as List<Object?>).map((item) => QuestionAnswer.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        reason: json['reason'] as String?,
+      );
+
+  /// The questions, normalised as the request carried them.
+  final QuestionInteraction interaction;
+
+  /// Absent when the backend has no record of it — a session answered in another client — and the line shows the questions and the `summary`.
+  final String? outcome;
+
+  /// What was answered, on `answered`.
+  final List<QuestionAnswer>? answers;
+
+  /// Why it was refused, on `declined`.
+  final String? reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'interaction': interaction.toJson(),
+    };
+
+    if (outcome != null) {
+      json['outcome'] = outcome;
+    }
+
+    if (answers != null) {
+      json['answers'] = answers?.map((item) => item.toJson()).toList(growable: false);
+    }
+
+    if (reason != null) {
+      json['reason'] = reason;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ToolCompletedPayloadQuestion].
+bool toolCompletedPayloadQuestionLimitsHold(Map<String, Object?> json) {
+  if (json['answers'] is List<Object?> && (json['answers']! as List<Object?>).length > 4) {
+    return false;
+  }
+
+  return true;
+}
+
 /// A tool invocation ended, from the `tool_result` the SDK reports on a `user` message.
 class ToolCompletedPayload {
   const ToolCompletedPayload({
@@ -2622,6 +2936,7 @@ class ToolCompletedPayload {
     this.parentToolUseId,
     this.taskId,
     this.at,
+    this.question,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -2632,6 +2947,7 @@ class ToolCompletedPayload {
         parentToolUseId: json['parentToolUseId'] as String?,
         taskId: json['taskId'] as String?,
         at: json['at'] as String?,
+        question: json['question'] == null ? null : ToolCompletedPayloadQuestion.fromJson(json['question']! as Map<String, Object?>),
       );
 
   final String toolUseId;
@@ -2650,6 +2966,9 @@ class ToolCompletedPayload {
 
   /// When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for.
   final String? at;
+
+  /// On an `AskUserQuestion` of the **history** (`transcript.appended`, the follower): the questions, normalised, and how they ended — joined by `toolUseId` with what the backend recorded. Live, a screen already has the `permission.requested` and `permission.resolved`, and this is absent.
+  final ToolCompletedPayloadQuestion? question;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -2672,6 +2991,10 @@ class ToolCompletedPayload {
 
     if (at != null) {
       json['at'] = at;
+    }
+
+    if (question != null) {
+      json['question'] = question?.toJson();
     }
 
     return json;
@@ -3055,6 +3378,7 @@ class PermissionResolvePayload {
     this.scope,
     this.reach,
     this.reason,
+    this.answers,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -3064,6 +3388,7 @@ class PermissionResolvePayload {
         scope: json['scope'] as String?,
         reach: json['reach'] as String?,
         reason: json['reason'] as String?,
+        answers: json['answers'] == null ? null : (json['answers']! as List<Object?>).map((item) => QuestionAnswer.fromJson(item! as Map<String, Object?>)).toList(growable: false),
       );
 
   /// The request being answered. Idempotency keys on it, so resending after a reconnect costs nothing.
@@ -3080,6 +3405,9 @@ class PermissionResolvePayload {
 
   /// Why it was refused. Required whenever `decision` is `deny` — the schema carries the condition, so no end has to remember it.
   final String? reason;
+
+  /// The answers to a question (`interaction` on the request), one per question, and required for an `allow` of one — a rule the schema cannot carry, because this payload does not say what was asked: the backend checks it against the questions it published, and refuses with `PERMISSION_ANSWERS_INVALID` (the request stays open). Never on a `deny`, and never on a request that is not a question. `scope` and `reach` are ignored on a question: it is `once`.
+  final List<QuestionAnswer>? answers;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -3100,6 +3428,10 @@ class PermissionResolvePayload {
       json['reason'] = reason;
     }
 
+    if (answers != null) {
+      json['answers'] = answers?.map((item) => item.toJson()).toList(growable: false);
+    }
+
     return json;
   }
 }
@@ -3110,6 +3442,15 @@ class PermissionResolvePayload {
 /// is `deny` — the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from.
 bool permissionResolvePayloadConditionalsHold(Map<String, Object?> json) {
   if (json['decision'] == 'deny' && json['reason'] is! String) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionResolvePayload].
+bool permissionResolvePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['answers'] is List<Object?> && (json['answers']! as List<Object?>).length > 4) {
     return false;
   }
 

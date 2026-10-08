@@ -9,6 +9,7 @@ import 'package:equatable/equatable.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_event.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/question.dart';
 
 /// The permissions of one session, while somebody is looking at them.
 ///
@@ -23,6 +24,7 @@ class OutgoingAnswer extends Equatable {
     required this.scope,
     this.reason,
     this.reach,
+    this.answers,
   });
 
   /// The frame the question is on **now** — what the response correlates to.
@@ -37,8 +39,11 @@ class OutgoingAnswer extends Equatable {
   /// Which of the request's reaches the rules of a `session`, `project` or `always` yes take.
   final RuleReachKind? reach;
 
+  /// The answers to a question of Claude; `null` on everything else (plan 24, B-17).
+  final List<QuestionAnswer>? answers;
+
   @override
-  List<Object?> get props => <Object?>[frameId, requestId, decision, scope, reason, reach];
+  List<Object?> get props => <Object?>[frameId, requestId, decision, scope, reason, reach, answers];
 }
 
 abstract interface class PermissionFeed {

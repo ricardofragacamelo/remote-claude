@@ -2,7 +2,7 @@
 
 Exigida pelo [Estágio 0 do protocolo](../../architecture/shared/11-validation-protocol.md#estágio-0--plano-e-matriz-de-cenários).
 **Escrita antes do código**, enumerada pelas seis dimensões. A semente é o
-[§9 da proposta](../../propostas/historico-ao-vivo-e-fiel.md#9-matriz-de-cenários--semente).
+[§9 da proposta](../../discovery/04-historico-ao-vivo-e-fiel.md#9-matriz-de-cenários--semente).
 
 Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 

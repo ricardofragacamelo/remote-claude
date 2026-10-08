@@ -11,6 +11,10 @@ import 'package:remote_claude/features/permission/domain/repositories/permission
 /// retrying the same command. The contract requires one on every refusal.
 const String refusedFromThePhone = 'refused from the mobile app';
 
+/// What Claude is told when a person chose not to answer its question from the phone, and wrote
+/// nothing (plan 24, D-15). English, because it is for the model.
+const String declinedFromThePhone = 'The user chose not to answer the question.';
+
 /// Starts watching the permissions of one session.
 class WatchPermissions {
   const WatchPermissions(this._repository);

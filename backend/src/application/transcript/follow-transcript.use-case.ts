@@ -18,6 +18,7 @@ import type {
 import type { TranscriptStore } from './ports/transcript-store.port';
 import { readableTranscript } from './readable-transcript';
 import type { TranscriptAudience } from './transcript-audience';
+import type { QuestionHistory } from './question-history';
 
 /** The numbers the follower lives by — configured (`RC_TRANSCRIPT_FOLLOW_*`, plan 22, D-11). */
 export interface FollowSettings {
@@ -146,6 +147,7 @@ export class FollowTranscriptUseCase {
     private readonly ids: IdGenerator,
     private readonly settings: FollowSettings,
     private readonly observer: FollowObserver,
+    private readonly questions: QuestionHistory,
   ) {}
 
   /** How many conversations are followed now. */
@@ -328,9 +330,9 @@ export class FollowTranscriptUseCase {
 
     this.observer.looked(followed.id.value, { read, entries: followed.entries?.length ?? 0 });
 
-    for (const subscriber of followed.subscribers) {
+    for (const subscriber of [...followed.subscribers]) {
       subscriber.session = { ...subscriber.session, lastModified: session.lastModified };
-      this.deliver(subscriber, followed.entries ?? []);
+      await this.deliver(subscriber, followed.entries ?? []);
     }
   }
 
@@ -354,7 +356,10 @@ export class FollowTranscriptUseCase {
   }
 
   /** One subscriber's share of a look: its tail, or its reset. */
-  private deliver(subscriber: Subscriber, entries: readonly TranscriptMessage[]): void {
+  private async deliver(
+    subscriber: Subscriber,
+    entries: readonly TranscriptMessage[],
+  ): Promise<void> {
     if (!subscriber.started) {
       return;
     }
@@ -376,8 +381,11 @@ export class FollowTranscriptUseCase {
     }
 
     const lastMessageId = entries.at(-1)?.id ?? null;
+    // The questions of Claude it carries, with what was answered here — the same path as a page read
+    // (plan 24, D-27). The person's own record, never another's.
+    const shown = await this.questions.of(subscriber.userId, tail.entries, entries);
     subscriber.sink.appended(subscriber.followId, subscriber.followed.id.value, {
-      events: tail.entries.flatMap((entry) => entry.events),
+      events: shown.flatMap((entry) => entry.events),
       lastMessageId,
       activity,
       working,

@@ -40,6 +40,14 @@
     "reason": {
       "type": "string",
       "description": "Why it was refused. Required whenever `decision` is `deny` — the schema carries the condition, so no end has to remember it."
+    },
+    "answers": {
+      "type": "array",
+      "maxItems": 4,
+      "description": "The answers to a question (`interaction` on the request), one per question, and required for an `allow` of one — a rule the schema cannot carry, because this payload does not say what was asked: the backend checks it against the questions it published, and refuses with `PERMISSION_ANSWERS_INVALID` (the request stays open). Never on a `deny`, and never on a request that is not a question. `scope` and `reach` are ignored on a question: it is `once`.",
+      "items": {
+        "$ref": "../definitions/question-answer.schema.json"
+      }
     }
   }
 }

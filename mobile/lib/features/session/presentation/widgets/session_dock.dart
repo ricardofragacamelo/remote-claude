@@ -142,6 +142,9 @@ class SessionDock {
       builder: (BuildContext context, Widget? _) => PendingPill(
         count: waiting,
         outOfView: questions.outOfView,
+        questionsOnly: ref.watch(
+          permissionQueueControllerProvider(sessionId).select(onlyQuestions),
+        ),
         onGoTo: () {
           if (oldest != null) {
             questions.goTo(oldest);

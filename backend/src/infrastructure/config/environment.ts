@@ -118,6 +118,7 @@ export const environmentSchema = z.object({
   RC_SESSION_DEFAULT_MODEL: z.string().min(1),
   RC_SESSION_DEFAULT_PERMISSION_MODE: z.enum(PERMISSION_MODES),
   RC_PERMISSION_TIMEOUT_MS: z.coerce.number().int().positive(),
+  RC_QUESTION_TIMEOUT_MS: z.coerce.number().int().positive(),
   RC_PERMISSION_EXTENSION_MS: z.coerce.number().int().positive(),
   RC_PERMISSION_MAX_EXTENSIONS: z.coerce.number().int().min(0),
   RC_PERMISSION_RULE_LIFETIME_MS: z.coerce.number().int().positive(),
@@ -292,6 +293,8 @@ export interface AppConfig {
    */
   readonly permission: {
     readonly timeoutMs: number;
+    /** How long a question of Claude waits — longer than a permission (plan 24, D-07). */
+    readonly questionTimeoutMs: number;
     readonly extensionMs: number;
     readonly maxExtensions: number;
     readonly ruleLifetimeMs: number;
@@ -447,6 +450,7 @@ export function loadConfig(source: RawEnvironment): AppConfig {
     },
     permission: {
       timeoutMs: env.RC_PERMISSION_TIMEOUT_MS,
+      questionTimeoutMs: env.RC_QUESTION_TIMEOUT_MS,
       extensionMs: env.RC_PERMISSION_EXTENSION_MS,
       maxExtensions: env.RC_PERMISSION_MAX_EXTENSIONS,
       ruleLifetimeMs: env.RC_PERMISSION_RULE_LIFETIME_MS,

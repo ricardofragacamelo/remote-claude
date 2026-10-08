@@ -338,6 +338,7 @@ SessionEvent _toolOutcome(_Frame frame) {
           summary: _text(frame.payload, 'summary'),
           taskId: _text(frame.payload, 'taskId'),
           writtenAt: _writtenAt(frame.payload),
+          question: _record(frame.payload, 'question'),
         );
 }
 
@@ -407,6 +408,12 @@ SessionEvent _rewound(_Frame frame) {
 
   return outcome == null ? UnreadEvent(frame.seq) : FilesRewound(frame.seq, outcome);
 }
+
+/// The object at [key], or `null` when it is absent or not one.
+Map<String, Object?>? _record(Map<String, Object?> payload, String key) => switch (payload[key]) {
+  final Map<String, Object?> value => value,
+  _ => null,
+};
 
 /// A string field, or `null` when it is absent or is something else.
 String? _text(Map<String, Object?> payload, String key) {

@@ -1,5 +1,6 @@
 import type { PermissionMode } from '@domain/session';
 import type { PermissionRule, RuleSubject } from '../entities/permission-rule.entity';
+import { answeredByRule } from './mode-approval';
 import { matchedInput } from './rule-pattern';
 import { commandsOf, SHELL_TOOLS } from './shell-syntax';
 
@@ -16,6 +17,10 @@ export interface RuleQuestion {
 
 /**
  * The rule that answers an invocation, or `null` when a human has to.
+ *
+ * **No `allow` answers a tool that asks the person** — `AskUserQuestion`, `ExitPlanMode`
+ * ({@link answeredByRule}). One already recorded is simply not read as an answer, and the caller can
+ * tell it was there with {@link ignoredAllow} ([24 · D-26](../../../../../docs/plans/24-structured-questions/decisions.md)).
  *
  * Whenever two answers are possible, the more restrictive one wins
  * ([D-11](../../../../../docs/plans/03-rules-and-audit/decisions.md)):
@@ -40,8 +45,10 @@ export function answeringRule(
   rules: readonly PermissionRule[],
   question: RuleQuestion,
 ): PermissionRule | null {
-  const matching = rules.filter((rule) =>
-    rule.matches(question.subject, question.toolName, question.input, question.now),
+  const matching = rules.filter(
+    (rule) =>
+      answeredByRule(rule.decision, question.toolName) &&
+      rule.matches(question.subject, question.toolName, question.input, question.now),
   );
 
   const refusal = matching.find((rule) => rule.decision === 'deny');
@@ -54,6 +61,27 @@ export function answeringRule(
   }
 
   return matching[0] ?? commandByCommand(rules, question);
+}
+
+/**
+ * An `allow` that matches an invocation it may not answer, if there is one — what a lookup reports
+ * so a rule that stopped answering is not mistaken for one that was revoked.
+ */
+export function ignoredAllow(
+  rules: readonly PermissionRule[],
+  question: RuleQuestion,
+): PermissionRule | null {
+  if (answeredByRule('allow', question.toolName)) {
+    return null;
+  }
+
+  return (
+    rules.find(
+      (rule) =>
+        rule.decision === 'allow' &&
+        rule.matches(question.subject, question.toolName, question.input, question.now),
+    ) ?? null
+  );
 }
 
 /** The rule of the first command, when every command of a shell line is allowed by some rule. */

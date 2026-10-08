@@ -17,6 +17,7 @@ import 'package:equatable/equatable.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_event.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_outcome.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/question.dart';
 
 /// Where one card is in the round trip of an answer.
 enum CardPhase {
@@ -92,6 +93,11 @@ class PermissionCard extends Equatable {
   ];
 }
 
+/// Whether everything waiting on the person is a question of Claude — none a permission (plan 24).
+bool onlyQuestions(PermissionQueue queue) =>
+    queue.pending.isNotEmpty &&
+    queue.pending.every((PermissionCard card) => card.request.interaction != null);
+
 /// What tapping a decision on a card leads to, before anything is sent.
 enum AnswerStep {
   /// Nothing: the card is not there, is already answering, or cannot answer yet.
@@ -110,6 +116,7 @@ class PermissionQueue extends Equatable {
     this.pending = const <PermissionCard>[],
     this.settled = const <PermissionOutcome>[],
     this.asOf,
+    this.drafts = const <String, QuestionDraft>{},
   });
 
   /// The open questions, oldest first.
@@ -120,6 +127,18 @@ class PermissionQueue extends Equatable {
 
   /// The instant the countdowns are computed against — the last tick. `null` before the first.
   final DateTime? asOf;
+
+  /// What was chosen so far on the card of each question, by request (plan 24, R-06). It outlives a
+  /// reset — the replay republishes the question, and it finds its draft — and goes when the
+  /// question is over, however it ended.
+  final Map<String, QuestionDraft> drafts;
+
+  /// The draft of [requestId], or an empty one.
+  QuestionDraft draftOf(String requestId) => drafts[requestId] ?? const QuestionDraft();
+
+  /// This queue keeping [draft] for [requestId].
+  PermissionQueue saveDraft(String requestId, QuestionDraft draft) =>
+      _with(drafts: <String, QuestionDraft>{...drafts, requestId: draft});
 
   /// The card of [requestId], when it is still open.
   PermissionCard? cardOf(String requestId) {
@@ -162,7 +181,8 @@ class PermissionQueue extends Equatable {
     // Already over: the settlement is on its way on its own, and it is what removes the card. A
     // refusal must not be the thing that revives or rewrites it (S-66).
     PermissionExtensionRefused(refusal: ExtensionRefusal.over) => this,
-    PermissionFeedReset() => PermissionQueue(asOf: asOf),
+    // The drafts stay: the questions they belong to are republished, and find them again.
+    PermissionFeedReset() => PermissionQueue(asOf: asOf, drafts: drafts),
   };
 
   /// Seeds a card from the server's revalidation, before the socket has re-delivered it.
@@ -224,7 +244,13 @@ class PermissionQueue extends Equatable {
 
     for (final PermissionCard card in pending) {
       if (card.request.isExpiredAt(now)) {
-        ended.add(PermissionOutcome.expired(card.requestId, toolUseId: card.request.toolUseId));
+        ended.add(
+          PermissionOutcome.expired(
+            card.requestId,
+            toolUseId: card.request.toolUseId,
+            interaction: card.request.interaction,
+          ),
+        );
       } else {
         open.add(card);
       }
@@ -234,6 +260,7 @@ class PermissionQueue extends Equatable {
       pending: open,
       settled: <PermissionOutcome>[...settled, ...ended],
       asOf: now,
+      drafts: _without(ended.map((PermissionOutcome outcome) => outcome.requestId)),
     );
   }
 
@@ -272,12 +299,29 @@ class PermissionQueue extends Equatable {
     settled: <PermissionOutcome>[
       ...settled.where((PermissionOutcome known) => known.requestId != outcome.requestId),
       // About the tool the question was about, when it was on screen — and, when it was not, about
-      // whatever an earlier settlement of it knew.
+      // whatever an earlier settlement of it knew. A question carries its questions to the line.
       outcome.about(
         cardOf(outcome.requestId)?.request.toolUseId ?? outcomeOf(outcome.requestId)?.toolUseId,
+        questions:
+            cardOf(outcome.requestId)?.request.interaction ??
+            outcomeOf(outcome.requestId)?.interaction,
       ),
     ],
+    // Answered here or elsewhere, or refused by the deadline: what was being chosen is moot.
+    drafts: _without(<String>[outcome.requestId]),
   );
+
+  /// The drafts, without those of [requestIds].
+  Map<String, QuestionDraft> _without(Iterable<String> requestIds) {
+    final Set<String> gone = requestIds.toSet();
+
+    return gone.any(drafts.containsKey)
+        ? <String, QuestionDraft>{
+            for (final MapEntry<String, QuestionDraft> entry in drafts.entries)
+              if (!gone.contains(entry.key)) entry.key: entry.value,
+          }
+        : drafts;
+  }
 
   PermissionQueue _phase(String requestId, CardPhase phase) =>
       _change(requestId, (PermissionCard card) => card._copy(phase: phase));
@@ -294,13 +338,17 @@ class PermissionQueue extends Equatable {
     );
   }
 
-  PermissionQueue _with({List<PermissionCard>? pending, List<PermissionOutcome>? settled}) =>
-      PermissionQueue(
-        pending: pending ?? this.pending,
-        settled: settled ?? this.settled,
-        asOf: asOf,
-      );
+  PermissionQueue _with({
+    List<PermissionCard>? pending,
+    List<PermissionOutcome>? settled,
+    Map<String, QuestionDraft>? drafts,
+  }) => PermissionQueue(
+    pending: pending ?? this.pending,
+    settled: settled ?? this.settled,
+    asOf: asOf,
+    drafts: drafts ?? this.drafts,
+  );
 
   @override
-  List<Object?> get props => <Object?>[pending, settled, asOf];
+  List<Object?> get props => <Object?>[pending, settled, asOf, drafts];
 }

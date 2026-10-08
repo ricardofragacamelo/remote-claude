@@ -616,7 +616,7 @@ estender ao HTTP.
   | Status | Corpo | Quando |
   |---|---|---|
   | `200` | `{ "status": "pending", "request": <payload de permission.requested>, "remainingExtensions": n }` | o pedido ainda bloqueia o loop; `request` é **exatamente** o payload do frame, e `n` é o teto configurado menos as extensões gastas |
-  | `200` | `{ "status": "resolved", "requestId", "decision", "auto", "resolvedBy"?, "resolvedFrom"? }` | alguém respondeu, ou uma regra respondeu; os campos são os de `permission.resolved`, ausentes (nunca `null`) quando não há o que dizer |
+  | `200` | `{ "status": "resolved", "requestId", "decision", "auto", "resolvedBy"?, "resolvedFrom"?, "answers"?, "interaction"? }` | alguém respondeu, ou uma regra respondeu; os campos são os de `permission.resolved`, ausentes (nunca `null`) quando não há o que dizer — numa pergunta, `answers` e a `interaction`, que o celular aberto por um push desenha com as respostas ([plano 24](../../plans/24-structured-questions/README.md)) |
   | `410` | `PERMISSION_REQUEST_EXPIRED` | o prazo negou — "chegou tarde" não é "já foi decidido" |
   | `404` | `PERMISSION_REQUEST_NOT_FOUND` | `requestId` que este processo não conhece (inclusive o de sessão já encerrada), **ou** pedido que não é daquele `sessionId` |
   | `403` | `PERMISSION_NOT_OWNED` | pedido de outro usuário |
@@ -626,7 +626,9 @@ estender ao HTTP.
   resposta a um estranho não dependa de ele ter acertado a sessão.
 - **Precedência** ([D-11 do plano 03](../../plans/03-rules-and-audit/decisions.md#d-11--o-mais-restritivo-até-onde-o-canusetool-alcança)):
   qualquer `deny` que case nega, ao lado de qualquer `allow`; em `permissionMode: plan`, nenhum
-  `allow` auto-aprova — o pedido vai ao humano. Regra que resolve publica `permission.resolved` com
+  `allow` auto-aprova — o pedido vai ao humano. Nenhum `allow` responde uma tool de
+  `HUMAN_ONLY_TOOLS` (`AskUserQuestion`, `ExitPlanMode`): a regra é ignorada, com log `debug`, e um
+  `deny` continua recusando ([24 · D-08](../../plans/24-structured-questions/decisions.md#f1--backend)). Regra que resolve publica `permission.resolved` com
   `auto: true` e **não** publica `permission.requested` nem dispara push. As regras são lidas a cada
   pedido, sem cache: falha ao lê-las pergunta ao humano, nunca autoriza.
 - **HTTP — `/permission-rules`** (Bearer). As regras que sobrevivem à sessão (`project`, `always`);
@@ -645,6 +647,7 @@ estender ao HTTP.
   | | `400` `PERMISSION_RULE_PATTERN_INVALID` | padrão fora da gramática |
   | | `422` `PERMISSION_RULE_EXPIRY_TOO_LONG` | validade acima do teto configurado |
   | | `400` `INVALID_INPUT` | validade no passado, ou `project` sem `projectPath` |
+  | | `422` `PERMISSION_RULE_TOOL_INTERACTIVE` | **allow** para uma tool que pede resposta (`AskUserQuestion`, `ExitPlanMode`); deny é aceito ([24 · B-07](../../plans/24-structured-questions/F1-backend.md#b-07--regras-não-respondem-perguntas-)) |
   | `GET /permission-rules/:ruleId` | `200` com a regra | em **qualquer** estado, inclusive `revoked` — é por onde a trilha leva à regra que respondeu ([D-18 do plano 03](../../plans/03-rules-and-audit/decisions.md#d-18--a-regra-revogada-tem-endereço)) |
   | | `404` `PERMISSION_RULE_NOT_FOUND` | não existe |
   | | `403` `PERMISSION_NOT_OWNED` | é de outra pessoa |
@@ -657,7 +660,8 @@ estender ao HTTP.
   `revokedAt`. Conceder e revogar entram na trilha (`permission.ruleGranted`,
   `permission.ruleRevoked`), só quando algo mudou.
 - **Erros:** `PERMISSION_REQUEST_NOT_FOUND`, `PERMISSION_REQUEST_EXPIRED`, `PERMISSION_NOT_OWNED`,
-  `PERMISSION_RULE_PATTERN_INVALID`, `PERMISSION_RULE_EXPIRY_TOO_LONG`, `PERMISSION_RULE_NOT_FOUND`
+  `PERMISSION_RULE_PATTERN_INVALID`, `PERMISSION_RULE_EXPIRY_TOO_LONG`, `PERMISSION_RULE_NOT_FOUND`,
+  `PERMISSION_ANSWERS_INVALID`, `PERMISSION_RULE_TOOL_INTERACTIVE`
 - Ver [contrato WS](../shared/05-websocket-protocol.md#o-fluxo-de-permissão).
 
 ### `transcript`

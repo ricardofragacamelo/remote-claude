@@ -13,6 +13,7 @@ import { anAllowlist, OWNER } from '../../../support/builders/workspace.builder'
 import {
   aTranscriptSession,
   conversationId,
+  noQuestionRecords,
   someMessages,
 } from '../../../support/builders/transcript.builder';
 import { InMemorySessionOriginRepository } from '../../../support/fakes/in-memory-session-origin.repository';
@@ -43,6 +44,7 @@ describe('ReadTranscriptUseCase', () => {
           activeWindowMs: 120_000,
         },
       ),
+      noQuestionRecords(),
     ).execute({
       userId: owner,
       sessionId: ClaudeSessionId.create(conversationId(n)),
@@ -143,6 +145,7 @@ describe('ReadTranscriptUseCase', () => {
             activeWindowMs: 120_000,
           },
         ),
+        noQuestionRecords(),
       ).subagent({
         userId: as,
         sessionId: ClaudeSessionId.create(conversationId(1)),

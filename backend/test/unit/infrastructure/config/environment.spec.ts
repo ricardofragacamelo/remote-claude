@@ -39,6 +39,7 @@ const complete: RawEnvironment = {
   RC_SESSION_DEFAULT_MODEL: 'claude-sonnet-5',
   RC_SESSION_DEFAULT_PERMISSION_MODE: 'default',
   RC_PERMISSION_TIMEOUT_MS: '120000',
+  RC_QUESTION_TIMEOUT_MS: '600000',
   RC_PERMISSION_EXTENSION_MS: '120000',
   RC_PERMISSION_MAX_EXTENSIONS: '3',
   RC_PERMISSION_RULE_LIFETIME_MS: '28800000',
@@ -114,6 +115,7 @@ describe('loadConfig', () => {
       websocket: { maxFramesPerSecond: 20, maxFrameBytes: 65_536, maxAttachedSessions: 16 },
       permission: {
         timeoutMs: 120_000,
+        questionTimeoutMs: 600_000,
         extensionMs: 120_000,
         maxExtensions: 3,
         ruleLifetimeMs: 28_800_000,
@@ -494,6 +496,23 @@ describe('loadConfig', () => {
     it('accepts a default equal to the ceiling', () => {
       expect(loadConfig(complete).permission.ruleDefaultLifetimeMs).toBe(7_776_000_000);
     });
+  });
+
+  describe('the deadline of a question — plan 24, S-26', () => {
+    it('is its own, beside the deadline of a permission', () => {
+      const { permission } = loadConfig(withChange({ RC_QUESTION_TIMEOUT_MS: '300000' }));
+
+      expect(permission).toMatchObject({ timeoutMs: 120_000, questionTimeoutMs: 300_000 });
+    });
+
+    it.each([undefined, '0', '-1', 'ten minutes', '1.5'])(
+      'refuses to boot with a deadline of %s',
+      (value) => {
+        expect(() => loadConfig(withChange({ RC_QUESTION_TIMEOUT_MS: value }))).toThrow(
+          ConfigurationError,
+        );
+      },
+    );
   });
 
   describe('the retention of the trail — S-33', () => {

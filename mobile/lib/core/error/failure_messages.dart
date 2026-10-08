@@ -95,6 +95,8 @@ String translateFailure(AppLocalizations l10n, Failure failure) {
       return l10n.permissionErrorNotOwned;
     case 'permission.error.ruleNotFound':
       return l10n.permissionErrorRuleNotFound;
+    case 'permission.error.answersInvalid':
+      return l10n.permissionErrorAnswersInvalid;
     default:
       return _groupedMessage(l10n, failure);
   }

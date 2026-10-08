@@ -19,7 +19,7 @@ resolução, a trilha), [plano 09](../09-chat-layout/README.md) e
 linha de ferramenta com IN/OUT, que a [F5](F5-history.md) estende). A F5 só começa com o 22
 fechado.
 
-**Insumo:** [proposta — Perguntas estruturadas](../../propostas/perguntas-estruturadas.md). A
+**Insumo:** [proposta — Perguntas estruturadas](../../discovery/05-perguntas-estruturadas.md). A
 proposta é o **porquê** e a referência (como a extensão do VS Code faz); este plano é o contrato.
 Onde os dois divergem, vale o plano, e a divergência está em [decisions.md](decisions.md).
 
@@ -33,7 +33,7 @@ Arquivos irmãos: [matriz de cenários](scenarios.md) · [decisões em aberto](d
 Em 2026-10-04 o Claude perguntou, no painel, "Qual tipo de avaliação você quer?" com quatro
 opções. A tela mostrou o JSON num card de Permitir/Recusar. O usuário permitiu, e o Claude recebeu
 `The user did not answer the questions.` A cadeia inteira está no
-[diagnóstico da proposta](../../propostas/perguntas-estruturadas.md#4-estado-atual-o-diagnóstico).
+[diagnóstico da proposta](../../discovery/05-perguntas-estruturadas.md#4-estado-atual-o-diagnóstico).
 Conferida em 2026-10-08, ela continua valendo, com duas mudanças trazidas pelo plano 23:
 
 | O que mudou | Efeito neste plano |
@@ -46,7 +46,7 @@ Três escolhas dão forma ao plano:
 | Escolha | Por quê |
 |---|---|
 | **A pergunta continua sendo um pedido de permissão**, com uma `interaction` do tipo `question` | herda o que já vale: `requestId`, idempotência, a primeira resposta vence, prazo que nega, só o dono responde, trilha. Um fluxo paralelo teria de reimplementar cada garantia |
-| **O protocolo é nosso** ([D-02](decisions.md#f0--normas-e-contrato), [D-03](decisions.md#f0--normas-e-contrato)) | o backend normaliza as perguntas, o cliente responde por **id** de pergunta, com a lista de rótulos e o "Outro" em campo separado. A string unida por `", "` do SDK só existe no adapter. É a forma canônica da [proposta de múltiplos motores §6.4](../../propostas/multiplos-motores-de-agente.md) |
+| **O protocolo é nosso** ([D-02](decisions.md#f0--normas-e-contrato), [D-03](decisions.md#f0--normas-e-contrato)) | o backend normaliza as perguntas, o cliente responde por **id** de pergunta, com a lista de rótulos e o "Outro" em campo separado. A string unida por `", "` do SDK só existe no adapter. É a forma canônica da [proposta de múltiplos motores §6.4](../../discovery/03-multiplos-motores-de-agente.md) |
 | **Resposta inválida não chega ao Claude** | o backend valida contra as perguntas que ele mesmo publicou. `allow` sem respostas, rótulo inexistente ou duas escolhas numa pergunta de escolha única são `PERMISSION_ANSWERS_INVALID`, e o pedido continua aberto |
 
 ---
@@ -68,7 +68,7 @@ Três escolhas dão forma ao plano:
 ### Não entra
 
 - **A caixa de decisões, recomendação com evidência e respondedor automático** — são da
-  [proposta de workflow §10.3 e §13](../../propostas/workflow-de-sessoes.md). O ponto de encaixe
+  [proposta de workflow §10.3 e §13](../../discovery/02-workflow-de-sessoes.md). O ponto de encaixe
   fica pronto: a validação da [B-05](F1-backend.md#b-05--validar-a-resposta-) é a que um
   respondedor automático vai usar.
 - **`ExitPlanMode` como `interaction.kind = 'plan'`.** O `PlanApprovalCard` continua como está.
@@ -92,13 +92,13 @@ entre si.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Normas e contrato](F0-norms.md) | 05, 04, backend/04, web e mobile emendados; schemas e tipos gerados; i18n e ARB | B-01…B-03 | 🔲 |
-| F1 | [Backend](F1-backend.md) | normalização, validação, veredito com respostas, regras, prazo, persistência, trilha, push, `GET` | B-04…B-10 | 🔲 |
-| F2 | [Fixtures](F2-fixtures.md) | gravador que responde, `plan-turn` regravado, `question-turn`, fake SDK que registra o veredito | B-11…B-12 | 🔲 |
-| F3 | [Web](F3-web.md) | serviço e hook, `QuestionCard`, `AnsweredQuestions` na linha da tool, avisos | B-13…B-16 | 🔲 |
-| F4 | [Mobile](F4-mobile.md) | dados e controller, `question_card` em passos, chegada pelo push, linha respondida, avisos | B-17…B-20 | 🔲 |
-| F5 | [Histórico](F5-history.md) | respostas no transcript e no seguidor, pelo `toolUseId` | B-21…B-22 | 🔲 |
-| F6 | [E2E](F6-e2e.md) | tudo acima pela porta do usuário, no web e no app | B-23…B-25 | 🔲 |
+| F0 | [Normas e contrato](F0-norms.md) | 05, 04, backend/04, web e mobile emendados; schemas e tipos gerados; i18n e ARB | B-01…B-03 | ✅ |
+| F1 | [Backend](F1-backend.md) | normalização, validação, veredito com respostas, regras, prazo, persistência, trilha, push, `GET` | B-04…B-10 | ✅ |
+| F2 | [Fixtures](F2-fixtures.md) | gravador que responde, `plan-turn` regravado, `question-turn`, fake SDK que registra o veredito | B-11…B-12 | ✅ |
+| F3 | [Web](F3-web.md) | serviço e hook, `QuestionCard`, `AnsweredQuestions` na linha da tool, avisos | B-13…B-16 | ✅ |
+| F4 | [Mobile](F4-mobile.md) | dados e controller, `question_card` em passos, chegada pelo push, linha respondida, avisos | B-17…B-20 | ✅ |
+| F5 | [Histórico](F5-history.md) | respostas no transcript e no seguidor, pelo `toolUseId` | B-21…B-22 | ✅ |
+| F6 | [E2E](F6-e2e.md) | tudo acima pela porta do usuário, no web e no app | B-23…B-25 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 

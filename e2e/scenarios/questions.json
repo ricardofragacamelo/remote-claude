@@ -1,0 +1,24 @@
+{
+  "id": "24·S-104…S-107",
+  "title": "a question of Claude answered by its card — one choice, several and in words —, declined with a reason, run out of time, and answered in one tab while another watches",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "fixture": "question-turn",
+    "card": "Claude's question",
+    "sections": ["Usage", "License"],
+    "formatTab": "Format",
+    "format": "Tables & bullets",
+    "other": "Other",
+    "otherText": "a friendly one",
+    "otherAnswer": "Other: a friendly one",
+    "submit": "Send answers",
+    "decline": "Don't answer",
+    "declineReason": "Why not? Claude reads this (optional)",
+    "reason": "I'll write it myself.",
+    "declineConfirm": "Send without answering",
+    "declined": "Not answered:",
+    "expired": "This question ran out of time. Nothing was sent.",
+    "askedMany": "Asked 3 questions",
+    "width": 360
+  }
+}

@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/components/ui/button';
+import { PermissionCountdown } from './PermissionCountdown';
 import type { PermissionDecision, PermissionRequest, PermissionScope } from '../types/permission';
 
 /** The renderer of markdown, on demand — never in the first chunk of the page. */
@@ -55,9 +56,7 @@ export function PlanApprovalCard({
     >
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="text-sm font-semibold">{t('permission.plan.title')}</h3>
-        <span className="text-xs opacity-70" role="timer">
-          {t('permission.card.remaining', { seconds: Math.ceil(remainingMs / 1_000) })}
-        </span>
+        <PermissionCountdown remainingMs={remainingMs} />
       </div>
 
       <div className="max-h-96 overflow-auto rounded bg-muted p-3">

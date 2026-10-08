@@ -42,7 +42,7 @@ no web **e** no mobile, mesmo quando a conversa está sendo conduzida em outro c
 | **Transcript** | o histórico que o Claude Code grava em `~/.claude/projects/`. O backend o lê **só** pelo Agent SDK (`getSessionInfo`, `getSessionMessages`) e nunca abre o arquivo ([transcript.adapter.ts](../../backend/src/adapter/outbound/claude/transcript.adapter.ts#L30-L35), S-09). |
 | **Entrada** | uma `SessionMessage` do SDK. O Claude Code grava **um bloco de conteúdo por entrada**: uma resposta da API com `thinking`, `text` e `tool_use` vira três entradas com o mesmo `message.id` e `uuid`s distintos. |
 | **Acompanhar** (*follow*) | o mecanismo novo desta proposta: o leitor recebe, por push, as entradas que o transcript ganhou depois da última que ele tem (§5). |
-| **Pensamento omitido / resumido** | `thinking` sem texto (o padrão do CLI) ou com o resumo pedido por `display: 'summarized'` ([descoberta §10.7](../discovery/01-descoberta-claude-agent-sdk.md#107--thinking-vem-omitido-por-padrão-display-summarized-o-traz-d-17)). |
+| **Pensamento omitido / resumido** | `thinking` sem texto (o padrão do CLI) ou com o resumo pedido por `display: 'summarized'` ([descoberta §10.7](01-descoberta-claude-agent-sdk.md#107--thinking-vem-omitido-por-padrão-display-summarized-o-traz-d-17)). |
 
 ---
 
@@ -461,7 +461,7 @@ O fluxo é Component → Hook → Service → api/ws: nenhum componente fala com
 - `backend/03-modules` §transcript: o seguidor, a sondagem e o porquê de não haver `fs.watch`.
 - [Plano 08, D-17](../plans/08-claude-panel/decisions.md): registrar a revisão, se HV-04 mudar o que
   foi decidido.
-- [Descoberta §10.7](../discovery/01-descoberta-claude-agent-sdk.md#107--thinking-vem-omitido-por-padrão-display-summarized-o-traz-d-17):
+- [Descoberta §10.7](01-descoberta-claude-agent-sdk.md#107--thinking-vem-omitido-por-padrão-display-summarized-o-traz-d-17):
   o achado do §4.3 (o timestamp marca o fim do bloco, e a duração ao vivo não é gravada).
 - Ajuda das telas: o que "trabalhando em outro cliente" significa e por que a duração é "até".
 

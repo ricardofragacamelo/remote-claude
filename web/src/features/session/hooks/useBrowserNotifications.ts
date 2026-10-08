@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
+import type { Envelope } from '@remote-claude/contracts';
 
 import { wsClient } from '@/shared/api/ws';
 import { folderName } from '@/shared/lib/folder-name';
+import { isRecord } from '@/shared/lib/json';
 import { readVisitor, writeVisitor } from '@/shared/lib/visitor-storage';
 import { folderOfSession } from '../store/session-folders.store';
 
@@ -61,8 +63,18 @@ export function useBrowserNotifications(): BrowserNotifications {
 /** The words of each notification — named in full so the i18n check sees each key. */
 const SAYS = {
   permission: 'sessions.browserNotice.permission',
+  question: 'permission.question.notice',
   turn: 'sessions.browserNotice.turn',
 } as const;
+
+/** What a frame is worth a notification for — a question of Claude said apart (plan 24, B-16). */
+function whatOf(frame: Envelope): keyof typeof SAYS | null {
+  if (frame.type === 'permission.requested') {
+    return isRecord(frame.payload?.['interaction']) ? 'question' : 'permission';
+  }
+
+  return frame.type === 'turn.completed' ? 'turn' : null;
+}
 
 /**
  * Tells the browser when a turn ends or a question is asked, **only** with the page hidden and only
@@ -76,12 +88,7 @@ export function useBrowserNotifier(): void {
   useEffect(
     () =>
       wsClient.onSessionFrame((frame) => {
-        const what =
-          frame.type === 'permission.requested'
-            ? 'permission'
-            : frame.type === 'turn.completed'
-              ? 'turn'
-              : null;
+        const what = whatOf(frame);
         const folder = folderOfSession(frame.sessionId);
 
         if (

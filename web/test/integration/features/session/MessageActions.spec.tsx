@@ -72,6 +72,7 @@ describe('an inline card', () => {
       expiresAt: '2999-01-01T00:00:00.000Z',
       suggestions: [],
       reaches: [],
+      interaction: null,
       isAnswering: false,
     };
     const requests = {
@@ -83,6 +84,10 @@ describe('an inline card', () => {
       extend: vi.fn(),
       byTool: new Map(),
       settledByTool: new Map(),
+      drafts: {},
+      saveDraft: vi.fn(),
+      answerQuestion: vi.fn(),
+      declineQuestion: vi.fn(),
     } satisfies InlineRequests;
     const inline: InlineContext = { requests, folder: '' };
 

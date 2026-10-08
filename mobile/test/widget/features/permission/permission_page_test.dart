@@ -18,6 +18,7 @@ import 'package:remote_claude/l10n/generated/app_localizations.dart';
 import '../../../support/builders/permissions.dart';
 import '../../../support/fakes/fake_permission_repository.dart';
 import '../../../support/fakes/stub_device_controller.dart';
+import '../../../support/builders/questions.dart';
 import '../../../support/pump_app.dart';
 
 /// What the session route shows in these tests: a marker, because what is proven is that the app
@@ -252,5 +253,42 @@ void main() {
 
     // S-74 — the session opens on the question, scrolled to its card.
     expect(find.text('$sessionMarker on request-1'), findsOneWidget);
+  });
+
+  group('a question of Claude, from a push — plan 24, S-94', () {
+    testWidgets('open, it is the card of the question, full screen', (WidgetTester tester) async {
+      serverSays(LookupPending(aQuestionRequest(requestId: 'request-1')));
+      await open(tester);
+      repository.feed.emit(asked(aQuestionRequest(requestId: 'request-1')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.permissionToolAskUserQuestion), findsOneWidget);
+      expect(find.text(sections.prompt), findsOneWidget);
+      expect(find.text(l10n.permissionQuestionSubmit), findsOneWidget);
+    });
+
+    testWidgets('answered elsewhere, it is what was answered', (WidgetTester tester) async {
+      serverSays(
+        const LookupSettled(
+          PermissionOutcome(
+            requestId: 'request-1',
+            decision: PermissionDecision.allow,
+            auto: false,
+            origin: AnswerOrigin.web,
+            interaction: threeQuestions,
+            answers: <QuestionAnswer>[
+              QuestionAnswer(questionId: 'q1', selected: <String>['Usage']),
+              QuestionAnswer(questionId: 'q2', selected: <String>[], other: 'a wiki'),
+              QuestionAnswer(questionId: 'q3', selected: <String>['Friendly']),
+            ],
+          ),
+        ),
+      );
+      await open(tester);
+
+      expect(find.byType(AnsweredQuestions), findsOneWidget);
+      expect(find.text(l10n.permissionQuestionOtherAnswer('a wiki')), findsOneWidget);
+      expect(find.text(l10n.permissionQuestionSubmit), findsNothing);
+    });
   });
 }

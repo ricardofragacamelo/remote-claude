@@ -90,4 +90,21 @@ void main() {
     expect(elapsedText(l10n, const Duration(seconds: 61)), l10n.sessionWorkingMinutes('1', '01'));
     expect(elapsedText(l10n, const Duration(seconds: -5)), l10n.sessionWorkingSeconds('0'));
   });
+
+  test('S-97 · a question of Claude is waited for as one, and a permission as before', () {
+    expect(
+      workingLabel(
+        l10n,
+        status: SessionStatus.waitingPermission,
+        turn: 't',
+        waiting: 1,
+        questionsOnly: true,
+      ),
+      l10n.permissionQuestionWaiting,
+    );
+    expect(
+      workingLabel(l10n, status: SessionStatus.waitingPermission, turn: 't', waiting: 1),
+      l10n.sessionWorkingWaiting,
+    );
+  });
 }

@@ -694,6 +694,146 @@ describe('the transcript HTTP surface', () => {
     });
   });
 
+  /**
+   * Plan 24, B-21 — a question of Claude read back: the questions from the transcript, and how they
+   * ended from what this backend recorded when they were answered, joined by the tool call.
+   */
+  describe('the questions of Claude in a conversation — plan 24', () => {
+    /** The `AskUserQuestion` of the recording, and the first label of each of its questions. */
+    const QUESTION = 'toolu_01GpjZVmiX4rEFumRubJuXzV';
+
+    beforeEach(async () => {
+      const db = harness.app.get<PersistenceContext>(PERSISTENCE_CONTEXT).db;
+      await db.execute(sql`TRUNCATE TABLE "permission_requests"`);
+    });
+
+    /** A conversation in which Claude asked three questions. */
+    function asked(n: number): string {
+      const id = conversationId(n);
+      store.add({
+        sessionId: id,
+        directory: allowlist.root,
+        cwd: allowlist.root,
+        lastModified: (written += 1_000),
+        messages: capturedTranscript('question-turn'),
+      });
+      return id;
+    }
+
+    /** What this backend recorded of the question, as the permission flow writes it. */
+    async function recorded(
+      row: {
+        status: 'pending' | 'resolved' | 'expired';
+        decision?: 'allow' | 'deny';
+        reason?: string;
+        answers?: unknown;
+        auto?: boolean;
+        subject?: string;
+      },
+      requestedAt = '2026-10-08T10:00:00.000Z',
+    ): Promise<void> {
+      const db = harness.app.get<PersistenceContext>(PERSISTENCE_CONTEXT).db;
+      await db.execute(sql`
+        INSERT INTO "permission_requests"
+          ("id", "user_id", "session_id", "tool_use_id", "tool_name", "input", "risk_hint", "status",
+           "decision", "reason", "auto", "answers", "requested_at", "expires_at")
+        VALUES
+          (${`req-${requestedAt}`}, ${row.subject ?? SUBJECT}, '01J0ABCDEFGHJKMNPQRSTVWXYZ',
+           ${QUESTION}, 'AskUserQuestion', '{}'::jsonb, 'read', ${row.status},
+           ${row.decision ?? null}, ${row.reason ?? null}, ${row.auto ?? null},
+           ${row.answers === undefined ? null : JSON.stringify(row.answers)}::jsonb,
+           ${requestedAt}::timestamptz, ${requestedAt}::timestamptz + interval '10 minutes')
+      `);
+    }
+
+    /** The `question` the end of the `AskUserQuestion` carries. */
+    async function questionOf(id: string): Promise<Record<string, unknown> | undefined> {
+      const response = await read(id, { limit: '100' });
+      expect(response.status).toBe(200);
+      const events = response.body.events as { type: string; payload: Record<string, unknown> }[];
+      const end = events.find(
+        (event) => event.type === 'tool.completed' && event.payload['toolUseId'] === QUESTION,
+      );
+      return end?.payload['question'] as Record<string, unknown> | undefined;
+    }
+
+    const ANSWERS = [
+      { questionId: 'q1', selected: ['Installation'] },
+      { questionId: 'q2', selected: ['Classic prose'] },
+      { questionId: 'q3', selected: [], other: 'friendly' },
+    ];
+
+    it('carries the answers recorded here, matched by the tool call — S-98', async () => {
+      const id = asked(90);
+      await recorded({ status: 'resolved', decision: 'allow', answers: ANSWERS });
+
+      const question = await questionOf(id);
+
+      expect(question).toMatchObject({ outcome: 'answered', answers: ANSWERS });
+      expect(question?.['interaction']).toMatchObject({ kind: 'question', malformed: false });
+      expect(
+        (question?.['interaction'] as { questions: { id: string }[] }).questions.map((q) => q.id),
+      ).toEqual(['q1', 'q2', 'q3']);
+    });
+
+    it('with no record here, carries the questions alone, and the summary stays — S-99', async () => {
+      const id = asked(91);
+      // Somebody else's answer to the same call is not theirs to see.
+      await recorded({ status: 'resolved', decision: 'allow', answers: ANSWERS, subject: OTHER });
+
+      const response = await read(id, { limit: '100' });
+      const events = response.body.events as { type: string; payload: Record<string, unknown> }[];
+      const end = events.find(
+        (event) => event.type === 'tool.completed' && event.payload['toolUseId'] === QUESTION,
+      );
+
+      expect(end?.payload['question']).toMatchObject({ interaction: { kind: 'question' } });
+      expect(end?.payload['question']).not.toHaveProperty('outcome');
+      expect(end?.payload['question']).not.toHaveProperty('answers');
+      expect(String(end?.payload['summary'])).toContain('Your questions have been answered');
+    });
+
+    it('says a refused question was refused, with its reason — S-101', async () => {
+      const id = asked(92);
+      await recorded({ status: 'resolved', decision: 'deny', reason: 'Not now.' });
+
+      expect(await questionOf(id)).toMatchObject({ outcome: 'declined', reason: 'Not now.' });
+    });
+
+    it('says a question nobody answered in time ran out — S-101', async () => {
+      const id = asked(93);
+      await recorded({ status: 'expired', decision: 'deny', auto: true });
+
+      const question = await questionOf(id);
+
+      expect(question).toMatchObject({ outcome: 'expired' });
+      expect(question).not.toHaveProperty('answers');
+    });
+
+    it('takes the latest record of a call asked about twice — S-98', async () => {
+      const id = asked(94);
+      await recorded(
+        { status: 'expired', decision: 'deny', auto: true },
+        '2026-10-08T10:00:00.000Z',
+      );
+      await recorded(
+        { status: 'resolved', decision: 'allow', answers: ANSWERS },
+        '2026-10-08T10:05:00.000Z',
+      );
+
+      expect(await questionOf(id)).toMatchObject({ outcome: 'answered' });
+    });
+
+    it('leaves every other tool as it was', async () => {
+      const id = conversation(95);
+
+      const response = await read(id);
+      const events = response.body.events as { type: string; payload: Record<string, unknown> }[];
+
+      expect(events.some((event) => 'question' in event.payload)).toBe(false);
+    });
+  });
+
   it('logs both sides of the edge, and never a word of the conversation — S-72', async () => {
     const id = conversation(1, { turns: 2 });
     harness.log.lines.length = 0;

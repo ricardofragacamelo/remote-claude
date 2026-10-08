@@ -1,4 +1,8 @@
-import { PermissionRule } from '@domain/permission';
+import {
+  PermissionRule,
+  PermissionRuleToolInteractiveError,
+  answeredByRule,
+} from '@domain/permission';
 import type { Clock, IdGenerator } from '@domain/shared';
 import type { RecordAuditEventUseCase } from '@application/audit';
 import type { GrantPermissionRuleCommand } from './commands/grant-permission-rule.command';
@@ -34,6 +38,7 @@ export class GrantPermissionRuleUseCase {
    * @throws {import('@domain/permission').PermissionRuleExpiryTooLongError} past the ceiling
    * @throws {import('@domain/permission').PermissionRuleExpiryInvalidError} already over
    * @throws {import('@domain/permission').PermissionScopeUnsupportedError} `project` with no project
+   * @throws {PermissionRuleToolInteractiveError} an `allow` for a tool that asks the person
    */
   async execute(command: GrantPermissionRuleCommand): Promise<PermissionRule> {
     const at = this.clock.now();
@@ -83,9 +88,13 @@ export class GrantPermissionRuleUseCase {
     return stored;
   }
 
-  /** Step 1: the domain validates the pattern, the lifetime and the scope. Nothing is stored. */
+  /**
+   * Step 1: the domain validates the pattern, the lifetime and the scope — and refuses an `allow`
+   * for a tool that asks the person, which no lookup would ever read as an answer (D-08, D-31).
+   * Nothing is stored.
+   */
   private build(command: GrantPermissionRuleCommand, at: Date): PermissionRule {
-    return PermissionRule.create(
+    const rule = PermissionRule.create(
       {
         id: this.ids.next(),
         userId: command.userId,
@@ -100,6 +109,12 @@ export class GrantPermissionRuleUseCase {
       },
       this.settings.ruleMaxLifetimeMs,
     );
+
+    if (!answeredByRule(rule.decision, rule.pattern.toolName)) {
+      throw new PermissionRuleToolInteractiveError(rule.pattern.toolName);
+    }
+
+    return rule;
   }
 
   /** Steps 2 and 3: the atomic grant, and the trail of a grant that created something. */

@@ -38,6 +38,7 @@ function runner(
   journal: RecordingJournal;
   record: ScriptRecord;
   log: RecordingLogger;
+  gate: StubPermissionGate;
   settle: () => Promise<void>;
 } {
   const events: SessionEvent[] = [];
@@ -87,6 +88,7 @@ function runner(
     journal,
     record,
     log,
+    gate,
     // The stream is consumed on the microtask queue, so draining it is a matter of yielding often
     // enough rather than sleeping for a fixed number of milliseconds. The count is generous: the
     // recorded tool turn is a hundred messages, each with its own hop.
@@ -157,6 +159,80 @@ describe('SessionRunner', () => {
 
       expect(result).toEqual({ behavior: 'allow', updatedInput: { command: 'git status' } });
       expect(result).not.toHaveProperty('updatedPermissions');
+    });
+  });
+
+  describe('a question of Claude — plan 24, B-09', () => {
+    const QUESTIONS = {
+      questions: [
+        {
+          question: 'Which library?',
+          header: 'Library',
+          multiSelect: false,
+          options: [
+            { label: 'date-fns', description: '' },
+            { label: 'luxon', description: '' },
+          ],
+        },
+      ],
+      metadata: { source: 'remember' },
+    };
+
+    /** What `canUseTool` hands the SDK back for the question, asked from `agentID` when given. */
+    async function asked(agentID?: string): Promise<unknown> {
+      harness.runner.run();
+      const canUseTool = harness.record.options?.canUseTool;
+
+      return canUseTool?.('AskUserQuestion', QUESTIONS, {
+        signal: new AbortController().signal,
+        toolUseID: 'toolu-question',
+        requestId: 'request-question',
+        ...(agentID === undefined ? {} : { agentID }),
+      } as unknown as Parameters<NonNullable<typeof canUseTool>>[2]);
+    }
+
+    it('hands the answers back in the SDK`s shape, with the questions untouched — S-46', async () => {
+      harness.gate.answer({
+        decision: 'allow',
+        reason: null,
+        answers: [{ questionId: 'q1', selected: ['luxon'], other: null }],
+      });
+
+      expect(await asked()).toEqual({
+        behavior: 'allow',
+        updatedInput: { ...QUESTIONS, answers: { 'Which library?': 'luxon' } },
+      });
+    });
+
+    it('answers a question asked inside a subagent the same way — S-55', async () => {
+      harness.gate.answer({
+        decision: 'allow',
+        reason: null,
+        answers: [{ questionId: 'q1', selected: [], other: 'neither' }],
+      });
+
+      expect(await asked('agent-1')).toEqual({
+        behavior: 'allow',
+        updatedInput: { ...QUESTIONS, answers: { 'Which library?': 'neither' } },
+      });
+      expect(harness.gate.asked.at(-1)).toMatchObject({
+        toolName: 'AskUserQuestion',
+        toolUseId: 'toolu-question',
+        input: QUESTIONS,
+      });
+    });
+
+    it('passes a refusal on with its message, and no answers — S-45, S-50', async () => {
+      harness.gate.answer({
+        decision: 'deny',
+        reason: 'The user did not answer in time. Do not assume an answer; ask again or stop.',
+        answers: null,
+      });
+
+      expect(await asked()).toEqual({
+        behavior: 'deny',
+        message: 'The user did not answer in time. Do not assume an answer; ask again or stop.',
+      });
     });
   });
 

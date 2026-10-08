@@ -43,6 +43,20 @@ describe('the push catalogue', () => {
   });
 });
 
+describe('a question of Claude — plan 24, D-22', () => {
+  it('has words of its own, in the language of the device, and falls back to en — S-52', () => {
+    const english = translator.question('en');
+    const portuguese = translator.question('pt-BR');
+
+    expect(english).toEqual({ title: 'Claude has a question for you', body: 'Open to answer.' });
+    expect(portuguese).toEqual({
+      title: 'O Claude tem uma pergunta para você',
+      body: 'Abra para responder.',
+    });
+    expect(translator.question('fr')).toEqual(english);
+  });
+});
+
 describe('the approval of a device — plan 17, F3', () => {
   // S-120 · in the device's language, with the same fallback as a question.
   it('answers in the language of the device, and falls back to en', () => {

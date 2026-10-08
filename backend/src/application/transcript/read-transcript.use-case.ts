@@ -2,6 +2,7 @@ import type { UserId } from '@domain/auth';
 import { pageFromTail, TranscriptNotFoundError } from '@domain/transcript';
 import type { ClaudeSessionId, Page, TranscriptMessage } from '@domain/transcript';
 import type { TranscriptStore } from './ports/transcript-store.port';
+import type { QuestionHistory } from './question-history';
 import { readableTranscript } from './readable-transcript';
 import type { ListedTranscript, TranscriptAudience } from './transcript-audience';
 
@@ -42,6 +43,7 @@ export class ReadTranscriptUseCase {
   constructor(
     private readonly store: TranscriptStore,
     private readonly audience: TranscriptAudience,
+    private readonly questions: QuestionHistory,
   ) {}
 
   /**
@@ -51,10 +53,12 @@ export class ReadTranscriptUseCase {
   async execute(query: ReadTranscriptQuery): Promise<TranscriptPage> {
     const session = await this.visible(query);
     const messages = await this.store.messages(session);
+    const page = pageFromTail(session.id.value, messages, query.before, query.limit);
 
     return {
       session,
-      page: pageFromTail(session.id.value, messages, query.before, query.limit),
+      // The questions of Claude on the page, with what was answered (plan 24, B-21).
+      page: { ...page, items: await this.questions.of(query.userId, page.items, messages) },
       lastMessageId: messages.at(-1)?.id ?? null,
     };
   }

@@ -22,6 +22,9 @@ const READ_ONLY_TOOLS = new Set([
   'TaskList',
   'Task',
   'BashOutput',
+  // A question to the person (plan 24, D-10): it reads nothing and changes nothing — the CLI says
+  // `isReadOnly()` — and grading it `destructive` put a two-step confirmation in front of an answer.
+  'AskUserQuestion',
 ]);
 
 /** Tools that change files, and nothing worse. */

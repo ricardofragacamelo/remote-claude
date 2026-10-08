@@ -17,7 +17,9 @@ export class StubPermissionGate implements SessionPermissionGate {
   readonly forgotten: string[] = [];
   readonly modes: { readonly sessionId: string; readonly mode: PermissionMode }[] = [];
 
-  constructor(private verdict: PermissionVerdict = { decision: 'allow', reason: null }) {}
+  constructor(
+    private verdict: PermissionVerdict = { decision: 'allow', reason: null, answers: null },
+  ) {}
 
   /** Changes the answer for every question from here on. */
   answer(verdict: PermissionVerdict): void {

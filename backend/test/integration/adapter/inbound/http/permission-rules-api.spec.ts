@@ -147,6 +147,32 @@ describe('the permission rules HTTP surface', () => {
       expect(await rowCount()).toBe(0);
     });
 
+    it.each(['AskUserQuestion', 'ExitPlanMode'])(
+      'refuses an allow for %s, which asks the person, with 422, and stores nothing — plan 24, S-31, S-32',
+      async (pattern) => {
+        const response = await grant({ pattern, decision: 'allow', scope: 'always' });
+
+        expect(response.status).toBe(422);
+        expect(response.body.error).toMatchObject({
+          code: 'PERMISSION_RULE_TOOL_INTERACTIVE',
+          messageKey: 'permission.error.ruleToolInteractive',
+          params: { toolName: pattern },
+          httpEquivalent: 422,
+        });
+        expect(await rowCount()).toBe(0);
+      },
+    );
+
+    it.each(['AskUserQuestion', 'ExitPlanMode'])(
+      'grants a deny for %s, with 201 — "do not ask me anything here" — plan 24, S-31, S-32',
+      async (pattern) => {
+        const response = await grant({ pattern, decision: 'deny', scope: 'always' });
+
+        expect(response.status).toBe(201);
+        expect(response.body).toMatchObject({ toolName: pattern, decision: 'deny' });
+      },
+    );
+
     it('accepts a lifetime at the ceiling', async () => {
       // A minute short of it, since the request takes time to reach the server and the ceiling is
       // measured from the moment of the grant there.

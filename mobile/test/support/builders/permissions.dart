@@ -4,6 +4,7 @@ library;
 import 'package:remote_claude/features/permission/domain/entities/permission_event.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_outcome.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/question.dart';
 
 /// The instant every test's clock starts at.
 final DateTime t0 = DateTime.utc(2026, 9, 24, 12);
@@ -25,6 +26,7 @@ PermissionRequest aPermissionRequest({
   ],
   RuleOffer? rule,
   List<RuleReach> reaches = const <RuleReach>[],
+  QuestionInteraction? interaction,
 }) => PermissionRequest(
   requestId: requestId,
   sessionId: sessionId,
@@ -38,6 +40,7 @@ PermissionRequest aPermissionRequest({
   scopes: scopes,
   rule: rule,
   reaches: reaches,
+  interaction: interaction,
 );
 
 /// The server asking [request], on the frame [frameId].

@@ -19,7 +19,7 @@ mudar as três pontas no mesmo plano.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — As normas 🔲
+### B-01 — As normas ✅
 
 - [05 §O fluxo de permissão](../../architecture/shared/05-websocket-protocol.md#o-fluxo-de-permissão):
   a `interaction` do pedido, as `answers` da resposta e do resolvido, que `scope` e `reach` são
@@ -36,12 +36,14 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 - [web/03](../../architecture/web/03-ui-system.md) e [mobile/04](../../architecture/mobile/04-ui.md):
   o card de pergunta — abas no web, passos no app, avanço automático, "Outro", preview, recusa.
 
-O comportamento detalhado está na [proposta §10.4](../../propostas/perguntas-estruturadas.md#104-o-card-de-pergunta-comportamento-comum);
+O comportamento detalhado está na [proposta §10.4](../../discovery/05-perguntas-estruturadas.md#104-o-card-de-pergunta-comportamento-comum);
 a norma o resume e aponta para lá só como origem.
 
-### B-02 — Schemas e tipos gerados 🔲
+### B-02 — Schemas e tipos gerados ✅
 
-Em `packages/contracts/schema/`:
+Em `packages/contracts/schema/` — as formas repetidas (`QuestionInteraction`, `QuestionAnswer`) em
+`definitions/`, nomeadas por `$ref`, que o gerador passou a aceitar, com `minItems`
+([D-28](decisions.md#f0--normas-e-contrato)):
 
 - `events/permission-requested.schema.json`: `interaction` opcional — `kind` (`const: 'question'`),
   `malformed`, `questions[]` com `id`, `header`, `prompt`, `multiSelect` e `options[]` (`label`,
@@ -59,7 +61,7 @@ O `v` não muda: só entram campos opcionais ([05 §Versionamento](../../archite
 Sem `oneOf`: o gerador não aceita, e com uma só variante não precisa (R-03). Rodar
 `pnpm contracts` e conferir com `pnpm contracts:check`.
 
-### B-03 — Textos 🔲
+### B-03 — Textos ✅
 
 Chaves novas, em `en` e `pt-BR`, com o par no `scripts/i18n-shared.json`:
 
@@ -68,6 +70,10 @@ Chaves novas, em `en` e `pt-BR`, com o par no `scripts/i18n-shared.json`:
   ler a pergunta, aguardando sua resposta, Perguntou: {header}, Fez {n} perguntas), os dois erros;
 - app: os mesmos em `app_en.arb` e `app_pt.arb`, com `@descrição`, e `permissionToolAskUserQuestion`;
 - backend: `push.question.title` e `push.question.body` ([D-22](decisions.md#f0--normas-e-contrato)).
+
+**Na execução** ([D-33](decisions.md#f0--normas-e-contrato)): chave declarada e não usada é órfã, e o
+`i18n:check` a recusa — também dentro do portão 7. As chaves foram desenhadas aqui e entram com o
+código que as usa: as do push na B-10, as do web na F3, as do app na F4. O S-04 fecha na F4.
 
 ---
 

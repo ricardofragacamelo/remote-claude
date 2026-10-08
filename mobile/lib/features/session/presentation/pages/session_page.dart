@@ -250,6 +250,7 @@ class _SessionPageState extends ConsumerState<SessionPage> with BoxOwner<Session
         turn: turn,
         tool: conversation.runningTool?.toolName,
         waiting: questions.pending.length,
+        questionsOnly: onlyQuestions(questions),
       ),
       since: DateTime.tryParse(conversation.turnStartedAt ?? ''),
       onGoToRequest: oldest == null ? null : () => _questions.goTo(oldest),

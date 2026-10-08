@@ -15,7 +15,7 @@ Leia antes: [06-testing-strategy §E2E](../../architecture/shared/06-testing-str
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-23 — Web 🔲
+### B-23 — Web ✅
 
 Um cenário novo em `e2e/scenarios/` com o `question-turn` da B-11, e um spec Playwright: escolha
 única, múltipla e "Outro" respondidas pelo card; recusa com motivo; vencimento com um
@@ -26,16 +26,21 @@ O [claude-panel-changes.spec.ts](../../../e2e/specs/claude-panel-changes.spec.ts
 `planAsksBefore` do `e2e/scenarios/panel-changes.json` passam a responder o `AskUserQuestion` pelo
 card de pergunta, e não mais por "Permitir uma vez" (R-09).
 
-### B-24 — App 🔲
+### B-24 — App ✅
 
 Um `integration_test` com o mesmo cenário: responder pelos passos, recusar, e ver respondida no app
 a pergunta respondida pelo web. O login é o do e2e de hoje; a chegada pelo push fica no widget
 (S-94).
 
-### B-25 — Os portões completos 🔲
+### B-25 — Os portões completos ✅
 
 `pnpm verify:full` e `pnpm test:e2e:mobile` — o gate 9 só roda o e2e do web. Antes, conferir se
 outra sessão está rodando validação na mesma árvore (R-10).
+
+Resultado: `pnpm verify:full` com os onze portões verdes; `pnpm test:e2e:mobile` 34/35 — a suíte
+`questions` deste plano verde em todas as corridas, e o 05·S-79 (plano 05) falhando nas corridas
+completas sem instrumentação. Fechada por decisão do usuário ([D-39](decisions.md#f6--e2e)), com
+o S-79 registrado como pendência herdada ([progresso](progress.md#escopo-reduzido-ou-adiado)).
 
 ---
 

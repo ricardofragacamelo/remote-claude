@@ -318,6 +318,7 @@
       "NotebookEdit": "Edit a notebook",
       "Read": "Read a file",
       "WebFetch": "Fetch a page",
+      "AskUserQuestion": "Answer Claude's question",
       "unknown": "Use {{tool}}"
     },
     "error": {
@@ -331,7 +332,9 @@
       "ruleExpiryTooLong": "That rule would last longer than this installation allows.",
       "ruleNotFound": "That rule does not exist.",
       "ruleNotOwned": "That rule belongs to somebody else.",
-      "ruleExpiryInvalid": "A rule has to expire after it is created."
+      "ruleExpiryInvalid": "A rule has to expire after it is created.",
+      "answersInvalid": "Those answers do not fit the question. Check each one and send again.",
+      "ruleToolInteractive": "Claude's questions and plans always come to you: a rule cannot allow them."
     },
     "persist": {
       "title": "Stop asking about this?",
@@ -380,6 +383,33 @@
       "ruleDenied": "Refused by one of your rules",
       "somebody": "somebody",
       "allowAll": "Allowed automatically — Allow everything"
+    },
+    "question": {
+      "label": "Claude's question",
+      "tabs": "The questions",
+      "answered": "answered",
+      "progress": "Question {{n}} of {{total}}",
+      "other": "Other",
+      "otherPlaceholder": "Type your answer…",
+      "otherAnswer": "Other: {{text}}",
+      "recommended": "Recommended",
+      "preview": "Preview",
+      "noPreview": "No preview for this option",
+      "submit": "Send answers",
+      "decline": "Don't answer",
+      "declineReason": "Why not? Claude reads this (optional)",
+      "declineConfirm": "Send without answering",
+      "declineBack": "Back to the questions",
+      "expired": "This question ran out of time. Nothing was sent.",
+      "malformed": "Claude's question could not be read, so it cannot be answered here. Declining tells Claude so.",
+      "waiting": "Waiting for your answer to a question",
+      "pill": "Claude asked you something ({{count}})",
+      "notice": "Claude asked you a question in {{folder}}.",
+      "asked": "Asked: {{header}}",
+      "askedMany": "Asked {{count}} questions",
+      "pending": "Waiting for an answer",
+      "declined": "Not answered: {{reason}}",
+      "answeredElsewhere": "Answered elsewhere"
     }
   },
   "audit": {

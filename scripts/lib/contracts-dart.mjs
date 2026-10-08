@@ -191,6 +191,11 @@ const LIMIT_REFUSALS = {
     broken: (/** @type {string} */ value, /** @type {number} */ bound) =>
       `${value}.length > ${String(bound)}`,
   },
+  minItems: {
+    type: 'List<Object?>',
+    broken: (/** @type {string} */ value, /** @type {number} */ bound) =>
+      `${value}.length < ${String(bound)}`,
+  },
   maxLength: {
     type: 'String',
     broken: (/** @type {string} */ value, /** @type {number} */ bound) =>
@@ -205,7 +210,7 @@ const LIMIT_REFUSALS = {
 
 /**
  * The bounds of one declaration, as a predicate over a decoded map — the Dart half of what the
- * TypeScript guard checks with `withinMaxItems`, `withinMaxLength` and `atLeast`.
+ * TypeScript guard checks with `withinMaxItems`, `withMinItems`, `withinMaxLength` and `atLeast`.
  *
  * A field that is absent, or of another shape, passes: whether it may be absent is the conditional
  * predicate's question, and its shape the class's.

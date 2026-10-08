@@ -89,6 +89,15 @@ const GUARD_HELPERS = [
     ],
   },
   {
+    name: 'withMinItems',
+    source: [
+      "/** Whether a list, when it is one, holds at least `min` items. Anything else is the shape check's to refuse. */",
+      'function withMinItems(value: unknown, min: number): boolean {',
+      '  return !Array.isArray(value) || value.length >= min;',
+      '}',
+    ],
+  },
+  {
     name: 'withinMaxLength',
     source: [
       '/** Whether a string, when it is one, is at most `max` characters long. */',
@@ -186,6 +195,7 @@ function triggerExpression(conditional) {
 /** The helper each bound is checked with. */
 const LIMIT_HELPERS = {
   maxItems: 'withinMaxItems',
+  minItems: 'withMinItems',
   maxLength: 'withinMaxLength',
   minimum: 'atLeast',
 };

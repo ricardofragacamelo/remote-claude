@@ -129,6 +129,7 @@ export function testEnvironment(
   // deterministic. The deadline is short enough for a suite to wait on it; the extension is twice
   // as long, so an extension always moves a fresh deadline and the difference is observable.
   process.env['RC_PERMISSION_TIMEOUT_MS'] = '400';
+  process.env['RC_QUESTION_TIMEOUT_MS'] = '400';
   process.env['RC_PERMISSION_EXTENSION_MS'] = '800';
   process.env['RC_PERMISSION_MAX_EXTENSIONS'] = '2';
   process.env['RC_PERMISSION_RULE_LIFETIME_MS'] = '60000';

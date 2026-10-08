@@ -15,6 +15,9 @@ export interface NotifyPermissionCommand {
 
   /** The tool's **name**. Never its input — a push goes through somebody else's server (S-19). */
   readonly toolName: string;
+
+  /** Whether it is a question of Claude rather than a permission — the words differ (plan 24, D-22). */
+  readonly question: boolean;
 }
 
 /** What the use case did, so the caller can log it and a test can assert on it. */

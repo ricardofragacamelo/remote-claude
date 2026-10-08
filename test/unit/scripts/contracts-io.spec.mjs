@@ -5,7 +5,9 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  DEFINITIONS,
   SCHEMA_DIR,
+  definitionSchemas,
   drift,
   messageSchemas,
   targets,
@@ -64,6 +66,28 @@ describe('messageSchemas', () => {
     const found = messageSchemas(repoRoot);
 
     expect(found).toEqual([...found].sort());
+  });
+
+  it('leaves the shared definitions out: they are shapes, not messages', () => {
+    expect(messageSchemas(repoRoot).filter((found) => found.includes(`/${DEFINITIONS}/`))).toEqual(
+      [],
+    );
+  });
+});
+
+describe('definitionSchemas', () => {
+  it('finds the shared definitions, sorted', () => {
+    const found = definitionSchemas(repoRoot);
+
+    expect(found).toContain(`${SCHEMA_DIR}/${DEFINITIONS}/question-answer.schema.json`);
+    expect(found).toEqual([...found].sort());
+  });
+
+  it('finds none in a tree that has no definitions', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rc-contracts-'));
+    temporary.push(root);
+
+    expect(definitionSchemas(root)).toEqual([]);
   });
 });
 

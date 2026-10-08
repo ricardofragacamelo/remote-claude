@@ -48,6 +48,14 @@
       "type": "string",
       "enum": ["rule", "allowAll"],
       "description": "Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), or the session running in Permitir tudo (`allowAll`). Absent when a human answered or the deadline passed."
+    },
+    "answers": {
+      "type": "array",
+      "maxItems": 4,
+      "description": "What the person answered, when the request was a question and the decision `allow` — what lets another screen show the question answered, and the tool's line say what was chosen.",
+      "items": {
+        "$ref": "../definitions/question-answer.schema.json"
+      }
     }
   }
 }

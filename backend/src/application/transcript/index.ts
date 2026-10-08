@@ -6,6 +6,7 @@ export type { ListedTranscript, TranscriptActivitySettings } from './transcript-
 export type { LiveConversationSource } from './ports/live-conversation.source';
 export { LIVE_CONVERSATION_SOURCE } from './ports/live-conversation.source';
 export { ReadTranscriptUseCase } from './read-transcript.use-case';
+export { QuestionHistory } from './question-history';
 export type { ReadTranscriptQuery, TranscriptPage } from './read-transcript.use-case';
 export { ReadToolResultUseCase } from './read-tool-result.use-case';
 export type { ReadToolResultQuery } from './read-tool-result.use-case';

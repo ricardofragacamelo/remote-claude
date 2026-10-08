@@ -172,6 +172,18 @@ function mcpOf(name: string): { readonly server: string; readonly tool: string }
  *
  * @param absorbed the calls of the list tools the task list read — any other one says its name
  */
+/**
+ * The line of a question of Claude, from the questions the server normalised — "Asked: Library",
+ * or "Asked 3 questions" (plan 24, B-15). Never from the SDK's input.
+ */
+export function questionLabel(questions: readonly { readonly header: string }[]): ToolLabel {
+  const [only] = questions;
+
+  return questions.length === 1 && only !== undefined && only.header !== ''
+    ? { key: 'permission.question.asked', params: { header: only.header } }
+    : { key: 'permission.question.askedMany', params: { count: questions.length } };
+}
+
 export function toolLabel(
   tool: Pick<ToolExecution, 'toolUseId' | 'toolName' | 'input' | 'title'>,
   folder: string,

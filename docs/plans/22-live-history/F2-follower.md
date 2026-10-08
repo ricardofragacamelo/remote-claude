@@ -25,7 +25,7 @@ Sem framework, sem I/O ([backend/01](../../architecture/backend/01-clean-archite
 ### B-15 — `inferWorking` ✅
 
 Função pura ao lado da `transcript-activity.ts`: a regra da
-[proposta §5.6](../../propostas/historico-ao-vivo-e-fiel.md#56-trabalhando-em-outro-cliente). `true` só com
+[proposta §5.6](../../discovery/04-historico-ao-vivo-e-fiel.md#56-trabalhando-em-outro-cliente). `true` só com
 `activeElsewhere` e última entrada que deixa o turno aberto (`tool_use` sem resultado, `thinking`, prompt sem
 resposta); `false` em qualquer outro caso ([D-12](decisions.md#f2--seguidor-no-backend)).
 

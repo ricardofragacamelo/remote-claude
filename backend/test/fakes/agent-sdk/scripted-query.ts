@@ -75,6 +75,17 @@ export interface ScriptRecord {
   readonly completed: string[];
   /** Tools the scripted run consulted `canUseTool` about. */
   readonly asked: string[];
+
+  /**
+   * What `canUseTool` answered, in the order it was asked — the `updatedInput` of an answered
+   * question among it (plan 24, B-12). The replay goes on with what was recorded whatever the
+   * answer (D-19); this is where a test reads what the SDK would have been told.
+   */
+  readonly verdicts: {
+    readonly toolName: string;
+    readonly requestId: string;
+    readonly result: unknown;
+  }[];
   /** How many times `interrupt()` was called. */
   interrupts: number;
   /** How many times `close()` was called. */
@@ -725,17 +736,19 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     index: number,
   ): Promise<void> {
     this.record.asked.push(toolName);
-    await this.options.canUseTool?.(toolName, input as Record<string, unknown>, {
+    // `requestId` is the idempotency key the permission bridge branches on, so a fake that left it
+    // constant would make every request look like a redelivery of the first — and one that only
+    // varied within a run would make the second **session** inherit the first session's answers.
+    // Nor may it repeat across the turns of one session: the second turn would inherit the first
+    // turn's answer, and a revoked rule would look as if it still applied. The real SDK mints a
+    // fresh one per call.
+    const requestId = `${this.runId}-request-${String((this.asks += 1))}-${String(index)}`;
+    const result = await this.options.canUseTool?.(toolName, input as Record<string, unknown>, {
       signal: new AbortController().signal,
-      // `requestId` is the idempotency key the permission bridge branches on, so a fake
-      // that left it constant would make every request look like a redelivery of the first
-      // — and one that only varied within a run would make the second **session** inherit
-      // the first session's answers. Nor may it repeat across the turns of one session: the
-      // second turn would inherit the first turn's answer, and a revoked rule would look as
-      // if it still applied. The real SDK mints a fresh one per call.
-      requestId: `${this.runId}-request-${String((this.asks += 1))}-${String(index)}`,
+      requestId,
       toolUseID: toolUseId,
     });
+    this.record.verdicts.push({ toolName, requestId, result });
   }
 
   /**
@@ -987,6 +1000,7 @@ export function scriptedSdk(script: ScriptOptions = {}): {
     hooked: [],
     completed: [],
     asked: [],
+    verdicts: [],
     interrupts: 0,
     closes: 0,
     commandCalls: 0,

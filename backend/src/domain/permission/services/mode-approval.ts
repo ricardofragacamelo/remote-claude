@@ -19,3 +19,14 @@ export const HUMAN_ONLY_TOOLS: ReadonlySet<string> = new Set(['AskUserQuestion',
 export function answeredByMode(mode: PermissionMode, toolName: string): boolean {
   return mode === 'allowAll' && !HUMAN_ONLY_TOOLS.has(toolName);
 }
+
+/**
+ * Whether a rule of this decision may answer an invocation of this tool.
+ *
+ * A `deny` always may: "do not ask me anything here" is a legitimate thing to say. An `allow` may
+ * not answer a question or a plan — it would hand Claude an answer nobody gave, or approve a plan
+ * nobody read ([24 · D-08](../../../../../docs/plans/24-structured-questions/decisions.md)).
+ */
+export function answeredByRule(decision: 'allow' | 'deny', toolName: string): boolean {
+  return decision === 'deny' || !HUMAN_ONLY_TOOLS.has(toolName);
+}

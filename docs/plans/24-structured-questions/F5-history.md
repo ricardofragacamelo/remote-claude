@@ -18,7 +18,7 @@ os mesmos arquivos que o plano 22 está fechando.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-21 — Enriquecer pelo `toolUseId` 🔲
+### B-21 — Enriquecer pelo `toolUseId` ✅
 
 Um enriquecedor na aplicação (`application/transcript`), atrás de uma porta para
 `permission_requests`: para cada linha de `AskUserQuestion` do transcript, busca o pedido pelo
@@ -29,7 +29,7 @@ caminho. Sem linha nossa, a linha segue como hoje: perguntas e `summary`.
 O resultado vai no campo `question` do `tool.completed`, previsto no contrato pela
 [B-02](F0-norms.md#b-02--schemas-e-tipos-gerados-).
 
-### B-22 — As duas pontas leem 🔲
+### B-22 — As duas pontas leem ✅
 
 O web e o app desenham a linha respondida a partir do histórico com o mesmo `AnsweredQuestions` /
 `answered_questions` das F3 e F4.

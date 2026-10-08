@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { UserId } from '@domain/auth';
-import { PermissionRule, answeringRule } from '@domain/permission';
+import { PermissionRule, answeredByRule, answeringRule, ignoredAllow } from '@domain/permission';
 import type { PermissionRuleDraft, RuleQuestion } from '@domain/permission';
 import type { PermissionMode } from '@domain/session';
 import { SessionId } from '@domain/session';
@@ -94,4 +94,58 @@ describe('answeringRule', () => {
       expect(answeringRule([allowAlways], question(mode))).toBe(allowAlways);
     },
   );
+});
+
+/**
+ * A tool that asks the person is never answered by an `allow` — a question nobody answered, or a
+ * plan nobody read (plan 24, D-08). A `deny` still refuses.
+ */
+describe('rules and the tools that ask the person — plan 24, B-07', () => {
+  const asking = (toolName: string): RuleQuestion => ({
+    subject: { userId: owner, sessionId, projectPath: project },
+    toolName,
+    input: toolName === 'ExitPlanMode' ? { plan: '# plan' } : { questions: [] },
+    permissionMode: 'default',
+    now,
+  });
+
+  it.each(['AskUserQuestion', 'ExitPlanMode'])(
+    'reads no allow as an answer to %s, and says which one it ignored — S-29, S-32',
+    (toolName) => {
+      const allow = rule(`allow-${toolName}`, { pattern: toolName });
+
+      expect(answeringRule([allow], asking(toolName))).toBeNull();
+      expect(ignoredAllow([allow], asking(toolName))).toBe(allow);
+    },
+  );
+
+  it.each(['AskUserQuestion', 'ExitPlanMode'])(
+    'lets a deny refuse %s by itself — S-30',
+    (toolName) => {
+      const allow = rule(`allow-${toolName}`, { pattern: toolName });
+      const deny = rule(`deny-${toolName}`, { pattern: toolName, decision: 'deny' });
+
+      expect(answeringRule([allow, deny], asking(toolName))).toBe(deny);
+    },
+  );
+
+  it('ignores nothing for a tool that asks leave, and nothing that does not match', () => {
+    expect(ignoredAllow([allowAlways], question())).toBeNull();
+    expect(
+      ignoredAllow([rule('other', { pattern: 'Bash' })], asking('AskUserQuestion')),
+    ).toBeNull();
+    expect(
+      ignoredAllow(
+        [rule('deny', { pattern: 'AskUserQuestion', decision: 'deny' })],
+        asking('AskUserQuestion'),
+      ),
+    ).toBeNull();
+  });
+
+  it('lets a deny answer anything, and an allow anything but a tool that asks', () => {
+    expect(answeredByRule('deny', 'AskUserQuestion')).toBe(true);
+    expect(answeredByRule('allow', 'AskUserQuestion')).toBe(false);
+    expect(answeredByRule('allow', 'ExitPlanMode')).toBe(false);
+    expect(answeredByRule('allow', 'Bash')).toBe(true);
+  });
 });

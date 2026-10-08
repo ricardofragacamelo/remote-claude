@@ -17,7 +17,7 @@ F6 precisam de uma conversa em que a pergunta foi respondida, e de uma com vári
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-11 — O gravador responde 🔲
+### B-11 — O gravador responde ✅
 
 [record-agent-sdk-fixtures.mjs](../../../scripts/record-agent-sdk-fixtures.mjs): quando a tool é
 `AskUserQuestion`, devolve `answers` com a primeira opção de cada pergunta. Regravar o
@@ -27,7 +27,12 @@ alto** se o modelo não cooperar (R-04), em vez de gravar algo menos útil.
 
 A gravação usa o Claude de verdade: rodar uma vez, conferir a fixture, versionar.
 
-### B-12 — O fake registra o veredito 🔲
+**Na execução:** a lógica nova mora em `scripts/lib/fixture-questions.mjs`, com teste — o gravador é um
+script que se executa ao ser importado. O `plan-turn` regravado mantém a pergunta antes do plano (o
+`requires` dele confere isso), agora de uma pergunta com prévias; o `question-turn` tem três
+perguntas, uma múltipla e uma com prévias, e uma das prévias escreve HTML.
+
+### B-12 — O fake registra o veredito ✅
 
 `backend/test/fakes/agent-sdk/scripted-query.ts` continua emitindo o `tool_result` gravado,
 qualquer que seja a resposta ([D-19](decisions.md#f2--fixtures)), e passa a **registrar** o que o

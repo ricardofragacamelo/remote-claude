@@ -9,12 +9,15 @@
 /// honestly.
 library;
 
-import 'package:remote_claude/core/network/contracts/protocol.g.dart';
+// The wire's own question classes stay out: the domain's are the ones read here (plan 24).
+import 'package:remote_claude/core/network/contracts/protocol.g.dart'
+    hide QuestionAnswer, QuestionInteraction;
 import 'package:remote_claude/features/permission/data/mappers/wire_fields.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_event.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_outcome.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/question.dart';
 
 /// The frames of the permission round trip, by name. Nothing else in the app spells them.
 abstract final class PermissionFrames {
@@ -110,6 +113,7 @@ PermissionRequest? permissionRequestFrom(
     scopes: offers.scopes,
     rule: offers.rule,
     reaches: offers.reaches,
+    interaction: questionInteractionFrom(payload['interaction']),
   );
 }
 
@@ -204,6 +208,9 @@ PermissionOutcome? permissionOutcomeFrom(Map<String, Object?> payload) {
       'allowAll' => AnswerVia.allowAll,
       _ => null,
     },
+    // The event carries the answers; the server's revalidation the questions too (plan 24, S-94).
+    interaction: questionInteractionFrom(payload['interaction']),
+    answers: questionAnswersFrom(payload['answers']),
   );
 }
 

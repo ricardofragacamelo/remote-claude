@@ -1,4 +1,4 @@
-import { PermissionRule, patternForInvocation } from '@domain/permission';
+import { PermissionRule, answeredByRule, patternForInvocation } from '@domain/permission';
 import type { PermissionAnswer, PermissionRequest, PermissionSettling } from '@domain/permission';
 import type { IdGenerator } from '@domain/shared';
 import { resolvedPayload } from './permission-payloads';
@@ -99,7 +99,12 @@ export class PermissionSettlement {
     answer: PermissionAnswer,
     chosen: readonly string[] | undefined,
   ): void {
-    if (answer.scope !== 'session' || answer.resolvedBy === null) {
+    // An `allow` of a question or a plan would be ignored by every lookup (D-08), so it is not left.
+    if (
+      answer.scope !== 'session' ||
+      answer.resolvedBy === null ||
+      !answeredByRule(answer.decision, request.toolName)
+    ) {
       return;
     }
 

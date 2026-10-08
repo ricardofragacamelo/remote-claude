@@ -17,7 +17,7 @@ e [shared/02-i18n](../../architecture/shared/02-i18n.md). Componente chama hook,
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-13 — Dados 🔲
+### B-13 — Dados ✅
 
 - `features/permission/types`: `PermissionRequest.interaction`, `QuestionAnswer`,
   `PermissionOutcome.answers`.
@@ -27,7 +27,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
   que sobrevive à queda do socket e ao replay do `attach` (R-06), e é descartado quando o pedido é
   resolvido em outro lugar.
 
-### B-14 — O card de pergunta 🔲
+### B-14 — O card de pergunta ✅
 
 `components/QuestionCard.tsx`, no desvio de `PermissionRequestCard.tsx`, ao lado do
 `PlanApprovalCard`. O comportamento é o da norma escrita na B-01 (web/03); em resumo:
@@ -49,7 +49,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 A pergunta de subagente cai na cauda (`TailRequests`) como qualquer pedido, sem tratamento
 especial; S-76 prova.
 
-### B-15 — A pergunta respondida 🔲
+### B-15 — A pergunta respondida ✅
 
 `components/AnsweredQuestions.tsx`, somente leitura: cada pergunta com a escolhida marcada, as
 outras esmaecidas e o texto do "Outro". Usado no card resolvido em outro lugar e na linha da tool:
@@ -59,7 +59,7 @@ sem `answers` (sessão de outro cliente), as perguntas e o `summary`.
 
 `session/lib/tool-labels.ts`: "Perguntou: {header}" ou "Fez {n} perguntas".
 
-### B-16 — Avisos 🔲
+### B-16 — Avisos ✅
 
 `WorkingIndicator`, `PendingPill`, `usePermissionNotices` e `useBrowserNotifications` ganham a
 variante de pergunta — "Aguardando sua resposta" —, sem o texto dela.

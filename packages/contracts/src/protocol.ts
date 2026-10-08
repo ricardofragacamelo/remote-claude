@@ -81,6 +81,47 @@ export interface Envelope {
   readonly payload?: Readonly<Record<string, unknown>>;
 }
 
+/** The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the SDK's joined string. */
+export interface QuestionAnswer {
+  /** The `id` of the question in the request's `interaction`. */
+  readonly questionId: string;
+  /** The labels chosen, exactly as the request gave them. Empty when only the free answer was given. */
+  readonly selected: readonly string[];
+  /** The free answer ("Other"), when there is one. Never blank. */
+  readonly other?: string;
+}
+
+export interface QuestionInteractionQuestionsItemOptionsItem {
+  /** Shown and answered exactly as it is — a label ending in "(Recommended)" keeps it, and a screen may highlight it but never pre-select it. */
+  readonly label: string;
+  readonly description: string;
+  /** A mockup or a snippet, in markdown, rendered with the safe renderer — never HTML. Absent when the option has none. */
+  readonly preview?: string;
+}
+
+export interface QuestionInteractionQuestionsItem {
+  /** `q1`…`q4`, by position — stable within the request, and what an answer names. */
+  readonly id: string;
+  /** The short chip of the question (the SDK asks for 12 characters; the model does not always obey). Cut, never refused. */
+  readonly header: string;
+  /** The question itself, as Claude wrote it. Text to show, never markup. Cut, never refused. */
+  readonly prompt: string;
+  /** Several options may be chosen. A single choice is one label, or the free answer (`other`). */
+  readonly multiSelect: boolean;
+  /** What Claude offers. The free answer ("Other") is not here: the screen offers it. */
+  readonly options: readonly QuestionInteractionQuestionsItemOptionsItem[];
+}
+
+/** Claude asking the person something (`AskUserQuestion`) rather than asking leave to run a tool, with the questions the backend normalised out of the SDK's input. A client renders this and never reads the SDK's `input` (plan 24). */
+export interface QuestionInteraction {
+  /** The only variant for now. `plan` (for `ExitPlanMode`) would be the second, and the generator has no `oneOf` yet. */
+  readonly kind: 'question';
+  /** The SDK's input could not be read safely — no questions or more than four, fewer than two or more than four options, an option with no label, a question with no options, a question repeated, a label repeated within a question. `questions` is then empty, the card offers only a refusal, and an `allow` is refused with `PERMISSION_ANSWERS_INVALID`. */
+  readonly malformed: boolean;
+  /** One to four, in the order Claude asked them; empty when `malformed`. */
+  readonly questions: readonly QuestionInteractionQuestionsItem[];
+}
+
 /** A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream. */
 export interface CommandAcceptedPayload {
   /** `type` of the command being acknowledged. */
@@ -462,14 +503,16 @@ export interface PermissionRequestedPayload {
   readonly input: Readonly<Record<string, unknown>>;
   /** Derived in the backend, by a per-tool list **plus** a heuristic over the input, and it fails closed: a command the heuristic does not recognise is marked `destructive`. A false positive is an annoyance; a false negative is the accident. */
   readonly riskHint: 'read' | 'write' | 'destructive';
-  /** The UI pre-selects refusal. Silence never authorises. */
+  /** The UI pre-selects refusal. Silence never authorises. `false` only on a question (`interaction`), where the focus goes to the first option. */
   readonly defaultToNo: boolean;
   /** When the request is denied automatically, ISO 8601 in UTC. Ours is the only timeout there is — the CLI imposes none. */
   readonly expiresAt: string;
-  /** Scopes the UI may offer beyond a one-off yes. `project` and `always` come whenever the request has at least one reach in `reaches` (and `project` only with a workspace). */
+  /** Scopes the UI may offer beyond a one-off yes. `project` and `always` come whenever the request has at least one reach in `reaches` (and `project` only with a workspace). Empty on a question: answering one leaves no rule. */
   readonly suggestions?: readonly PermissionRequestedPayloadSuggestionsItem[];
-  /** How far a rule left by this answer may reach, computed by the server from the invocation. The client picks one and answers with its `reach`, never with a pattern: the server computes the patterns again and refuses a reach it did not offer. Applies to `session`, `project` and `always`. */
+  /** How far a rule left by this answer may reach, computed by the server from the invocation. The client picks one and answers with its `reach`, never with a pattern: the server computes the patterns again and refuses a reach it did not offer. Applies to `session`, `project` and `always`. Empty on a question. */
   readonly reaches?: readonly PermissionRequestedPayloadReachesItem[];
+  /** Set when the request is a question rather than a permission. Absent on every other request. */
+  readonly interaction?: QuestionInteraction;
 }
 
 /** A permission request is settled. It reaches **every** connection, including the one that answered — that is how a second client learns it lost the race, and who won it. */
@@ -488,6 +531,8 @@ export interface PermissionResolvedPayload {
   readonly toolUseId?: string;
   /** Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), or the session running in Permitir tudo (`allowAll`). Absent when a human answered or the deadline passed. */
   readonly via?: 'rule' | 'allowAll';
+  /** What the person answered, when the request was a question and the decision `allow` — what lets another screen show the question answered, and the tool's line say what was chosen. */
+  readonly answers?: readonly QuestionAnswer[];
 }
 
 /** A prompt left the queue: it started, or somebody took it out. The positions of the ones behind it move up by one. */
@@ -580,6 +625,18 @@ export interface SessionStatusChangedPayload {
   readonly status: 'idle' | 'thinking' | 'running' | 'waitingPermission' | 'closed';
 }
 
+/** On an `AskUserQuestion` of the **history** (`transcript.appended`, the follower): the questions, normalised, and how they ended — joined by `toolUseId` with what the backend recorded. Live, a screen already has the `permission.requested` and `permission.resolved`, and this is absent. */
+export interface ToolCompletedPayloadQuestion {
+  /** The questions, normalised as the request carried them. */
+  readonly interaction: QuestionInteraction;
+  /** Absent when the backend has no record of it — a session answered in another client — and the line shows the questions and the `summary`. */
+  readonly outcome?: 'answered' | 'declined' | 'expired';
+  /** What was answered, on `answered`. */
+  readonly answers?: readonly QuestionAnswer[];
+  /** Why it was refused, on `declined`. */
+  readonly reason?: string;
+}
+
 /** A tool invocation ended, from the `tool_result` the SDK reports on a `user` message. */
 export interface ToolCompletedPayload {
   readonly toolUseId: string;
@@ -593,6 +650,8 @@ export interface ToolCompletedPayload {
   readonly taskId?: string;
   /** When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for. */
   readonly at?: string;
+  /** On an `AskUserQuestion` of the **history** (`transcript.appended`, the follower): the questions, normalised, and how they ended — joined by `toolUseId` with what the backend recorded. Live, a screen already has the `permission.requested` and `permission.resolved`, and this is absent. */
+  readonly question?: ToolCompletedPayloadQuestion;
 }
 
 /** Output of a tool while it is still running, from the SDK's `tool_progress`. */
@@ -694,6 +753,8 @@ export interface PermissionResolvePayload {
   readonly reach?: 'exact' | 'prefix' | 'tool';
   /** Why it was refused. Required whenever `decision` is `deny` — the schema carries the condition, so no end has to remember it. */
   readonly reason?: string;
+  /** The answers to a question (`interaction` on the request), one per question, and required for an `allow` of one — a rule the schema cannot carry, because this payload does not say what was asked: the backend checks it against the questions it published, and refuses with `PERMISSION_ANSWERS_INVALID` (the request stays open). Never on a `deny`, and never on a request that is not a question. `scope` and `reach` are ignored on a question: it is `once`. */
+  readonly answers?: readonly QuestionAnswer[];
 }
 
 /** What `GET /transcripts/:sessionId/tools/:toolUseId/result` answers: the whole output of one tool of a conversation, read from the transcript when a client unfolds the tool — never on the stream, whose `tool.completed.summary` is short on purpose. Over HTTP, but one contract in three languages all the same. An output above the ceiling is not an error: it comes cut, its beginning and its end, with `truncated: true`. */
@@ -707,6 +768,33 @@ export interface TranscriptToolResultPayload {
   /** Where in `text` the first part ends and the last begins, in characters — present only when `truncated`, so the screen can say there what was left out. */
   readonly cutAt?: number;
 }
+
+/** The bounds the schema gives the fields of {@link QuestionAnswer}. */
+export const QUESTION_ANSWER_LIMITS = {
+  questionId: { maxLength: 8 },
+  selected: { maxItems: 4 },
+  other: { maxLength: 2000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link QuestionInteractionQuestionsItemOptionsItem}. */
+export const QUESTION_INTERACTION_QUESTIONS_ITEM_OPTIONS_ITEM_LIMITS = {
+  label: { maxLength: 200 },
+  description: { maxLength: 1000 },
+  preview: { maxLength: 20000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link QuestionInteractionQuestionsItem}. */
+export const QUESTION_INTERACTION_QUESTIONS_ITEM_LIMITS = {
+  id: { maxLength: 8 },
+  header: { maxLength: 60 },
+  prompt: { maxLength: 2000 },
+  options: { maxItems: 4, minItems: 2 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link QuestionInteraction}. */
+export const QUESTION_INTERACTION_LIMITS = {
+  questions: { maxItems: 4 },
+} as const;
 
 /** The bounds the schema gives the fields of {@link SessionPromptPayloadAttachmentsItemRange}. */
 export const SESSION_PROMPT_PAYLOAD_ATTACHMENTS_ITEM_RANGE_LIMITS = {
@@ -725,6 +813,21 @@ export const SESSION_PROMPT_PAYLOAD_LIMITS = {
   attachments: { maxItems: 20 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link PermissionResolvedPayload}. */
+export const PERMISSION_RESOLVED_PAYLOAD_LIMITS = {
+  answers: { maxItems: 4 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ToolCompletedPayloadQuestion}. */
+export const TOOL_COMPLETED_PAYLOAD_QUESTION_LIMITS = {
+  answers: { maxItems: 4 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionResolvePayload}. */
+export const PERMISSION_RESOLVE_PAYLOAD_LIMITS = {
+  answers: { maxItems: 4 },
+} as const;
+
 /** Whether `value` is an object and not `null` — the one case `typeof` alone gets wrong. */
 function isNonNullObject(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null;
@@ -733,6 +836,11 @@ function isNonNullObject(value: unknown): value is Readonly<Record<string, unkno
 /** Whether a list, when it is one, holds at most `max` items. Anything else is the shape check's to refuse. */
 function withinMaxItems(value: unknown, max: number): boolean {
   return !Array.isArray(value) || value.length <= max;
+}
+
+/** Whether a list, when it is one, holds at least `min` items. Anything else is the shape check's to refuse. */
+function withMinItems(value: unknown, min: number): boolean {
+  return !Array.isArray(value) || value.length >= min;
 }
 
 /** Whether a string, when it is one, is at most `max` characters long. */
@@ -769,6 +877,86 @@ export function isEnvelope(value: unknown): value is Envelope {
     typeof record['type'] === 'string',
     typeof record['ts'] === 'string',
     requiredWhen(record['kind'] === 'event', typeof record['seq'] === 'number'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link QuestionAnswer}. Unknown fields are accepted.
+ */
+export function isQuestionAnswer(value: unknown): value is QuestionAnswer {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['questionId'] === 'string',
+    Array.isArray(record['selected']),
+    withinMaxLength(record['questionId'], 8),
+    withinMaxItems(record['selected'], 4),
+    withinMaxLength(record['other'], 2000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link QuestionInteractionQuestionsItemOptionsItem}. Unknown fields are accepted.
+ */
+export function isQuestionInteractionQuestionsItemOptionsItem(value: unknown): value is QuestionInteractionQuestionsItemOptionsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['label'] === 'string',
+    typeof record['description'] === 'string',
+    withinMaxLength(record['label'], 200),
+    withinMaxLength(record['description'], 1000),
+    withinMaxLength(record['preview'], 20000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link QuestionInteractionQuestionsItem}. Unknown fields are accepted.
+ */
+export function isQuestionInteractionQuestionsItem(value: unknown): value is QuestionInteractionQuestionsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['header'] === 'string',
+    typeof record['prompt'] === 'string',
+    typeof record['multiSelect'] === 'boolean',
+    Array.isArray(record['options']),
+    withinMaxLength(record['id'], 8),
+    withinMaxLength(record['header'], 60),
+    withinMaxLength(record['prompt'], 2000),
+    withinMaxItems(record['options'], 4),
+    withMinItems(record['options'], 2),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link QuestionInteraction}. Unknown fields are accepted.
+ */
+export function isQuestionInteraction(value: unknown): value is QuestionInteraction {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    record['kind'] === 'question',
+    typeof record['malformed'] === 'boolean',
+    Array.isArray(record['questions']),
+    withinMaxItems(record['questions'], 4),
   ].every(Boolean);
 }
 
@@ -1479,6 +1667,7 @@ export function isPermissionResolvedPayload(value: unknown): value is Permission
     typeof record['decision'] === 'string',
     typeof record['auto'] === 'boolean',
     requiredWhen(record['auto'] === false, typeof record['resolvedBy'] === 'string'),
+    withinMaxItems(record['answers'], 4),
   ].every(Boolean);
 }
 
@@ -1659,6 +1848,22 @@ export function isSessionStatusChangedPayload(value: unknown): value is SessionS
 
   return [
     typeof record['status'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ToolCompletedPayloadQuestion}. Unknown fields are accepted.
+ */
+export function isToolCompletedPayloadQuestion(value: unknown): value is ToolCompletedPayloadQuestion {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isQuestionInteraction(record['interaction']),
+    withinMaxItems(record['answers'], 4),
   ].every(Boolean);
 }
 
@@ -1845,6 +2050,7 @@ export function isPermissionResolvePayload(value: unknown): value is PermissionR
     typeof record['requestId'] === 'string',
     typeof record['decision'] === 'string',
     requiredWhen(record['decision'] === 'deny', typeof record['reason'] === 'string'),
+    withinMaxItems(record['answers'], 4),
   ].every(Boolean);
 }
 

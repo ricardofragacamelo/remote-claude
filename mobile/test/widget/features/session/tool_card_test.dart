@@ -17,6 +17,7 @@ import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 import '../../../support/fakes/fake_transcript_content_repository.dart';
+import '../../../support/builders/questions.dart';
 import '../../../support/pump_app.dart';
 
 ToolExecution tool({
@@ -27,6 +28,7 @@ ToolExecution tool({
   Map<String, Object?> input = const <String, Object?>{'command': 'rm -rf /tmp/scratch'},
   String? title,
   bool isSubagent = false,
+  Map<String, Object?>? question,
 }) => ToolExecution(
   toolUseId: 't1',
   toolName: toolName,
@@ -36,6 +38,7 @@ ToolExecution tool({
   summary: summary,
   title: title,
   isSubagent: isSubagent,
+  question: question,
 );
 
 void main() {
@@ -347,6 +350,162 @@ void main() {
 
       expect(content.toolReads, <(String, String)>[('c-1', 't1')]);
       expect(find.text('finished'), findsOneWidget);
+    });
+  });
+
+  group('a question of Claude — plan 24, B-19', () {
+    Future<void> pumpQuestion(
+      WidgetTester tester,
+      ToolExecution shown,
+      PermissionOutcome decision,
+    ) => tester.pumpApp(
+      SingleChildScrollView(
+        child: ToolCard(tool: shown, decision: decision),
+      ),
+      overrides: <Override>[transcriptContentRepositoryProvider.overrideWithValue(content)],
+    );
+
+    final ToolExecution asked = tool(
+      toolName: 'AskUserQuestion',
+      input: const <String, Object?>{'questions': <Object?>[]},
+      status: ToolStatus.succeeded,
+      summary: 'answered',
+    );
+
+    testWidgets('S-95 · shows the questions answered, never the raw input', (
+      WidgetTester tester,
+    ) async {
+      await pumpQuestion(
+        tester,
+        asked,
+        const PermissionOutcome(
+          requestId: 'r',
+          decision: PermissionDecision.allow,
+          auto: false,
+          interaction: threeQuestions,
+          answers: <QuestionAnswer>[
+            QuestionAnswer(questionId: 'q1', selected: <String>['Usage']),
+            QuestionAnswer(questionId: 'q2', selected: <String>['Plain list']),
+            QuestionAnswer(questionId: 'q3', selected: <String>[], other: 'dry'),
+          ],
+        ),
+      );
+
+      expect(find.text(l10n.permissionQuestionAskedMany(3)), findsOneWidget);
+      expect(find.byType(AnsweredQuestions), findsOneWidget);
+      expect(find.text(l10n.permissionQuestionOtherAnswer('dry')), findsOneWidget);
+      expect(find.textContaining('{questions'), findsNothing);
+    });
+
+    testWidgets('S-95 · refused, it says why', (WidgetTester tester) async {
+      await pumpQuestion(
+        tester,
+        tool(
+          toolName: 'AskUserQuestion',
+          input: const <String, Object?>{},
+          status: ToolStatus.denied,
+          summary: 'ask me later',
+        ),
+        const PermissionOutcome(
+          requestId: 'r',
+          decision: PermissionDecision.deny,
+          auto: false,
+          interaction: QuestionInteraction(questions: <Question>[tone]),
+        ),
+      );
+
+      expect(find.text(l10n.permissionQuestionDeclined('ask me later')), findsOneWidget);
+      expect(find.text(l10n.permissionQuestionAsked('Tone')), findsOneWidget);
+    });
+
+    testWidgets('S-96 · still open, it waits for an answer rather than running', (
+      WidgetTester tester,
+    ) async {
+      await pump(tester, tool(toolName: 'AskUserQuestion', input: const <String, Object?>{}));
+
+      expect(find.text(l10n.permissionQuestionPending), findsOneWidget);
+    });
+
+    ToolExecution reopened(Map<String, Object?> question, {String summary = 'answered'}) => tool(
+      toolName: 'AskUserQuestion',
+      input: const <String, Object?>{},
+      status: ToolStatus.succeeded,
+      summary: summary,
+      question: question,
+    );
+
+    const Map<String, Object?> wire = <String, Object?>{
+      'kind': 'question',
+      'malformed': false,
+      'questions': <Object?>[
+        <String, Object?>{
+          'id': 'q1',
+          'header': 'Tone',
+          'prompt': 'Which tone?',
+          'multiSelect': false,
+          'options': <Object?>[
+            <String, Object?>{'label': 'Friendly', 'description': ''},
+            <String, Object?>{'label': 'Formal', 'description': ''},
+          ],
+        },
+      ],
+    };
+
+    testWidgets('S-103 · reopened, it draws the questions answered from the history, as live', (
+      WidgetTester tester,
+    ) async {
+      await pump(
+        tester,
+        reopened(<String, Object?>{
+          'interaction': wire,
+          'outcome': 'answered',
+          'answers': <Object?>[
+            <String, Object?>{
+              'questionId': 'q1',
+              'selected': <Object?>['Formal'],
+            },
+          ],
+        }),
+      );
+
+      expect(find.text(l10n.permissionQuestionAsked('Tone')), findsOneWidget);
+      expect(find.byType(AnsweredQuestions), findsOneWidget);
+      expect(find.textContaining('{'), findsNothing);
+    });
+
+    testWidgets('S-103 · reopened, a refusal says the reason recorded, and a lapse says so', (
+      WidgetTester tester,
+    ) async {
+      await pump(
+        tester,
+        reopened(<String, Object?>{
+          'interaction': wire,
+          'outcome': 'declined',
+          'reason': 'Not now.',
+        }),
+      );
+      expect(find.text(l10n.permissionQuestionDeclined('Not now.')), findsOneWidget);
+
+      await pump(tester, reopened(<String, Object?>{'interaction': wire, 'outcome': 'expired'}));
+      expect(find.text(l10n.permissionQuestionExpired), findsOneWidget);
+    });
+
+    testWidgets('S-103 · with no record here, it was answered elsewhere, and the CLI says how', (
+      WidgetTester tester,
+    ) async {
+      await pump(
+        tester,
+        reopened(<String, Object?>{'interaction': wire}, summary: 'Your answers: Formal'),
+      );
+
+      expect(find.text(l10n.permissionQuestionAnsweredElsewhere), findsOneWidget);
+      expect(find.text('Your answers: Formal'), findsOneWidget);
+    });
+
+    testWidgets('an end it cannot read is drawn like any other tool', (WidgetTester tester) async {
+      await pump(tester, reopened(<String, Object?>{'interaction': 'none'}));
+
+      expect(find.byType(AnsweredQuestions), findsNothing);
     });
   });
 }

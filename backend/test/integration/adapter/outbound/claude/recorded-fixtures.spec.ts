@@ -147,3 +147,69 @@ describe('the recorded fixtures of the Agent SDK', () => {
     );
   });
 });
+
+/** The `tool_result` of every `AskUserQuestion` of a recording, with the structured result beside it. */
+function questionResultsIn(name: string): { text: string; structured: unknown }[] {
+  const fixture = loadFixture(name);
+  const asked = new Set(
+    fixture.messages.flatMap((message) =>
+      message.type === 'assistant' && Array.isArray(message.message.content)
+        ? message.message.content
+            .filter((block) => block.type === 'tool_use' && block.name === 'AskUserQuestion')
+            .map((block) => (block as { id: string }).id)
+        : [],
+    ),
+  );
+
+  return fixture.messages.flatMap((message) => {
+    if (message.type !== 'user' || !Array.isArray(message.message.content)) {
+      return [];
+    }
+
+    return (message.message.content as { type: string; tool_use_id?: string; content?: unknown }[])
+      .filter((block) => block.type === 'tool_result' && asked.has(String(block.tool_use_id)))
+      .map((block) => ({
+        text: JSON.stringify(block.content),
+        structured: (message as { tool_use_result?: unknown }).tool_use_result,
+      }));
+  });
+}
+
+/**
+ * The questions of the recordings, answered — plan 24, B-11. They were recorded by a recorder that
+ * answers, so the CLI said the questions were answered, and its structured result carries the answers.
+ */
+describe('the recorded questions', () => {
+  it.each(['plan-turn', 'question-turn'])(
+    'were answered in %s, and the CLI said so — S-56',
+    (name) => {
+      const results = questionResultsIn(name);
+
+      expect(results.length).toBeGreaterThan(0);
+      for (const result of results) {
+        expect(result.text).toContain('Your questions have been answered');
+        expect(result.text).not.toContain('did not answer');
+        expect(
+          Object.keys((result.structured as { answers?: object } | undefined)?.answers ?? {}),
+        ).not.toHaveLength(0);
+      }
+    },
+  );
+
+  it('asked several questions in one call, one of them multiple and one with previews — S-57', () => {
+    const [asked] = loadFixture('question-turn').canUseTool.filter(
+      (entry) => entry.toolName === 'AskUserQuestion',
+    );
+    const questions = (
+      asked?.input as {
+        questions: { multiSelect: boolean; options: { preview?: string }[] }[];
+      }
+    ).questions;
+
+    expect(questions.length).toBeGreaterThanOrEqual(2);
+    expect(questions.some((question) => question.multiSelect)).toBe(true);
+    expect(
+      questions.some((question) => question.options.some((option) => option.preview !== undefined)),
+    ).toBe(true);
+  });
+});

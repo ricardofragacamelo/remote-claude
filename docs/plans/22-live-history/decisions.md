@@ -10,7 +10,7 @@ Plano: [README.md](README.md) · Cenários: [scenarios.md](scenarios.md) · Prog
 
 Decisão em aberto **não** impede planejar; impede **começar a fase** que depende dela.
 
-> Nasceram na [proposta](../../propostas/historico-ao-vivo-e-fiel.md#11-decisões-em-aberto) como HV-01…HV-12 e
+> Nasceram na [proposta](../../discovery/04-historico-ao-vivo-e-fiel.md#11-decisões-em-aberto) como HV-01…HV-12 e
 > foram renumeradas aqui (a coluna **Decisão** diz a origem). O usuário respondeu quatro em 2026-10-04, ao criar
 > o plano: D-12, D-14, D-15 e D-16 com a recomendação, e **a D-09 contra ela** (abrir a imagem, e não só o
 > marcador), o que acrescenta uma rota (B-12). As outras foram decididas pelo agente, com a recomendação da
@@ -24,7 +24,7 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-01 | Onde o plano entra na sequência | os planos 10, 12, 15, 17, 20 e 21 estão em andamento; `--at` renumera todos os seguintes | escopo | **2026-10-04 — no fim, como 22** (agente). Depende só de 04, 08 e 10, e nenhum plano depende dele. Renumerar com outras sessões escrevendo nos planos seria pedir conflito | ✅ |
-| D-02 | Mecanismo de acompanhamento (HV-01) | reconsulta no cliente, assinatura WS com sondagem no backend, ou `fs.watch` | B-01, B-16 | **2026-10-04 — assinatura WS com sondagem no backend** (agente, recomendação). `fs.watch` é proibido pela S-09 do 04; a reconsulta no cliente custa uma página por aba por tick ([proposta §5.1](../../propostas/historico-ao-vivo-e-fiel.md#51-opções-consideradas)). No molde do `workspace.watch` do 05 | ✅ |
+| D-02 | Mecanismo de acompanhamento (HV-01) | reconsulta no cliente, assinatura WS com sondagem no backend, ou `fs.watch` | B-01, B-16 | **2026-10-04 — assinatura WS com sondagem no backend** (agente, recomendação). `fs.watch` é proibido pela S-09 do 04; a reconsulta no cliente custa uma página por aba por tick ([proposta §5.1](../../discovery/04-historico-ao-vivo-e-fiel.md#51-opções-consideradas)). No molde do `workspace.watch` do 05 | ✅ |
 | D-03 | Versão do protocolo (HV-12) | se comando novo exige subir `v` | B-01 | **2026-10-04 — aditivo, sem subir `v`** (agente). O [05 §Versionamento](../../architecture/shared/05-websocket-protocol.md#versionamento-e-geração-de-tipos) só sobe `v` ao remover, renomear ou mudar semântica; comando novo que um servidor antigo não conhece é recusado como qualquer `type` desconhecido, e o cliente antigo ignora os eventos novos | ✅ |
 | D-04 | Que texto vale onde web e app divergem ("Continuar esta conversa" × "Retomar"; "Pronto" × "Concluída") | — | B-04 | **2026-10-04 — o do web** (agente). É o que o usuário comparou com o VS Code, e o app segue o web desde o [10 · D-04](../10-mobile-chat-layout/decisions.md#f0--normas). Os pares entram no `i18n-shared.json` para não divergirem de novo | ✅ |
 
@@ -45,7 +45,7 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-11 | Intervalos e tetos (HV-02) | o custo acima de 50 MB e com 4 conversas não foi medido | B-16, B-18 | **2026-10-04 — tick de 1 s com `activity = 'activeElsewhere'`, 10 s parada; 4 assinaturas por conexão, 16 conversas no total** (agente, recomendação), em `RC_TRANSCRIPT_FOLLOW_ACTIVE_MS`, `RC_TRANSCRIPT_FOLLOW_IDLE_MS`, `RC_TRANSCRIPT_FOLLOW_MAX_PER_CONNECTION` e `RC_TRANSCRIPT_FOLLOW_MAX`. A B-19 mede, e o resultado pode rever estes valores (o rastro fica aqui). **Medido em 2026-10-07** (`pnpm transcript:follow-bench`, store desta máquina, o maior transcript com 12,7 MB e 859 entradas): `getSessionInfo` 0,8 ms de mediana (3 ms no pior); `getSessionMessages` do maior 40,7 ms (65 ms no pior) e +30,5 MB de heap; o tick das 4 maiores juntas 2,3 ms; reler as 4, duas por vez, 184 ms. **Os valores ficam**: 1 s de tick custa ~0,1 % de um núcleo por conversa ativa, e a releitura só acontece quando o arquivo muda. Transcript acima de 50 MB não existe neste store e **não foi medido** (R-02 continua aberto) | ✅ |
-| D-12 | Mostrar "trabalhando em outro cliente" inferido (HV-10) | o transcript não grava o estado do turno | B-15, B-23, B-26 | **2026-10-04 — mostrar** (usuário, recomendação), com ajuda que diz que é inferência. Regra da [proposta §5.6](../../propostas/historico-ao-vivo-e-fiel.md#56-trabalhando-em-outro-cliente) | ✅ |
+| D-12 | Mostrar "trabalhando em outro cliente" inferido (HV-10) | o transcript não grava o estado do turno | B-15, B-23, B-26 | **2026-10-04 — mostrar** (usuário, recomendação), com ajuda que diz que é inferência. Regra da [proposta §5.6](../../discovery/04-historico-ao-vivo-e-fiel.md#56-trabalhando-em-outro-cliente) | ✅ |
 | D-13 | Subagente em execução em outro cliente (HV-09) | — | B-16 | **2026-10-04 — só ao abrir o card**, como no 08 · B-21 (agente, recomendação). O seguidor acompanha só a cadeia principal | ✅ |
 
 ## F3 — Acompanhar no web

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { opensSubagent, relativeTo, toolLabel } from '@/features/session/lib/tool-labels';
+import {
+  opensSubagent,
+  questionLabel,
+  relativeTo,
+  toolLabel,
+} from '@/features/session/lib/tool-labels';
 
 const FOLDER = '/home/dev/project';
 
@@ -149,5 +154,25 @@ describe('the line of a tool with a title — plan 22 B-29', () => {
     expect(
       titled('Agent', { description: 'Find it', subagent_type: 'Explore' }, 'Find it').key,
     ).toBe('sessions.tool.agent');
+  });
+});
+
+describe('the line of a question of Claude — plan 24, S-79', () => {
+  it('names one question by its header', () => {
+    expect(questionLabel([{ header: 'Library' }])).toEqual({
+      key: 'permission.question.asked',
+      params: { header: 'Library' },
+    });
+  });
+
+  it('counts several, and one with no header', () => {
+    expect(questionLabel([{ header: 'A' }, { header: 'B' }, { header: 'C' }])).toEqual({
+      key: 'permission.question.askedMany',
+      params: { count: 3 },
+    });
+    expect(questionLabel([{ header: '' }])).toEqual({
+      key: 'permission.question.askedMany',
+      params: { count: 1 },
+    });
   });
 });

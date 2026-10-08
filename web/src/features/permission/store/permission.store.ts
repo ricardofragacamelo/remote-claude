@@ -3,7 +3,7 @@ import type { StoreApi } from 'zustand/vanilla';
 import type { Envelope } from '@remote-claude/contracts';
 
 import { toExtension, toOutcome, toRequest } from '../services/permission.service';
-import type { PermissionOutcome, PermissionRequest } from '../types/permission';
+import type { PermissionOutcome, PermissionRequest, QuestionDraft } from '../types/permission';
 
 /** The questions of one session, and how the last few were settled. */
 export interface PermissionQueueState {
@@ -11,6 +11,16 @@ export interface PermissionQueueState {
 
   /** How the requests that have left the queue ended, newest last. */
   readonly settled: readonly PermissionOutcome[];
+
+  /**
+   * What was chosen so far on the card of each question, by request (plan 24, R-06). It outlives a
+   * reset — a replay republishes the question, and finds its draft — and goes when the question is
+   * over, however it ended.
+   */
+  readonly drafts: Readonly<Record<string, QuestionDraft>>;
+
+  /** Keeps what was chosen on the card of a question. */
+  saveDraft(requestId: string, draft: QuestionDraft): void;
 
   /** Applies one frame of the session's stream. */
   apply(frame: Envelope): void;
@@ -56,6 +66,10 @@ export function createPermissionQueueStore(): PermissionQueueStore {
   return createStore<PermissionQueueState>((set) => ({
     pending: [],
     settled: [],
+    drafts: {},
+
+    saveDraft: (requestId, draft) =>
+      set((state) => ({ ...state, drafts: { ...state.drafts, [requestId]: draft } })),
 
     apply: (frame) =>
       set((state) => {
@@ -75,6 +89,8 @@ export function createPermissionQueueStore(): PermissionQueueStore {
             ...state,
             pending: without(state.pending, outcome.requestId),
             settled: [...state.settled, settledOf(outcome, state.pending)],
+            // Answered here or elsewhere, or refused by the deadline: what was being chosen is moot.
+            drafts: withoutDraft(state.drafts, outcome.requestId),
           };
         }
 
@@ -119,13 +135,17 @@ export function createPermissionQueueStore(): PermissionQueueStore {
                   resolvedFrom: null,
                   toolUseId: expired.toolUseId === '' ? null : expired.toolUseId,
                   answeredHere: false,
+                  interaction: expired.interaction,
+                  answers: null,
                 },
               ],
+              drafts: withoutDraft(state.drafts, requestId),
             };
       }),
 
     reset: () => {
-      set({ pending: [], settled: [] });
+      // The drafts stay: the questions they belong to are republished, and find them again.
+      set((state) => ({ ...state, pending: [], settled: [] }));
     },
   }));
 }
@@ -187,7 +207,17 @@ function settledOf(
         ...outcome,
         toolUseId: asked.toolUseId === '' ? null : asked.toolUseId,
         answeredHere: asked.isAnswering && !outcome.auto && outcome.resolvedFrom !== 'mobile',
+        interaction: asked.interaction,
       };
+}
+
+function withoutDraft(
+  drafts: Readonly<Record<string, QuestionDraft>>,
+  requestId: string,
+): Readonly<Record<string, QuestionDraft>> {
+  return requestId in drafts
+    ? Object.fromEntries(Object.entries(drafts).filter(([id]) => id !== requestId))
+    : drafts;
 }
 
 function without(

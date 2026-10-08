@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/question-interaction.json",
+  "title": "QuestionInteraction",
+  "type": "object",
+  "description": "Claude asking the person something (`AskUserQuestion`) rather than asking leave to run a tool, with the questions the backend normalised out of the SDK's input. A client renders this and never reads the SDK's `input` (plan 24).",
+  "required": ["kind", "malformed", "questions"],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "question",
+      "description": "The only variant for now. `plan` (for `ExitPlanMode`) would be the second, and the generator has no `oneOf` yet."
+    },
+    "malformed": {
+      "type": "boolean",
+      "description": "The SDK's input could not be read safely — no questions or more than four, fewer than two or more than four options, an option with no label, a question with no options, a question repeated, a label repeated within a question. `questions` is then empty, the card offers only a refusal, and an `allow` is refused with `PERMISSION_ANSWERS_INVALID`."
+    },
+    "questions": {
+      "type": "array",
+      "maxItems": 4,
+      "description": "One to four, in the order Claude asked them; empty when `malformed`.",
+      "items": {
+        "type": "object",
+        "required": ["id", "header", "prompt", "multiSelect", "options"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 8,
+            "description": "`q1`…`q4`, by position — stable within the request, and what an answer names."
+          },
+          "header": {
+            "type": "string",
+            "maxLength": 60,
+            "description": "The short chip of the question (the SDK asks for 12 characters; the model does not always obey). Cut, never refused."
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "The question itself, as Claude wrote it. Text to show, never markup. Cut, never refused."
+          },
+          "multiSelect": {
+            "type": "boolean",
+            "description": "Several options may be chosen. A single choice is one label, or the free answer (`other`)."
+          },
+          "options": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4,
+            "description": "What Claude offers. The free answer (\"Other\") is not here: the screen offers it.",
+            "items": {
+              "type": "object",
+              "required": ["label", "description"],
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "maxLength": 200,
+                  "description": "Shown and answered exactly as it is — a label ending in \"(Recommended)\" keeps it, and a screen may highlight it but never pre-select it."
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 1000
+                },
+                "preview": {
+                  "type": "string",
+                  "maxLength": 20000,
+                  "description": "A mockup or a snippet, in markdown, rendered with the safe renderer — never HTML. Absent when the option has none."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -31,6 +31,12 @@ export interface PushTarget {
 export type PushParams = Readonly<Record<string, string>>;
 
 /**
+ * What a request asks of the person: leave to run a tool, or an answer to a question of Claude
+ * (plan 24, D-22). It chooses the words; the tap opens the same screen either way.
+ */
+export type PushSubject = 'permission' | 'question';
+
+/**
  * One notification, for one device.
  *
  * **It never carries the content of a file or the output of a command.** Not as a matter of
@@ -54,6 +60,7 @@ export class PushMessage {
     /** The request it is about, or `null` for a message about the device itself. */
     readonly reference: PermissionReference | null,
     readonly params: PushParams,
+    readonly subject: PushSubject = 'permission',
   ) {}
 
   /**
@@ -67,6 +74,17 @@ export class PushMessage {
     params: PushParams,
   ): PushMessage {
     return new PushMessage('permissionRequested', target, reference, params);
+  }
+
+  /**
+   * Claude asked the person something.
+   *
+   * It carries **nothing** of the question — not its text, not an option: a push passes through
+   * somebody else's server, and the question is Claude's words about somebody's work
+   * ([workflow §14](../../../../docs/discovery/02-workflow-de-sessoes.md)). The tap opens the same card.
+   */
+  static questionAsked(target: PushTarget, reference: PermissionReference): PushMessage {
+    return new PushMessage('permissionRequested', target, reference, {}, 'question');
   }
 
   /**

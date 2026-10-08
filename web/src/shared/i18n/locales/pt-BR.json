@@ -318,6 +318,7 @@
       "NotebookEdit": "Editar um notebook",
       "Read": "Ler um arquivo",
       "WebFetch": "Buscar uma página",
+      "AskUserQuestion": "Responder à pergunta do Claude",
       "unknown": "Usar {{tool}}"
     },
     "error": {
@@ -331,7 +332,9 @@
       "ruleExpiryTooLong": "Essa regra duraria mais do que esta instalação permite.",
       "ruleNotFound": "Essa regra não existe.",
       "ruleNotOwned": "Essa regra é de outra pessoa.",
-      "ruleExpiryInvalid": "Uma regra precisa expirar depois de ser criada."
+      "ruleExpiryInvalid": "Uma regra precisa expirar depois de ser criada.",
+      "answersInvalid": "Essas respostas não servem para a pergunta. Confira cada uma e envie de novo.",
+      "ruleToolInteractive": "As perguntas e os planos do Claude sempre chegam a você: uma regra não pode permiti-los."
     },
     "persist": {
       "title": "Parar de perguntar sobre isto?",
@@ -380,6 +383,33 @@
       "ruleDenied": "Recusado por uma regra sua",
       "somebody": "alguém",
       "allowAll": "Aprovado automaticamente — Permitir tudo"
+    },
+    "question": {
+      "label": "Pergunta do Claude",
+      "tabs": "As perguntas",
+      "answered": "respondida",
+      "progress": "Pergunta {{n}} de {{total}}",
+      "other": "Outro",
+      "otherPlaceholder": "Digite sua resposta…",
+      "otherAnswer": "Outro: {{text}}",
+      "recommended": "Recomendada",
+      "preview": "Prévia",
+      "noPreview": "Sem prévia para esta opção",
+      "submit": "Enviar respostas",
+      "decline": "Não responder",
+      "declineReason": "Por quê? O Claude lê isto (opcional)",
+      "declineConfirm": "Enviar sem responder",
+      "declineBack": "Voltar às perguntas",
+      "expired": "Esta pergunta expirou. Nada foi enviado.",
+      "malformed": "Não foi possível ler a pergunta do Claude, então ela não pode ser respondida aqui. Recusar avisa o Claude disso.",
+      "waiting": "Aguardando sua resposta a uma pergunta",
+      "pill": "O Claude te perguntou algo ({{count}})",
+      "notice": "O Claude te fez uma pergunta em {{folder}}.",
+      "asked": "Perguntou: {{header}}",
+      "askedMany": "Fez {{count}} perguntas",
+      "pending": "Aguardando resposta",
+      "declined": "Não respondida: {{reason}}",
+      "answeredElsewhere": "Respondida em outro lugar"
     }
   },
   "audit": {

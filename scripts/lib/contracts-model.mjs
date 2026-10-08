@@ -18,6 +18,7 @@ const METADATA = new Set(['$schema', '$id', 'title', 'description', 'x-kind', 'x
  */
 const LIMIT_KEYWORDS_OF_TYPE = new Map([
   ['maxItems', 'array'],
+  ['minItems', 'array'],
   ['maxLength', 'string'],
   ['minimum', 'integer'],
 ]);
@@ -79,12 +80,13 @@ export class ContractError extends Error {
  */
 
 /**
- * The bounds of one field — how many items, how many characters, the least value.
+ * The bounds of one field — how many items at most and at least, how many characters, the least
+ * value.
  *
  * They live in the schema for the reason `x-required-when` does: a ceiling written by hand in each
  * end is a ceiling that holds in two of them. An absent bound is no bound.
  *
- * @typedef {{ readonly maxItems?: number, readonly maxLength?: number, readonly minimum?: number }} Limits
+ * @typedef {{ readonly maxItems?: number, readonly minItems?: number, readonly maxLength?: number, readonly minimum?: number }} Limits
  */
 
 /**
@@ -158,10 +160,14 @@ function rejectUnknownKeywords(source, schema) {
  * @param {string} source
  * @param {string} name name to give a nested object
  * @param {Record<string, unknown>} schema
- * @param {Interface[]} collected
+ * @param {Collector} collector
  * @returns {TypeRef}
  */
-function resolveType(source, name, schema, collected) {
+function resolveType(source, name, schema, collector) {
+  if (schema['$ref'] !== undefined) {
+    return resolveRef(source, name, schema, collector);
+  }
+
   rejectUnknownKeywords(source, schema);
 
   const declared = schema['type'];
@@ -181,7 +187,78 @@ function resolveType(source, name, schema, collected) {
   if (resolve === undefined) {
     throw new ContractError(source, `\`${name}\` has unsupported type \`${declared}\``);
   }
-  return resolve(source, name, schema, collected);
+  return resolve(source, name, schema, collector);
+}
+
+/**
+ * Where a `$ref` may point: a file of `definitions/`, from a message (`../definitions/…`) or from
+ * another definition (`./…`, or the bare name).
+ */
+const DEFINITION_REF = /^(?:\.\.\/definitions\/|\.\/)?([a-z0-9-]+\.schema\.json)$/;
+
+/**
+ * A shape written once and used by several messages — the answers to a question travel in the
+ * response, in the event that settles it and in the history (plan 24, D-28).
+ *
+ * Without it the same object is written three times, and a field added to one copy is the field a
+ * client of another never learns about. Nothing but a `description` may stand beside the `$ref`: a
+ * sibling `type` or bound would be read here and silently mean something else from the definition.
+ *
+ * @param {string} source
+ * @param {string} name
+ * @param {Record<string, unknown>} schema
+ * @param {Collector} collector
+ * @returns {ObjectType}
+ */
+function resolveRef(source, name, schema, collector) {
+  const beside = Object.keys(schema).find((key) => key !== '$ref' && key !== 'description');
+  if (beside !== undefined) {
+    throw new ContractError(
+      source,
+      `\`${name}\` has \`${beside}\` beside \`$ref\` — the definition says what it is`,
+    );
+  }
+
+  const ref = schema['$ref'];
+  const file = typeof ref === 'string' ? DEFINITION_REF.exec(ref)?.[1] : undefined;
+  const definition = file === undefined ? undefined : collector.definitions.get(file);
+
+  if (definition === undefined) {
+    throw new ContractError(
+      source,
+      `\`${name}\` refers to ${JSON.stringify(ref)}, which is no file of \`definitions/\``,
+    );
+  }
+
+  return { kind: 'object', name: define(definition, collector) };
+}
+
+/**
+ * Collects a definition as an interface named by its `title`, once however many fields refer to it.
+ *
+ * @param {Document} definition
+ * @param {Collector} collector
+ * @returns {string} the name of the interface
+ */
+function define(definition, collector) {
+  const { source, schema } = definition;
+  const title = schema['title'];
+
+  if (typeof title !== 'string' || !/^[A-Z][A-Za-z0-9]*$/.test(title)) {
+    throw new ContractError(source, 'a definition needs a PascalCase `title` — it names the type');
+  }
+
+  if (!collector.defined.has(title)) {
+    if (schema['type'] !== 'object' || schema['properties'] === undefined) {
+      throw new ContractError(source, 'a definition is an object with `properties`');
+    }
+    // Marked before it is built, so a definition that refers back to itself ends instead of looping.
+    collector.defined.add(title);
+    rejectUnknownKeywords(source, schema);
+    collector.interfaces.push(toInterface(source, title, schema, collector));
+  }
+
+  return title;
 }
 
 /**
@@ -210,7 +287,7 @@ function resolveEnum(source, name, values) {
 /**
  * Resolves a schema of one declared `type`, once `const` and `enum` are ruled out.
  *
- * @typedef {(source: string, name: string, schema: Record<string, unknown>, collected: Interface[]) => TypeRef} Resolver
+ * @typedef {(source: string, name: string, schema: Record<string, unknown>, collector: Collector) => TypeRef} Resolver
  */
 
 /**
@@ -218,7 +295,7 @@ function resolveEnum(source, name, values) {
  *
  * @type {Resolver}
  */
-function resolveArray(source, name, schema, collected) {
+function resolveArray(source, name, schema, collector) {
   const items = schema['items'];
   if (typeof items !== 'object' || items === null) {
     throw new ContractError(source, `\`${name}\` is an array without \`items\``);
@@ -235,7 +312,7 @@ function resolveArray(source, name, schema, collected) {
       source,
       `${name}Item`,
       /** @type {Record<string, unknown>} */ (items),
-      collected,
+      collector,
     ),
   };
 }
@@ -245,12 +322,12 @@ function resolveArray(source, name, schema, collected) {
  *
  * @type {Resolver}
  */
-function resolveObject(source, name, schema, collected) {
+function resolveObject(source, name, schema, collector) {
   if (schema['properties'] === undefined) {
     // An object with no declared properties is an open map — `params` of an error, say.
     return { kind: 'record' };
   }
-  collected.push(toInterface(source, name, schema, collected));
+  collector.interfaces.push(toInterface(source, name, schema, collector));
   return { kind: 'object', name };
 }
 
@@ -438,10 +515,10 @@ function conditionalReason(source, name, because) {
  * @param {string} source
  * @param {string} name
  * @param {Record<string, unknown>} schema
- * @param {Interface[]} collected
+ * @param {Collector} collector
  * @returns {Interface}
  */
-function toInterface(source, name, schema, collected) {
+function toInterface(source, name, schema, collector) {
   const properties = /** @type {Record<string, Record<string, unknown>>} */ (
     schema['properties'] ?? {}
   );
@@ -463,7 +540,7 @@ function toInterface(source, name, schema, collected) {
       name: field,
       required: required.has(field),
       description: String(property['description'] ?? ''),
-      type: resolveType(source, `${name}${pascalCase(field)}`, property, collected),
+      type: resolveType(source, `${name}${pascalCase(field)}`, property, collector),
       limits: toLimits(source, `${name}.${field}`, property),
     })),
   };
@@ -474,24 +551,55 @@ function toInterface(source, name, schema, collected) {
  */
 
 /**
+ * What resolving the schemas accumulates: every named interface, dependencies first, and the
+ * shared definitions a `$ref` may name — by file name — with the ones already collected.
+ *
+ * @typedef {object} Collector
+ * @property {Interface[]} interfaces
+ * @property {ReadonlyMap<string, Document>} definitions
+ * @property {Set<string>} defined
+ */
+
+/**
  * Builds the model every emitter reads.
  *
  * @param {Document} envelope
  * @param {readonly Document[]} messages in a stable order — the generated files are committed,
  *   so the output has to depend only on the input, never on directory listing order
+ * @param {readonly Document[]} [definitions] the shapes of `definitions/`, which a `$ref` names by
+ *   file; each becomes one interface, named by its `title`, before any message that uses it
  * @returns {Model}
  */
-export function buildModel(envelope, messages) {
-  /** @type {Interface[]} */
-  const interfaces = [];
-  const envelopeInterface = toInterface(envelope.source, 'Envelope', envelope.schema, interfaces);
+export function buildModel(envelope, messages, definitions = []) {
+  /** @type {Collector} */
+  const collector = {
+    interfaces: [],
+    definitions: new Map(definitions.map((document) => [fileOf(document.source), document])),
+    defined: new Set(),
+  };
+  const { interfaces } = collector;
+
+  const titles = definitions.map((definition) => definition.schema['title']);
+  const twice = definitions.find((_, index) => titles.indexOf(titles[index]) !== index);
+  if (twice !== undefined) {
+    throw new ContractError(
+      twice.source,
+      `the definition \`${String(twice.schema['title'])}\` is declared twice`,
+    );
+  }
+
+  const envelopeInterface = toInterface(envelope.source, 'Envelope', envelope.schema, collector);
+
+  for (const definition of definitions) {
+    define(definition, collector);
+  }
 
   /** @type {Message[]} */
   const built = [];
 
   for (const { source, schema } of messages) {
     const message = toMessage(source, schema);
-    interfaces.push(toInterface(source, message.payload, schema, interfaces));
+    interfaces.push(toInterface(source, message.payload, schema, collector));
     built.push(message);
   }
 
@@ -503,6 +611,11 @@ export function buildModel(envelope, messages) {
   }
 
   return { envelope: envelopeInterface, interfaces, messages: built };
+}
+
+/** @param {string} source @returns {string} the file name a `$ref` uses */
+function fileOf(source) {
+  return source.split('/').at(-1) ?? source;
 }
 
 /**

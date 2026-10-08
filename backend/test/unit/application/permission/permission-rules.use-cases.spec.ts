@@ -7,9 +7,10 @@ import {
   PermissionRuleNotFoundError,
   PermissionRuleNotOwnedError,
   PermissionRulePatternInvalidError,
+  PermissionRuleToolInteractiveError,
   PermissionScopeUnsupportedError,
 } from '@domain/permission';
-import type { PermissionRule } from '@domain/permission';
+import { PermissionRule } from '@domain/permission';
 import { SessionId } from '@domain/session';
 import type { GrantPermissionRuleCommand } from '@application/permission';
 import {
@@ -168,6 +169,78 @@ describe('permission rules', () => {
       ]);
 
       expect([first.kind, second.kind]).toEqual(['settled', 'settled']);
+    });
+  });
+
+  describe('the tools that ask the person — plan 24, B-07', () => {
+    it.each(['AskUserQuestion', 'ExitPlanMode', 'AskUserQuestion(anything)'])(
+      'refuses an allow for %s, and grants nothing — S-31, S-32',
+      async (pattern) => {
+        await expect(grant({ pattern, scope: 'always' })).rejects.toBeInstanceOf(
+          PermissionRuleToolInteractiveError,
+        );
+        await expect(grant({ pattern, scope: 'always' })).rejects.toMatchObject({
+          code: 'PERMISSION_RULE_TOOL_INTERACTIVE',
+          messageKey: 'permission.error.ruleToolInteractive',
+          params: { toolName: pattern.split('(')[0] },
+        });
+        expect(await harness.rules.listFor(PERMISSION_OWNER)).toEqual([]);
+        expect(harness.trail.appended).toEqual([]);
+      },
+    );
+
+    it.each(['AskUserQuestion', 'ExitPlanMode'])(
+      'grants a deny for %s — S-31, S-32',
+      async (pattern) => {
+        const granted = await grant({ pattern, decision: 'deny', scope: 'always' });
+
+        expect(granted.decision).toBe('deny');
+      },
+    );
+
+    it('reads an allow already recorded as no answer, says so, and asks the person — S-29', async () => {
+      // One left from before this plan — the API would refuse it now, so it is stored directly.
+      const old = PermissionRule.create(
+        {
+          id: 'rule-old',
+          userId: PERMISSION_OWNER,
+          sessionId: null,
+          projectPath: null,
+          pattern: 'AskUserQuestion',
+          decision: 'allow',
+          scope: 'always',
+          createdAt: PERMISSION_NOW,
+          expiresAt: new Date(PERMISSION_NOW.getTime() + 60_000),
+        },
+        TEST_PERMISSION_SETTINGS.ruleMaxLifetimeMs,
+      );
+      await harness.rules.grant(old, PERMISSION_NOW);
+
+      const outcome = await harness.request.execute(
+        aPermissionQuestion({ toolName: 'AskUserQuestion', input: { questions: [] } }),
+      );
+
+      expect(outcome.kind).toBe('pending');
+      expect(harness.ignoredRules).toEqual(['rule-old']);
+    });
+
+    it('leaves no session rule from an allow of a plan, which no lookup would read', async () => {
+      await harness.request.execute(
+        aPermissionQuestion({ toolName: 'ExitPlanMode', input: { plan: '# plan' } }),
+      );
+
+      await harness.resolve.execute({
+        requestId: 'request-1',
+        decision: 'allow',
+        reason: null,
+        scope: 'session',
+        reach: 'tool',
+        userId: PERMISSION_OWNER,
+        resolvedFrom: 'web',
+        watchesSession: () => true,
+      });
+
+      expect(harness.registry.rulesOf(harness.registry.find('request-1')!.sessionId)).toEqual([]);
     });
   });
 

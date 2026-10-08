@@ -630,6 +630,7 @@ const boundedModel = buildModel(envelope, [
         forkAt: { type: 'string' },
         resumeId: { type: 'string' },
         items: { type: 'array', maxItems: 20, items: { type: 'string' } },
+        pair: { type: 'array', minItems: 2, items: { type: 'string' } },
         label: { type: 'string', maxLength: 200 },
         line: { type: 'integer', minimum: 1 },
       },
@@ -668,6 +669,7 @@ describe('a presence rule, in both languages', () => {
 describe('the bounds of a field, in TypeScript', () => {
   it('checks each bound in the guard, through its helper', () => {
     expect(boundedTypeScript).toContain("    withinMaxItems(record['items'], 20),");
+    expect(boundedTypeScript).toContain("    withMinItems(record['pair'], 2),");
     expect(boundedTypeScript).toContain("    withinMaxLength(record['label'], 200),");
     expect(boundedTypeScript).toContain("    atLeast(record['line'], 1),");
   });
@@ -681,6 +683,7 @@ describe('the bounds of a field, in TypeScript', () => {
   it('exports the bounds as a constant a validator of its own can read', () => {
     expect(boundedTypeScript).toContain('export const BOUNDED_PAYLOAD_LIMITS = {');
     expect(boundedTypeScript).toContain('  items: { maxItems: 20 },');
+    expect(boundedTypeScript).toContain('  pair: { minItems: 2 },');
     expect(boundedTypeScript).toContain('  label: { maxLength: 200 },');
     expect(boundedTypeScript).toContain('  line: { minimum: 1 },');
   });
@@ -695,9 +698,12 @@ describe('the bounds of a field, in Dart', () => {
     expect(boundedDart).toContain('bool boundedPayloadLimitsHold(Map<String, Object?> json) {');
   });
 
-  it('refuses a list longer than its bound, a string longer than its bound and a number under it', () => {
+  it('refuses a list longer or shorter than its bound, a string longer than its bound and a number under it', () => {
     expect(boundedDart).toContain(
       "if (json['items'] is List<Object?> && (json['items']! as List<Object?>).length > 20) {",
+    );
+    expect(boundedDart).toContain(
+      "if (json['pair'] is List<Object?> && (json['pair']! as List<Object?>).length < 2) {",
     );
     expect(boundedDart).toContain(
       "if (json['label'] is String && (json['label']! as String).length > 200) {",
@@ -721,7 +727,11 @@ describe('the bound helpers, at runtime', () => {
       `function ${name}\\(value: unknown, (?:max|min): number\\): boolean \\{\\n  return (.*);\\n\\}`,
     ).exec(boundedTypeScript)?.[1];
     return /** @type {(value: unknown, bound: number) => boolean} */ (
-      new Function('value', name === 'atLeast' ? 'min' : 'max', `return ${String(source)};`)
+      new Function(
+        'value',
+        name === 'atLeast' || name === 'withMinItems' ? 'min' : 'max',
+        `return ${String(source)};`,
+      )
     );
   };
 
@@ -729,6 +739,9 @@ describe('the bound helpers, at runtime', () => {
     ['withinMaxItems', ['a', 'b'], 2, true],
     ['withinMaxItems', ['a', 'b', 'c'], 2, false],
     ['withinMaxItems', undefined, 2, true],
+    ['withMinItems', ['a', 'b'], 2, true],
+    ['withMinItems', ['a'], 2, false],
+    ['withMinItems', undefined, 2, true],
     ['withinMaxLength', 'ab', 2, true],
     ['withinMaxLength', 'abc', 2, false],
     ['withinMaxLength', 7, 2, true],

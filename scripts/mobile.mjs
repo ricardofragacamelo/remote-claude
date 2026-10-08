@@ -281,10 +281,11 @@ function coverage() {
 
 /**
  * Scenarios the app reads **as the web does**, under a name of no end of its own: the walking
- * skeleton's, and the conversation that grows while it is read (plan 22, B-36), whose steps and
- * texts — each with the key of either end — are one file for both.
+ * skeleton's, the conversation that grows while it is read (plan 22, B-36), whose steps and
+ * texts — each with the key of either end — are one file for both, and the questions of Claude
+ * both ends answer from the same recorded turn (plan 24, B-24).
  */
-const SHARED_BY_NAME = new Set(['vertical-ping', 'live-history']);
+const SHARED_BY_NAME = new Set(['vertical-ping', 'live-history', 'questions']);
 
 /**
  * The scenarios this end proves, by file name, and the version this build reports.

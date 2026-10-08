@@ -4,6 +4,10 @@
       "title": "O Claude está esperando por você",
       "body": "Ele quer executar {{toolName}}. Abra para permitir ou recusar."
     },
+    "question": {
+      "title": "O Claude tem uma pergunta para você",
+      "body": "Abra para responder."
+    },
     "device": {
       "approved": {
         "title": "Este celular foi liberado",

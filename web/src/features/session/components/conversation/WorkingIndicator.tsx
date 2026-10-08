@@ -22,6 +22,12 @@ export interface WorkingIndicatorProps {
   /** How many questions wait on the person. */
   readonly waiting: number;
 
+  /**
+   * Every one of them is a question of Claude, and none a permission — the indicator says it waits
+   * for an answer to a question, never what the question is (plan 24, B-16).
+   */
+  readonly questionsOnly?: boolean;
+
   /** Takes the person to the oldest question. */
   onGoToRequest?(): void;
 }
@@ -46,12 +52,13 @@ function Working({
   turn,
   tool,
   waiting,
+  questionsOnly = false,
   onGoToRequest,
 }: WorkingIndicatorProps): React.JSX.Element {
   const { t } = useTranslation();
   const seconds = useElapsed(turnSince);
   const asking = status === 'waitingPermission' || waiting > 0;
-  const label = labelOf({ asking, status, tool, turn }, t);
+  const label = labelOf({ asking, questionsOnly, status, tool, turn }, t);
 
   return (
     <div data-working-indicator className="flex min-w-0 items-center gap-1.5 text-ui-sm">
@@ -80,14 +87,21 @@ function Working({
 function labelOf(
   {
     asking,
+    questionsOnly,
     status,
     tool,
     turn,
-  }: { asking: boolean; status: SessionStatus; tool: string | null; turn: string },
+  }: {
+    asking: boolean;
+    questionsOnly: boolean;
+    status: SessionStatus;
+    tool: string | null;
+    turn: string;
+  },
   t: TFunction,
 ): string {
   if (asking) {
-    return t('sessions.working.waiting');
+    return questionsOnly ? t('permission.question.waiting') : t('sessions.working.waiting');
   }
 
   return status === 'running' && tool !== null

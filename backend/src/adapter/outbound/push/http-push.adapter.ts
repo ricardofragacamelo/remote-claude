@@ -132,7 +132,10 @@ export class HttpPushSender implements PushSender {
       return { token: message.target.token, data, android: { priority: 'high' } };
     }
 
-    const text = this.text.permission(message.target.locale.value, message.params);
+    const text =
+      message.subject === 'question'
+        ? this.text.question(message.target.locale.value)
+        : this.text.permission(message.target.locale.value, message.params);
 
     return {
       token: message.target.token,

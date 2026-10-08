@@ -75,6 +75,7 @@ describe('processEnvironment', () => {
       'RC_PUSH_CREDENTIALS_FILE',
       'RC_PUSH_ENDPOINT',
       'RC_PUSH_SCOPE',
+      'RC_QUESTION_TIMEOUT_MS',
       'RC_SESSION_DEFAULT_MODEL',
       'RC_SESSION_DEFAULT_PERMISSION_MODE',
       'RC_SESSION_IDLE_TTL_MS',

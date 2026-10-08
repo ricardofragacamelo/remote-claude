@@ -8,12 +8,13 @@ import {
 } from '@adapter/outbound/permission/emitter-permission.events';
 import { HubPermissionBroadcaster } from '@adapter/outbound/permission/hub-permission.broadcaster';
 import {
+  LogQuestionAnswered,
   RecordDecisionOnResolved,
   ReleaseAgentLoopOnResolved,
 } from '@adapter/outbound/permission/permission-resolved.listeners';
 import { RecordToolInvocationUseCase } from '@application/audit';
 import type { PermissionResolvedEvent } from '@application/permission';
-import { PermissionRequest } from '@domain/permission';
+import { PermissionRequest, normalizeQuestion } from '@domain/permission';
 import type { AuditEntry } from '@domain/audit';
 import { ConnectionRegistry } from '@infra/websocket/connection-registry';
 import { EventBuffer } from '@infra/websocket/event-buffer';
@@ -316,5 +317,112 @@ describe('the consumers of permission.resolved', () => {
     expect(log.lines.map((line) => line['msg'])).toContain(
       'the permission decision could not be written to the trail',
     );
+  });
+});
+
+/** A question of Claude, settled with the answers given — or refused, with none. */
+function anAnsweredQuestion(answered = true): PermissionResolvedEvent {
+  const input = {
+    questions: [
+      {
+        question: 'Which library?',
+        header: 'Library',
+        multiSelect: false,
+        options: [
+          { label: 'date-fns', description: '' },
+          { label: 'luxon', description: '' },
+        ],
+      },
+    ],
+  };
+  const request = PermissionRequest.open({
+    id: 'request-q',
+    sessionId: PERMISSION_SESSION,
+    userId: PERMISSION_OWNER,
+    projectPath: null,
+    toolUseId: 'toolu-q',
+    toolName: 'AskUserQuestion',
+    input,
+    interaction: normalizeQuestion(input),
+    riskHint: 'read',
+    requestedAt: PERMISSION_NOW,
+    expiresAt: PERMISSION_NOW,
+  });
+
+  request.resolve({
+    decision: answered ? 'allow' : 'deny',
+    reason: answered ? null : 'not now',
+    scope: 'once',
+    resolvedBy: PERMISSION_OWNER,
+    resolvedFrom: 'mobile',
+    auto: false,
+    ...(answered
+      ? { answers: [{ questionId: 'q1', selected: [], other: `${'x'.repeat(250)} private` }] }
+      : {}),
+    at: PERMISSION_NOW,
+  });
+
+  return { request };
+}
+
+describe('a question of Claude, once answered — plan 24, B-08', () => {
+  it('writes what was answered on the decision of the trail — S-36', async () => {
+    const written: AuditEntry[] = [];
+    const record = new RecordToolInvocationUseCase(
+      { append: (entry) => (written.push(entry), Promise.resolve()) },
+      new SequentialIds(),
+    );
+
+    new RecordDecisionOnResolved(record, new RecordingLogger().logger).handle(anAnsweredQuestion());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(written[0]?.decision).toBe('allowed');
+    expect(written[0]?.input.value).toMatchObject({
+      questions: [{ question: 'Which library?' }],
+      answers: [{ questionId: 'q1', selected: [], other: `${'x'.repeat(250)} private` }],
+    });
+  });
+
+  it('writes a refused question with its input as it came', async () => {
+    const written: AuditEntry[] = [];
+    const record = new RecordToolInvocationUseCase(
+      { append: (entry) => (written.push(entry), Promise.resolve()) },
+      new SequentialIds(),
+    );
+
+    new RecordDecisionOnResolved(record, new RecordingLogger().logger).handle(
+      anAnsweredQuestion(false),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(written[0]?.input.value).not.toHaveProperty('answers');
+  });
+
+  it('says at info that it was answered and how, never what; and what, cut, at debug — S-37', () => {
+    const log = new RecordingLogger();
+
+    new LogQuestionAnswered(log.logger).handle(anAnsweredQuestion());
+
+    const [info, debug] = log.withOp('permission.question.answered');
+    expect(info).toMatchObject({
+      level: 'info',
+      requestId: 'request-q',
+      questions: 1,
+      withOther: true,
+    });
+    expect(JSON.stringify(info)).not.toContain('private');
+    expect(debug).toMatchObject({
+      level: 'debug',
+      answers: [{ questionId: 'q1', selected: [], other: 'x'.repeat(200) }],
+    });
+  });
+
+  it('says nothing of a refusal, nor of a request that is not a question', () => {
+    const log = new RecordingLogger();
+
+    new LogQuestionAnswered(log.logger).handle(anAnsweredQuestion(false));
+    new LogQuestionAnswered(log.logger).handle(aResolvedEvent());
+
+    expect(log.withOp('permission.question.answered')).toEqual([]);
   });
 });

@@ -5,6 +5,7 @@ import { PermissionReasonRequiredError } from '../errors/permission-reason-requi
 import { PermissionRequestExpiredError } from '../errors/permission-request-expired.error';
 import { PermissionRequestNotFoundError } from '../errors/permission-request-not-found.error';
 import type { PermissionScope } from '../value-objects/permission-scope.value-object';
+import type { QuestionAnswer, QuestionInteraction } from '../value-objects/question.value-object';
 import type { RiskHint } from '../value-objects/risk-hint.value-object';
 
 /** Yes or no. There is no third value: silence is handled by the deadline, and it denies. */
@@ -55,6 +56,12 @@ export interface PermissionAnswer {
    */
   readonly via?: PermissionVia;
 
+  /**
+   * What the person answered, when the request was a question and they answered it — validated
+   * against the questions the server published, in their order. Absent on every other settlement.
+   */
+  readonly answers?: readonly QuestionAnswer[];
+
   readonly at: Date;
 }
 
@@ -102,6 +109,12 @@ export interface PermissionRequestOpening {
   readonly toolUseId: string | null;
   readonly toolName: string;
   readonly input: Readonly<Record<string, unknown>>;
+
+  /**
+   * The questions, when the request is Claude asking the person something rather than asking leave
+   * to run a tool — absent or `null` for every other request (plan 24).
+   */
+  readonly interaction?: QuestionInteraction | null;
   readonly riskHint: RiskHint;
   readonly requestedAt: Date;
   readonly expiresAt: Date;
@@ -135,6 +148,7 @@ export class PermissionRequest {
     readonly toolUseId: string | null,
     readonly toolName: string,
     readonly input: Readonly<Record<string, unknown>>,
+    readonly interaction: QuestionInteraction | null,
     readonly riskHint: RiskHint,
     readonly requestedAt: Date,
     expiresAt: Date,
@@ -151,6 +165,7 @@ export class PermissionRequest {
       opening.toolUseId,
       opening.toolName,
       opening.input,
+      opening.interaction ?? null,
       opening.riskHint,
       opening.requestedAt,
       opening.expiresAt,

@@ -37,6 +37,7 @@ import type { QueryFactory } from './query.factory';
 import { claudeEnvironment } from './claude-environment';
 import { markedEnvironment } from './process-marker';
 import { toContextUse, toInstallationModel, toMcpServer } from './installation-mapping';
+import { withAnswers } from './question-answers';
 import { buildSdkOptions } from './sdk-options.factory';
 import type { SessionLimits } from './sdk-options.factory';
 import { SdkMessageMapper } from './sdk-message.mapper';
@@ -244,8 +245,13 @@ export class SessionRunner implements ClaudeSessionHandle {
           'canUseTool answered',
         );
 
+        // An answered question goes back with its answers, in the SDK's shape — built here and
+        // nowhere else (plan 24, B-09). Without them Claude reads "did not answer the questions".
         return verdict.decision === 'allow'
-          ? { behavior: 'allow', updatedInput: input }
+          ? {
+              behavior: 'allow',
+              updatedInput: verdict.answers === null ? input : withAnswers(input, verdict.answers),
+            }
           : { behavior: 'deny', message: verdict.reason ?? 'denied' };
       });
   }

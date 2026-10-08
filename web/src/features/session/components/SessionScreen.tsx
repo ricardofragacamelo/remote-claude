@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import type { PlanMode } from '@/features/permission';
+import type { PermissionRequest, PlanMode } from '@/features/permission';
 import { Button } from '@/shared/components/ui/button';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 
@@ -141,6 +141,7 @@ export function SessionScreen({
               <PendingPill
                 count={requests.pending.length}
                 outOfView={finder.outOfView}
+                questionsOnly={onlyQuestions(requests.pending)}
                 onGoTo={finder.goToOldest}
               />
             </div>
@@ -245,6 +246,7 @@ function Working({
       turn={`${session.sessionId ?? ''}:${String(session.turns.length)}`}
       tool={running?.toolName ?? null}
       waiting={requests.pending.length}
+      questionsOnly={onlyQuestions(requests.pending)}
       onGoToRequest={finder.goToOldest}
     />
   );
@@ -521,4 +523,9 @@ function useInterruptOnce(session: LiveSession): () => void {
       session.interrupt();
     }
   };
+}
+
+/** Whether everything waiting on the person is a question of Claude — none a permission. */
+function onlyQuestions(pending: readonly PermissionRequest[]): boolean {
+  return pending.length > 0 && pending.every((request) => request.interaction !== null);
 }

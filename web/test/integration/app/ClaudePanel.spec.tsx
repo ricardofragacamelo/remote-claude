@@ -118,6 +118,37 @@ function question(requestId = 'req-1'): Record<string, unknown> {
   };
 }
 
+/** A question of Claude where the permission was: the same request, with an interaction. */
+function askedSomething(requestId = 'req-q'): Record<string, unknown> {
+  const asked = question(requestId);
+
+  return {
+    ...asked,
+    payload: {
+      ...(asked['payload'] as Record<string, unknown>),
+      toolName: 'AskUserQuestion',
+      title: 'permission.tool.AskUserQuestion',
+      input: { questions: [{ question: 'Which secret plan?' }] },
+      interaction: {
+        kind: 'question',
+        malformed: false,
+        questions: [
+          {
+            id: 'q1',
+            header: 'Secret',
+            prompt: 'Which secret plan?',
+            multiSelect: false,
+            options: [
+              { label: 'A', description: '' },
+              { label: 'B', description: '' },
+            ],
+          },
+        ],
+      },
+    },
+  };
+}
+
 describe('a new conversation is a draft — plan 08, B-33, D-07', () => {
   it('teaches the first conversation, and runs nothing until the first prompt — S-151, S-196', async () => {
     await onWorkbench();
@@ -619,6 +650,29 @@ describe('questions asked where nobody is looking — plan 08, B-42', () => {
     stop();
   });
 
+  it('says a question of Claude is one, on the notice of the other tab — plan 24, S-81', async () => {
+    const user = userEvent.setup();
+    const told: AppNotification[] = [];
+    const stop = onNotify((notification) => told.push(notification));
+    const mounted = await onWorkbench();
+    await startFromDraft(user, live, { id: SESSION, folder: A });
+
+    await user.click(await tabNamed('b'));
+    await waitFor(() => {
+      expect(mounted.search()).toEqual({ folder: B });
+    });
+    live.receive(askedSomething());
+
+    await waitFor(() => {
+      expect(told.at(-1)).toMatchObject({
+        messageKey: 'permission.question.notice',
+        params: { folder: 'a' },
+      });
+    });
+    expect(JSON.stringify(told)).not.toContain('secret');
+    stop();
+  });
+
   it('brings the conversation back over the changes from the pill above the box, on the card — plan 09, S-68', async () => {
     const user = userEvent.setup();
     await onWorkbench();
@@ -736,6 +790,21 @@ describe('the notifications of the browser — plan 08, B-42, D-21', () => {
     await choose(user, t('sessions.menu.open'), t('sessions.browserNotice.turnOff'));
     live.receive(question('req-3'));
     expect(browser.shown).toHaveLength(2);
+  });
+
+  it('says a question of Claude is one, and never what it asks — plan 24, S-81', async () => {
+    const user = userEvent.setup();
+    const browser = browserAnswering('granted');
+    await onWorkbench();
+    await startFromDraft(user, live, { id: SESSION, folder: A });
+    await choose(user, t('sessions.menu.open'), t('sessions.browserNotice.turnOn'));
+    await user.keyboard('{Escape}');
+
+    hidden(true);
+    live.receive(askedSomething());
+
+    expect(browser.shown).toEqual([t('permission.question.notice', { folder: 'a' })]);
+    expect(browser.shown.join()).not.toContain('secret');
   });
 
   it('says how to allow them again when the browser refused, the badges going on — S-193', async () => {

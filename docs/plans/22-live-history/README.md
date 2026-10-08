@@ -19,7 +19,7 @@ D-17 que este plano revê) e [plano 10 — Layout do chat no app](../10-mobile-c
 [i18n-shared.json](../../../scripts/i18n-shared.json) da D-04). **Não depende** dos planos 11…21
 ([D-01](decisions.md#f0--normas-e-contrato)).
 
-**Origem:** a proposta [Histórico ao vivo e fiel ao Claude Code](../../propostas/historico-ao-vivo-e-fiel.md),
+**Origem:** a proposta [Histórico ao vivo e fiel ao Claude Code](../../discovery/04-historico-ao-vivo-e-fiel.md),
 de 2026-10-04, que tem a evidência de cada lacuna, as medições e as referências de linha. Este plano não a
 repete: aponta para ela.
 
@@ -32,7 +32,7 @@ Arquivos irmãos: [matriz de cenários](scenarios.md) · [decisões em aberto](d
 
 Em 2026-10-04 o usuário abriu a mesma conversa no leitor do remote-claude e na extensão do Claude Code
 no VS Code, e viu duas telas diferentes. O leitor parou na leitura inicial enquanto o VS Code seguia, e
-o que chegou não era o que o VS Code mostra ([proposta §4.1](../../propostas/historico-ao-vivo-e-fiel.md#41-comparação-lado-a-lado)).
+o que chegou não era o que o VS Code mostra ([proposta §4.1](../../discovery/04-historico-ao-vivo-e-fiel.md#41-comparação-lado-a-lado)).
 
 | O que o usuário vê | Causa no código | O que este plano faz |
 |---|---|---|
@@ -50,9 +50,9 @@ Três escolhas dão forma ao plano:
 
 | Escolha | Por quê |
 |---|---|
-| **Assinatura WS com sondagem no backend, não `fs.watch` nem reconsulta no cliente** ([D-02](decisions.md#f0--normas-e-contrato)) | o transcript só é lido pelo Agent SDK (S-09 do plano 04, `pnpm lint:arch`), então observar o arquivo está fora. Reconsultar do cliente custa uma página inteira por aba por tick. A sondagem é por conversa, compartilhada por todos que a acompanham, e o `getSessionInfo` custa ~2 ms; a releitura cara só acontece quando o `lastModified` muda ([proposta §5.4](../../propostas/historico-ao-vivo-e-fiel.md#54-custo-medido-em-2026-10-04-na-conversa-ebfc173a)) |
+| **Assinatura WS com sondagem no backend, não `fs.watch` nem reconsulta no cliente** ([D-02](decisions.md#f0--normas-e-contrato)) | o transcript só é lido pelo Agent SDK (S-09 do plano 04, `pnpm lint:arch`), então observar o arquivo está fora. Reconsultar do cliente custa uma página inteira por aba por tick. A sondagem é por conversa, compartilhada por todos que a acompanham, e o `getSessionInfo` custa ~2 ms; a releitura cara só acontece quando o `lastModified` muda ([proposta §5.4](../../discovery/04-historico-ao-vivo-e-fiel.md#54-custo-medido-em-2026-10-04-na-conversa-ebfc173a)) |
 | **Um evento, um formato** | o que chega pelo acompanhamento tem a forma do histórico e da sessão viva, e é dobrado pelo **mesmo** redutor (B-03 do 04) no web e pela mesma `Conversation` no app. Não nasce um terceiro formato |
-| **A ordem é a do SDK, nunca a do relógio** | o SDK devolve a cadeia `parentUuid`, que é o que o modelo viu; o prompt enfileirado tem timestamp anterior ao resultado que o precede ([proposta §4.7](../../propostas/historico-ao-vivo-e-fiel.md#47-prompts-do-usuário-enfileirados-e-com-imagem)). Um cenário prende isso (S-21) |
+| **A ordem é a do SDK, nunca a do relógio** | o SDK devolve a cadeia `parentUuid`, que é o que o modelo viu; o prompt enfileirado tem timestamp anterior ao resultado que o precede ([proposta §4.7](../../discovery/04-historico-ao-vivo-e-fiel.md#47-prompts-do-usuário-enfileirados-e-com-imagem)). Um cenário prende isso (S-21) |
 
 ---
 
@@ -79,7 +79,7 @@ Três escolhas dão forma ao plano:
   autor por turno ([D-16](decisions.md#f5--fidelidade-no-web)).
 - **Subagente aninhado no mobile.** Fora por decisão do usuário no [10 · D-01](../10-mobile-chat-layout/decisions.md#f0--normas).
 - **Markdown nas mensagens do mobile.** Não foi pedido aqui e muda toda a tela da sessão
-  ([proposta §4.9](../../propostas/historico-ao-vivo-e-fiel.md#49-outras-divergências-entre-web-e-mobile-e-a-relação-com-o-plano-10)).
+  ([proposta §4.9](../../discovery/04-historico-ao-vivo-e-fiel.md#49-outras-divergências-entre-web-e-mobile-e-a-relação-com-o-plano-10)).
 - **Dizer qual é o outro cliente.** A origem `external` não diz se é VS Code ou terminal; o texto é
   "outro cliente".
 - **Mudar a listagem de conversas.** Continua com a sondagem de 10 s no web e "puxar para atualizar" no app.
@@ -134,7 +134,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Uma sondagem por conversa, adaptativa, com reset e tetos | B-16 | [backend/03-modules §transcript](../../architecture/backend/03-modules.md) | S-51…S-64 |
 | O handler WS: ack antes de tudo, soltura na queda | B-17 | [backend/06-realtime](../../architecture/backend/06-realtime.md) | S-65…S-70 |
 | Configuração e log de cada borda | B-18 | [shared/03-logging](../../architecture/shared/03-logging.md) | S-71, S-72 |
-| O custo medido no transcript grande e com várias conversas | B-19 | [proposta §5.4](../../propostas/historico-ao-vivo-e-fiel.md#54-custo-medido-em-2026-10-04-na-conversa-ebfc173a) | S-73 |
+| O custo medido no transcript grande e com várias conversas | B-19 | [proposta §5.4](../../discovery/04-historico-ao-vivo-e-fiel.md#54-custo-medido-em-2026-10-04-na-conversa-ebfc173a) | S-73 |
 | O web assina, junta, solta e reassina | B-20, B-21, B-22 | [web/01](../../architecture/web/README.md) · [web/04-state-and-data](../../architecture/web/04-state-and-data.md) | S-74…S-82 |
 | O leitor do web acompanha o fim, conta as novas e diz o estado | B-23 | [web/03-ui-system](../../architecture/web/03-ui-system.md) | S-83…S-88 |
 | O app assina, junta, solta e reassina | B-24, B-25 | [mobile/03-state-and-data](../../architecture/mobile/03-state-and-data.md) | S-89…S-95 |

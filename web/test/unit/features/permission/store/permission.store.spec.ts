@@ -76,6 +76,7 @@ describe('the permission queue', () => {
         ],
         isAnswering: false,
         reaches: [],
+        interaction: null,
       },
     ]);
   });
@@ -113,6 +114,8 @@ describe('the permission queue', () => {
         toolUseId: 'toolu-1',
         via: null,
         answeredHere: false,
+        interaction: null,
+        answers: null,
       },
     ]);
   });
@@ -179,6 +182,8 @@ describe('the permission queue', () => {
       toolUseId: 'toolu-1',
       via: null,
       answeredHere: false,
+      interaction: null,
+      answers: null,
     });
   });
 
@@ -323,5 +328,94 @@ describe('the permission queue', () => {
 
     expect(store().pending).toEqual([]);
     expect(store().settled).toEqual([]);
+  });
+});
+
+/** A question of Claude, as the server asks it. */
+const aQuestion = (): Envelope =>
+  requested({
+    requestId: 'req-q',
+    toolUseId: 'toolu-q',
+    toolName: 'AskUserQuestion',
+    defaultToNo: false,
+    interaction: {
+      kind: 'question',
+      malformed: false,
+      questions: [
+        {
+          id: 'q1',
+          header: 'Library',
+          prompt: 'Which library?',
+          multiSelect: false,
+          options: [
+            { label: 'date-fns', description: '' },
+            { label: 'luxon', description: '' },
+          ],
+        },
+      ],
+    },
+  });
+
+const DRAFT = { step: 0, selected: { q1: ['luxon'] }, other: {} };
+
+describe('the drafts of the questions — plan 24, B-13', () => {
+  beforeEach(() => {
+    forgetPermissionQueues();
+  });
+
+  it('keeps what was chosen by request, through a reset and the question republished — S-62', () => {
+    store().apply(aQuestion());
+    store().saveDraft('req-q', DRAFT);
+
+    store().reset();
+    store().apply(aQuestion());
+
+    expect(store().drafts['req-q']).toEqual(DRAFT);
+    expect(store().pending[0]?.interaction?.questions[0]?.id).toBe('q1');
+  });
+
+  it('drops the draft when the question is settled anywhere, and carries its questions to the line — S-63', () => {
+    store().apply(aQuestion());
+    store().saveDraft('req-q', DRAFT);
+
+    store().apply(
+      event('permission.resolved', {
+        requestId: 'req-q',
+        decision: 'allow',
+        auto: false,
+        resolvedBy: 'me',
+        resolvedFrom: 'mobile',
+        answers: [{ questionId: 'q1', selected: ['date-fns'] }],
+      }),
+    );
+
+    expect(store().drafts).toEqual({});
+    expect(store().settled.at(-1)).toMatchObject({
+      toolUseId: 'toolu-q',
+      interaction: { malformed: false },
+      answers: [{ questionId: 'q1', selected: ['date-fns'], other: null }],
+    });
+  });
+
+  it('drops the draft of a question that ran out of time, and keeps its questions — S-73', () => {
+    store().apply(aQuestion());
+    store().saveDraft('req-q', DRAFT);
+
+    store().expire('req-q');
+
+    expect(store().drafts).toEqual({});
+    expect(store().settled.at(-1)).toMatchObject({ decision: 'deny', auto: true, answers: null });
+    expect(store().settled.at(-1)?.interaction).not.toBeNull();
+  });
+
+  it('leaves the drafts of other questions alone', () => {
+    store().saveDraft('req-other', DRAFT);
+    store().apply(aQuestion());
+
+    store().apply(
+      event('permission.resolved', { requestId: 'req-q', decision: 'deny', auto: true }),
+    );
+
+    expect(store().drafts).toEqual({ 'req-other': DRAFT });
   });
 });

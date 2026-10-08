@@ -45,6 +45,25 @@ describe('PushMessage', () => {
     });
   });
 
+  describe('a question of Claude — plan 24, D-22', () => {
+    it('opens the same card, and carries nothing of the question — S-52', () => {
+      const message = PushMessage.questionAsked(target, reference);
+
+      expect(message).toMatchObject({
+        kind: 'permissionRequested',
+        subject: 'question',
+        reference,
+        params: {},
+        isSilent: false,
+        tag: 'req-1',
+      });
+    });
+
+    it('leaves a permission a permission', () => {
+      expect(PushMessage.permissionRequested(target, reference, {}).subject).toBe('permission');
+    });
+  });
+
   describe('the withdrawal', () => {
     // A provider cannot take a notification back, so the withdrawal is a message of its own.
     it('is silent, and says nothing', () => {

@@ -23,6 +23,7 @@ import {
   aTranscriptAudience,
   aTranscriptSession,
   conversationId,
+  noQuestionRecords,
   someMessages,
 } from '../../../support/builders/transcript.builder';
 import { FixedClock } from '../../../support/fakes/fixed-clock';
@@ -128,6 +129,7 @@ describe('FollowTranscriptUseCase — plan 22, B-16', () => {
       new SequentialIds(),
       settings,
       observer,
+      noQuestionRecords(),
     );
   });
 

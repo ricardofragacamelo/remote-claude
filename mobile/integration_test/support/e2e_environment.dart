@@ -100,6 +100,9 @@ class E2eScenario {
   /// An expected value, as a string.
   String text(String key) => expect[key]! as String;
 
+  /// An expected list of texts.
+  List<String> texts(String key) => (expect[key]! as List<Object?>).cast<String>();
+
   /// An expected list of integers.
   List<int> integers(String key) => (expect[key]! as List<Object?>).cast<int>();
 }

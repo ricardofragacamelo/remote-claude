@@ -21,6 +21,8 @@ describe('classifyRisk', () => {
     ['TaskGet', { taskId: '1' }],
     ['TaskUpdate', { taskId: '1', status: 'completed' }],
     ['TaskList', {}],
+    // A question to the person reads nothing and changes nothing — plan 24, D-10.
+    ['AskUserQuestion', { questions: [] }],
   ])('grades %s as a read', (toolName, input) => {
     expect(classifyRisk(toolName, input)).toBe('read');
   });

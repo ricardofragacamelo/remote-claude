@@ -55,6 +55,16 @@ export class PushTranslator {
     };
   }
 
+  /** Claude asked something (plan 24, D-22) — words of ours, never the question's. */
+  question(locale: string): PushText {
+    const language = languageOf(locale);
+
+    return {
+      title: this.instance.t('push.question.title', { lng: language }),
+      body: this.instance.t('push.question.body', { lng: language }),
+    };
+  }
+
   /** The phone may decide now (plan 17, F3) — in its language, with the same fallback. */
   deviceApproved(locale: string): PushText {
     const language = languageOf(locale);

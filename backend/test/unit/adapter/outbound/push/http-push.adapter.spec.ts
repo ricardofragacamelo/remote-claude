@@ -182,6 +182,20 @@ describe('sending a question', () => {
   });
 });
 
+describe('sending a question of Claude — plan 24, D-22', () => {
+  it('says there is a question, in the device language, and nothing of what it asks — S-52', async () => {
+    await sender().send(PushMessage.questionAsked(target, reference));
+
+    expect(provider.message['notification']).toEqual(new PushTranslator().question('pt-BR'));
+    expect(provider.message['data']).toEqual({
+      kind: 'permissionRequested',
+      sessionId: 'ses-1',
+      requestId: 'req-1',
+      expiresAt: '2026-09-18T10:02:00.000Z',
+    });
+  });
+});
+
 describe('withdrawing one', () => {
   const withdrawal = (): PushMessage => PushMessage.permissionResolved(target, reference);
 

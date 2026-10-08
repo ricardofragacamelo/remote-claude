@@ -50,6 +50,7 @@ describe('the permission request mapper', () => {
       resolvedFrom: null,
       auto: null,
       ruleId: null,
+      answers: null,
       extensionsUsed: 0,
       requestedAt: PERMISSION_NOW,
       expiresAt: new Date(PERMISSION_NOW.getTime() + 1_000),
@@ -79,6 +80,30 @@ describe('the permission request mapper', () => {
       resolvedFrom: 'mobile',
       auto: false,
       resolvedAt: written,
+    });
+  });
+
+  it('writes the answers to a question as the contract carries them — plan 24, S-35', () => {
+    const request = aRequest();
+    request.resolve({
+      decision: 'allow',
+      reason: null,
+      scope: 'once',
+      resolvedBy: PERMISSION_OWNER,
+      resolvedFrom: 'web',
+      auto: false,
+      answers: [
+        { questionId: 'q1', selected: ['luxon'], other: null },
+        { questionId: 'q2', selected: [], other: 'my own' },
+      ],
+      at: written,
+    });
+
+    expect(toRow(request, written)).toMatchObject({
+      answers: [
+        { questionId: 'q1', selected: ['luxon'] },
+        { questionId: 'q2', selected: [], other: 'my own' },
+      ],
     });
   });
 

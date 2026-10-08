@@ -9,10 +9,10 @@ você quer?" com quatro opções. A tela não mostrou a pergunta, mostrou o JSON
 e o **porquê**, registra como a referência (a extensão do Claude Code no VS Code) resolve o problema,
 mede o impacto nas três pontas e lista o que falta decidir antes de virar plano.
 **Relação com outras propostas:**
-- [workflow-de-sessoes.md](workflow-de-sessoes.md): as lacunas 1 e 2 do §4 deste documento são
+- [workflow-de-sessoes.md](02-workflow-de-sessoes.md): as lacunas 1 e 2 do §4 deste documento são
   exatamente o assunto aqui. A fase A do §21 ("Decisões estruturadas") inclui "`AskUserQuestion`
   respondida pela UI".
-- [multiplos-motores-de-agente.md](multiplos-motores-de-agente.md): o §6.4 define a pergunta
+- [multiplos-motores-de-agente.md](03-multiplos-motores-de-agente.md): o §6.4 define a pergunta
   estruturada como **interação canônica**.
 
 Esta proposta é o recorte mínimo que as duas exigem como pré-requisito, já na forma canônica.
@@ -87,7 +87,7 @@ O usuário pediu duas coisas:
 2. **O protocolo é nosso.** O cliente não lê o `input` cru do SDK. O backend normaliza as
    perguntas para um formato próprio e traduz a resposta de volta para o formato do SDK. Vale o
    [ADR-006](../architecture/shared/00-decisions.md) e a forma canônica de
-   [multiplos-motores §6.4](multiplos-motores-de-agente.md).
+   [multiplos-motores §6.4](03-multiplos-motores-de-agente.md).
 3. **Tudo o que já vale para permissão continua valendo:** idempotência por `requestId`, a
    primeira resposta vence, prazo vencido nega, só o dono responde, toda decisão é auditada
    ([05 §Regras não negociáveis](../architecture/shared/05-websocket-protocol.md)).
@@ -97,7 +97,7 @@ O usuário pediu duas coisas:
 5. **Texto do Claude é conteúdo, não interface.** Pergunta, `header`, rótulos e descrições
    aparecem como vieram, sem tradução. Já "Outro", "Enviar respostas", "Pergunta 2 de 3" etc. são
    chaves de i18n. O push **nunca** leva o texto da pergunta
-   ([workflow-de-sessoes §14](workflow-de-sessoes.md)).
+   ([workflow-de-sessoes §14](02-workflow-de-sessoes.md)).
 6. **Preview é markdown renderizado com segurança.** Nunca HTML. O `previewFormat` do SDK fica
    no default (`markdown`).
 7. **As três pontas mudam juntas.** É mudança de contrato WebSocket: backend, web e mobile no
@@ -250,7 +250,7 @@ A conferência "bate com as opções" aceita, numa pergunta de escolha múltipla
 
 - `checkPermissions` devolve **sempre** `ask` ("Answer questions?") e
   `requiresUserInteraction()` é `true`. Ou seja, a ferramenta passa pelo `canUseTool` em qualquer
-  modo; o modo `plan` foi medido ([discovery §10.9](../discovery/01-descoberta-claude-agent-sdk.md)).
+  modo; o modo `plan` foi medido ([discovery §10.9](01-descoberta-claude-agent-sdk.md)).
   `bypassPermissions` não foi medido, e o produto não oferece esse modo
   (`allowDangerouslySkipPermissions: false`).
 - `isReadOnly()` e `isConcurrencySafe()` são `true`: a ferramenta não tem efeito colateral.
@@ -466,7 +466,7 @@ interface PermissionVerdict {
 
 O `PermissionBridge.verdictOf` copia `answers` da resolução. O runner monta o `updatedInput`.
 Preferimos `answers` a um `updatedInput` genérico: a porta continua sem conhecer o SDK, e o veredito
-já fica na forma canônica de [multiplos-motores §6.4](multiplos-motores-de-agente.md) (D-03).
+já fica na forma canônica de [multiplos-motores §6.4](03-multiplos-motores-de-agente.md) (D-03).
 
 ### 7.5 Regras automáticas não respondem perguntas
 
@@ -818,11 +818,11 @@ Sigo a referência (§6) com os ajustes para o nosso contexto.
 
 | Proposta | O que ela pede | Como esta proposta atende |
 |---|---|---|
-| [workflow-de-sessoes §4](workflow-de-sessoes.md), lacunas 1 e 2 | veredito com respostas; tela de pergunta nas três pontas | é exatamente o escopo daqui |
-| [workflow-de-sessoes §10.2](workflow-de-sessoes.md) (objeto decisão) | `questions` com `id`, `kind`, opções com `id`, recomendação, `answer` por id | o fio já usa **id de pergunta** e resposta estruturada. A caixa de decisões (§10.3 de lá) pode **embrulhar** o card de pergunta sem mudar o contrato do pedido |
-| [workflow-de-sessoes §13.1-13.2](workflow-de-sessoes.md) (`QuestionResponder`, validação contra as opções) | resposta automática antes do humano, validada | a validação do §7.3 é a mesma que um respondedor automático vai usar; o ponto de encaixe é o `RequestPermissionUseCase` |
-| [multiplos-motores §6.4 e §8](multiplos-motores-de-agente.md) | interação canônica `question`; `permission.resolve` ganha `answers` | `interaction.kind = 'question'` e `answers` no resolve, sem nome de ferramenta do Claude no domínio do cliente |
-| [multiplos-motores §10.2](multiplos-motores-de-agente.md) e ME-15 (ordem M0 × WF-A) | "fazer canônico desde o início" | fazemos, sem esperar o M0. O M0 depois só generaliza a origem (`kind` do pedido e capacidade `questions`) |
+| [workflow-de-sessoes §4](02-workflow-de-sessoes.md), lacunas 1 e 2 | veredito com respostas; tela de pergunta nas três pontas | é exatamente o escopo daqui |
+| [workflow-de-sessoes §10.2](02-workflow-de-sessoes.md) (objeto decisão) | `questions` com `id`, `kind`, opções com `id`, recomendação, `answer` por id | o fio já usa **id de pergunta** e resposta estruturada. A caixa de decisões (§10.3 de lá) pode **embrulhar** o card de pergunta sem mudar o contrato do pedido |
+| [workflow-de-sessoes §13.1-13.2](02-workflow-de-sessoes.md) (`QuestionResponder`, validação contra as opções) | resposta automática antes do humano, validada | a validação do §7.3 é a mesma que um respondedor automático vai usar; o ponto de encaixe é o `RequestPermissionUseCase` |
+| [multiplos-motores §6.4 e §8](03-multiplos-motores-de-agente.md) | interação canônica `question`; `permission.resolve` ganha `answers` | `interaction.kind = 'question'` e `answers` no resolve, sem nome de ferramenta do Claude no domínio do cliente |
+| [multiplos-motores §10.2](03-multiplos-motores-de-agente.md) e ME-15 (ordem M0 × WF-A) | "fazer canônico desde o início" | fazemos, sem esperar o M0. O M0 depois só generaliza a origem (`kind` do pedido e capacidade `questions`) |
 
 **Recomendação (D-01):** fazer como **plano próprio**, com o número 22 e inserido antes do 19, que
 fica sempre por último. A justificativa é que o problema é real hoje, independe de workflow e de
@@ -996,9 +996,9 @@ Ordem por dependência. A fase de e2e fica **por último**, como em todo plano.
 - [02 — i18n](../architecture/shared/02-i18n.md).
 - [06 — estratégia de testes](../architecture/shared/06-testing-strategy.md) e
   [11 — protocolo de validação](../architecture/shared/11-validation-protocol.md).
-- [Discovery do Agent SDK §10.9](../discovery/01-descoberta-claude-agent-sdk.md).
-- [workflow-de-sessoes.md](workflow-de-sessoes.md) e
-  [multiplos-motores-de-agente.md](multiplos-motores-de-agente.md).
+- [Discovery do Agent SDK §10.9](01-descoberta-claude-agent-sdk.md).
+- [workflow-de-sessoes.md](02-workflow-de-sessoes.md) e
+  [multiplos-motores-de-agente.md](03-multiplos-motores-de-agente.md).
 - Planos relacionados:
   - [08 B-22](../plans/08-claude-panel/F2-rendering.md) (modo plan);
   - [09 F4](../plans/09-chat-layout/README.md) (permissão inline, web);

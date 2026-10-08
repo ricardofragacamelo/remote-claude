@@ -30,7 +30,9 @@ function plannedTargets() {
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));
     if (error instanceof ContractError) {
-      hint('the generator accepts object, string, integer, boolean, array, enum and const');
+      hint(
+        'the generator accepts object, string, integer, boolean, array, enum, const and a $ref to definitions/',
+      );
     }
     return null;
   }

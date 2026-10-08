@@ -13,6 +13,7 @@ import type {
   SessionPermissionGate,
 } from '@application/session';
 import { SESSION_BROADCASTER, SessionRegistry, observedStatus } from '@application/session';
+import { QUESTION_TOOL } from '@domain/permission';
 import type { PermissionResolution } from '@domain/permission';
 import { UserId } from '@domain/auth';
 import type { PermissionMode, SessionId } from '@domain/session';
@@ -23,6 +24,14 @@ const SESSION_ENDED = 'the session ended before the request was answered';
 
 /** What it is told when nobody answered in time. Silence never authorises. */
 const NOBODY_ANSWERED = 'nobody answered before the deadline';
+
+/**
+ * What it is told when nobody answered a **question** in time — said so that Claude does not take
+ * the silence for an answer ([24 · D-07](../../../../../docs/plans/24-structured-questions/decisions.md#f1--backend)).
+ * English, because it is for the model.
+ */
+const QUESTION_NOT_ANSWERED =
+  'The user did not answer in time. Do not assume an answer; ask again or stop.';
 
 /**
  * Whose session a request belongs to when the registry has already forgotten it.
@@ -87,7 +96,7 @@ export class PermissionBridge implements SessionPermissionGate {
         'canUseTool answered without asking anybody',
       );
 
-      return verdictOf(outcome.resolution);
+      return verdictOf(outcome.resolution, question.toolName);
     }
 
     // The one status the UI cannot afford to confuse with `running`: the loop has stopped on a
@@ -196,7 +205,7 @@ export class PermissionBridge implements SessionPermissionGate {
 
     // Not every resolution is one this process is waiting on: a rule may have answered without
     // anybody being asked, and another session's request reaches every consumer of the bus.
-    waiting?.release(verdictOf(resolution));
+    waiting?.release(verdictOf(resolution, event.request.toolName));
   }
 
   /** Moves the session's status from an event of the permission flow, and publishes the move. */
@@ -236,11 +245,11 @@ export class PermissionBridge implements SessionPermissionGate {
       };
 
       const onAbort = (): void => {
-        release({ decision: 'deny', reason: SESSION_ENDED });
+        release(ENDED);
       };
 
       if (question.signal.aborted) {
-        resolve({ decision: 'deny', reason: SESSION_ENDED });
+        resolve(ENDED);
         return;
       }
 
@@ -267,12 +276,21 @@ function fieldsOf(question: PermissionQuestion): Record<string, unknown> {
   };
 }
 
-/** A settled request, in the two values the agent loop understands. */
-function verdictOf(resolution: PermissionResolution): PermissionVerdict {
+/** The verdict of a request whose session has gone. */
+const ENDED: PermissionVerdict = { decision: 'deny', reason: SESSION_ENDED, answers: null };
+
+/** A settled request, in the values the agent loop understands — with the answers of a question. */
+function verdictOf(resolution: PermissionResolution, toolName: string): PermissionVerdict {
   return {
     decision: resolution.decision,
     // The deadline's refusal carries no reason, because nobody gave one. Claude still needs a
     // sentence to work with, and this is the only place it can honestly be supplied.
-    reason: resolution.reason ?? (resolution.decision === 'deny' ? NOBODY_ANSWERED : null),
+    reason: resolution.reason ?? (resolution.decision === 'deny' ? silenceFor(toolName) : null),
+    answers: resolution.answers ?? null,
   };
+}
+
+/** What the silence of the deadline says to Claude: of a question, that it was not answered. */
+function silenceFor(toolName: string): string {
+  return toolName === QUESTION_TOOL ? QUESTION_NOT_ANSWERED : NOBODY_ANSWERED;
 }

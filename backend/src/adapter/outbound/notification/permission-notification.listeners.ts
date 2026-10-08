@@ -72,6 +72,7 @@ export class NotifyOnPermissionRequested extends PushConsumer {
           // The **name** of the tool, and nothing from its input: a push passes through somebody
           // else's server (S-19).
           toolName: request.toolName,
+          question: request.interaction !== null,
         }),
       'the question could not be announced to the devices of this user',
     );

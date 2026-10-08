@@ -2,12 +2,15 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:remote_claude/core/network/contracts/protocol.g.dart';
+// The wire's own question classes stay out: the domain's are the ones read here (plan 24).
+import 'package:remote_claude/core/network/contracts/protocol.g.dart'
+    hide QuestionAnswer, QuestionInteraction;
 import 'package:remote_claude/features/permission/data/mappers/permission_mapper.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_event.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_outcome.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/question.dart';
 
 import '../../../../../support/builders/frames.dart';
 
@@ -719,6 +722,180 @@ void main() {
 
     test('keeps `via` on the same settlement about another tool', () {
       expect(settled('allowAll')?.about('toolu-9').via, AnswerVia.allowAll);
+    });
+  });
+
+  group('a question of Claude — plan 24, B-17', () {
+    Map<String, Object?> interaction(List<Object?> questions, {bool malformed = false}) =>
+        <String, Object?>{'kind': 'question', 'malformed': malformed, 'questions': questions};
+
+    const Map<String, Object?> library = <String, Object?>{
+      'id': 'q1',
+      'header': 'Library',
+      'prompt': 'Which library?',
+      'multiSelect': false,
+      'options': <Object?>[
+        <String, Object?>{'label': 'date-fns', 'description': 'small'},
+        <String, Object?>{'label': 'luxon', 'description': 'zones', 'preview': '# luxon'},
+      ],
+    };
+
+    test('S-82 · reads the questions the server normalised', () {
+      final PermissionRequest? request = requestOf(
+        requested(<String, Object?>{
+          'toolName': 'AskUserQuestion',
+          'interaction': interaction(<Object?>[library]),
+        }),
+      );
+
+      expect(
+        request?.interaction,
+        const QuestionInteraction(
+          questions: <Question>[
+            Question(
+              id: 'q1',
+              header: 'Library',
+              prompt: 'Which library?',
+              options: <QuestionOption>[
+                QuestionOption(label: 'date-fns', description: 'small'),
+                QuestionOption(label: 'luxon', description: 'zones', preview: '# luxon'),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
+
+    test('S-82 · leaves every other request without questions', () {
+      expect(requestOf(requested(const <String, Object?>{}))?.interaction, isNull);
+      expect(
+        requestOf(
+          requested(<String, Object?>{
+            'interaction': <String, Object?>{'kind': 'plan'},
+          }),
+        )?.interaction,
+        isNull,
+      );
+    });
+
+    test('S-82 · reads what it cannot read whole as a question that can only be refused', () {
+      final List<Object?> unreadable = <Object?>[
+        interaction(const <Object?>[], malformed: true),
+        interaction(const <Object?>[]),
+        interaction(<Object?>['Which?']),
+        interaction(<Object?>[
+          <String, Object?>{...library, 'id': ''},
+        ]),
+        interaction(<Object?>[
+          <String, Object?>{...library, 'prompt': 7},
+        ]),
+        interaction(<Object?>[
+          <String, Object?>{
+            ...library,
+            'options': <Object?>[
+              <String, Object?>{'label': 'only'},
+            ],
+          },
+        ]),
+        interaction(<Object?>[
+          <String, Object?>{
+            ...library,
+            'options': <Object?>[
+              <String, Object?>{'label': 'a'},
+              <String, Object?>{'label': ''},
+            ],
+          },
+        ]),
+        interaction(<Object?>[
+          <String, Object?>{
+            ...library,
+            'options': <Object?>[
+              <String, Object?>{'label': 'a'},
+              'b',
+            ],
+          },
+        ]),
+        <String, Object?>{'kind': 'question', 'questions': 'many'},
+      ];
+
+      for (final Object? each in unreadable) {
+        expect(
+          requestOf(requested(<String, Object?>{'interaction': each}))?.interaction,
+          QuestionInteraction.unreadable,
+          reason: '$each',
+        );
+      }
+    });
+
+    test('reads a missing header and description as empty, a blank preview as none', () {
+      final QuestionInteraction? read = requestOf(
+        requested(<String, Object?>{
+          'interaction': interaction(<Object?>[
+            <String, Object?>{
+              'id': 'q1',
+              'prompt': 'Q?',
+              'options': <Object?>[
+                <String, Object?>{'label': 'A', 'preview': ''},
+                <String, Object?>{'label': 'B', 'description': 7},
+              ],
+            },
+          ]),
+        }),
+      )?.interaction;
+
+      expect(read?.questions.single.header, '');
+      expect(read?.questions.single.multiSelect, isFalse);
+      expect(read?.questions.single.options, const <QuestionOption>[
+        QuestionOption(label: 'A'),
+        QuestionOption(label: 'B'),
+      ]);
+    });
+
+    test('S-82 · reads the answers of a settlement, and none when it carries none', () {
+      final PermissionOutcome? outcome = permissionOutcomeFrom(<String, Object?>{
+        'requestId': 'req-1',
+        'decision': 'allow',
+        'auto': false,
+        'answers': <Object?>[
+          <String, Object?>{
+            'questionId': 'q1',
+            'selected': <Object?>['luxon', 7],
+            'other': 'and more',
+          },
+          'x',
+          <String, Object?>{'selected': <Object?>[]},
+          <String, Object?>{'questionId': 'q2', 'selected': 'luxon'},
+        ],
+      });
+
+      expect(outcome?.answers, const <QuestionAnswer>[
+        QuestionAnswer(questionId: 'q1', selected: <String>['luxon'], other: 'and more'),
+      ]);
+      expect(
+        permissionOutcomeFrom(<String, Object?>{'requestId': 'r', 'decision': 'deny'})?.answers,
+        isNull,
+      );
+    });
+
+    test('S-94 · the server\'s revalidation of an answered question carries its questions too', () {
+      final PermissionLookup? lookup = permissionLookupFrom(<String, Object?>{
+        'status': 'resolved',
+        'requestId': 'req-1',
+        'decision': 'allow',
+        'auto': false,
+        'answers': <Object?>[
+          <String, Object?>{
+            'questionId': 'q1',
+            'selected': <Object?>['luxon'],
+          },
+        ],
+        'interaction': interaction(<Object?>[library]),
+      }, sessionId: 'session-1');
+
+      expect(lookup, isA<LookupSettled>());
+      final PermissionOutcome outcome = (lookup! as LookupSettled).outcome;
+      expect(outcome.interaction?.questions.single.id, 'q1');
+      expect(outcome.answers?.single.selected, <String>['luxon']);
     });
   });
 }

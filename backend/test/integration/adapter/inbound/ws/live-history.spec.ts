@@ -699,6 +699,52 @@ describe('the history read live — plan 22', () => {
     });
   });
 
+  describe('a question of Claude, followed — plan 24, B-21', () => {
+    const QUESTION = 'toolu_01GpjZVmiX4rEFumRubJuXzV';
+
+    beforeEach(async () => {
+      const db = harness.app.get<PersistenceContext>(PERSISTENCE_CONTEXT).db;
+      await db.execute(sql`TRUNCATE TABLE "permission_requests"`);
+    });
+
+    it('delivers the end of the question with what was answered here — S-100', async () => {
+      const history = recordedHistory('question-turn');
+      const end = history.findIndex((entry) =>
+        JSON.stringify(entry.message).includes(`"tool_use_id":"${QUESTION}"`),
+      );
+      const id = conversation(40, history.slice(0, end));
+      const answers = [{ questionId: 'q1', selected: ['Installation'] }];
+      const db = harness.app.get<PersistenceContext>(PERSISTENCE_CONTEXT).db;
+      await db.execute(sql`
+        INSERT INTO "permission_requests"
+          ("id", "user_id", "session_id", "tool_use_id", "tool_name", "input", "risk_hint", "status",
+           "decision", "answers", "requested_at", "expires_at")
+        VALUES
+          ('req-followed', ${SUBJECT}, '01J0ABCDEFGHJKMNPQRSTVWXYZ', ${QUESTION}, 'AskUserQuestion',
+           '{}'::jsonb, 'read', 'resolved', 'allow', ${JSON.stringify(answers)}::jsonb,
+           now(), now() + interval '10 minutes')
+      `);
+      const socket = await connected();
+      const followId = String(
+        (await follow(socket, id, history[end - 1]?.uuid)).payload?.['followId'],
+      );
+      await nextUpdate(socket, followId);
+
+      // The answer is written: the line of the question ends, in the conversation followed.
+      store.append(id, history.slice(end, end + 1), (written = Date.now()));
+      const update = await nextUpdate(socket, followId);
+      const completed = (
+        (update.payload?.['events'] ?? []) as { type: string; payload: Record<string, unknown> }[]
+      ).find((event) => event.type === 'tool.completed' && event.payload['toolUseId'] === QUESTION);
+
+      expect(completed?.payload['question']).toMatchObject({
+        interaction: { kind: 'question' },
+        outcome: 'answered',
+        answers,
+      });
+    });
+  });
+
   describe('the door of the e2e suite into Claude`s store — B-34', () => {
     /** What the door is asked to do, as the suite asks it. */
     const plant = (id: string, fixture: string, history = true): request.Test =>

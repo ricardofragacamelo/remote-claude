@@ -40,6 +40,7 @@ import { SESSION_ID } from './session.builder';
  */
 export const TEST_PERMISSION_SETTINGS: PermissionSettings = {
   timeoutMs: 1_000,
+  questionTimeoutMs: 10_000,
   extensionMs: 2_000,
   maxExtensions: 2,
   ruleLifetimeMs: 60_000,
@@ -57,6 +58,9 @@ export interface PermissionHarness {
 
   /** Failures the rule book reported instead of letting them decide anything. */
   readonly lookupFailures: readonly unknown[];
+
+  /** The `allow` rules the rule book found and would not read as an answer (plan 24, D-26). */
+  readonly ignoredRules: readonly string[];
   readonly broadcaster: RecordingPermissionBroadcaster;
   readonly events: RecordingPermissionEvents;
   readonly scheduler: ManualScheduler;
@@ -112,9 +116,17 @@ export function aPermissionModule(
   const rules = new InMemoryPermissionRuleRepository();
   const trail = new RecordingAuditEvents();
   const lookupFailures: unknown[] = [];
-  const ruleBook = new PermissionRuleBook(registry, rules, (error) => {
-    lookupFailures.push(error);
-  });
+  const ignoredRules: string[] = [];
+  const ruleBook = new PermissionRuleBook(
+    registry,
+    rules,
+    (error) => {
+      lookupFailures.push(error);
+    },
+    (rule) => {
+      ignoredRules.push(rule.id);
+    },
+  );
   const recordEvent = new RecordAuditEventUseCase(trail, ids);
   const grant = new GrantPermissionRuleUseCase(rules, recordEvent, ids, clock, settings);
 
@@ -139,6 +151,7 @@ export function aPermissionModule(
     trail,
     ruleBook,
     lookupFailures,
+    ignoredRules,
     broadcaster,
     events,
     scheduler,

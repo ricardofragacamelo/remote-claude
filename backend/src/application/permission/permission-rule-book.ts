@@ -1,4 +1,4 @@
-import { answeringRule } from '@domain/permission';
+import { answeringRule, ignoredAllow } from '@domain/permission';
 import type { PermissionRule, RuleQuestion } from '@domain/permission';
 import type { PermissionRegistry } from './permission-registry';
 import type { PermissionRuleRepository } from './ports/permission-rule.repository';
@@ -9,6 +9,12 @@ import type { PermissionRuleRepository } from './ports/permission-rule.repositor
  * A callback rather than a logger, for the same reason as the deadline's: `application/` has none.
  */
 export type RuleLookupFailureReporter = (error: unknown, requestId: string) => void;
+
+/**
+ * What the rule book does with an `allow` it found and may not read as an answer — one for a tool
+ * that asks the person (plan 24, D-26). A callback for the same reason: `application/` has no logger.
+ */
+export type IgnoredRuleReporter = (rule: PermissionRule, requestId: string) => void;
 
 /**
  * Every rule that may answer a request, from both places rules live.
@@ -42,6 +48,7 @@ export class PermissionRuleBook {
     private readonly registry: PermissionRegistry,
     private readonly rules: PermissionRuleRepository,
     private readonly reportFailure: RuleLookupFailureReporter,
+    private readonly reportIgnored: IgnoredRuleReporter,
   ) {}
 
   /** The rule that answers, or `null` when a human has to — whatever the reason. */
@@ -66,10 +73,16 @@ export class PermissionRuleBook {
       return { kind: 'unread' };
     }
 
-    const rule = answeringRule(
-      [...this.registry.rulesOf(question.subject.sessionId), ...persisted],
-      question,
-    );
+    const rules = [...this.registry.rulesOf(question.subject.sessionId), ...persisted];
+    const rule = answeringRule(rules, question);
+
+    if (rule === null) {
+      // Said, so an `allow` that stopped answering is not mistaken for one that was revoked.
+      const ignored = ignoredAllow(rules, question);
+      if (ignored !== null) {
+        this.reportIgnored(ignored, requestId);
+      }
+    }
 
     return rule === null ? { kind: 'none' } : { kind: 'rule', rule };
   }

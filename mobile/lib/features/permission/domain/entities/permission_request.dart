@@ -7,6 +7,7 @@ library;
 import 'dart:convert';
 
 import 'package:equatable/equatable.dart';
+import 'package:remote_claude/features/permission/domain/entities/question.dart';
 
 /// How dangerous the backend judged an invocation. Derived there, never here.
 ///
@@ -93,6 +94,7 @@ class PermissionRequest extends Equatable {
     this.scopes = const <PermissionScope>[PermissionScope.once],
     this.rule,
     this.reaches = const <RuleReach>[],
+    this.interaction,
   });
 
   /// Idempotency is by **this**, never by [toolUseId].
@@ -127,6 +129,10 @@ class PermissionRequest extends Equatable {
   /// How far a rule left by the answer may reach, as the server computed it. More than one is a
   /// choice on the card; the answer names one.
   final List<RuleReach> reaches;
+
+  /// The questions, when the request is Claude asking the person something rather than asking leave
+  /// to run a tool — `null` for every other request (plan 24).
+  final QuestionInteraction? interaction;
 
   /// Whether the deadline has already refused it at [now].
   bool isExpiredAt(DateTime now) => !now.isBefore(expiresAt);
@@ -165,6 +171,7 @@ class PermissionRequest extends Equatable {
     scopes: scopes,
     rule: rule,
     reaches: reaches,
+    interaction: interaction,
   );
 
   @override
@@ -181,5 +188,6 @@ class PermissionRequest extends Equatable {
     scopes,
     rule,
     reaches,
+    interaction,
   ];
 }

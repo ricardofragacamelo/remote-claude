@@ -19,6 +19,9 @@ export const SCHEMA_DIR = 'packages/contracts/schema';
 /** The envelope, which every message extends. */
 export const ENVELOPE = 'envelope.schema.json';
 
+/** The shapes several messages share, which a `$ref` names by file (plan 24, D-28). */
+export const DEFINITIONS = 'definitions';
+
 /**
  * Every message schema, in a stable order.
  *
@@ -49,7 +52,31 @@ export function messageSchemas(rootDir) {
   // recursive call a second time, and every nested schema would resolve outside `rootDir`.
   return walk(base)
     .map((full) => path.relative(rootDir, full).split(path.sep).join('/'))
-    .filter((relative) => relative !== `${SCHEMA_DIR}/${ENVELOPE}`)
+    .filter(
+      (relative) =>
+        relative !== `${SCHEMA_DIR}/${ENVELOPE}` &&
+        !relative.startsWith(`${SCHEMA_DIR}/${DEFINITIONS}/`),
+    )
+    .sort();
+}
+
+/**
+ * Every shared definition, in a stable order — none when the directory does not exist.
+ *
+ * @param {string} rootDir
+ * @returns {string[]} paths relative to `rootDir`
+ */
+export function definitionSchemas(rootDir) {
+  const base = path.join(rootDir, SCHEMA_DIR, DEFINITIONS);
+
+  if (!fs.existsSync(base)) {
+    return [];
+  }
+
+  return fs
+    .readdirSync(base)
+    .filter((name) => name.endsWith('.schema.json'))
+    .map((name) => `${SCHEMA_DIR}/${DEFINITIONS}/${name}`)
     .sort();
 }
 
@@ -84,6 +111,7 @@ export function targets(rootDir) {
   const model = buildModel(
     read(rootDir, `${SCHEMA_DIR}/${ENVELOPE}`),
     messageSchemas(rootDir).map((relative) => read(rootDir, relative)),
+    definitionSchemas(rootDir).map((relative) => read(rootDir, relative)),
   );
 
   return [

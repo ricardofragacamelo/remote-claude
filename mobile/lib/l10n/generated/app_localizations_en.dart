@@ -546,6 +546,101 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionErrorRuleNotFound => 'That rule does not exist.';
 
   @override
+  String get permissionToolAskUserQuestion => 'Answer Claude\'s question';
+
+  @override
+  String get permissionQuestionLabel => 'Claude\'s question';
+
+  @override
+  String permissionQuestionProgress(int n, int total) {
+    return 'Question $n of $total';
+  }
+
+  @override
+  String get permissionQuestionAnswered => 'answered';
+
+  @override
+  String get permissionQuestionOther => 'Other';
+
+  @override
+  String get permissionQuestionOtherPlaceholder => 'Type your answer…';
+
+  @override
+  String get permissionQuestionRecommended => 'Recommended';
+
+  @override
+  String get permissionQuestionPreview => 'Preview';
+
+  @override
+  String get permissionQuestionSeePreview => 'See preview';
+
+  @override
+  String get permissionQuestionBack => 'Back';
+
+  @override
+  String get permissionQuestionNext => 'Next';
+
+  @override
+  String get permissionQuestionSubmit => 'Send answers';
+
+  @override
+  String get permissionQuestionDecline => 'Don\'t answer';
+
+  @override
+  String get permissionQuestionDeclineReason => 'Why not? Claude reads this (optional)';
+
+  @override
+  String get permissionQuestionDeclineConfirm => 'Send without answering';
+
+  @override
+  String get permissionQuestionDeclineBack => 'Back to the questions';
+
+  @override
+  String get permissionQuestionExpired => 'This question ran out of time. Nothing was sent.';
+
+  @override
+  String get permissionQuestionMalformed =>
+      'Claude\'s question could not be read, so it cannot be answered here. Declining tells Claude so.';
+
+  @override
+  String get permissionQuestionWaiting => 'Waiting for your answer to a question';
+
+  @override
+  String permissionQuestionPill(String count) {
+    return 'Claude asked you something ($count)';
+  }
+
+  @override
+  String permissionQuestionAsked(String header) {
+    return 'Asked: $header';
+  }
+
+  @override
+  String permissionQuestionAskedMany(int count) {
+    return 'Asked $count questions';
+  }
+
+  @override
+  String get permissionQuestionPending => 'Waiting for an answer';
+
+  @override
+  String permissionQuestionDeclined(String reason) {
+    return 'Not answered: $reason';
+  }
+
+  @override
+  String get permissionQuestionAnsweredElsewhere => 'Answered elsewhere';
+
+  @override
+  String get permissionErrorAnswersInvalid =>
+      'Those answers do not fit the question. Check each one and send again.';
+
+  @override
+  String permissionQuestionOtherAnswer(String text) {
+    return 'Other: $text';
+  }
+
+  @override
   String get rulesTitle => 'Your rules';
 
   @override

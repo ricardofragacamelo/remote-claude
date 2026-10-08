@@ -551,6 +551,101 @@ class AppLocalizationsPt extends AppLocalizations {
   String get permissionErrorRuleNotFound => 'Essa regra não existe.';
 
   @override
+  String get permissionToolAskUserQuestion => 'Responder à pergunta do Claude';
+
+  @override
+  String get permissionQuestionLabel => 'Pergunta do Claude';
+
+  @override
+  String permissionQuestionProgress(int n, int total) {
+    return 'Pergunta $n de $total';
+  }
+
+  @override
+  String get permissionQuestionAnswered => 'respondida';
+
+  @override
+  String get permissionQuestionOther => 'Outro';
+
+  @override
+  String get permissionQuestionOtherPlaceholder => 'Digite sua resposta…';
+
+  @override
+  String get permissionQuestionRecommended => 'Recomendada';
+
+  @override
+  String get permissionQuestionPreview => 'Prévia';
+
+  @override
+  String get permissionQuestionSeePreview => 'Ver prévia';
+
+  @override
+  String get permissionQuestionBack => 'Voltar';
+
+  @override
+  String get permissionQuestionNext => 'Próxima';
+
+  @override
+  String get permissionQuestionSubmit => 'Enviar respostas';
+
+  @override
+  String get permissionQuestionDecline => 'Não responder';
+
+  @override
+  String get permissionQuestionDeclineReason => 'Por quê? O Claude lê isto (opcional)';
+
+  @override
+  String get permissionQuestionDeclineConfirm => 'Enviar sem responder';
+
+  @override
+  String get permissionQuestionDeclineBack => 'Voltar às perguntas';
+
+  @override
+  String get permissionQuestionExpired => 'Esta pergunta expirou. Nada foi enviado.';
+
+  @override
+  String get permissionQuestionMalformed =>
+      'Não foi possível ler a pergunta do Claude, então ela não pode ser respondida aqui. Recusar avisa o Claude disso.';
+
+  @override
+  String get permissionQuestionWaiting => 'Aguardando sua resposta a uma pergunta';
+
+  @override
+  String permissionQuestionPill(String count) {
+    return 'O Claude te perguntou algo ($count)';
+  }
+
+  @override
+  String permissionQuestionAsked(String header) {
+    return 'Perguntou: $header';
+  }
+
+  @override
+  String permissionQuestionAskedMany(int count) {
+    return 'Fez $count perguntas';
+  }
+
+  @override
+  String get permissionQuestionPending => 'Aguardando resposta';
+
+  @override
+  String permissionQuestionDeclined(String reason) {
+    return 'Não respondida: $reason';
+  }
+
+  @override
+  String get permissionQuestionAnsweredElsewhere => 'Respondida em outro lugar';
+
+  @override
+  String get permissionErrorAnswersInvalid =>
+      'Essas respostas não servem para a pergunta. Confira cada uma e envie de novo.';
+
+  @override
+  String permissionQuestionOtherAnswer(String text) {
+    return 'Outro: $text';
+  }
+
+  @override
   String get rulesTitle => 'Suas regras';
 
   @override

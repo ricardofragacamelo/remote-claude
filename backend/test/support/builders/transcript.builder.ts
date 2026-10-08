@@ -1,4 +1,4 @@
-import { TranscriptAudience } from '@application/transcript';
+import { QuestionHistory, TranscriptAudience } from '@application/transcript';
 import type { LiveConversationSource, TranscriptOriginSource } from '@application/transcript';
 import type { Clock } from '@domain/shared';
 import { ClaudeSessionId } from '@domain/transcript';
@@ -64,4 +64,9 @@ export function aTranscriptAudience(parts: AudienceParts = {}): TranscriptAudien
       activeWindowMs: parts.activeWindowMs ?? 120_000,
     },
   );
+}
+
+/** The questions of a history with no record of any answer here — what a test without questions needs. */
+export function noQuestionRecords(): QuestionHistory {
+  return new QuestionHistory({ recordsOf: () => Promise.resolve(new Map()) });
 }

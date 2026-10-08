@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/components/ui/button';
-import { claimArrival } from '../store/permission.store';
 import { patternsToConfirm, preselectedReach } from '../lib/reach';
+import { useArrivalFocus } from '../hooks/useArrivalFocus';
 import { EditPreviewView } from './EditPreviewView';
+import { PermissionCountdown } from './PermissionCountdown';
 import type {
   PermissionDecision,
   PermissionRequest,
@@ -70,10 +71,10 @@ export function PermissionCard({
   folder = null,
 }: PermissionCardProps): React.JSX.Element {
   const { t } = useTranslation();
-  const seconds = Math.ceil(remainingMs / 1_000);
   const [armed, setArmed] = useState<ScopeSuggestion | null>(null);
   const [reach, setReach] = useState<RuleReach | null>(() => preselectedReach(request.reaches));
-  const denyRef = useArrivalFocus(request);
+  // Refusal takes the focus on arrival, when the request leans to no (plan 09, D-13).
+  const denyRef = useArrivalFocus<HTMLButtonElement>(request.requestId, request.defaultToNo);
 
   return (
     <li
@@ -95,9 +96,7 @@ export function PermissionCard({
             defaultValue: t('permission.tool.unknown', { tool: request.toolName }),
           })}
         </h3>
-        <span className="text-xs opacity-70" role="timer">
-          {t('permission.card.remaining', { seconds })}
-        </span>
+        <PermissionCountdown remainingMs={remainingMs} />
       </div>
 
       <p className="text-xs uppercase opacity-70">{t(`permission.risk.${request.riskHint}`)}</p>
@@ -245,34 +244,6 @@ function ReachChooser({
       })}
     </fieldset>
   );
-}
-
-/** Whether the focus is where somebody writes: a field, or an editor. */
-function isWriting(element: Element | null): boolean {
-  return (
-    element instanceof HTMLTextAreaElement ||
-    element instanceof HTMLInputElement ||
-    (element instanceof HTMLElement && element.isContentEditable)
-  );
-}
-
-/**
- * The refusal takes the focus when the card arrives and the request leans to no — **unless somebody
- * is writing** (plan 09, D-13): with the focus in the prompt box, or in the editor, it stays there,
- * and an Enter meant for the prompt never answers the request. Only on arrival: a card drawn again
- * leaves the focus where it is.
- */
-function useArrivalFocus(request: PermissionRequest): React.RefObject<HTMLButtonElement | null> {
-  const denyRef = useRef<HTMLButtonElement>(null);
-  const { requestId, defaultToNo } = request;
-
-  useEffect(() => {
-    if (claimArrival(requestId) && defaultToNo && !isWriting(document.activeElement)) {
-      denyRef.current?.focus();
-    }
-  }, [requestId, defaultToNo]);
-
-  return denyRef;
 }
 
 interface PersistConfirmationProps {

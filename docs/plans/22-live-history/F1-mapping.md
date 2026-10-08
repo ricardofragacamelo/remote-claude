@@ -12,7 +12,7 @@ por `blockId`.
 
 **Por que antes do seguidor:** o que o seguidor envia é o mesmo evento do histórico. Sem o `blockId`, juntar a
 página com os envios perde blocos (dois pensamentos omitidos "iguais") ou os duplica
-([proposta §5.5](../../propostas/historico-ao-vivo-e-fiel.md#55-o-que-o-cliente-faz-com-o-que-chega)).
+([proposta §5.5](../../discovery/04-historico-ao-vivo-e-fiel.md#55-o-que-o-cliente-faz-com-o-que-chega)).
 
 ---
 

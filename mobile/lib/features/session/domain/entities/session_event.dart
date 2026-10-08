@@ -250,11 +250,16 @@ final class ToolFinished extends SessionEvent {
     this.summary,
     this.taskId,
     this.writtenAt = '',
+    this.question,
   });
 
   final String toolUseId;
   final ToolStatus status;
   final String? summary;
+
+  /// The question of an `AskUserQuestion`, as the contract carried it — read by the permission
+  /// feature, which owns questions (plan 24, B-22).
+  final Map<String, Object?>? question;
 
   /// The task a `TaskCreate` made or a `TaskUpdate` changed — what the task list keys it by.
   final String? taskId;
@@ -263,7 +268,15 @@ final class ToolFinished extends SessionEvent {
   final String writtenAt;
 
   @override
-  List<Object?> get props => <Object?>[seq, toolUseId, status, summary, taskId, writtenAt];
+  List<Object?> get props => <Object?>[
+    seq,
+    toolUseId,
+    status,
+    summary,
+    taskId,
+    writtenAt,
+    question,
+  ];
 }
 
 /// What a finished turn cost.

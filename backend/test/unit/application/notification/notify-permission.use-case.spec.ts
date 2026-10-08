@@ -26,6 +26,7 @@ const command: NotifyPermissionCommand = {
   requestId: 'req-1',
   expiresAt,
   toolName: 'Bash',
+  question: false,
 };
 
 /** The composition the module performs, repeated here so the use case is exercised as wired. */

@@ -245,6 +245,21 @@ void main() {
       expect(after.tools.single.summary, 'done');
     });
 
+    test('S-103 · keeps on the tool the question its end carried', () {
+      const Map<String, Object?> question = <String, Object?>{'outcome': 'declined'};
+      final Conversation after = applyAll(<SessionEvent>[
+        const ToolInvoked(
+          1,
+          toolUseId: 't1',
+          toolName: 'AskUserQuestion',
+          input: <String, Object?>{},
+        ),
+        const ToolFinished(2, toolUseId: 't1', status: ToolStatus.denied, question: question),
+      ]);
+
+      expect(after.tools.single.question, question);
+    });
+
     test('anything about a tool nobody invoked changes nothing', () {
       final Conversation after = applyAll(<SessionEvent>[
         const ToolOutput(1, toolUseId: 'unknown', chunk: 'lost'),

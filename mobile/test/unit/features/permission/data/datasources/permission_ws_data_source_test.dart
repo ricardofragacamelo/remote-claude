@@ -14,6 +14,7 @@ import 'package:remote_claude/features/permission/data/datasources/permission_ws
 import 'package:remote_claude/features/permission/domain/entities/permission_event.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_outcome.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/question.dart';
 import 'package:remote_claude/features/permission/domain/repositories/permission_repository.dart';
 
 import '../../../../../support/builders/frames.dart';
@@ -464,6 +465,38 @@ void main() {
       await settle();
 
       expect(seen, isEmpty);
+    });
+  });
+
+  group('answering a question of Claude — plan 24, B-17', () {
+    test('S-83 · sends the answers by question, the free answer only when there is one', () async {
+      await connectAndHandshake();
+
+      watch().answer(
+        const OutgoingAnswer(
+          frameId: 'req-frame-q',
+          requestId: 'req-q',
+          decision: PermissionDecision.allow,
+          scope: PermissionScope.once,
+          answers: <QuestionAnswer>[
+            QuestionAnswer(questionId: 'q1', selected: <String>['Usage', 'License']),
+            QuestionAnswer(questionId: 'q2', selected: <String>[], other: 'a wiki'),
+          ],
+        ),
+      );
+
+      expect(sentOfType('permission.resolve').single['payload'], <String, Object?>{
+        'requestId': 'req-q',
+        'decision': 'allow',
+        'scope': 'once',
+        'answers': <Object?>[
+          <String, Object?>{
+            'questionId': 'q1',
+            'selected': <Object?>['Usage', 'License'],
+          },
+          <String, Object?>{'questionId': 'q2', 'selected': <Object?>[], 'other': 'a wiki'},
+        ],
+      });
     });
   });
 }

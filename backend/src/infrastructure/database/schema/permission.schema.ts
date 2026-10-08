@@ -1,4 +1,13 @@
-import { boolean, check, index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  check,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 import { auditColumns, invocationColumns } from './columns';
@@ -34,6 +43,11 @@ export const permissionRequests = pgTable(
     auto: boolean('auto'),
     /** The rule that answered, when one did. No foreign key: a `session` rule is never stored. */
     ruleId: text('rule_id'),
+    /**
+     * What the person answered to a question — by question, the labels and the free answer apart.
+     * `NULL` on every other request, and on a row written before `0019` (plan 24, D-12).
+     */
+    answers: jsonb('answers'),
     extensionsUsed: integer('extensions_used').notNull().default(0),
     requestedAt: timestamp('requested_at', { withTimezone: true }).notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -49,6 +63,8 @@ export const permissionRequests = pgTable(
       table.userId,
       table.requestedAt.desc(),
     ),
+    // The history of a session finds the questions it asked by the tool call (plan 24, B-21).
+    index('permission_requests_tool_use_id_idx').on(table.toolUseId),
     check(
       'permission_requests_status_known',
       sql`${table.status} IN ('pending', 'resolved', 'expired')`,

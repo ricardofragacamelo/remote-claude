@@ -128,7 +128,7 @@ describe('PermissionBridge', () => {
       watchesSession: () => true,
     });
 
-    await expect(pending).resolves.toEqual({ decision: 'allow', reason: null });
+    await expect(pending).resolves.toEqual({ decision: 'allow', reason: null, answers: null });
   });
 
   it('is released by an answer that arrives while the request is still being written down', async () => {
@@ -151,6 +151,7 @@ describe('PermissionBridge', () => {
     await expect(bridge.ask(question())).resolves.toEqual({
       decision: 'deny',
       reason: 'not now',
+      answers: null,
     });
   });
 
@@ -187,6 +188,7 @@ describe('PermissionBridge', () => {
     await expect(bridge.ask(question({ requestId: 'request-2' }))).resolves.toEqual({
       decision: 'allow',
       reason: null,
+      answers: null,
     });
   });
 
@@ -203,6 +205,73 @@ describe('PermissionBridge', () => {
     await expect(pending).resolves.toEqual({
       decision: 'deny',
       reason: 'nobody answered before the deadline',
+      answers: null,
+    });
+  });
+
+  describe('a question of Claude — plan 24', () => {
+    const asking = (): PermissionQuestion =>
+      question({
+        toolName: 'AskUserQuestion',
+        input: {
+          questions: [
+            {
+              question: 'Which library?',
+              header: 'Library',
+              multiSelect: false,
+              options: [
+                { label: 'date-fns', description: '' },
+                { label: 'luxon', description: '' },
+              ],
+            },
+          ],
+        },
+      });
+
+    it('hands the loop the answers the person gave — S-46', async () => {
+      const pending = bridge.ask(asking());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      await harness.resolve.execute({
+        requestId: 'request-1',
+        decision: 'allow',
+        reason: null,
+        scope: 'once',
+        answers: [{ questionId: 'q1', selected: ['luxon'], other: null }],
+        userId: PERMISSION_OWNER,
+        resolvedFrom: 'web',
+        watchesSession: () => true,
+      });
+
+      await expect(pending).resolves.toEqual({
+        decision: 'allow',
+        reason: null,
+        answers: [{ questionId: 'q1', selected: ['luxon'], other: null }],
+      });
+    });
+
+    it('tells Claude a question nobody answered was not answered, not to assume one — S-50', async () => {
+      const pending = bridge.ask(asking());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      harness.scheduler.fire();
+
+      await expect(pending).resolves.toEqual({
+        decision: 'deny',
+        reason: 'The user did not answer in time. Do not assume an answer; ask again or stop.',
+        answers: null,
+      });
+    });
+
+    it('says the same to a redelivery of a question the deadline already refused', async () => {
+      const first = bridge.ask(asking());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      harness.scheduler.fire();
+      await first;
+
+      await expect(bridge.ask(asking())).resolves.toMatchObject({
+        decision: 'deny',
+        reason: 'The user did not answer in time. Do not assume an answer; ask again or stop.',
+      });
     });
   });
 
@@ -218,6 +287,7 @@ describe('PermissionBridge', () => {
       await expect(pending).resolves.toEqual({
         decision: 'deny',
         reason: 'the session ended before the request was answered',
+        answers: null,
       });
     });
 
@@ -280,6 +350,7 @@ describe('PermissionBridge', () => {
       await expect(bridge.ask(question({ input: { command: 'pnpm test' } }))).resolves.toEqual({
         decision: 'allow',
         reason: null,
+        answers: null,
       });
 
       const said = log.lines.find(
@@ -303,7 +374,7 @@ describe('PermissionBridge', () => {
       live.setPermissionMode('allowAll');
       await bridge.modeChanged(PERMISSION_SESSION, 'allowAll');
 
-      await expect(pending).resolves.toEqual({ decision: 'allow', reason: null });
+      await expect(pending).resolves.toEqual({ decision: 'allow', reason: null, answers: null });
       expect(log.lines.map((line) => line['msg'])).toContain(
         'the open requests of the session were re-read under its new mode',
       );

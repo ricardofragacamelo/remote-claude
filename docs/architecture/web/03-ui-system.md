@@ -187,6 +187,41 @@ Quando chega `permission.requested`:
 - Daqui se **chega à lista de regras**. É um dos dois pontos de entrada obrigatórios dela.
 - Resolvida em outro dispositivo → o card se atualiza sozinho mostrando quem resolveu.
 
+#### A pergunta — `QuestionCard`
+
+Um pedido com `interaction.kind = 'question'` (o `AskUserQuestion` do Claude) não é um "Permitir /
+Recusar": é o **card de pergunta**, no desvio do `PermissionRequestCard`, ao lado do
+`PlanApprovalCard` ([plano 24](../../plans/24-structured-questions/F3-web.md)). Ele segue a extensão
+do VS Code (o molde dos planos 09 e 10), com os ajustes da
+[proposta §10.4](../../discovery/05-perguntas-estruturadas.md#104-o-card-de-pergunta-comportamento-comum):
+
+- **uma pergunta por vez**, em abas com o `header`; a aba ganha a marca de respondida;
+- **escolha única** é radio, e marcar uma opção numa pergunta que **não** é a última **avança
+  sozinho** para a próxima; **escolha múltipla** é checkbox, que alterna e não avança. Inputs
+  nativos, estilizados, como no `PlanApprovalCard` (sem Radix);
+- **"Outro"** é sempre a última opção, criada pela tela; marcar abre um campo de texto com foco. Na
+  múltipla convive com as outras. Marcado e vazio **não** conta como resposta;
+- a opção cujo rótulo termina em "(Recommended)" é **destacada**, nunca pré-selecionada, e o rótulo
+  não muda;
+- **preview** só na escolha única com algum preview: um painel com o markdown seguro (o
+  `ChatMarkdown`) da opção em foco ou sob o mouse, em caixa monoespaçada, empilhado em tela estreita;
+  a opção sem preview diz "sem prévia";
+- **"Enviar respostas"** fica desabilitado até toda pergunta ter resposta; **"Não responder"** e Esc
+  abrem um motivo opcional — vazio, vai a chave padrão de recusa. Não há "Permitir", escopo nem
+  alcance;
+- contagem regressiva e "Estender" como no card de permissão; "enviando" bloqueia o card; com o
+  socket fora, o rascunho fica e o envio volta a valer quando ele volta. O rascunho é por
+  `requestId` e sobrevive ao replay do `attach`;
+- `malformed: true` → só a explicação e "Não responder";
+- teclado: ← e → trocam de pergunta, ↑ e ↓ andam nas opções, Enter ou espaço marcam, Ctrl/⌘+Enter
+  envia; `role="radiogroup"` / `role="group"` com `aria-checked`. O foco chega na **primeira opção**,
+  não na recusa (`defaultToNo: false`) — com a mesma exceção de quem está escrevendo.
+
+Depois de respondida, a linha da tool (`AnsweredQuestions`) mostra cada pergunta com a escolhida
+marcada, as outras esmaecidas e o texto do "Outro"; recusada mostra o motivo; sem respostas nossas
+(sessão de outro cliente), as perguntas e o resumo. O rótulo da linha é "Perguntou: {header}" ou
+"Fez {n} perguntas", e o aviso de espera diz "Aguardando sua resposta", nunca o texto da pergunta.
+
 ### Regras — onde a autorização é retirada
 
 Regra de permissão é autorização **antecipada** para executar comando na máquina do usuário.

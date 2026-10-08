@@ -17,7 +17,7 @@ e [shared/02-i18n](../../architecture/shared/02-i18n.md).
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-17 — Dados 🔲
+### B-17 — Dados ✅
 
 - `domain/entities/permission_request.dart`: `interaction` e `QuestionAnswer`.
 - `data/mappers/permission_mapper.dart`: lê `interaction` e `answers`.
@@ -26,7 +26,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
   `requestId`. Responder não passa pelo `approvalLock` ([D-11](decisions.md#f4--mobile)), e o
   `riskHint: 'read'` já tira a confirmação em dois passos.
 
-### B-18 — O card de pergunta 🔲
+### B-18 — O card de pergunta ✅
 
 `presentation/widgets/question_card.dart`, no desvio de `permission_panel.dart`, ao lado do
 `plan_approval_card.dart`. Uma pergunta por passo — "Pergunta 2 de 3", Voltar e Próxima —, porque
@@ -40,13 +40,13 @@ A tela de chegada do push (`/sessions/:sessionId/permissions/:requestId`) mostra
 em tela cheia quando o `GET` traz `interaction`, e as respostas quando já foi resolvida.
 `permission_card_view.dart` (`toolLabel`) ganha a chave nova.
 
-### B-19 — A pergunta respondida 🔲
+### B-19 — A pergunta respondida ✅
 
 `presentation/widgets/answered_questions.dart`, somente leitura, usado na tela de chegada e no
 `session/.../tool_card.dart`, que ganha um ramo para `AskUserQuestion` no card recolhível do plano
 22, no lugar do mapa cru. O rótulo da tool: "Perguntou: {header}" ou "Fez {n} perguntas".
 
-### B-20 — Avisos 🔲
+### B-20 — Avisos ✅
 
 O indicador da sessão diz "Aguardando sua resposta" para pergunta.
 

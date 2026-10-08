@@ -125,14 +125,32 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
       provide: PermissionRuleBook,
       inject: [PermissionRegistry, PERMISSION_RULE_REPOSITORY, LOGGER],
       useFactory: (registry: PermissionRegistry, rules: PermissionRuleRepository, logger: Logger) =>
-        new PermissionRuleBook(registry, rules, (error, requestId) => {
-          // Not a refusal and not an authorisation: the request goes to a human, as if no rule
-          // existed. Loud, because a rule that silently stopped answering looks like a revocation.
-          logger.error(
-            { op: 'permission.rule.lookup', layer: 'application', requestId, err: error },
-            'the permission rules could not be read; the request is put to a human',
-          );
-        }),
+        new PermissionRuleBook(
+          registry,
+          rules,
+          (error, requestId) => {
+            // Not a refusal and not an authorisation: the request goes to a human, as if no rule
+            // existed. Loud, because a rule that silently stopped answering looks like a revocation.
+            logger.error(
+              { op: 'permission.rule.lookup', layer: 'application', requestId, err: error },
+              'the permission rules could not be read; the request is put to a human',
+            );
+          },
+          (rule, requestId) => {
+            // An `allow` for a tool that asks the person is never read as an answer (plan 24,
+            // D-26). Said, so it is not mistaken for a revocation.
+            logger.debug(
+              {
+                op: 'permission.rule.lookup',
+                layer: 'application',
+                requestId,
+                ruleId: rule.id,
+                pattern: rule.ruleContent,
+              },
+              'an allow rule matched a tool that asks the person, and was not read as an answer',
+            );
+          },
+        ),
     },
     {
       provide: GrantPermissionRuleUseCase,
@@ -282,6 +300,12 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
               reason: command.reason ?? null,
               scope: command.scope ?? null,
               reach: command.reach ?? null,
+              answers:
+                command.answers?.map((given) => ({
+                  questionId: given.questionId,
+                  selected: given.selected,
+                  other: given.other ?? null,
+                })) ?? null,
               userId: context.userId,
               // The socket said which installation it is in the handshake; no installation is a
               // browser, which is the only other client there is.

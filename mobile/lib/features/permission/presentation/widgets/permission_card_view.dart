@@ -235,6 +235,7 @@ class _Heading extends StatelessWidget {
 /// A switch rather than a key built at runtime: a generated catalogue is what makes a missing key a
 /// compile error, and a key assembled from a string is a key nobody can check.
 String toolLabel(AppLocalizations l10n, String toolName) => switch (toolName) {
+  'AskUserQuestion' => l10n.permissionToolAskUserQuestion,
   'Bash' => l10n.permissionToolBash,
   'Write' => l10n.permissionToolWrite,
   'Edit' => l10n.permissionToolEdit,
@@ -563,6 +564,48 @@ class ExtendAction extends StatelessWidget {
         icon: const Icon(Icons.more_time),
         label: Text(l10n.permissionExtend),
       ),
+    );
+  }
+}
+
+/// The foot of a plan's card and of a question's: more time, an answer leaving, and what the last
+/// tap came to.
+class CardFooter extends StatelessWidget {
+  const CardFooter({
+    required this.card,
+    required this.blocked,
+    required this.onExtend,
+    super.key,
+    this.notice,
+    this.remaining,
+  });
+
+  final PermissionCard card;
+
+  /// How long is left, when the card counts it down at its foot.
+  final Duration? remaining;
+
+  /// Its answers are blocked — no device, no connection.
+  final bool blocked;
+  final VoidCallback onExtend;
+
+  /// What the last tap came to, when it did not leave.
+  final String? notice;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? said = notice;
+    final Duration? left = remaining;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        if (left != null) PermissionCountdown(remaining: left),
+        ExtendAction.forCard(card, blocked: blocked, onExtend: onExtend),
+        if (card.phase == CardPhase.sending)
+          NoteLine(AppLocalizations.of(context).permissionSending),
+        if (said != null) Text(said, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+      ],
     );
   }
 }

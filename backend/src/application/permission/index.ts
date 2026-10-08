@@ -17,7 +17,13 @@ export type { ExtendPermissionCommand } from './extend-permission.use-case';
 export { EndSessionPermissionsUseCase } from './end-session-permissions.use-case';
 export { DescribePermissionUseCase } from './describe-permission.use-case';
 export { PermissionRuleBook } from './permission-rule-book';
-export type { RuleLookup, RuleLookupFailureReporter } from './permission-rule-book';
+export type {
+  IgnoredRuleReporter,
+  RuleLookup,
+  RuleLookupFailureReporter,
+} from './permission-rule-book';
+export { answersPayload, interactionPayload } from './permission-payloads';
+export type { AnswerPayload } from './permission-payloads';
 export { GrantPermissionRuleUseCase } from './grant-permission-rule.use-case';
 export { RevokePermissionRuleUseCase } from './revoke-permission-rule.use-case';
 export { ListPermissionRulesUseCase } from './list-permission-rules.use-case';
@@ -43,3 +49,5 @@ export type {
   RuleRevocation,
 } from './ports/permission-rule.repository';
 export { PERMISSION_RULE_REPOSITORY } from './ports/permission-rule.repository';
+export type { QuestionRecord, QuestionRecordSource } from './ports/question-record.source';
+export { QUESTION_RECORD_SOURCE } from './ports/question-record.source';

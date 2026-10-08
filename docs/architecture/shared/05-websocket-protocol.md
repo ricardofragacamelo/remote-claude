@@ -459,6 +459,77 @@ Resposta:
 A obrigatoriedade condicional do `reason` é **do schema**, não de validação espalhada pelo
 código — ver [campo obrigatório por condição](#campo-obrigatório-por-condição).
 
+### A pergunta — `interaction`
+
+Quando o Claude chama `AskUserQuestion`, o pedido **continua sendo um pedido de permissão** — mesmo
+`requestId`, mesma idempotência, a primeira resposta vence, o prazo nega, só o dono responde, toda
+decisão é auditada — e ganha uma `interaction` do tipo `question`, com as perguntas **já
+normalizadas pelo backend**. O cliente desenha a `interaction` e nunca lê o `input` do SDK, que
+continua no payload para a auditoria e a depuração
+([plano 24](../../plans/24-structured-questions/README.md)):
+
+```jsonc
+{
+  "requestId": "req_…", "toolUseId": "toolu_…", "toolName": "AskUserQuestion",
+  "title": "permission.tool.AskUserQuestion",   // sem description: quem desenha é a interaction
+  "input": { "questions": [ … ] },
+  "riskHint": "read", "defaultToNo": false,      // a pergunta não tem efeito colateral
+  "suggestions": [], "reaches": [],               // não há "sempre responder assim"
+  "expiresAt": "…",                               // RC_QUESTION_TIMEOUT_MS, não o da permissão
+  "interaction": {
+    "kind": "question",                           // a única variante, por ora
+    "malformed": false,
+    "questions": [
+      { "id": "q1", "header": "Avaliação", "prompt": "Qual tipo de avaliação você quer?",
+        "multiSelect": false,
+        "options": [
+          { "label": "Backend (Recommended)", "description": "…", "preview": "```ts\n…\n```" },
+          { "label": "Frontend", "description": "…" }   // sem preview: o campo fica ausente
+        ] }
+    ]
+  }
+}
+```
+
+- **Ids pela posição** (`q1`…`q4`), estáveis dentro do pedido. Textos acima do `maxLength` do schema
+  são **truncados** na normalização, e não recusados: o texto é do Claude, e o pedido precisa chegar.
+  O "(Recommended)" no rótulo fica intacto — a resposta precisa do rótulo exato.
+- **`malformed: true`, com `questions: []`**, para o que não se lê com segurança: nenhuma pergunta ou
+  mais de quatro, menos de duas ou mais de quatro opções, opção sem rótulo, pergunta sem opções (o
+  modo estendido do CLI), texto de pergunta repetido, rótulo repetido na mesma pergunta. O cliente
+  mostra um card **só de recusa**, e o backend recusa um `allow`.
+- **O preview é markdown**, desenhado com o markdown seguro; nunca HTML.
+
+A resposta leva as escolhas **por id de pergunta**, com a lista de rótulos e o "Outro" em campo
+separado. A string unida por `", "` que o SDK espera só existe no adapter do backend:
+
+```jsonc
+{ "kind": "response", "type": "permission.resolve", "correlationId": "<id do request>",
+  "payload": { "requestId": "req_…", "decision": "allow",
+               "answers": [
+                 { "questionId": "q1", "selected": ["Backend (Recommended)"] },
+                 { "questionId": "q2", "selected": ["Lint", "Testes"], "other": "e a CI" }
+               ] } }
+```
+
+- **Toda pergunta é obrigatória**, e o backend valida as respostas contra as perguntas que ele mesmo
+  publicou. `allow` sem `answers`, `answers` num pedido que não é pergunta ou num `deny`, id
+  inexistente ou repetido, pergunta sem resposta, rótulo que não é opção daquela pergunta, duas
+  escolhas numa escolha única, "Outro" vazio depois de `trim` e `allow` num pedido `malformed` são
+  `PERMISSION_ANSWERS_INVALID` (422) — e o pedido **continua aberto**. Os `details[]` dizem a regra e
+  a pergunta, nunca o texto digitado.
+- **`scope` e `reach` são ignorados** numa pergunta: vale `once`, e nenhuma regra nasce.
+- **Recusar** é `deny` com `reason`, como em qualquer pedido; o cliente manda a chave padrão de recusa
+  quando a pessoa não escreve nada.
+- **No vencimento**, o Claude recebe um `deny` que diz o que aconteceu ("The user did not answer in
+  time…"), e as conexões recebem `permission.resolved`, como em qualquer pedido.
+
+`permission.resolved` leva as mesmas `answers` quando a decisão foi `allow` numa pergunta — para o
+outro cliente trocar o card pela pergunta respondida, para a linha da tool ao vivo, no replay do
+`session.attach` e no `GET` de estado. No histórico, as respostas chegam no campo `question` do
+`tool.completed`, casadas pelo `toolUseId` com o que o backend gravou; uma sessão respondida fora do
+produto não tem registro nosso e mostra as perguntas e o `summary`.
+
 ### Regras não negociáveis
 
 1. **Idempotência por `requestId`.** Múltiplos clientes observam a mesma sessão, e o cliente
@@ -877,15 +948,32 @@ O gatilho é `equals` (um valor), `absent: true` (o campo que decide está ausen
 `present: true` (está presente) — um dos três, nunca dois. O `because` é obrigatório: regra que
 ninguém consegue revisar é regra que ninguém mantém.
 
+**A exceção explicada: `answers` de uma pergunta.** "`answers` é obrigatório quando o pedido é uma
+pergunta" **não** cabe no `x-required-when`, porque o payload da resposta não tem o `toolName` — o
+que decide está no pedido, e não na resposta. A regra é **semântica**: mora no domínio do backend
+(`validateAnswers`), e devolve `PERMISSION_ANSWERS_INVALID` com o pedido aberto. Os limites das
+`answers` (`maxItems`, `maxLength`) continuam no schema.
+
 ### Limites de campo
 
-Três limites também vivem no schema, pelo mesmo motivo — `maxItems` (lista), `maxLength` (texto) e
-`minimum` (inteiro) — e o gerador recusa um limite que o tipo não honraria (`maxLength` num inteiro) ou
+Quatro limites também vivem no schema, pelo mesmo motivo — `maxItems` e `minItems` (lista),
+`maxLength` (texto) e `minimum` (inteiro) — e o gerador recusa um limite que o tipo não honraria (`maxLength` num inteiro) ou
 que nenhum guard conferiria (um limite nos itens de uma lista de escalares). Em TypeScript, cada um é
-uma cláusula do guard (`withinMaxItems`, `withinMaxLength`, `atLeast`) e uma constante exportada
+uma cláusula do guard (`withinMaxItems`, `withMinItems`, `withinMaxLength`, `atLeast`) e uma constante exportada
 (`SESSION_PROMPT_PAYLOAD_LIMITS`, …) que o validador do backend lê em vez de repetir o número; em Dart,
 um predicado `…LimitsHold` ao lado da classe. Campo ausente passa: se ele pode faltar é pergunta do
 obrigatório e do condicional.
+
+### Definições compartilhadas — `$ref`
+
+Uma forma que mais de uma mensagem carrega é escrita **uma vez**, em
+`packages/contracts/schema/definitions/`, e nomeada por `$ref` (`"../definitions/question-answer.schema.json"`):
+as respostas a uma pergunta viajam na resposta, no evento que a liquida e no histórico
+([24 · D-28](../../plans/24-structured-questions/decisions.md#f0--normas-e-contrato)). Cada definição
+vira **um** tipo, com o nome do seu `title` (`QuestionAnswer`, `QuestionInteraction`), nas duas pontas.
+Ao lado do `$ref` só cabe `description`: um `type` ou um limite irmão seria lido aqui e contradiria a
+definição em silêncio. O gerador recusa a referência a um arquivo que não é definição, a definição sem
+`title` PascalCase ou que não é objeto, e duas definições com o mesmo `title`.
 
 **Por que não validar isso em cada ponta.** Uma regra escrita à mão em três linguagens é uma
 regra que vale em duas delas — e a que fica para trás é sempre a que ninguém compila junto. O

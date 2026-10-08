@@ -319,8 +319,12 @@ class Conversation extends Equatable {
     ),
     ToolFinished() => _changeTool(
       event.toolUseId,
-      (ToolExecution tool) =>
-          tool.copyWith(status: event.status, summary: event.summary, taskId: event.taskId),
+      (ToolExecution tool) => tool.copyWith(
+        status: event.status,
+        summary: event.summary,
+        taskId: event.taskId,
+        question: event.question,
+      ),
     ),
     TurnFinished(:final TurnSummary turn) => _turn(turn),
     PromptQueued(:final QueuedPrompt prompt) => copyWith(

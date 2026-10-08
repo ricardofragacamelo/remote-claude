@@ -92,9 +92,11 @@ String workingLabel(
   required String turn,
   String? tool,
   int waiting = 0,
+  bool questionsOnly = false,
 }) {
   if (status == SessionStatus.waitingPermission || waiting > 0) {
-    return l10n.sessionWorkingWaiting;
+    // A question of Claude says it is one, never what it asks (plan 24, B-20).
+    return questionsOnly ? l10n.permissionQuestionWaiting : l10n.sessionWorkingWaiting;
   }
 
   return status == SessionStatus.running && tool != null

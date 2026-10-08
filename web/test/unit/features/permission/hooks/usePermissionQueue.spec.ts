@@ -203,3 +203,108 @@ describe('the permission queue hook', () => {
     expect(result.current.refusal).toBeNull();
   });
 });
+
+/** A question of Claude, as the server asks it. */
+const questionFrame = {
+  ...requestFrame,
+  id: 'frame-q',
+  payload: {
+    ...requestFrame.payload,
+    requestId: 'req-q',
+    toolName: 'AskUserQuestion',
+    title: 'permission.tool.AskUserQuestion',
+    defaultToNo: false,
+    suggestions: [],
+    interaction: {
+      kind: 'question',
+      malformed: false,
+      questions: [
+        {
+          id: 'q1',
+          header: 'Library',
+          prompt: 'Which library?',
+          multiSelect: false,
+          options: [
+            { label: 'date-fns', description: '' },
+            { label: 'luxon', description: '' },
+          ],
+        },
+      ],
+    },
+  },
+};
+
+describe('answering a question of Claude — plan 24, B-13', () => {
+  let sockets: InstalledWebSocket;
+
+  beforeEach(() => {
+    forgetPermissionQueues();
+    setAccessToken('token-1');
+    sockets = installFakeWebSocket();
+  });
+
+  afterEach(() => {
+    wsClient.close();
+    setAccessToken(null);
+  });
+
+  function mountWithQuestion() {
+    const mounted = renderHook(() => usePermissionQueue(SESSION));
+    act(() => {
+      wsClient.connect();
+      sockets.latest.open();
+      sockets.latest.receive(readyFrame);
+      sockets.latest.receive(questionFrame);
+    });
+    return mounted;
+  }
+
+  const resolves = (): readonly Record<string, unknown>[] =>
+    sockets.latest.frames().filter((sent) => sent['type'] === 'permission.resolve');
+
+  it('allows once, with the answers, and nothing to persist — S-61', () => {
+    const { result } = mountWithQuestion();
+    const [request] = result.current.pending;
+
+    act(() => {
+      result.current.answerQuestion(request!, [
+        { questionId: 'q1', selected: ['luxon'], other: null },
+      ]);
+    });
+
+    expect(resolves()[0]?.['payload']).toEqual({
+      requestId: 'req-q',
+      decision: 'allow',
+      scope: 'once',
+      answers: [{ questionId: 'q1', selected: ['luxon'] }],
+    });
+  });
+
+  it('refuses with what was written, or with our sentence for nothing — S-72', () => {
+    const { result } = mountWithQuestion();
+    const [request] = result.current.pending;
+
+    act(() => {
+      result.current.declineQuestion(request!, '  ');
+    });
+
+    expect(resolves()[0]?.['payload']).toEqual({
+      requestId: 'req-q',
+      decision: 'deny',
+      scope: 'once',
+      reason: 'The user chose not to answer the question.',
+    });
+  });
+
+  it('keeps the draft it is given, by request — S-62', () => {
+    const { result } = mountWithQuestion();
+    const draft = { step: 0, selected: { q1: ['luxon'] }, other: {} };
+
+    act(() => {
+      result.current.saveDraft('req-q', draft);
+    });
+
+    expect(result.current.drafts).toEqual({ 'req-q': draft });
+    expect(permissionQueueOf(SESSION).getState().drafts['req-q']).toEqual(draft);
+  });
+});

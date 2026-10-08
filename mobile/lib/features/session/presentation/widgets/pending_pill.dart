@@ -76,6 +76,7 @@ class PendingPill extends StatelessWidget {
     required this.outOfView,
     required this.onGoTo,
     super.key,
+    this.questionsOnly = false,
   });
 
   /// How many questions wait.
@@ -84,12 +85,18 @@ class PendingPill extends StatelessWidget {
   /// The card of one of them is out of view.
   final bool outOfView;
 
+  /// Every one of them is a question of Claude — "Claude asked you something (n)" (plan 24, B-20).
+  final bool questionsOnly;
+
   /// Takes the person to the oldest.
   final VoidCallback onGoTo;
 
   @override
   Widget build(BuildContext context) {
-    final String label = AppLocalizations.of(context).sessionPendingPill('$count');
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String label = questionsOnly
+        ? l10n.permissionQuestionPill('$count')
+        : l10n.sessionPendingPill('$count');
     final ColorScheme scheme = Theme.of(context).colorScheme;
 
     // Announced whenever a question is open — in view or not — so a question that arrives while the

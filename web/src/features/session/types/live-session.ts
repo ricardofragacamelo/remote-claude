@@ -1,3 +1,5 @@
+import type { QuestionAnswer, QuestionInteraction } from '@/features/permission';
+
 /** Where a session is, as the contract's `session.statusChanged` reports it. */
 export type SessionStatus =
   'starting' | 'idle' | 'thinking' | 'running' | 'waitingPermission' | 'closed';
@@ -110,6 +112,28 @@ export interface ToolExecution {
 
   /** The task of the list a `TaskCreate` made or a `TaskUpdate` changed, once it ended (B-20). */
   readonly taskId: string | null;
+
+  /**
+   * The question of an `AskUserQuestion`, as `tool.completed` carried it: the questions and what
+   * this backend recorded of how they ended (plan 24, B-22). Absent from any other tool, and from
+   * an older server.
+   */
+  readonly question?: ToolQuestion;
+}
+
+/** How a question of Claude ended, as the contract says it. */
+export type QuestionOutcome = 'answered' | 'declined' | 'expired';
+
+/** A question of Claude as the history carries it (plan 24, B-21). */
+export interface ToolQuestion {
+  readonly interaction: QuestionInteraction;
+
+  /** How it ended — `null` with no record of it here: answered in another client, say. */
+  readonly outcome: QuestionOutcome | null;
+  readonly answers: readonly QuestionAnswer[] | null;
+
+  /** Why it was refused, on `declined`. */
+  readonly reason: string | null;
 }
 
 /** A prompt waiting for the running turn to end — the backend's queue (plan 08, D-14). */

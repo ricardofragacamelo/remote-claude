@@ -159,15 +159,17 @@ function permissionMessage(
     readonly requestId: string;
     readonly expiresAt: Date;
     readonly toolName: string;
+    readonly question: boolean;
   },
 ): PushMessage {
-  return PushMessage.permissionRequested(
-    target,
-    {
-      sessionId: command.sessionId,
-      requestId: command.requestId,
-      expiresAt: command.expiresAt.toISOString(),
-    },
-    { toolName: command.toolName },
-  );
+  const reference = {
+    sessionId: command.sessionId,
+    requestId: command.requestId,
+    expiresAt: command.expiresAt.toISOString(),
+  };
+
+  // A question says nothing of itself, not even the tool's name (plan 24, D-22).
+  return command.question
+    ? PushMessage.questionAsked(target, reference)
+    : PushMessage.permissionRequested(target, reference, { toolName: command.toolName });
 }

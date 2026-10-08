@@ -542,6 +542,87 @@
   "permissionErrorRuleNotFound": "That rule does not exist.",
   "@permissionErrorRuleNotFound": { "description": "Translation of permission.error.ruleNotFound" },
 
+  "permissionToolAskUserQuestion": "Answer Claude's question",
+  "@permissionToolAskUserQuestion": {"description": "What the AskUserQuestion tool does"},
+
+  "permissionQuestionLabel": "Claude's question",
+  "@permissionQuestionLabel": {"description": "Accessibility label of the card of a question Claude asks"},
+
+  "permissionQuestionProgress": "Question {n} of {total}",
+  "@permissionQuestionProgress": {"description": "Which step of the questions is on screen", "placeholders": {"n": {"type": "int"}, "total": {"type": "int"}}},
+
+  "permissionQuestionAnswered": "answered",
+  "@permissionQuestionAnswered": {"description": "The mark of a question that has an answer"},
+
+  "permissionQuestionOther": "Other",
+  "@permissionQuestionOther": {"description": "The free answer, always the last option"},
+
+  "permissionQuestionOtherPlaceholder": "Type your answer…",
+  "@permissionQuestionOtherPlaceholder": {"description": "The field of the free answer"},
+
+  "permissionQuestionRecommended": "Recommended",
+  "@permissionQuestionRecommended": {"description": "The mark of the option Claude recommends"},
+
+  "permissionQuestionPreview": "Preview",
+  "@permissionQuestionPreview": {"description": "Title of the sheet with the preview of an option"},
+
+  "permissionQuestionSeePreview": "See preview",
+  "@permissionQuestionSeePreview": {"description": "Opens the preview of an option"},
+
+  "permissionQuestionBack": "Back",
+  "@permissionQuestionBack": {"description": "Goes to the previous question"},
+
+  "permissionQuestionNext": "Next",
+  "@permissionQuestionNext": {"description": "Goes to the next question"},
+
+  "permissionQuestionSubmit": "Send answers",
+  "@permissionQuestionSubmit": {"description": "Sends the answers to Claude"},
+
+  "permissionQuestionDecline": "Don't answer",
+  "@permissionQuestionDecline": {"description": "Refuses to answer the question"},
+
+  "permissionQuestionDeclineReason": "Why not? Claude reads this (optional)",
+  "@permissionQuestionDeclineReason": {"description": "The optional reason for not answering"},
+
+  "permissionQuestionDeclineConfirm": "Send without answering",
+  "@permissionQuestionDeclineConfirm": {"description": "Confirms not answering"},
+
+  "permissionQuestionDeclineBack": "Back to the questions",
+  "@permissionQuestionDeclineBack": {"description": "Leaves the refusal and goes back to the questions"},
+
+  "permissionQuestionExpired": "This question ran out of time. Nothing was sent.",
+  "@permissionQuestionExpired": {"description": "A question nobody answered in time"},
+
+  "permissionQuestionMalformed": "Claude's question could not be read, so it cannot be answered here. Declining tells Claude so.",
+  "@permissionQuestionMalformed": {"description": "A question whose input could not be read"},
+
+  "permissionQuestionWaiting": "Waiting for your answer to a question",
+  "@permissionQuestionWaiting": {"description": "The working indicator: a question of Claude waits"},
+
+  "permissionQuestionPill": "Claude asked you something ({count})",
+  "@permissionQuestionPill": {"description": "The pill over the box with a question of Claude out of view", "placeholders": {"count": {"type": "String"}}},
+
+  "permissionQuestionAsked": "Asked: {header}",
+  "@permissionQuestionAsked": {"description": "The line of a tool that asked one question", "placeholders": {"header": {"type": "String"}}},
+
+  "permissionQuestionAskedMany": "Asked {count} questions",
+  "@permissionQuestionAskedMany": {"description": "The line of a tool that asked several questions", "placeholders": {"count": {"type": "int"}}},
+
+  "permissionQuestionPending": "Waiting for an answer",
+  "@permissionQuestionPending": {"description": "A question not answered yet"},
+
+  "permissionQuestionDeclined": "Not answered: {reason}",
+  "@permissionQuestionDeclined": {"description": "A question somebody chose not to answer", "placeholders": {"reason": {"type": "String"}}},
+
+  "permissionQuestionAnsweredElsewhere": "Answered elsewhere",
+  "@permissionQuestionAnsweredElsewhere": {"description": "A question answered in another client"},
+
+  "permissionErrorAnswersInvalid": "Those answers do not fit the question. Check each one and send again.",
+  "@permissionErrorAnswersInvalid": {"description": "The answers were refused by the server"},
+
+  "permissionQuestionOtherAnswer": "Other: {text}",
+  "@permissionQuestionOtherAnswer": {"description": "A free answer, as it was given", "placeholders": {"text": {"type": "String"}}},
+
   "rulesTitle": "Your rules",
   "@rulesTitle": { "description": "Title of the rules screen" },
 

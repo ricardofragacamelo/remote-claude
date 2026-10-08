@@ -451,7 +451,7 @@ describe('buildModel with a conditional requirement', () => {
 });
 
 /**
- * The bounds a field may declare — `maxItems`, `maxLength`, `minimum` — read off the schema so that
+ * The bounds a field may declare — `maxItems`, `minItems`, `maxLength`, `minimum` — read off the schema so that
  * a ceiling is written once for three languages (plan 08, B-01).
  */
 describe('buildModel with bounds', () => {
@@ -479,6 +479,12 @@ describe('buildModel with bounds', () => {
     });
   });
 
+  it('reads minItems on an array, beside maxItems', () => {
+    expect(
+      limitsOf({ type: 'array', minItems: 2, maxItems: 4, items: { type: 'string' } }),
+    ).toEqual({ maxItems: 4, minItems: 2 });
+  });
+
   it('reads maxLength on a string', () => {
     expect(limitsOf({ type: 'string', maxLength: 200 })).toEqual({ maxLength: 200 });
   });
@@ -494,6 +500,7 @@ describe('buildModel with bounds', () => {
   it.each([
     ['maxLength', 'integer', { type: 'integer', maxLength: 3 }],
     ['maxItems', 'string', { type: 'string', maxItems: 3 }],
+    ['minItems', 'string', { type: 'string', minItems: 3 }],
     ['minimum', 'string', { type: 'string', minimum: 1 }],
   ])('refuses %s on a %s, where it would mean nothing', (keyword, _type, property) => {
     expect(() => withProperty(property)).toThrow(
@@ -514,6 +521,109 @@ describe('buildModel with bounds', () => {
   it('refuses a bound on the items of an array, which no guard would ever check', () => {
     expect(() => withProperty({ type: 'array', items: { type: 'string', maxLength: 3 } })).toThrow(
       /`maxLength` on the items of `ThingPayloadBounded` is never checked/,
+    );
+  });
+});
+
+/**
+ * A shape several messages share, written once in `definitions/` and named by `$ref` — the answers
+ * to a question travel in the response, the event that settles it and the history (plan 24, D-28).
+ */
+describe('buildModel with shared definitions', () => {
+  /** @param {Record<string, unknown>} schema @param {string} [file] */
+  const definition = (schema, file = 'answer.schema.json') => ({
+    source: `definitions/${file}`,
+    schema: { title: 'Answer', type: 'object', properties: { id: { type: 'string' } }, ...schema },
+  });
+
+  /** @param {Record<string, unknown>} properties */
+  const using = (properties, definitions = [definition({})]) =>
+    buildModel(
+      envelope(),
+      [
+        message({
+          title: 'Thing',
+          'x-kind': 'command',
+          'x-type': 'thing.do',
+          type: 'object',
+          properties,
+        }),
+      ],
+      definitions,
+    );
+
+  it('names the field by the definition, and collects the definition once however often it is used', () => {
+    const model = using({
+      one: { $ref: '../definitions/answer.schema.json', description: 'the first' },
+      many: { type: 'array', items: { $ref: '../definitions/answer.schema.json' } },
+    });
+
+    const payload = model.interfaces.find((declared) => declared.name === 'ThingPayload');
+    expect(payload?.fields.map((field) => [field.name, field.type, field.description])).toEqual([
+      ['one', { kind: 'object', name: 'Answer' }, 'the first'],
+      ['many', { kind: 'array', items: { kind: 'object', name: 'Answer' } }, ''],
+    ]);
+    expect(model.interfaces.filter((declared) => declared.name === 'Answer')).toHaveLength(1);
+  });
+
+  it('puts a definition before the message that uses it, and keeps one nobody uses', () => {
+    const names = using({ one: { $ref: '../definitions/answer.schema.json' } }, [
+      definition({}),
+      definition({ title: 'Spare' }, 'spare.schema.json'),
+    ]).interfaces.map((declared) => declared.name);
+
+    expect(names.indexOf('Answer')).toBeLessThan(names.indexOf('ThingPayload'));
+    expect(names).toContain('Spare');
+  });
+
+  it('lets one definition name another by its bare file name', () => {
+    const model = using({ one: { $ref: '../definitions/outer.schema.json' } }, [
+      definition(
+        { title: 'Outer', properties: { inner: { $ref: 'answer.schema.json' } } },
+        'outer.schema.json',
+      ),
+      definition({}),
+    ]);
+
+    expect(model.interfaces.find((declared) => declared.name === 'Outer')?.fields[0]?.type).toEqual(
+      {
+        kind: 'object',
+        name: 'Answer',
+      },
+    );
+  });
+
+  it('refuses a $ref to a file that is not a definition', () => {
+    expect(() => using({ one: { $ref: '../definitions/missing.schema.json' } })).toThrow(
+      /refers to "\.\.\/definitions\/missing\.schema\.json", which is no file of `definitions\/`/,
+    );
+    expect(() => using({ one: { $ref: '#/$defs/answer' } })).toThrow(/which is no file/);
+  });
+
+  it('refuses a keyword beside the $ref, which the definition would silently contradict', () => {
+    expect(() =>
+      using({ one: { $ref: '../definitions/answer.schema.json', type: 'string' } }),
+    ).toThrow(/`ThingPayloadOne` has `type` beside `\$ref`/);
+  });
+
+  it.each([
+    ['no title', { title: undefined }],
+    ['a title that is not PascalCase', { title: 'answer' }],
+  ])('refuses a definition with %s', (_case, schema) => {
+    expect(() => using({}, [definition(schema)])).toThrow(
+      /a definition needs a PascalCase `title`/,
+    );
+  });
+
+  it('refuses a definition that is not an object with properties', () => {
+    expect(() => using({}, [definition({ type: 'string', properties: undefined })])).toThrow(
+      /a definition is an object with `properties`/,
+    );
+  });
+
+  it('refuses two definitions with one title, which would leave one of them unread', () => {
+    expect(() => using({}, [definition({}), definition({}, 'other.schema.json')])).toThrow(
+      /the definition `Answer` is declared twice/,
     );
   });
 });

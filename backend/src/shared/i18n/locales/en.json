@@ -4,6 +4,10 @@
       "title": "Claude is waiting for you",
       "body": "It wants to run {{toolName}}. Open to allow or refuse."
     },
+    "question": {
+      "title": "Claude has a question for you",
+      "body": "Open to answer."
+    },
     "device": {
       "approved": {
         "title": "This phone was approved",

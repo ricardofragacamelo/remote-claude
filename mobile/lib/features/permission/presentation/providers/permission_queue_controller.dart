@@ -10,6 +10,7 @@ import 'package:remote_claude/features/permission/domain/entities/permission_eve
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/question.dart';
 import 'package:remote_claude/features/permission/domain/repositories/permission_repository.dart';
 import 'package:remote_claude/features/permission/domain/usecases/gate_approval.dart';
 import 'package:remote_claude/features/permission/domain/usecases/watch_permissions.dart';
@@ -178,6 +179,61 @@ class PermissionQueueController extends _$PermissionQueueController {
 
   /// Backs out of the second step of a yes.
   void disarm(String requestId) => _update(state.disarm(requestId));
+
+  /// Keeps what was chosen on the card of a question (plan 24, B-17).
+  void saveDraft(String requestId, QuestionDraft draft) =>
+      _update(state.saveDraft(requestId, draft));
+
+  /// Answers a question of Claude: a yes, with the answers, and nothing to persist.
+  ///
+  /// No lock and no second step: answering authorises nothing (D-11), and the server says the tool
+  /// reads nothing (`riskHint: read`, D-10).
+  AnswerResult answerQuestion(String requestId, List<QuestionAnswer> answers) =>
+      _question(requestId, PermissionDecision.allow, answers: answers);
+
+  /// Does not answer a question: a refusal, with what was written — or our sentence for nothing.
+  AnswerResult declineQuestion(String requestId, String reason) => _question(
+    requestId,
+    PermissionDecision.deny,
+    reason: reason.trim().isEmpty ? declinedFromThePhone : reason.trim(),
+  );
+
+  AnswerResult _question(
+    String requestId,
+    PermissionDecision decision, {
+    List<QuestionAnswer>? answers,
+    String? reason,
+  }) {
+    final String? frameId = state.cardOf(requestId)?.frameId;
+
+    if (state.stepFor(requestId, decision, PermissionScope.once) != AnswerStep.send ||
+        frameId == null) {
+      return AnswerResult.ignored;
+    }
+
+    _update(state.markSending(requestId));
+
+    final bool left =
+        _feed?.answer(
+          OutgoingAnswer(
+            frameId: frameId,
+            requestId: requestId,
+            decision: decision,
+            scope: PermissionScope.once,
+            reason: reason,
+            answers: answers,
+          ),
+        ) ??
+        false;
+
+    if (!left) {
+      // The socket was down: the card is given back, and its draft is still there.
+      _update(state.release(requestId));
+      return AnswerResult.notSent;
+    }
+
+    return AnswerResult.sent;
+  }
 
   /// Asks for more time. The number is the backend's, never this phone's.
   ///

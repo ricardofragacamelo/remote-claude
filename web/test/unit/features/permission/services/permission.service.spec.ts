@@ -91,6 +91,7 @@ describe('answering a permission request', () => {
         scope: 'once',
         reach: null,
         reason: null,
+        answers: null,
       }),
     ).toBe('answer-1');
   });
@@ -105,6 +106,7 @@ describe('answering a permission request', () => {
       scope: 'session',
       reach: null,
       reason: null,
+      answers: null,
     });
 
     expect(responses).toEqual([
@@ -126,6 +128,7 @@ describe('answering a permission request', () => {
       scope: 'once',
       reach: null,
       reason: 'not now',
+      answers: null,
     });
 
     expect(responses[0]?.payload).toMatchObject({ reason: 'not now' });
@@ -162,6 +165,8 @@ describe('reading the permission frames', () => {
       toolUseId: null,
       via: null,
       answeredHere: false,
+      interaction: null,
+      answers: null,
     });
   });
 
@@ -405,6 +410,7 @@ describe('the reach of an answer — plan 23, B-13', () => {
       frameId: 'frame-1',
       decision: 'allow' as const,
       reason: null,
+      answers: null,
     };
 
     sendAnswer(client, { ...answer, scope: 'session', reach: 'prefix' });

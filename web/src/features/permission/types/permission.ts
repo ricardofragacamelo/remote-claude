@@ -42,6 +42,56 @@ export interface RuleReach {
   readonly patterns: readonly string[];
 }
 
+/** One option of a question, as the server published it — its label exact, to answer with. */
+export interface QuestionOption {
+  readonly label: string;
+  readonly description: string;
+
+  /** Markdown, rendered safely; `null` when the option has none. */
+  readonly preview: string | null;
+}
+
+/** One question of Claude, normalised by the server (plan 24). */
+export interface Question {
+  /** `q1`…`q4` — what an answer names. */
+  readonly id: string;
+  readonly header: string;
+  readonly prompt: string;
+  readonly multiSelect: boolean;
+  readonly options: readonly QuestionOption[];
+}
+
+/**
+ * Claude asking the person something, rather than asking leave to run a tool. `malformed` is a
+ * question nobody can read safely — on the server's word, or this build's: it can only be refused.
+ */
+export interface QuestionInteraction {
+  readonly malformed: boolean;
+  readonly questions: readonly Question[];
+}
+
+/** What a person answered to one question: the labels and the free answer, apart. */
+export interface QuestionAnswer {
+  readonly questionId: string;
+  readonly selected: readonly string[];
+
+  /** The free answer ("Other"); `null` when there is none. */
+  readonly other: string | null;
+}
+
+/**
+ * What a person has chosen so far on the card of a question — kept by request, outside the card, so
+ * a dropped socket or the replay of an attach never loses it (plan 24, R-06).
+ */
+export interface QuestionDraft {
+  /** The question on screen. */
+  readonly step: number;
+  readonly selected: Readonly<Record<string, readonly string[]>>;
+
+  /** The free answer of each question: its text when "Other" is marked, `null` or absent when not. */
+  readonly other: Readonly<Record<string, string | null>>;
+}
+
 /** A scope the UI may offer, with the key it is labelled by. */
 export interface ScopeSuggestion {
   readonly scope: PermissionScope;
@@ -88,6 +138,9 @@ export interface PermissionRequest {
    */
   readonly reaches: readonly RuleReach[];
 
+  /** The questions, when the request is a question of Claude — `null` for every other request. */
+  readonly interaction: QuestionInteraction | null;
+
   /**
    * An answer of ours is in flight.
    *
@@ -122,4 +175,10 @@ export interface PermissionOutcome {
 
   /** This screen sent the answer that won — "allowed by you". */
   readonly answeredHere: boolean;
+
+  /** The questions, when the request was one — what the line of its tool draws (plan 24, B-15). */
+  readonly interaction: QuestionInteraction | null;
+
+  /** What was answered, when the request was a question and the decision `allow`. */
+  readonly answers: readonly QuestionAnswer[] | null;
 }

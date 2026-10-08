@@ -9,6 +9,10 @@ import type {
   PermissionOutcome,
   PermissionRequest,
   PermissionScope,
+  Question,
+  QuestionAnswer,
+  QuestionInteraction,
+  QuestionOption,
   RiskHint,
   RuleOffer,
   RuleReach,
@@ -35,6 +39,9 @@ export interface Answer {
 
   /** Which of the request's reaches the rules of `session`, `project` or `always` take. */
   readonly reach: RuleReachKind | null;
+
+  /** The answers to a question; `null` on everything else (plan 24). */
+  readonly answers: readonly QuestionAnswer[] | null;
 }
 
 /**
@@ -56,9 +63,19 @@ export function sendAnswer(client: WsClient, answer: Answer): string | null {
       // A one-off leaves no rule, so it names no reach.
       ...(answer.reach === null || answer.scope === 'once' ? {} : { reach: answer.reach }),
       ...(answer.reason === null ? {} : { reason: answer.reason }),
+      ...(answer.answers === null ? {} : { answers: answer.answers.map(wireAnswer) }),
     },
     answer.frameId,
   );
+}
+
+/** One answer as the contract carries it: the free answer absent when there is none. */
+function wireAnswer(answer: QuestionAnswer): Readonly<Record<string, unknown>> {
+  return {
+    questionId: answer.questionId,
+    selected: [...answer.selected],
+    ...(answer.other === null ? {} : { other: answer.other }),
+  };
 }
 
 /**
@@ -115,8 +132,91 @@ export function toRequest(frame: Envelope): PermissionRequest | null {
     defaultToNo: payload['defaultToNo'] !== false,
     expiresAt,
     ...offersOf(payload),
+    interaction: readInteraction(payload['interaction']),
     isAnswering: false,
   };
+}
+
+/**
+ * The questions of a request, or `null` when it is not a question.
+ *
+ * It **fails closed**: a question this build cannot read whole — a field missing, fewer than two
+ * options — is read as malformed, and the card offers only a refusal. Half a question shown is an
+ * invitation to answer something Claude did not ask.
+ */
+export function readInteraction(value: unknown): QuestionInteraction | null {
+  if (!isRecord(value) || value['kind'] !== 'question') {
+    return null;
+  }
+
+  const sent: unknown[] = Array.isArray(value['questions']) ? value['questions'] : [];
+  // What is not an object, or not a whole question, is dropped — and the count then differs.
+  const questions = sent.filter(isRecord).flatMap((entry): Question[] => {
+    const question = readQuestion(entry);
+    return question === null ? [] : [question];
+  });
+  const malformed =
+    value['malformed'] === true || sent.length === 0 || questions.length !== sent.length;
+
+  return { malformed, questions: malformed ? [] : questions };
+}
+
+/** One question, or `null` when anything a person needs to answer it is missing. */
+function readQuestion(entry: Readonly<Record<string, unknown>>): Question | null {
+  const id = text(entry, 'id');
+  const prompt = text(entry, 'prompt');
+  const sent: unknown[] = Array.isArray(entry['options']) ? entry['options'] : [];
+  const options = sent.filter(isRecord).flatMap((option): QuestionOption[] => {
+    const label = text(option, 'label');
+    return label === null ? [] : [optionOf(option, label)];
+  });
+
+  if (id === null || prompt === null || options.length < 2 || options.length !== sent.length) {
+    return null;
+  }
+
+  return {
+    id,
+    header: typeof entry['header'] === 'string' ? entry['header'] : '',
+    prompt,
+    multiSelect: entry['multiSelect'] === true,
+    options,
+  };
+}
+
+/** One option with the label to answer it with — its description and its preview, when it has them. */
+function optionOf(entry: Readonly<Record<string, unknown>>, label: string): QuestionOption {
+  return {
+    label,
+    description: typeof entry['description'] === 'string' ? entry['description'] : '',
+    preview: text(entry, 'preview'),
+  };
+}
+
+/** The answers a `permission.resolved` carries, or `null` when it carries none. */
+export function readAnswers(value: unknown): readonly QuestionAnswer[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  return value.flatMap((entry): QuestionAnswer[] => {
+    if (!isRecord(entry)) {
+      return [];
+    }
+
+    const questionId = text(entry, 'questionId');
+    const selected = entry['selected'];
+
+    return questionId === null || !Array.isArray(selected)
+      ? []
+      : [
+          {
+            questionId,
+            selected: selected.filter((label): label is string => typeof label === 'string'),
+            other: text(entry, 'other'),
+          },
+        ];
+  });
 }
 
 /** The reaches this build knows. One it does not is dropped, never offered. */
@@ -246,6 +346,9 @@ export function toOutcome(frame: Envelope): PermissionOutcome | null {
     // and this is the only way its tool's line learns how it ended (plan 10, B-20).
     toolUseId: text(payload, 'toolUseId'),
     answeredHere: false,
+    // The questions are the card's, and the store fills them in from it; the answers are the frame's.
+    interaction: null,
+    answers: readAnswers(payload['answers']),
   };
 }
 

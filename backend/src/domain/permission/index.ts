@@ -20,7 +20,15 @@ export type {
   RuleSubject,
 } from './entities/permission-rule.entity';
 export { classifyRisk } from './services/risk.classifier';
-export { HUMAN_ONLY_TOOLS, answeredByMode } from './services/mode-approval';
+export { interactionFor, normalizeQuestion, validateAnswers } from './services/question';
+export { QUESTION_LIMITS, QUESTION_TOOL } from './value-objects/question.value-object';
+export type {
+  Question,
+  QuestionAnswer,
+  QuestionInteraction,
+  QuestionOption,
+} from './value-objects/question.value-object';
+export { HUMAN_ONLY_TOOLS, answeredByMode, answeredByRule } from './services/mode-approval';
 export {
   matchedInput,
   parseRulePattern,
@@ -29,7 +37,7 @@ export {
   ruleMatches,
 } from './services/rule-pattern';
 export type { RulePattern, RulePatternKind } from './services/rule-pattern';
-export { answeringRule } from './services/rule-precedence';
+export { answeringRule, ignoredAllow } from './services/rule-precedence';
 export {
   RULE_REACHES,
   UNBOUNDED_COMMANDS,
@@ -63,3 +71,6 @@ export { PermissionRulePatternInvalidError } from './errors/permission-rule-patt
 export { PermissionRuleExpiryInvalidError } from './errors/permission-rule-expiry-invalid.error';
 export { PermissionRuleNotFoundError } from './errors/permission-rule-not-found.error';
 export { PermissionRuleNotOwnedError } from './errors/permission-rule-not-owned.error';
+export { PermissionAnswersInvalidError } from './errors/permission-answers-invalid.error';
+export type { AnswersProblem, AnswersRule } from './errors/permission-answers-invalid.error';
+export { PermissionRuleToolInteractiveError } from './errors/permission-rule-tool-interactive.error';

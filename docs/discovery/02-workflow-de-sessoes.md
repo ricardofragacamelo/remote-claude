@@ -95,7 +95,7 @@ sem gambiarra. Também são a semente dos cenários de e2e.
 | Peça | Onde | Como serve |
 |---|---|---|
 | Barramento interno (`EventEmitter2`) | [backend/03 §Comunicação assíncrona](../architecture/backend/03-modules.md#comunicação-assíncrona) | o motor escuta fatos de outros módulos sem que eles o conheçam |
-| `canUseTool` → `SessionPermissionGate` | [permission-gate.port.ts](../../backend/src/application/session/ports/permission-gate.port.ts) | por onde passam `AskUserQuestion` e `ExitPlanMode` ([discovery §10.9](../discovery/01-descoberta-claude-agent-sdk.md)) — o encaixe das decisões e das respostas automáticas |
+| `canUseTool` → `SessionPermissionGate` | [permission-gate.port.ts](../../backend/src/application/session/ports/permission-gate.port.ts) | por onde passam `AskUserQuestion` e `ExitPlanMode` ([discovery §10.9](01-descoberta-claude-agent-sdk.md)) — o encaixe das decisões e das respostas automáticas |
 | Passo "uma regra responde sem incomodar ninguém" | [request-permission.use-case.ts](../../backend/src/application/permission/request-permission.use-case.ts) | onde entra "um workflow responde" |
 | Regras de permissão | [plano 03](../plans/03-rules-and-audit/README.md), [plano 15](../plans/15-rules-management/README.md) | autorização antecipada dos comandos que o trabalho vai precisar (§9.6) |
 | Push com retry e central de notificações | [push-dispatcher.ts](../../backend/src/application/notification/push-dispatcher.ts), [backend/03 §notification](../architecture/backend/03-modules.md#notification) | os avisos de execução e de decisão, no celular e no web |
@@ -1703,7 +1703,7 @@ o mesmo arquivo. Se o acompanhamento **visual** for o que mais pesa, a parte de 
 para dentro de C.
 
 Antes de C, um **spike** de uma fase só, sem código de produto: estacionar e reabrir uma conversa no
-meio de um `tool_use` (§10.5). O resultado entra na [discovery](../discovery/01-descoberta-claude-agent-sdk.md).
+meio de um `tool_use` (§10.5). O resultado entra na [discovery](01-descoberta-claude-agent-sdk.md).
 
 ---
 

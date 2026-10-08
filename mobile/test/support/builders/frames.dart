@@ -289,6 +289,7 @@ String toolCompleted({
   String? summary,
   String? taskId,
   String sessionId = 'session-1',
+  Map<String, Object?>? question,
 }) => frame(
   kind: 'event',
   type: 'tool.completed',
@@ -298,6 +299,7 @@ String toolCompleted({
     'toolUseId': toolUseId,
     'status': status,
     'summary': ?summary,
+    'question': ?question,
     'taskId': ?taskId,
   },
 );

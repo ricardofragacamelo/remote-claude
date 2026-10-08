@@ -47,7 +47,7 @@
     },
     "defaultToNo": {
       "type": "boolean",
-      "description": "The UI pre-selects refusal. Silence never authorises."
+      "description": "The UI pre-selects refusal. Silence never authorises. `false` only on a question (`interaction`), where the focus goes to the first option."
     },
     "expiresAt": {
       "type": "string",
@@ -55,7 +55,7 @@
     },
     "suggestions": {
       "type": "array",
-      "description": "Scopes the UI may offer beyond a one-off yes. `project` and `always` come whenever the request has at least one reach in `reaches` (and `project` only with a workspace).",
+      "description": "Scopes the UI may offer beyond a one-off yes. `project` and `always` come whenever the request has at least one reach in `reaches` (and `project` only with a workspace). Empty on a question: answering one leaves no rule.",
       "items": {
         "type": "object",
         "required": ["scope", "labelKey"],
@@ -81,7 +81,7 @@
     },
     "reaches": {
       "type": "array",
-      "description": "How far a rule left by this answer may reach, computed by the server from the invocation. The client picks one and answers with its `reach`, never with a pattern: the server computes the patterns again and refuses a reach it did not offer. Applies to `session`, `project` and `always`.",
+      "description": "How far a rule left by this answer may reach, computed by the server from the invocation. The client picks one and answers with its `reach`, never with a pattern: the server computes the patterns again and refuses a reach it did not offer. Applies to `session`, `project` and `always`. Empty on a question.",
       "items": {
         "type": "object",
         "required": ["reach", "patterns"],
@@ -100,6 +100,10 @@
           }
         }
       }
+    },
+    "interaction": {
+      "$ref": "../definitions/question-interaction.schema.json",
+      "description": "Set when the request is a question rather than a permission. Absent on every other request."
     }
   }
 }

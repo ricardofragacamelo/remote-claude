@@ -51,9 +51,14 @@ describe('stored prefix rules and chained commands', () => {
     new DrizzlePermissionRuleRepository(aPersistenceContext(connection.db));
 
   const book = (): PermissionRuleBook =>
-    new PermissionRuleBook(new PermissionRegistry(), repository(), () => {
-      throw new Error('the rules were expected to be readable');
-    });
+    new PermissionRuleBook(
+      new PermissionRegistry(),
+      repository(),
+      () => {
+        throw new Error('the rules were expected to be readable');
+      },
+      () => undefined,
+    );
 
   async function store(id: string, pattern: string, decision: PermissionDecision): Promise<void> {
     const rule = PermissionRule.create(

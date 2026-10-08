@@ -25,6 +25,7 @@ function aRequest(toolName: string, input: Record<string, unknown>): PermissionR
     expiresAt: '2026-10-01T12:02:00.000Z',
     suggestions: [{ scope: 'once', labelKey: 'permission.scope.once', rule: null }],
     reaches: [],
+    interaction: null,
     isAnswering: false,
   };
 }

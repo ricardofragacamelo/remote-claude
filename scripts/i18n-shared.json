@@ -1,5 +1,5 @@
 {
-  "$comment": "Texts the web and the app both show, web key -> app key. `pnpm i18n:check` compares them text by text, in every language (plan 10, B-03, D-04). Add a pair when a screen of the app shows a text the web already shows; the verbs of the working indicator and the pending pill joined in plan 10, F4; the resume, the tool states and the refusals of following a conversation joined in plan 22, B-04 (D-04: the web's text wins); the thinking, the tool card and the image of a prompt joined in plan 22, F6.",
+  "$comment": "Texts the web and the app both show, web key -> app key. `pnpm i18n:check` compares them text by text, in every language (plan 10, B-03, D-04). Add a pair when a screen of the app shows a text the web already shows; the verbs of the working indicator and the pending pill joined in plan 10, F4; the resume, the tool states and the refusals of following a conversation joined in plan 22, B-04 (D-04: the web's text wins); the thinking, the tool card and the image of a prompt joined in plan 22, F6; the question of Claude (`AskUserQuestion`) joined in plan 24, B-03.",
   "locales": [
     {
       "web": "en",
@@ -193,6 +193,30 @@
     "sessions.image.close": "sessionImageClose",
     "sessions.image.description": "sessionImageDescription",
     "sessions.image.loading": "sessionImageLoading",
-    "sessions.image.alt": "sessionImageAlt"
+    "sessions.image.alt": "sessionImageAlt",
+    "permission.tool.AskUserQuestion": "permissionToolAskUserQuestion",
+    "permission.question.label": "permissionQuestionLabel",
+    "permission.question.progress": "permissionQuestionProgress",
+    "permission.question.answered": "permissionQuestionAnswered",
+    "permission.question.other": "permissionQuestionOther",
+    "permission.question.otherPlaceholder": "permissionQuestionOtherPlaceholder",
+    "permission.question.recommended": "permissionQuestionRecommended",
+    "permission.question.preview": "permissionQuestionPreview",
+    "permission.question.submit": "permissionQuestionSubmit",
+    "permission.question.decline": "permissionQuestionDecline",
+    "permission.question.declineReason": "permissionQuestionDeclineReason",
+    "permission.question.declineConfirm": "permissionQuestionDeclineConfirm",
+    "permission.question.declineBack": "permissionQuestionDeclineBack",
+    "permission.question.expired": "permissionQuestionExpired",
+    "permission.question.malformed": "permissionQuestionMalformed",
+    "permission.question.waiting": "permissionQuestionWaiting",
+    "permission.question.pill": "permissionQuestionPill",
+    "permission.question.asked": "permissionQuestionAsked",
+    "permission.question.askedMany": "permissionQuestionAskedMany",
+    "permission.question.pending": "permissionQuestionPending",
+    "permission.question.declined": "permissionQuestionDeclined",
+    "permission.question.answeredElsewhere": "permissionQuestionAnsweredElsewhere",
+    "permission.error.answersInvalid": "permissionErrorAnswersInvalid",
+    "permission.question.otherAnswer": "permissionQuestionOtherAnswer"
   }
 }

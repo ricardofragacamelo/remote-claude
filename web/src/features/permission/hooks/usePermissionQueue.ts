@@ -5,6 +5,7 @@ import { wsClient } from '@/shared/api/ws';
 import type { AppError } from '@/shared/api/errors';
 import { useClock } from '@/shared/hooks/useClock';
 import { answerRefusalOf, sendAnswer, sendExtension } from '../services/permission.service';
+import type { Answer } from '../services/permission.service';
 import { createPermissionQueueStore, permissionQueueOf } from '../store/permission.store';
 import { usePermissionAttachment } from './usePermissionAttachment';
 import type {
@@ -12,6 +13,8 @@ import type {
   PermissionOutcome,
   PermissionRequest,
   PermissionScope,
+  QuestionAnswer,
+  QuestionDraft,
   RuleReachKind,
 } from '../types/permission';
 
@@ -42,10 +45,23 @@ export interface PermissionQueue {
     reach?: RuleReachKind,
   ): void;
   extend(request: PermissionRequest): void;
+
+  /** What was chosen so far on the card of each question, by request (plan 24, B-13). */
+  readonly drafts: Readonly<Record<string, QuestionDraft>>;
+  saveDraft(requestId: string, draft: QuestionDraft): void;
+
+  /** Answers a question of Claude: `allow`, with the answers, and nothing to persist. */
+  answerQuestion(request: PermissionRequest, answers: readonly QuestionAnswer[]): void;
+
+  /** Does not answer a question: `deny`, with what the person wrote — or our sentence for nothing. */
+  declineQuestion(request: PermissionRequest, reason: string): void;
 }
 
 /** What Claude is told when a person refuses from this screen. */
 const REFUSED_HERE = 'refused from the web client';
+
+/** What Claude is told when a person chose not to answer its question, and wrote nothing. */
+const DECLINED_HERE = 'The user chose not to answer the question.';
 
 /**
  * The permission queue of the session on screen.
@@ -65,6 +81,8 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
   const markAnswering = useStore(store, (state) => state.markAnswering);
   const releaseAnswering = useStore(store, (state) => state.releaseAnswering);
   const expire = useStore(store, (state) => state.expire);
+  const drafts = useStore(store, (state) => state.drafts);
+  const saveDraft = useStore(store, (state) => state.saveDraft);
 
   // A subscription of its own, beside the conversation's. Both watch the same session and neither
   // knows the other exists; the transport attaches once and re-delivers to both. Shared with the
@@ -83,14 +101,8 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
 
   const { refusal, expectRefusal } = useAnswerRefusal(releaseAnswering);
 
-  const answer = useCallback(
-    (
-      request: PermissionRequest,
-      decision: PermissionDecision,
-      scope: PermissionScope,
-      reason?: string,
-      reach?: RuleReachKind,
-    ) => {
+  const send = useCallback(
+    (request: PermissionRequest, answer: Omit<Answer, 'requestId' | 'frameId'>) => {
       if (request.isAnswering) {
         return;
       }
@@ -100,23 +112,61 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
       const left = sendAnswer(wsClient, {
         requestId: request.requestId,
         frameId: request.frameId,
-        decision,
-        scope,
-        // The contract requires a reason on a refusal: it goes into the trail and back to Claude
-        // as a message, which is how the agent learns to propose something else.
-        reason: decision === 'deny' ? refusalReason(reason) : null,
-        reach: reach ?? null,
+        ...answer,
       });
 
       if (left === null) {
         // The socket was down, so nothing was answered. Leaving the card disabled would leave a
-        // question nobody can answer from a screen that looks like it is working on it.
+        // question nobody can answer from a screen that looks like it is working on it — and a
+        // question keeps its draft, to be sent when the socket is back.
         releaseAnswering(request.requestId);
       } else {
         expectRefusal(left, request.requestId);
       }
     },
     [markAnswering, releaseAnswering, expectRefusal],
+  );
+
+  const answer = useCallback(
+    (
+      request: PermissionRequest,
+      decision: PermissionDecision,
+      scope: PermissionScope,
+      reason?: string,
+      reach?: RuleReachKind,
+    ) => {
+      send(request, {
+        decision,
+        scope,
+        // The contract requires a reason on a refusal: it goes into the trail and back to Claude
+        // as a message, which is how the agent learns to propose something else.
+        reason: decision === 'deny' ? refusalReason(reason, REFUSED_HERE) : null,
+        reach: reach ?? null,
+        answers: null,
+      });
+    },
+    [send],
+  );
+
+  const answerQuestion = useCallback(
+    (request: PermissionRequest, answers: readonly QuestionAnswer[]) => {
+      // `once`, always: answering a question leaves no rule (plan 24, D-09).
+      send(request, { decision: 'allow', scope: 'once', reason: null, reach: null, answers });
+    },
+    [send],
+  );
+
+  const declineQuestion = useCallback(
+    (request: PermissionRequest, reason: string) => {
+      send(request, {
+        decision: 'deny',
+        scope: 'once',
+        reason: refusalReason(reason, DECLINED_HERE),
+        reach: null,
+        answers: null,
+      });
+    },
+    [send],
   );
 
   const extend = useCallback((request: PermissionRequest) => {
@@ -130,7 +180,18 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
     ]),
   );
 
-  return { pending, settled, remainingMs, refusal, answer, extend };
+  return {
+    pending,
+    settled,
+    remainingMs,
+    refusal,
+    answer,
+    extend,
+    drafts,
+    saveDraft,
+    answerQuestion,
+    declineQuestion,
+  };
 }
 
 /**
@@ -172,7 +233,7 @@ function useAnswerRefusal(release: (requestId: string) => void): {
 const DETACHED = createPermissionQueueStore();
 
 /** The reason a refusal carries: what the person wrote, or the screen's own when they wrote nothing. */
-function refusalReason(written: string | undefined): string {
+function refusalReason(written: string | undefined, ours: string): string {
   const said = written?.trim() ?? '';
-  return said === '' ? REFUSED_HERE : said;
+  return said === '' ? ours : said;
 }

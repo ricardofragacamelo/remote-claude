@@ -3,6 +3,7 @@ import type { Envelope } from '@remote-claude/contracts';
 import { isRecord, readText } from '@/shared/lib/json';
 import { isTurnRunning } from '../lib/turn';
 import type { HistoryEvent } from '../types/history';
+import { readToolQuestion } from './tool-question';
 import type {
   BlockKind,
   Conversation,
@@ -498,6 +499,7 @@ function progressOf(payload: Readonly<Record<string, unknown>>): ToolChange {
 function outcomeOf(payload: Readonly<Record<string, unknown>>): ToolChange {
   return (tool) => {
     const status = readText(payload, 'status');
+    const question = readToolQuestion(payload['question']);
 
     return status === null || !TOOL_OUTCOMES.has(status)
       ? null
@@ -506,6 +508,7 @@ function outcomeOf(payload: Readonly<Record<string, unknown>>): ToolChange {
           status: status as ToolStatus,
           summary: readText(payload, 'summary'),
           taskId: readText(payload, 'taskId'),
+          ...(question === null ? {} : { question }),
         };
   };
 }

@@ -85,6 +85,7 @@ import { SnapshotPurgeJob } from '../jobs/snapshot-purge.job';
 import { SessionReaperJob } from '../jobs/session-reaper.job';
 import { PermissionBridge } from '@adapter/outbound/claude/permission-bridge';
 import {
+  LogQuestionAnswered,
   RecordDecisionOnResolved,
   ReleaseAgentLoopOnResolved,
 } from '@adapter/outbound/permission/permission-resolved.listeners';
@@ -296,6 +297,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     // about sessions, and one of these releases the agent loop of one.
     ReleaseAgentLoopOnResolved,
     RecordDecisionOnResolved,
+    LogQuestionAnswered,
     { provide: CLAUDE_SESSION_PORT, useClass: AgentSdkClaudeSessionAdapter },
     { provide: SESSION_BROADCASTER, useClass: HubSessionBroadcaster },
     WorkspaceModuleResolver,

@@ -1,0 +1,3710 @@
+{
+  "$comment": "Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. Do not edit by hand — re-record instead. See docs/plans/01-live-session/F2-session-runtime.md.",
+  "name": "question-turn",
+  "why": "plan 24, B-11 — AskUserQuestion with several questions, one of multiple choice and one with previews, answered",
+  "prompt": "Before doing anything else, use the AskUserQuestion tool once, with three questions in that single call, about a README.md for this project: (1) which sections it should have, as a multiple choice (multiSelect: true) with options such as Usage, Installation and License; (2) its format, as a single choice in which every option carries a `preview` with a short markdown sample of that format; (3) its tone, as a single choice. Once I have answered, reply with one sentence that repeats my answers, and use no other tool.",
+  "recordedAt": "2026-10-08",
+  "sdkVersion": "0.3.277",
+  "counts": { "messages": 221, "preToolUse": 1, "canUseTool": 1 },
+  "preToolUse": [
+    {
+      "toolName": "AskUserQuestion",
+      "toolUseId": "toolu_01GpjZVmiX4rEFumRubJuXzV",
+      "effort": "high"
+    }
+  ],
+  "canUseTool": [
+    {
+      "toolName": "AskUserQuestion",
+      "input": {
+        "questions": [
+          {
+            "question": "Which sections should the README.md include?",
+            "header": "Sections",
+            "options": [
+              {
+                "label": "Installation",
+                "description": "How to install the project and its dependencies."
+              },
+              {
+                "label": "Usage",
+                "description": "Examples and instructions for running the project."
+              },
+              {
+                "label": "License",
+                "description": "The license terms the project is distributed under."
+              },
+              {
+                "label": "Contributing",
+                "description": "Guidelines for submitting issues and pull requests."
+              }
+            ],
+            "multiSelect": true
+          },
+          {
+            "question": "Which format should the README.md follow?",
+            "header": "Format",
+            "options": [
+              {
+                "label": "Classic prose",
+                "description": "Headings with explanatory paragraphs and fenced code blocks.",
+                "preview": "# Project Name\n\nA short paragraph explaining what this project does and who it is for.\n\n## Installation\n\nInstall the package with your preferred package manager:\n\n```bash\nnpm install project-name\n```\n"
+              },
+              {
+                "label": "Badge-heavy landing",
+                "description": "Centered title, status badges, then terse sections.",
+                "preview": "<div align=\"center\">\n\n# Project Name\n\n[![build](https://img.shields.io/badge/build-passing-green)]()\n[![license](https://img.shields.io/badge/license-MIT-blue)]()\n\n</div>\n\n---\n\n## ⚡ Quick start\n\n```bash\nnpm install project-name\n```\n"
+              },
+              {
+                "label": "Tables & bullets",
+                "description": "Dense reference style: bullet lists and option tables.",
+                "preview": "# Project Name\n\n- **What:** a small utility library\n- **Requires:** Node 20+\n\n## Options\n\n| Flag | Type | Default | Description |\n|-----------|---------|---------|------------------|\n| `--watch` | boolean | `false` | Rebuild on change |\n| `--out`   | string  | `dist`  | Output directory  |\n"
+              },
+              {
+                "label": "Tutorial walkthrough",
+                "description": "Numbered step-by-step guide from zero to working.",
+                "preview": "# Project Name\n\n## Getting started\n\n**Step 1 — Install**\n\n```bash\nnpm install project-name\n```\n\n**Step 2 — Create a config**\n\n```js\nexport default { out: 'dist' }\n```\n\n**Step 3 — Build**\n\n```bash\nnpx project-name build\n```\n"
+              }
+            ],
+            "multiSelect": false
+          },
+          {
+            "question": "What tone should the README.md be written in?",
+            "header": "Tone",
+            "options": [
+              {
+                "label": "Professional",
+                "description": "Neutral, concise, documentation-standard voice."
+              },
+              {
+                "label": "Friendly",
+                "description": "Warm and conversational, welcoming to newcomers."
+              },
+              {
+                "label": "Technical",
+                "description": "Precise and detail-dense, aimed at experienced developers."
+              },
+              { "label": "Playful", "description": "Light, humorous, with personality and emoji." }
+            ],
+            "multiSelect": false
+          }
+        ]
+      }
+    }
+  ],
+  "stderr": [],
+  "history": [
+    {
+      "type": "user",
+      "uuid": "095c8f61-96a7-4080-a683-06a456e2b608",
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "message": {
+        "role": "user",
+        "content": "Before doing anything else, use the AskUserQuestion tool once, with three questions in that single call, about a README.md for this project: (1) which sections it should have, as a multiple choice (multiSelect: true) with options such as Usage, Installation and License; (2) its format, as a single choice in which every option carries a `preview` with a short markdown sample of that format; (3) its tone, as a single choice. Once I have answered, reply with one sentence that repeats my answers, and use no other tool."
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-08T14:00:00.791Z"
+    },
+    {
+      "type": "assistant",
+      "uuid": "00572889-e24a-4a01-8b04-7e49cf5a3b46",
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfptbqnaZAEveGzmA8F49",
+        "type": "message",
+        "role": "assistant",
+        "content": [{ "type": "text", "text": "I'll ask all three questions in a single call." }],
+        "container": null,
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 15863,
+          "output_tokens": 1054,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+          "service_tier": "standard",
+          "cache_creation": { "ephemeral_1h_input_tokens": 0, "ephemeral_5m_input_tokens": 0 },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 1054,
+              "cache_read_input_tokens": 15863,
+              "cache_creation_input_tokens": 0,
+              "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 0 },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-08T14:00:02.380Z"
+    },
+    {
+      "type": "assistant",
+      "uuid": "7f1e9deb-27f4-4226-aa19-1017089ec94f",
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfptbqnaZAEveGzmA8F49",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01GpjZVmiX4rEFumRubJuXzV",
+            "name": "AskUserQuestion",
+            "input": {
+              "questions": [
+                {
+                  "question": "Which sections should the README.md include?",
+                  "header": "Sections",
+                  "multiSelect": true,
+                  "options": [
+                    {
+                      "label": "Installation",
+                      "description": "How to install the project and its dependencies."
+                    },
+                    {
+                      "label": "Usage",
+                      "description": "Examples and instructions for running the project."
+                    },
+                    {
+                      "label": "License",
+                      "description": "The license terms the project is distributed under."
+                    },
+                    {
+                      "label": "Contributing",
+                      "description": "Guidelines for submitting issues and pull requests."
+                    }
+                  ]
+                },
+                {
+                  "question": "Which format should the README.md follow?",
+                  "header": "Format",
+                  "multiSelect": false,
+                  "options": [
+                    {
+                      "label": "Classic prose",
+                      "description": "Headings with explanatory paragraphs and fenced code blocks.",
+                      "preview": "# Project Name\n\nA short paragraph explaining what this project does and who it is for.\n\n## Installation\n\nInstall the package with your preferred package manager:\n\n```bash\nnpm install project-name\n```\n"
+                    },
+                    {
+                      "label": "Badge-heavy landing",
+                      "description": "Centered title, status badges, then terse sections.",
+                      "preview": "<div align=\"center\">\n\n# Project Name\n\n[![build](https://img.shields.io/badge/build-passing-green)]()\n[![license](https://img.shields.io/badge/license-MIT-blue)]()\n\n</div>\n\n---\n\n## ⚡ Quick start\n\n```bash\nnpm install project-name\n```\n"
+                    },
+                    {
+                      "label": "Tables & bullets",
+                      "description": "Dense reference style: bullet lists and option tables.",
+                      "preview": "# Project Name\n\n- **What:** a small utility library\n- **Requires:** Node 20+\n\n## Options\n\n| Flag | Type | Default | Description |\n|-----------|---------|---------|------------------|\n| `--watch` | boolean | `false` | Rebuild on change |\n| `--out`   | string  | `dist`  | Output directory  |\n"
+                    },
+                    {
+                      "label": "Tutorial walkthrough",
+                      "description": "Numbered step-by-step guide from zero to working.",
+                      "preview": "# Project Name\n\n## Getting started\n\n**Step 1 — Install**\n\n```bash\nnpm install project-name\n```\n\n**Step 2 — Create a config**\n\n```js\nexport default { out: 'dist' }\n```\n\n**Step 3 — Build**\n\n```bash\nnpx project-name build\n```\n"
+                    }
+                  ]
+                },
+                {
+                  "question": "What tone should the README.md be written in?",
+                  "header": "Tone",
+                  "multiSelect": false,
+                  "options": [
+                    {
+                      "label": "Professional",
+                      "description": "Neutral, concise, documentation-standard voice."
+                    },
+                    {
+                      "label": "Friendly",
+                      "description": "Warm and conversational, welcoming to newcomers."
+                    },
+                    {
+                      "label": "Technical",
+                      "description": "Precise and detail-dense, aimed at experienced developers."
+                    },
+                    {
+                      "label": "Playful",
+                      "description": "Light, humorous, with personality and emoji."
+                    }
+                  ]
+                }
+              ]
+            },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 15863,
+          "output_tokens": 1054,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+          "service_tier": "standard",
+          "cache_creation": { "ephemeral_1h_input_tokens": 0, "ephemeral_5m_input_tokens": 0 },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 1054,
+              "cache_read_input_tokens": 15863,
+              "cache_creation_input_tokens": 0,
+              "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 0 },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-08T14:00:13.936Z"
+    },
+    {
+      "type": "user",
+      "uuid": "be04cb0c-552c-484e-9b7b-ccac9c1611ab",
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "content": "Your questions have been answered: \"Which sections should the README.md include?\"=\"Installation\", \"Which format should the README.md follow?\"=\"Classic prose\", \"What tone should the README.md be written in?\"=\"Professional\". You can now continue with these answers in mind.",
+            "tool_use_id": "toolu_01GpjZVmiX4rEFumRubJuXzV"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-08T14:00:13.982Z"
+    },
+    {
+      "type": "assistant",
+      "uuid": "89cfc590-846b-4777-b82a-ce1e86ecf54e",
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfptcnqWaHYDtM43VKZDP",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "You'd like a README.md with an Installation section, written in the Classic prose format with a Professional tone."
+          }
+        ],
+        "container": null,
+        "stop_reason": "end_turn",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 19155,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 34,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+          "service_tier": "standard",
+          "cache_creation": { "ephemeral_1h_input_tokens": 19155, "ephemeral_5m_input_tokens": 0 },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 34,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 19155,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 19155
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-08T14:00:15.409Z"
+    }
+  ],
+  "messages": [
+    {
+      "type": "system",
+      "subtype": "init",
+      "cwd": "/workspace",
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "tools": [
+        "Task",
+        "AskUserQuestion",
+        "Bash",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DesignSync",
+        "Edit",
+        "EnterPlanMode",
+        "EnterWorktree",
+        "ExitPlanMode",
+        "ExitWorktree",
+        "ListAgents",
+        "Monitor",
+        "NotebookEdit",
+        "PushNotification",
+        "Read",
+        "RemoteTrigger",
+        "ReportFindings",
+        "ScheduleWakeup",
+        "SendMessage",
+        "ShareOnboardingGuide",
+        "Skill",
+        "TaskStop",
+        "ToolSearch",
+        "WebFetch",
+        "WebSearch",
+        "Workflow",
+        "Write"
+      ],
+      "mcp_servers": [],
+      "model": "claude-opus-5[1m]",
+      "permissionMode": "default",
+      "slash_commands": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator",
+        "plugin-authoring",
+        "advisor",
+        "agents",
+        "auto-mode-setup",
+        "autocompact",
+        "clear",
+        "color",
+        "compact",
+        "config",
+        "output-style",
+        "context",
+        "effort",
+        "fast",
+        "heapdump",
+        "init",
+        "mcp",
+        "import",
+        "model",
+        "__remote-workflow",
+        "workflow-launch-exec",
+        "plugin-types",
+        "reload-plugins",
+        "reload-skills",
+        "rename",
+        "security-review",
+        "usage-credits",
+        "extra-usage",
+        "usage",
+        "insights",
+        "recap",
+        "skill-doctor",
+        "goal",
+        "design-consent",
+        "design-revoke",
+        "list-agents",
+        "team-onboarding"
+      ],
+      "terminal_slash_commands": ["doctor", "color", "reload-plugins"],
+      "apiKeySource": "none",
+      "claude_code_version": "2.1.277",
+      "output_style": "default",
+      "agents": ["claude", "Explore", "general-purpose", "Plan", "statusline-setup"],
+      "skills": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator",
+        "plugin-authoring"
+      ],
+      "plugins": [
+        { "name": "sec-default", "path": "builtin", "source": "sec-default@builtin" },
+        { "name": "agents-md", "path": "builtin", "source": "agents-md@builtin" },
+        { "name": "plugin-authoring", "path": "builtin", "source": "plugin-authoring@builtin" }
+      ],
+      "capabilities": ["interrupt_receipt_v1", "interrupt_cancel_queued_v1", "msg_lifecycle_v1"],
+      "analytics_disabled": false,
+      "product_feedback_disabled": false,
+      "uuid": "03796568-671d-4ffd-9f42-771367b1b138",
+      "memory_paths": { "auto": "/home/user/.claude/projects/-workspace/memory/" },
+      "messaging_socket_path": "/run/user/1000/cc-socks/1053032.sock",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required"
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "uuid": "8543a08a-bba0-420d-ad27-d655fa410676"
+    },
+    {
+      "type": "system",
+      "subtype": "commands_changed",
+      "commands": [
+        {
+          "name": "deep-research",
+          "description": "Deep research harness — fan-out web searches, fetch sources, adversarially verify claims, synthesize a cited report. (dynamic workflow)",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "design",
+          "description": "Grant or revoke Claude agent access to your Design projects",
+          "argumentHint": "consent | revoke",
+          "builtin": true
+        },
+        {
+          "name": "design-sync",
+          "description": "Push a React design system to claude.ai/design. This runs a converter that bundles the real component code (from Storybook or a bare package) and uploads it. Use when the user runs /design-sync or says \"sync my design system to Claude Design\".",
+          "argumentHint": "[<project hint, e.g. \"Acme DS\">]",
+          "builtin": true
+        },
+        {
+          "name": "dataviz",
+          "description": "Use this skill whenever you are about to create ANY chart, graph, plot, dashboard, or data visualization, in ANY output medium — an HTML or React artifact, inline SVG, plotting code in any library (matplotlib, plotly, d3, Recharts, …), an image/PNG you will render and upload, or a chart shared into Slack. Read it BEFORE writing the first line of chart code, choosing chart colors, building a stat tile / meter / KPI row, or laying out a dashboard. When the destination is a first-party document connector (host-designated, never self-described) that renders live charts, hand it the rows (inline, or as an uploaded data file the chart cites) rather than a rendered PNG/SVG — a picture of a chart loses hover, data inspection and per-value comments. Produces visualizations that read as one system — elegant, accessible, consistent in light and dark — using a brand-neutral placeholder palette you swap for your own. Teaches a design-system-agnostic method: a form heuristic, a color formula with a runnable validator, mark specs, and interaction rules. A validated default palette is documented in `references/palette.md` — swap that file's values for your brand's. Triggers on: \"chart\", \"graph\", \"plot\", \"data viz\", \"visualization\", \"dashboard\", \"analytics\", \"visualize data\", \"categorical colors\", \"sequential / diverging palette\", \"stat tile\", \"sparkline\", \"heatmap\", \"legend\", \"axis\", \"tooltip\", \"chart colors\", \"color by series\".",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "update-config",
+          "description": "Use this skill to configure the Claude Code harness via settings.json. Automated behaviors (\"from now on when X\", \"each time X\", \"whenever X\", \"before/after X\") require hooks configured in settings.json - the harness executes these, not Claude, so memory/preferences cannot fulfill them. Also use for: permissions (\"allow X\", \"add permission\", \"move permission to\"), env vars (\"set X=Y\"), hook troubleshooting, or any changes to settings.json/settings.local.json files. Examples: \"allow npm commands\", \"add bq permission to global settings\", \"move permission to user settings\", \"set DEBUG=true\", \"when claude stops show X\". For simple settings like theme/model, suggest the /config command.",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "verify",
+          "description": "Verify that a code change actually does what it's supposed to by exercising it end-to-end and observing behavior — drive the affected flow, not just tests or typecheck. Run before committing nontrivial changes; bootstraps this repo's project verify skill if none exists yet. Don't invoke it on a diff that only touches tests, docs, or other code with no runtime surface to drive (a change to product source always has one) — there's nothing to observe.",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "debug",
+          "description": "Enable debug logging for this session and help diagnose issues",
+          "argumentHint": "[issue description]",
+          "builtin": true
+        },
+        {
+          "name": "code-review",
+          "description": "Review the current diff, or a PR number/branch/path target, for correctness bugs (plus reuse/simplification/efficiency cleanups where the model's review recipe covers them) at the given effort level (low/medium: fewer, high-confidence findings; high→max: broader coverage, may include uncertain findings); with no level given, it reuses the level you typed last. Pass --comment to post findings as inline PR comments, or --fix to apply the findings to the working tree after the review.",
+          "argumentHint": "[low|medium|high|xhigh|max] [--fix] [--comment] [<pr#>|<branch>|<path>]",
+          "aliases": ["review"],
+          "builtin": true
+        },
+        {
+          "name": "simplify",
+          "description": "Review the changed code for reuse, simplification, efficiency, and altitude cleanups, then apply the fixes. Quality only — it does not hunt for bugs; use /code-review for that.",
+          "argumentHint": "[<target>]",
+          "builtin": true
+        },
+        {
+          "name": "batch",
+          "description": "Research and plan a large-scale change, then execute it in parallel across 5–30 isolated worktree agents that each open a PR.",
+          "argumentHint": "<instruction>",
+          "builtin": true
+        },
+        {
+          "name": "fewer-permission-prompts",
+          "description": "Scan your transcripts for common read-only Bash and MCP tool calls, then add a prioritized allowlist to project .claude/settings.json to reduce permission prompts.",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "doctor",
+          "description": "Health-check the user's Claude Code setup and fix issues: diagnose installation health — what the `claude doctor` terminal diagnostics cover — from local data (duplicate or leftover installs, PATH, unparseable settings files, broken or colliding agent definitions, skills whose frontmatter fails to parse); find unused skills, MCP servers, and plugins versus their context cost and disable dead weight; deduplicate local CLAUDE.md files against checked-in ones; trim checked-in CLAUDE.md files by cutting content a session could derive from the codebase (directory layouts, tech-stack lists, architecture overviews) while keeping gotchas, rationale, and non-standard conventions; migrate always-loaded CLAUDE.md guidance into lazy skills and nested CLAUDE.md files; flag slow hooks and context-heavy extensions; check the installed version is current; make auto mode the default permission mode; and pre-approve frequently denied read-only commands. Use when the user asks for a doctor run, checkup, audit, tune-up, or cleanup of their Claude Code setup or configuration.",
+          "argumentHint": "",
+          "aliases": ["checkup"],
+          "builtin": true
+        },
+        {
+          "name": "loop",
+          "description": "Run a prompt or slash command on a recurring interval (e.g. /loop 5m /foo). Omit the interval to let the model self-pace.",
+          "argumentHint": "[interval] [prompt]",
+          "aliases": ["proactive"],
+          "builtin": true
+        },
+        {
+          "name": "schedule",
+          "description": "Create, update, list, or run scheduled cloud agents (routines) that execute on a cron schedule.",
+          "argumentHint": "",
+          "aliases": ["routines"],
+          "builtin": true
+        },
+        {
+          "name": "claude-api",
+          "description": "Reference for the Claude API / Anthropic SDK — model ids, pricing, params, streaming, tool use, MCP, agents, caching, token counting, model migration.\nTRIGGER — read BEFORE opening the target file; don't skip because it \"looks like a one-liner\" — whenever: the prompt names Claude/Anthropic in any form (Claude, Anthropic, Fable, Opus, Sonnet, Haiku, `anthropic`, `@anthropic-ai`, `claude-*`, `us.anthropic.*`, `[1m]`); the user asks about an LLM (pricing/model choice/limits/caching) — never answer from memory; OR the task is LLM-shaped with provider unstated (agent/MCP/tool-definition/multi-agent/RAG/LLM-judge/computer-use; generate/summarize/extract/classify/rewrite/converse over NL; debugging refusals/cutoffs/streaming/tool-calls/tokens).\nSKIP only when another provider is being worked on (overrides all triggers): OpenAI/GPT/Gemini/Llama/Mistral/Cohere/Ollama named in the query; OR `grep -rE 'openai|langchain_openai|google.generativeai|genai|mistralai|cohere|ollama'` over the project hits (run this grep FIRST if no provider named — don't Read the file).",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "workflow-authoring",
+          "description": "Reference for writing a Workflow tool script (script API and gotchas, resume, quality patterns, worked examples). Load before authoring a script for a workflow the user already opted into; it does not itself authorize running one.",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "run",
+          "description": "Launch and drive this project's app to see a change working. Use when asked to run, start, or screenshot the app, or to confirm a change works in the real app (not just tests). First looks for a project skill that already covers launching the app; otherwise falls back to built-in patterns per project type (CLI, server, TUI, Electron, browser-driven, library).",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "run-skill-generator",
+          "description": "Author or improve the run-<unit> skill - a per-project skill that tells agents how to build, launch, and drive this project's app. Use when the user asks to set up the project, get it running, write run instructions, or verify build/run steps work from a clean environment.",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "advisor",
+          "description": "Let Claude consult a stronger model at key moments",
+          "argumentHint": "[fable|opus|sonnet|off]",
+          "builtin": true
+        },
+        {
+          "name": "agents",
+          "description": "(removed) Ask Claude to create/manage subagents, or edit .claude/agents/",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "auto-mode-setup",
+          "description": "Teach auto mode about your environment, plus optional rule tweaks",
+          "argumentHint": "[--request-id <uuid>] (--wizard posture=… scope=… depth=… --propose | --expect-sha256 <64-hex> --apply-file <path>)",
+          "builtin": true
+        },
+        {
+          "name": "autocompact",
+          "description": "Configure the auto-compact window size",
+          "argumentHint": "[auto|<tokens>]",
+          "builtin": true
+        },
+        {
+          "name": "clear",
+          "description": "Start a new session with empty context; previous session stays on disk (resumable with /resume)",
+          "argumentHint": "[name]",
+          "aliases": ["reset", "new"],
+          "builtin": true
+        },
+        {
+          "name": "color",
+          "description": "Set the prompt bar color for this session",
+          "argumentHint": "[red|blue|green|yellow|purple|orange|pink|cyan|default]",
+          "builtin": true
+        },
+        {
+          "name": "compact",
+          "description": "Free up context by summarizing the conversation so far",
+          "argumentHint": "<optional custom summarization instructions>",
+          "builtin": true
+        },
+        {
+          "name": "config",
+          "description": "Set a setting by key",
+          "argumentHint": "key=value",
+          "aliases": ["settings"],
+          "builtin": true
+        },
+        {
+          "name": "output-style",
+          "description": "List output styles or switch to one",
+          "argumentHint": "[style]",
+          "builtin": true
+        },
+        {
+          "name": "context",
+          "description": "Show current context usage",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "effort",
+          "description": "Set effort level for model usage",
+          "argumentHint": "<low|medium|high|xhigh|max|ultracode|auto>",
+          "builtin": true
+        },
+        {
+          "name": "fast",
+          "description": "Toggle fast mode (Opus 5)",
+          "argumentHint": "[on|off]",
+          "builtin": true
+        },
+        {
+          "name": "heapdump",
+          "description": "Dump the JS heap to the Desktop; on Linux with no Desktop folder, the home directory",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "init",
+          "description": "Initialize a new CLAUDE.md file with codebase documentation",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "mcp",
+          "description": "Manage MCP servers",
+          "argumentHint": "[reconnect|enable|disable [<server>|all]]",
+          "builtin": true
+        },
+        {
+          "name": "import",
+          "description": "Import config from another AI coding agent",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "model",
+          "description": "Set the AI model for Claude Code",
+          "argumentHint": "<model>",
+          "builtin": true
+        },
+        {
+          "name": "__remote-workflow",
+          "description": "Run the workflow script delivered in this session environment (server-launched sessions only)",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "workflow-launch-exec",
+          "description": "Execute a server-launched workflow handoff (workflow_launch event sessions only)",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "reload-plugins",
+          "description": "Activate pending plugin changes in the current session",
+          "argumentHint": "[--force]",
+          "builtin": true
+        },
+        {
+          "name": "reload-skills",
+          "description": "Pick up skills added or changed on disk during this session",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "rename",
+          "description": "Rename the current conversation",
+          "argumentHint": "[name]",
+          "aliases": ["name"],
+          "builtin": true
+        },
+        {
+          "name": "security-review",
+          "description": "Complete a security review of the pending changes on the current branch",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "usage-credits",
+          "description": "Configure usage credits or request them from your admin when you hit a limit",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "extra-usage",
+          "description": "Renamed to /usage-credits",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "usage",
+          "description": "Show session cost, plan usage, and what's contributing to your limits",
+          "argumentHint": "",
+          "aliases": ["cost", "stats"],
+          "builtin": true
+        },
+        {
+          "name": "insights",
+          "description": "Generate a report analyzing your Claude Code sessions",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "recap",
+          "description": "Generate a one-line session recap now",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "skill-doctor",
+          "description": "Show which loaded skills are unused and costing context",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "goal",
+          "description": "Set a goal — keep working until the condition is met",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "design-consent",
+          "description": "Grant Claude agent access to your Design projects",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "design-revoke",
+          "description": "Revoke Claude agent access to your Design projects",
+          "argumentHint": "",
+          "builtin": true
+        },
+        {
+          "name": "list-agents",
+          "description": "List subagents, teammates, and other Claude sessions you can message",
+          "argumentHint": "",
+          "aliases": ["peers"],
+          "builtin": true
+        },
+        {
+          "name": "team-onboarding",
+          "description": "Help teammates ramp on Claude Code with a guide from your usage",
+          "argumentHint": "",
+          "builtin": true
+        }
+      ],
+      "uuid": "9068127d-50bb-41b7-93f5-88d969018f8e",
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011CfptbqnaZAEveGzmA8F49",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 15863,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 0 },
+            "output_tokens": 1,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "fb26daed-9bea-4fe4-afe0-82f08a4878b0",
+      "ttft_ms": 783
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": { "type": "text", "text": "" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "889a65b9-1c5d-4a78-9346-db028aef0c16"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "I" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "5f943cb9-92a2-45f2-96f2-44621e83f539"
+    },
+    {
+      "type": "rate_limit_event",
+      "rate_limit_info": {
+        "status": "allowed_warning",
+        "resetsAt": 1791478800,
+        "rateLimitType": "seven_day",
+        "utilization": 0.97,
+        "isUsingOverage": false,
+        "surpassedThreshold": 0.75,
+        "unifiedWindows": {
+          "five_hour": { "utilization": 0.46, "resetsAt": 1791475200 },
+          "seven_day": { "utilization": 0.97, "resetsAt": 1791478800 }
+        }
+      },
+      "uuid": "00222d3d-4f2d-4aac-b732-9f5cf370617c",
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "'ll " }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "9e680160-a748-4cac-ac6e-5ca7095502d7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ask all three" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "58f9bc70-c9ec-45d0-be55-bd889fbf8a8e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " questions in" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "400dc3c2-8333-442e-89e9-ee2c5e240d59"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " a" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "a00b39ff-d63b-4861-bedc-95590d744dff"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " single call." }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "82b37ece-9338-4345-9a93-6d7d3ca9bab5"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfptbqnaZAEveGzmA8F49",
+        "type": "message",
+        "role": "assistant",
+        "content": [{ "type": "text", "text": "I'll ask all three questions in a single call." }],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 15863,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 0 },
+          "output_tokens": 1,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "uuid": "00572889-e24a-4a01-8b04-7e49cf5a3b46",
+      "timestamp": "2026-10-08T14:00:02.380Z",
+      "request_id": "req_011CfptbqWTdHbshyPDeDqyo"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "a970f090-180c-49b3-a51a-7a25cabacda0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 1,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01GpjZVmiX4rEFumRubJuXzV",
+          "name": "AskUserQuestion",
+          "input": {},
+          "caller": { "type": "direct" }
+        }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "e9a10b1d-3b4e-4cb3-bc9c-4c4ffda473f7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "3c388819-9f21-4820-b0ce-c1588832f608"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"questions\": [{" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "c6b9ab1e-29a6-48eb-a35a-b57b71da00ac"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\"question\": \"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "eea79b3b-8931-41bb-a029-c17c4d9ffb93"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "Which sections should the README.md"
+        }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "a78270dc-7b93-46e4-bbf3-5b311daccf71"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " include?\", \"header" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "9bb33b72-5ebc-47b9-a8c0-2e72a85f7552"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\": \"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "2ecf61a6-d9f9-4a2a-bc32-5cab30311dc4"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "Sections\", \"mult" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "0579f280-a2bc-4ad4-8e28-df15ad82dd0c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "iSelect\": true, \"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "d585fac4-57fe-44d8-aa79-043164770ac9"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "options\": [" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "d8897a2d-4cd0-4bf6-a0dd-6dcaa5269b5d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"label\": \"Installation" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "4d423204-819a-4b37-9f63-d7a0fc061cf3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\", \"description\": \"How to install"
+        }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7c880ff1-2796-4957-b342-0523b599d2c1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " the" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "b5bdf201-e876-457b-a266-80caed036b9f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " project and its dependencies.\"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "de6e1a62-a84c-4091-b395-6d33c8e1982b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "}, {\"label\": \"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "d5502865-71a7-42a2-a527-5ba3be7e950b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "Usage\", \"description\": \"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7e76545a-1514-4934-bd83-9695044754bb"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "Examples and inst" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "e4bb49d0-49a7-41d8-bc34-4ed5d4137736"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "ructions for running the project.\"}"
+        }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "42a9bc0e-41f9-4266-a0bd-3b090afba2d1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": ", {\"label\": \"License\"," }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7052c558-f2b1-4e75-9c45-43a1313eef59"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " \"description\": \"The license" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "16bc7fed-7b7c-4a35-93a7-8a32b3561168"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " terms the" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "be14052e-e599-4861-b63b-0fca98396335"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " project is" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "ef400748-2e9c-4ce1-b1b5-85ab0989499d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " dist" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "a794ca3a-ea25-4068-8428-0fe1d33197e9"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ributed under.\"}, {\"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "73ba5fb9-9b69-4cff-89a5-e767cd3bd249"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "label\": \"Contributing\"," }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "75910d30-bd87-4ea1-9fd2-29f1bb2c85bb"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " \"description\": \"Guidel" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "d4ecdc87-0ceb-4b53-bbe7-1727c4fd60d7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ines for subm" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7a05d77f-ca7e-4518-83b5-d41059785be2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "itting issues and" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "85702969-28f7-4e8a-9606-69c49af82851"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " pull requests.\"}]}" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "e5188c4a-d088-427e-a32c-5c90742aeb93"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": ", {\"question\": \"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "a6c74b04-065b-4724-80ad-07e0c4986e94"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "Which format should the README." }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "cb32d912-75df-4f92-ba13-6788e79a4862"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "md follow?\", \"header\":" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "98455ee5-9825-4243-aace-f7a3fd5ceb63"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " \"Format\", \"multiS" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "d4bde96e-4a04-43f2-a2bd-44446010412c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "elect\": false, \"options\":" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7a968710-e58b-4a3b-a9f9-54b29cdf7e03"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " [{\"label\": \"Class" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "a35bb15c-2197-4f1a-bd17-3f79c362ac99"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ic pr" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "fd7d2a4b-cc50-4c15-b343-f11c30f7e182"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ose\", \"description\": \"Head" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "0f76c445-7c50-4cfa-9594-133e5138b74f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ings with expl" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "d118d8eb-dd8d-4248-8c6b-85948e58863e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "anatory paragraphs" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "e0c890c2-6beb-41d8-b351-68a3bd08f5b2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " and f" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "ff3664ad-e67c-41ac-95ca-a36603b23734"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "enced code blocks.\"," }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "9b269e11-b680-4fba-b5e0-41bb26f609c8"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " \"preview\": \"# Project" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "532d4825-373b-4f3c-ad32-704a561953c3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " Name\\n\\n" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "aae10f63-8cb4-42aa-b9b0-04dd1c6d4289"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "A" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "c0ad8299-5d71-4471-a147-5fc4b7f66842"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " short pa" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "33b1cc94-04b4-46d9-927b-ad5764f42bc1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ragraph expl" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "19180b27-6a98-43c6-8806-975014215293"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "aining what this" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "0f2a71ef-f3d7-4251-9968-902ba1310ad6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " project does and who" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "bf2b036e-68a4-40b6-b039-ce8d6820f372"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " it is" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "df7fe71e-df9c-410e-a4fc-af8c9003c467"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " for.\\n\\n##" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "b278019a-e56c-4109-85ec-68a06b88b889"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " Installation\\n\\n" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "57e39b92-a248-46f0-a2a2-9e96677a5ffe"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "Install the package" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "178a1653-e5b1-4fa5-b761-1c6ee063438a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " with your" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "04bd9323-61f9-45f7-942d-5c83682cf427"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " preferred package manager:\\" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7816eb21-3cde-41a1-ac4c-0da59b7d381f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "n\\n```bash\\n" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "06952686-6bf4-4ef8-8ee3-c8b3caca5d39"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "npm install project" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "1d6b62c7-c362-4df8-8aad-203b685de166"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "-name\\n```\\" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "fc4ad913-9757-4c9c-b4e2-829ce81d6116"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "n\"}, {\"label\":" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "65eed6d2-200d-41a5-a1fc-559f1798b821"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " \"Badge-" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "2f861d69-8eed-4e3a-88ab-a0de4dc26202"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "he" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "4f49b56f-de59-472a-ba87-e09d0237db89"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "avy land" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7d2e77f3-4fe3-427a-b0c2-b1f6e9ace936"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ing\", \"description\": \"Cent" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "cfea026b-e05f-4f1e-8694-dc702d87b6e1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ered title, status" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "94aa90d0-f348-4240-bef1-31a6baeeaf41"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " badges, then" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "9c24240f-dfd4-4282-8272-7051cbc0c1ba"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " ter" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "d4e12a1d-a9cb-42c6-bd50-288289fb06ff"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "se sections.\", \"preview" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "f00e5f93-6b3e-413a-92ee-88683914b7cb"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\": \"<div align=\\\"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "61324b36-f3dc-4b82-8b7d-9b104fa1101d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "center\\\">\\n\\" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "94918a4c-9720-45e1-bedf-4f50185c760f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "n# Project Name\\n" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "ec1035cf-1454-40bc-b4f8-cb50094906d0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\\n[" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "b417758e-935c-4d5b-b0e3-0898b96a00cb"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "![build](https://img.sh" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "bbe3cdb6-6712-40bf-ba6e-a2694c01effa"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ields.io/badge/build" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "516aae61-4368-4ba5-bc66-947552dfdd07"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "-passing-green)" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "ff95a04e-afcf-4642-b222-cea47dafe2ae"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "]" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "f688dfc2-8309-4f4e-882f-a4c7a40a195d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "()" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "6c5a4b1a-d960-4efb-962a-d21ca5977b26"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\\n[![license" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "4c453c01-0493-4264-9cf5-4cfcf05ce7a3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "](https://img.shields." }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "bcd8f469-f20b-4fdb-9d88-e3b6f04bc911"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "io/badge/license-M" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "0d711d11-bbd5-4014-91e3-9515333aa212"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "IT-blue)]()" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "08f864a6-de3c-4dc4-8e14-276d6626bd20"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\\n\\n</div>\\" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "6397a221-7bcb-4dcb-9f49-85501659a39e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "n\\n---\\n\\n" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "e9cd4893-0f5c-4939-8384-82c9c163e0d4"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "## " }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "c1841b49-e0a5-46e9-965a-a14eefaad3ab"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "⚡ Qu" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "4b1ebe57-ab16-45cc-a699-1d033d05d45a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ick start\\n\\n```b" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "03affb56-e10a-4a05-b29b-1405c75801b6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ash\\nnpm install project" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "f27fa534-e323-4541-bb82-e2147191f904"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "-name\\n```\\n\"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "89035bb5-97df-4481-9825-27760839bb9e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "}, {\"label\": \"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "bd9df4ed-1118-4c80-8064-bd6540118fe0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "Tables" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "1ed3fda4-fb02-4366-9e63-ff9d9d6fa326"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " & b" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "6b83221a-1cf1-4402-aa29-2179700d7483"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ullets\", \"description\": \"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "66b5cd5e-74ff-47d8-9fa0-baa13e52778c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "D" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7cee791e-83c5-4872-ac80-8c8f621c6705"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ense re" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "4ea277e8-4d13-4c05-b58c-75ed138ce11a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ference style" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "e2b8d469-4d99-417c-a689-8c82f415b92c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": ":" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "fddc493f-2f62-48d0-b771-524e53c769e0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " bullet" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "c16ee876-fe28-4f75-a94a-5a4b2f36913f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " lists and option" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7ee16f63-18c2-49fa-918f-8c3bb2eea864"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " tables.\", \"preview\":" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "692490c9-cd64-48f0-8650-629989f6bc96"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " \"# Project Name\\n" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "344d1714-6977-4427-9c07-206503af0bcb"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\\n- **" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "a61a9e7c-0ae7-4f4c-952a-9bb9fe5d6bc2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "What" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "68920beb-61cc-4be1-8f1d-66984fe779b0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": ":" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "fe37bf78-6586-4095-b0e5-f64c2f04a589"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "** a small" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "d1a5f467-4da9-4d9c-8739-838968f6c42a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " ut" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "f6aede4e-09c1-48e8-b44b-7334663976c0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ility library" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "3c1efe76-de5b-4d5d-9ad7-360b2f444c6c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\\n- **Requ" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "f579b2ea-1957-496c-a77b-54c00dc43212"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ires:** Node " }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "611663ef-b4ef-4d8c-9ace-31ba6bbce0b7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "20" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "0462a8a8-c5d8-4b31-a318-706497998f04"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "+\\n\\n## Options" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "fdc01a26-dd9d-4ca6-9a08-1158e242c2e9"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\\n\\n| Fl" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "be7e789c-719c-4e80-bb21-77031f900829"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ag | Type | Default |" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "5922baeb-ac26-4e50-8722-82f5c727df6d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " Description |\\n|-" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "ba2d67f7-a426-411b-a644-4ef7ada4fab3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "----" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "a12fc04a-a88f-48ec-abce-3a8db077ae69"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "------" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "546e98f6-efa2-4d50-aa46-5028eea21e19"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "|---" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "d3491dea-7593-4991-b56e-e1b8267e76ab"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "------|---------|------" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "b90f5c78-65cb-4dbc-9e27-82947ea471c3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "------------|\\n| `--" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "6f4cdf4d-ce47-43ac-8e3d-6a76de743920"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "wat" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "50d0ebb0-e05b-4bbe-a60d-ee03dd68456c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ch` | boolean | `" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "e7065c6d-69fa-4671-b3ef-ec63b079f029"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "false` | Rebuild" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "1e94081c-6624-45b6-993e-304ba62fffe4"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " on change |\\n| `--" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "df301fcb-88a9-421d-9b43-712397116e50"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "out`   | string  | `" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "f274f48d-6b7b-47a0-b1f9-b549e953ad7c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "dist`" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "b732d44e-c7c3-41e9-9300-6b89e0d54dbf"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "  | Output directory  " }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "84904e52-008e-4101-a011-c1608d911128"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "|\\n\"}, {\"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "33da67fd-d091-4a5d-8095-b6d4b54ae8ff"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "label\": \"T" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "ea61d165-171f-4a89-a2ba-e8816d2c1be7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "utorial wal" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "a93e87a7-b82e-444c-876d-6893bba18eb2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "kthrough\", \"description\":" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "32a46e4c-23ee-4b45-b10d-b0d4449f1cac"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " \"Numbered step" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "fb77906e-6c45-44dd-811a-3221359ccf43"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "-by-step guide from" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "93418165-4426-41f3-ae44-a517d88622c5"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " zero to working" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "92c5f8fb-02e9-4996-9004-9153665643ad"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": ".\", \"preview\": \"#" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "446c116c-efa5-4a3d-85ef-2d83b681c473"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " Project Name\\n\\n" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "235600a4-f367-4a36-b4dd-fcf8d117a93d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "##" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "29af872d-9241-4637-bb00-c8c4529be680"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " Getting started\\n\\n" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "de3508c3-8368-43c6-9f04-6194e2b60b20"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "**" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "269a01aa-c0f7-47db-8b8c-9f655a035597"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "Step 1 " }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "259bf511-399b-4480-8583-f2760abcacff"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "— Install" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "ee74b568-8b42-4191-beb6-1fb24f7c959f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "**" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "28fc4be9-7668-4b29-9def-42056f79919b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\\n\\n```bash\\" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "5a6b9c08-b57c-47aa-8530-178754ea27ab"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "nnpm install project-name" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7ea65b6a-a6db-4f99-ba26-423c735104c8"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\\n```\\n\\n**" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "3fd11017-8489-4acc-8614-6651575a2c32"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "Step 2 — Create" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "bdd209eb-ead2-43d0-a30c-e546a9244bfd"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " a config**\\n\\n```" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "6cc7a3b4-d6ad-4c23-8867-4b66a283952c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "js" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "2f719d3b-74c4-4373-91fc-7411eec2c47c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\\nex" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "2dd795f0-9407-4277-ba42-02358520acdc"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "port default { out" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "fb7b7c91-0274-4f83-a15a-1aa211086da0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": ": " }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "6f4fa0e1-8537-4a2c-8ae7-0be64115ecd6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "'dist' }\\n```" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "1caee626-c369-4310-a50f-66704bb0d47e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\\n\\n**Step " }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "39c9fcff-5611-4abf-986f-75c671ca3bc3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "3 — Build" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "83efc1a2-ff75-4381-b758-3aa2cf090de2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "**\\n\\n```bash" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "1623c6b3-2789-4233-ac66-d689f39b74c6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\\nnpx" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7c6d0459-9e8a-404b-895f-0c6fb6bc3e67"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " project-name build\\n```\\" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "83a60b3a-7876-40cd-9b0c-619f07d885d1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "n\"}]}, {\"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "4032f884-82d8-4a0a-b03b-9e5d535b0258"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "question\": \"What tone should the"
+        }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "50a4993d-1bc3-4f6a-a685-e4657091eb75"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " README." }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "e1cca7c9-d2dd-48a7-ac42-985a04f3d4bd"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "md be written in?\", \"header" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "3b259ead-a47f-42a6-ba71-01e97c4f3ba0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "\": \"Tone\", \"mult" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "96e5bcd7-c8be-461a-ae70-98b53c46b01b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "iSelect\": false, \"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "8fa79e44-daee-4ab0-830b-1f9ac00f016d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "options\": [{\"label\": \"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "9e825b3f-646e-4285-b238-91d3d0383f07"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "Profess" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "f37e423a-9d11-4063-8782-55800c9d1869"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ional\"," }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7200b3ad-2f9d-4f11-b61b-95346f18db26"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " \"description\": \"Neutral" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "083f7002-723c-469c-8e60-aadbf94b5371"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": ", conc" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "8f0c68b1-820a-4e7b-b00f-b18ff9d93cbf"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ise, docum" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "135f0638-cf28-43cd-b20a-02a90beded89"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "entation-stand" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "71f36204-c728-4b30-847b-4c5042001558"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ard vo" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "3b13b243-89be-4ab6-b266-cc2ea89bf140"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ice.\"}, {\"label\":" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "3f60c656-235c-41cd-86de-21ca7aa0884c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " \"Friendly\"," }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "876d8b4f-197d-4b0f-958b-17417f914b7e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " \"description\": \"Warm and" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "84773753-1062-465e-a3ac-b92157b07287"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " conversational, welcoming" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "12edc941-98bd-4796-9b20-c70745450348"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " to newcomers.\"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7d013aeb-592e-4055-8ec0-61eccb0d307e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "}, {\"label\": \"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "95031499-fbd0-427c-938a-7b3b26607de2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "Technical\", \"description\": \"" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "b1cef4b0-0c50-4bfa-a53b-c28218247aa6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "Precise and detail" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "ba0c902a-d736-4cea-8c07-fdfe9b365d8d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "-d" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "3ae311e3-1a62-434c-81f1-f5e87f3cc8d1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ense, aimed at experien" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "8b6612e2-43d5-4712-b682-e75e7fcd02a4"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ced develop" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "2743b5f2-2673-45b3-9f87-f2a2027a365a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ers.\"}, {\"label\":" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "32a70bc6-026e-4fbd-9e6a-0152f205244f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " \"Playful\", \"description\":" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "ae8dcf14-ba79-4bb0-a065-88593b321b14"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " \"Light," }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "7b5a485a-8381-4dad-a698-6f115068e911"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": " humorous, with person" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "c29bd4bd-5b0d-449f-a3f8-94a5541e15c7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "ality and emoji.\"}]" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "692595e7-ef3c-4157-bef6-2875d66f8d36"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "}]" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "15e0ac31-138c-47ac-a557-878152d27d26"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": { "type": "input_json_delta", "partial_json": "}" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "14056d8a-723b-411a-a7d4-09bdbc237f93"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfptbqnaZAEveGzmA8F49",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01GpjZVmiX4rEFumRubJuXzV",
+            "name": "AskUserQuestion",
+            "input": {
+              "questions": [
+                {
+                  "question": "Which sections should the README.md include?",
+                  "header": "Sections",
+                  "multiSelect": true,
+                  "options": [
+                    {
+                      "label": "Installation",
+                      "description": "How to install the project and its dependencies."
+                    },
+                    {
+                      "label": "Usage",
+                      "description": "Examples and instructions for running the project."
+                    },
+                    {
+                      "label": "License",
+                      "description": "The license terms the project is distributed under."
+                    },
+                    {
+                      "label": "Contributing",
+                      "description": "Guidelines for submitting issues and pull requests."
+                    }
+                  ]
+                },
+                {
+                  "question": "Which format should the README.md follow?",
+                  "header": "Format",
+                  "multiSelect": false,
+                  "options": [
+                    {
+                      "label": "Classic prose",
+                      "description": "Headings with explanatory paragraphs and fenced code blocks.",
+                      "preview": "# Project Name\n\nA short paragraph explaining what this project does and who it is for.\n\n## Installation\n\nInstall the package with your preferred package manager:\n\n```bash\nnpm install project-name\n```\n"
+                    },
+                    {
+                      "label": "Badge-heavy landing",
+                      "description": "Centered title, status badges, then terse sections.",
+                      "preview": "<div align=\"center\">\n\n# Project Name\n\n[![build](https://img.shields.io/badge/build-passing-green)]()\n[![license](https://img.shields.io/badge/license-MIT-blue)]()\n\n</div>\n\n---\n\n## ⚡ Quick start\n\n```bash\nnpm install project-name\n```\n"
+                    },
+                    {
+                      "label": "Tables & bullets",
+                      "description": "Dense reference style: bullet lists and option tables.",
+                      "preview": "# Project Name\n\n- **What:** a small utility library\n- **Requires:** Node 20+\n\n## Options\n\n| Flag | Type | Default | Description |\n|-----------|---------|---------|------------------|\n| `--watch` | boolean | `false` | Rebuild on change |\n| `--out`   | string  | `dist`  | Output directory  |\n"
+                    },
+                    {
+                      "label": "Tutorial walkthrough",
+                      "description": "Numbered step-by-step guide from zero to working.",
+                      "preview": "# Project Name\n\n## Getting started\n\n**Step 1 — Install**\n\n```bash\nnpm install project-name\n```\n\n**Step 2 — Create a config**\n\n```js\nexport default { out: 'dist' }\n```\n\n**Step 3 — Build**\n\n```bash\nnpx project-name build\n```\n"
+                    }
+                  ]
+                },
+                {
+                  "question": "What tone should the README.md be written in?",
+                  "header": "Tone",
+                  "multiSelect": false,
+                  "options": [
+                    {
+                      "label": "Professional",
+                      "description": "Neutral, concise, documentation-standard voice."
+                    },
+                    {
+                      "label": "Friendly",
+                      "description": "Warm and conversational, welcoming to newcomers."
+                    },
+                    {
+                      "label": "Technical",
+                      "description": "Precise and detail-dense, aimed at experienced developers."
+                    },
+                    {
+                      "label": "Playful",
+                      "description": "Light, humorous, with personality and emoji."
+                    }
+                  ]
+                }
+              ]
+            },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 15863,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 0 },
+          "output_tokens": 1,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "uuid": "7f1e9deb-27f4-4226-aa19-1017089ec94f",
+      "timestamp": "2026-10-08T14:00:13.936Z",
+      "request_id": "req_011CfptbqWTdHbshyPDeDqyo",
+      "wire_tool_inputs": {
+        "toolu_01GpjZVmiX4rEFumRubJuXzV": {
+          "questions": [
+            {
+              "question": "Which sections should the README.md include?",
+              "header": "Sections",
+              "multiSelect": true,
+              "options": [
+                {
+                  "label": "Installation",
+                  "description": "How to install the project and its dependencies."
+                },
+                {
+                  "label": "Usage",
+                  "description": "Examples and instructions for running the project."
+                },
+                {
+                  "label": "License",
+                  "description": "The license terms the project is distributed under."
+                },
+                {
+                  "label": "Contributing",
+                  "description": "Guidelines for submitting issues and pull requests."
+                }
+              ]
+            },
+            {
+              "question": "Which format should the README.md follow?",
+              "header": "Format",
+              "multiSelect": false,
+              "options": [
+                {
+                  "label": "Classic prose",
+                  "description": "Headings with explanatory paragraphs and fenced code blocks.",
+                  "preview": "# Project Name\n\nA short paragraph explaining what this project does and who it is for.\n\n## Installation\n\nInstall the package with your preferred package manager:\n\n```bash\nnpm install project-name\n```\n"
+                },
+                {
+                  "label": "Badge-heavy landing",
+                  "description": "Centered title, status badges, then terse sections.",
+                  "preview": "<div align=\"center\">\n\n# Project Name\n\n[![build](https://img.shields.io/badge/build-passing-green)]()\n[![license](https://img.shields.io/badge/license-MIT-blue)]()\n\n</div>\n\n---\n\n## ⚡ Quick start\n\n```bash\nnpm install project-name\n```\n"
+                },
+                {
+                  "label": "Tables & bullets",
+                  "description": "Dense reference style: bullet lists and option tables.",
+                  "preview": "# Project Name\n\n- **What:** a small utility library\n- **Requires:** Node 20+\n\n## Options\n\n| Flag | Type | Default | Description |\n|-----------|---------|---------|------------------|\n| `--watch` | boolean | `false` | Rebuild on change |\n| `--out`   | string  | `dist`  | Output directory  |\n"
+                },
+                {
+                  "label": "Tutorial walkthrough",
+                  "description": "Numbered step-by-step guide from zero to working.",
+                  "preview": "# Project Name\n\n## Getting started\n\n**Step 1 — Install**\n\n```bash\nnpm install project-name\n```\n\n**Step 2 — Create a config**\n\n```js\nexport default { out: 'dist' }\n```\n\n**Step 3 — Build**\n\n```bash\nnpx project-name build\n```\n"
+                }
+              ]
+            },
+            {
+              "question": "What tone should the README.md be written in?",
+              "header": "Tone",
+              "multiSelect": false,
+              "options": [
+                {
+                  "label": "Professional",
+                  "description": "Neutral, concise, documentation-standard voice."
+                },
+                {
+                  "label": "Friendly",
+                  "description": "Warm and conversational, welcoming to newcomers."
+                },
+                {
+                  "label": "Technical",
+                  "description": "Precise and detail-dense, aimed at experienced developers."
+                },
+                {
+                  "label": "Playful",
+                  "description": "Light, humorous, with personality and emoji."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 1 },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "b31c5c1d-4e45-47f1-9339-23ad1194c3ef"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 15863,
+          "output_tokens": 1054,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 1054,
+              "cache_read_input_tokens": 15863,
+              "cache_creation_input_tokens": 0,
+              "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 0 },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "252536f2-47d7-46e8-b9eb-1b370541c547"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "1002500d-dd5b-484e-b5f7-4ede8397c86d"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "content": "Your questions have been answered: \"Which sections should the README.md include?\"=\"Installation\", \"Which format should the README.md follow?\"=\"Classic prose\", \"What tone should the README.md be written in?\"=\"Professional\". You can now continue with these answers in mind.",
+            "tool_use_id": "toolu_01GpjZVmiX4rEFumRubJuXzV"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "uuid": "be04cb0c-552c-484e-9b7b-ccac9c1611ab",
+      "timestamp": "2026-10-08T14:00:13.982Z",
+      "tool_use_result": {
+        "questions": [
+          {
+            "question": "Which sections should the README.md include?",
+            "header": "Sections",
+            "options": [
+              {
+                "label": "Installation",
+                "description": "How to install the project and its dependencies."
+              },
+              {
+                "label": "Usage",
+                "description": "Examples and instructions for running the project."
+              },
+              {
+                "label": "License",
+                "description": "The license terms the project is distributed under."
+              },
+              {
+                "label": "Contributing",
+                "description": "Guidelines for submitting issues and pull requests."
+              }
+            ],
+            "multiSelect": true
+          },
+          {
+            "question": "Which format should the README.md follow?",
+            "header": "Format",
+            "options": [
+              {
+                "label": "Classic prose",
+                "description": "Headings with explanatory paragraphs and fenced code blocks.",
+                "preview": "# Project Name\n\nA short paragraph explaining what this project does and who it is for.\n\n## Installation\n\nInstall the package with your preferred package manager:\n\n```bash\nnpm install project-name\n```\n"
+              },
+              {
+                "label": "Badge-heavy landing",
+                "description": "Centered title, status badges, then terse sections.",
+                "preview": "<div align=\"center\">\n\n# Project Name\n\n[![build](https://img.shields.io/badge/build-passing-green)]()\n[![license](https://img.shields.io/badge/license-MIT-blue)]()\n\n</div>\n\n---\n\n## ⚡ Quick start\n\n```bash\nnpm install project-name\n```\n"
+              },
+              {
+                "label": "Tables & bullets",
+                "description": "Dense reference style: bullet lists and option tables.",
+                "preview": "# Project Name\n\n- **What:** a small utility library\n- **Requires:** Node 20+\n\n## Options\n\n| Flag | Type | Default | Description |\n|-----------|---------|---------|------------------|\n| `--watch` | boolean | `false` | Rebuild on change |\n| `--out`   | string  | `dist`  | Output directory  |\n"
+              },
+              {
+                "label": "Tutorial walkthrough",
+                "description": "Numbered step-by-step guide from zero to working.",
+                "preview": "# Project Name\n\n## Getting started\n\n**Step 1 — Install**\n\n```bash\nnpm install project-name\n```\n\n**Step 2 — Create a config**\n\n```js\nexport default { out: 'dist' }\n```\n\n**Step 3 — Build**\n\n```bash\nnpx project-name build\n```\n"
+              }
+            ],
+            "multiSelect": false
+          },
+          {
+            "question": "What tone should the README.md be written in?",
+            "header": "Tone",
+            "options": [
+              {
+                "label": "Professional",
+                "description": "Neutral, concise, documentation-standard voice."
+              },
+              {
+                "label": "Friendly",
+                "description": "Warm and conversational, welcoming to newcomers."
+              },
+              {
+                "label": "Technical",
+                "description": "Precise and detail-dense, aimed at experienced developers."
+              },
+              { "label": "Playful", "description": "Light, humorous, with personality and emoji." }
+            ],
+            "multiSelect": false
+          }
+        ],
+        "answers": {
+          "Which sections should the README.md include?": "Installation",
+          "Which format should the README.md follow?": "Classic prose",
+          "What tone should the README.md be written in?": "Professional"
+        }
+      }
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "uuid": "b7a7ca4e-a666-415d-b25f-9f850f0ce1c8"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011CfptcnqWaHYDtM43VKZDP",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 19155,
+            "cache_read_input_tokens": 0,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 19155
+            },
+            "output_tokens": 1,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "0299b726-52bc-4837-bddf-a63780e20fc9",
+      "ttft_ms": 858
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": { "type": "text", "text": "" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "907558b1-5328-4070-afd7-02a4ded696d3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "You" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "279df6c1-14f0-425f-a184-23858828cdca"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "'" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "266c3eb9-1862-488c-b4f0-fca4d71f0c72"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "d like a README" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "60e29204-9789-490e-b57c-0019063e06c7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": ".md with an" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "4a015bc4-ac0f-4b08-854c-3fdc48a245ba"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " Installation section, written" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "6cc8e778-a02e-49a7-a9db-88a71f94c69c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " in the" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "34636dd2-6ffb-48f9-b64a-e4fc2d49de97"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " Classic pr" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "0bae344e-3b30-4740-89c2-c4152bbe2f99"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ose format with a Professional t" }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "5ce7580e-d083-4cb9-be19-6b2e408a1776"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "one." }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "1e72515e-3fbd-4be0-9b56-aee0ab027018"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfptcnqWaHYDtM43VKZDP",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "You'd like a README.md with an Installation section, written in the Classic prose format with a Professional tone."
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 19155,
+          "cache_read_input_tokens": 0,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 19155 },
+          "output_tokens": 1,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "uuid": "89cfc590-846b-4777-b82a-ce1e86ecf54e",
+      "timestamp": "2026-10-08T14:00:15.409Z",
+      "request_id": "req_011CfptcnTgrhDMjmqZWtN7y"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "85ea985e-4468-4597-975f-17f8e66302db"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 19155,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 34,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 34,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 19155,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 19155
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "655ee07e-a1ff-413e-951f-2fa0024308e8"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "parent_tool_use_id": null,
+      "uuid": "5e50fe5d-47e1-4dfa-adb7-04234d6d76bf"
+    },
+    {
+      "duration_api_ms": 15229,
+      "stop_reason": "end_turn",
+      "session_id": "c0aba36f-01f9-45ec-acea-be62ba6fccfb",
+      "total_cost_usd": 0.2277835,
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 19155,
+        "cache_read_input_tokens": 15863,
+        "output_tokens": 1088,
+        "output_tokens_details": { "thinking_tokens": 0 },
+        "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+        "service_tier": "standard",
+        "cache_creation": { "ephemeral_1h_input_tokens": 19155, "ephemeral_5m_input_tokens": 0 },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 34,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 19155,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 19155
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "modelUsage": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 1012,
+          "outputTokens": 14,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.001082,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-haiku-4-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 4,
+          "outputTokens": 1088,
+          "cacheReadInputTokens": 15863,
+          "cacheCreationInputTokens": 19155,
+          "webSearchRequests": 0,
+          "costUSD": 0.2267015,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 64000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-opus-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "permission_denials": [],
+      "terminal_reason": "completed",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required",
+      "subagent_stats": {
+        "spawned": 0,
+        "requested": { "background": 0, "foreground": 0, "unset": 0 },
+        "started_in_background": 0,
+        "max_depth": 0,
+        "spawned_by_subagents": 0,
+        "completed": 0,
+        "failed": 0,
+        "killed": { "parent": 0, "user": 0, "system": 0 },
+        "refused": { "depth_limit": 0, "concurrency_limit": 0, "budget": 0 },
+        "by_type": {}
+      },
+      "is_error": false,
+      "num_turns": 2,
+      "subtype": "success",
+      "api_error_status": null,
+      "result": "You'd like a README.md with an Installation section, written in the Classic prose format with a Professional tone.",
+      "ttft_ms": 1672,
+      "type": "result",
+      "duration_ms": 14729,
+      "uuid": "6cff2621-92ae-4b26-aefa-c1ca07fd2e62",
+      "ttft_stream_ms": 1119,
+      "time_to_request_ms": 336,
+      "first_content_frame_ms": 1120,
+      "queued_turn_count": 0,
+      "result_index": 0
+    }
+  ]
+}

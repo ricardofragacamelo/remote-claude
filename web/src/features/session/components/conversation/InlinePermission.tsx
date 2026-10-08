@@ -26,6 +26,12 @@ export function InlinePermission({
       onOpenRules={inline.onOpenRules}
       onPlanApproved={inline.onPlanApproved}
       folder={inline.folder}
+      question={{
+        drafts: requests.drafts,
+        onDraft: requests.saveDraft,
+        onSubmit: requests.answerQuestion,
+        onDecline: requests.declineQuestion,
+      }}
     />
   );
 }

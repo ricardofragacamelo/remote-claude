@@ -1,9 +1,13 @@
+import { QUESTION_RECORD_SOURCE } from '@application/permission';
+import type { QuestionRecordSource } from '@application/permission';
+import { DrizzleQuestionRecordSource } from '@adapter/outbound/persistence/permission/drizzle-question-record.source';
 import { Module } from '@nestjs/common';
 
 import {
   FollowTranscriptUseCase,
   LIVE_CONVERSATION_SOURCE,
   ListTranscriptsUseCase,
+  QuestionHistory,
   ReadPromptImageUseCase,
   ReadToolResultUseCase,
   ReadTranscriptUseCase,
@@ -87,11 +91,22 @@ import { WorkspaceModule } from './workspace.module';
         audience: TranscriptAudience,
       ) => new ListTranscriptsUseCase(allowlist, store, audience),
     },
+    // The questions of Claude in the history, joined to what this backend recorded of their answers
+    // (plan 24, B-21) — read here, in the permission requests the permission flow already writes.
+    { provide: QUESTION_RECORD_SOURCE, useClass: DrizzleQuestionRecordSource },
+    {
+      provide: QuestionHistory,
+      inject: [QUESTION_RECORD_SOURCE],
+      useFactory: (records: QuestionRecordSource) => new QuestionHistory(records),
+    },
     {
       provide: ReadTranscriptUseCase,
-      inject: [TRANSCRIPT_STORE, TranscriptAudience],
-      useFactory: (store: TranscriptStore, audience: TranscriptAudience) =>
-        new ReadTranscriptUseCase(store, audience),
+      inject: [TRANSCRIPT_STORE, TranscriptAudience, QuestionHistory],
+      useFactory: (
+        store: TranscriptStore,
+        audience: TranscriptAudience,
+        questions: QuestionHistory,
+      ) => new ReadTranscriptUseCase(store, audience, questions),
     },
     {
       provide: ReadToolResultUseCase,
@@ -109,7 +124,15 @@ import { WorkspaceModule } from './workspace.module';
       // The follower of conversations begun elsewhere (plan 22, F2): what it sees of each tick is
       // logged here, at `debug` — counts, never a word of the conversation (S-72).
       provide: FollowTranscriptUseCase,
-      inject: [TRANSCRIPT_STORE, TranscriptAudience, SCHEDULER, ID_GENERATOR, APP_CONFIG, LOGGER],
+      inject: [
+        TRANSCRIPT_STORE,
+        TranscriptAudience,
+        SCHEDULER,
+        ID_GENERATOR,
+        APP_CONFIG,
+        LOGGER,
+        QuestionHistory,
+      ],
       useFactory: (
         store: TranscriptStore,
         audience: TranscriptAudience,
@@ -117,21 +140,30 @@ import { WorkspaceModule } from './workspace.module';
         ids: IdGenerator,
         config: AppConfig,
         logger: Logger,
+        questions: QuestionHistory,
       ) =>
-        new FollowTranscriptUseCase(store, audience, scheduler, ids, config.transcript.follow, {
-          looked: (conversationId, outcome) => {
-            logger.debug(
-              { op: 'transcript.follow', layer: 'application', conversationId, ...outcome },
-              'followed conversation looked at',
-            );
+        new FollowTranscriptUseCase(
+          store,
+          audience,
+          scheduler,
+          ids,
+          config.transcript.follow,
+          {
+            looked: (conversationId, outcome) => {
+              logger.debug(
+                { op: 'transcript.follow', layer: 'application', conversationId, ...outcome },
+                'followed conversation looked at',
+              );
+            },
+            failed: (conversationId, error) => {
+              logger.warn(
+                { op: 'transcript.follow', layer: 'application', conversationId, err: error },
+                'a look at a followed conversation failed; the next one tries again',
+              );
+            },
           },
-          failed: (conversationId, error) => {
-            logger.warn(
-              { op: 'transcript.follow', layer: 'application', conversationId, err: error },
-              'a look at a followed conversation failed; the next one tries again',
-            );
-          },
-        }),
+          questions,
+        ),
     },
   ],
   // The store, for `session`, which asks it where a conversation ran before continuing one; and the

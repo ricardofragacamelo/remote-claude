@@ -36,6 +36,12 @@ import { pathToFileURL } from 'node:url';
 
 import * as prettier from 'prettier';
 
+import {
+  QUESTION_TOOL,
+  answeredWithFirstOptions,
+  planTurnProblems,
+  questionTurnProblems,
+} from './lib/fixture-questions.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { bold, dim, fail, info, ok, title, warn } from './lib/ui.mjs';
 
@@ -98,6 +104,9 @@ const TRANSCRIPT_POLL_MS = 250;
  * @property {boolean} [watchTranscript] measure how long the transcript goes unwritten
  * @property {number} [quietMs] how long to wait, once every prompt is in, for a result that may
  *   never come — longer than {@link QUIET_MS} for a turn that is slow by nature, like `/compact`
+ * @property {(consulted: { toolName: string, input: unknown }[]) => string[]} [requires] what the
+ *   recording has to hold for the tests built on it — a fixture missing any of it is not written,
+ *   and the run fails, rather than proving less than those tests claim (plan 24, R-04)
  */
 
 /**
@@ -256,6 +265,21 @@ const SCENARIOS = [
       'anything yet. When the plan is ready, present it to me with ExitPlanMode.',
     files: { 'index.js': "console.log('tally');\n" },
     options: { permissionMode: 'plan' },
+    // The panel's e2e answers the question first and the plan second (plan 24, B-23).
+    requires: planTurnProblems,
+  },
+  {
+    name: 'question-turn',
+    why: 'plan 24, B-11 — AskUserQuestion with several questions, one of multiple choice and one with previews, answered',
+    prompt:
+      'Before doing anything else, use the AskUserQuestion tool once, with three questions in that ' +
+      'single call, about a README.md for this project: (1) which sections it should have, as a ' +
+      'multiple choice (multiSelect: true) with options such as Usage, Installation and License; ' +
+      '(2) its format, as a single choice in which every option carries a `preview` with a short ' +
+      'markdown sample of that format; (3) its tone, as a single choice. Once I have answered, ' +
+      'reply with one sentence that repeats my answers, and use no other tool.',
+    files: { 'index.js': "console.log('tally');\n" },
+    requires: questionTurnProblems,
   },
   {
     name: 'thinking-turn',
@@ -604,7 +628,12 @@ function recordingCallbacks(seen) {
      */
     canUseTool: (toolName, input) => {
       seen.canUseTool.push({ toolName, input });
-      return Promise.resolve({ behavior: 'allow', updatedInput: input });
+      // A question is answered — the first option of each — the way the product answers one: an
+      // input handed back as it came reads to the CLI as "did not answer" (plan 24, B-11).
+      return Promise.resolve({
+        behavior: 'allow',
+        updatedInput: toolName === QUESTION_TOOL ? answeredWithFirstOptions(input) : input,
+      });
     },
   };
 }
@@ -652,7 +681,8 @@ async function consume(session, state, turns, messages, quietMs) {
  *
  * `canUseTool` answers `allow` and records that it was asked. It has to answer something, and
  * denying would record a stream of refusals rather than a stream of work — but **which** tools it
- * was consulted about is the measurement the fixture carries.
+ * was consulted about is the measurement the fixture carries. A question it answers with the first
+ * option of each, as a person would answer it.
  *
  * The prompts go one per turn: the next is sent when the previous turn's `result` arrives, unless a
  * step asks to be sent mid-turn.
@@ -1018,6 +1048,10 @@ async function recordScenario(sdk, scenario) {
     return;
   }
 
+  if (lacksWhatItRequires(scenario, result.canUseTool)) {
+    return;
+  }
+
   // The `system:init` message is the only one that reports the working directory, and it is
   // what the throwaway path is normalised out of.
   const init = /** @type {{ cwd?: string } | undefined} */ (
@@ -1056,6 +1090,25 @@ async function recordScenario(sdk, scenario) {
     `${String(fixture.counts.messages)} messages · ${String(fixture.counts.preToolUse)} hooks · ` +
       `${String(fixture.counts.canUseTool)} canUseTool · ${String(Date.now() - started)}ms`,
   );
+}
+
+/**
+ * Whether a recording lacks what its scenario requires — said loudly, and the run failed: the model
+ * did not cooperate, and a fixture that proves less than the tests built on it claim is worse than
+ * none (plan 24, R-04). Nothing is written; run it again.
+ *
+ * @param {(typeof SCENARIOS)[number]} scenario
+ * @param {{ toolName: string, input: unknown }[]} consulted
+ */
+function lacksWhatItRequires(scenario, consulted) {
+  const missing = scenario.requires?.(consulted) ?? [];
+
+  if (missing.length > 0) {
+    fail(`${scenario.name} was not written`, missing.join('; '));
+    process.exitCode = 1;
+  }
+
+  return missing.length > 0;
 }
 
 /**

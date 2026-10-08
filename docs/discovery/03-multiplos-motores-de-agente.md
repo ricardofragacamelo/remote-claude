@@ -7,7 +7,7 @@ suportar vários motores?"
 **Destino:** servir de insumo para um ou mais planos em [docs/plans/](../plans/README.md). Esta
 proposta **não** é um plano: não tem fases com tarefas nem critério de conclusão. Ela fixa o **quê**
 e o **porquê**, mede o impacto e lista o que falta decidir antes de virar plano.
-**Relação com a [proposta de workflow de sessões](workflow-de-sessoes.md):** aquele documento **não
+**Relação com a [proposta de workflow de sessões](02-workflow-de-sessoes.md):** aquele documento **não
 é alterado** por esta proposta. O impacto sobre ele está todo no §10 daqui, como uma lista de ajustes
 a absorver quando os planos de workflow forem criados — ou quando o usuário decidir revisar aquela
 proposta.
@@ -172,7 +172,7 @@ tarefas.
   instalação do Claude.
 - Os kinds de auditoria `claude.*`.
 - Documentos normativos: [backend/04-claude-integration](../architecture/backend/04-claude-integration.md),
-  [discovery 01](../discovery/01-descoberta-claude-agent-sdk.md), ADR-001 e ADR-011.
+  [discovery 01](01-descoberta-claude-agent-sdk.md), ADR-001 e ADR-011.
 - O próprio nome do produto (`remote-claude`) e o formato `remote-claude/workflow@1` da proposta de
   workflow.
 
@@ -555,7 +555,7 @@ Ver §8.
   [AGENTS.md](../../AGENTS.md) ("Entender como o backend conversa com o Claude local") e o
   anti-padrão "`query()` do Agent SDK sem `settingSources`" ganham a versão geral.
 - Uma **discovery por motor** (`docs/discovery/02-…-copilot.md`, `03-…-codex.md`, `04-…-acp.md`), no
-  molde da [01](../discovery/01-descoberta-claude-agent-sdk.md), escrita pelo spike.
+  molde da [01](01-descoberta-claude-agent-sdk.md), escrita pelo spike.
 - [05-websocket-protocol](../architecture/shared/05-websocket-protocol.md): todas as mudanças do §8.
 
 ### 7.7 Testes e scripts
@@ -632,7 +632,7 @@ Três formas de chegar a um motor novo:
 
 ## 10. Impacto na execução de workflows
 
-Esta seção mede o impacto desta proposta sobre a [proposta de workflow de sessões](workflow-de-sessoes.md)
+Esta seção mede o impacto desta proposta sobre a [proposta de workflow de sessões](02-workflow-de-sessoes.md)
 (referida aqui como **WF**), seção por seção. **Nada aqui altera aquele documento.** A tabela do
 §10.13 é a lista de ajustes a absorver quando os planos de workflow (A a F do WF §21) forem
 criados.

@@ -4,7 +4,7 @@ import {
   PermissionRequestNotFoundError,
 } from '@domain/permission';
 import type { UserId } from '@domain/auth';
-import { requestedPayload, resolvedPayload } from './permission-payloads';
+import { interactionPayload, requestedPayload, resolvedPayload } from './permission-payloads';
 import type { ResolvedPermissionPayload } from './permission-payloads';
 import type { PermissionRegistry } from './permission-registry';
 import type { PermissionSettings } from './permission-settings';
@@ -36,7 +36,16 @@ export type PermissionState =
       /** What stops a card offering an extension that no longer exists. */
       readonly remainingExtensions: number;
     }
-  | ({ readonly status: 'resolved' } & ResolvedPermissionPayload);
+  | ({
+      readonly status: 'resolved';
+
+      /**
+       * The questions, when the request was one — the phone a push opened draws them with what was
+       * answered (plan 24, S-94). `permission.resolved` does not carry them: every screen that
+       * received it had the request already.
+       */
+      readonly interaction?: Readonly<Record<string, unknown>>;
+    } & ResolvedPermissionPayload);
 
 /**
  * The real state of one request, asked for rather than waited for.
@@ -100,6 +109,12 @@ export class DescribePermissionUseCase {
       throw new PermissionRequestExpiredError(query.requestId);
     }
 
-    return { status: 'resolved', ...resolvedPayload(request, resolution) };
+    return {
+      status: 'resolved',
+      ...resolvedPayload(request, resolution),
+      ...(request.interaction === null
+        ? {}
+        : { interaction: interactionPayload(request.interaction) }),
+    };
   }
 }

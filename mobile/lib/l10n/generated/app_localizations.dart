@@ -1053,6 +1053,168 @@ abstract class AppLocalizations {
   /// **'That rule does not exist.'**
   String get permissionErrorRuleNotFound;
 
+  /// What the AskUserQuestion tool does
+  ///
+  /// In en, this message translates to:
+  /// **'Answer Claude\'s question'**
+  String get permissionToolAskUserQuestion;
+
+  /// Accessibility label of the card of a question Claude asks
+  ///
+  /// In en, this message translates to:
+  /// **'Claude\'s question'**
+  String get permissionQuestionLabel;
+
+  /// Which step of the questions is on screen
+  ///
+  /// In en, this message translates to:
+  /// **'Question {n} of {total}'**
+  String permissionQuestionProgress(int n, int total);
+
+  /// The mark of a question that has an answer
+  ///
+  /// In en, this message translates to:
+  /// **'answered'**
+  String get permissionQuestionAnswered;
+
+  /// The free answer, always the last option
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get permissionQuestionOther;
+
+  /// The field of the free answer
+  ///
+  /// In en, this message translates to:
+  /// **'Type your answer…'**
+  String get permissionQuestionOtherPlaceholder;
+
+  /// The mark of the option Claude recommends
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get permissionQuestionRecommended;
+
+  /// Title of the sheet with the preview of an option
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get permissionQuestionPreview;
+
+  /// Opens the preview of an option
+  ///
+  /// In en, this message translates to:
+  /// **'See preview'**
+  String get permissionQuestionSeePreview;
+
+  /// Goes to the previous question
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get permissionQuestionBack;
+
+  /// Goes to the next question
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get permissionQuestionNext;
+
+  /// Sends the answers to Claude
+  ///
+  /// In en, this message translates to:
+  /// **'Send answers'**
+  String get permissionQuestionSubmit;
+
+  /// Refuses to answer the question
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t answer'**
+  String get permissionQuestionDecline;
+
+  /// The optional reason for not answering
+  ///
+  /// In en, this message translates to:
+  /// **'Why not? Claude reads this (optional)'**
+  String get permissionQuestionDeclineReason;
+
+  /// Confirms not answering
+  ///
+  /// In en, this message translates to:
+  /// **'Send without answering'**
+  String get permissionQuestionDeclineConfirm;
+
+  /// Leaves the refusal and goes back to the questions
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the questions'**
+  String get permissionQuestionDeclineBack;
+
+  /// A question nobody answered in time
+  ///
+  /// In en, this message translates to:
+  /// **'This question ran out of time. Nothing was sent.'**
+  String get permissionQuestionExpired;
+
+  /// A question whose input could not be read
+  ///
+  /// In en, this message translates to:
+  /// **'Claude\'s question could not be read, so it cannot be answered here. Declining tells Claude so.'**
+  String get permissionQuestionMalformed;
+
+  /// The working indicator: a question of Claude waits
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for your answer to a question'**
+  String get permissionQuestionWaiting;
+
+  /// The pill over the box with a question of Claude out of view
+  ///
+  /// In en, this message translates to:
+  /// **'Claude asked you something ({count})'**
+  String permissionQuestionPill(String count);
+
+  /// The line of a tool that asked one question
+  ///
+  /// In en, this message translates to:
+  /// **'Asked: {header}'**
+  String permissionQuestionAsked(String header);
+
+  /// The line of a tool that asked several questions
+  ///
+  /// In en, this message translates to:
+  /// **'Asked {count} questions'**
+  String permissionQuestionAskedMany(int count);
+
+  /// A question not answered yet
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for an answer'**
+  String get permissionQuestionPending;
+
+  /// A question somebody chose not to answer
+  ///
+  /// In en, this message translates to:
+  /// **'Not answered: {reason}'**
+  String permissionQuestionDeclined(String reason);
+
+  /// A question answered in another client
+  ///
+  /// In en, this message translates to:
+  /// **'Answered elsewhere'**
+  String get permissionQuestionAnsweredElsewhere;
+
+  /// The answers were refused by the server
+  ///
+  /// In en, this message translates to:
+  /// **'Those answers do not fit the question. Check each one and send again.'**
+  String get permissionErrorAnswersInvalid;
+
+  /// A free answer, as it was given
+  ///
+  /// In en, this message translates to:
+  /// **'Other: {text}'**
+  String permissionQuestionOtherAnswer(String text);
+
   /// Title of the rules screen
   ///
   /// In en, this message translates to:

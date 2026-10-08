@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 
 import { RecordToolInvocationUseCase } from '@application/audit';
+import { answersPayload } from '@application/permission';
 import type { PermissionResolvedEvent } from '@application/permission';
 import { PermissionBridge } from '@adapter/outbound/claude/permission-bridge';
 import { LOGGER, type Logger } from '@shared/logging/logger';
@@ -67,7 +68,12 @@ export class RecordDecisionOnResolved {
         sessionId: request.sessionId,
         toolUseId: request.toolUseId,
         toolName: request.toolName,
-        input: request.input,
+        // A question's decision carries what was answered: "who answered, from where, and what" is
+        // what the trail exists to say (plan 24, D-12). The hook's entry keeps the input as it was.
+        input:
+          resolution.answers === undefined
+            ? request.input
+            : { ...request.input, answers: answersPayload(resolution.answers) },
         decision: resolution.decision === 'allow' ? 'allowed' : 'denied',
         origin: { deviceId: null, ip: null },
         at: resolution.at,
@@ -109,6 +115,58 @@ export class RecordDecisionOnResolved {
         ...cause,
       },
       'the permission decision could not be written to the trail',
+    );
+  }
+}
+
+/** How much of an answer the `debug` line shows, per text. */
+const ANSWER_LOG_LIMIT = 200;
+
+/**
+ * The consumer that says a question was answered (plan 24, B-08).
+ *
+ * At `info`, that it was and how — how many questions, and whether anybody wrote their own answer —
+ * and never **what**: a free answer is whatever the person typed. The content goes to `debug`, cut,
+ * as the input of a tool does.
+ */
+@Injectable()
+export class LogQuestionAnswered {
+  constructor(@Inject(LOGGER) private readonly logger: Logger) {}
+
+  @OnEvent(PERMISSION_RESOLVED)
+  handle(event: PermissionResolvedEvent): void {
+    const { request } = event;
+    const answers = request.resolution?.answers;
+
+    if (answers === undefined) {
+      return;
+    }
+
+    const line = {
+      op: 'permission.question.answered',
+      layer: 'adapter',
+      sessionId: request.sessionId.value,
+      requestId: request.id,
+    };
+
+    this.logger.info(
+      {
+        ...line,
+        questions: answers.length,
+        withOther: answers.some((answer) => answer.other !== null),
+      },
+      'a question of Claude was answered',
+    );
+    this.logger.debug(
+      {
+        ...line,
+        answers: answers.map((answer) => ({
+          questionId: answer.questionId,
+          selected: answer.selected.map((label) => label.slice(0, ANSWER_LOG_LIMIT)),
+          other: answer.other?.slice(0, ANSWER_LOG_LIMIT) ?? null,
+        })),
+      },
+      'what the question was answered with',
     );
   }
 }
