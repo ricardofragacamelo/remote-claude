@@ -114,6 +114,7 @@ export function createPermissionQueueStore(): PermissionQueueStore {
                   requestId,
                   decision: 'deny' as const,
                   auto: true,
+                  via: null,
                   resolvedBy: null,
                   resolvedFrom: null,
                   toolUseId: expired.toolUseId === '' ? null : expired.toolUseId,

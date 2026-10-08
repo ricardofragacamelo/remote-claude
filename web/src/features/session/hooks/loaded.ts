@@ -21,3 +21,18 @@ export function loadedOf<T>(query: UseQueryResult<T, AppError>): Loaded<T> {
     },
   };
 }
+
+/**
+ * A query read only when a row is unfolded, in the same shape: loading only while there is nothing
+ * yet to show, and a failure only while there is no answer — a failed refetch keeps what came.
+ */
+export function unfoldedOf<T>(query: UseQueryResult<T, AppError>): Loaded<T> {
+  return {
+    data: query.data ?? null,
+    isLoading: query.isFetching && query.data === undefined,
+    error: query.data === undefined ? query.error : null,
+    retry: () => {
+      void query.refetch();
+    },
+  };
+}

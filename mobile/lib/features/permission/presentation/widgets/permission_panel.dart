@@ -103,8 +103,8 @@ class _PermissionPanelState extends ConsumerState<PermissionPanel> {
       block: block,
       canApprove: hasLock && _last != AnswerResult.noLock,
       notice: notice,
-      onAnswer: (PermissionDecision decision, PermissionScope scope) =>
-          unawaited(_answer(l10n, decision, scope)),
+      onAnswer: (PermissionDecision decision, PermissionScope scope, {RuleReachKind? reach}) =>
+          unawaited(_answer(l10n, decision, scope, reach: reach)),
       onDisarm: () => _controller().disarm(widget.card.requestId),
       // Pushed, not gone to: "back" from the rules lands on the question that is still open.
       onOpenRules: () => unawaited(context.push(rulesRoute)),
@@ -132,6 +132,7 @@ class _PermissionPanelState extends ConsumerState<PermissionPanel> {
     PermissionDecision decision,
     PermissionScope scope, {
     String? reason,
+    RuleReachKind? reach,
   }) async {
     final AnswerResult result = await _controller().answer(
       widget.card.requestId,
@@ -139,6 +140,7 @@ class _PermissionPanelState extends ConsumerState<PermissionPanel> {
       scope,
       lockReason: l10n.permissionLockReason,
       reason: reason,
+      reach: reach,
     );
 
     if (mounted) {

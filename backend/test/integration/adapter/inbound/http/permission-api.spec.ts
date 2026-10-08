@@ -119,9 +119,38 @@ describe('the permission HTTP surface', () => {
             lifetimeMs: 3_600_000,
           },
         ],
+        // What a rule left by the answer may reach, computed by the server (plan 23, B-10).
+        reaches: [
+          { reach: 'exact', patterns: ['Bash(rm -rf build/)'] },
+          { reach: 'prefix', patterns: ['Bash(rm:*)'] },
+        ],
       },
       // Two allowed by the suite's configuration, one already spent above.
       remainingExtensions: 1,
+    });
+  });
+
+  it('says Permitir tudo answered a request nobody was asked about — plan 23, S-68', async () => {
+    await harness.app.get(RequestPermissionUseCase).execute({
+      requestId: 'request-allow-all',
+      sessionId: SESSION,
+      userId: UserId.create(SUBJECT),
+      projectPath: null,
+      permissionMode: 'allowAll',
+      toolUseId: 'toolu-request-allow-all',
+      toolName: 'Bash',
+      input: { command: 'pnpm test' },
+    });
+
+    const response = await revalidate('request-allow-all');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      status: 'resolved',
+      decision: 'allow',
+      auto: true,
+      resolvedBy: SUBJECT,
+      via: 'allowAll',
     });
   });
 

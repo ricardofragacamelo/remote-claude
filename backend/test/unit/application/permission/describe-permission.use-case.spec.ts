@@ -123,6 +123,8 @@ describe('DescribePermissionUseCase', () => {
       auto: true,
       resolvedBy: PERMISSION_OWNER.value,
       toolUseId: 'toolu-1',
+      // What answered, so the screen can say "by a rule" (plan 23, S-67).
+      via: 'rule',
     });
   });
 

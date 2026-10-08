@@ -10,7 +10,10 @@
 /// - **refusal is the easiest target** when the server leans that way (S-42), and a destructive
 ///   yes takes two deliberate steps (S-41) — as does every yes that persists a rule, whatever the
 ///   risk, because the second step is where the reach of "don't ask again" is said in full (S-65);
-/// - **silence refuses**, so the countdown is always on screen, next to the way to buy more time.
+/// - **silence refuses**, so the countdown is always on screen, next to the way to buy more time;
+/// - **how far a rule reaches is chosen, not guessed** (plan 23, B-16): the server sends the reaches
+///   with their patterns, the card shows each one in full when there is more than one, and the answer
+///   names the one chosen — never a pattern of its own.
 ///
 /// Presentational: it knows nothing about the socket, the device or the lock. Whoever mounts it
 /// decides what is blocked and why, and it says so in words — a control that is off with no reason
@@ -67,7 +70,9 @@ class PermissionCardView extends StatefulWidget {
   /// What happened to the last tap, when it did not do what it looked like it would.
   final String? notice;
 
-  final void Function(PermissionDecision decision, PermissionScope scope) onAnswer;
+  /// A yes or a no — with [reach], which of the request's reaches the rules of a yes take.
+  final void Function(PermissionDecision decision, PermissionScope scope, {RuleReachKind? reach})
+  onAnswer;
   final VoidCallback onDisarm;
   final VoidCallback onExtend;
 
@@ -83,6 +88,9 @@ class _PermissionCardViewState extends State<PermissionCardView> {
   /// The scope of the yes waiting for its second step. Local to the widget: it only lives between
   /// two taps on this card.
   PermissionScope _armed = PermissionScope.once;
+
+  /// How far the rules of a yes reach — chosen on the card, starting on the one of D-09.
+  late RuleReach? _reach = preselectedReach(widget.card.request.reaches);
 
   @override
   Widget build(BuildContext context) {
@@ -117,13 +125,23 @@ class _PermissionCardViewState extends State<PermissionCardView> {
               _Confirmation(
                 destructive: destructive,
                 reach: _armed.isPersisted ? request.rule : null,
+                patterns: _reach?.patterns ?? <String>[?request.rule?.pattern],
                 scope: _armed,
                 enabled: widget.block == null && widget.canApprove,
-                onConfirm: () => widget.onAnswer(PermissionDecision.allow, _armed),
+                onConfirm: () =>
+                    widget.onAnswer(PermissionDecision.allow, _armed, reach: _reachOf(_armed)),
                 onCancel: widget.onDisarm,
                 onOpenRules: widget.onOpenRules,
               )
-            else
+            else ...<Widget>[
+              if (request.reaches.length > 1)
+                _ReachChoice(
+                  reaches: request.reaches,
+                  chosen: _reach,
+                  onChoose: _answerable
+                      ? (RuleReach reach) => setState(() => _reach = reach)
+                      : null,
+                ),
               _Answers(
                 request: request,
                 refuseEnabled: _answerable,
@@ -131,9 +149,10 @@ class _PermissionCardViewState extends State<PermissionCardView> {
                 onRefuse: () => widget.onAnswer(PermissionDecision.deny, PermissionScope.once),
                 onApprove: (PermissionScope scope) {
                   setState(() => _armed = scope);
-                  widget.onAnswer(PermissionDecision.allow, scope);
+                  widget.onAnswer(PermissionDecision.allow, scope, reach: _reachOf(scope));
                 },
               ),
+            ],
             ExtendAction.forCard(card, blocked: widget.block != null, onExtend: widget.onExtend),
             ..._reasons(l10n, scheme),
           ],
@@ -141,6 +160,10 @@ class _PermissionCardViewState extends State<PermissionCardView> {
       ),
     );
   }
+
+  /// The reach a yes with [scope] names: none for a one-off, which leaves no rule.
+  RuleReachKind? _reachOf(PermissionScope scope) =>
+      scope == PermissionScope.once ? null : _reach?.kind;
 
   bool get _answerable =>
       widget.block == null && widget.card.isAnswerable && widget.card.phase == CardPhase.idle;
@@ -364,6 +387,58 @@ String ruleLifetime(AppLocalizations l10n, RuleOffer? rule) {
       : l10n.permissionRuleHours(lifetime.inHours < 1 ? 1 : lifetime.inHours);
 }
 
+/// How far the rules of a yes reach — each reach with its patterns, exactly as they would be stored.
+class _ReachChoice extends StatelessWidget {
+  const _ReachChoice({required this.reaches, required this.chosen, required this.onChoose});
+
+  final List<RuleReach> reaches;
+  final RuleReach? chosen;
+
+  /// `null` while the card cannot be answered.
+  final void Function(RuleReach reach)? onChoose;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(bottom: Tokens.spaceMd),
+      child: RadioGroup<RuleReachKind>(
+        groupValue: chosen?.kind,
+        onChanged: (RuleReachKind? kind) {
+          final RuleReach? picked = reaches
+              .where((RuleReach each) => each.kind == kind)
+              .firstOrNull;
+          if (picked != null) {
+            onChoose?.call(picked);
+          }
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(l10n.permissionReachLabel, style: Theme.of(context).textTheme.labelSmall),
+            for (final RuleReach each in reaches)
+              RadioListTile<RuleReachKind>(
+                value: each.kind,
+                enabled: onChoose != null,
+                contentPadding: EdgeInsets.zero,
+                title: Text(reachName(l10n, each.kind)),
+                subtitle: Text(each.patterns.join('\n'), style: identifierStyle(context)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The name of a reach, in the words of the screen.
+String reachName(AppLocalizations l10n, RuleReachKind kind) => switch (kind) {
+  RuleReachKind.exact => l10n.permissionReachExact,
+  RuleReachKind.prefix => l10n.permissionReachPrefix,
+  RuleReachKind.tool => l10n.permissionReachTool,
+};
+
 /// The deliberate second step of a yes that needs one.
 ///
 /// For a destructive yes, the warning. For a persisted one, the reach in full — which command,
@@ -373,6 +448,7 @@ class _Confirmation extends StatelessWidget {
   const _Confirmation({
     required this.destructive,
     required this.reach,
+    required this.patterns,
     required this.scope,
     required this.enabled,
     required this.onConfirm,
@@ -382,8 +458,11 @@ class _Confirmation extends StatelessWidget {
 
   final bool destructive;
 
-  /// The rule the yes would grant, when it persists one.
+  /// The rule the yes would grant, when it persists one: its lifetime.
   final RuleOffer? reach;
+
+  /// The rules the yes would leave — the patterns of the reach chosen.
+  final List<String> patterns;
 
   final PermissionScope scope;
   final bool enabled;
@@ -416,7 +495,7 @@ class _Confirmation extends StatelessWidget {
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: Tokens.spaceSm),
-          VerbatimBox(rule.pattern),
+          VerbatimBox(patterns.join('\n')),
           NoteLine(l10n.permissionPersistRevocable),
           if (onOpenRules != null)
             Align(

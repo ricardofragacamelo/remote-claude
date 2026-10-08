@@ -19,21 +19,21 @@ cabeçalho de autor, e continua sem ([proposta §4.6](../../propostas/historico-
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-31 — Pensamento 🔲
+### B-31 — Pensamento ✅
 
 [thinking_line.dart](../../../mobile/lib/features/session/presentation/widgets/thinking_line.dart) segue a regra
 do web: omitido é "Pensou", recolhido, com "o modelo não mostrou" ao abrir; resumido à vista, atenuado;
 `redacted` com o aviso. A `Conversation` mede a duração do histórico pelo `at`, com "até N s"
 ([D-14](decisions.md#f5--fidelidade-no-web)). As chaves são as do par do `i18n-shared.json` (B-04).
 
-### B-32 — O card de ferramenta 🔲
+### B-32 — O card de ferramenta ✅
 
 [tool_card.dart](../../../mobile/lib/features/session/presentation/widgets/tool_card.dart): recolhido por
 padrão, como o web; rótulo pelo `title`; IN do Bash com o `command` em mono (não mais `Map.toString()`), OUT com
 a saída; expandir pede a saída completa pela rota da B-11, uma vez; falha mostra o `summary` e "tentar de
 novo"; `truncated` diz quanto tinha.
 
-### B-33 — Imagem do prompt 🔲
+### B-33 — Imagem do prompt ✅
 
 [conversation_view.dart](../../../mobile/lib/features/session/presentation/widgets/conversation_view.dart): o
 balão vazio dá lugar a "imagem anexada" com tipo e tamanho; tocar busca a imagem pela rota da B-12 com o token no

@@ -32,6 +32,7 @@ import {
 } from '../../../support/builders/session.builder';
 import { RecordingBroadcaster } from '../../../support/fakes/recording-broadcaster';
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
+import { StubPermissionGate } from '../../../support/fakes/stub-permission-gate';
 import {
   aContextResolver,
   ScriptedReferenceInspector,
@@ -143,7 +144,7 @@ describe('the commands that drive a running session', () => {
           payload: {
             messageId: 'prompt-1',
             role: 'user',
-            content: [{ type: 'text', text: 'first' }],
+            content: [{ type: 'text', blockId: 'prompt-1:0', text: 'first' }],
             promptedBy: 'web',
           },
         },
@@ -238,7 +239,7 @@ describe('the commands that drive a running session', () => {
           payload: {
             messageId: 'prompt-1',
             role: 'user',
-            content: [{ type: 'text', text: 'from the phone' }],
+            content: [{ type: 'text', blockId: 'prompt-1:0', text: 'from the phone' }],
             promptedBy: 'mobile',
           },
         },
@@ -446,11 +447,58 @@ describe('the commands that drive a running session', () => {
   });
 
   describe('setPermissionMode', () => {
-    it('changes it on the subprocess and on the session', async () => {
-      await new SetSessionPermissionModeUseCase(registry).execute(SESSION_ID, 'acceptEdits', owner);
+    it('changes it on the subprocess and on the session, then tells the gate', async () => {
+      const gate = new StubPermissionGate();
+
+      await new SetSessionPermissionModeUseCase(registry, gate).execute(
+        SESSION_ID,
+        'acceptEdits',
+        owner,
+      );
 
       expect(handle.modes).toEqual(['acceptEdits']);
       expect(session.permissionMode).toBe('acceptEdits');
+      expect(gate.modes).toEqual([{ sessionId: SESSION_ID, mode: 'acceptEdits' }]);
+    });
+
+    it('keeps Permitir tudo on the session and hands it to the gate — plan 23, S-07', async () => {
+      // The entity holds our mode, because the next request reads it; what the SDK is told is the
+      // runner's business (`sdkPermissionMode`), and the handle here records what it was asked.
+      const gate = new StubPermissionGate();
+
+      await new SetSessionPermissionModeUseCase(registry, gate).execute(
+        SESSION_ID,
+        'allowAll',
+        owner,
+      );
+
+      expect(session.permissionMode).toBe('allowAll');
+      expect(gate.modes).toEqual([{ sessionId: SESSION_ID, mode: 'allowAll' }]);
+    });
+
+    it('ends with the session and the subprocess agreeing when two clients switch at once — plan 23, S-100', async () => {
+      const gate = new StubPermissionGate();
+      const switching = new SetSessionPermissionModeUseCase(registry, gate);
+
+      await Promise.all([
+        switching.execute(SESSION_ID, 'allowAll', owner),
+        switching.execute(SESSION_ID, 'default', owner),
+      ]);
+
+      expect(handle.modes).toEqual(['allowAll', 'default']);
+      expect(session.permissionMode).toBe(handle.modes.at(-1));
+      expect(gate.modes.at(-1)).toEqual({ sessionId: SESSION_ID, mode: 'default' });
+    });
+
+    it('tells the gate nothing when the subprocess refused the mode', async () => {
+      const gate = new StubPermissionGate();
+      handle.failWith = new Error('no such mode');
+
+      await expect(
+        new SetSessionPermissionModeUseCase(registry, gate).execute(SESSION_ID, 'plan', owner),
+      ).rejects.toThrow('no such mode');
+      expect(session.permissionMode).not.toBe('plan');
+      expect(gate.modes).toEqual([]);
     });
   });
 

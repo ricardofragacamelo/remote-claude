@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:remote_claude/core/widgets/confirm_dialog.dart';
 import 'package:remote_claude/core/logging/logger_provider.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/widgets/message_strip.dart';
@@ -198,21 +199,12 @@ class EndDialog extends ConsumerWidget {
       },
     );
 
-    return AlertDialog(
-      title: Text(l10n.sessionCloseTitle),
-      content: SingleChildScrollView(child: Text(l10n.sessionCloseDescription)),
-      actions: <Widget>[
-        TextButton(
-          autofocus: true,
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(l10n.sessionCloseKeep),
-        ),
-        TextButton(
-          style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-          onPressed: () => Navigator.of(context).pop(true),
-          child: Text(l10n.sessionCloseConfirm),
-        ),
-      ],
+    return ConfirmDialog(
+      title: l10n.sessionCloseTitle,
+      body: l10n.sessionCloseDescription,
+      keep: l10n.sessionCloseKeep,
+      confirm: l10n.sessionCloseConfirm,
+      destructive: true,
     );
   }
 }

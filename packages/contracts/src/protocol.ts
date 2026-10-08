@@ -9,6 +9,7 @@ export const FRAME_TYPES = [
   'command.accepted',
   'connection.ready',
   'session.attached',
+  'transcript.following',
   'workspace.watching',
   'connection.authenticate',
   'connection.reauthenticate',
@@ -27,6 +28,8 @@ export const FRAME_TYPES = [
   'session.setModel',
   'session.setPermissionMode',
   'session.start',
+  'transcript.follow',
+  'transcript.unfollow',
   'workspace.unwatch',
   'workspace.watch',
   'diag.pong',
@@ -46,6 +49,8 @@ export const FRAME_TYPES = [
   'tool.completed',
   'tool.progress',
   'tool.started',
+  'transcript.appended',
+  'transcript.reset',
   'turn.completed',
   'workspace.filesChanged',
   'workspace.watchStopped',
@@ -114,6 +119,16 @@ export interface SessionAttachedPayload {
   readonly claudeSessionId?: string;
   /** The conversation this session continues, when it is a resume. Present on the ack a `session.start` answers with when the conversation it asked to resume was already live for the caller: resuming what is live is an attach, never a second subprocess. */
   readonly resumedFrom?: string;
+}
+
+/** Answer to `transcript.follow`: the subscription exists, and what the conversation gains will arrive as `transcript.appended` with this `followId`. Nothing of the subscription arrives before this ack. */
+export interface TranscriptFollowingPayload {
+  /** The subscription. Its events carry it, and `seq` is monotonic per `followId`, from 1. */
+  readonly followId: string;
+  /** The conversation being followed. */
+  readonly conversationId: string;
+  /** What the conversation is doing now, by the rule of the listing: `activeElsewhere` is an estimate — something wrote to it recently —, never a fact about which client has it open. */
+  readonly activity: 'liveHere' | 'activeElsewhere' | 'idle';
 }
 
 /** Answer to `workspace.watch`: the subscription exists, and the changes of the folder will arrive as `workspace.filesChanged` with this `watchId`. */
@@ -286,8 +301,8 @@ export interface SessionSetModelPayload {
 /** Changes the permission mode of a running session. */
 export interface SessionSetPermissionModePayload {
   readonly sessionId: string;
-  /** The mode to switch to. */
-  readonly mode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+  /** The mode to switch to. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured. */
+  readonly mode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'allowAll';
 }
 
 /** Opens a session on a workspace. The path is checked against the allowlist before anything else happens — it is the first line of defence, not a hint. */
@@ -296,14 +311,28 @@ export interface SessionStartPayload {
   readonly workspacePath: string;
   /** Model to open with. Absent means the server default. */
   readonly model?: string;
-  /** Permission mode to open with. Absent means the server default. */
-  readonly permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+  /** Permission mode to open with. Absent means the server default. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured. */
+  readonly permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'allowAll';
   /** How much effort the model puts in, for the whole session. Absent is the installation's default. Chosen before the session exists, because changing it on a live one (`applyFlagSettings`) restarts the CLI's query and drops its hooks — measured in plan 08, D-16. A level the model does not take is `INVALID_INPUT` (`session.error.effortUnsupported`). An enum read as a string, so a level added later does not break a client. */
   readonly effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
   /** Session of the Agent SDK to resume instead of starting fresh. */
   readonly resumeSessionId?: string;
   /** Edit and resend: the `messageId` of the user prompt to rewrite. The conversation `resumeSessionId` names continues from **just before** it, always in a new id — the original stays as it was (plan 08, D-19). A point the conversation does not have is `INVALID_INPUT` (`session.error.forkPointUnknown`); one the CLI refuses is `SESSION_FORK_REJECTED`. */
   readonly forkAt?: string;
+}
+
+/** Starts following a conversation of the history that this backend does not run — begun in the editor or the terminal, and maybe still being written there. Answered with `transcript.following`, which names the subscription; what the transcript gains then arrives as `transcript.appended`, with a `seq` of its own that starts at 1. The first `transcript.appended` carries **everything** after `afterMessageId`, even what was written between the page the client read and this command, so there is no hole between the two. There is **no replay**: after a reconnect the client follows again with the last `lastMessageId` it has. Refused with `INVALID_INPUT` (every invalid field in `details[]`), `NOT_FOUND` for a conversation that does not exist **or** that the caller does not read — the same answer on purpose —, `TRANSCRIPT_FOLLOW_LIVE_HERE` for a conversation a live session of the caller holds (`session.attach` shows it), and `TRANSCRIPT_FOLLOW_LIMIT` past the ceiling of the connection or of the server. */
+export interface TranscriptFollowPayload {
+  /** The conversation in Claude's store, a canonical UUID — the `sessionId` of `GET /transcripts/:sessionId/messages`. */
+  readonly conversationId: string;
+  /** The last entry the client has: the `lastMessageId` of the page it read, or of the last `transcript.appended`. Absent when the conversation it read was empty — then everything is new. */
+  readonly afterMessageId?: string;
+}
+
+/** Stops following a conversation. Idempotent: a subscription that already ended — or never was this connection's — is acknowledged all the same, because a client that unfollows as it leaves a screen races its own reconnection. */
+export interface TranscriptUnfollowPayload {
+  /** The subscription, as `transcript.following` named it. */
+  readonly followId: string;
 }
 
 /** Stops following a folder. Idempotent: a subscription that already ended — or never was this connection's — is acknowledged all the same, because a client that unwatches as it closes a tab races its own reconnection. */
@@ -351,13 +380,19 @@ export interface ErrorPayload {
 }
 
 export interface MessageCompletedPayloadContentItem {
-  /** Block kind — `text`, `thinking`, `redacted_thinking`, `tool_use`, `tool_result` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped. */
+  /** Block kind — `text`, `thinking`, `redacted_thinking`, `tool_use`, `tool_result`, `image` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped. */
   readonly type: string;
   /** The text of a `text` block. */
   readonly text?: string;
   /** What the model thought, on a `thinking` block — in a field of its own and not in `text`, so a client that joins the `text` of every block never shows it as the answer. A `redacted_thinking` block has neither: it says the model thought, and nothing it thought. */
   readonly thinking?: string;
   readonly toolUseId?: string;
+  /** The identity of the block: `<uuid>:<index>` — the uuid of the transcript entry the block is in, which the live message carries too, and its place in that entry. The same block has the same id live and in the history, read twice or a hundred times. A client keeps one block per id: two blocks equal in kind and text — two thinkings the model did not show — are still two. Absent from a server older than it; the client then compares kind and text. */
+  readonly blockId?: string;
+  /** The type of an `image` block, as the prompt declared it (`image/png`, …). Absent when it declared none. */
+  readonly mediaType?: string;
+  /** The size of an `image` block in bytes, decoded. The bytes themselves never travel on the stream or in a page: the image is fetched on demand, by `GET /transcripts/:sessionId/images/:blockId`. Absent for an image given by URL. */
+  readonly size?: number;
 }
 
 /** A message is finished, with its content as blocks. It supersedes whatever the deltas of the same `messageId` accumulated — a client that missed a delta is made whole here. */
@@ -368,6 +403,8 @@ export interface MessageCompletedPayload {
   readonly promptedBy?: string;
   /** The blocks of the message, in order. */
   readonly content: readonly MessageCompletedPayloadContentItem[];
+  /** When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for. */
+  readonly at?: string;
   /** Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation. */
   readonly parentToolUseId?: string;
 }
@@ -397,10 +434,17 @@ export interface PermissionRequestedPayloadSuggestionsItem {
   readonly scope: 'once' | 'session' | 'project' | 'always';
   /** An i18n key. The server never sends prose. */
   readonly labelKey: string;
-  /** What a rule granted by this suggestion would match, in the grammar of the Claude Code settings — the narrowest pattern that covers this invocation. Present on `project` and `always`; a client never offers one of those without it. */
+  /** What a rule granted with the `exact` reach would match, in the grammar of the Claude Code settings. Kept for clients that do not read `reaches`; absent when there is no `exact` reach. */
   readonly pattern?: string;
   /** How long a rule granted by this suggestion would live, counted from the answer. Present on `project` and `always`; the number is the installation's, never the client's. */
   readonly lifetimeMs?: number;
+}
+
+export interface PermissionRequestedPayloadReachesItem {
+  /** `exact` is this very input; `prefix` (shell only) covers every command that starts like each command of this line; `tool` (never shell) is every invocation of the tool. */
+  readonly reach: 'exact' | 'prefix' | 'tool';
+  /** The rules this reach would leave, one per pattern, in the grammar of the Claude Code settings. Shown in full before anybody confirms. */
+  readonly patterns: readonly string[];
 }
 
 /** The one `request` that travels server to client, and the reason the whole protocol is a socket instead of a stream: `canUseTool` has blocked the agent loop and it stays blocked until somebody answers or the deadline passes. Answered with the `permission.resolve` response. */
@@ -422,8 +466,10 @@ export interface PermissionRequestedPayload {
   readonly defaultToNo: boolean;
   /** When the request is denied automatically, ISO 8601 in UTC. Ours is the only timeout there is — the CLI imposes none. */
   readonly expiresAt: string;
-  /** Scopes the UI may offer beyond a one-off yes. */
+  /** Scopes the UI may offer beyond a one-off yes. `project` and `always` come whenever the request has at least one reach in `reaches` (and `project` only with a workspace). */
   readonly suggestions?: readonly PermissionRequestedPayloadSuggestionsItem[];
+  /** How far a rule left by this answer may reach, computed by the server from the invocation. The client picks one and answers with its `reach`, never with a pattern: the server computes the patterns again and refuses a reach it did not offer. Applies to `session`, `project` and `always`. */
+  readonly reaches?: readonly PermissionRequestedPayloadReachesItem[];
 }
 
 /** A permission request is settled. It reaches **every** connection, including the one that answered — that is how a second client learns it lost the race, and who won it. */
@@ -432,7 +478,7 @@ export interface PermissionResolvedPayload {
   readonly requestId: string;
   /** What was decided. First answer wins, so this is the decision that reached `canUseTool`, not necessarily the one this client sent. */
   readonly decision: 'allow' | 'deny';
-  /** The server decided it, with nobody answering — the deadline passed, or a rule the user granted earlier (`session`, `project` or `always`) matched. A request a rule settles is never put to anybody, and this event is how every screen watching still learns that something ran in the user's name. Silence never authorises, so an automatic decision is always `deny` unless a rule allowed it. */
+  /** The server decided it, with nobody answering — the deadline passed, a rule the user granted earlier (`session`, `project` or `always`) matched, or the session runs in Permitir tudo (`allowAll`). `via` says which. A request a rule settles is never put to anybody, and this event is how every screen watching still learns that something ran in the user's name. Silence never authorises, so an automatic decision is always `deny` unless a rule or Permitir tudo allowed it. */
   readonly auto: boolean;
   /** Who answered. Required whenever `auto` is false, so "approved on your phone 2 min ago" is something the UI can actually say. */
   readonly resolvedBy?: string;
@@ -440,6 +486,8 @@ export interface PermissionResolvedPayload {
   readonly resolvedFrom?: 'web' | 'mobile';
   /** The tool call the request was about, when the SDK named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`. */
   readonly toolUseId?: string;
+  /** Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), or the session running in Permitir tudo (`allowAll`). Absent when a human answered or the deadline passed. */
+  readonly via?: 'rule' | 'allowAll';
 }
 
 /** A prompt left the queue: it started, or somebody took it out. The positions of the ones behind it move up by one. */
@@ -518,7 +566,8 @@ export interface SessionStartedPayload {
   /** The workspace the session runs in, already normalised and already inside the allowlist. */
   readonly workspacePath: string;
   readonly model: string;
-  readonly permissionMode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+  /** The permission mode. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured. */
+  readonly permissionMode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'allowAll';
   /** The id of the conversation in Claude's store, which is not ours: it is what `GET /transcripts/:sessionId/messages` reads and what a later `session.start` takes as `resumeSessionId`. Equal to `resumedFrom` when one of our own conversations is continued in place; new when a conversation begun elsewhere is forked. */
   readonly claudeSessionId: string;
   /** The conversation this session continues, when it is a resume. Absent for a fresh session. The history before the first turn of this session is read from it, over HTTP — the replay buffer only ever holds what this session said. */
@@ -536,12 +585,14 @@ export interface ToolCompletedPayload {
   readonly toolUseId: string;
   /** `denied` is not a failure of the tool: it is a human having said no, and the UI reads the two differently. */
   readonly status: 'succeeded' | 'failed' | 'denied';
-  /** A short result for the timeline. The full output is the transcript's job, not this event's. */
+  /** A short result for the timeline: the output **as text** — a result made of blocks is their text joined, never JSON —, cut to its **last** 5 lines and at most 400 characters, with `…` in front when it was cut. The end is kept because that is where a build or a test says how it went. The whole output is the transcript's job: `GET /transcripts/:sessionId/tools/:toolUseId/result`. */
   readonly summary?: string;
   /** Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation. */
   readonly parentToolUseId?: string;
   /** The task of the list a `TaskCreate` made or a `TaskUpdate` changed — taken from the tool's structured result live, and from its result in the history. Absent for every other tool. The `summary` is the CLI's text, cut, and never carries it reliably (plan 08, B-20). */
   readonly taskId?: string;
+  /** When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for. */
+  readonly at?: string;
 }
 
 /** Output of a tool while it is still running, from the SDK's `tool_progress`. */
@@ -560,10 +611,39 @@ export interface ToolStartedPayload {
   readonly toolName: string;
   /** The exact input the tool was called with. */
   readonly input: Readonly<Record<string, unknown>>;
-  /** A short human label for the invocation, already derived by the backend. */
+  /** A short human label for the invocation, already derived by the backend: the `description` the model gave the call (`Bash` always carries one), when it is non-blank text. Absent otherwise, and the client labels the tool as it did before. */
   readonly title?: string;
   /** Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation. */
   readonly parentToolUseId?: string;
+  /** When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for. */
+  readonly at?: string;
+}
+
+export interface TranscriptAppendedPayloadEventsItem {
+  readonly type: string;
+  readonly payload: Readonly<Record<string, unknown>>;
+}
+
+/** What a followed conversation gained since the last frame of the subscription — or, on the first one, since the `afterMessageId` it was followed from. The frame's `seq` belongs to the subscription, not to any session: monotonic per `followId`, from 1, and never replayed. A hole in it is a lost frame, and the client reads the conversation again rather than patching. It also goes out with no `events` when only `activity` or `working` changed, so the screen never says the conversation is busy after it stopped. */
+export interface TranscriptAppendedPayload {
+  readonly followId: string;
+  readonly conversationId: string;
+  /** The new entries as events of the history — `{ type, payload }`, the same `message.completed`, `tool.started` and `tool.completed` a page of `GET /transcripts/:sessionId/messages` carries, oldest first, in the order of the SDK's chain and never of the clock. A client folds them with the same reducer as the page. */
+  readonly events: readonly TranscriptAppendedPayloadEventsItem[];
+  /** The last entry of the conversation now — what a reconnect follows again from. Absent while the conversation has no entry. */
+  readonly lastMessageId?: string;
+  /** What the conversation is doing now, as `transcript.following` says it. */
+  readonly activity: 'liveHere' | 'activeElsewhere' | 'idle';
+  /** Whether Claude seems to be working on it in another client: the conversation is `activeElsewhere` **and** its last entry leaves the turn open — a tool call without its result, a thinking, or a prompt without an answer. An inference from the transcript, which records no state of the turn; the screen says it is one. */
+  readonly working: boolean;
+}
+
+/** The subscription cannot go on from where the client is, and has ended: nothing more arrives for this `followId`. It carries the next `seq` of the subscription. On `rewritten` the client reads the latest page again and follows from its `lastMessageId`; on `gone` it says the conversation is no longer there. */
+export interface TranscriptResetPayload {
+  readonly followId: string;
+  readonly conversationId: string;
+  /** `rewritten` — the entry the client had is no longer in the chain: a rewind, a compaction or a fork rebuilt it; `gone` — the store no longer has the conversation. */
+  readonly reason: 'rewritten' | 'gone';
 }
 
 /** A turn finished, from the SDK's `result`. It is what closes the turn in the UI and what carries its cost. */
@@ -608,10 +688,24 @@ export interface PermissionResolvePayload {
   readonly requestId: string;
   /** Yes or no. There is no third value: silence is handled by the deadline, and it denies. */
   readonly decision: 'allow' | 'deny';
-  /** How far the decision reaches. Absent means `once`. `session` leaves a rule that dies with the session; `project` and `always` persist a rule — the narrowest pattern covering this invocation, with the configured default lifetime — that answers future requests without asking and is revoked through `DELETE /permission-rules/:ruleId`. An invocation with nothing a pattern can name cannot be granted `project` or `always`: that is `INVALID_INPUT`, never a rule for the whole tool. */
+  /** How far the decision reaches. Absent means `once`. `session` leaves rules that die with the session; `project` and `always` persist rules — the patterns of the chosen `reach`, with the configured default lifetime — that answer future requests without asking and are revoked through `DELETE /permission-rules/:ruleId`. A scope with no pattern for the chosen reach is `INVALID_INPUT`. */
   readonly scope?: 'once' | 'session' | 'project' | 'always';
+  /** Which of the request's `reaches` the rules left by `session`, `project` or `always` take. Absent means `exact`. A reach the request did not offer is `INVALID_INPUT`, and the request stays open. Ignored for `once`. */
+  readonly reach?: 'exact' | 'prefix' | 'tool';
   /** Why it was refused. Required whenever `decision` is `deny` — the schema carries the condition, so no end has to remember it. */
   readonly reason?: string;
+}
+
+/** What `GET /transcripts/:sessionId/tools/:toolUseId/result` answers: the whole output of one tool of a conversation, read from the transcript when a client unfolds the tool — never on the stream, whose `tool.completed.summary` is short on purpose. Over HTTP, but one contract in three languages all the same. An output above the ceiling is not an error: it comes cut, its beginning and its end, with `truncated: true`. */
+export interface TranscriptToolResultPayload {
+  /** The output as text — a result made of blocks is their text joined. Cut in the middle when `truncated`. */
+  readonly text: string;
+  /** Whether the output was above the ceiling, and `text` holds only its first and its last part. */
+  readonly truncated: boolean;
+  /** The size of the whole output, in bytes of UTF-8 — what the screen says was there when it shows a cut. */
+  readonly bytes: number;
+  /** Where in `text` the first part ends and the last begins, in characters — present only when `truncated`, so the screen can say there what was left out. */
+  readonly cutAt?: number;
 }
 
 /** The bounds the schema gives the fields of {@link SessionPromptPayloadAttachmentsItemRange}. */
@@ -743,6 +837,23 @@ export function isSessionAttachedPayload(value: unknown): value is SessionAttach
     typeof record['replayed'] === 'number',
     typeof record['oldestAvailableSeq'] === 'number',
     typeof record['gap'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link TranscriptFollowingPayload}. Unknown fields are accepted.
+ */
+export function isTranscriptFollowingPayload(value: unknown): value is TranscriptFollowingPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['followId'] === 'string',
+    typeof record['conversationId'] === 'string',
+    typeof record['activity'] === 'string',
   ].every(Boolean);
 }
 
@@ -1122,6 +1233,36 @@ export function isSessionStartPayload(value: unknown): value is SessionStartPayl
 }
 
 /**
+ * Whether `value` carries every required field of {@link TranscriptFollowPayload}. Unknown fields are accepted.
+ */
+export function isTranscriptFollowPayload(value: unknown): value is TranscriptFollowPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['conversationId'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link TranscriptUnfollowPayload}. Unknown fields are accepted.
+ */
+export function isTranscriptUnfollowPayload(value: unknown): value is TranscriptUnfollowPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['followId'] === 'string',
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link WorkspaceUnwatchPayload}. Unknown fields are accepted.
  */
 export function isWorkspaceUnwatchPayload(value: unknown): value is WorkspaceUnwatchPayload {
@@ -1280,6 +1421,22 @@ export function isPermissionRequestedPayloadSuggestionsItem(value: unknown): val
   return [
     typeof record['scope'] === 'string',
     typeof record['labelKey'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRequestedPayloadReachesItem}. Unknown fields are accepted.
+ */
+export function isPermissionRequestedPayloadReachesItem(value: unknown): value is PermissionRequestedPayloadReachesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['reach'] === 'string',
+    Array.isArray(record['patterns']),
   ].every(Boolean);
 }
 
@@ -1555,6 +1712,58 @@ export function isToolStartedPayload(value: unknown): value is ToolStartedPayloa
 }
 
 /**
+ * Whether `value` carries every required field of {@link TranscriptAppendedPayloadEventsItem}. Unknown fields are accepted.
+ */
+export function isTranscriptAppendedPayloadEventsItem(value: unknown): value is TranscriptAppendedPayloadEventsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['type'] === 'string',
+    isNonNullObject(record['payload']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link TranscriptAppendedPayload}. Unknown fields are accepted.
+ */
+export function isTranscriptAppendedPayload(value: unknown): value is TranscriptAppendedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['followId'] === 'string',
+    typeof record['conversationId'] === 'string',
+    Array.isArray(record['events']),
+    typeof record['activity'] === 'string',
+    typeof record['working'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link TranscriptResetPayload}. Unknown fields are accepted.
+ */
+export function isTranscriptResetPayload(value: unknown): value is TranscriptResetPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['followId'] === 'string',
+    typeof record['conversationId'] === 'string',
+    typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link TurnCompletedPayload}. Unknown fields are accepted.
  */
 export function isTurnCompletedPayload(value: unknown): value is TurnCompletedPayload {
@@ -1639,6 +1848,23 @@ export function isPermissionResolvePayload(value: unknown): value is PermissionR
   ].every(Boolean);
 }
 
+/**
+ * Whether `value` carries every required field of {@link TranscriptToolResultPayload}. Unknown fields are accepted.
+ */
+export function isTranscriptToolResultPayload(value: unknown): value is TranscriptToolResultPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['text'] === 'string',
+    typeof record['truncated'] === 'boolean',
+    typeof record['bytes'] === 'number',
+  ].every(Boolean);
+}
+
 /** A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream. */
 export interface CommandAcceptedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'ack';
@@ -1696,6 +1922,26 @@ export function isSessionAttachedFrame(value: unknown): value is SessionAttached
     value.kind === 'ack' &&
     value.type === 'session.attached' &&
     isSessionAttachedPayload(value.payload)
+  );
+}
+
+/** Answer to `transcript.follow`: the subscription exists, and what the conversation gains will arrive as `transcript.appended` with this `followId`. Nothing of the subscription arrives before this ack. */
+export interface TranscriptFollowingFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'ack';
+  readonly type: 'transcript.following';
+  readonly payload: TranscriptFollowingPayload;
+}
+
+/** Whether `value` is a {@link TranscriptFollowingFrame}. */
+export function isTranscriptFollowingFrame(value: unknown): value is TranscriptFollowingFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'ack' &&
+    value.type === 'transcript.following' &&
+    isTranscriptFollowingPayload(value.payload)
   );
 }
 
@@ -2056,6 +2302,46 @@ export function isSessionStartFrame(value: unknown): value is SessionStartFrame 
     value.kind === 'command' &&
     value.type === 'session.start' &&
     isSessionStartPayload(value.payload)
+  );
+}
+
+/** Starts following a conversation of the history that this backend does not run — begun in the editor or the terminal, and maybe still being written there. Answered with `transcript.following`, which names the subscription; what the transcript gains then arrives as `transcript.appended`, with a `seq` of its own that starts at 1. The first `transcript.appended` carries **everything** after `afterMessageId`, even what was written between the page the client read and this command, so there is no hole between the two. There is **no replay**: after a reconnect the client follows again with the last `lastMessageId` it has. Refused with `INVALID_INPUT` (every invalid field in `details[]`), `NOT_FOUND` for a conversation that does not exist **or** that the caller does not read — the same answer on purpose —, `TRANSCRIPT_FOLLOW_LIVE_HERE` for a conversation a live session of the caller holds (`session.attach` shows it), and `TRANSCRIPT_FOLLOW_LIMIT` past the ceiling of the connection or of the server. */
+export interface TranscriptFollowFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'transcript.follow';
+  readonly payload: TranscriptFollowPayload;
+}
+
+/** Whether `value` is a {@link TranscriptFollowFrame}. */
+export function isTranscriptFollowFrame(value: unknown): value is TranscriptFollowFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'transcript.follow' &&
+    isTranscriptFollowPayload(value.payload)
+  );
+}
+
+/** Stops following a conversation. Idempotent: a subscription that already ended — or never was this connection's — is acknowledged all the same, because a client that unfollows as it leaves a screen races its own reconnection. */
+export interface TranscriptUnfollowFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'transcript.unfollow';
+  readonly payload: TranscriptUnfollowPayload;
+}
+
+/** Whether `value` is a {@link TranscriptUnfollowFrame}. */
+export function isTranscriptUnfollowFrame(value: unknown): value is TranscriptUnfollowFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'transcript.unfollow' &&
+    isTranscriptUnfollowPayload(value.payload)
   );
 }
 
@@ -2436,6 +2722,46 @@ export function isToolStartedFrame(value: unknown): value is ToolStartedFrame {
     value.kind === 'event' &&
     value.type === 'tool.started' &&
     isToolStartedPayload(value.payload)
+  );
+}
+
+/** What a followed conversation gained since the last frame of the subscription — or, on the first one, since the `afterMessageId` it was followed from. The frame's `seq` belongs to the subscription, not to any session: monotonic per `followId`, from 1, and never replayed. A hole in it is a lost frame, and the client reads the conversation again rather than patching. It also goes out with no `events` when only `activity` or `working` changed, so the screen never says the conversation is busy after it stopped. */
+export interface TranscriptAppendedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'transcript.appended';
+  readonly payload: TranscriptAppendedPayload;
+}
+
+/** Whether `value` is a {@link TranscriptAppendedFrame}. */
+export function isTranscriptAppendedFrame(value: unknown): value is TranscriptAppendedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'transcript.appended' &&
+    isTranscriptAppendedPayload(value.payload)
+  );
+}
+
+/** The subscription cannot go on from where the client is, and has ended: nothing more arrives for this `followId`. It carries the next `seq` of the subscription. On `rewritten` the client reads the latest page again and follows from its `lastMessageId`; on `gone` it says the conversation is no longer there. */
+export interface TranscriptResetFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'transcript.reset';
+  readonly payload: TranscriptResetPayload;
+}
+
+/** Whether `value` is a {@link TranscriptResetFrame}. */
+export function isTranscriptResetFrame(value: unknown): value is TranscriptResetFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'transcript.reset' &&
+    isTranscriptResetPayload(value.payload)
   );
 }
 

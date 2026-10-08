@@ -94,9 +94,7 @@ PermissionRequest? permissionRequestFrom(
   }
 
   final Object? input = payload['input'];
-  final ({List<PermissionScope> scopes, RuleOffer? rule}) offered = _offered(
-    payload['suggestions'],
-  );
+  final _Offers offers = _offersOf(payload);
 
   return PermissionRequest(
     requestId: requestId,
@@ -109,9 +107,70 @@ PermissionRequest? permissionRequestFrom(
     // Absent reads as `true`. The safe default is not a convenience here: it is the rule.
     defaultToNo: payload['defaultToNo'] != false,
     expiresAt: expiresAt,
-    scopes: offered.scopes,
-    rule: offered.rule,
+    scopes: offers.scopes,
+    rule: offers.rule,
+    reaches: offers.reaches,
   );
+}
+
+/// What a yes may reach: the scopes offered, the lifetime of their rules, and the reaches.
+typedef _Offers = ({List<PermissionScope> scopes, RuleOffer? rule, List<RuleReach> reaches});
+
+/// The scopes and the reaches of a request, read together because each needs the other: a
+/// persisted scope is offered only with something to persist.
+_Offers _offersOf(Map<String, Object?> payload) {
+  final Object? sentReaches = payload['reaches'];
+  final List<RuleReach>? sent = sentReaches is List<Object?> ? _reaches(sentReaches) : null;
+  final ({List<PermissionScope> scopes, RuleOffer? rule}) read = _offered(
+    payload['suggestions'],
+    patternless: sent != null && sent.isNotEmpty,
+  );
+  final String? exact = read.rule?.pattern;
+  // A server that sends no reaches offers the one reach it always had: the exact pattern (S-80).
+  final List<RuleReach> reaches =
+      sent ??
+      (exact == null
+          ? const <RuleReach>[]
+          : <RuleReach>[
+              RuleReach(kind: RuleReachKind.exact, patterns: <String>[exact]),
+            ]);
+
+  // Without a reach, a persisted scope would leave nothing behind: it is not offered.
+  return reaches.isEmpty
+      ? (
+          scopes: read.scopes
+              .where((PermissionScope scope) => !scope.isPersisted)
+              .toList(growable: false),
+          rule: null,
+          reaches: reaches,
+        )
+      : (scopes: read.scopes, rule: read.rule, reaches: reaches);
+}
+
+/// The reaches this build knows, in the order the server sent them. One it does not know, or cannot
+/// read, is dropped rather than offered.
+List<RuleReach> _reaches(List<Object?> entries) => <RuleReach>[
+  for (final Object? entry in entries)
+    if (entry is Map<String, Object?>) ?_reach(entry),
+];
+
+RuleReach? _reach(Map<String, Object?> entry) {
+  final RuleReachKind? kind = switch (wireText(entry, 'reach')) {
+    'exact' => RuleReachKind.exact,
+    'prefix' => RuleReachKind.prefix,
+    'tool' => RuleReachKind.tool,
+    _ => null,
+  };
+  final Object? patterns = entry['patterns'];
+
+  if (kind == null ||
+      patterns is! List<Object?> ||
+      patterns.isEmpty ||
+      patterns.any((Object? pattern) => pattern is! String)) {
+    return null;
+  }
+
+  return RuleReach(kind: kind, patterns: patterns.cast<String>());
 }
 
 /// How a request was settled, as `permission.resolved` says it, or `null` when it is not that.
@@ -140,6 +199,11 @@ PermissionOutcome? permissionOutcomeFrom(Map<String, Object?> payload) {
     // The tool it was about: a request a rule settled was never asked here, and this is how the line
     // of its tool still says so (plan 10, B-20).
     toolUseId: wireText(payload, 'toolUseId'),
+    via: switch (wireText(payload, 'via')) {
+      'rule' => AnswerVia.rule,
+      'allowAll' => AnswerVia.allowAll,
+      _ => null,
+    },
   );
 }
 
@@ -194,7 +258,13 @@ PermissionEvent? _extended(Map<String, Object?> payload) {
 /// scope that arrives without its pattern and its lifetime is dropped for the same reason and one
 /// more: "don't ask again" without saying about what, or for how long, is the button R-02 is about
 /// (S-67).
-({List<PermissionScope> scopes, RuleOffer? rule}) _offered(Object? suggestions) {
+///
+/// [patternless] — whether a persisted scope may arrive without its `exact` pattern: when the server
+/// sends reaches, the patterns travel there.
+({List<PermissionScope> scopes, RuleOffer? rule}) _offered(
+  Object? suggestions, {
+  required bool patternless,
+}) {
   final Set<PermissionScope> offered = <PermissionScope>{PermissionScope.once};
   RuleOffer? rule;
 
@@ -208,7 +278,7 @@ PermissionEvent? _extended(Map<String, Object?> payload) {
         case 'session':
           offered.add(PermissionScope.session);
         case 'project' || 'always':
-          final RuleOffer? described = _ruleOffer(entry);
+          final RuleOffer? described = _ruleOffer(entry, patternless: patternless);
           if (described != null) {
             offered.add(
               wireText(entry, 'scope') == 'project'
@@ -228,11 +298,11 @@ PermissionEvent? _extended(Map<String, Object?> payload) {
   );
 }
 
-RuleOffer? _ruleOffer(Map<String, Object?> entry) {
+RuleOffer? _ruleOffer(Map<String, Object?> entry, {required bool patternless}) {
   final String? pattern = wireText(entry, 'pattern');
   final Object? lifetimeMs = entry['lifetimeMs'];
 
-  return pattern == null || lifetimeMs is! int || lifetimeMs <= 0
+  return (pattern == null && !patternless) || lifetimeMs is! int || lifetimeMs <= 0
       ? null
       : RuleOffer(
           pattern: pattern,

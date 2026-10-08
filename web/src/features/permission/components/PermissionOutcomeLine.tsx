@@ -3,14 +3,12 @@ import { useTranslation } from 'react-i18next';
 
 import type { PermissionOutcome } from '../types/permission';
 
-/** How a request was settled, in words: by the deadline, by a rule, by this screen, or by whom. */
+/** How a request was settled, in words: by the deadline, by a rule, by Permitir tudo, by this screen, or by whom. */
 function sentenceOf(outcome: PermissionOutcome, t: TFunction): string {
   const decision = t(`permission.verdict.${outcome.decision}`);
 
   if (outcome.auto) {
-    return t(
-      outcome.decision === 'allow' ? 'permission.outcome.rule' : 'permission.outcome.expired',
-    );
+    return automaticSentence(outcome, t);
   }
 
   if (outcome.answeredHere) {
@@ -29,6 +27,19 @@ function sentenceOf(outcome: PermissionOutcome, t: TFunction): string {
     default:
       return t('permission.outcome.by', { decision, who });
   }
+}
+
+/**
+ * A decision nobody made: the deadline's refusal, Permitir tudo's yes, or a rule's answer — and an
+ * automatic yes this build cannot name reads as a rule, the sentence there was before the mode
+ * existed (plan 23, S-81, S-82).
+ */
+function automaticSentence(outcome: PermissionOutcome, t: TFunction): string {
+  if (outcome.decision === 'deny') {
+    return t(outcome.via === null ? 'permission.outcome.expired' : 'permission.outcome.ruleDenied');
+  }
+
+  return t(outcome.via === 'allowAll' ? 'permission.outcome.allowAll' : 'permission.outcome.rule');
 }
 
 /**

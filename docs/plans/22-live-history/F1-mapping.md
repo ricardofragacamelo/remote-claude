@@ -21,35 +21,35 @@ página com os envios perde blocos (dois pensamentos omitidos "iguais") ou os du
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-06 — `blockId` em cada bloco, e `at` no histórico 🔲
+### B-06 — `blockId` em cada bloco, e `at` no histórico ✅
 
 Em `backend/src/adapter/outbound/claude/sdk-message.mapper.ts` (`toContentBlock`, `assistantEvents`,
 `historicalEvents`): o `blockId` da [D-06](decisions.md#f1--mapeamento-e-leituras), e o `at` = o `timestamp` da
 entrada nos eventos do histórico. No `transcript.dto.ts`, os campos novos. O buffer de replay da sessão viva
 leva o `blockId` como os outros campos.
 
-### B-07 — O título da ferramenta 🔲
+### B-07 — O título da ferramenta ✅
 
 No ponto do `tool.started` do mapper: `title` = `input.description` quando é texto não vazio
 ([D-05](decisions.md#f1--mapeamento-e-leituras)). Ao vivo e no histórico, pelo mesmo caminho.
 
-### B-08 — O resumo da saída, em texto e pela cauda 🔲
+### B-08 — O resumo da saída, em texto e pela cauda ✅
 
 `summarise` passa a usar o `resultText` que o mapper já tem (junta os textos de um `tool_result` em lista) e a
 guardar as últimas linhas, com o tamanho da [D-07](decisions.md#f1--mapeamento-e-leituras). Vale ao vivo, no
 histórico e no buffer de replay; o `summary` continua curto.
 
-### B-09 — O bloco de imagem como marcador 🔲
+### B-09 — O bloco de imagem como marcador ✅
 
 `toContentBlock` envia, para `image`, o `mediaType` e o `size` (bytes decodificados do base64), e **nunca** os
 dados. Imagem por URL sai sem `size`. É o que a B-12 serve sob demanda ([D-09](decisions.md#f1--mapeamento-e-leituras)).
 
-### B-10 — `lastMessageId` na página 🔲
+### B-10 — `lastMessageId` na página ✅
 
 `ReadTranscriptUseCase` e `transcript.dto.ts`: a página de `GET /transcripts/:sessionId/messages` diz qual é a
 última entrada da cadeia — é o `afterMessageId` do `transcript.follow`. A ordem continua a do SDK (S-21).
 
-### B-11 — A saída completa de uma ferramenta 🔲
+### B-11 — A saída completa de uma ferramenta ✅
 
 `TranscriptStore.toolResult(session, toolUseId)` (porta + `transcript.adapter.ts`) acha o `tool_result` na
 lista que o `TranscriptCache` já tem — nada de arquivo. `ReadToolResultUseCase` aplica o cercado do
@@ -57,14 +57,14 @@ lista que o `TranscriptCache` já tem — nada de arquivo. `ReadToolResultUseCas
 controller em `adapter/inbound/http/transcript` expõe a rota. Log `debug` com id, tamanho e `truncated`, nunca
 o conteúdo, como o `Read` já faz.
 
-### B-12 — A imagem de um prompt 🔲
+### B-12 — A imagem de um prompt ✅
 
 `TranscriptStore.promptImage(session, blockId)` acha o bloco na lista em cache; `ReadPromptImageUseCase` aplica
 o mesmo cercado, o teto e a lista de tipos da [D-10](decisions.md#f1--mapeamento-e-leituras); a rota devolve o
 binário com os cabeçalhos da decisão. A variável `RC_TRANSCRIPT_IMAGE_MAX_BYTES` (e a
 `RC_TRANSCRIPT_TOOL_RESULT_MAX_BYTES` da B-11) entram na config e no `.env.example`.
 
-### B-13 — Deduplicação por `blockId`, nas duas pontas 🔲
+### B-13 — Deduplicação por `blockId`, nas duas pontas ✅
 
 No redutor do web ([conversation-reducer.ts](../../../web/src/features/session/services/conversation-reducer.ts))
 e na `Conversation` do app ([conversation.dart](../../../mobile/lib/features/session/domain/entities/conversation.dart)):

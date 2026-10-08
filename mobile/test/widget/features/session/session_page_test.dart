@@ -20,6 +20,7 @@ import 'package:remote_claude/features/session/domain/repositories/insight_repos
 import 'package:remote_claude/features/session/presentation/widgets/conversation_view.dart';
 import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
+import 'package:remote_claude/features/session/domain/entities/transcript_content.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 import '../../../support/builders/frames.dart';
@@ -30,6 +31,7 @@ import '../../../support/fakes/fake_permission_repository.dart';
 import '../../../support/fakes/fake_session_repository.dart';
 import '../../../support/fakes/stub_device_controller.dart';
 import '../../../support/fakes/stub_push_controller.dart';
+import '../../../support/fakes/fake_transcript_content_repository.dart';
 import '../../../support/pump_app.dart';
 
 /// What the transcript of the conversation says: a question and its answer.
@@ -55,6 +57,7 @@ void main() {
   late FakePermissionRepository permissions;
   late FakeHistoryRepository history;
   late FakeInsightRepository insight;
+  late FakeTranscriptContentRepository content;
 
   setUpAll(() async {
     l10n = await englishCatalogue();
@@ -70,6 +73,7 @@ void main() {
     sessionRepositoryProvider.overrideWithValue(sessions),
     historyRepositoryProvider.overrideWithValue(history as HistoryRepository),
     insightRepositoryProvider.overrideWithValue(insight as InsightRepository),
+    transcriptContentRepositoryProvider.overrideWithValue(content),
     deviceControllerAnswering(
       AsyncValue<RegisteredDevice?>.data(aRegisteredDevice(status: device)),
     ),
@@ -85,6 +89,7 @@ void main() {
     permissions = FakePermissionRepository();
     history = FakeHistoryRepository()..answer(transcript);
     insight = FakeInsightRepository();
+    content = FakeTranscriptContentRepository();
   }
 
   Future<void> pumpSession(
@@ -355,9 +360,33 @@ void main() {
       toolStarted(toolUseId: 't1', seq: 1, input: <String, Object?>{'command': 'rm -rf /tmp/x'}),
     );
 
-    expect(find.textContaining('rm -rf /tmp/x'), findsOneWidget);
     expect(find.text(l10n.sessionToolStatusRunning), findsOneWidget);
+
+    // Folded, like the web's line (plan 22, S-117); opened, the command whole.
+    await tester.tap(find.text('Bash'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('rm -rf /tmp/x'), findsOneWidget);
   });
+
+  testWidgets(
+    'B-32 · a finished tool opens its whole output from the conversation of the session',
+    (WidgetTester tester) async {
+      await pumpSession(tester);
+      content.outputs['t1'] = const ToolOutput(text: 'the whole of it');
+
+      await emit(tester, sessionStarted(sessionId: 'session-1', claudeSessionId: 'conv-9'));
+      await emit(
+        tester,
+        toolStarted(toolUseId: 't1', seq: 2, input: <String, Object?>{'command': 'ls'}),
+      );
+      await emit(tester, toolCompleted(toolUseId: 't1', seq: 3, summary: 'end'));
+      await tester.tap(find.text('Bash'));
+      await tester.pumpAndSettle();
+
+      expect(content.toolReads, <(String, String)>[('conv-9', 't1')]);
+      expect(find.text('the whole of it'), findsOneWidget);
+    },
+  );
 
   testWidgets('S-08 · thinking is its own line, never the answer', (WidgetTester tester) async {
     await pumpSession(tester);
@@ -375,7 +404,13 @@ void main() {
 
     expect(find.text('Done.'), findsOneWidget);
     expect(find.text(l10n.thinkingTook('4')), findsOneWidget);
-    expect(find.text('let me think'), findsNothing);
+    // In view, as its own line above the answer — never inside it (plan 22, D-15).
+    expect(find.text('let me think'), findsOneWidget);
+    expect(find.text('let me thinkDone.'), findsNothing);
+    expect(
+      tester.getTopLeft(find.text('let me think')).dy,
+      lessThan(tester.getTopLeft(find.text('Done.')).dy),
+    );
   });
 
   testWidgets('says where the session is, as it moves — in the chip of the bar', (

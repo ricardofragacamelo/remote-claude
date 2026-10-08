@@ -1,0 +1,17 @@
+{
+  "id": "23·S-95, S-97",
+  "title": "Permitir tudo, switched on in the chip of the session: the recorded write runs without a card and its line says the mode allowed it; switched off, the next write asks again",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "tool-turn",
+    "tool": "Write",
+    "modeLabel": "Mode",
+    "allowAll": "Allow everything",
+    "ask": "Ask me",
+    "allowedByMode": "Allowed automatically — Allow everything",
+    "via": "allowAll"
+  }
+}

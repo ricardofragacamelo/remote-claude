@@ -280,12 +280,20 @@ function coverage() {
 }
 
 /**
+ * Scenarios the app reads **as the web does**, under a name of no end of its own: the walking
+ * skeleton's, and the conversation that grows while it is read (plan 22, B-36), whose steps and
+ * texts — each with the key of either end — are one file for both.
+ */
+const SHARED_BY_NAME = new Set(['vertical-ping', 'live-history']);
+
+/**
  * The scenarios this end proves, by file name, and the version this build reports.
  *
  * Every scenario the app runs is compiled in as **one** JSON object keyed by the file name — the
- * walking skeleton's, every `mobile-*.json` of plans 02 and 03, and the `limits-*.json` both ends of
- * plan 05 prove — because a device has no repository to read them from, and one define per scenario
- * would grow the command line with every scenario.
+ * walking skeleton's, every `mobile-*.json` of plans 02 and 03, the `limits-*.json` both ends of
+ * plan 05 prove, and the {@link SHARED_BY_NAME} both ends read as they are — because a device has no
+ * repository to read them from, and one define per scenario would grow the command line with every
+ * scenario.
  *
  * @returns {{ scenario: string, appVersion: string }}
  */
@@ -299,7 +307,7 @@ function sharedScenario() {
     .map((entry) => entry.replace(/\.json$/, ''))
     .filter(
       (name) =>
-        name === 'vertical-ping' || name.startsWith('mobile-') || name.startsWith('limits-'),
+        SHARED_BY_NAME.has(name) || name.startsWith('mobile-') || name.startsWith('limits-'),
     )
     .sort();
 

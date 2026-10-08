@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/acks/transcript-following.json",
+  "title": "TranscriptFollowing",
+  "description": "Answer to `transcript.follow`: the subscription exists, and what the conversation gains will arrive as `transcript.appended` with this `followId`. Nothing of the subscription arrives before this ack.",
+  "x-kind": "ack",
+  "x-type": "transcript.following",
+  "type": "object",
+  "required": ["followId", "conversationId", "activity"],
+  "properties": {
+    "followId": {
+      "type": "string",
+      "description": "The subscription. Its events carry it, and `seq` is monotonic per `followId`, from 1."
+    },
+    "conversationId": {
+      "type": "string",
+      "description": "The conversation being followed."
+    },
+    "activity": {
+      "type": "string",
+      "enum": ["liveHere", "activeElsewhere", "idle"],
+      "description": "What the conversation is doing now, by the rule of the listing: `activeElsewhere` is an estimate — something wrote to it recently —, never a fact about which client has it open."
+    }
+  }
+}

@@ -21,55 +21,14 @@ import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/permission/presentation/providers/rule_list_controller.dart';
 import 'package:remote_claude/features/session/session.dart';
 
+import 'support/browser_turns.dart';
 import 'support/e2e_environment.dart';
 import 'support/signed_in_app.dart';
-
-/// The payload of a frame the browser socket received.
-Map<String, Object?> payloadOf(Map<String, Object?> frame) =>
-    frame['payload']! as Map<String, Object?>;
-
-/// Whether [frame] is of [type].
-bool Function(Map<String, Object?>) ofType(String type) =>
-    (Map<String, Object?> frame) => frame['type'] == type;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   final BuildConfig config = e2eConfig();
-
-  /// The browser opens a session, and the phone opens it by its address — attached, watching.
-  Future<(BrowserSocket, String)> openedInTheBrowser(WidgetTester tester, SignedInApp app) async {
-    final BrowserSocket browser = await BrowserSocket.open(config, app.accessToken);
-    final String sessionId = await browser.start(await app.browser.firstWorkspace());
-    addTearDown(() async {
-      await browser.closeSession(sessionId);
-      await browser.close();
-    });
-
-    app.container.read(routerProvider).go(sessionRouteFor(sessionId));
-    await pumpUntil(tester, () => find.byType(SessionPage).evaluate().isNotEmpty);
-
-    return (browser, sessionId);
-  }
-
-  /// The browser prompts the recorded write, and waits for the turn to finish.
-  ///
-  /// [whileRunning] is what happens in the app between the prompt and the end of the turn.
-  ///
-  /// @returns every frame the browser received during the turn
-  Future<List<Map<String, Object?>>> turnFromTheBrowser(
-    BrowserSocket browser,
-    String sessionId,
-    String fixture, {
-    Future<void> Function()? whileRunning,
-  }) async {
-    final int mark = browser.frames.length;
-    browser.prompt(sessionId, fixture);
-    await whileRunning?.call();
-    await browser.waitFor(ofType('turn.completed'), from: mark);
-
-    return browser.frames.skip(mark).toList();
-  }
 
   /// Opens the phone's rules screen, and answers its revoke buttons once the list has loaded.
   Future<Finder> revokeButtonsOnTheRulesScreen(WidgetTester tester, SignedInApp app) async {
@@ -86,21 +45,23 @@ void main() {
   final E2eScenario fromThePhone = E2eScenario.named('mobile-rule-from-phone');
 
   testWidgets('${fromThePhone.id} — ${fromThePhone.title}', (WidgetTester tester) async {
-    final SignedInApp app = await signedInApp(tester, config, fromThePhone);
+    final (SignedInApp app, BrowserSocket browser, String sessionId) = await watchingTheBrowser(
+      tester,
+      config,
+      fromThePhone,
+    );
     addTearDown(app.browser.revokeEveryRule);
-    await approvedFromTheBrowser(tester, app);
-    final (BrowserSocket browser, String sessionId) = await openedInTheBrowser(tester, app);
     final String fixture = fromThePhone.text('fixture');
 
     // The browser prompts; the phone answers "don't ask again anywhere" — in two steps, because the
     // second one is where the reach of the rule is said in full.
-    final List<Map<String, Object?>> granting = await turnFromTheBrowser(
+    final Map<String, Object?> granted = await answeredOnThePhone(
+      tester,
+      app,
       browser,
       sessionId,
       fixture,
-      whileRunning: () async {
-        await pumpUntil(tester, () => app.queueOf(sessionId).pending.isNotEmpty);
-        final String requestId = app.queueOf(sessionId).pending.single.requestId;
+      (String requestId) async {
         await extendedOnTheCard(tester, app, sessionId, requestId);
 
         await app.robot(tester).answer(app.l10n.permissionScopeAlways);
@@ -109,14 +70,10 @@ void main() {
           () => find.text(app.l10n.permissionPersistConfirm).evaluate().isNotEmpty,
         );
         await app.robot(tester).answer(app.l10n.permissionPersistConfirm);
-        await pumpUntil(tester, () => app.queueOf(sessionId).outcomeOf(requestId) != null);
       },
     );
 
-    expect(
-      payloadOf(granting.where(ofType('permission.resolved')).single),
-      containsPair('resolvedFrom', fromThePhone.text('resolvedFrom')),
-    );
+    expect(granted, containsPair('resolvedFrom', fromThePhone.text('resolvedFrom')));
     expect(
       (await app.browser.rules()).map((Map<String, Object?> rule) => rule['scope']),
       contains(fromThePhone.text('scope')),
@@ -124,15 +81,8 @@ void main() {
 
     // The browser's next write asks nobody — not the browser, not the phone — and the phone says a
     // rule answered it.
-    final List<Map<String, Object?>> unasked = await turnFromTheBrowser(
-      browser,
-      sessionId,
-      fixture,
-    );
-
-    expect(unasked.where(ofType('permission.requested')), isEmpty);
     expect(
-      payloadOf(unasked.where(ofType('permission.resolved')).single),
+      await answeredByNobody(browser, sessionId, fixture),
       allOf(containsPair('auto', true), containsPair('decision', 'allow')),
     );
     await pumpUntil(tester, () => app.queueOf(sessionId).lastOutcome?.auto ?? false);

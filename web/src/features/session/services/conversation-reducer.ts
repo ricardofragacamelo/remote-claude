@@ -66,7 +66,16 @@ function aboutMessage(read: MessageReader): EventReader {
 export function readEvent(state: Conversation, frame: Envelope): Conversation {
   const read = EVENT_READERS.get(frame.type);
 
-  return read === undefined ? state : read(state, frame.payload ?? {}, frame);
+  if (read === undefined) {
+    return state;
+  }
+
+  const payload = frame.payload ?? {};
+  const next = read(state, payload, frame);
+  const at = readText(payload, 'at');
+
+  // An event of the history says when its entry was written: the next thinking is measured from it.
+  return at === null ? next : { ...next, writtenAt: at };
 }
 
 /**
@@ -233,6 +242,19 @@ function between(since: string | null, until: string): number | null {
 }
 
 /**
+ * Milliseconds from the entry before to this one, by the instants the history wrote them — an upper
+ * bound of what happened between them (plan 22, D-14). `null` without both instants, and when this
+ * one was written first: a prompt that waited in the queue is read after a result it predates (S-21),
+ * and a duration below zero is no duration.
+ */
+function upperBound(since: string | undefined, until: string | null): number | null {
+  const from = since === undefined ? Number.NaN : Date.parse(since);
+  const to = until === null ? Number.NaN : Date.parse(until);
+
+  return Number.isNaN(from) || Number.isNaN(to) || to < from ? null : to - from;
+}
+
+/**
  * When thinking stops, by the clock of the frame that stopped it — a fragment of the answer, or the
  * thinking block finishing. Once only: the first measure is the true one.
  */
@@ -310,10 +332,30 @@ const BLOCK_KINDS: ReadonlyMap<string, BlockKind> = new Map([
   ['text', 'text'],
   ['thinking', 'thinking'],
   ['redacted_thinking', 'redactedThinking'],
+  ['image', 'image'],
 ]);
 
-/** The blocks of a finished message that are drawn as text — a tool's are drawn as the tool. */
-function blocksOf(payload: Readonly<Record<string, unknown>>): MessageBlock[] {
+/** What an image block says of itself: its type and its size — the bytes never travel (D-09). */
+function imageOf(block: Readonly<Record<string, unknown>>): Partial<MessageBlock> {
+  const mediaType = readText(block, 'mediaType');
+  const size = block['size'];
+
+  return {
+    ...(mediaType === null ? {} : { mediaType }),
+    ...(typeof size === 'number' && Number.isFinite(size) && size >= 0 ? { size } : {}),
+  };
+}
+
+/**
+ * The blocks of a finished message that are drawn as text, as thinking or as the marker of an image
+ * — a tool's are drawn as the tool.
+ *
+ * @param atMostMs how long, at most, a thinking of it took — read off the history (D-14), `null` live
+ */
+function blocksOf(
+  payload: Readonly<Record<string, unknown>>,
+  atMostMs: number | null,
+): MessageBlock[] {
   const content = Array.isArray(payload['content']) ? payload['content'] : [];
 
   return content.flatMap((block): MessageBlock[] => {
@@ -324,8 +366,35 @@ function blocksOf(payload: Readonly<Record<string, unknown>>): MessageBlock[] {
     }
 
     const text = kind === 'thinking' ? readText(block, 'thinking') : readText(block, 'text');
-    return [{ kind, text: text ?? '' }];
+    const blockId = readText(block, 'blockId');
+    return [
+      {
+        kind,
+        text: text ?? '',
+        ...(blockId === null ? {} : { blockId }),
+        ...(kind === 'thinking' && atMostMs !== null ? { atMostMs } : {}),
+        ...(kind === 'image' ? imageOf(block) : {}),
+      },
+    ];
   });
+}
+
+/**
+ * Whether two blocks are the same block: by identity when both carry one — two thinkings the model
+ * did not show are equal in kind and text and still two (plan 22, S-35) —, and by what they say when
+ * either comes from a server older than the identity (S-37).
+ */
+function sameBlock(left: MessageBlock, right: MessageBlock): boolean {
+  if (left.blockId !== undefined && right.blockId !== undefined) {
+    return left.blockId === right.blockId;
+  }
+
+  return (
+    left.kind === right.kind &&
+    left.text === right.text &&
+    left.mediaType === right.mediaType &&
+    left.size === right.size
+  );
 }
 
 /**
@@ -340,9 +409,7 @@ function mergedBlocks(
   have: readonly MessageBlock[],
   arriving: readonly MessageBlock[],
 ): readonly MessageBlock[] {
-  const fresh = arriving.filter(
-    (block) => !have.some((each) => each.kind === block.kind && each.text === block.text),
-  );
+  const fresh = arriving.filter((block) => !have.some((each) => sameBlock(each, block)));
 
   return [...have, ...fresh];
 }
@@ -368,10 +435,12 @@ const applyCompleted: MessageReader = (state, messageId, payload, at) => {
   const existing =
     state.messages.find((message) => message.messageId === messageId) ??
     aMessage(messageId, role, parentOf(payload));
-  const arriving = blocksOf(payload);
+  const arriving = blocksOf(payload, upperBound(state.writtenAt, readText(payload, 'at')));
   const blocks = mergedBlocks(existing.blocks, arriving);
   const streaming = streamingAfter(existing.streaming, arriving);
-  const stopsThinking = arriving.some((block) => block.kind !== 'text');
+  const stopsThinking = arriving.some(
+    (block) => block.kind === 'thinking' || block.kind === 'redactedThinking',
+  );
 
   const completed: StreamMessage = {
     ...existing,
@@ -397,9 +466,11 @@ function applyToolStarted(
     return state;
   }
 
+  const title = readText(payload, 'title')?.trim() ?? '';
   const started: ToolExecution = {
     toolUseId,
     toolName,
+    ...(title === '' ? {} : { title }),
     input: isRecord(payload['input']) ? payload['input'] : {},
     status: 'running',
     elapsed: null,

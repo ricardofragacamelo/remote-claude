@@ -53,6 +53,19 @@ describe('the chain, as the build enforces it', () => {
     expect(fired).toContain('no-restricted-imports');
   });
 
+  it.each([
+    ["import { wsClient } from '@/shared/api/ws';\nexport const a = wsClient;\n"],
+    ["import { WsClient } from '@/shared/api/ws-client';\nexport const a = WsClient;\n"],
+    [
+      "import { followTranscript } from '../services/transcript-follow.service';\nexport const a = followTranscript;\n",
+    ],
+  ])(
+    'refuses a component talking to the socket, by itself or by the follow — plan 22, S-88: %s',
+    async (code) => {
+      expect(await rulesFiredOn(COMPONENT, code)).toContain('no-restricted-imports');
+    },
+  );
+
   it('allows a component importing a hook, which is the whole point of the chain', async () => {
     const fired = await rulesFiredOn(
       COMPONENT,

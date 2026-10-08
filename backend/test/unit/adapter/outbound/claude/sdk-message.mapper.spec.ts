@@ -483,7 +483,7 @@ describe('the SDK message mapper', () => {
       expect(mapped.events[0]?.payload).toMatchObject({ messageId: '', role: 'user' });
     });
 
-    it('reads a tool result with no id, and one whose content is structured', () => {
+    it('reads a tool result with no id, and one whose content is no text at all — plan 22, S-14', () => {
       const mapped = toEvents(
         message({
           type: 'user',
@@ -492,10 +492,11 @@ describe('the SDK message mapper', () => {
         }),
       );
 
+      // Text or nothing: the JSON of a structure is what reached the screen until plan 22.
       expect(mapped.events[0]?.payload).toEqual({
         toolUseId: '',
         status: 'succeeded',
-        summary: '{"lines":3}',
+        summary: '',
       });
     });
 
@@ -512,9 +513,10 @@ describe('the SDK message mapper', () => {
         }),
       );
 
+      // Cut to the end, which is where an output says how it went (plan 22, D-07).
       const summary = String((mapped.events[0]?.payload as { summary: string }).summary);
-      expect(summary).toHaveLength(201);
-      expect(summary.endsWith('…')).toBe(true);
+      expect(summary).toHaveLength(401);
+      expect(summary.startsWith('…')).toBe(true);
     });
 
     it('reads a tool result with no content at all', () => {
@@ -526,7 +528,7 @@ describe('the SDK message mapper', () => {
         }),
       );
 
-      expect(mapped.events[0]?.payload).toMatchObject({ summary: '""' });
+      expect(mapped.events[0]?.payload).toMatchObject({ summary: '' });
     });
 
     it('reads a result whose usage the SDK did not send', () => {

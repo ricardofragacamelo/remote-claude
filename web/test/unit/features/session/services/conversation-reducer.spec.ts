@@ -78,7 +78,7 @@ describe('the conversation reducer', () => {
 
     it('ignores a block of a type it does not draw, and an item that is not a block', () => {
       const state = fold(
-        completed('m1', ['text', { type: 'image' }, { type: 'text', text: 'ok' }]),
+        completed('m1', ['text', { type: 'tool_use' }, { type: 'text', text: 'ok' }]),
       );
 
       expect(state.messages[0]?.blocks).toEqual([{ kind: 'text', text: 'ok' }]);
@@ -446,6 +446,106 @@ describe('the conversation reducer', () => {
       ]);
       expect(merged.turns.map((turn) => turn.turnId)).toEqual(['turn-1', 'turn-2']);
       expect(merged.lastTurn?.turnId).toBe('turn-2');
+    });
+  });
+
+  describe('the identity of a block — plan 22, B-13', () => {
+    const thought = (blockId?: string) => ({ type: 'thinking', ...(blockId ? { blockId } : {}) });
+
+    it('keeps two thinkings the model did not show in one answer — S-35', () => {
+      const state = fold(completed('m1', [thought('u1:0')]), completed('m1', [thought('u2:0')]));
+
+      expect(state.messages[0]?.blocks).toEqual([
+        { kind: 'thinking', text: '', blockId: 'u1:0' },
+        { kind: 'thinking', text: '', blockId: 'u2:0' },
+      ]);
+    });
+
+    it('shows once the block a page and a follower both delivered — S-36', () => {
+      const block = [{ type: 'text', blockId: 'u1:0', text: 'Once.' }];
+      const page = {
+        type: 'message.completed',
+        payload: { messageId: 'm1', role: 'assistant', content: block },
+      };
+
+      expect(conversationFrom([page, page]).messages[0]?.blocks).toEqual([
+        { kind: 'text', text: 'Once.', blockId: 'u1:0' },
+      ]);
+    });
+
+    it('keeps the old rule for a block with no identity — S-37', () => {
+      const state = fold(completed('m1', [thought()]), completed('m1', [thought()]));
+      const mixed = fold(
+        completed('m1', [{ type: 'text', text: 'Same.' }]),
+        completed('m1', [{ type: 'text', blockId: 'u1:0', text: 'Same.' }]),
+      );
+
+      expect(state.messages[0]?.blocks).toHaveLength(1);
+      expect(mixed.messages[0]?.blocks).toHaveLength(1);
+    });
+
+    it('joins a live session with its history by message, nothing doubled or lost — S-38', () => {
+      const live = fold(
+        completed('m2', [{ type: 'thinking', blockId: 'u3:0' }]),
+        completed('m2', [{ type: 'text', blockId: 'u4:0', text: 'live' }]),
+      );
+      const merged = withHistory(live, [
+        {
+          type: 'message.completed',
+          payload: {
+            messageId: 'm1',
+            role: 'user',
+            content: [{ type: 'text', blockId: 'u1:0', text: 'old' }],
+          },
+        },
+        {
+          type: 'message.completed',
+          payload: {
+            messageId: 'm2',
+            role: 'assistant',
+            content: [{ type: 'thinking', blockId: 'u3:0' }],
+          },
+        },
+      ]);
+
+      expect(merged.timeline).toEqual([
+        { kind: 'message', id: 'm1' },
+        { kind: 'message', id: 'm2' },
+      ]);
+      expect(merged.messages.find((message) => message.messageId === 'm2')?.blocks).toHaveLength(2);
+    });
+
+    it('lays new entries of an answer already begun into the same message, in order — S-39', () => {
+      const state = conversationFrom([
+        {
+          type: 'message.completed',
+          payload: { messageId: 'm1', role: 'assistant', content: [thought('u1:0')] },
+        },
+        {
+          type: 'message.completed',
+          payload: {
+            messageId: 'm1',
+            role: 'assistant',
+            content: [{ type: 'text', blockId: 'u2:0', text: 'A' }],
+          },
+        },
+        {
+          type: 'message.completed',
+          payload: {
+            messageId: 'm1',
+            role: 'assistant',
+            content: [{ type: 'text', blockId: 'u3:0', text: 'B' }],
+          },
+        },
+      ]);
+
+      expect(state.messages).toHaveLength(1);
+      expect(state.messages[0]?.blocks.map((block) => block.blockId)).toEqual([
+        'u1:0',
+        'u2:0',
+        'u3:0',
+      ]);
+      expect(state.messages[0]?.text).toBe('AB');
     });
   });
 });

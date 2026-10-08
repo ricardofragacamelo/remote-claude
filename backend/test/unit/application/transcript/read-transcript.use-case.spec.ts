@@ -67,6 +67,18 @@ describe('ReadTranscriptUseCase', () => {
     expect(page.next).toBe('m2');
   });
 
+  it('says where the whole conversation ends, whatever the page — plan 22, S-20', async () => {
+    store.add('/srv/projects/app', aTranscriptSession({ id: 1 }), someMessages(3));
+
+    expect((await read(1, 'm2')).lastMessageId).toBe('m3');
+  });
+
+  it('says an empty conversation ends nowhere — plan 22, S-20', async () => {
+    store.add('/srv/projects/app', aTranscriptSession({ id: 1 }));
+
+    expect((await read()).lastMessageId).toBeNull();
+  });
+
   it('continues from the cursor — S-06', async () => {
     store.add('/srv/projects/app', aTranscriptSession({ id: 1 }), someMessages(3));
 

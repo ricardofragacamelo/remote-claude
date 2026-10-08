@@ -43,11 +43,22 @@ const MATCHED_FIELDS = ['command', 'file_path', 'path', 'pattern', 'url'] as con
  * @throws {PermissionRulePatternInvalidError} for anything outside the three forms
  */
 export function parseRulePattern(pattern: string): RulePattern {
+  const read = readRulePattern(pattern);
+
+  if (read === null) {
+    throw new PermissionRulePatternInvalidError(pattern);
+  }
+
+  return read;
+}
+
+/** {@link parseRulePattern}, answering `null` for anything outside the three forms. */
+export function readRulePattern(pattern: string): RulePattern | null {
   const match = PATTERN.exec(pattern.trim());
   const toolName = match?.[1];
 
   if (match === null || toolName === undefined) {
-    throw new PermissionRulePatternInvalidError(pattern);
+    return null;
   }
 
   const inner = match[2];
@@ -59,17 +70,13 @@ export function parseRulePattern(pattern: string): RulePattern {
   if (inner.length === 0) {
     // `Bash()` is not "every Bash": it is a pattern somebody meant to fill in. Reading it as the
     // widest possible rule is exactly the mistake a permission system may not make.
-    throw new PermissionRulePatternInvalidError(pattern);
+    return null;
   }
 
   if (inner.endsWith(':*')) {
     const prefix = inner.slice(0, -2);
 
-    if (prefix.length === 0) {
-      throw new PermissionRulePatternInvalidError(pattern);
-    }
-
-    return { toolName, kind: 'prefix', content: prefix };
+    return prefix.length === 0 ? null : { toolName, kind: 'prefix', content: prefix };
   }
 
   return { toolName, kind: 'exact', content: inner };

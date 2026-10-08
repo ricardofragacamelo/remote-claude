@@ -23,11 +23,14 @@ Stack fechada: NestJS · React + shadcn/ui + Tailwind · Flutter · PostgreSQL 1
 as validações estáticas.** Código escrito não é tarefa concluída.
 
 ```bash
-pnpm verify:full     # lint + typecheck + arquitetura + duplicação + unit + integração + e2e + cobertura + segurança
+pnpm verify          # fim de cada fase: formatação, lint, tipos, arquitetura, duplicação, unit, cobertura
+pnpm verify:full     # fim do plano: o anterior + integração + e2e + segurança + contrato e i18n
 ```
 
-**Pronto = `pnpm verify:full` sai com código 0.** Antes disso, a tarefa está em andamento,
-independentemente de quanto código foi escrito.
+**Fase pronta = `pnpm verify` sai com código 0.** **Plano pronto = `pnpm verify:full` sai com código 0**,
+rodado uma vez, depois da última task — que é sempre a da fase de E2E, a última de todo plano
+([ADR-023](docs/architecture/shared/00-decisions.md#adr-023--portão-rápido-por-fase-portão-completo-no-fim-do-plano)).
+Antes disso, o trabalho está em andamento, independentemente de quanto código foi escrito.
 
 Três coisas que **não** tornam uma tarefa pronta:
 

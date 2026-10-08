@@ -8,11 +8,13 @@
   "type": "object",
   "required": ["sessionId", "mode"],
   "properties": {
-    "sessionId": { "type": "string" },
+    "sessionId": {
+      "type": "string"
+    },
     "mode": {
       "type": "string",
-      "enum": ["default", "acceptEdits", "bypassPermissions", "plan"],
-      "description": "The mode to switch to."
+      "enum": ["default", "acceptEdits", "bypassPermissions", "plan", "allowAll"],
+      "description": "The mode to switch to. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured."
     }
   }
 }

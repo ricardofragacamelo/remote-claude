@@ -58,6 +58,28 @@ export interface TranscriptStore {
     session: TranscriptSession,
     toolUseId: string,
   ): Promise<readonly TranscriptMessage[] | null>;
+
+  /**
+   * The whole output of a tool of the main chain, as text — a result made of blocks is their text
+   * joined —, or `null` when the chain has no result of that tool: an id it never had, a call still
+   * running, a tool of a subagent (plan 22, B-11). Uncut: the ceiling is the use case's.
+   */
+  toolResult(session: TranscriptSession, toolUseId: string): Promise<string | null>;
+
+  /**
+   * The image a prompt of the main chain carried, by the `blockId` its marker has — or `null` when no
+   * image of a prompt has that id (plan 22, B-12).
+   */
+  promptImage(session: TranscriptSession, blockId: string): Promise<StoredImage | null>;
+}
+
+/** An image a prompt carried, as the transcript keeps it: its declared type, and its bytes in base64. */
+export interface StoredImage {
+  /** The type the prompt declared, or `null` when it declared none. */
+  readonly mediaType: string | null;
+
+  /** The bytes, in base64 — as the Messages API took them. */
+  readonly data: string;
 }
 
 export const TRANSCRIPT_STORE = Symbol('TranscriptStore');

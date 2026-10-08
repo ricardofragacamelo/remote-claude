@@ -11,8 +11,11 @@ export type PanelPane = 'chat' | 'changes';
 /** The levels of effort the installation may offer (D-16). */
 export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
-/** The modes a conversation can run in — never `bypassPermissions`, which this product never offers. */
-export type PanelMode = 'default' | 'acceptEdits' | 'plan';
+/**
+ * The modes a conversation can run in — Permitir tudo (`allowAll`) included, a mode of ours, and never
+ * `bypassPermissions`, which this product never offers (ADR-022).
+ */
+export type PanelMode = 'default' | 'acceptEdits' | 'plan' | 'allowAll';
 
 /** What a new conversation starts with — chosen in its draft, sent with `session.start` (D-07). */
 export interface DraftChoices {

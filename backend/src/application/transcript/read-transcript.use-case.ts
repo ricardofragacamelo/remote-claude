@@ -2,6 +2,7 @@ import type { UserId } from '@domain/auth';
 import { pageFromTail, TranscriptNotFoundError } from '@domain/transcript';
 import type { ClaudeSessionId, Page, TranscriptMessage } from '@domain/transcript';
 import type { TranscriptStore } from './ports/transcript-store.port';
+import { readableTranscript } from './readable-transcript';
 import type { ListedTranscript, TranscriptAudience } from './transcript-audience';
 
 /** Which page of which conversation, for whom. */
@@ -20,6 +21,12 @@ export interface TranscriptPage {
   /** The conversation, with what it is doing now — the panel asks before forking one that is active. */
   readonly session: ListedTranscript;
   readonly page: Page<TranscriptMessage, string>;
+
+  /**
+   * The last entry of the whole conversation, whatever page this is — `null` when it has none. It is
+   * what `transcript.follow` follows from, so nothing written after the page is missed (plan 22, B-10).
+   */
+  readonly lastMessageId: string | null;
 }
 
 /**
@@ -45,7 +52,11 @@ export class ReadTranscriptUseCase {
     const session = await this.visible(query);
     const messages = await this.store.messages(session);
 
-    return { session, page: pageFromTail(session.id.value, messages, query.before, query.limit) };
+    return {
+      session,
+      page: pageFromTail(session.id.value, messages, query.before, query.limit),
+      lastMessageId: messages.at(-1)?.id ?? null,
+    };
   }
 
   /**
@@ -70,14 +81,7 @@ export class ReadTranscriptUseCase {
   }
 
   /** The conversation, when it exists and this caller may read it — the same answer otherwise. */
-  private async visible(query: ReadTranscriptQuery): Promise<ListedTranscript> {
-    const session = await this.store.find(query.sessionId);
-    const [shown] = session === null ? [] : await this.audience.shown([session], query.userId);
-
-    if (shown === undefined) {
-      throw new TranscriptNotFoundError(query.sessionId.value);
-    }
-
-    return shown;
+  private visible(query: ReadTranscriptQuery): Promise<ListedTranscript> {
+    return readableTranscript(this.store, this.audience, query.sessionId, query.userId);
   }
 }

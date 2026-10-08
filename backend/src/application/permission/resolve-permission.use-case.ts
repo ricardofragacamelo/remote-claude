@@ -3,13 +3,15 @@ import {
   PermissionScopeUnsupportedError,
   isPermissionScope,
   isPersistedPermissionScope,
-  patternForInvocation,
+  reachesFor,
 } from '@domain/permission';
 import type {
   PermissionDecision,
   PermissionRequest,
+  PermissionScope,
   PermissionSettling,
   PersistedPermissionScope,
+  RuleReachKind,
 } from '@domain/permission';
 import type { UserId } from '@domain/auth';
 import type { Clock } from '@domain/shared';
@@ -40,6 +42,12 @@ import type { PermissionSettlement } from './settle-permission';
  * decision that actually reached the SDK, so the client can show who won rather than a failure
  * (docs/architecture/web/04-state-and-data.md#a-fila-de-permissão). A rule asked for about a question
  * that was already decided when the answer arrived is not granted.
+ *
+ * **Answers to one request are taken one at a time, in the order they arrive.** The grant is awaited
+ * before the entity decides, so two answers let through together would both find the request
+ * pending and both leave their rules, and only then would one of them lose (plan 23, S-65). The
+ * second waits for the first, and finds the question decided — or, when the first was refused,
+ * still open.
  */
 export class ResolvePermissionUseCase {
   constructor(
@@ -49,6 +57,9 @@ export class ResolvePermissionUseCase {
     private readonly clock: Clock,
   ) {}
 
+  /** The answer being taken for each request id, which the next answer to it waits for. */
+  private readonly answering = new Map<string, Promise<PermissionSettling>>();
+
   /**
    * @throws {import('@domain/permission').PermissionRequestNotFoundError} unknown request id
    * @throws {import('@domain/permission').PermissionNotOwnedError} not watching that session
@@ -56,14 +67,38 @@ export class ResolvePermissionUseCase {
    * @throws {PermissionReasonRequiredError} a refusal with no reason
    */
   async execute(command: ResolvePermissionCommand): Promise<PermissionSettling> {
+    const before = this.answering.get(command.requestId);
+    // The earlier answer's failure is its own caller's to handle; this one only waits for it.
+    const current = (before ?? Promise.resolve()).then(noop, noop).then(() => this.answer(command));
+    this.answering.set(command.requestId, current);
+
+    try {
+      return await current;
+    } finally {
+      if (this.answering.get(command.requestId) === current) {
+        this.answering.delete(command.requestId);
+      }
+    }
+  }
+
+  private async answer(command: ResolvePermissionCommand): Promise<PermissionSettling> {
     const request = answerableRequest(this.registry, command);
     const scope = command.scope ?? 'once';
     if (!isPermissionScope(scope)) {
       throw new PermissionScopeUnsupportedError(scope);
     }
 
+    const patterns = request.isPending ? patternsOf(request, scope, command.reach ?? null) : [];
+
     if (isPersistedPermissionScope(scope) && request.isPending) {
-      await this.grantFrom(request, command.decision, command.reason, scope, command.userId);
+      await this.grantFrom(
+        request,
+        command.decision,
+        command.reason,
+        scope,
+        command.userId,
+        patterns,
+      );
     }
 
     return this.settlement.settle(
@@ -77,16 +112,13 @@ export class ResolvePermissionUseCase {
         auto: false,
         at: this.clock.now(),
       },
-      { announce: true },
+      { announce: true, ...(scope === 'session' ? { sessionPatterns: patterns } : {}) },
     );
   }
 
   /**
-   * The rule an answer with a persisted scope asks for.
-   *
-   * The narrowest pattern that covers the invocation on screen, never the widest: a person who
-   * approves `rm -rf build/` "always" has said nothing about `rm -rf src/`. An input with no field a
-   * pattern can name would only give a rule for the **whole tool**, and that is refused (S-58).
+   * The rules an answer with a persisted scope asks for — one per pattern of the chosen reach,
+   * granted all or none (plan 23, D-13).
    */
   private async grantFrom(
     request: PermissionRequest,
@@ -94,25 +126,64 @@ export class ResolvePermissionUseCase {
     reason: string | null,
     scope: PersistedPermissionScope,
     userId: UserId,
+    patterns: readonly string[],
   ): Promise<void> {
-    // Checked here as well as by the entity, because the rule is granted **before** the entity is
-    // asked: a refusal without a reason must not leave a standing rule behind it.
+    // Checked here as well as by the entity, because the rules are granted **before** the entity
+    // is asked: a refusal without a reason must not leave a standing rule behind it.
     if (decision === 'deny' && (reason === null || reason.length === 0)) {
       throw new PermissionReasonRequiredError(request.id);
     }
 
-    const pattern = patternForInvocation(request.toolName, request.input);
-    if (pattern === null) {
-      throw new PermissionScopeUnsupportedError(scope);
-    }
-
-    await this.grant.execute({
-      userId,
-      pattern,
-      decision,
-      scope,
-      projectPath: request.projectPath,
-      expiresAt: null,
-    });
+    await this.grant.executeAll(
+      patterns.map((pattern) => ({
+        userId,
+        pattern,
+        decision,
+        scope,
+        projectPath: request.projectPath,
+        expiresAt: null,
+      })),
+    );
   }
+}
+
+function noop(): void {
+  // Nothing: see `execute`.
+}
+
+/**
+ * The patterns the chosen reach leaves rules for, computed again from the request — never taken
+ * from the client, which only names the reach.
+ *
+ * - `once` leaves nothing;
+ * - a reach the request does not have is refused, for every scope: the person chose something the
+ *   server did not offer, and is told rather than quietly given something else;
+ * - no reach named means `exact`. When there is no `exact` either, `session` is a one-off, as it
+ *   was before reaches existed, and `project`/`always` are refused (S-58): the only other rule
+ *   would be the whole tool, which is far more than what was approved.
+ *
+ * @throws {PermissionScopeUnsupportedError} as above
+ */
+function patternsOf(
+  request: PermissionRequest,
+  scope: PermissionScope,
+  reach: RuleReachKind | null,
+): readonly string[] {
+  if (scope === 'once') {
+    return [];
+  }
+
+  const chosen = reachesFor(request.toolName, request.input).find(
+    (offered) => offered.reach === (reach ?? 'exact'),
+  );
+
+  if (chosen !== undefined) {
+    return chosen.patterns;
+  }
+
+  if (reach !== null || isPersistedPermissionScope(scope)) {
+    throw new PermissionScopeUnsupportedError(scope);
+  }
+
+  return [];
 }

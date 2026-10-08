@@ -39,6 +39,9 @@ export interface ChoiceMenuProps {
   /** A chip in the tone of a warning — a mode that stops asking (plan 09, S-24). */
   readonly warning?: boolean;
 
+  /** A chip in the tone of danger — the mode that stops asking about anything (plan 23, S-71). */
+  readonly danger?: boolean;
+
   /** What the menu says before its options, in full — the warning the chip only hints at. */
   readonly note?: string | undefined;
 
@@ -67,7 +70,7 @@ const CHIP =
  */
 export function ChoiceMenu(props: ChoiceMenuProps): React.JSX.Element {
   const { t } = useTranslation();
-  const { label, value, disabled = false, icon: Icon, warning = false } = props;
+  const { label, value, disabled = false, icon: Icon, warning = false, danger = false } = props;
   const named = t('composer.chip.choice', { label, value });
 
   if (props.readOnly !== undefined) {
@@ -99,7 +102,7 @@ export function ChoiceMenu(props: ChoiceMenuProps): React.JSX.Element {
           type="button"
           disabled={disabled}
           aria-label={named}
-          className={cn(CHIP, warning && 'text-warning')}
+          className={cn(CHIP, warning && 'text-warning', danger && 'text-destructive')}
         >
           <ChipFace icon={Icon} value={value} />
           <ChevronUp className="size-3 shrink-0 opacity-60" aria-hidden />
@@ -116,6 +119,7 @@ export function ChoiceMenu(props: ChoiceMenuProps): React.JSX.Element {
 function ChoiceItems({
   label,
   note,
+  danger = false,
   options,
   current,
   onPick,
@@ -124,7 +128,13 @@ function ChoiceItems({
     <>
       <DropdownMenuLabel>{label}</DropdownMenuLabel>
       {note !== undefined && (
-        <p role="note" className="max-w-72 px-2 pb-1 text-ui-xs text-warning">
+        <p
+          role="note"
+          className={cn(
+            'max-w-72 px-2 pb-1 text-ui-xs',
+            danger ? 'text-destructive' : 'text-warning',
+          )}
+        >
           {note}
         </p>
       )}

@@ -202,6 +202,7 @@ Todos em `.mjs`, executados direto pelo `node`, sem build.
 | `secrets-scan.mjs` | B-04 | `gitleaks` no repositório ou só no que está no índice; cai na imagem Docker quando o binário não existe | `pnpm scan:secrets` |
 | `db.mjs` | B-51, [03 · B-18](../03-rules-and-audit/F3-retention.md) | `migrate`, `reset`, `seed`, e `purge` — a purga da trilha, a mesma rotina do job do backend, com o relatório do que saiu e do que ficou | `pnpm db migrate` · `pnpm db purge` |
 | `clean.mjs` | B-50 | purga projetos e volumes compose órfãos, build, coverage | `pnpm clean` |
+| `transcript-follow-bench.mjs` | [22 · B-19](../22-live-history/F2-follower.md#b-19--a-medição-) | mede o custo do seguidor de conversas no store de quem roda — tempo e heap, nunca conteúdo | `pnpm transcript:follow-bench` |
 | `plan.mjs` | B-52 | cria pasta de plano no [formato normativo](../README.md#formato-obrigatório); `--progress` recalcula os contadores | `pnpm plan new <nome>` |
 
 Regras para todo script: utilidade compartilhada em `scripts/lib/`, **código de saída

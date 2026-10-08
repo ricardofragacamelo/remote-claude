@@ -17,7 +17,13 @@ import { RecordingLogger } from '../../../../support/fakes/recording-logger';
 import { conversationId } from '../../../../support/builders/transcript.builder';
 
 const DIRECTORY = '/srv/projects/app';
-const limits = { cachedSessions: 4, concurrentReads: 2, timeoutMs: 5_000, wholeStoreTtlMs: 0 };
+const limits = {
+  cachedSessions: 4,
+  cachedContents: 2,
+  concurrentReads: 2,
+  timeoutMs: 5_000,
+  wholeStoreTtlMs: 0,
+};
 
 describe('AgentSdkTranscriptAdapter', () => {
   let sdk: ScriptedTranscripts;
@@ -367,5 +373,119 @@ describe('AgentSdkTranscriptAdapter', () => {
     expect(written).not.toContain('SECRET-SUMMARY');
     expect(written).not.toContain('two goals');
     expect(written).not.toContain('summary.md');
+  });
+
+  describe('the whole output of a tool and the image of a prompt — plan 22, B-11, B-12, D-18', () => {
+    const image = {
+      type: 'user',
+      uuid: 'a0000000-0000-4000-8000-000000000001',
+      session_id: conversationId(1),
+      parent_tool_use_id: null,
+      parent_agent_id: null,
+      message: {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'what colour?' },
+          { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'iVBORw0=' } },
+        ],
+      },
+    } as unknown as SessionMessage;
+
+    const seed = (lastModified = 1_000): void => {
+      sdk.add({
+        sessionId: conversationId(1),
+        directory: DIRECTORY,
+        cwd: DIRECTORY,
+        lastModified,
+        messages: [...capturedTranscript('bash-output-turn'), image],
+      });
+    };
+    const theSession = async () => {
+      const found = await adapter.find(ClaudeSessionId.create(conversationId(1)));
+      if (found === null) {
+        throw new Error('seeded above');
+      }
+      return found;
+    };
+    const toolUseId = (): string => {
+      const [first] = capturedTranscript('bash-output-turn');
+      const content = (first?.message as { content: { id: string }[] }).content;
+      return content[0]?.id ?? '';
+    };
+
+    it('serves the output of a tool, whole — S-22', async () => {
+      seed();
+      const text = await adapter.toolResult(await theSession(), toolUseId());
+
+      expect(text?.endsWith('599\n600')).toBe(true);
+      expect(await adapter.toolResult(await theSession(), 'toolu_none')).toBeNull();
+    });
+
+    it('serves the image of a prompt by its marker — S-29, S-32', async () => {
+      seed();
+      const session = await theSession();
+
+      expect(await adapter.promptImage(session, `${String(image.uuid)}:1`)).toEqual({
+        mediaType: 'image/png',
+        data: 'iVBORw0=',
+      });
+      expect(await adapter.promptImage(session, `${String(image.uuid)}:0`)).toBeNull();
+    });
+
+    it('reads nothing again for what the messages already read, or asked twice — S-34', async () => {
+      seed();
+      const session = await theSession();
+
+      await adapter.messages(session);
+      await adapter.toolResult(session, toolUseId());
+      await adapter.promptImage(session, `${String(image.uuid)}:1`);
+      await adapter.promptImage(session, `${String(image.uuid)}:1`);
+
+      expect(sdk.calls.getSessionMessages).toHaveLength(1);
+    });
+
+    it('reads once for both, the other way around too', async () => {
+      seed();
+      const session = await theSession();
+
+      await adapter.toolResult(session, toolUseId());
+      await adapter.messages(session);
+
+      expect(sdk.calls.getSessionMessages).toHaveLength(1);
+    });
+
+    it('reads again once the conversation was written', async () => {
+      seed();
+      await adapter.toolResult(await theSession(), toolUseId());
+      seed(2_000);
+      await adapter.toolResult(await theSession(), toolUseId());
+
+      expect(sdk.calls.getSessionMessages).toHaveLength(2);
+    });
+
+    it('logs the id, whether it was there and the length — never a word of it — S-27, S-33', async () => {
+      seed();
+      const session = await theSession();
+      await adapter.toolResult(session, toolUseId());
+      await adapter.promptImage(session, `${String(image.uuid)}:1`);
+
+      const logged = JSON.stringify(log.lines);
+      expect(logged).not.toContain('599');
+      expect(logged).not.toContain('iVBORw0');
+      expect(log.lines.find((line) => line['op'] === 'claude.transcript.toolResult')).toMatchObject(
+        {
+          found: true,
+          cache: 'miss',
+        },
+      );
+      expect(
+        log.lines.find((line) => line['op'] === 'claude.transcript.promptImage'),
+      ).toMatchObject({
+        found: true,
+        mediaType: 'image/png',
+        encodedLength: 8,
+        cache: 'hit',
+      });
+    });
   });
 });

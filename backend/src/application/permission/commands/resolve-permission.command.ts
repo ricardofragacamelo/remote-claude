@@ -1,4 +1,4 @@
-import type { PermissionDecision, PermissionOrigin } from '@domain/permission';
+import type { PermissionDecision, PermissionOrigin, RuleReachKind } from '@domain/permission';
 import type { Answerer } from '../answerable-request';
 
 /** One answer, as it arrived from a client. */
@@ -9,10 +9,17 @@ export interface ResolvePermissionCommand extends Answerer {
   readonly reason: string | null;
 
   /**
-   * Absent means `once`. `project` and `always` also grant a rule that outlives the session —
-   * with the narrowest pattern that covers this invocation, and the configured default lifetime.
+   * Absent means `once`. `session` leaves rules that die with the session; `project` and `always`
+   * grant rules that outlive it, with the configured default lifetime — the patterns of `reach`.
    */
   readonly scope: string | null;
+
+  /**
+   * Which of the request's reaches those rules take (plan 23, B-10). Absent means `exact`. Never a
+   * pattern: the patterns are computed again from the request, and a reach it does not have is
+   * refused.
+   */
+  readonly reach?: RuleReachKind | null;
 
   readonly resolvedFrom: PermissionOrigin;
 }

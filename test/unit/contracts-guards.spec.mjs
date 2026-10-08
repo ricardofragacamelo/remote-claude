@@ -27,7 +27,15 @@ import {
   isSessionRejectChangePayload,
   isSessionRewindFilesPayload,
   isSessionStartPayload,
+  isToolCompletedPayload,
   isToolStartedPayload,
+  isTranscriptAppendedPayload,
+  isTranscriptFollowPayload,
+  isTranscriptFollowingPayload,
+  isTranscriptResetPayload,
+  isTranscriptToolResultPayload,
+  isTranscriptUnfollowPayload,
+  isMessageCompletedPayloadContentItem,
   SESSION_PROMPT_PAYLOAD_ATTACHMENTS_ITEM_LIMITS,
   SESSION_PROMPT_PAYLOAD_LIMITS,
 } from '../../packages/contracts/src/index.js';
@@ -114,6 +122,11 @@ describe('the generated protocol surface', () => {
       'tool.completed',
       'tool.progress',
       'tool.started',
+      'transcript.appended',
+      'transcript.follow',
+      'transcript.following',
+      'transcript.reset',
+      'transcript.unfollow',
       'turn.completed',
       'workspace.filesChanged',
       'workspace.unwatch',
@@ -675,5 +688,99 @@ describe('the stream and the commands of the panel', () => {
     expect(isSessionRewindFilesPayload({ sessionId: 's', promptId: 'p', paths: ['a.ts'] })).toBe(
       true,
     );
+  });
+});
+
+/** Plan 22, B-01 — following a conversation, and the fields the history gained. */
+describe('the live history', () => {
+  const conversationId = '6b41b192-a41b-46c2-b8d7-000000000001';
+
+  it('carries the follow of a conversation: two commands, an ack and two events', () => {
+    for (const type of [
+      'transcript.follow',
+      'transcript.unfollow',
+      'transcript.following',
+      'transcript.appended',
+      'transcript.reset',
+    ]) {
+      expect(FRAME_TYPES).toContain(type);
+    }
+  });
+
+  it('accepts the examples of the 05, and refuses each without a required field — S-01', () => {
+    /** @type {{ guard: (value: unknown) => boolean, example: Record<string, unknown>, required: string }[]} */
+    const examples = [
+      {
+        guard: isTranscriptFollowPayload,
+        example: { conversationId, afterMessageId: 'u-41' },
+        required: 'conversationId',
+      },
+      { guard: isTranscriptUnfollowPayload, example: { followId: 't_1' }, required: 'followId' },
+      {
+        guard: isTranscriptFollowingPayload,
+        example: { followId: 't_1', conversationId, activity: 'idle' },
+        required: 'activity',
+      },
+      {
+        guard: isTranscriptAppendedPayload,
+        example: {
+          followId: 't_1',
+          conversationId,
+          events: [{ type: 'message.completed', payload: {} }],
+          lastMessageId: 'u-44',
+          activity: 'activeElsewhere',
+          working: true,
+        },
+        required: 'working',
+      },
+      {
+        guard: isTranscriptResetPayload,
+        example: { followId: 't_1', conversationId, reason: 'rewritten' },
+        required: 'reason',
+      },
+      {
+        guard: isTranscriptToolResultPayload,
+        example: { text: 'ok', truncated: false, bytes: 2 },
+        required: 'bytes',
+      },
+    ];
+
+    for (const { guard, example, required } of examples) {
+      expect(guard(example)).toBe(true);
+      const without = Object.fromEntries(
+        Object.entries(example).filter(([key]) => key !== required),
+      );
+      expect(guard(without)).toBe(false);
+    }
+  });
+
+  it('accepts a follow of an empty conversation, and an update of one with nothing yet — S-01', () => {
+    expect(isTranscriptFollowPayload({ conversationId })).toBe(true);
+    expect(
+      isTranscriptAppendedPayload({
+        followId: 't_1',
+        conversationId,
+        events: [],
+        activity: 'idle',
+        working: false,
+      }),
+    ).toBe(true);
+  });
+
+  it('keeps an event without the new fields valid — S-02', () => {
+    expect(isMessageCompletedPayloadContentItem({ type: 'image' })).toBe(true);
+    expect(
+      isMessageCompletedPayloadContentItem({
+        type: 'image',
+        blockId: 'u:1',
+        mediaType: 'image/png',
+        size: 5,
+      }),
+    ).toBe(true);
+    expect(isToolStartedPayload({ toolUseId: 't', toolName: 'Bash', input: {} })).toBe(true);
+    expect(
+      isToolStartedPayload({ toolUseId: 't', toolName: 'Bash', input: {}, title: 'List', at: 'x' }),
+    ).toBe(true);
+    expect(isToolCompletedPayload({ toolUseId: 't', status: 'succeeded' })).toBe(true);
   });
 });

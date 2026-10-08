@@ -23,6 +23,7 @@
  *   pnpm fixtures:record               # every scenario
  *   pnpm fixtures:record text-turn     # one of them, by name
  *   pnpm fixtures:record --normalise   # re-apply the normalisation to what is committed, no SDK
+ *   pnpm fixtures:record --history queue-turn   # add what the SDK reads back of a recorded run
  */
 
 import { randomUUID } from 'node:crypto';
@@ -319,6 +320,14 @@ const SCENARIOS = [
       'node -e "setTimeout(() => console.log(\'waited\'), 40000)". Then reply with exactly: done.',
     files: {},
     watchTranscript: true,
+  },
+  {
+    name: 'bash-output-turn',
+    why: 'plan 22, B-05 — a Bash call with its `description` and an output of several hundred lines: the title of the tool, and a summary that keeps the end',
+    prompt:
+      'Run exactly this command with the Bash tool, in the foreground: seq 1 600. ' +
+      'Then reply with exactly: done.',
+    files: {},
   },
 ];
 
@@ -837,6 +846,58 @@ async function normaliseCommitted() {
 }
 
 /**
+ * What the SDK reads back of a recorded run — `getSessionMessages`, the transcript the history is
+ * read from —, anonymised like the rest (plan 22, B-05).
+ *
+ * The stream and the transcript are not the same list: the CLI files the prompts, which it never
+ * echoes, and stamps every entry with the instant it was written. A test of the history needs the
+ * second, and this is it, read from the run itself and never typed.
+ *
+ * @param {{ getSessionMessages(id: string): Promise<unknown[]> }} sdk
+ * @param {readonly unknown[]} messages the run's stream, which names its session
+ * @param {string} cwd the throwaway workspace, when the run is the one recording now
+ */
+async function historyOf(sdk, messages, cwd) {
+  const named = /** @type {{ session_id?: string } | undefined} */ (
+    messages.find((m) => m !== null && typeof m === 'object' && 'session_id' in m)
+  );
+
+  if (named?.session_id === undefined) {
+    return null;
+  }
+
+  const history = await sdk.getSessionMessages(named.session_id);
+  return cwd === '' ? JSON.parse(anonymised(JSON.stringify(history))) : normalise(history, cwd);
+}
+
+/**
+ * Adds the history to fixtures already recorded, without running them again — for a run whose
+ * transcript is still in the store of this machine. It spends no quota.
+ *
+ * @param {{ getSessionMessages(id: string): Promise<unknown[]> }} sdk
+ * @param {readonly string[]} names
+ */
+async function addHistory(sdk, names) {
+  title('Agent SDK — reading back the history of recorded runs');
+
+  for (const name of names) {
+    const full = path.join(FIXTURES_DIR, `${name}.json`);
+    const fixture = JSON.parse(fs.readFileSync(full, 'utf8'));
+    const history = await historyOf(sdk, fixture.messages, '');
+
+    if (history === null || history.length === 0) {
+      fail(name, 'the store of this machine no longer has its transcript; record it again');
+      process.exitCode = 1;
+      continue;
+    }
+
+    const { messages, ...rest } = fixture;
+    await writeFixture(full, { ...rest, history, messages });
+    ok(name, `${String(history.length)} entries read back`);
+  }
+}
+
+/**
  * The version of the SDK these recordings came from. A fixture without it ages invisibly.
  *
  * Found by walking up from the resolved entry point rather than by resolving `package.json`
@@ -934,10 +995,14 @@ async function writeInstallation(query) {
  * Records one scenario and writes its fixture, or reports why it could not — which fails the run
  * without stopping the scenarios after it.
  *
- * @param {(params: unknown) => AsyncIterable<unknown> & { close(): void }} query
+ * @param {{
+ *   query: (params: unknown) => AsyncIterable<unknown> & { close(): void },
+ *   getSessionMessages(id: string): Promise<unknown[]>,
+ * }} sdk
  * @param {(typeof SCENARIOS)[number]} scenario
  */
-async function recordScenario(query, scenario) {
+async function recordScenario(sdk, scenario) {
+  const { query } = sdk;
   info(`${bold(scenario.name)} — ${dim(scenario.why)}`);
 
   const started = Date.now();
@@ -959,6 +1024,7 @@ async function recordScenario(query, scenario) {
     result.messages.find((m) => m !== null && typeof m === 'object' && 'cwd' in m)
   );
   const cwd = String(init?.cwd ?? '');
+  const history = await historyOf(sdk, result.messages, cwd);
 
   const fixture = {
     $comment:
@@ -967,11 +1033,7 @@ async function recordScenario(query, scenario) {
     name: scenario.name,
     why: scenario.why,
     prompt: stepsOf(scenario)[0]?.text ?? '(content blocks)',
-    ...(scenario.prompts === undefined
-      ? {}
-      : { prompts: stepsOf(scenario).map((step) => step.text ?? '(content blocks)') }),
-    ...(scenario.options === undefined ? {} : { options: scenario.options }),
-    ...(scenario.env === undefined ? {} : { env: scenario.env }),
+    ...declaredBy(scenario),
     ...(result.transcript === null ? {} : { transcript: result.transcript }),
     recordedAt: new Date().toISOString().slice(0, 10),
     sdkVersion: sdkVersion(),
@@ -983,6 +1045,7 @@ async function recordScenario(query, scenario) {
     preToolUse: normalise(result.preToolUse, cwd),
     canUseTool: normalise(result.canUseTool, cwd),
     stderr: result.stderr,
+    ...(history === null ? {} : { history }),
     messages: normalise(result.messages, cwd),
   };
 
@@ -993,6 +1056,21 @@ async function recordScenario(query, scenario) {
     `${String(fixture.counts.messages)} messages · ${String(fixture.counts.preToolUse)} hooks · ` +
       `${String(fixture.counts.canUseTool)} canUseTool · ${String(Date.now() - started)}ms`,
   );
+}
+
+/**
+ * What a scenario declared beyond its first prompt — written to its fixture only when it did.
+ *
+ * @param {(typeof SCENARIOS)[number]} scenario
+ */
+function declaredBy(scenario) {
+  return {
+    ...(scenario.prompts === undefined
+      ? {}
+      : { prompts: stepsOf(scenario).map((step) => step.text ?? '(content blocks)') }),
+    ...(scenario.options === undefined ? {} : { options: scenario.options }),
+    ...(scenario.env === undefined ? {} : { env: scenario.env }),
+  };
 }
 
 /**
@@ -1021,9 +1099,16 @@ async function main() {
     return;
   }
 
-  title('Agent SDK — recording fixtures');
+  const names = process.argv.slice(2).filter((arg) => !arg.startsWith('--'));
+  const readBack = process.argv.includes('--history');
 
-  const { chosen, catalogue, installation } = chosenRecordings(process.argv.slice(2));
+  if (!readBack) {
+    title('Agent SDK — recording fixtures');
+  }
+
+  const { chosen, catalogue, installation } = readBack
+    ? { chosen: [], catalogue: false, installation: false }
+    : chosenRecordings(names);
 
   if (!fs.existsSync(path.join(os.homedir(), '.claude', '.credentials.json'))) {
     abort('the Claude CLI is not logged in on this machine; run `claude` once and sign in');
@@ -1038,10 +1123,15 @@ async function main() {
     pathToFileURL(fromBackend.resolve('@anthropic-ai/claude-agent-sdk')).href
   );
 
+  if (readBack) {
+    await addHistory(sdk, names);
+    return;
+  }
+
   fs.mkdirSync(FIXTURES_DIR, { recursive: true });
 
   for (const scenario of chosen) {
-    await recordScenario(sdk.query, scenario);
+    await recordScenario(sdk, scenario);
   }
 
   if (catalogue) {

@@ -7,6 +7,7 @@ import { PERMISSION_MODES } from '@domain/session';
 import type { PermissionMode } from '@domain/session';
 import type { FileLimits, HistoryLimits, TransferLimits, WatchSettings } from '@application/files';
 import type { AttachmentLimits, ComposerLimits } from '@application/session';
+import type { FollowSettings } from '@application/transcript';
 
 /**
  * Every variable the backend reads, with what it is for.
@@ -164,6 +165,14 @@ export const environmentSchema = z.object({
   // How recently a conversation begun elsewhere has to have been written to read as active there
   // (plan 08, D-06): an estimate, measured against how long one tool leaves the transcript unwritten.
   RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS: z.coerce.number().int().min(1).max(86_400),
+  // Plan 22: the whole output of a tool and the image of a prompt, served on demand (D-08, D-10) …
+  RC_TRANSCRIPT_TOOL_RESULT_MAX_BYTES: z.coerce.number().int().min(1_024).max(16_777_216),
+  RC_TRANSCRIPT_IMAGE_MAX_BYTES: z.coerce.number().int().min(1_024).max(67_108_864),
+  // … and the follower of a conversation begun elsewhere: its two intervals and its ceilings (D-11).
+  RC_TRANSCRIPT_FOLLOW_ACTIVE_MS: z.coerce.number().int().min(100).max(60_000),
+  RC_TRANSCRIPT_FOLLOW_IDLE_MS: z.coerce.number().int().min(100).max(600_000),
+  RC_TRANSCRIPT_FOLLOW_MAX_PER_CONNECTION: z.coerce.number().int().min(1).max(64),
+  RC_TRANSCRIPT_FOLLOW_MAX: z.coerce.number().int().min(1).max(256),
   RC_ATTACHMENT_MAX_BYTES: z.coerce.number().int().min(1_024).max(ATTACHMENT_BYTES_CEILING),
   RC_ATTACHMENT_TTL_SECONDS: z.coerce.number().int().min(1).max(86_400),
   RC_ATTACHMENT_MEMORY_BYTES: z.coerce.number().int().min(1_024),
@@ -211,6 +220,16 @@ const consistentEnvironment = environmentSchema
   .refine((env) => env.RC_FILES_UPLOAD_MAX_BYTES <= env.RC_FILES_UPLOAD_MAX_TOTAL_BYTES, {
     path: ['RC_FILES_UPLOAD_MAX_BYTES'],
     message: 'must not be greater than RC_FILES_UPLOAD_MAX_TOTAL_BYTES',
+  })
+  // A conversation at rest looked at more often than one being written is the adaptive tick upside down.
+  .refine((env) => env.RC_TRANSCRIPT_FOLLOW_ACTIVE_MS <= env.RC_TRANSCRIPT_FOLLOW_IDLE_MS, {
+    path: ['RC_TRANSCRIPT_FOLLOW_ACTIVE_MS'],
+    message: 'must not be greater than RC_TRANSCRIPT_FOLLOW_IDLE_MS',
+  })
+  // One connection allowed more than the whole server would be a ceiling no connection can reach.
+  .refine((env) => env.RC_TRANSCRIPT_FOLLOW_MAX_PER_CONNECTION <= env.RC_TRANSCRIPT_FOLLOW_MAX, {
+    path: ['RC_TRANSCRIPT_FOLLOW_MAX_PER_CONNECTION'],
+    message: 'must not be greater than RC_TRANSCRIPT_FOLLOW_MAX',
   });
 
 /** The shape the schema accepts, before validation. */
@@ -353,6 +372,15 @@ export interface AppConfig {
      * file 40 s unwritten, measured (D-06).
      */
     readonly activeWindowMs: number;
+
+    /** The most of a tool's output the route serves before it cuts the middle out (plan 22, D-08). */
+    readonly toolResultMaxBytes: number;
+
+    /** The largest image of a prompt the route serves (plan 22, D-10). */
+    readonly imageMaxBytes: number;
+
+    /** The follower of a conversation begun elsewhere (plan 22, D-11). */
+    readonly follow: FollowSettings;
   };
 
   /**
@@ -470,7 +498,17 @@ export function loadConfig(source: RawEnvironment): AppConfig {
         maxBatchEntries: env.RC_FILES_HISTORY_MAX_BATCH_ENTRIES,
       },
     },
-    transcript: { activeWindowMs: env.RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS * 1_000 },
+    transcript: {
+      activeWindowMs: env.RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS * 1_000,
+      toolResultMaxBytes: env.RC_TRANSCRIPT_TOOL_RESULT_MAX_BYTES,
+      imageMaxBytes: env.RC_TRANSCRIPT_IMAGE_MAX_BYTES,
+      follow: {
+        activeMs: env.RC_TRANSCRIPT_FOLLOW_ACTIVE_MS,
+        idleMs: env.RC_TRANSCRIPT_FOLLOW_IDLE_MS,
+        maxPerConnection: env.RC_TRANSCRIPT_FOLLOW_MAX_PER_CONNECTION,
+        max: env.RC_TRANSCRIPT_FOLLOW_MAX,
+      },
+    },
     composer: {
       attachments: {
         maxBytes: env.RC_ATTACHMENT_MAX_BYTES,

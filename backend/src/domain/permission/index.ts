@@ -9,6 +9,7 @@ export type {
   PermissionRequestStatus,
   PermissionSettling,
   PermissionResolution,
+  PermissionVia,
 } from './entities/permission-request.entity';
 export { PermissionRule } from './entities/permission-rule.entity';
 export type {
@@ -19,14 +20,25 @@ export type {
   RuleSubject,
 } from './entities/permission-rule.entity';
 export { classifyRisk } from './services/risk.classifier';
+export { HUMAN_ONLY_TOOLS, answeredByMode } from './services/mode-approval';
 export {
   matchedInput,
   parseRulePattern,
   patternForInvocation,
+  readRulePattern,
   ruleMatches,
 } from './services/rule-pattern';
 export type { RulePattern, RulePatternKind } from './services/rule-pattern';
 export { answeringRule } from './services/rule-precedence';
+export {
+  RULE_REACHES,
+  UNBOUNDED_COMMANDS,
+  commandPrefix,
+  isRuleReach,
+  reachesFor,
+} from './services/rule-reach';
+export type { RuleReach, RuleReachKind } from './services/rule-reach';
+export { commandsOf } from './services/shell-syntax';
 export type { RuleQuestion } from './services/rule-precedence';
 export {
   PERMISSION_SCOPES,

@@ -751,6 +751,76 @@ estender ao HTTP.
   `sdk-message.mapper` que servem o stream, e com os mesmos ids. É o que deixa o cliente recarregar
   depois de um `gap` com um redutor só — e o que faz thinking e subagent aparecerem iguais vivos e
   recarregados (plano 08).
+
+  O [plano 22](../../plans/22-live-history/README.md) acrescenta à página o **`lastMessageId`** — a
+  última entrada da cadeia, `null` na conversa vazia —, que é o `afterMessageId` do
+  `transcript.follow`; e aos eventos o **`at`** (o `timestamp` da entrada, que o SDK devolve sem
+  declarar no tipo) e o **`blockId`** de cada bloco (`<uuid>:<índice>`, o mesmo ao vivo). A ordem
+  continua a do SDK, a cadeia `parentUuid`, **nunca** a dos timestamps: o prompt enfileirado tem
+  `timestamp` anterior ao do resultado que o precede, e é depois dele que o modelo o leu.
+- **HTTP — `GET /transcripts/:sessionId/tools/:toolUseId/result`** (Bearer, plano 22 · B-11). A saída
+  **inteira** de uma ferramenta da cadeia principal, pedida quando o card é aberto — o
+  `tool.completed.summary` é curto de propósito.
+
+  | Status | Quando |
+  |---|---|
+  | `200` `{ text, truncated, bytes, cutAt? }` | a saída em texto (lista de blocos vira o texto deles junto); acima do teto, os primeiros e os últimos 128 KiB, com `truncated: true`, `bytes` com o total em UTF-8 e `cutAt` — onde, em `text`, a cabeça acaba e a cauda começa; o corte nunca parte um caractere — corte não é erro |
+  | `400` `INVALID_INPUT` | ids malformados |
+  | `404` `NOT_FOUND` | conversa que não existe **ou** que o chamador não lê, `toolUseId` que a cadeia principal não tem (o de um subagente também), ou `tool_use` ainda sem resultado — a mesma resposta |
+  | `502` / `504` | como acima |
+
+  O teto é `RC_TRANSCRIPT_TOOL_RESULT_MAX_BYTES` (padrão 256 KiB, [22 · D-08](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
+  O conteúdo **nunca** vai para o log — só o id, o tamanho e o `truncated`, como no `Read` do `files`.
+- **HTTP — `GET /transcripts/:sessionId/images/:blockId`** (Bearer, plano 22 · B-12). A imagem de um
+  prompt da conversa, pedida quando a pessoa a abre; no stream e na página o bloco `image` vai só com
+  `mediaType` e `size` ([22 · D-09](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
+  Responde o binário com o `Content-Type` da imagem, `X-Content-Type-Options: nosniff`,
+  `Content-Disposition: inline` e `Cache-Control: private, no-store`. Só `image/png`, `image/jpeg`,
+  `image/gif` e `image/webp` — SVG executa script —; outro tipo é `415` `UNSUPPORTED_MEDIA_TYPE`
+  (`transcript.error.imageTypeUnsupported`). Acima de `RC_TRANSCRIPT_IMAGE_MAX_BYTES` (padrão 10 MiB) é
+  `413` `PAYLOAD_TOO_LARGE` (`transcript.error.imageTooLarge`). `blockId` que não é imagem, que não
+  existe, ou de conversa que o chamador não lê: `404`. O cliente busca com o token pela api e mostra
+  por `blob:` — token nunca em URL ([22 · D-10](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
+- **O conteúdo das duas rotas tem cache próprio, menor.** A lista em cache da conversa guarda só os
+  eventos, com o `summary` cortado; a saída inteira e os bytes da imagem são o que pesa no transcript.
+  O adapter guarda, por `sessionId` + `lastModified`, um índice só com eles — resultado por
+  `toolUseId`, imagem por `blockId`, da cadeia principal —, de **2** conversas no máximo, preenchido
+  pela própria leitura das mensagens (que já tem o que o SDK devolveu) e, faltando, por uma releitura
+  pelo limitador e o prazo de sempre ([22 · D-18](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
+  Pedir a mesma saída ou a mesma imagem de novo, sem a conversa ter sido escrita, não relê nada.
+- **O seguidor — `transcript.follow`** (plano 22 · F2). O leitor de uma conversa que este backend não
+  opera a assina pelo WebSocket ([05 §Acompanhar um transcript](../shared/05-websocket-protocol.md#acompanhar-um-transcript--transcript)),
+  e o `FollowTranscriptUseCase` (`application/transcript`) a mantém:
+  - **uma sondagem por conversa**, compartilhada por todos os assinantes (abas, web e app): a cada
+    tick, `getSessionInfo` (~2 ms medidos) e, **só se o `lastModified` mudou**, a releitura pelo cache
+    e pelo limitador acima — uma releitura por bloco gravado, nunca uma por assinante;
+  - **intervalo adaptativo**: `RC_TRANSCRIPT_FOLLOW_ACTIVE_MS` (padrão 1 s) enquanto a conversa está
+    `activeElsewhere`, `RC_TRANSCRIPT_FOLLOW_IDLE_MS` (padrão 10 s) parada — uma conversa parada pode
+    ser retomada no editor a qualquer momento ([22 · D-11](../../plans/22-live-history/decisions.md#f2--seguidor-no-backend));
+  - **a cauda de cada assinante** é a função pura `transcriptTail` (`domain/transcript/services`): o
+    que veio depois da última entrada que ele recebeu, ou "fora da cadeia" — que vira
+    `transcript.reset { reason: 'rewritten' }` e o fim da assinatura. Conversa que some do store é
+    `reason: 'gone'`;
+  - **`working`** é a função pura `inferWorking`, ao lado da `activityOf`: `true` só com
+    `activeElsewhere` e a última entrada deixando o turno aberto — tudo menos a resposta de texto que o
+    encerra ([22 · D-12](../../plans/22-live-history/decisions.md#f2--seguidor-no-backend));
+  - **o mesmo cercado da leitura** (`TranscriptAudience`): conversa que o chamador não lê é `404`,
+    igual a id que não existe; `liveHere` é recusado com `TRANSCRIPT_FOLLOW_LIVE_HERE`. O cercado
+    completo — que pergunta ao banco quem abriu a conversa — roda ao assinar e a cada releitura; entre
+    elas, a `activity` é recalculada sem I/O, pelo relógio e pelo registro de sessões vivas;
+  - **tetos**: `RC_TRANSCRIPT_FOLLOW_MAX_PER_CONNECTION` (padrão 4) e `RC_TRANSCRIPT_FOLLOW_MAX`
+    (padrão 16, a mesma ordem do cache de 16 conversas) — passar é `TRANSCRIPT_FOLLOW_LIMIT`;
+  - **soltura garantida**: `unfollow` (idempotente), a connection que sai do registro por qualquer
+    motivo, e a conversa sem assinante deixa de ter tick. Falha num tick é logada, e o seguinte tenta
+    de novo; nada é enviado pela metade;
+  - **só a cadeia principal**: subagente continua carregado ao abrir o card ([22 · D-13](../../plans/22-live-history/decisions.md#f2--seguidor-no-backend)).
+
+  **Por que sondar e não `fs.watch`:** o transcript só é lido pelo SDK — a regra
+  `transcript-reads-through-the-sdk` do `lint:arch` reprova `fs` nesta fatia (S-09 do plano 04) —, e o
+  arquivo e o caminho dele são internos do Claude Code. O `getSessionInfo` é a pergunta barata que o
+  SDK oferece; a cara (`getSessionMessages`, ~50–79 ms e +5–12 MB num transcript de 8,5 MB) só
+  acontece quando ele diz que mudou. O custo medido está no `pnpm transcript:follow-bench`
+  ([22 · B-19](../../plans/22-live-history/F2-follower.md#b-19--a-medição-)).
 - **HTTP — `GET /transcripts/:sessionId/subagents/:agentId/messages`** (Bearer,
   [plano 08 · B-21](../../plans/08-claude-panel/F2-rendering.md)). O transcript de um subagent da
   conversa, pela cauda, pelas funções do SDK (`listSubagents`/`getSubagentMessages`), com as mesmas
@@ -759,7 +829,10 @@ estender ao HTTP.
   malformados; `502`/`504` como acima.
 - **Erros:** `NOT_FOUND` (`transcript.error.notFound`), `INVALID_INPUT`
   (`transcript.error.invalidSessionId`, `transcript.error.cursorStale`), `CLAUDE_UNAVAILABLE`
-  (`transcript.error.claudeUnavailable`), `CLAUDE_TIMEOUT` (`transcript.error.claudeTimeout`).
+  (`transcript.error.claudeUnavailable`), `CLAUDE_TIMEOUT` (`transcript.error.claudeTimeout`); e, do
+  plano 22, `TRANSCRIPT_FOLLOW_LIMIT` (`transcript.error.followLimit`), `TRANSCRIPT_FOLLOW_LIVE_HERE`
+  (`transcript.error.followLiveHere`), `UNSUPPORTED_MEDIA_TYPE` (`transcript.error.imageTypeUnsupported`)
+  e `PAYLOAD_TOO_LARGE` (`transcript.error.imageTooLarge`).
 
 ### `notification`
 

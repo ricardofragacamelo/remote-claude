@@ -1,4 +1,4 @@
-import { Brain, Cpu, ShieldCheck, ShieldAlert, ClipboardList } from 'lucide-react';
+import { Brain, Cpu, ShieldCheck, ShieldAlert, ShieldOff, ClipboardList } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +30,17 @@ const MODE_NAMES: Readonly<
     description: 'sessions.mode.planDescription',
     icon: ClipboardList,
   },
+  allowAll: {
+    label: 'sessions.mode.allowAll',
+    description: 'sessions.mode.allowAllDescription',
+    icon: ShieldOff,
+  },
+};
+
+/** What the open menu says before the modes, for the two that stop asking. */
+const MODE_WARNINGS: Readonly<Partial<Record<PanelMode, string>>> = {
+  acceptEdits: 'sessions.mode.acceptEditsWarning',
+  allowAll: 'sessions.mode.allowAllWarning',
 };
 
 const EFFORT_NAMES: Readonly<Record<EffortLevel, string>> = {
@@ -97,7 +108,8 @@ export function ModelPicker({
 
 /**
  * The mode — what each one stops asking, said in full (B-36). Accepting edits puts the chip in the
- * tone of a warning, and says why inside the menu, never as a loose line (plan 09, S-24).
+ * tone of a warning, and Permitir tudo in the tone of danger — each with its icon and its name, never
+ * colour alone — and says why inside the menu, never as a loose line (plan 09, S-24; plan 23, S-71).
  */
 export function ModePicker({
   current,
@@ -108,15 +120,16 @@ export function ModePicker({
 }): React.JSX.Element {
   const { t } = useTranslation();
   const mode = panelModeOf(current);
-  const accepting = mode === 'acceptEdits';
+  const warning = MODE_WARNINGS[mode];
 
   return (
     <ChoiceMenu
       label={t('sessions.mode.label')}
       value={t(MODE_NAMES[mode].label)}
       icon={MODE_NAMES[mode].icon}
-      warning={accepting}
-      note={accepting ? t('sessions.mode.acceptEditsWarning') : undefined}
+      warning={mode === 'acceptEdits'}
+      danger={mode === 'allowAll'}
+      note={warning === undefined ? undefined : t(warning)}
       current={mode}
       options={PANEL_MODES.map((each) => ({
         id: each,

@@ -123,6 +123,10 @@ configurada no logger, não deixada a critério de quem escreve o log:
   `@OmitFromLog(...)` e o interceptor de I/O o substitui: os `params` de uma notificação, que podem
   levar um caminho, ficam fora do log como ficam fora do push
   ([06 · S-178](../../plans/06-workbench/scenarios.md))
+- **O histórico lido pelo backend** — o leitor do transcript, a saída inteira de uma ferramenta e a
+  imagem de um prompt logam id, contagem, tamanho e `truncated`, nunca o conteúdo; e o frame de saída
+  `transcript.appended` sai do log do gateway com o `payload` de cada evento substituído, ficando o
+  `type` e a contagem ([22 · S-27, S-33, S-72](../../plans/22-live-history/scenarios.md))
 
 Substitua por `"[REDACTED]"`. Payload grande é truncado em **8 KB** com
 `"truncated": true` — nunca omitido em silêncio.

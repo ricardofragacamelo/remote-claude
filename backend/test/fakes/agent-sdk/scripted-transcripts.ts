@@ -58,8 +58,33 @@ function gate(): Gate {
  * @param copy when given, every uuid is suffixed so one recording can stand for several turns
  */
 export function capturedTranscript(name = 'tool-turn', copy?: number): SessionMessage[] {
-  return loadFixture(name)
-    .messages.filter(
+  return asTranscript(loadFixture(name).messages, copy);
+}
+
+/**
+ * The chain a **compaction** leaves, as `getSessionMessages` reads it after a `/compact`: what the
+ * recording said after its `compact_boundary` — the summary the CLI wrote, and what came after it.
+ * The entries before the boundary are no longer on the chain the SDK rebuilds (plan 22, B-34).
+ *
+ * @param copy when given, every uuid is suffixed, as in {@link capturedTranscript}
+ * @throws {Error} when the recording has no compaction
+ */
+export function compactedChain(name: string, copy?: number): SessionMessage[] {
+  const { messages } = loadFixture(name);
+  const boundary = messages.findIndex(
+    (message) => message.type === 'system' && message.subtype === 'compact_boundary',
+  );
+
+  if (boundary === -1) {
+    throw new Error(`the recording ${name} has no compaction`);
+  }
+  return asTranscript(messages.slice(boundary + 1), copy);
+}
+
+/** The `user` and `assistant` messages of a stream, without their streaming envelope. */
+function asTranscript(messages: readonly SDKMessage[], copy: number | undefined): SessionMessage[] {
+  return messages
+    .filter(
       (message): message is Extract<SDKMessage, { type: 'user' | 'assistant' }> =>
         message.type === 'user' || message.type === 'assistant',
     )
@@ -71,6 +96,25 @@ export function capturedTranscript(name = 'tool-turn', copy?: number): SessionMe
       parent_tool_use_id: message.parent_tool_use_id,
       parent_agent_id: null,
     }));
+}
+
+/**
+ * What the SDK **read back** of a recorded run — the transcript itself, with the prompts the CLI never
+ * echoes and the `timestamp` of every entry (plan 22, B-05). Only the recordings that kept it have it.
+ *
+ * @param copy when given, every uuid is suffixed, as in {@link capturedTranscript}
+ */
+export function recordedHistory(name: string, copy?: number): SessionMessage[] {
+  const history = loadFixture(name).history;
+
+  if (history === undefined) {
+    throw new Error(
+      `the recording ${name} kept no history; run pnpm fixtures:record --history ${name}`,
+    );
+  }
+  return copy === undefined
+    ? [...history]
+    : history.map((entry) => ({ ...entry, uuid: renumber(entry.uuid, copy) }));
 }
 
 /** A uuid of the same shape, made distinct per copy: the last group carries the copy number. */
@@ -145,6 +189,11 @@ export class ScriptedTranscripts implements TranscriptSdk {
     });
 
     return this;
+  }
+
+  /** The conversation is gone from the store — its file deleted. */
+  remove(sessionId: string): void {
+    this.conversations.delete(sessionId);
   }
 
   /** A live session writing: messages at the end, and a new `lastModified`. */

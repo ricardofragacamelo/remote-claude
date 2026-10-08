@@ -2,7 +2,6 @@ import type {
   CanUseTool,
   HookJSONOutput,
   Options,
-  PermissionMode as SdkPermissionMode,
   PermissionResult,
   Query,
   SDKMessage,
@@ -19,7 +18,7 @@ import type {
 } from '@application/session';
 import type { Scheduler } from '@application/shared';
 import type { Clock } from '@domain/shared';
-import { ClaudeTimeoutError, ClaudeUnavailableError } from '@domain/session';
+import { ClaudeTimeoutError, ClaudeUnavailableError, sdkPermissionMode } from '@domain/session';
 import type {
   ContextUse,
   InstallationModel,
@@ -284,7 +283,8 @@ export class SessionRunner implements ClaudeSessionHandle {
   }
 
   async setPermissionMode(mode: PermissionMode): Promise<void> {
-    await this.query?.setPermissionMode(mode as SdkPermissionMode);
+    // Permitir tudo is ours and reaches the SDK as `default` — the same translation as at the start.
+    await this.query?.setPermissionMode(sdkPermissionMode(mode));
   }
 
   get cliVersion(): string | null {

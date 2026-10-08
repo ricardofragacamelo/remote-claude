@@ -9,6 +9,7 @@ import {
   UnknownCommandError,
 } from '@domain/session';
 import type { MenuCommand, PermissionMode, SessionClient, SlashCommand } from '@domain/session';
+import type { SessionPermissionGate } from './ports/permission-gate.port';
 import type { SessionBroadcaster } from './ports/session-broadcaster.port';
 import type { CommandCatalog } from './command-catalog';
 import type { OutgoingPrompt, PromptAttachment, PromptContextResolver } from './prompt-context';
@@ -267,13 +268,27 @@ export class SetSessionModelUseCase extends SessionCommandUseCase {
   }
 }
 
-/** Changes the permission mode of a running session. */
+/**
+ * Changes the permission mode of a running session.
+ *
+ * The SDK first, then the entity, then the questions already open: a request that arrives after the
+ * entity changed reads the new mode, and the ones that were waiting are handed to the gate with it —
+ * switching to Permitir tudo answers them (plan 23, D-06).
+ */
 export class SetSessionPermissionModeUseCase extends SessionCommandUseCase {
+  constructor(
+    registry: SessionRegistry,
+    private readonly gate: SessionPermissionGate,
+  ) {
+    super(registry);
+  }
+
   async execute(rawSessionId: string, mode: PermissionMode, userId: UserId): Promise<void> {
     const { session, handle } = this.require(rawSessionId, userId);
 
     await handle.setPermissionMode(mode);
     session.setPermissionMode(mode);
+    await this.gate.modeChanged(session.id, mode);
   }
 }
 

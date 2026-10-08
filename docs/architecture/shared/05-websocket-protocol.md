@@ -119,7 +119,7 @@ Regras:
 | `session.prompt` | `{ sessionId, text, attachments? }` | envia um turno — ver [O contexto do prompt](#o-contexto-do-prompt--attachments) |
 | `session.cancelQueuedPrompt` | `{ sessionId, queueId }` | tira da fila um prompt que ainda não começou — ver [A fila de prompts](#a-fila-de-prompts) |
 | `session.interrupt` | `{ sessionId }` | `query.interrupt()` |
-| `session.setPermissionMode` | `{ sessionId, mode }` | troca o modo em execução |
+| `session.setPermissionMode` | `{ sessionId, mode }` | troca o modo em execução. `allowAll` é o **Permitir tudo**, um modo nosso: o SDK roda em `default` e o servidor aprova sozinho toda tool que nenhuma regra recuse, menos as que são perguntas ([ADR-022](00-decisions.md#adr-022--permitir-tudo-é-um-modo-nosso-não-o-bypasspermissions-do-sdk)). Trocar **para** `allowAll` resolve os pedidos já abertos da sessão pelas mesmas regras. `bypassPermissions` continua sendo o do SDK, nunca honrado |
 | `session.setModel` | `{ sessionId, model }` | troca o modelo em execução |
 | `session.close` | `{ sessionId }` | encerra e libera o subprocesso |
 | `session.setLocale` | `{ locale }` | muda o idioma da connection |
@@ -128,6 +128,8 @@ Regras:
 | `session.restoreChange` | `{ sessionId, path }` | desfaz a última rejeição de um arquivo (de um trecho ou do arquivo inteiro), enquanto o arquivo ainda é o que a rejeição deixou — ver [Desfazer arquivos](#desfazer-arquivos) |
 | `workspace.watch` | `{ workspacePath }` | passa a acompanhar as mudanças no disco de uma pasta aberta — ver [A pasta assistida](#a-pasta-assistida--workspace) |
 | `workspace.unwatch` | `{ watchId }` | para de acompanhar; idempotente |
+| `transcript.follow` | `{ conversationId, afterMessageId? }` | passa a acompanhar uma conversa do histórico que este backend não opera — ver [Acompanhar um transcript](#acompanhar-um-transcript--transcript) |
+| `transcript.unfollow` | `{ followId }` | para de acompanhar; idempotente |
 | `permission.extend` | `{ requestId }` | estende o prazo do pedido pendente. O cliente **não** escolha o número: incremento e teto vêm da configuração do backend |
 | `permission.resolve` | *(é `response`, não command — ver abaixo)* | |
 
@@ -135,7 +137,8 @@ Todo comando recebe `ack` ou `error`. `ack` significa **aceito**, não **conclu�
 resultado chega como `event`. O ack genérico é `command.accepted { command }`; `session.attach`
 responde `session.attached { sessionId, replayed, oldestAvailableSeq, gap, claudeSessionId?, resumedFrom? }`
 — e `session.start` também, quando retoma uma conversa que **já está viva** para o chamador
-(ver [Retomada](#retomada)); `workspace.watch` responde `workspace.watching { watchId, workspacePath }`.
+(ver [Retomada](#retomada)); `workspace.watch` responde `workspace.watching { watchId, workspacePath }`; `transcript.follow` responde
+`transcript.following { followId, conversationId, activity }`.
 
 **Ordem garantida:** o `ack` sai antes de qualquer frame causado pelo comando. Um cliente nunca vê
 o resultado antes de saber que o comando foi aceito.
@@ -157,7 +160,7 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `tool.progress` | `{ toolUseId, chunk, parentToolUseId? }` | `tool_progress` |
 | `tool.completed` | `{ toolUseId, status, summary?, parentToolUseId?, taskId? }` — `succeeded`·`failed`·`denied`; `taskId` só de `TaskCreate`/`TaskUpdate` (a lista de tarefas, plano 08) | `user` (tool_result) |
 | `permission.requested` | ver abaixo | `canUseTool` |
-| `permission.resolved` | `{ requestId, decision, auto, resolvedBy?, resolvedFrom?, toolUseId? }` — `toolUseId` é a chamada de tool do pedido, quando o SDK a nomeou: o que põe a decisão na linha daquela tool, inclusive a de uma regra que respondeu sem perguntar ninguém ([plano 10, B-20](../../plans/10-mobile-chat-layout/F4-inline.md)). A correspondência continua sendo pelo `requestId` | derivado |
+| `permission.resolved` | `{ requestId, decision, auto, resolvedBy?, resolvedFrom?, toolUseId?, via? }` — `via` diz por que ninguém foi perguntado: `rule` (uma regra respondeu) ou `allowAll` (a sessão está em Permitir tudo); ausente quando um humano respondeu ou o prazo venceu — `toolUseId` é a chamada de tool do pedido, quando o SDK a nomeou: o que põe a decisão na linha daquela tool, inclusive a de uma regra que respondeu sem perguntar ninguém ([plano 10, B-20](../../plans/10-mobile-chat-layout/F4-inline.md)). A correspondência continua sendo pelo `requestId` | derivado |
 | `turn.completed` | `{ turnId, usage, costUsd, durationMs, promptedBy? }` | `result` |
 | `session.closed` | `{ sessionId, reason }` — `closedByUser`·`completed`·`failed`·`auditUnavailable`·`shutdown`·`idleTimeout` | fim do generator · TTL de ociosa (`idleTimeout`) · shutdown |
 | `diag.pong` | `{ sessionId, pingedAt, pingCount, nonce }` | resposta do `diag.ping` |
@@ -168,11 +171,13 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `prompt.dequeued` | `{ queueId, reason }` — `started`·`cancelled` | a fila do backend |
 | `workspace.filesChanged` | `{ watchId, changes[{ path, kind, origin? }], overflow? }` — `kind`: `created`·`changed`·`deleted`; `origin`: `claude`·`user`·`external` | o watcher da pasta assistida |
 | `workspace.watchStopped` | `{ watchId, reason }` — `allowlistChanged`·`folderDeleted`·`systemLimit` | o watcher da pasta assistida |
+| `transcript.appended` | `{ followId, conversationId, events[], lastMessageId?, activity, working }` | o seguidor do transcript |
+| `transcript.reset` | `{ followId, conversationId, reason }` — `rewritten`·`gone` | o seguidor do transcript |
 | `error` | envelope de erro | qualquer falha |
 
 **`seq` é obrigatório em todo `event`**, monotônico **por stream** — uma sessão, ou uma assinatura
 (a pasta assistida; o terminal do [plano 12](../../plans/12-integrated-terminal/README.md) reusa a
-regra). Numa sessão é o que viabiliza o replay; numa assinatura **não há replay**. Um cliente nunca
+regra; o transcript acompanhado também). Numa sessão é o que viabiliza o replay; numa assinatura **não há replay**. Um cliente nunca
 mistura dois streams: o `seq` de uma assinatura não move o ponto de retomada de sessão nenhuma
 ([07 · D-07](../../plans/07-explorer-and-editor/decisions.md#d-07--o-transporte-da-mudança-e-o-seq-do-stream)).
 
@@ -250,6 +255,35 @@ O backend abre o SDK com `CLAUDE_CODE_ENABLE_TODO_TOOLS=1`, e o CLI oferece uma 
 
 O cliente reduz as chamadas em ordem; uma chamada fora do formato, ou um `TaskUpdate` de um `taskId`
 que a lista não tem, é uma tool como outra qualquer.
+
+### Identidade do bloco, instante, título e saída
+
+Campos aditivos do [plano 22](../../plans/22-live-history/README.md), opcionais nos schemas — um evento
+sem eles continua válido nas três pontas, e nenhum sobe `v`
+([22 · D-03](../../plans/22-live-history/decisions.md#f0--normas-e-contrato)):
+
+- **`blockId`** em cada bloco do `message.completed`: `<uuid>:<índice>` — o `uuid` da entrada do
+  transcript em que o bloco está, que a mensagem ao vivo **também** carrega (medido nas gravações do
+  plano 22), e a posição do bloco nela. O mesmo bloco tem o mesmo id ao vivo e no histórico. O cliente
+  guarda **um bloco por id**: dois pensamentos omitidos da mesma resposta são iguais em tipo e texto e
+  continuam sendo dois. Sem `blockId` (servidor antigo), a regra antiga: tipo e texto
+  ([22 · D-06](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)). A junção do
+  histórico com a sessão viva continua por `messageId`.
+- **`at`** nos eventos **do histórico** (`message.completed`, `tool.started`, `tool.completed`): o
+  `timestamp` da entrada, que marca o **fim** do que ela guarda. Uma duração lida entre dois deles é um
+  limite superior — "Pensou por até N s" ([22 · D-14](../../plans/22-live-history/decisions.md#f5--fidelidade-no-web)).
+  Ao vivo não vai: o relógio é o `ts` do frame.
+- **`title`** em `tool.started` passa a ser preenchido: a `description` que o modelo deu à chamada,
+  quando é texto não vazio ([22 · D-05](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
+  Ausente, o cliente rotula a tool como antes.
+- **`summary`** em `tool.completed` é **texto** — o resultado em lista de blocos é o texto deles
+  junto, nunca JSON — e guarda o **fim**: as últimas 5 linhas, até 400 caracteres, com `…` no começo
+  quando cortou ([22 · D-07](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)). A
+  saída inteira é da rota `GET /transcripts/:sessionId/tools/:toolUseId/result`.
+- **`mediaType`** e **`size`** no bloco `image`: o tipo declarado e os bytes decodificados — **nunca**
+  os dados. A imagem é buscada sob demanda, por `GET /transcripts/:sessionId/images/:blockId`
+  ([22 · D-09, D-10](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)). Imagem por
+  URL sai sem `size`.
 
 ### O contexto do prompt — `attachments`
 
@@ -385,6 +419,10 @@ Payload de `permission.requested`:
     { "scope": "always",  "labelKey": "permission.scope.always",
       "pattern": "Bash(rm -rf build/)", "lifetimeMs": 7776000000 }
   ],
+  "reaches": [                    // os alcances que uma regra deixada por esta resposta pode ter
+    { "reach": "exact",  "patterns": ["Bash(rm -rf build/)"] },
+    { "reach": "prefix", "patterns": ["Bash(rm:*)"] }
+  ],
   "expiresAt": "2026-09-13T12:02:00.000Z"
 }
 ```
@@ -397,8 +435,16 @@ cobre esta invocação e o mesmo que a resposta grava, e `lifetimeMs`, a validad
 instalação, contada a partir da resposta. É o que deixa a tela dizer o alcance por extenso antes de
 alguém escolher, sem um segundo matcher no cliente nem um "90 dias" escrito à mão
 ([03 · D-12](../../plans/03-rules-and-audit/decisions.md#d-12--o-alcance-vem-na-pergunta)).
-Invocação sem padrão possível não recebe as duas sugestões, e `project` exige workspace. O cliente
-que recebe um escopo persistido sem um dos dois campos **não** o oferece.
+Invocação sem alcance possível não recebe as duas sugestões, e `project` exige workspace.
+
+**`reaches` são os alcances, e o cliente escolhe um, nunca um padrão**
+([23 · B-10](../../plans/23-fluid-permissions/F2-rule-reach.md)). `exact` é este input; `prefix` (só
+shell) cobre todo comando que começa como cada comando desta linha, um padrão por comando; `tool`
+(nunca shell) é toda invocação da tool. O `pattern` das sugestões é o do `exact`, mantido para quem
+não lê `reaches`. A resposta leva `reach`; o servidor recalcula os padrões a partir do pedido e recusa
+com `INVALID_INPUT` um alcance que não ofereceu, deixando o pedido aberto. O alcance vale para
+`session`, `project` e `always`. Ver
+[backend/04](../backend/04-claude-integration.md#o-alcance-de-uma-regra-nascida-no-card).
 
 Resposta:
 
@@ -406,6 +452,7 @@ Resposta:
 { "kind": "response", "type": "permission.resolve", "correlationId": "<id do request>",
   "payload": { "requestId": "req_...", "decision": "allow",
                "scope": "once",         // once | session | project | always
+               "reach": "prefix",       // exact (default) | prefix | tool — um dos `reaches`
                "reason": "..." } }      // obrigatório quando decision = deny
 ```
 
@@ -638,6 +685,60 @@ chega por **assinatura** no socket que já existe ([07 · D-07](../../plans/07-e
 
 O comportamento do watcher — o que é assistido, a coalescência, a liberação garantida — é da
 [F3 do plano 07](../../plans/07-explorer-and-editor/F3-file-watch.md); este é o contrato.
+
+---
+
+## Acompanhar um transcript — `transcript.*`
+
+Uma conversa começada no editor ou no terminal continua sendo escrita lá enquanto o leitor do
+histórico a mostra. O leitor a **assina** no socket que já existe, no molde da pasta assistida
+([22 · D-02](../../plans/22-live-history/decisions.md#f0--normas-e-contrato)):
+
+```
+GET /transcripts/:id/messages                 → página + lastMessageId: "u-41"
+→ command  transcript.follow     { conversationId, afterMessageId: "u-41" }
+← ack      transcript.following  { followId: "t_01J…", conversationId, activity: "activeElsewhere" }
+← event    transcript.appended   seq 1  { followId, conversationId, events: […], lastMessageId: "u-44", activity, working: true }
+← event    transcript.appended   seq 2  { …, events: [], working: false }
+← event    transcript.reset      seq 3  { followId, conversationId, reason: "rewritten" }
+```
+
+- **Sem lacuna entre a página e a assinatura.** A página de `GET /transcripts/:id/messages` diz o
+  `lastMessageId`, e o `transcript.follow` o manda como `afterMessageId`. O primeiro
+  `transcript.appended` é **tudo** o que veio depois dele, mesmo o gravado entre a resposta HTTP e a
+  assinatura. Conversa vazia: sem `afterMessageId`, e tudo é novo.
+- **O `ack` vem antes de tudo.** Nada do `followId` chega antes do `transcript.following`.
+- **`seq` é do `followId`**, começa em 1, e o frame não leva `sessionId`. Buraco no `seq` é frame
+  perdido: o cliente relê a página e reassina, nunca remenda.
+- **Sem replay. Reconexão é reassinar** com o último `lastMessageId` que o cliente tem — o item
+  acima garante que nada se perde. Assinar duas vezes com o mesmo `afterMessageId` dá as mesmas
+  entradas.
+- **`events` tem a forma do histórico**: os `{ type, payload }` da página, com `at` e `blockId`, na
+  ordem da cadeia do SDK e **nunca** do relógio — o prompt enfileirado tem `timestamp` anterior ao do
+  resultado que o precede, e é depois dele que o modelo o leu. O cliente os dobra com o **mesmo**
+  redutor da página. Um `appended` sem `events` diz só que `activity` ou `working` mudou.
+- **Cadeia reescrita é reset.** Rewind, compactação ou fork que tiram da cadeia a entrada que o
+  cliente tinha: `transcript.reset { reason: 'rewritten' }`, e a assinatura acaba — o cliente relê a
+  página 1 e reassina. Conversa que some do store: `reason: 'gone'`. O reset leva o `seq` seguinte e é
+  o último frame do `followId`.
+- **`working`** é inferência, dita como tal na tela: `true` só com `activity = 'activeElsewhere'` e a
+  última entrada deixando o turno aberto — `tool_use` sem resultado, pensamento, prompt sem resposta
+  ([22 · D-12](../../plans/22-live-history/decisions.md#f2--seguidor-no-backend)). O transcript não
+  grava o estado do turno.
+- **O mesmo cercado da leitura.** Conversa que o chamador não lê é `NOT_FOUND`, igual a um id que não
+  existe. **Só a cadeia principal**: subagente continua carregado ao abrir o card
+  ([22 · D-13](../../plans/22-live-history/decisions.md#f2--seguidor-no-backend)).
+- **Sessão viva deste backend não é acompanhada por aqui**: `activity = 'liveHere'` é recusado com
+  `TRANSCRIPT_FOLLOW_LIVE_HERE`, e quem mostra a conversa é a tela da sessão, por `session.attach`.
+- **Tetos.** Assinaturas por connection e conversas acompanhadas no total, configurados
+  (`RC_TRANSCRIPT_FOLLOW_MAX_PER_CONNECTION`, `RC_TRANSCRIPT_FOLLOW_MAX`); passar de um é
+  `TRANSCRIPT_FOLLOW_LIMIT` com `params.limit` e `params.scope` (`connection`·`server`), nunca uma
+  degradação silenciosa. A connection que cai solta todas as suas assinaturas.
+- **Cliente que nunca pede, ignora** — como `workspace.*`: um frame `transcript.*` sem assinatura
+  dele é descartado, e o `seq` dele não toca o ponto de retomada de sessão nenhuma.
+
+Como o backend descobre o que mudou — uma sondagem barata por conversa, compartilhada por todos os
+assinantes, e nenhum `fs.watch` — é do [backend/03 §transcript](../backend/03-modules.md#transcript).
 
 ---
 

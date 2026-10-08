@@ -7,6 +7,7 @@ library;
 
 import 'package:equatable/equatable.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
+import 'package:remote_claude/features/session/domain/entities/transcript_follow.dart';
 
 /// A page of history: the latest messages, or the ones before a cursor.
 class HistoryPage extends Equatable {
@@ -17,6 +18,8 @@ class HistoryPage extends Equatable {
     this.summary = '',
     this.events = const <SessionEvent>[],
     this.nextCursor,
+    this.activity,
+    this.lastMessageId,
   });
 
   /// The conversation in Claude's store this is a page of.
@@ -40,6 +43,15 @@ class HistoryPage extends Equatable {
   /// Opaque: the page **before** this one, or `null` on the first message of the conversation.
   final String? nextCursor;
 
+  /// What the conversation is doing now — `null` from a server older than the listing's activity,
+  /// or with a value this build does not know: then nothing is said about it.
+  final ConversationActivity? activity;
+
+  /// The last entry of the **whole** conversation, whatever page this is — what following it starts
+  /// after, so nothing written after this page is missed (plan 22, B-10). `null` when it has no
+  /// entry, or from a server older than plan 22.
+  final String? lastMessageId;
+
   @override
   List<Object?> get props => <Object?>[
     conversationId,
@@ -48,5 +60,7 @@ class HistoryPage extends Equatable {
     summary,
     events,
     nextCursor,
+    activity,
+    lastMessageId,
   ];
 }

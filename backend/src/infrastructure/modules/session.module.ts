@@ -58,6 +58,7 @@ import type {
   ResumableConversationSource,
   SessionBroadcaster,
   SessionOriginRepository,
+  SessionPermissionGate,
   WorkspaceResolver,
 } from '@application/session';
 import { CLOCK, ID_GENERATOR, PATH_LOCK } from '@application/shared';
@@ -105,7 +106,11 @@ import { WorkspaceModuleResolver } from '@adapter/outbound/session/workspace-mod
 import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
 import { RecordAuditEventUseCase } from '@application/audit';
-import { EndSessionPermissionsUseCase, RequestPermissionUseCase } from '@application/permission';
+import {
+  ApplyPermissionModeUseCase,
+  EndSessionPermissionsUseCase,
+  RequestPermissionUseCase,
+} from '@application/permission';
 import { UuidGenerator } from '@shared/ids/uuid-generator';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { AuditModule } from './audit.module';
@@ -271,6 +276,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
       inject: [
         RequestPermissionUseCase,
         EndSessionPermissionsUseCase,
+        ApplyPermissionModeUseCase,
         SessionRegistry,
         SESSION_BROADCASTER,
         LOGGER,
@@ -278,10 +284,11 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
       useFactory: (
         request: RequestPermissionUseCase,
         endPermissions: EndSessionPermissionsUseCase,
+        applyMode: ApplyPermissionModeUseCase,
         registry: SessionRegistry,
         broadcaster: SessionBroadcaster,
         logger: Logger,
-      ) => new PermissionBridge(request, endPermissions, registry, broadcaster, logger),
+      ) => new PermissionBridge(request, endPermissions, applyMode, registry, broadcaster, logger),
     },
     { provide: SESSION_PERMISSION_GATE, useExisting: PermissionBridge },
     // The two consumers of `permission.resolved` that need something from this module. They are
@@ -498,8 +505,9 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     },
     {
       provide: SetSessionPermissionModeUseCase,
-      inject: [SessionRegistry],
-      useFactory: (registry: SessionRegistry) => new SetSessionPermissionModeUseCase(registry),
+      inject: [SessionRegistry, SESSION_PERMISSION_GATE],
+      useFactory: (registry: SessionRegistry, gate: SessionPermissionGate) =>
+        new SetSessionPermissionModeUseCase(registry, gate),
     },
     {
       provide: CloseSessionUseCase,

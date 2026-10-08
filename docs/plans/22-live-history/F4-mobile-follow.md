@@ -18,20 +18,20 @@ Ver [mobile/03-state-and-data](../../architecture/mobile/03-state-and-data.md) e
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-24 — Os dados: página com `activity`, comandos e eventos novos 🔲
+### B-24 — Os dados: página com `activity`, comandos e eventos novos ✅
 
 A entidade [history_page.dart](../../../mobile/lib/features/session/domain/entities/history_page.dart) ganha
 `activity` e `lastMessageId`, e o [history_mapper.dart](../../../mobile/lib/features/session/data/mappers/history_mapper.dart)
 os lê (ausentes viram `null`). O data source do WS manda `transcript.follow` e `transcript.unfollow` e entrega
 `appended` e `reset`, pelos tipos do `protocol.g.dart`. Log em `debug` pelo `logging` com formatter JSON.
 
-### B-25 — O controller acompanha 🔲
+### B-25 — O controller acompanha ✅
 
 [conversation_history_controller.dart](../../../mobile/lib/features/session/presentation/providers/conversation_history_controller.dart):
 assina depois da primeira página; junta os anexados à `Conversation`; `reset` relê e reassina;
 `AppLifecycleState.paused` solta e `resumed` reassina; o WS que volta reassina; o provider descartado solta.
 
-### B-26 — A página: aviso, confirmação de fork e "trabalhando" 🔲
+### B-26 — A página: aviso, confirmação de fork e "trabalhando" ✅
 
 [conversation_history_page.dart](../../../mobile/lib/features/session/presentation/pages/conversation_history_page.dart):
 o aviso "ativa em outro cliente" vivo; a confirmação antes do fork de uma conversa ativa, como o web

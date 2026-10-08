@@ -18,9 +18,14 @@ String outcomeSentence(AppLocalizations l10n, PermissionOutcome outcome) {
     return l10n.permissionOutcomeExpired;
   }
 
-  // Decided by the server with nobody answering, and not the deadline: a rule — of this session,
-  // this project or every project. The event does not say which, so the sentence does not either.
+  // Decided by the server with nobody answering, and not the deadline: Permitir tudo, when the
+  // server says so (plan 23, S-93), or a rule — of this session, this project or every project. The
+  // event does not say which rule, so the sentence does not either.
   if (outcome.auto) {
+    if (allowed && outcome.via == AnswerVia.allowAll) {
+      return l10n.permissionOutcomeAllowedByAllowAll;
+    }
+
     return allowed ? l10n.permissionOutcomeAllowedByRule : l10n.permissionOutcomeRefusedByRule;
   }
 

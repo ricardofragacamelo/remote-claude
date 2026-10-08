@@ -95,13 +95,29 @@
 
   "sessionToolStatusRunning": "Executando",
 
-  "sessionToolStatusSucceeded": "Concluída",
+  "sessionToolStatusSucceeded": "Pronto",
 
   "sessionToolStatusFailed": "Falhou",
 
-  "sessionToolStatusDenied": "Negada",
+  "sessionToolStatusDenied": "Recusada",
 
-  "sessionToolOutputLabel": "Saída",
+  "sessionToolTitled": "{name} · {title}",
+  "sessionToolRowLabel": "{tool} — {status}. Mostrar o input exato",
+  "sessionToolRowIn": "IN",
+  "sessionToolRowOut": "OUT",
+  "sessionToolRowInput": "O input exato",
+  "sessionToolRowOutput": "O que ela disse",
+  "sessionToolRowOutputLoading": "Carregando a saída inteira…",
+  "sessionToolRowOutputFailed": "A saída inteira não carregou — aqui está só o fim dela.",
+  "sessionToolRowOutputTruncated": "A saída tinha {size}: aqui estão só o começo e o fim, cortada onde está marcado.",
+  "sessionToolRowOutputCut": "[… o meio da saída foi deixado de fora aqui …]",
+  "sessionImageAttached": "Imagem anexada",
+  "sessionImageAttachedWith": "Imagem anexada ({details})",
+  "sessionImageOpen": "Abrir a imagem",
+  "sessionImageClose": "Fechar",
+  "sessionImageDescription": "A imagem que este prompt levou, como o Claude a recebeu.",
+  "sessionImageLoading": "Carregando a imagem…",
+  "sessionImageAlt": "A imagem anexada ao prompt",
 
   "sessionClosedByUser": "Encerrada por quem a abriu.",
 
@@ -206,6 +222,16 @@
 
   "permissionOutcomeRefusedByRule": "Negado por uma das suas regras, sem perguntar a ninguém.",
 
+  "permissionOutcomeAllowedByAllowAll": "Permitido pelo Permitir tudo, sem perguntar a ninguém.",
+
+  "permissionReachLabel": "Alcance",
+
+  "permissionReachExact": "Exatamente isto",
+
+  "permissionReachPrefix": "Comandos que começam igual",
+
+  "permissionReachTool": "Qualquer uso desta tool",
+
   "permissionOutcomeExpired": "Negado automaticamente: ninguém respondeu a tempo.",
 
   "approvalLockTitle": "Pedir digital ou PIN antes de aprovar",
@@ -308,6 +334,14 @@
 
   "transcriptErrorCursorStale": "Esta conversa mudou enquanto você a lia. Recarregue a partir das mensagens mais recentes.",
 
+  "transcriptErrorFollowLimit": "Há conversas demais sendo acompanhadas agora (no máximo {limit}). Esta continua legível, mas não vai se atualizar sozinha.",
+
+  "transcriptErrorFollowLiveHere": "Esta conversa está aberta numa sessão viva aqui. Abra essa sessão para vê-la enquanto anda.",
+
+  "transcriptErrorImageTypeUnsupported": "Esta imagem não pode ser mostrada aqui: {mediaType} não é um tipo que o servidor serve.",
+
+  "transcriptErrorImageTooLarge": "Esta imagem é grande demais para ser mostrada aqui.",
+
   "historyListTitle": "Histórico",
 
   "historyListLoading": "Carregando conversas",
@@ -340,7 +374,7 @@
 
   "historyLoadEarlier": "Carregar mensagens anteriores",
 
-  "historyResumeAction": "Retomar",
+  "historyResumeAction": "Continuar esta conversa",
 
   "historyResumePending": "Retomando…",
 
@@ -349,6 +383,26 @@
   "historyResumeNotSent": "A conversa não foi retomada: este aparelho não está conectado.",
 
   "historyExternalNote": "Esta conversa começou fora deste app. Retomá-la aqui a continua com um novo id: o editor ou o terminal de onde ela veio não verá as respostas dadas aqui.",
+
+  "historyActiveElsewhereNote": "Outro processo escreveu nesta conversa há pouco — o editor ou um terminal pode estar com ela aberta. Continuar aqui cria uma cópia, e as duas vão divergir.",
+
+  "historyFollowWorking": "Trabalhando em outro cliente…",
+
+  "historyFollowWorkingHelp": "Isto é uma inferência, não algo que o Claude informou: a última entrada da conversa deixa o turno aberto — uma ferramenta sem resultado, um pensamento ou um prompt sem resposta — e algo escreveu nela há pouco. O histórico não grava o estado de um turno, e nada aqui diz qual é o outro cliente.",
+
+  "historyFollowNewerOne": "1 nova",
+
+  "historyFollowNewer": "{count} novas",
+
+  "historyFollowNewerLabel": "Ir para o fim — {newer}",
+
+  "sessionForkTitle": "Continuar uma conversa que está sendo escrita agora?",
+
+  "sessionForkDescription": "Outro processo — o editor ou um terminal — escreveu nesta conversa há pouco. Continuar aqui cria uma cópia com um id novo; a outra segue sozinha, e as duas vão divergir.",
+
+  "sessionForkCancel": "Cancelar",
+
+  "sessionForkConfirm": "Continuar como cópia",
 
   "sessionHistoryLoading": "Carregando o que foi dito antes",
 
@@ -465,6 +519,9 @@
   "thinkingLive": "Pensando…",
   "thinkingDone": "Pensou",
   "thinkingTook": "Pensou por {seconds} s",
+  "thinkingTookMinutes": "Pensou por {minutes} min {seconds} s",
+  "thinkingTookUpTo": "Pensou por até {seconds} s",
+  "thinkingTookUpToMinutes": "Pensou por até {minutes} min {seconds} s",
   "thinkingHidden": "Pensou — o modelo não mostrou",
   "thinkingNothingShown": "O modelo pensou aqui e não mostrou o que pensou.",
   "draftTitle": "Uma nova conversa",
@@ -493,6 +550,9 @@
   "modeAcceptEditsWarning": "O Claude vai editar e gravar arquivos sem perguntar — e sem a prévia da alteração.",
   "modePlan": "Plan",
   "modePlanDescription": "O Claude planeja sem mudar nada, e pede que você aprove o plano.",
+  "modeAllowAll": "Permitir tudo",
+  "modeAllowAllDescription": "O Claude executa toda tool sem perguntar, menos o que uma regra sua recusa. As perguntas dele a você continuam chegando.",
+  "modeAllowAllWarning": "O Claude vai executar qualquer comando nesta máquina sem perguntar a você, até você trocar o modo.",
   "modelLabel": "Modelo",
   "modelDefault": "Padrão da instalação",
   "modelsFailed": "Os modelos desta instalação não puderam ser lidos: {reason}",
@@ -574,7 +634,7 @@
   "sessionHelpStatusHeading": "O status",
   "sessionHelpStatus": "O chip da barra de cima diz como a sessão está, por cor e por palavra: conectada, reconectando, rodando, esperando você ou encerrada. Toque nele para ver o id da sessão, com o jeito de copiá-lo, e quanto ela custou desde que abriu.",
   "sessionHelpWorkingHeading": "Enquanto o Claude trabalha",
-  "sessionHelpWorking": "Enquanto um turno roda, a última linha dele se mexe: um asterisco, o que o Claude está fazendo — a tool que executa, que espera você, ou uma palavra para o turno — e há quanto tempo. O raciocínio é uma linha própria, na ordem: \"Pensando…\" enquanto chega, \"Pensou por n s\" quando termina, recolhido — toque para ler. Quando o turno acaba, a linha dá lugar ao que o turno custou.",
+  "sessionHelpWorking": "Enquanto um turno roda, a última linha dele se mexe: um asterisco, o que o Claude está fazendo — a tool que executa, que espera você, ou uma palavra para o turno — e há quanto tempo. O raciocínio é uma linha própria, na ordem: \"Pensando…\" enquanto chega, \"Pensou por n s\" quando termina — o que pensou à vista, mais discreto que a resposta, quando o modelo mostrou; recolhido quando não mostrou. Uma tool é uma linha, recolhida: toque para ver o que entrou e o que saiu. Quando o turno acaba, a linha dá lugar ao que o turno custou.",
   "sessionHelpInlineHeading": "Perguntas na conversa",
   "sessionHelpInline": "Quando o Claude pergunta antes de executar uma tool, a pergunta fica na conversa, no lugar dessa tool: o comando exato, o risco, o tempo que resta e até onde vai um sim. Respondida, a linha da tool diz como — por você, no navegador, por uma regra sua, ou recusada porque ninguém respondeu a tempo. Uma pergunta nunca fecha o teclado nem tira a caixa de você: enviar continua enviando o seu prompt, e só um toque no card responde a ela.",
   "sessionHelpPillHeading": "Esperando sua resposta",

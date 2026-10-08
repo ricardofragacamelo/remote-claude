@@ -177,6 +177,13 @@ Quando chega `permission.requested`:
 - O escopo (`once` / `session` / `project` / `always`) é escolha explícita, com `once` default.
   Cada opção diz **o que significa**, sem eufemismo e sem sigla — "não perguntar de novo neste
   projeto", "não perguntar de novo em lugar nenhum" —, com a validade da regra à vista.
+- O **alcance** (`exact` / `prefix` / `tool`) vem do servidor em `reaches`, com os padrões de cada um,
+  e só é escolhido quando há mais de um. Cada opção mostra os padrões por extenso. O pré-selecionado é
+  `prefix` quando existe, `exact` para tool de caminho e URL, e `tool` quando é o único
+  ([23 · D-09](../../plans/23-fluid-permissions/decisions.md#f2--alcance-das-regras)). A resposta leva
+  `reach`, nunca um padrão. O alcance vale para `session`, `project` e `always`.
+- Resolvida sem perguntar ninguém → a linha da tool diz **por quê**: "por uma regra" (`via: 'rule'`)
+  ou "Permitir tudo" (`via: 'allowAll'`), e o texto genérico de aprovação automática para outro valor.
 - Daqui se **chega à lista de regras**. É um dos dois pontos de entrada obrigatórios dela.
 - Resolvida em outro dispositivo → o card se atualiza sozinho mostrando quem resolveu.
 
@@ -200,7 +207,7 @@ Regra de permissão é autorização **antecipada** para executar comando na má
   **mantém a linha**, com o erro traduzido ao lado — a regra continua respondendo, e é isso que a
   tela existe para mostrar.
 - **Escolher `project` ou `always` pede um segundo passo, qualquer que seja o risco**, e o segundo
-  passo diz o alcance por extenso: o padrão exato que será gravado, onde vale e por quanto tempo —
+  passo diz o alcance por extenso: os padrões exatos que serão gravados, onde valem e por quanto tempo —
   os dois vindos da sugestão do servidor, nunca calculados aqui. Dele se chega a `/rules`
   ([03 · D-14](../../plans/03-rules-and-audit/decisions.md#d-14--escopo-persistido-sempre-pede-o-segundo-passo)).
 
@@ -262,10 +269,58 @@ fora de vista — ver [o painel em três faixas](#o-painel-do-claude--três-faix
 (hyperlink), título de janela e sequência desconhecida são descartados. Acima do teto de exibição,
 mostra o fim e "mostrar tudo".
 
-**Thinking recolhido, subagent aninhado.** Thinking aparece recolhido, com "pensou por *n* s" quando a
-duração é conhecida (o stream vivo a mede; o histórico não guarda tempo por bloco, e então diz só que
-pensou); thinking redigido diz que existiu, sem inventar conteúdo. O subagent aparece **dentro** do
-`Task` que o abriu, recolhido, com o tipo do agente e o status; dois em paralelo não se misturam.
+**Thinking como o Claude Code o mostra, subagent aninhado** ([plano 22](../../plans/22-live-history/README.md),
+que revê a [08 · D-17](../../plans/08-claude-panel/decisions.md#d-17--thinking)). Três casos:
+
+- **omitido** — o padrão do CLI, o pensamento sem texto: "Pensou", **recolhido**; ao abrir, diz que o
+  modelo não mostrou o que pensou. É rótulo de pensamento, nunca aviso de ausência;
+- **resumido** — com texto: o texto **à vista**, em estilo atenuado, sob o rótulo "Pensou", como o VS
+  Code ([22 · D-15](../../plans/22-live-history/decisions.md#f5--fidelidade-no-web));
+- **redigido** (`redacted_thinking`): diz que existiu, sem inventar conteúdo.
+
+A duração: ao vivo, "Pensou por *n* s", **medida** pelos frames; no histórico, "Pensou por **até** *n* s",
+do `at` da entrada anterior ao do bloco — o `timestamp` marca o **fim** do bloco e o intervalo inclui a
+latência até o primeiro token, então é limite superior e o texto diz isso
+([22 · D-14](../../plans/22-live-history/decisions.md#f5--fidelidade-no-web)). Sem `at` (servidor antigo,
+primeira entrada), sem duração. Dois pensamentos da mesma resposta são dois — a identidade é o `blockId`.
+O subagent aparece **dentro** do `Task` que o abriu, recolhido, com o tipo do agente e o status; dois em
+paralelo não se misturam.
+
+**O autor uma vez por turno** ([22 · D-16](../../plans/22-live-history/decisions.md#f5--fidelidade-no-web)).
+Turno é da mensagem do usuário até a próxima. "CLAUDE" aparece uma vez, no começo das respostas do
+turno, e não a cada resposta da API — cada ida e volta de tool é uma resposta nova. Uma mensagem sem
+bloco visível (só `tool_use`) **não** desenha cabeçalho. Vale para o leitor e para a sessão viva, que usam
+os mesmos componentes; um prompt enfileirado no meio do turno abre um turno novo.
+
+**A ferramenta pelo título, com IN e OUT** ([22 · D-05, D-07, D-08](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
+Com `tool.started.title`, o rótulo é o nome da ferramenta e a descrição que o modelo deu ("Bash ·
+Rodar os testes"); sem ele, o rótulo de sempre. O Bash expandido mostra **IN** — o `command` em mono — e
+**OUT** — a saída, com ANSI pela regra abaixo —; as outras ferramentas mantêm a apresentação do input.
+O OUT começa com o `summary` (o fim da saída) e, ao expandir, pede **uma vez** a saída inteira pela rota
+`GET /transcripts/:id/tools/:toolUseId/result`; recolher e reabrir não pede de novo. Saída cortada
+(`truncated`) diz quanto tinha e onde cortou; a rota que falha deixa o `summary` e diz que a saída
+completa não carregou, com "tentar de novo". Ferramenta ainda rodando não pede a rota.
+
+**Imagem do prompt é marcador, aberta sob demanda** ([22 · D-09, D-10](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
+"Imagem anexada", com o tipo e o tamanho, no lugar do balão vazio — inclusive no prompt só de imagem.
+Abrir busca pela rota com o token **pela api** e mostra por `blob:`, revogado ao fechar; o token nunca
+vai na URL. `415`, `413` e `404` viram a mensagem traduzida no lugar da imagem.
+
+**O leitor que acompanha** ([22 · F3](../../plans/22-live-history/F3-web-follow.md)). Uma conversa do
+histórico que este backend não opera é **assinada** (`transcript.follow`) enquanto o leitor está aberto e a
+aba visível, e o que chega é dobrado pelo mesmo redutor da página:
+
+- **no fim, acompanha o fim**; rolado para cima, aparece a pílula **"*N* novas"** — *N* conta mensagens,
+  não blocos —, que leva ao fim e some;
+- **o aviso "ativa em outro cliente"** segue a `activity` mais recente, e some quando ela para;
+- **"Trabalhando em outro cliente…"** aparece com `working` e some sem ele, discreto, com ajuda que diz
+  que é inferência do transcript ([22 · D-12](../../plans/22-live-history/decisions.md#f2--seguidor-no-backend)):
+  não se sabe qual cliente é, por isso nunca "no VS Code". É anunciado a leitor de tela (`aria-live`
+  educado) sem roubar o foco;
+- **"Continuar esta conversa"** com a assinatura aberta confirma se a conversa está ativa, solta a
+  assinatura, e a tela vira a sessão viva;
+- o teto de assinaturas (`TRANSCRIPT_FOLLOW_LIMIT`) mostra a mensagem traduzida e o leitor continua
+  legível, sem acompanhar.
 
 **Diff inline, e "prévia contra o disco agora".** Edit e Write mostram o diff no card, recolhido acima de
 *n* linhas, com "abrir diff" para a aba de diff do editor. A prévia **antes** de aprovar é o input
@@ -332,6 +387,14 @@ largura de painel, no celular e com o teclado virtual aberto (a altura acompanha
 | encerrar (do dono, confirmado), exportar, desfazer, notificações, regras, ajuda, copiar o id | menu `⋯` da sessão, no cabeçalho | uso raro; encerrar é irreversível e pede confirmação ([09 · D-10](../../plans/09-chat-layout/decisions.md#f3--cabeçalho)) |
 | id da sessão e custo | tooltip do status, e o custo na status bar ([09 · D-11](../../plans/09-chat-layout/decisions.md#f3--cabeçalho)) | não é conversa; o resumo de cada turno continua nela |
 | `+` (arquivo, anexo, seleção), `/`, modo, modelo, esforço, contexto, enviar/parar | a barra da caixa, nessa ordem | é o que vale para o **próximo** prompt; enviar e parar no mesmo lugar ([09 · D-06](../../plans/09-chat-layout/decisions.md#f2--composer)) |
+
+**O modo** oferece `default`, `acceptEdits`, `plan` e **Permitir tudo** (`allowAll`,
+[ADR-022](../shared/00-decisions.md#adr-022--permitir-tudo-é-um-modo-nosso-não-o-bypasspermissions-do-sdk)).
+`bypassPermissions` nunca aparece. `acceptEdits` deixa o chip em tom de aviso; `allowAll` em tom
+**destrutivo**, com ícone e texto, nunca só cor, e o aviso por extenso no menu ("o Claude roda qualquer
+comando sem perguntar, menos o que uma regra recusa"). O atalho que gira os modos nunca chega a
+`allowAll`, e sai dele para `default` ([23 · D-10](../../plans/23-fluid-permissions/decisions.md#f3--web)):
+Permitir tudo só se escolhe no menu, com o aviso à vista.
 | esforço | escolhido só no rascunho; na sessão viva, só leitura com o motivo | trocá-lo com a sessão viva reinicia a query e desliga o `PreToolUse` |
 | fila, edição, recusa, sessão encerrada, pedidos fora de vista, lista de tarefas | acima da caixa | é o que impede ou espera o próximo envio |
 | permissão e plano para aprovar | inline, no lugar da linha da tool | a pessoa decide olhando o que a tool vai fazer, na ordem em que aconteceu |

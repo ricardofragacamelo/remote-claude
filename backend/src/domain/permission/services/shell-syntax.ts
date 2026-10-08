@@ -45,3 +45,53 @@ export function shellSegments(command: string): string[] {
     .map((segment) => segment.trim())
     .filter((segment) => segment.length > 0);
 }
+
+/**
+ * Redirections that change nothing about what runs: a file descriptor sent to another (`2>&1`,
+ * `>&2`) and output thrown away (`>/dev/null`, `2> /dev/null`, `&>/dev/null`). Only when the target
+ * ends there — `> /dev/null/../x` is not thrown away, and stays opaque.
+ */
+const NEUTRAL_REDIRECTIONS = /(?:&>|\d?>)\s*\/dev\/null(?=\s|$|[;&|])|\d?>&\d(?=\s|$|[;&|])/g;
+
+/** A piece of a line whose quotes all close. Odd quotes mean the cut fell inside a quoted text. */
+function quotesClose(piece: string): boolean {
+  const count = (quote: string): number => piece.split(quote).length - 1;
+
+  return count('"') % 2 === 0 && count("'") % 2 === 0;
+}
+
+/**
+ * The commands a line runs, for the side that **allows** — or `null` when it cannot be read safely.
+ *
+ * The opposite reading of {@link shellSegments}, and on purpose: that one over-cuts because it
+ * refuses, this one gives up because it authorises
+ * ([23 · D-07](../../../../../docs/plans/23-fluid-permissions/decisions.md)):
+ *
+ * 1. the redirections that change nothing are taken out first;
+ * 2. anything opaque left — substitution, a real redirection, a heredoc — gives up;
+ * 3. the line is cut at its separators;
+ * 4. with more than one piece, a piece with an unclosed quote or a backslash gives up: the cut may
+ *    have fallen inside a quoted text, and the piece would not be a command the shell runs.
+ */
+export function commandsOf(line: string): string[] | null {
+  const neutral = line.replace(NEUTRAL_REDIRECTIONS, ' ');
+
+  if (SHELL_OPAQUE.test(neutral)) {
+    return null;
+  }
+
+  const pieces = neutral
+    .split(new RegExp(SHELL_SEPARATORS.source, 'g'))
+    .map((piece) => piece.trim())
+    .filter((piece) => piece.length > 0);
+
+  if (pieces.length === 0) {
+    return null;
+  }
+
+  if (pieces.length > 1 && pieces.some((piece) => !quotesClose(piece) || piece.includes('\\'))) {
+    return null;
+  }
+
+  return pieces;
+}

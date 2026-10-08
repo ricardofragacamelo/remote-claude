@@ -11,6 +11,7 @@ library;
 import 'package:remote_claude/features/session/data/mappers/session_event_mapper.dart';
 import 'package:remote_claude/features/session/domain/entities/history_page.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
+import 'package:remote_claude/features/session/domain/entities/transcript_follow.dart';
 
 /// The page in [body], or `null` when the body does not describe the conversation it is a page
 /// of.
@@ -38,18 +39,34 @@ HistoryPage? historyPageFrom(Object? body) {
     return null;
   }
 
-  final Object? events = body['events'];
-  final Object? summary = conversation['summary'];
-  final Object? nextCursor = body['nextCursor'];
-
   return HistoryPage(
     conversationId: conversationId,
     workspacePath: cwd,
     beganElsewhere: origin == 'external',
-    summary: summary is String ? summary : '',
-    events: events is List<Object?>
-        ? events.map(historyEventFrom).whereType<SessionEvent>().toList(growable: false)
-        : const <SessionEvent>[],
-    nextCursor: nextCursor is String ? nextCursor : null,
+    summary: _textOf(conversation['summary']) ?? '',
+    events: _eventsOf(body['events']),
+    nextCursor: _textOf(body['nextCursor']),
+    // Both are absent from a server older than plan 22, and then nothing is followed from a point
+    // and nothing is said about the activity — never a guess (S-89).
+    activity: activityFrom(conversation['activity']),
+    lastMessageId: _textOf(body['lastMessageId']),
   );
 }
+
+/// [value] when it is text, and `null` otherwise.
+String? _textOf(Object? value) => value is String ? value : null;
+
+/// The entries of a page this build can read, oldest first.
+List<SessionEvent> _eventsOf(Object? events) => events is List<Object?>
+    ? events.map(historyEventFrom).whereType<SessionEvent>().toList(growable: false)
+    : const <SessionEvent>[];
+
+/// The activity [value] names, or `null` when it names none this build knows.
+///
+/// Shared with the frames of a followed conversation, which say it with the same words.
+ConversationActivity? activityFrom(Object? value) => switch (value) {
+  'liveHere' => ConversationActivity.liveHere,
+  'activeElsewhere' => ConversationActivity.activeElsewhere,
+  'idle' => ConversationActivity.idle,
+  _ => null,
+};

@@ -167,6 +167,167 @@ void main() {
     });
   });
 
+  group('what arrives below a reader — plan 22, S-99', () {
+    testWidgets('at the end, it is followed and nothing is counted', (WidgetTester tester) async {
+      await tester.pumpApp(
+        ConversationView(conversation: longConversation(60), countsUnseen: true),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.pumpApp(
+        ConversationView(conversation: longConversation(62, last: 'arrived'), countsUnseen: true),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('arrived').hitTestable(), findsOneWidget);
+      expect(find.byType(UnseenPill), findsNothing);
+    });
+
+    testWidgets('scrolled up, "N new" counts what arrived and takes the reader to it', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpApp(
+        ConversationView(conversation: longConversation(60), countsUnseen: true),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, 1500));
+      await tester.pumpAndSettle();
+
+      await tester.pumpApp(
+        ConversationView(conversation: longConversation(61, last: 'one more'), countsUnseen: true),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.historyFollowNewerOne), findsOneWidget);
+
+      await tester.pumpApp(
+        ConversationView(conversation: longConversation(63, last: 'arrived'), countsUnseen: true),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.historyFollowNewer(3)), findsOneWidget);
+      expect(find.text('arrived').hitTestable(), findsNothing);
+      expect(tester.getSemantics(find.byType(UnseenPill)), matchesSemantics(isLiveRegion: true));
+
+      await tester.tap(find.text(l10n.historyFollowNewer(3)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('arrived').hitTestable(), findsOneWidget);
+      expect(find.byType(UnseenPill), findsNothing);
+    });
+
+    testWidgets('going back to the end by hand sees what was new', (WidgetTester tester) async {
+      await tester.pumpApp(
+        ConversationView(conversation: longConversation(60), countsUnseen: true),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, 1500));
+      await tester.pumpAndSettle();
+      await tester.pumpApp(
+        ConversationView(conversation: longConversation(62, last: 'arrived'), countsUnseen: true),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(UnseenPill), findsOneWidget);
+
+      await tester.fling(find.byType(ListView), const Offset(0, -20000), 5000);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(UnseenPill), findsNothing);
+    });
+
+    testWidgets('S-84 · it counts messages, as the web does: a thinking and an answer of one reply '
+        'are one, and a reply that only calls a tool is none', (WidgetTester tester) async {
+      await tester.pumpApp(
+        ConversationView(conversation: longConversation(60), countsUnseen: true),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, 1500));
+      await tester.pumpAndSettle();
+
+      await tester.pumpApp(
+        ConversationView(
+          conversation: Conversation(
+            entries: <ConversationEntry>[
+              ...longConversation(60).entries,
+              const ThinkingEntry(messageId: 'r1', index: 0, isComplete: true),
+              const StreamMessage(messageId: 'r1', blocks: <String>['one reply']),
+              const ToolExecution(toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{}),
+              const ToolExecution(toolUseId: 't2', toolName: 'Read', input: <String, Object?>{}),
+            ],
+          ),
+          countsUnseen: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.historyFollowNewerOne), findsOneWidget);
+    });
+
+    testWidgets('S-84 · an earlier page read meanwhile goes before, and is never new', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpApp(
+        ConversationView(conversation: longConversation(60), countsUnseen: true),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, 1500));
+      await tester.pumpAndSettle();
+
+      await tester.pumpApp(
+        ConversationView(
+          conversation: Conversation(
+            entries: <ConversationEntry>[
+              for (int index = 0; index < 25; index += 1)
+                StreamMessage(messageId: 'earlier$index', blocks: <String>['earlier $index']),
+              ...longConversation(60).entries,
+            ],
+          ),
+          countsUnseen: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(UnseenPill), findsNothing);
+    });
+
+    test('S-84 · what is counted, and from where', () {
+      const List<ConversationEntry> entries = <ConversationEntry>[
+        StreamMessage(messageId: 'u1', isFromUser: true, blocks: <String>['go']),
+        ThinkingEntry(messageId: 'a1', index: 0),
+        StreamMessage(messageId: 'a1', streaming: 'look'),
+        StreamMessage(messageId: 'a2'),
+        ToolExecution(toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{}),
+        StreamMessage(
+          messageId: 'u2',
+          isFromUser: true,
+          images: <PromptImage>[PromptImage(blockId: 'u2:0')],
+        ),
+      ];
+
+      expect(lastShown(entries), 'u2');
+      expect(lastShown(const <ConversationEntry>[]), isNull);
+      expect(countAfter(entries, 'u1'), 2);
+      expect(countAfter(entries, 'u2'), 0);
+      expect(countAfter(entries, null), 0);
+      // A mark the conversation no longer has — it was read again — counts nothing.
+      expect(countAfter(entries, 'gone'), 0);
+      expect(countAfter(entries, 'a2'), 0);
+    });
+
+    testWidgets('the live session counts nothing: it was not asked to', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpApp(ConversationView(conversation: longConversation(60)));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, 1500));
+      await tester.pumpAndSettle();
+
+      await tester.pumpApp(ConversationView(conversation: longConversation(62)));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(UnseenPill), findsNothing);
+    });
+  });
+
   testWidgets('every kind of entry is drawn as what it is', (WidgetTester tester) async {
     await tester.pumpApp(
       const ConversationView(

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildPlanFiles,
+  e2eLast,
   isValidSlug,
   titleize,
   withPlanIndexed,
@@ -191,5 +192,22 @@ describe('withPlanInOverallProgress', () => {
     expect(() => withPlanInOverallProgress('# Progresso geral\n', spec)).toThrow(
       /docs\/plans\/progress\.md has no plan table/,
     );
+  });
+});
+
+describe('e2eLast — every plan ends with its E2E phase', () => {
+  it.each([
+    [['foundation'], ['foundation', 'e2e']],
+    [
+      ['backend', 'e2e', 'web'],
+      ['backend', 'web', 'e2e'],
+    ],
+    [
+      ['backend', 'e2e'],
+      ['backend', 'e2e'],
+    ],
+    [[], ['e2e']],
+  ])('turns %j into %j', (asked, phases) => {
+    expect(e2eLast(asked)).toEqual(phases);
   });
 });

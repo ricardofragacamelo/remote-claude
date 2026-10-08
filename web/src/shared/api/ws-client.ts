@@ -50,6 +50,12 @@ export interface SessionSubscriber {
   lastSeq(): number;
 }
 
+/** The acks that answer a subscription — of a folder, of a conversation — rather than a session. */
+const SUBSCRIPTION_ANSWERS: ReadonlySet<string> = new Set([
+  'workspace.watching',
+  'transcript.following',
+]);
+
 /** Backoff bounds. Never a tight loop, and never longer than half a minute. */
 export const BACKOFF_MIN_MS = 1_000;
 export const BACKOFF_MAX_MS = 30_000;
@@ -391,9 +397,9 @@ export class WsClient {
       return;
     }
 
-    // The answer to a `workspace.watch` names the subscription, and only the one who sent the
-    // command can tell it is theirs — by `correlationId`, like a refusal.
-    if (parsed.type === 'workspace.watching') {
+    // The answer to a `workspace.watch` or a `transcript.follow` names the subscription, and only the
+    // one who sent the command can tell it is theirs — by `correlationId`, like a refusal.
+    if (SUBSCRIPTION_ANSWERS.has(parsed.type)) {
       this.notify(parsed);
       return;
     }

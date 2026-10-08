@@ -18,6 +18,9 @@ typedef Tap = (PermissionDecision, PermissionScope);
 void main() {
   late AppLocalizations l10n;
   late List<Tap> taps;
+
+  /// The reach each answer named, in the order of [taps].
+  late List<RuleReachKind?> reaches;
   late int disarms;
   late int extensions;
   late int rulesOpened;
@@ -36,6 +39,7 @@ void main() {
     bool withRules = false,
   }) async {
     taps = <Tap>[];
+    reaches = <RuleReachKind?>[];
     disarms = 0;
     extensions = 0;
     rulesOpened = 0;
@@ -48,8 +52,10 @@ void main() {
           block: block,
           canApprove: canApprove,
           notice: notice,
-          onAnswer: (PermissionDecision decision, PermissionScope scope) =>
-              taps.add((decision, scope)),
+          onAnswer: (PermissionDecision decision, PermissionScope scope, {RuleReachKind? reach}) {
+            taps.add((decision, scope));
+            reaches.add(reach);
+          },
           onDisarm: () => disarms += 1,
           onExtend: () => extensions += 1,
           onOpenRules: withRules ? () => rulesOpened += 1 : null,
@@ -368,6 +374,97 @@ void main() {
 
       expect(find.text(l10n.permissionPersistTitle), findsNothing);
       expect(find.text(l10n.permissionConfirmAction), findsOneWidget);
+    });
+  });
+
+  group('how far a rule reaches — plan 23, B-16', () {
+    const RuleReach exact = RuleReach(
+      kind: RuleReachKind.exact,
+      patterns: <String>['Bash(git push 2>&1 | tail -5)'],
+    );
+    const RuleReach prefix = RuleReach(
+      kind: RuleReachKind.prefix,
+      patterns: <String>['Bash(git push:*)', 'Bash(tail:*)'],
+    );
+
+    PermissionRequest reaching(List<RuleReach> reaches) => aPermissionRequest(
+      riskHint: RiskHint.write,
+      description: 'git push 2>&1 | tail -5',
+      scopes: const <PermissionScope>[
+        PermissionScope.once,
+        PermissionScope.session,
+        PermissionScope.always,
+      ],
+      rule: const RuleOffer(pattern: null, lifetime: Duration(days: 90)),
+      reaches: reaches,
+    );
+
+    testWidgets('S-89 · shows each reach with its patterns, starting on the prefix (S-90)', (
+      WidgetTester tester,
+    ) async {
+      await pumpCard(
+        tester,
+        card: PermissionCard(request: reaching(const <RuleReach>[exact, prefix]), frameId: 'f'),
+      );
+
+      expect(find.text(l10n.permissionReachLabel), findsOneWidget);
+      expect(find.text('Bash(git push:*)\nBash(tail:*)'), findsOneWidget);
+      final RadioGroup<RuleReachKind> group = tester.widget<RadioGroup<RuleReachKind>>(
+        find.byType(RadioGroup<RuleReachKind>),
+      );
+      expect(group.groupValue, RuleReachKind.prefix);
+    });
+
+    testWidgets('S-89 · shows no choice when there is only one reach', (WidgetTester tester) async {
+      await pumpCard(
+        tester,
+        card: PermissionCard(request: reaching(const <RuleReach>[exact]), frameId: 'f'),
+      );
+
+      expect(find.text(l10n.permissionReachLabel), findsNothing);
+    });
+
+    testWidgets('S-91 · a yes names the reach chosen, and a one-off names none', (
+      WidgetTester tester,
+    ) async {
+      await pumpCard(
+        tester,
+        card: PermissionCard(request: reaching(const <RuleReach>[exact, prefix]), frameId: 'f'),
+      );
+
+      await tester.tap(find.text(l10n.permissionReachExact));
+      await tester.pump();
+      await tester.tap(find.text(l10n.permissionScopeSession));
+      await tester.tap(find.text(l10n.permissionScopeOnce));
+
+      expect(reaches, <RuleReachKind?>[RuleReachKind.exact, null]);
+    });
+
+    testWidgets('S-92 · the second step says every pattern of the reach', (
+      WidgetTester tester,
+    ) async {
+      await pumpCard(
+        tester,
+        card: PermissionCard(request: reaching(const <RuleReach>[exact, prefix]), frameId: 'f'),
+      );
+      await tester.tap(find.text(l10n.permissionScopeAlways));
+      expect(reaches, <RuleReachKind?>[RuleReachKind.prefix]);
+
+      await pumpCard(
+        tester,
+        card: PermissionCard(
+          request: reaching(const <RuleReach>[exact, prefix]),
+          frameId: 'f',
+          phase: CardPhase.confirming,
+        ),
+      );
+      // A fresh card starts on the prefix again, and says both of its rules.
+      expect(
+        tester
+            .widgetList<SelectableText>(find.byType(SelectableText))
+            .map((SelectableText t) => t.data),
+        contains('Bash(git push:*)\nBash(tail:*)'),
+      );
     });
   });
 

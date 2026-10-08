@@ -5,6 +5,8 @@
 /// docs/architecture/mobile/01-architecture.md.
 library;
 
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:remote_claude/core/error/failure.dart';
 
@@ -68,7 +70,7 @@ Failure failureFromDio(DioException exception, String fallbackTraceId) {
     return NetworkFailure(traceId: fallbackTraceId);
   }
 
-  final Failure mapped = failureFromEnvelope(response.data, fallbackTraceId);
+  final Failure mapped = failureFromEnvelope(_decoded(response.data), fallbackTraceId);
 
   // A 401 whose body said nothing useful is still a 401, and the screen has to offer a sign-in
   // rather than the generic apology.
@@ -77,4 +79,19 @@ Failure failureFromDio(DioException exception, String fallbackTraceId) {
   }
 
   return mapped;
+}
+
+/// [body] as JSON when it came as bytes — a request that asked for bytes gets its refusal's
+/// envelope in them too. Bytes that are not JSON stay what they were, which the envelope reader
+/// does not recognise.
+Object? _decoded(Object? body) {
+  if (body is! List<int>) {
+    return body;
+  }
+
+  try {
+    return jsonDecode(utf8.decode(body));
+  } on FormatException {
+    return body;
+  }
 }

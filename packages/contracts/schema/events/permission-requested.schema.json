@@ -25,7 +25,9 @@
       "type": "string",
       "description": "The invocation this request is about, tying it to the `tool.started` already on screen."
     },
-    "toolName": { "type": "string" },
+    "toolName": {
+      "type": "string"
+    },
     "title": {
       "type": "string",
       "description": "Short label of what is being asked, derived by the backend."
@@ -53,23 +55,48 @@
     },
     "suggestions": {
       "type": "array",
-      "description": "Scopes the UI may offer beyond a one-off yes.",
+      "description": "Scopes the UI may offer beyond a one-off yes. `project` and `always` come whenever the request has at least one reach in `reaches` (and `project` only with a workspace).",
       "items": {
         "type": "object",
         "required": ["scope", "labelKey"],
         "properties": {
-          "scope": { "type": "string", "enum": ["once", "session", "project", "always"] },
+          "scope": {
+            "type": "string",
+            "enum": ["once", "session", "project", "always"]
+          },
           "labelKey": {
             "type": "string",
             "description": "An i18n key. The server never sends prose."
           },
           "pattern": {
             "type": "string",
-            "description": "What a rule granted by this suggestion would match, in the grammar of the Claude Code settings — the narrowest pattern that covers this invocation. Present on `project` and `always`; a client never offers one of those without it."
+            "description": "What a rule granted with the `exact` reach would match, in the grammar of the Claude Code settings. Kept for clients that do not read `reaches`; absent when there is no `exact` reach."
           },
           "lifetimeMs": {
             "type": "integer",
             "description": "How long a rule granted by this suggestion would live, counted from the answer. Present on `project` and `always`; the number is the installation's, never the client's."
+          }
+        }
+      }
+    },
+    "reaches": {
+      "type": "array",
+      "description": "How far a rule left by this answer may reach, computed by the server from the invocation. The client picks one and answers with its `reach`, never with a pattern: the server computes the patterns again and refuses a reach it did not offer. Applies to `session`, `project` and `always`.",
+      "items": {
+        "type": "object",
+        "required": ["reach", "patterns"],
+        "properties": {
+          "reach": {
+            "type": "string",
+            "enum": ["exact", "prefix", "tool"],
+            "description": "`exact` is this very input; `prefix` (shell only) covers every command that starts like each command of this line; `tool` (never shell) is every invocation of the tool."
+          },
+          "patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The rules this reach would leave, one per pattern, in the grammar of the Claude Code settings. Shown in full before anybody confirms."
           }
         }
       }

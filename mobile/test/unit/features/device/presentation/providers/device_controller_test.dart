@@ -5,6 +5,7 @@ import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_context.dart';
 import 'package:remote_claude/core/logging/logger_provider.dart';
+import 'package:remote_claude/core/network/credentials_provider.dart';
 import 'package:remote_claude/core/session/sign_out_hooks.dart';
 import 'package:remote_claude/features/auth/auth.dart';
 import 'package:remote_claude/features/auth/auth_providers.dart';
@@ -198,6 +199,24 @@ void main() {
 
     expect(await container.read(deviceControllerProvider.future), isNull);
     expect(devices.registrations, isEmpty);
+  });
+
+  // 05 · S-79 — a renewal refused in the middle of a turn signs the person out; the device has no
+  // session to register under, and the refusal is the sign-in screen's to say, not an error here.
+  test('a refused renewal is nobody signed in, and registers nothing more', () async {
+    final ProviderContainer container = build(signedIn: session());
+    expect(await container.read(deviceControllerProvider.future), pending);
+
+    auth.failure = const ServerFailure(
+      code: 'UNAUTHENTICATED',
+      messageKey: 'auth.error.unauthenticated',
+      traceId: 'trace-1',
+    );
+    expect(await container.read(credentialsProvider).renew(), isNull);
+
+    expect(container.read(authControllerProvider).hasError, isTrue);
+    expect(await container.read(deviceControllerProvider.future), isNull);
+    expect(devices.registrations, hasLength(1));
   });
 
   // It runs as soon as there is a credential to register under: the screen has to be able to say

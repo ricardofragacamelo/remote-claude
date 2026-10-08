@@ -222,16 +222,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionToolStatusRunning => 'Running';
 
   @override
-  String get sessionToolStatusSucceeded => 'Succeeded';
+  String get sessionToolStatusSucceeded => 'Done';
 
   @override
   String get sessionToolStatusFailed => 'Failed';
 
   @override
-  String get sessionToolStatusDenied => 'Denied';
+  String get sessionToolStatusDenied => 'Refused';
 
   @override
-  String get sessionToolOutputLabel => 'Output';
+  String sessionToolTitled(String name, String title) {
+    return '$name · $title';
+  }
+
+  @override
+  String sessionToolRowLabel(String tool, String status) {
+    return '$tool — $status. Show the exact input';
+  }
+
+  @override
+  String get sessionToolRowIn => 'IN';
+
+  @override
+  String get sessionToolRowOut => 'OUT';
+
+  @override
+  String get sessionToolRowInput => 'The exact input';
+
+  @override
+  String get sessionToolRowOutput => 'What it said';
+
+  @override
+  String get sessionToolRowOutputLoading => 'Loading the whole output…';
+
+  @override
+  String get sessionToolRowOutputFailed => 'The whole output did not load — this is only its end.';
+
+  @override
+  String sessionToolRowOutputTruncated(String size) {
+    return 'The output had $size: only its start and its end are here, cut where it is marked.';
+  }
+
+  @override
+  String get sessionToolRowOutputCut => '[… the middle of the output was left out here …]';
+
+  @override
+  String get sessionImageAttached => 'Attached image';
+
+  @override
+  String sessionImageAttachedWith(String details) {
+    return 'Attached image ($details)';
+  }
+
+  @override
+  String get sessionImageOpen => 'Open the image';
+
+  @override
+  String get sessionImageClose => 'Close';
+
+  @override
+  String get sessionImageDescription => 'The image this prompt carried, as Claude received it.';
+
+  @override
+  String get sessionImageLoading => 'Loading the image…';
+
+  @override
+  String get sessionImageAlt => 'The image attached to the prompt';
 
   @override
   String get sessionClosedByUser => 'Ended by whoever opened it.';
@@ -402,6 +458,22 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get permissionOutcomeRefusedByRule =>
       'Refused by one of your rules, without asking anybody.';
+
+  @override
+  String get permissionOutcomeAllowedByAllowAll =>
+      'Allowed by Allow everything, without asking anybody.';
+
+  @override
+  String get permissionReachLabel => 'How far';
+
+  @override
+  String get permissionReachExact => 'Exactly this';
+
+  @override
+  String get permissionReachPrefix => 'Commands that start the same way';
+
+  @override
+  String get permissionReachTool => 'Any use of this tool';
 
   @override
   String get permissionOutcomeExpired => 'Refused automatically: nobody answered in time.';
@@ -595,6 +667,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'This conversation changed while you were reading it. Reload it from the latest messages.';
 
   @override
+  String transcriptErrorFollowLimit(String limit) {
+    return 'Too many conversations are being followed right now ($limit at most). This one stays readable, but it will not update by itself.';
+  }
+
+  @override
+  String get transcriptErrorFollowLiveHere =>
+      'This conversation is open in a live session here. Open that session to see it as it goes.';
+
+  @override
+  String transcriptErrorImageTypeUnsupported(String mediaType) {
+    return 'This image cannot be shown here: $mediaType is not a type the server serves.';
+  }
+
+  @override
+  String get transcriptErrorImageTooLarge => 'This image is too large to show here.';
+
+  @override
   String get historyListTitle => 'History';
 
   @override
@@ -649,7 +738,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyLoadEarlier => 'Load earlier messages';
 
   @override
-  String get historyResumeAction => 'Resume';
+  String get historyResumeAction => 'Continue this conversation';
 
   @override
   String get historyResumePending => 'Resuming…';
@@ -665,6 +754,43 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get historyExternalNote =>
       'This conversation began outside this app. Resuming it here continues it under a new id: the editor or terminal it came from will not see the answers given here.';
+
+  @override
+  String get historyActiveElsewhereNote =>
+      'Something else wrote this conversation a moment ago — the editor or a terminal may have it open. Continuing it here makes a copy, and the two will diverge.';
+
+  @override
+  String get historyFollowWorking => 'Working in another client…';
+
+  @override
+  String get historyFollowWorkingHelp =>
+      'This is an inference, not something Claude reported: the conversation\'s last entry leaves the turn open — a tool without its result, a thought, or a prompt without an answer — and something wrote it a moment ago. The history does not record the state of a turn, and nothing here says which client it is.';
+
+  @override
+  String get historyFollowNewerOne => '1 new';
+
+  @override
+  String historyFollowNewer(int count) {
+    return '$count new';
+  }
+
+  @override
+  String historyFollowNewerLabel(String newer) {
+    return 'Go to the end — $newer';
+  }
+
+  @override
+  String get sessionForkTitle => 'Continue a conversation that is being written now?';
+
+  @override
+  String get sessionForkDescription =>
+      'Something else — the editor or a terminal — wrote this conversation a moment ago. Continuing it here makes a copy under a new id; the other one keeps going on its own, and the two will diverge.';
+
+  @override
+  String get sessionForkCancel => 'Cancel';
+
+  @override
+  String get sessionForkConfirm => 'Continue as a copy';
 
   @override
   String get sessionHistoryLoading => 'Loading what was said before';
@@ -916,6 +1042,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String thinkingTookMinutes(String minutes, String seconds) {
+    return 'Thought for $minutes min $seconds s';
+  }
+
+  @override
+  String thinkingTookUpTo(String seconds) {
+    return 'Thought for up to $seconds s';
+  }
+
+  @override
+  String thinkingTookUpToMinutes(String minutes, String seconds) {
+    return 'Thought for up to $minutes min $seconds s';
+  }
+
+  @override
   String get thinkingHidden => 'Thought — the model did not show it';
 
   @override
@@ -1010,6 +1151,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get modePlanDescription =>
       'Claude plans without changing anything, and asks you to approve the plan.';
+
+  @override
+  String get modeAllowAll => 'Allow everything';
+
+  @override
+  String get modeAllowAllDescription =>
+      'Claude runs every tool without asking, except what one of your rules refuses. Its questions to you still come.';
+
+  @override
+  String get modeAllowAllWarning =>
+      'Claude will run any command on this machine without asking you, until you change the mode.';
 
   @override
   String get modelLabel => 'Model';
@@ -1290,7 +1442,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionHelpWorking =>
-      'While a turn runs, its last line moves: an asterisk, what Claude is doing — the tool it runs, that it waits for you, or a word for the turn — and for how long. Its thinking is a line of its own, in order: \"Thinking…\" while it arrives, \"Thought for n s\" once it is over, folded — tap it to read it. When the turn ends, the line gives way to what the turn cost.';
+      'While a turn runs, its last line moves: an asterisk, what Claude is doing — the tool it runs, that it waits for you, or a word for the turn — and for how long. Its thinking is a line of its own, in order: \"Thinking…\" while it arrives, \"Thought for n s\" once it is over — what it thought in view, quieter than the answer, when the model showed it; folded when it did not. A tool is one line, folded: tap it for what went in and what came out. When the turn ends, the line gives way to what the turn cost.';
 
   @override
   String get sessionHelpInlineHeading => 'Questions in the conversation';

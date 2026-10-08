@@ -52,7 +52,7 @@ final class SessionWsDataSourceProvider
   }
 }
 
-String _$sessionWsDataSourceHash() => r'fb802916f5c97d712b21f9885ce9c01928faed10';
+String _$sessionWsDataSourceHash() => r'3e586f8ab4eeb0af00efdfb4db493d3258b8d289';
 
 /// The session repository.
 
@@ -373,6 +373,305 @@ final class ReadHistoryProvider extends $FunctionalProvider<ReadHistory, ReadHis
 }
 
 String _$readHistoryHash() => r'5f716618425ab37076f5e6a695cc2cd1ac90c331';
+
+/// The routes of what a conversation's timeline only marks: a tool's whole output, a prompt's
+/// image (plan 22, B-32, B-33).
+
+@ProviderFor(transcriptContentApiDataSource)
+final transcriptContentApiDataSourceProvider = TranscriptContentApiDataSourceProvider._();
+
+/// The routes of what a conversation's timeline only marks: a tool's whole output, a prompt's
+/// image (plan 22, B-32, B-33).
+
+final class TranscriptContentApiDataSourceProvider
+    extends
+        $FunctionalProvider<
+          TranscriptContentApiDataSource,
+          TranscriptContentApiDataSource,
+          TranscriptContentApiDataSource
+        >
+    with $Provider<TranscriptContentApiDataSource> {
+  /// The routes of what a conversation's timeline only marks: a tool's whole output, a prompt's
+  /// image (plan 22, B-32, B-33).
+  TranscriptContentApiDataSourceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'transcriptContentApiDataSourceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$transcriptContentApiDataSourceHash();
+
+  @$internal
+  @override
+  $ProviderElement<TranscriptContentApiDataSource> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  TranscriptContentApiDataSource create(Ref ref) {
+    return transcriptContentApiDataSource(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(TranscriptContentApiDataSource value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<TranscriptContentApiDataSource>(value),
+    );
+  }
+}
+
+String _$transcriptContentApiDataSourceHash() => r'd7c981a88e58a8bafa64e0a88d7c919862d224fa';
+
+/// The content repository.
+
+@ProviderFor(transcriptContentRepository)
+final transcriptContentRepositoryProvider = TranscriptContentRepositoryProvider._();
+
+/// The content repository.
+
+final class TranscriptContentRepositoryProvider
+    extends
+        $FunctionalProvider<
+          TranscriptContentRepository,
+          TranscriptContentRepository,
+          TranscriptContentRepository
+        >
+    with $Provider<TranscriptContentRepository> {
+  /// The content repository.
+  TranscriptContentRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'transcriptContentRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$transcriptContentRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<TranscriptContentRepository> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  TranscriptContentRepository create(Ref ref) {
+    return transcriptContentRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(TranscriptContentRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<TranscriptContentRepository>(value),
+    );
+  }
+}
+
+String _$transcriptContentRepositoryHash() => r'33959123cbdbe715043d96e370503ac69368706c';
+
+/// Opens a tool's whole output and a prompt's image.
+
+@ProviderFor(readTranscriptContent)
+final readTranscriptContentProvider = ReadTranscriptContentProvider._();
+
+/// Opens a tool's whole output and a prompt's image.
+
+final class ReadTranscriptContentProvider
+    extends $FunctionalProvider<ReadTranscriptContent, ReadTranscriptContent, ReadTranscriptContent>
+    with $Provider<ReadTranscriptContent> {
+  /// Opens a tool's whole output and a prompt's image.
+  ReadTranscriptContentProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'readTranscriptContentProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$readTranscriptContentHash();
+
+  @$internal
+  @override
+  $ProviderElement<ReadTranscriptContent> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ReadTranscriptContent create(Ref ref) {
+    return readTranscriptContent(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ReadTranscriptContent value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ReadTranscriptContent>(value),
+    );
+  }
+}
+
+String _$readTranscriptContentHash() => r'fd92129e8a47fcc2a7e39e362da85daa22e7f21e';
+
+/// The socket's edge for following conversations of the history (plan 22, B-24).
+
+@ProviderFor(transcriptFollowWsDataSource)
+final transcriptFollowWsDataSourceProvider = TranscriptFollowWsDataSourceProvider._();
+
+/// The socket's edge for following conversations of the history (plan 22, B-24).
+
+final class TranscriptFollowWsDataSourceProvider
+    extends
+        $FunctionalProvider<
+          TranscriptFollowWsDataSource,
+          TranscriptFollowWsDataSource,
+          TranscriptFollowWsDataSource
+        >
+    with $Provider<TranscriptFollowWsDataSource> {
+  /// The socket's edge for following conversations of the history (plan 22, B-24).
+  TranscriptFollowWsDataSourceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'transcriptFollowWsDataSourceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$transcriptFollowWsDataSourceHash();
+
+  @$internal
+  @override
+  $ProviderElement<TranscriptFollowWsDataSource> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  TranscriptFollowWsDataSource create(Ref ref) {
+    return transcriptFollowWsDataSource(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(TranscriptFollowWsDataSource value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<TranscriptFollowWsDataSource>(value),
+    );
+  }
+}
+
+String _$transcriptFollowWsDataSourceHash() => r'0c4ae89692685a51cfb4aab8551258a71d7aef8d';
+
+/// The follow repository.
+
+@ProviderFor(transcriptFollowRepository)
+final transcriptFollowRepositoryProvider = TranscriptFollowRepositoryProvider._();
+
+/// The follow repository.
+
+final class TranscriptFollowRepositoryProvider
+    extends
+        $FunctionalProvider<
+          TranscriptFollowRepository,
+          TranscriptFollowRepository,
+          TranscriptFollowRepository
+        >
+    with $Provider<TranscriptFollowRepository> {
+  /// The follow repository.
+  TranscriptFollowRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'transcriptFollowRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$transcriptFollowRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<TranscriptFollowRepository> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  TranscriptFollowRepository create(Ref ref) {
+    return transcriptFollowRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(TranscriptFollowRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<TranscriptFollowRepository>(value),
+    );
+  }
+}
+
+String _$transcriptFollowRepositoryHash() => r'716b8cb7c5ddfdaa7647bb0ca0d3aa6fbcbb88a9';
+
+/// Follows a conversation of the history while another client writes it.
+
+@ProviderFor(followTranscript)
+final followTranscriptProvider = FollowTranscriptProvider._();
+
+/// Follows a conversation of the history while another client writes it.
+
+final class FollowTranscriptProvider
+    extends $FunctionalProvider<FollowTranscript, FollowTranscript, FollowTranscript>
+    with $Provider<FollowTranscript> {
+  /// Follows a conversation of the history while another client writes it.
+  FollowTranscriptProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'followTranscriptProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$followTranscriptHash();
+
+  @$internal
+  @override
+  $ProviderElement<FollowTranscript> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  FollowTranscript create(Ref ref) {
+    return followTranscript(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(FollowTranscript value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<FollowTranscript>(value),
+    );
+  }
+}
+
+String _$followTranscriptHash() => r'569963828bccd1bd264451df45ee4c93af20ee44';
 
 /// The endpoints of a live session that answer a question: its commands and its undo points.
 

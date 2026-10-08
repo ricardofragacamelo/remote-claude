@@ -18,7 +18,7 @@ e as que as normas descrevem: D-05…D-17.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — O contrato de acompanhar, no 05 e nos schemas 🔲
+### B-01 — O contrato de acompanhar, no 05 e nos schemas ✅
 
 No [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md):
 
@@ -41,7 +41,7 @@ Os schemas em `packages/contracts/schema/` (`commands/`, `acks/`, `events/`), os
 `TRANSCRIPT_FOLLOW_LIMIT`, `TRANSCRIPT_FOLLOW_LIVE_HERE`, e o `415`/`413` das rotas da B-02 se ainda não houver
 código para eles.
 
-### B-02 — As rotas e os campos novos do transcript 🔲
+### B-02 — As rotas e os campos novos do transcript ✅
 
 Em [backend/03-modules §transcript](../../architecture/backend/03-modules.md):
 
@@ -55,7 +55,7 @@ Em [backend/03-modules §transcript](../../architecture/backend/03-modules.md):
 
 O schema da resposta da rota de saída em `packages/contracts/schema/responses/`.
 
-### B-03 — As regras das telas, e a revisão da D-17 🔲
+### B-03 — As regras das telas, e a revisão da D-17 ✅
 
 Em [web/03-ui-system](../../architecture/web/03-ui-system.md) e [mobile/04-ui](../../architecture/mobile/04-ui.md):
 
@@ -72,7 +72,7 @@ Na [D-17 do plano 08](../08-claude-panel/decisions.md#d-17--thinking), uma nota:
 D-15 do plano 22 — o resumido fica à vista". Na [descoberta §10.7](../../discovery/01-descoberta-claude-agent-sdk.md#107--thinking-vem-omitido-por-padrão-display-summarized-o-traz-d-17),
 o achado: o `timestamp` marca o fim do bloco, e a duração ao vivo não é gravada.
 
-### B-04 — As chaves i18n e ARB, e os pares do mapa 🔲
+### B-04 — As chaves i18n e ARB, e os pares do mapa ✅
 
 Chaves novas em `en` e `pt-BR` (web) e `en` e `pt` (app): "trabalhando em outro cliente" e a ajuda; "N novas";
 "Pensou por até N s"; IN, OUT, "saída completa não carregou", "saída cortada"; "imagem anexada", abrir,
@@ -84,7 +84,12 @@ No app, "Retomar" passa a "Continuar esta conversa" e "Concluída" a "Pronto", c
 novas que as duas pontas mostram ([proposta §4.9](../../propostas/historico-ao-vivo-e-fiel.md#49-outras-divergências-entre-web-e-mobile-e-a-relação-com-o-plano-10)).
 Ver [shared/02-i18n](../../architecture/shared/02-i18n.md).
 
-### B-05 — As fixtures gravadas 🔲
+> **Na execução (2026-10-07):** entraram as chaves que o backend emite (os quatro erros novos), as duas
+> renomeações do app e os pares do mapa. As chaves **de tela** (pílula, "trabalhando", IN/OUT, imagem,
+> "Pensou por até") entram com as telas, nas tasks B-23, B-26 e B-27…B-33: o `i18n:check` reprova chave
+> declarada e não usada, e declará-las agora seria pô-lo vermelho até a F3 ([progresso](progress.md#decisões-tomadas-durante-a-execução)).
+
+### B-05 — As fixtures gravadas ✅
 
 Das gravações que existem (`thinking-turn`, `thinking-summarized-turn`, `image-turn`, `queue-turn`,
 `long-tool-turn`, `compact-turn`, `tool-turn`), conferir o que cada uma cobre da lista da S-07, e gravar o
@@ -92,6 +97,15 @@ que faltar com `pnpm fixtures:record` — nunca escrever uma entrada à mão
 ([01 · D-04](../01-live-session/decisions.md)). O que é provável faltar: uma resposta com **dois** pensamentos
 omitidos, Bash com `description` e saída de várias centenas de linhas, e `tool_result` em lista de blocos.
 Cada gravação nova entra no teste do adapter (`sdk-message.mapper.history.spec.ts`).
+
+> **Na execução (2026-10-07):** `bash-output-turn` foi gravada (Bash com `description`, 600 linhas). O
+> `tool_result` em lista de blocos já estava em `task-subagent-turn` e `plan-turn`. Dois pensamentos na
+> mesma resposta **não saíram** em duas tentativas de gravação (o modelo pensa uma vez), e o cenário
+> foi tirado do gravador; S-35 é provado nos clientes com o formato que o CLI grava (um bloco por
+> entrada, o mesmo `message.id`). O gravador passou a guardar o `history` — o que `getSessionMessages`
+> relê da execução — e `--history` o acrescentou a `queue-turn`, `bash-output-turn`, `tool-turn`,
+> `thinking-turn` e `image-turn`, sem rodar de novo. Os testes estão em
+> `sdk-message.mapper.live-history.spec.ts`.
 
 ---
 

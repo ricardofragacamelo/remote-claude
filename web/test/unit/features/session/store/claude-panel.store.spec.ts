@@ -111,6 +111,21 @@ describe('what a reload gives the panel back — S-125', () => {
     });
   });
 
+  it('gives a draft in Permitir tudo back as one, and an unknown mode as the default — plan 23, S-73', () => {
+    const kept = keptClaudePanelFrom({
+      tabs: [
+        { key: 'draft:1', kind: 'draft', choices: { model: null, mode: 'allowAll', effort: null } },
+        { key: 'draft:2', kind: 'draft', choices: { model: null, mode: 'allowall', effort: null } },
+      ],
+      active: null,
+    });
+
+    expect(kept?.tabs.map((tab) => (tab.kind === 'draft' ? tab.choices.mode : null))).toEqual([
+      'allowAll',
+      'default',
+    ]);
+  });
+
   it('gives the tabs back, each as far as it reads as one, and the one on screen — S-147', () => {
     const kept = keptClaudePanelFrom({
       tabs: [

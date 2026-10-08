@@ -22,6 +22,11 @@ sealed class SessionEvent extends Equatable {
   /// Where this event sits in the session's order. A replay re-delivers everything up to it.
   final int seq;
 
+  /// When the history wrote the entry this event was read from — the **end** of what it holds
+  /// (plan 22, D-14). Empty live, where the clock is the frame's, and for the events the history
+  /// does not date.
+  String get writtenAt => '';
+
   @override
   List<Object?> get props => <Object?>[seq];
 }
@@ -127,12 +132,19 @@ final class MessageFinished extends SessionEvent {
     required this.isFromUser,
     this.thoughts = const <Thought>[],
     this.at = '',
+    this.textBlockIds = const <String>[],
+    this.images = const <PromptImage>[],
+    this.writtenAt = '',
   });
 
   final String messageId;
 
   /// The text blocks that finished, joined. Empty when what finished was thinking or a tool call.
   final String text;
+
+  /// The identities of those text blocks, in order — empty from a server older than them (plan 22,
+  /// D-06). Two blocks are the same block when their ids are.
+  final List<String> textBlockIds;
   final bool isFromUser;
 
   /// The thinking blocks that finished, in order.
@@ -141,13 +153,29 @@ final class MessageFinished extends SessionEvent {
   /// When, by the server's clock — empty from the history.
   final String at;
 
+  /// The images of a prompt, as markers (plan 22, D-09).
+  final List<PromptImage> images;
+
   @override
-  List<Object?> get props => <Object?>[seq, messageId, text, isFromUser, thoughts, at];
+  final String writtenAt;
+
+  @override
+  List<Object?> get props => <Object?>[
+    seq,
+    messageId,
+    text,
+    isFromUser,
+    thoughts,
+    at,
+    textBlockIds,
+    images,
+    writtenAt,
+  ];
 }
 
 /// One finished block of thinking.
 class Thought extends Equatable {
-  const Thought(this.text, {this.isRedacted = false});
+  const Thought(this.text, {this.isRedacted = false, this.blockId});
 
   /// What the model thought — empty when it would not show it.
   final String text;
@@ -155,8 +183,12 @@ class Thought extends Equatable {
   /// The model thought here and did not show what (`redacted_thinking`).
   final bool isRedacted;
 
+  /// The block's identity — two thinkings the model did not show are equal and still two (plan 22,
+  /// S-35). `null` from a server older than it.
+  final String? blockId;
+
   @override
-  List<Object?> get props => <Object?>[text, isRedacted];
+  List<Object?> get props => <Object?>[text, isRedacted, blockId];
 }
 
 /// A tool started running on the user's machine.
@@ -167,6 +199,8 @@ final class ToolInvoked extends SessionEvent {
     required this.toolName,
     required this.input,
     this.isSubagent = false,
+    this.title,
+    this.writtenAt = '',
   });
 
   final String toolUseId;
@@ -178,8 +212,22 @@ final class ToolInvoked extends SessionEvent {
   /// A subagent ran it, not the main conversation — its task list is its own.
   final bool isSubagent;
 
+  /// What the model said the call is for, when it said (plan 22, D-05).
+  final String? title;
+
   @override
-  List<Object?> get props => <Object?>[seq, toolUseId, toolName, input, isSubagent];
+  final String writtenAt;
+
+  @override
+  List<Object?> get props => <Object?>[
+    seq,
+    toolUseId,
+    toolName,
+    input,
+    isSubagent,
+    title,
+    writtenAt,
+  ];
 }
 
 /// Something a tool printed.
@@ -201,6 +249,7 @@ final class ToolFinished extends SessionEvent {
     required this.status,
     this.summary,
     this.taskId,
+    this.writtenAt = '',
   });
 
   final String toolUseId;
@@ -211,7 +260,10 @@ final class ToolFinished extends SessionEvent {
   final String? taskId;
 
   @override
-  List<Object?> get props => <Object?>[seq, toolUseId, status, summary, taskId];
+  final String writtenAt;
+
+  @override
+  List<Object?> get props => <Object?>[seq, toolUseId, status, summary, taskId, writtenAt];
 }
 
 /// What a finished turn cost.

@@ -6,6 +6,7 @@ import type {
   ModelInfo,
   SDKControlGetContextUsageResponse,
   SDKMessage,
+  SessionMessage,
   SlashCommand,
 } from '@anthropic-ai/claude-agent-sdk';
 
@@ -26,6 +27,8 @@ export interface AgentSdkFixture {
   /** The subset of those that `canUseTool` was consulted about. */
   readonly canUseTool: readonly { readonly toolName: string; readonly input: unknown }[];
   readonly stderr: readonly string[];
+  /** What `getSessionMessages` read back of the run — present on the recordings that kept it. */
+  readonly history?: readonly SessionMessage[];
   readonly messages: readonly SDKMessage[];
 }
 

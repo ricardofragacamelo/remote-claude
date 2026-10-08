@@ -647,6 +647,45 @@ void main() {
       expect(read(container).isChoosing, isFalse);
     });
 
+    test(
+      'plan 23 · S-84 · Permitir tudo is sent as it is, and switching away sends the next mode',
+      () async {
+        final ProviderContainer container = build();
+        hold(container, 'session-1');
+        repository.emit(
+          arrivalOf(sessionStarted(sessionId: 'session-1', permissionMode: 'default')),
+        );
+        await settle();
+
+        controllerOf(container).setPermissionMode('allowAll');
+        expect(repository.commands.last.$1, 'session.setPermissionMode');
+        expect(repository.commands.last.$2, <String, Object?>{
+          'sessionId': 'session-1',
+          'mode': 'allowAll',
+        });
+        repository.emit(const CommandAccepted('command-1'));
+        await settle();
+        expect(read(container).permissionMode, 'allowAll');
+
+        controllerOf(container).setPermissionMode('default');
+        expect(repository.commands.last.$2, <String, Object?>{
+          'sessionId': 'session-1',
+          'mode': 'default',
+        });
+      },
+    );
+
+    test('plan 23 · S-86 · a session that started in Permitir tudo says so', () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+      repository.emit(
+        arrivalOf(sessionStarted(sessionId: 'session-1', permissionMode: 'allowAll')),
+      );
+      await settle();
+
+      expect(read(container).permissionMode, 'allowAll');
+    });
+
     test('S-35 · a second change while one is pending sends nothing', () {
       final ProviderContainer container = build();
       hold(container, 'session-1');

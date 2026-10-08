@@ -1,7 +1,8 @@
 import type { Envelope } from '@remote-claude/contracts';
 
 import { logger } from '@/shared/logging/logger';
-import type { ConnectionStatus } from './ws-client';
+import { routeFrames, watchReadiness } from './socket-subscriptions';
+import type { SubscriptionTransport } from './socket-subscriptions';
 
 /** What happened to one path of a folder being watched — the contract's `changes[]` item. */
 export interface FolderChange {
@@ -47,12 +48,7 @@ export interface FolderWatchSubscriber {
 }
 
 /** The part of the socket client the watches need. */
-export interface WatchTransport {
-  issue(type: string, payload: Readonly<Record<string, unknown>>): string | null;
-  command(type: string, payload: Readonly<Record<string, unknown>>): boolean;
-  observe(listener: (frame: Envelope) => void): () => void;
-  onStatus(watcher: (status: ConnectionStatus) => void): () => void;
-}
+export type WatchTransport = SubscriptionTransport;
 
 /** The watched folders of one socket client. */
 export interface FolderWatches {
@@ -217,25 +213,17 @@ export function createFolderWatches(transport: WatchTransport): FolderWatches {
     }
   }
 
-  transport.observe((frame) => {
-    if (frame.type === 'workspace.watching') {
-      answered(frame);
-    } else if (frame.type === 'workspace.filesChanged') {
-      changed(frame);
-    } else if (frame.type === 'workspace.watchStopped') {
-      stopped(frame);
-    } else if (frame.kind === 'error' && frame.correlationId !== undefined) {
-      refused(frame);
-    }
-  });
+  routeFrames(
+    transport,
+    {
+      'workspace.watching': answered,
+      'workspace.filesChanged': changed,
+      'workspace.watchStopped': stopped,
+    },
+    refused,
+  );
 
-  transport.onStatus((status) => {
-    const nowReady = status === 'ready';
-
-    if (nowReady === ready) {
-      return;
-    }
-
+  watchReadiness(transport, (nowReady) => {
     ready = nowReady;
     // A subscription dies with its socket; the answers it owed die with it too.
     abandoned.clear();

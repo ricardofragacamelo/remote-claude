@@ -28,8 +28,8 @@
     },
     "permissionMode": {
       "type": "string",
-      "enum": ["default", "acceptEdits", "bypassPermissions", "plan"],
-      "description": "Permission mode to open with. Absent means the server default."
+      "enum": ["default", "acceptEdits", "bypassPermissions", "plan", "allowAll"],
+      "description": "Permission mode to open with. Absent means the server default. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured."
     },
     "effort": {
       "type": "string",

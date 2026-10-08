@@ -1,18 +1,14 @@
 import type { CancelScheduled, Scheduler } from '@application/shared';
 import type { LabelledChange, WatchSink, WatchStopReason } from '@application/files';
-import type { ConnectionRegistry } from '@infra/websocket/connection-registry';
-import type { FrameBuilder } from '@infra/websocket/frame-builder';
-import type { SessionHub } from '@infra/websocket/session-hub';
 import type { Logger } from '@shared/logging/logger';
+import { NumberedStream } from '../numbered-stream';
+import type { StreamTransport } from '../numbered-stream';
 
 /** How often a sink whose socket fell behind looks again whether it caught up. */
 export const CATCH_UP_INTERVAL_MS = 250;
 
 /** What the sinks of every connection share. */
-export interface SinkTransport {
-  readonly registry: ConnectionRegistry;
-  readonly frames: FrameBuilder;
-  readonly hub: Pick<SessionHub, 'deliver'>;
+export interface SinkTransport extends StreamTransport {
   readonly scheduler: Scheduler;
   readonly logger: Logger;
   /** Past this many bytes queued on a socket, its changes are owed as one `overflow`. */
@@ -32,7 +28,7 @@ export interface SinkTransport {
  *   delivers to the others meanwhile, and the slow client reloads instead of patching (S-155).
  */
 export class SocketWatchSink implements WatchSink {
-  private seq = 0;
+  private readonly stream: NumberedStream;
   private held = true;
   private owed = false;
   private ended = false;
@@ -42,10 +38,12 @@ export class SocketWatchSink implements WatchSink {
   constructor(
     private readonly connectionId: string,
     private readonly transport: SinkTransport,
-  ) {}
+  ) {
+    this.stream = new NumberedStream(connectionId, transport);
+  }
 
   get open(): boolean {
-    return this.transport.registry.get(this.connectionId) !== null;
+    return this.stream.open;
   }
 
   /** The ack went out: from now on, what the subscription produces reaches the client. */
@@ -145,18 +143,7 @@ export class SocketWatchSink implements WatchSink {
 
   /** One numbered event of this subscription to its connection; the `seq` it got. */
   private send(type: string, payload: Readonly<Record<string, unknown>>): number | null {
-    const connection = this.transport.registry.get(this.connectionId);
-
-    if (connection === null) {
-      return null;
-    }
-
-    this.seq += 1;
-    this.transport.hub.deliver(
-      connection,
-      this.transport.frames.build({ kind: 'event', type, payload, seq: this.seq }),
-    );
-    return this.seq;
+    return this.stream.send(type, payload);
   }
 }
 

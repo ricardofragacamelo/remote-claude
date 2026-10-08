@@ -113,5 +113,7 @@ pnpm verify:full     # o anterior + integração + e2e + segurança
 Existe um comando só de propósito: um checklist que exige lembrar de sete comandos é um
 checklist que será executado pela metade.
 
-**A tarefa está pronta quando `pnpm verify:full` sai com código 0.** Antes disso, ela está
-em andamento — independentemente de quanto código foi escrito.
+**A fase está pronta quando `pnpm verify` sai com código 0; o plano, quando `pnpm verify:full` sai
+com código 0**, rodado depois da última task — a da fase de E2E, sempre a última do plano
+([ADR-023](00-decisions.md#adr-023--portão-rápido-por-fase-portão-completo-no-fim-do-plano)). Antes
+disso, o trabalho está em andamento — independentemente de quanto código foi escrito.

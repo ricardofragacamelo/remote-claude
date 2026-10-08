@@ -65,17 +65,32 @@ export class TranscriptAudience {
         return [];
       }
 
-      const visible = { ...session, origin };
-      return [
-        {
-          ...visible,
-          activity: activityOf(visible, {
-            liveSessionId: this.live.liveSessionOf(session.id, userId),
-            now,
-            windowMs: this.activity.activeWindowMs,
-          }),
-        },
-      ];
+      return [this.withActivity({ ...session, origin }, userId, now)];
     });
+  }
+
+  /**
+   * A conversation already shown to this caller, with what it is doing **now** — without asking the
+   * database again who opened it (plan 22, B-16). The follower recomputes this every tick, between the
+   * reads that run the whole fence: the clock moves the window, and a live session may have taken the
+   * conversation, and neither is an I/O.
+   */
+  activityNow(session: VisibleTranscriptSession, userId: UserId): ListedTranscript {
+    return this.withActivity(session, userId, this.activity.clock.now().getTime());
+  }
+
+  private withActivity(
+    visible: VisibleTranscriptSession,
+    userId: UserId,
+    now: number,
+  ): ListedTranscript {
+    return {
+      ...visible,
+      activity: activityOf(visible, {
+        liveSessionId: this.live.liveSessionOf(visible.id, userId),
+        now,
+        windowMs: this.activity.activeWindowMs,
+      }),
+    };
   }
 }

@@ -328,7 +328,7 @@ describe('the conversation of the panel', () => {
   });
 
   describe('thinking — B-19', () => {
-    it('folds the thinking, and says how long it took — S-82', async () => {
+    it('shows a summarised thinking in view, and says how long it took — S-82, plan 22 D-15', async () => {
       const conversation = fold(
         frame(
           'message.delta',
@@ -352,7 +352,8 @@ describe('the conversation of the panel', () => {
       show(conversation);
 
       const summary = await screen.findByText(t('sessions.thinking.took', { seconds: 3 }));
-      expect(summary.closest('details')).not.toHaveAttribute('open');
+      expect(summary.closest('details')).toHaveAttribute('open');
+      expect(screen.getByText('Weighing it')).toBeVisible();
     });
 
     it('says it is thinking while the thinking arrives', async () => {

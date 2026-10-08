@@ -1,4 +1,4 @@
-import type { SessionId } from '@domain/session';
+import type { PermissionMode, SessionId } from '@domain/session';
 
 /** One question the SDK is holding its loop open for. */
 export interface PermissionQuestion {
@@ -45,6 +45,13 @@ export interface SessionPermissionGate {
 
   /** Drops whatever is still waiting for a session that has ended. */
   forget(sessionId: SessionId): void;
+
+  /**
+   * The session switched mode. Switching to Permitir tudo answers the questions already open that
+   * no rule refuses and that are not questions for the person (plan 23, D-06); any other switch
+   * changes nothing until the next tool. Never rejects: the mode has already changed.
+   */
+  modeChanged(sessionId: SessionId, mode: PermissionMode): Promise<void>;
 }
 
 export const SESSION_PERMISSION_GATE = Symbol('SessionPermissionGate');

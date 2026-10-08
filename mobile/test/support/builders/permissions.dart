@@ -24,6 +24,7 @@ PermissionRequest aPermissionRequest({
     PermissionScope.session,
   ],
   RuleOffer? rule,
+  List<RuleReach> reaches = const <RuleReach>[],
 }) => PermissionRequest(
   requestId: requestId,
   sessionId: sessionId,
@@ -36,6 +37,7 @@ PermissionRequest aPermissionRequest({
   expiresAt: expiresAt ?? t0.add(const Duration(minutes: 2)),
   scopes: scopes,
   rule: rule,
+  reaches: reaches,
 );
 
 /// The server asking [request], on the frame [frameId].
@@ -48,6 +50,7 @@ PermissionSettled settled(
   PermissionDecision decision = PermissionDecision.allow,
   bool auto = false,
   AnswerOrigin origin = AnswerOrigin.web,
+  AnswerVia? via,
 }) => PermissionSettled(
-  PermissionOutcome(requestId: requestId, decision: decision, auto: auto, origin: origin),
+  PermissionOutcome(requestId: requestId, decision: decision, auto: auto, origin: origin, via: via),
 );

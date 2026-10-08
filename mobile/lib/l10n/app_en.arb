@@ -210,17 +210,65 @@
   "sessionToolStatusRunning": "Running",
   "@sessionToolStatusRunning": { "description": "Tool invocation still running" },
 
-  "sessionToolStatusSucceeded": "Succeeded",
+  "sessionToolStatusSucceeded": "Done",
   "@sessionToolStatusSucceeded": { "description": "Tool invocation that finished well" },
 
   "sessionToolStatusFailed": "Failed",
   "@sessionToolStatusFailed": { "description": "Tool invocation that failed" },
 
-  "sessionToolStatusDenied": "Denied",
+  "sessionToolStatusDenied": "Refused",
   "@sessionToolStatusDenied": { "description": "Tool invocation somebody refused" },
 
-  "sessionToolOutputLabel": "Output",
-  "@sessionToolOutputLabel": { "description": "Label above what a tool printed" },
+  "sessionToolTitled": "{name} · {title}",
+  "@sessionToolTitled": { "description": "Label of a tool with the description the model gave the call", "placeholders": { "name": { "type": "String" }, "title": { "type": "String" } } },
+
+  "sessionToolRowLabel": "{tool} — {status}. Show the exact input",
+  "@sessionToolRowLabel": { "description": "Accessible name of the line of a tool, which opens its card", "placeholders": { "tool": { "type": "String" }, "status": { "type": "String" } } },
+
+  "sessionToolRowIn": "IN",
+  "@sessionToolRowIn": { "description": "Tag of what went into a shell command" },
+
+  "sessionToolRowOut": "OUT",
+  "@sessionToolRowOut": { "description": "Tag of what came out of a shell command" },
+
+  "sessionToolRowInput": "The exact input",
+  "@sessionToolRowInput": { "description": "Accessible name of the exact input of a tool" },
+
+  "sessionToolRowOutput": "What it said",
+  "@sessionToolRowOutput": { "description": "Accessible name of what a tool said" },
+
+  "sessionToolRowOutputLoading": "Loading the whole output…",
+  "@sessionToolRowOutputLoading": { "description": "The whole output of a tool is being read" },
+
+  "sessionToolRowOutputFailed": "The whole output did not load — this is only its end.",
+  "@sessionToolRowOutputFailed": { "description": "The whole output of a tool could not be read; its end stays" },
+
+  "sessionToolRowOutputTruncated": "The output had {size}: only its start and its end are here, cut where it is marked.",
+  "@sessionToolRowOutputTruncated": { "description": "The server sent only the start and the end of a large output", "placeholders": { "size": { "type": "String" } } },
+
+  "sessionToolRowOutputCut": "[… the middle of the output was left out here …]",
+  "@sessionToolRowOutputCut": { "description": "Marker where the middle of a large output was left out" },
+
+  "sessionImageAttached": "Attached image",
+  "@sessionImageAttached": { "description": "Marker of an image a prompt carried, of unknown type and size" },
+
+  "sessionImageAttachedWith": "Attached image ({details})",
+  "@sessionImageAttachedWith": { "description": "Marker of an image a prompt carried, with its type and size", "placeholders": { "details": { "type": "String" } } },
+
+  "sessionImageOpen": "Open the image",
+  "@sessionImageOpen": { "description": "Opens the image a prompt carried" },
+
+  "sessionImageClose": "Close",
+  "@sessionImageClose": { "description": "Closes the screen of a prompt's image" },
+
+  "sessionImageDescription": "The image this prompt carried, as Claude received it.",
+  "@sessionImageDescription": { "description": "What the screen of a prompt's image shows" },
+
+  "sessionImageLoading": "Loading the image…",
+  "@sessionImageLoading": { "description": "The image of a prompt is being read" },
+
+  "sessionImageAlt": "The image attached to the prompt",
+  "@sessionImageAlt": { "description": "Accessible name of the image of a prompt" },
 
   "sessionClosedByUser": "Ended by whoever opened it.",
   "@sessionClosedByUser": { "description": "Why the session closed" },
@@ -391,6 +439,21 @@
 
   "permissionOutcomeRefusedByRule": "Refused by one of your rules, without asking anybody.",
   "@permissionOutcomeRefusedByRule": { "description": "A rule answered — for this session, this project or every project" },
+
+  "permissionOutcomeAllowedByAllowAll": "Allowed by Allow everything, without asking anybody.",
+  "@permissionOutcomeAllowedByAllowAll": {"description": "Allow everything (allowAll) answered — the session runs without asking"},
+
+  "permissionReachLabel": "How far",
+  "@permissionReachLabel": {"description": "The reach of a rule left by this answer — label"},
+
+  "permissionReachExact": "Exactly this",
+  "@permissionReachExact": {"description": "The reach of a rule left by this answer — exact"},
+
+  "permissionReachPrefix": "Commands that start the same way",
+  "@permissionReachPrefix": {"description": "The reach of a rule left by this answer — prefix"},
+
+  "permissionReachTool": "Any use of this tool",
+  "@permissionReachTool": {"description": "The reach of a rule left by this answer — tool"},
 
   "permissionOutcomeExpired": "Refused automatically: nobody answered in time.",
   "@permissionOutcomeExpired": { "description": "The deadline refused the request" },
@@ -621,6 +684,24 @@
   "transcriptErrorCursorStale": "This conversation changed while you were reading it. Reload it from the latest messages.",
   "@transcriptErrorCursorStale": { "description": "The page cursor no longer points into the conversation" },
 
+  "transcriptErrorFollowLimit": "Too many conversations are being followed right now ({limit} at most). This one stays readable, but it will not update by itself.",
+  "@transcriptErrorFollowLimit": {
+    "description": "The server answered TRANSCRIPT_FOLLOW_LIMIT to following a conversation",
+    "placeholders": { "limit": { "type": "String" } }
+  },
+
+  "transcriptErrorFollowLiveHere": "This conversation is open in a live session here. Open that session to see it as it goes.",
+  "@transcriptErrorFollowLiveHere": { "description": "The server answered TRANSCRIPT_FOLLOW_LIVE_HERE: a live session of the caller holds the conversation" },
+
+  "transcriptErrorImageTypeUnsupported": "This image cannot be shown here: {mediaType} is not a type the server serves.",
+  "@transcriptErrorImageTypeUnsupported": {
+    "description": "The image of a prompt of the history is of a type the route does not serve (415)",
+    "placeholders": { "mediaType": { "type": "String" } }
+  },
+
+  "transcriptErrorImageTooLarge": "This image is too large to show here.",
+  "@transcriptErrorImageTooLarge": { "description": "The image of a prompt of the history is above the ceiling of the route (413)" },
+
   "historyListTitle": "History",
   "@historyListTitle": { "description": "Title of the screen listing the conversations of one folder" },
 
@@ -675,7 +756,7 @@
   "historyLoadEarlier": "Load earlier messages",
   "@historyLoadEarlier": { "description": "Reads the page before the oldest message on screen" },
 
-  "historyResumeAction": "Resume",
+  "historyResumeAction": "Continue this conversation",
   "@historyResumeAction": { "description": "Continues the conversation in a live session" },
 
   "historyResumePending": "Resuming…",
@@ -689,6 +770,42 @@
 
   "historyExternalNote": "This conversation began outside this app. Resuming it here continues it under a new id: the editor or terminal it came from will not see the answers given here.",
   "@historyExternalNote": { "description": "Said before resuming a conversation begun elsewhere (D-04)" },
+
+  "historyActiveElsewhereNote": "Something else wrote this conversation a moment ago — the editor or a terminal may have it open. Continuing it here makes a copy, and the two will diverge.",
+  "@historyActiveElsewhereNote": { "description": "Said while the conversation's activity is activeElsewhere (plan 22, B-26); the same text as the web's history.screen.activeElsewhereNote" },
+
+  "historyFollowWorking": "Working in another client…",
+  "@historyFollowWorking": { "description": "The followed conversation seems to have a turn running in another client — an inference (plan 22, D-12)" },
+
+  "historyFollowWorkingHelp": "This is an inference, not something Claude reported: the conversation's last entry leaves the turn open — a tool without its result, a thought, or a prompt without an answer — and something wrote it a moment ago. The history does not record the state of a turn, and nothing here says which client it is.",
+  "@historyFollowWorkingHelp": { "description": "The help of \"Working in another client…\": why it is an inference" },
+
+  "historyFollowNewerOne": "1 new",
+  "@historyFollowNewerOne": { "description": "The pill over a followed conversation scrolled up, with one entry arrived below; the same as the web's history.follow.newerOne" },
+
+  "historyFollowNewer": "{count} new",
+  "@historyFollowNewer": {
+    "description": "The pill over a followed conversation scrolled up: how many entries arrived below; the same as the web's history.follow.newer",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "historyFollowNewerLabel": "Go to the end — {newer}",
+  "@historyFollowNewerLabel": {
+    "description": "What the pill does, for a screen reader and a long press",
+    "placeholders": { "newer": { "type": "String" } }
+  },
+
+  "sessionForkTitle": "Continue a conversation that is being written now?",
+  "@sessionForkTitle": { "description": "Asks before continuing a conversation that is active elsewhere; the same as the web's sessions.fork.title" },
+
+  "sessionForkDescription": "Something else — the editor or a terminal — wrote this conversation a moment ago. Continuing it here makes a copy under a new id; the other one keeps going on its own, and the two will diverge.",
+  "@sessionForkDescription": { "description": "What continuing an active conversation does" },
+
+  "sessionForkCancel": "Cancel",
+  "@sessionForkCancel": { "description": "Does not continue the active conversation" },
+
+  "sessionForkConfirm": "Continue as a copy",
+  "@sessionForkConfirm": { "description": "Continues the active conversation as a copy" },
 
   "sessionHistoryLoading": "Loading what was said before",
   "@sessionHistoryLoading": { "description": "While the history of a resumed or reloaded session is being read" },
@@ -892,6 +1009,12 @@
   "@thinkingDone": {"description": "Thinking line once it stopped, without a duration"},
   "thinkingTook": "Thought for {seconds} s",
   "@thinkingTook": {"description": "Thinking line once it stopped, with its duration", "placeholders": {"seconds": {"type": "String"}}},
+  "thinkingTookMinutes": "Thought for {minutes} min {seconds} s",
+  "@thinkingTookMinutes": {"description": "Thinking line once it stopped, with its duration of a minute or more", "placeholders": {"minutes": {"type": "String"}, "seconds": {"type": "String"}}},
+  "thinkingTookUpTo": "Thought for up to {seconds} s",
+  "@thinkingTookUpTo": {"description": "Thinking line read from the history: at most how long it took", "placeholders": {"seconds": {"type": "String"}}},
+  "thinkingTookUpToMinutes": "Thought for up to {minutes} min {seconds} s",
+  "@thinkingTookUpToMinutes": {"description": "Thinking line read from the history: at most how long it took, a minute or more", "placeholders": {"minutes": {"type": "String"}, "seconds": {"type": "String"}}},
   "thinkingHidden": "Thought — the model did not show it",
   "@thinkingHidden": {"description": "Thinking line of a redacted thinking"},
   "thinkingNothingShown": "The model thought here and did not show what it thought.",
@@ -948,6 +1071,12 @@
   "@modePlan": {"description": "modePlan"},
   "modePlanDescription": "Claude plans without changing anything, and asks you to approve the plan.",
   "@modePlanDescription": {"description": "modePlanDescription"},
+  "modeAllowAll": "Allow everything",
+  "@modeAllowAll": {"description": "modeAllowAll"},
+  "modeAllowAllDescription": "Claude runs every tool without asking, except what one of your rules refuses. Its questions to you still come.",
+  "@modeAllowAllDescription": {"description": "modeAllowAllDescription"},
+  "modeAllowAllWarning": "Claude will run any command on this machine without asking you, until you change the mode.",
+  "@modeAllowAllWarning": {"description": "modeAllowAllWarning"},
   "modelLabel": "Model",
   "@modelLabel": {"description": "Model chip"},
   "modelDefault": "Installation default",
@@ -1110,7 +1239,7 @@
   "@sessionHelpStatus": {"description": "Help: the status chip"},
   "sessionHelpWorkingHeading": "While Claude works",
   "@sessionHelpWorkingHeading": {"description": "Help heading"},
-  "sessionHelpWorking": "While a turn runs, its last line moves: an asterisk, what Claude is doing — the tool it runs, that it waits for you, or a word for the turn — and for how long. Its thinking is a line of its own, in order: \"Thinking…\" while it arrives, \"Thought for n s\" once it is over, folded — tap it to read it. When the turn ends, the line gives way to what the turn cost.",
+  "sessionHelpWorking": "While a turn runs, its last line moves: an asterisk, what Claude is doing — the tool it runs, that it waits for you, or a word for the turn — and for how long. Its thinking is a line of its own, in order: \"Thinking…\" while it arrives, \"Thought for n s\" once it is over — what it thought in view, quieter than the answer, when the model showed it; folded when it did not. A tool is one line, folded: tap it for what went in and what came out. When the turn ends, the line gives way to what the turn cost.",
   "@sessionHelpWorking": {"description": "Help: the working indicator"},
   "sessionHelpInlineHeading": "Questions in the conversation",
   "@sessionHelpInlineHeading": {"description": "Help heading"},

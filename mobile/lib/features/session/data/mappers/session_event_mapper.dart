@@ -25,8 +25,9 @@ import 'package:remote_claude/features/session/domain/entities/session_event.dar
 /// numbers its watch, never a session: read as an unknown event of the session it would move the
 /// session's resume point past events the session never sent, and the next reconnection would ask
 /// for a replay that skips them (plan 07, B-05). This app never watches a folder, so these frames
-/// only ever reach it by mistake — and are ignored.
-const List<String> _otherStreams = <String>['workspace.'];
+/// only ever reach it by mistake — and are ignored. A followed conversation numbers its `followId`
+/// the same way (plan 22, B-24): its frames are the follow's, read by their own mapper.
+const List<String> _otherStreams = <String>['workspace.', 'transcript.'];
 
 /// The event in [frame], or `null` when the frame is not part of a session's history.
 ///
@@ -246,13 +247,44 @@ SessionEvent _finished(_Frame frame) {
     isFromUser: _text(payload, 'role') == 'user',
     thoughts: <Thought>[for (final Map<String, Object?> block in blocks) ?_thoughtOf(block)],
     at: frame.at,
+    textBlockIds: <String>[
+      for (final Map<String, Object?> block in blocks)
+        if (block['type'] == 'text') ?_text(block, 'blockId'),
+    ],
+    images: <PromptImage>[
+      for (final Map<String, Object?> block in blocks)
+        if (block['type'] == 'image') _imageOf(block),
+    ],
+    writtenAt: _writtenAt(payload),
   );
 }
 
+/// An image block, as the marker it travels as: its type and size, never the bytes (plan 22, D-09).
+/// A size that is not a whole, non-negative number is not one.
+PromptImage _imageOf(Map<String, Object?> block) {
+  final Object? size = block['size'];
+
+  return PromptImage(
+    blockId: _text(block, 'blockId'),
+    mediaType: _text(block, 'mediaType'),
+    size: size is int && size >= 0 ? size : null,
+  );
+}
+
+/// What the model said a call is for. Blank is not a title: the tool keeps the label it has without
+/// one (plan 22, D-05).
+String? _titleOf(Map<String, Object?> payload) {
+  final String? title = _text(payload, 'title');
+  return title == null || title.trim().isEmpty ? null : title;
+}
+
+/// When the history wrote the entry of [payload] — empty live, and from a server older than it.
+String _writtenAt(Map<String, Object?> payload) => _text(payload, 'at') ?? '';
+
 /// A block of thinking, or `null` for any other kind.
 Thought? _thoughtOf(Map<String, Object?> block) => switch (block['type']) {
-  'thinking' => Thought(_text(block, 'thinking') ?? ''),
-  'redacted_thinking' => const Thought('', isRedacted: true),
+  'thinking' => Thought(_text(block, 'thinking') ?? '', blockId: _text(block, 'blockId')),
+  'redacted_thinking' => Thought('', isRedacted: true, blockId: _text(block, 'blockId')),
   _ => null,
 };
 
@@ -273,6 +305,8 @@ SessionEvent _invoked(_Frame frame) {
         ? payload['input']! as Map<String, Object?>
         : const <String, Object?>{},
     isSubagent: _isSubagent(payload),
+    title: _titleOf(payload),
+    writtenAt: _writtenAt(payload),
   );
 }
 
@@ -303,6 +337,7 @@ SessionEvent _toolOutcome(_Frame frame) {
           status: status,
           summary: _text(frame.payload, 'summary'),
           taskId: _text(frame.payload, 'taskId'),
+          writtenAt: _writtenAt(frame.payload),
         );
 }
 

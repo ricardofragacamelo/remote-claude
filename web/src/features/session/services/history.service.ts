@@ -13,6 +13,7 @@ interface HistoryPageResponse {
   readonly session?: unknown;
   readonly events?: unknown;
   readonly nextCursor?: unknown;
+  readonly lastMessageId?: unknown;
 }
 
 /**
@@ -45,6 +46,7 @@ export async function fetchHistoryPage(
     conversation,
     events: toHistoryEvents(body.events),
     nextCursor: typeof body.nextCursor === 'string' ? body.nextCursor : null,
+    lastMessageId: typeof body.lastMessageId === 'string' ? body.lastMessageId : null,
   };
 }
 

@@ -2,9 +2,11 @@
 /// (plan 10, B-11).
 ///
 /// The lists are the installation's, never ours: the models come from the session or, in a draft,
-/// from the folder's catalogue. `bypassPermissions` is never offered — a phone is the last place to
-/// switch off every question. `acceptEdits` is offered and **looks** different: a warning tone with
-/// its icon, never only a colour, and the warning in full in the sheet.
+/// from the folder's catalogue. `bypassPermissions` — the SDK's mode, which skips the approval — is
+/// never offered. Permitir tudo (`allowAll`) is ours, and is (plan 23, ADR-022): the backend still sees
+/// every tool, a rule that refuses still refuses, and switching it off asks again at the next tool.
+/// `acceptEdits` and `allowAll` **look** different: a warning tone with an icon of their own, never
+/// only a colour, and the warning in full in the sheet.
 library;
 
 import 'dart:async';
@@ -22,7 +24,7 @@ import 'package:remote_claude/features/session/presentation/widgets/session_shee
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// The modes a phone may switch to, in the order the sheet offers them.
-const List<String> offeredModes = <String>['default', 'acceptEdits', 'plan'];
+const List<String> offeredModes = <String>['default', 'acceptEdits', 'plan', 'allowAll'];
 
 /// The mode the installation opens with when nothing was chosen.
 const String defaultMode = 'default';
@@ -35,6 +37,7 @@ String modeName(AppLocalizations l10n, String mode) => switch (mode) {
   'default' => l10n.modeDefault,
   'acceptEdits' => l10n.modeAcceptEdits,
   'plan' => l10n.modePlan,
+  'allowAll' => l10n.modeAllowAll,
   _ => mode,
 };
 
@@ -43,7 +46,22 @@ String modeDescription(AppLocalizations l10n, String mode) => switch (mode) {
   'default' => l10n.modeDefaultDescription,
   'acceptEdits' => l10n.modeAcceptEditsDescription,
   'plan' => l10n.modePlanDescription,
+  'allowAll' => l10n.modeAllowAllDescription,
   _ => '',
+};
+
+/// The warning a mode that stops asking carries, in full — or nothing for one that asks.
+String? modeWarning(AppLocalizations l10n, String mode) => switch (mode) {
+  'acceptEdits' => l10n.modeAcceptEditsWarning,
+  'allowAll' => l10n.modeAllowAllWarning,
+  _ => null,
+};
+
+/// The icon of [mode] on the chip: the two that stop asking have one of their own.
+IconData modeIcon(String mode) => switch (mode) {
+  'acceptEdits' => Icons.warning_amber,
+  'allowAll' => Icons.lock_open,
+  _ => Icons.shield_outlined,
 };
 
 /// The name of an effort level, or the level itself when this build has no words for it.
@@ -70,8 +88,8 @@ ComposerChoice modeChoice(
   return ComposerChoice(
     label: l10n.modeLabel,
     value: isPending ? l10n.composerChoicePending : modeName(l10n, mode),
-    icon: mode == 'acceptEdits' ? Icons.warning_amber : Icons.shield_outlined,
-    warn: mode == 'acceptEdits',
+    icon: modeIcon(mode),
+    warn: modeWarning(l10n, mode) != null,
     onOpen: () => unawaited(
       _openSheet(
         context,
@@ -83,10 +101,8 @@ ComposerChoice modeChoice(
               _Option<String>(
                 value: each,
                 title: modeName(l10n, each),
-                subtitle: each == 'acceptEdits'
-                    ? '${modeDescription(l10n, each)} ${l10n.modeAcceptEditsWarning}'
-                    : modeDescription(l10n, each),
-                warn: each == 'acceptEdits',
+                subtitle: <String>[modeDescription(l10n, each), ?modeWarning(l10n, each)].join(' '),
+                warn: modeWarning(l10n, each) != null,
               ),
           ],
           onPick: isPending ? null : onPick,

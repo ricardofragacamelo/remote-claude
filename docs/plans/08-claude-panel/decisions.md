@@ -209,7 +209,7 @@ exclusivos; o que não existe ou não é do chamador mostra o erro traduzido com
 |---|---|---|---|---|---|
 | D-04 | Biblioteca de markdown e de realce | a escolha de editor do plano 07 (Monaco × CodeMirror); bundle medido no celular | B-14, B-15 | 2026-09-28 · **`react-markdown` + `remark-gfm`, sem `rehype-raw`**; URLs só `http`, `https`, `mailto` e relativo; imagem remota vira link; realce pelo `monaco.editor.colorize`, sob demanda (o plano 07 escolheu Monaco, 07 · D-09). Decisão do usuário com a recomendação; o bundle é medido na B-14 | ✅ |
 | D-25 | A lista de tarefas: `TodoWrite` ou `Task*`, ligadas por variável de ambiente | nenhum: medido — o CLI 2.1.268+ esconde as tools de modelos fora da lista; `CLAUDE_CODE_ENABLE_TODO_TOOLS` as liga (`task-tools-turn`, `todo-write-turn`) | B-20 | 2026-10-01 · **as duas**: o backend abre o SDK com `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` e o painel desenha a lista pela tool que vier no stream — `TodoWrite` ou `Task*` —, nunca pelo modelo. Decisão do usuário com a recomendação | ✅ |
-| D-17 | Thinking: aberto ou recolhido, e o que dele vai para o buffer, o transcript e o log | se o modelo em uso devolve thinking resumido, omitido ou em destaques por padrão | B-19 | 2026-09-28 · **mostrado recolhido**, com a duração; vai no buffer e no transcript como bloco próprio; no log, só o tamanho. Decisão do usuário com a recomendação. **Medido em 2026-10-01** ([§10.7](../../discovery/01-descoberta-claude-agent-sdk.md#107--thinking-vem-omitido-por-padrão-display-summarized-o-traz-d-17)): por padrão o thinking vem **omitido** (bloco sem texto); `thinking: { display: 'summarized' }` traz o resumo — a B-19 pede o resumo, para haver o que mostrar | ✅ |
+| D-17 | Thinking: aberto ou recolhido, e o que dele vai para o buffer, o transcript e o log | se o modelo em uso devolve thinking resumido, omitido ou em destaques por padrão | B-19 | 2026-09-28 · **mostrado recolhido**, com a duração; vai no buffer e no transcript como bloco próprio; no log, só o tamanho. Decisão do usuário com a recomendação. **Medido em 2026-10-01** ([§10.7](../../discovery/01-descoberta-claude-agent-sdk.md#107--thinking-vem-omitido-por-padrão-display-summarized-o-traz-d-17)): por padrão o thinking vem **omitido** (bloco sem texto); `thinking: { display: 'summarized' }` traz o resumo — a B-19 pede o resumo, para haver o que mostrar. **Revista em 2026-10-04 pela [D-15 do plano 22](../22-live-history/decisions.md#f5--fidelidade-no-web) — o resumido fica à vista**, em estilo atenuado, como o VS Code; o omitido continua recolhido | ✅ |
 
 ### D-25 — a lista de tarefas: `TodoWrite` ou `Task*`
 
@@ -253,6 +253,11 @@ mesmo parser. Medir o bundle na B-14.
 **Recomendação:** mostrar, recolhido por padrão, com a duração; vai no buffer e no transcript como
 bloco próprio (mesmo redutor), e **não** vai para o log além do tamanho — pode citar conteúdo de
 arquivo lido, e a regra de não logar conteúdo de `Read` vale para ele.
+
+> **Revista em 2026-10-04 pela D-15 do plano 22 — o resumido fica à vista.** O pensamento **resumido**
+> deixa de ser recolhido: o texto aparece à vista, atenuado, sob "Pensou", como o VS Code o mostra; o
+> **omitido** continua recolhido, com "o modelo não mostrou" ao abrir. O resto desta decisão — buffer,
+> transcript, log só do tamanho — continua ([22 · D-15](../22-live-history/decisions.md#f5--fidelidade-no-web)).
 
 ---
 

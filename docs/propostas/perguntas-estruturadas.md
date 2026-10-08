@@ -1,6 +1,6 @@
 # Proposta — Perguntas estruturadas do Claude (`AskUserQuestion`)
 
-**Estado:** rascunho, em discussão. Nenhum código escrito.
+**Estado:** virou o [plano 24 — Perguntas estruturadas](../plans/24-structured-questions/README.md) em 2026-10-08. As decisões do §14 estão lá ([decisions.md](../plans/24-structured-questions/decisions.md)), com os mesmos IDs; D-01 mudou (plano 24, e não 22). Nenhum código escrito.
 **Criada em:** 2026-10-04. Origem: uma sessão do painel em que o Claude perguntou "Qual tipo de avaliação
 você quer?" com quatro opções. A tela não mostrou a pergunta, mostrou o JSON. O usuário clicou em
 "Permitir", e o Claude recebeu `The user did not answer the questions.`

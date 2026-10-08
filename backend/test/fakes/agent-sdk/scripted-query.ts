@@ -86,6 +86,8 @@ export interface ScriptRecord {
   installationCalls: Record<keyof InstallationFixture, number>;
   /** The options the runner built, so a test can assert on what was sent to the SDK. */
   options: Options | null;
+  /** The modes `setPermissionMode()` was called with, in order — what the SDK was told. */
+  readonly modes: string[];
 }
 
 /** How a scripted run behaves beyond simply replaying. */
@@ -903,7 +905,8 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
     return Promise.resolve();
   }
 
-  setPermissionMode(): Promise<void> {
+  setPermissionMode(mode: string): Promise<void> {
+    this.record.modes.push(mode);
     return Promise.resolve();
   }
 
@@ -989,6 +992,7 @@ export function scriptedSdk(script: ScriptOptions = {}): {
     commandCalls: 0,
     installationCalls: { models: 0, mcpServers: 0, contextUsage: 0 },
     options: null,
+    modes: [],
   };
 
   return {

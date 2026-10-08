@@ -250,6 +250,51 @@ O app mantém anexadas **todas** as sessões abertas nele, não só a da tela
   (`StreamGap.sessionId`): cada controlador fica só com o que é dele. Um gap de uma sessão nunca
   limpa a tela de outra.
 
+### Acompanhar uma conversa do histórico
+
+O leitor de uma conversa que este backend não opera a **acompanha** enquanto está na tela
+([plano 22 · F4](../../plans/22-live-history/F4-mobile-follow.md),
+[contrato](../shared/05-websocket-protocol.md#acompanhar-um-transcript--transcript)). É outro stream, com
+data source, repositório e caso de uso próprios — fora do `SessionWsDataSource`:
+
+```
+TranscriptFollowWsDataSource → TranscriptFollowRepository → FollowTranscript → ConversationHistoryController
+```
+
+- **O `TranscriptFollowWsDataSource`** observa o socket (`WsClient.observe`): manda `transcript.follow`
+  e `transcript.unfollow`, e entrega o ack `transcript.following`, o `transcript.appended`, o
+  `transcript.reset` e a recusa como `FollowUpdate`. Nenhum desses frames nomeia uma sessão, e o `seq`
+  deles é do `followId` — nunca move o ponto de retomada de uma sessão.
+- **O `ConversationHistoryController`** lê a página 1 e assina a partir do `lastMessageId` dela. O ack
+  que vale é o do **seu** comando, pelo `correlationId`; uma assinatura solta antes do ack recebe o
+  `unfollow` assim que o ack chega. O que chega entra nos `events` do board, e a `Conversation` é
+  dobrada de novo do começo — o mesmo resultado de reler tudo.
+- **Buraco no `seq`** do `transcript.appended`, e `transcript.reset` (`rewritten` ou `gone`): relê a
+  página 1 e assina de novo a partir dela. Nunca remenda.
+- **Ciclo de vida:** `paused` solta a assinatura e apaga o "trabalhando"; `resumed` reassina a partir do
+  último `lastMessageId` entregue. O socket que cai leva as assinaturas junto (o servidor as solta), e
+  o `ready` seguinte reassina, sem duplicar.
+- **Descarte do provider:** sair da página tira o último ouvinte; a assinatura é solta na hora, mesmo com
+  o board guardado pelos 30 s do cache, e voltar dentro da janela reassina. Assinatura sem tela é carga
+  sem leitor.
+
+### O que a linha do tempo só marca
+
+A saída inteira de uma tool e a imagem de um prompt não vêm com a conversa: o `tool.completed` traz o
+fim (`summary`), e o bloco `image` só o tipo e o tamanho ([plano 22 · F6](../../plans/22-live-history/F6-mobile-fidelity.md)).
+Os dois são lidos quando a pessoa os abre, por `TranscriptContentApiDataSource` →
+`TranscriptContentRepository` → `ReadTranscriptContent`, cada um num controller:
+
+- **`ToolResultController`** (por conversa e `toolUseId`): o card o observa desde que foi aberto pela
+  primeira vez até sair da tela, então recolher e abrir de novo não pede nada; fica 5 minutos depois do
+  último ouvinte. Tool rodando, recusada ou de subagent não pede.
+- **`PromptImageController`** (por conversa e `blockId`): pedido pelo `ApiClient.bytes` com o token no
+  cabeçalho — nunca na URL — e mostrado por `Image.memory` numa tela própria; fechar a tela descarta o
+  provider, e os bytes vão junto.
+- **Nenhum dos dois repete sozinho.** A falha fica na tela com "tentar de novo"; na imagem, `415`, `413`
+  e `404` não oferecem, porque pedir de novo não muda a resposta. O conteúdo nunca vai para o log: o
+  interceptor registra o caminho e o status.
+
 ---
 
 ## Menu de comandos e desfazer
@@ -271,19 +316,23 @@ sessão ([plano 04 · F3/F4](../../plans/04-transcript-and-resume/README.md)):
 ## Rotas que a tela de sessão lê
 
 A tela de sessão e o rascunho leem três perguntas por HTTP, cada uma num controller, e mandam quatro
-comandos pelo socket. Tudo já existe no contrato (08 · F0); o app só passa a usar.
+comandos pelo socket. Tudo já existe no contrato (08 · F0); o app só passa a usar. As duas últimas linhas
+são o conteúdo que a conversa só marca, lido sob demanda, na sessão e no histórico
+([O que a linha do tempo só marca](#o-que-a-linha-do-tempo-só-marca)).
 
 | Rota | Quem lê | Quando | Se falhar |
 |---|---|---|---|
 | `GET /catalog?workspacePath=` | o rascunho | ao abrir: comandos, modelos e tetos, sem sessão viva ([08 · D-13](../../plans/08-claude-panel/decisions.md#d-13--o-catálogo-antes-da-sessão)) | `429` `SESSION_LIMIT_REACHED` quando não há vaga para a consulta; os chips dizem por quê, e o envio usa o padrão da instalação |
 | `GET /sessions/:id/models` | o chip de modelo | ao abrir a folha | o chip continua mostrando o modelo atual |
 | `GET /sessions/:id/context` | o anel do contexto | ao abrir a sessão, e relida a cada `turn.completed` e `session.compacted` | o anel vira um ícone no mesmo lugar, e a folha diz por quê |
+| `GET /transcripts/:id/tools/:toolUseId/result` | o card de uma tool, na sessão e no histórico | ao abrir o card da tool terminada, uma vez | o card fica com o `summary`, diz que a saída inteira não carregou e oferece "tentar de novo" |
+| `GET /transcripts/:id/images/:blockId` | o marcador da imagem de um prompt | ao abri-la | a mensagem traduzida no lugar da imagem; "tentar de novo" só fora de `415`, `413` e `404` |
 
 | Comando | Para quê |
 |---|---|
 | `session.start` com `model`, `permissionMode` e `effort` | o primeiro envio do rascunho; o `effort` só existe aqui ([08 · D-16](../../plans/08-claude-panel/decisions.md#d-16--esforço-na-sessão)) |
 | `session.setModel` | o chip de modelo, na sessão viva |
-| `session.setPermissionMode` | o chip de modo; `bypassPermissions` nunca sai do app |
+| `session.setPermissionMode` | o chip de modo, inclusive `allowAll` (Permitir tudo); `bypassPermissions` nunca sai do app |
 | `session.cancelQueuedPrompt` | cancelar uma linha da fila |
 
 ### O rascunho vira sessão no primeiro prompt

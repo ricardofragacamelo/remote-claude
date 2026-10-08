@@ -107,10 +107,13 @@ describe('the transcript transport shapes', () => {
         activity: { activity: 'activeElsewhere', liveSessionId: null, writtenAgoSeconds: 30 },
       },
       page: { items: someMessages(2), next: 'm1' },
+      lastMessageId: 'm9',
     });
 
     expect(dto.events.map((event) => event.payload['messageId'])).toEqual(['m1', 'm2']);
     expect(dto.nextCursor).toBe('m1');
+    // Plan 22, B-10: where the whole conversation ends, not where this page does.
+    expect(dto.lastMessageId).toBe('m9');
     // Plan 08, B-08: the panel reading one conversation knows, too, whether it is active elsewhere.
     expect(dto.session).toMatchObject({
       activity: 'activeElsewhere',

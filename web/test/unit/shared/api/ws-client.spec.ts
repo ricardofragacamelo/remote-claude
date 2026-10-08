@@ -630,6 +630,40 @@ describe('WsClient', () => {
       expect(seen).toMatchObject([{ type: 'workspace.watching', correlationId: 'cmd-1' }]);
     });
 
+    it('offers the answer to a conversation follow to the observers, and its stream — plan 22, B-20', () => {
+      const seen: Envelope[] = [];
+      const socket = connectAndReady();
+      client.observe((frame) => seen.push(frame));
+
+      socket.receive(
+        serverFrame({
+          kind: 'ack',
+          type: 'transcript.following',
+          correlationId: 'cmd-2',
+          payload: { followId: 't1', conversationId: 'c1', activity: 'idle' },
+        }),
+      );
+      socket.receive(
+        serverFrame({
+          kind: 'event',
+          type: 'transcript.appended',
+          seq: 1,
+          payload: {
+            followId: 't1',
+            conversationId: 'c1',
+            events: [],
+            activity: 'idle',
+            working: false,
+          },
+        }),
+      );
+
+      expect(seen).toMatchObject([
+        { type: 'transcript.following', correlationId: 'cmd-2' },
+        { type: 'transcript.appended', seq: 1 },
+      ]);
+    });
+
     it('sends a command once the connection is ready', () => {
       const socket = connectAndReady();
 

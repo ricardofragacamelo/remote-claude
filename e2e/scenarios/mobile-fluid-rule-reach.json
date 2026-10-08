@@ -1,0 +1,17 @@
+{
+  "id": "23·S-96, S-98",
+  "title": "a yes for this session with a reach wider than the exact input — any use of the tool — leaves a rule that answers the next write of the session without a card",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "tool-turn",
+    "tool": "Write",
+    "reachTool": "Any use of this tool",
+    "pattern": "Write",
+    "session": "Allow for this session",
+    "allowedByRule": "Allowed by one of your rules",
+    "via": "rule"
+  }
+}

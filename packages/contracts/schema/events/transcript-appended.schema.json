@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/transcript-appended.json",
+  "title": "TranscriptAppended",
+  "description": "What a followed conversation gained since the last frame of the subscription — or, on the first one, since the `afterMessageId` it was followed from. The frame's `seq` belongs to the subscription, not to any session: monotonic per `followId`, from 1, and never replayed. A hole in it is a lost frame, and the client reads the conversation again rather than patching. It also goes out with no `events` when only `activity` or `working` changed, so the screen never says the conversation is busy after it stopped.",
+  "x-kind": "event",
+  "x-type": "transcript.appended",
+  "type": "object",
+  "required": ["followId", "conversationId", "events", "activity", "working"],
+  "properties": {
+    "followId": { "type": "string" },
+    "conversationId": { "type": "string" },
+    "events": {
+      "type": "array",
+      "description": "The new entries as events of the history — `{ type, payload }`, the same `message.completed`, `tool.started` and `tool.completed` a page of `GET /transcripts/:sessionId/messages` carries, oldest first, in the order of the SDK's chain and never of the clock. A client folds them with the same reducer as the page.",
+      "items": {
+        "type": "object",
+        "required": ["type", "payload"],
+        "properties": {
+          "type": { "type": "string" },
+          "payload": { "type": "object" }
+        }
+      }
+    },
+    "lastMessageId": {
+      "type": "string",
+      "description": "The last entry of the conversation now — what a reconnect follows again from. Absent while the conversation has no entry."
+    },
+    "activity": {
+      "type": "string",
+      "enum": ["liveHere", "activeElsewhere", "idle"],
+      "description": "What the conversation is doing now, as `transcript.following` says it."
+    },
+    "working": {
+      "type": "boolean",
+      "description": "Whether Claude seems to be working on it in another client: the conversation is `activeElsewhere` **and** its last entry leaves the turn open — a tool call without its result, a thinking, or a prompt without an answer. An inference from the transcript, which records no state of the turn; the screen says it is one."
+    }
+  }
+}

@@ -1,11 +1,13 @@
 import { RecordAuditEventUseCase } from '@application/audit';
 import {
+  ApplyPermissionModeUseCase,
   DescribePermissionUseCase,
   EndSessionPermissionsUseCase,
   ExtendPermissionUseCase,
   GrantPermissionRuleUseCase,
   DescribePermissionRuleUseCase,
   ListPermissionRulesUseCase,
+  PermissionAutoAnswer,
   PermissionDeadlines,
   PermissionRegistry,
   PermissionRuleBook,
@@ -65,7 +67,9 @@ export interface PermissionHarness {
 
   /** Failures a deadline reported instead of letting escape as an unhandled rejection. */
   readonly deadlineFailures: readonly unknown[];
+  readonly autoAnswer: PermissionAutoAnswer;
   readonly request: RequestPermissionUseCase;
+  readonly applyMode: ApplyPermissionModeUseCase;
   readonly resolve: ResolvePermissionUseCase;
   readonly extend: ExtendPermissionUseCase;
   readonly endSession: EndSessionPermissionsUseCase;
@@ -122,6 +126,7 @@ export function aPermissionModule(
     ids,
     settings,
   );
+  const autoAnswer = new PermissionAutoAnswer(ruleBook, settlement);
   const deadlineFailures: unknown[] = [];
   const deadlines = new PermissionDeadlines(registry, settlement, scheduler, clock, (error) => {
     deadlineFailures.push(error);
@@ -142,17 +147,18 @@ export function aPermissionModule(
     settlement,
     deadlines,
     deadlineFailures,
+    autoAnswer,
     request: new RequestPermissionUseCase(
       registry,
       requests,
-      ruleBook,
-      settlement,
+      autoAnswer,
       deadlines,
       broadcaster,
       events,
       clock,
       settings,
     ),
+    applyMode: new ApplyPermissionModeUseCase(registry, autoAnswer, clock),
     resolve: new ResolvePermissionUseCase(registry, settlement, grant, clock),
     extend: new ExtendPermissionUseCase(
       registry,

@@ -1,4 +1,4 @@
-import type { TranscriptStore } from '@application/transcript';
+import type { StoredImage, TranscriptStore } from '@application/transcript';
 import type { ClaudeSessionId, TranscriptMessage, TranscriptSession } from '@domain/transcript';
 
 /**
@@ -58,6 +58,52 @@ export class InMemoryTranscriptStore implements TranscriptStore {
     toolUseId: string,
   ): Promise<readonly TranscriptMessage[] | null> {
     return Promise.resolve(this.subagentsByTool.get(`${session.id.value}/${toolUseId}`) ?? null);
+  }
+
+  private readonly results = new Map<string, string>();
+  private readonly images = new Map<string, StoredImage>();
+
+  /** Files the whole output of a tool of a conversation. */
+  addToolResult(sessionId: string, toolUseId: string, text: string): this {
+    this.results.set(`${sessionId}/${toolUseId}`, text);
+    return this;
+  }
+
+  /** Files the image a prompt of a conversation carried, under its marker's `blockId`. */
+  addImage(sessionId: string, blockId: string, image: StoredImage): this {
+    this.images.set(`${sessionId}/${blockId}`, image);
+    return this;
+  }
+
+  toolResult(session: TranscriptSession, toolUseId: string): Promise<string | null> {
+    return Promise.resolve(this.results.get(`${session.id.value}/${toolUseId}`) ?? null);
+  }
+
+  promptImage(session: TranscriptSession, blockId: string): Promise<StoredImage | null> {
+    return Promise.resolve(this.images.get(`${session.id.value}/${blockId}`) ?? null);
+  }
+
+  /** Replaces what a conversation holds — it was written to — and moves its version. */
+  rewrite(sessionId: string, messages: readonly TranscriptMessage[], lastModified: number): this {
+    this.messagesById.set(sessionId, messages);
+    for (const [directory, sessions] of this.byDirectory) {
+      this.byDirectory.set(
+        directory,
+        sessions.map((each) => (each.id.value === sessionId ? { ...each, lastModified } : each)),
+      );
+    }
+    return this;
+  }
+
+  /** Takes a conversation out of the store, as if its file were deleted. */
+  remove(sessionId: string): this {
+    for (const [directory, sessions] of this.byDirectory) {
+      this.byDirectory.set(
+        directory,
+        sessions.filter((each) => each.id.value !== sessionId),
+      );
+    }
+    return this;
   }
 
   messages(session: TranscriptSession): Promise<readonly TranscriptMessage[]> {

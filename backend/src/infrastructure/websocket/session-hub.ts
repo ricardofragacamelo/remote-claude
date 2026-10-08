@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Envelope } from '@remote-claude/contracts';
 
 import { LOGGER, type Logger } from '@shared/logging/logger';
-import { forLog } from '@shared/logging/redact';
+import { forLog, framePayloadForLog } from '@shared/logging/redact';
 import { currentTraceId } from '@shared/logging/trace-context';
 import { ConnectionRegistry } from './connection-registry';
 import type { Connection } from './connection-registry';
@@ -114,7 +114,7 @@ export class SessionHub {
 
   /** Sends one frame to one connection, logging the outbound edge. */
   deliver(connection: Connection, frame: Envelope): void {
-    const logged = forLog(frame.payload);
+    const logged = forLog(framePayloadForLog(frame.type, frame.payload));
 
     try {
       connection.socket.send(JSON.stringify(frame));

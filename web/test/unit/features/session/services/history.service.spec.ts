@@ -53,7 +53,18 @@ describe('fetchHistoryPage — plan 04, B-07', () => {
       },
       events: [said('m1', 'hi')],
       nextCursor: 'm0',
+      // A server older than plan 22 does not say where the conversation ends.
+      lastMessageId: null,
     });
+  });
+
+  it('says where the conversation ends, for following it from there — plan 22, B-22', async () => {
+    vi.spyOn(api, 'get').mockResolvedValue({
+      ...aHistoryPage([said('m1', 'hi')]),
+      lastMessageId: 'u-41',
+    });
+
+    expect((await fetchHistoryPage(OURS, null)).lastMessageId).toBe('u-41');
   });
 
   it('drops an event it cannot read, and keeps the rest', async () => {

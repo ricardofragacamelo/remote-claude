@@ -598,4 +598,127 @@ void main() {
       expect(permissionLookupFrom(null, sessionId: 'session-1'), isNull);
     });
   });
+
+  group('the reach of an answer — plan 23, B-16', () {
+    const Map<String, Object?> always = <String, Object?>{
+      'scope': 'always',
+      'labelKey': 'permission.scope.always',
+      'lifetimeMs': 3600000,
+    };
+
+    test('S-88 · reads the reaches it knows, and drops the ones it cannot read', () {
+      final PermissionRequest? request = requestOf(
+        requested(<String, Object?>{
+          'reaches': <Object?>[
+            <String, Object?>{
+              'reach': 'prefix',
+              'patterns': <Object?>['Bash(git push:*)', 'Bash(tail:*)'],
+            },
+            <String, Object?>{
+              'reach': 'glob',
+              'patterns': <Object?>['Bash(*)'],
+            },
+            <String, Object?>{'reach': 'exact', 'patterns': <Object?>[]},
+            <String, Object?>{
+              'reach': 'tool',
+              'patterns': <Object?>[3],
+            },
+            'exact',
+          ],
+        }),
+      );
+
+      expect(request?.reaches, const <RuleReach>[
+        RuleReach(
+          kind: RuleReachKind.prefix,
+          patterns: <String>['Bash(git push:*)', 'Bash(tail:*)'],
+        ),
+      ]);
+    });
+
+    test('offers a persisted scope with no exact pattern when the server sends reaches', () {
+      final PermissionRequest? request = requestOf(
+        requested(<String, Object?>{
+          'suggestions': <Object?>[always],
+          'reaches': <Object?>[
+            <String, Object?>{
+              'reach': 'tool',
+              'patterns': <Object?>['WebSearch'],
+            },
+          ],
+        }),
+      );
+
+      expect(request?.scopes, <PermissionScope>[PermissionScope.once, PermissionScope.always]);
+      expect(request?.rule, const RuleOffer(pattern: null, lifetime: Duration(hours: 1)));
+    });
+
+    test('S-80 · reads a server that sends no reaches as offering the exact pattern', () {
+      final PermissionRequest? request = requestOf(
+        requested(<String, Object?>{
+          'suggestions': <Object?>[
+            <String, Object?>{...always, 'pattern': 'Bash(git status)'},
+          ],
+        }),
+      );
+
+      expect(request?.reaches, const <RuleReach>[
+        RuleReach(kind: RuleReachKind.exact, patterns: <String>['Bash(git status)']),
+      ]);
+      expect(request?.scopes, contains(PermissionScope.always));
+    });
+
+    test('does not offer a persisted scope with nothing to persist', () {
+      final PermissionRequest? withNone = requestOf(
+        requested(<String, Object?>{
+          'suggestions': <Object?>[always],
+          'reaches': <Object?>[],
+        }),
+      );
+      final PermissionRequest? fromAnOldServer = requestOf(
+        requested(<String, Object?>{
+          'suggestions': <Object?>[always],
+        }),
+      );
+
+      expect(withNone?.scopes, <PermissionScope>[PermissionScope.once]);
+      expect(withNone?.rule, isNull);
+      expect(fromAnOldServer?.scopes, <PermissionScope>[PermissionScope.once]);
+    });
+
+    test('S-90 · starts on the prefix, then the exact input, then the whole tool', () {
+      const RuleReach exact = RuleReach(kind: RuleReachKind.exact, patterns: <String>['Edit(/a)']);
+      const RuleReach prefix = RuleReach(
+        kind: RuleReachKind.prefix,
+        patterns: <String>['Bash(ls:*)'],
+      );
+      const RuleReach tool = RuleReach(kind: RuleReachKind.tool, patterns: <String>['Edit']);
+
+      expect(preselectedReach(const <RuleReach>[exact, prefix]), prefix);
+      expect(preselectedReach(const <RuleReach>[exact, tool]), exact);
+      expect(preselectedReach(const <RuleReach>[tool]), tool);
+      expect(preselectedReach(const <RuleReach>[]), isNull);
+    });
+  });
+
+  group('who answered without asking — plan 23, B-17', () {
+    PermissionOutcome? settled(Object? via) => permissionOutcomeFrom(<String, Object?>{
+      'requestId': 'req-1',
+      'decision': 'allow',
+      'auto': true,
+      'resolvedBy': 'auth|owner',
+      'via': via,
+    });
+
+    test('S-94 · reads `via`, and ignores a value it does not know', () {
+      expect(settled('rule')?.via, AnswerVia.rule);
+      expect(settled('allowAll')?.via, AnswerVia.allowAll);
+      expect(settled('magic')?.via, isNull);
+      expect(settled(null)?.via, isNull);
+    });
+
+    test('keeps `via` on the same settlement about another tool', () {
+      expect(settled('allowAll')?.about('toolu-9').via, AnswerVia.allowAll);
+    });
+  });
 }

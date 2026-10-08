@@ -1,9 +1,10 @@
-import { matchedInput, patternForInvocation } from '@domain/permission';
+import { matchedInput, reachesFor } from '@domain/permission';
 import type {
   PermissionDecision,
   PermissionOrigin,
   PermissionRequest,
   PermissionResolution,
+  PermissionVia,
 } from '@domain/permission';
 
 /**
@@ -25,6 +26,9 @@ export type ResolvedPermissionPayload = {
 
   /** The tool call it was about — what puts the decision on that tool's line, even when nobody was asked. */
   readonly toolUseId?: string;
+
+  /** Why nobody was asked, when nobody was: a rule, or Permitir tudo. */
+  readonly via?: PermissionVia;
 };
 
 /**
@@ -62,36 +66,42 @@ export function requestedPayload(
     defaultToNo: true,
     expiresAt: request.expiresAt.toISOString(),
     suggestions: suggestionsFor(request, ruleLifetimeMs),
+    // What a rule left by this answer may reach — computed here, and chosen by the client by name
+    // only (plan 23, B-10). Every scope but `once` takes it.
+    reaches: reachesFor(request.toolName, request.input),
   };
 }
 
 /**
  * The scopes a screen may offer for this request.
  *
- * `project` and `always` carry **what the rule would be** — the pattern the answer will grant and
- * how long it will live — because the screen has to say it in full before anybody chooses, and a
- * client that derived either would be a second matcher or a hard-coded number
+ * `project` and `always` carry **what the rule would be** — the `exact` pattern and how long it
+ * would live — because the screen has to say it in full before anybody chooses, and a client that
+ * derived either would be a second matcher or a hard-coded number
  * ([D-12](../../../../docs/plans/03-rules-and-audit/decisions.md#d-12--o-alcance-vem-na-pergunta)).
+ * The other reaches, and their patterns, travel in `reaches`; `pattern` stays for a client that
+ * does not read them, and is absent when there is no `exact` reach.
  *
- * They are left out when no pattern can be written for the invocation: the answer would be refused
- * (S-58), and offering what the server refuses is worse than not offering it. `project` also needs
- * a project, which a request with no workspace does not have.
+ * They are left out when the invocation has no reach at all: the answer would be refused (S-58),
+ * and offering what the server refuses is worse than not offering it. `project` also needs a
+ * project, which a request with no workspace does not have.
  */
 function suggestionsFor(
   request: PermissionRequest,
   ruleLifetimeMs: number,
 ): readonly Readonly<Record<string, unknown>>[] {
-  const pattern = patternForInvocation(request.toolName, request.input);
+  const reaches = reachesFor(request.toolName, request.input);
   const ephemeral = [
     { scope: 'once', labelKey: 'permission.scope.once' },
     { scope: 'session', labelKey: 'permission.scope.session' },
   ];
 
-  if (pattern === null) {
+  if (reaches.length === 0) {
     return ephemeral;
   }
 
-  const rule = { pattern, lifetimeMs: ruleLifetimeMs };
+  const exact = reaches.find((reach) => reach.reach === 'exact')?.patterns[0];
+  const rule = { ...(exact === undefined ? {} : { pattern: exact }), lifetimeMs: ruleLifetimeMs };
 
   return [
     ...ephemeral,
@@ -121,5 +131,6 @@ export function resolvedPayload(
     ...(request.toolUseId === null || request.toolUseId === ''
       ? {}
       : { toolUseId: request.toolUseId }),
+    ...(resolution.via === undefined ? {} : { via: resolution.via }),
   };
 }

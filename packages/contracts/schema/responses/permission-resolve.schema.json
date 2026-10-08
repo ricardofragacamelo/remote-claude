@@ -10,7 +10,10 @@
   "x-required-when": [
     {
       "field": "reason",
-      "when": { "field": "decision", "equals": "deny" },
+      "when": {
+        "field": "decision",
+        "equals": "deny"
+      },
       "because": "the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from"
     }
   ],
@@ -27,7 +30,12 @@
     "scope": {
       "type": "string",
       "enum": ["once", "session", "project", "always"],
-      "description": "How far the decision reaches. Absent means `once`. `session` leaves a rule that dies with the session; `project` and `always` persist a rule — the narrowest pattern covering this invocation, with the configured default lifetime — that answers future requests without asking and is revoked through `DELETE /permission-rules/:ruleId`. An invocation with nothing a pattern can name cannot be granted `project` or `always`: that is `INVALID_INPUT`, never a rule for the whole tool."
+      "description": "How far the decision reaches. Absent means `once`. `session` leaves rules that die with the session; `project` and `always` persist rules — the patterns of the chosen `reach`, with the configured default lifetime — that answer future requests without asking and are revoked through `DELETE /permission-rules/:ruleId`. A scope with no pattern for the chosen reach is `INVALID_INPUT`."
+    },
+    "reach": {
+      "type": "string",
+      "enum": ["exact", "prefix", "tool"],
+      "description": "Which of the request's `reaches` the rules left by `session`, `project` or `always` take. Absent means `exact`. A reach the request did not offer is `INVALID_INPUT`, and the request stays open. Ignored for `once`."
     },
     "reason": {
       "type": "string",

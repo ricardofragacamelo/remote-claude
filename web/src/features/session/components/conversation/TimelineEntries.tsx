@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import type { TimelineEntry } from '../../types/live-session';
+import type { StreamMessage, TimelineEntry } from '../../types/live-session';
 import { InlinePermission } from './InlinePermission';
 import { MessageItem } from './MessageItem';
 import { ToolRow } from './ToolRow';
@@ -44,20 +44,65 @@ function ToolEntry({
   );
 }
 
+/** Whether a message has anything to draw — an answer of only a tool's call has not (S-109). */
+function isVisible(message: StreamMessage): boolean {
+  return message.blocks.length > 0 || message.streaming !== null;
+}
+
+/**
+ * The messages of a level that open their turn's run of answers — the ones that say who speaks
+ * (plan 22, D-16). A prompt always does: it is where a turn begins, a queued one in the middle of a
+ * turn too (S-110). An answer does when nothing before it in the turn said "Claude": each round trip
+ * of a tool is a new answer of the API, and the author is said once (S-108). A message with nothing
+ * to draw says nothing, and leaves the turn as it was. The end of a turn, a compaction or a rewind
+ * closes the run, so the next answer names its author again.
+ */
+function authorsOf(
+  entries: readonly TimelineEntry[],
+  messages: readonly StreamMessage[],
+): ReadonlySet<string> {
+  const byId = new Map(messages.map((message) => [message.messageId, message]));
+  const authors = new Set<string>();
+  let said: StreamMessage['role'] | null = null;
+
+  for (const entry of entries) {
+    if (entry.kind === 'message') {
+      const message = byId.get(entry.id);
+
+      if (message !== undefined && isVisible(message)) {
+        if (message.role === 'user' || said !== 'assistant') {
+          authors.add(message.messageId);
+        }
+        said = message.role;
+      }
+    } else if (entry.kind !== 'tool') {
+      said = null;
+    }
+  }
+
+  return authors;
+}
+
 /** One entry of the timeline, drawn as what it is. */
 function Entry({
   entry,
   context,
+  showsAuthor,
 }: {
   readonly entry: TimelineEntry;
   readonly context: TimelineContext;
+
+  /** It is the message that says who speaks in its turn. */
+  readonly showsAuthor: boolean;
 }): React.JSX.Element | null {
   const { conversation } = context;
 
   switch (entry.kind) {
     case 'message': {
       const message = conversation.messages.find((each) => each.messageId === entry.id);
-      return message === undefined ? null : <MessageItem message={message} context={context} />;
+      return message === undefined || !isVisible(message) ? null : (
+        <MessageItem message={message} context={context} showsAuthor={showsAuthor} />
+      );
     }
     case 'tool':
       return <ToolEntry toolUseId={entry.id} context={context} />;
@@ -88,6 +133,7 @@ export function TimelineEntries({
   const entries = context.conversation.timeline.filter(
     (entry) => (parentOfEntry(entry, context) ?? null) === parent,
   );
+  const authors = authorsOf(entries, context.conversation.messages);
 
   return (
     <ul
@@ -95,7 +141,12 @@ export function TimelineEntries({
       aria-label={parent === null ? t('session.screen.conversation') : t('sessions.subagent.label')}
     >
       {entries.map((entry) => (
-        <Entry key={`${entry.kind}:${entry.id}`} entry={entry} context={context} />
+        <Entry
+          key={`${entry.kind}:${entry.id}`}
+          entry={entry}
+          context={context}
+          showsAuthor={entry.kind === 'message' && authors.has(entry.id)}
+        />
       ))}
     </ul>
   );

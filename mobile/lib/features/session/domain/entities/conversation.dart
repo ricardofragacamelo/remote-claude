@@ -254,12 +254,27 @@ class Conversation extends Equatable {
       return this;
     }
 
-    final Conversation past = history.fold(
-      const Conversation(),
-      (Conversation folded, SessionEvent event) => folded._applied(event),
-    );
+    Conversation past = const Conversation();
+    String? since;
+
+    // Each entry of the history says when it was written, and the thinking of the next one is
+    // bounded by it (plan 22, D-14).
+    for (final SessionEvent event in history) {
+      past = past._applied(event, since: since);
+      since = event.writtenAt.isEmpty ? since : event.writtenAt;
+    }
 
     return copyWith(entries: _overlay(past.entries, entries));
+  }
+
+  /// How long, at most, from [since] to [until] — the instants two entries of the history were
+  /// written. `null` without both, and when [until] is the earlier: a prompt that waited in the
+  /// queue is read after the result it predates (S-21), and no duration is below zero (S-106).
+  static Duration? _upperBound(String? since, String until) {
+    final DateTime? from = DateTime.tryParse(since ?? '');
+    final DateTime? to = DateTime.tryParse(until);
+
+    return from == null || to == null || to.isBefore(from) ? null : to.difference(from);
   }
 
   /// [past] with [live] laid over it, by entry id.
@@ -287,14 +302,16 @@ class Conversation extends Equatable {
         (_, final ConversationEntry live?) => live,
       };
 
-  Conversation _applied(SessionEvent event) => switch (event) {
+  /// [event] applied, by its kind. [since] is when the history wrote the entry before it — `null`
+  /// live, where nothing is bounded by it.
+  Conversation _applied(SessionEvent event, {String? since}) => switch (event) {
     // Derived here rather than waiting for a status event: a screen that waited would say
     // "starting" until the first fragment of the first answer arrived.
     SessionOpened() => copyWith(status: SessionStatus.idle, facts: _factsOf(event)),
     SessionStatusReported() => _moved(event),
     ThinkingFragment() => _thinking(event),
     MessageFragment() => _fragment(event),
-    MessageFinished() => _finished(event),
+    MessageFinished() => _finished(event, _upperBound(since, event.writtenAt)),
     ToolInvoked() => _invoked(event),
     ToolOutput() => _changeTool(
       event.toolUseId,
@@ -459,13 +476,16 @@ class Conversation extends Equatable {
   /// that is a tool call adds nothing here, and must not erase the answer before it. A client that
   /// missed a fragment is made whole: the block that finished replaces the fragment that was
   /// streaming it.
-  Conversation _finished(MessageFinished event) {
+  ///
+  /// [atMost] bounds how long its thinking took, when the history dated it and the entry before
+  /// (plan 22, D-14).
+  Conversation _finished(MessageFinished event, Duration? atMost) {
     final Conversation thought = event.thoughts.fold(
       this,
-      (Conversation state, Thought each) => state._thought(event.messageId, each, event.at),
+      (Conversation state, Thought each) => state._thought(event.messageId, each, event.at, atMost),
     );
 
-    if (event.text.isEmpty && !event.isFromUser) {
+    if (event.text.isEmpty && event.images.isEmpty && !event.isFromUser) {
       return thought;
     }
 
@@ -474,7 +494,7 @@ class Conversation extends Equatable {
 
   /// One finished thinking: the one still arriving, completed — or a new one, unless the message
   /// already has it, which is the history and the stream both delivering it.
-  Conversation _thought(String messageId, Thought finished, String at) {
+  Conversation _thought(String messageId, Thought finished, String at, Duration? atMost) {
     final ThinkingEntry? open = _openThinking(messageId);
 
     if (open != null) {
@@ -483,15 +503,13 @@ class Conversation extends Equatable {
           text: finished.text.isEmpty ? null : finished.text,
           isRedacted: finished.isRedacted,
           at: at,
+          blockId: finished.blockId,
         ),
       );
     }
 
     final bool known = entries.whereType<ThinkingEntry>().any(
-      (ThinkingEntry each) =>
-          each.messageId == messageId &&
-          each.text == finished.text &&
-          each.isRedacted == finished.isRedacted,
+      (ThinkingEntry each) => _sameThought(each, messageId, finished),
     );
 
     return known
@@ -503,8 +521,23 @@ class Conversation extends Equatable {
               text: finished.text,
               isComplete: true,
               isRedacted: finished.isRedacted,
+              blockId: finished.blockId,
+              atMost: atMost,
             ),
           );
+  }
+
+  /// Whether a thinking already here is [finished] arriving again: by identity when both carry one —
+  /// two thinkings the model did not show are equal and still two (plan 22, S-35) —, and by message,
+  /// text and redaction when either comes from a server older than it (S-37).
+  static bool _sameThought(ThinkingEntry each, String messageId, Thought finished) {
+    if (each.blockId != null && finished.blockId != null) {
+      return each.blockId == finished.blockId;
+    }
+
+    return each.messageId == messageId &&
+        each.text == finished.text &&
+        each.isRedacted == finished.isRedacted;
   }
 
   /// The text block that finished, added to its message once.
@@ -518,14 +551,32 @@ class Conversation extends Equatable {
             .firstOrNull ??
         StreamMessage(messageId: event.messageId, isFromUser: event.isFromUser);
 
-    final bool known = message.streaming == null && message.blocks.contains(event.text);
+    // A prompt of only an image has no text to add: its marker is what is drawn (S-121).
+    final bool known =
+        _knownText(message, event) || (event.text.isEmpty && event.images.isNotEmpty);
     final StreamMessage whole = StreamMessage(
       messageId: message.messageId,
       blocks: known ? message.blocks : <String>[...message.blocks, event.text],
       isFromUser: event.isFromUser,
+      blockIds: known ? message.blockIds : <String>[...message.blockIds, ...event.textBlockIds],
+      images: <PromptImage>[
+        ...message.images,
+        for (final PromptImage image in event.images)
+          if (!message.images.contains(image)) image,
+      ],
     );
 
     return stopped._withEntry(whole);
+  }
+
+  /// Whether the text that finished is already in the message: by identity when the server named its
+  /// blocks (plan 22, S-36), and by its text otherwise (S-37).
+  static bool _knownText(StreamMessage message, MessageFinished event) {
+    if (event.textBlockIds.isNotEmpty && message.blockIds.isNotEmpty) {
+      return event.textBlockIds.every(message.blockIds.contains);
+    }
+
+    return message.streaming == null && message.blocks.contains(event.text);
   }
 
   /// A tool starting — or **starting again**, when the replay re-delivers it (S-78): in its place,
@@ -536,6 +587,7 @@ class Conversation extends Equatable {
       toolName: event.toolName,
       input: event.input,
       isSubagent: event.isSubagent,
+      title: event.title,
     ),
   );
 

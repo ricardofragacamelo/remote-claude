@@ -3,7 +3,7 @@ import type {
   PermissionVerdict,
   SessionPermissionGate,
 } from '@application/session';
-import type { SessionId } from '@domain/session';
+import type { PermissionMode, SessionId } from '@domain/session';
 
 /**
  * The gate, answering whatever the test tells it to.
@@ -15,6 +15,7 @@ import type { SessionId } from '@domain/session';
 export class StubPermissionGate implements SessionPermissionGate {
   readonly asked: PermissionQuestion[] = [];
   readonly forgotten: string[] = [];
+  readonly modes: { readonly sessionId: string; readonly mode: PermissionMode }[] = [];
 
   constructor(private verdict: PermissionVerdict = { decision: 'allow', reason: null }) {}
 
@@ -30,6 +31,11 @@ export class StubPermissionGate implements SessionPermissionGate {
 
   forget(sessionId: SessionId): void {
     this.forgotten.push(sessionId.value);
+  }
+
+  modeChanged(sessionId: SessionId, mode: PermissionMode): Promise<void> {
+    this.modes.push({ sessionId: sessionId.value, mode });
+    return Promise.resolve();
   }
 
   /** The tools it was consulted about, in order. */

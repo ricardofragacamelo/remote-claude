@@ -14,7 +14,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 
 ## Panorama
 
-**Última atualização:** 2026-10-05
+**Última atualização:** 2026-10-08
 
 ```
 00-bootstrap             ████████████████████ 100%   ✅ concluído
@@ -39,7 +39,9 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 19-distribution          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 20-dev-public            █████████████████░░░  86%   🔄 em andamento
 21-rich-previews         █░░░░░░░░░░░░░░░░░░░   4%   🔄 em andamento
-22-live-history          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+22-live-history          ████████████████████ 100%   ✅ concluído
+23-fluid-permissions     ████████████████████ 100%   ✅ concluído
+24-structured-questions  ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 ```
 
 ---
@@ -72,8 +74,10 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [19 — Distribuição](19-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/8 | 🔲 |
 | [20 — Dev public](20-dev-public/README.md) | 0/1 | 6/7 | 38/41 | 8/8 | 🔄 |
 | [21 — Rich previews](21-rich-previews/README.md) | 0/5 | 1/23 | 2/74 | 15/15 | 🔄 |
-| [22 — Histórico ao vivo](22-live-history/README.md) | 0/8 | 0/37 | 0/130 | 17/17 | 🔲 |
-| **Total** | **77/132** | **452/799** | **1748/3278** | **316/397** | 🔄 |
+| [22 — Histórico ao vivo](22-live-history/README.md) | 8/8 | 37/37 | 130/130 | 18/18 | ✅ |
+| [23 — Permissões fluidas](23-fluid-permissions/README.md) | 6/6 | 19/19 | 100/100 | 14/14 | ✅ |
+| [24 — Perguntas estruturadas](24-structured-questions/README.md) | 0/7 | 0/25 | 0/111 | 22/27 | 🔲 |
+| **Total** | **91/145** | **508/843** | **1978/3489** | **353/439** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -90,7 +94,8 @@ Em andamento: o [17](17-devices/README.md) (a F3 — o celular fica sabendo que 
 feita), o [20](20-dev-public/README.md) (a F0 espera a verificação à mão da B-06), o
 [21](21-rich-previews/README.md) (a B-03 entrou antes do plano), e o [12](12-integrated-terminal/README.md)
 e o [15](15-rules-management/README.md), que têm cenários escritos e nenhuma tarefa. Não iniciados: 11,
-13, 14, 16, 18, 19 e o [22](22-live-history/README.md), criado em 2026-10-04. Cada marco está no
+13, 14, 16, 18, 19, o [22](22-live-history/README.md), criado em 2026-10-04, e o
+[23](23-fluid-permissions/README.md), criado em 2026-10-07, e o [24](24-structured-questions/README.md), criado em 2026-10-08. Cada marco está no
 [histórico](#histórico); os parágrafos abaixo são o relato de quando cada um dos primeiros planos fechou.
 
 Em 2026-09-30 o [plano 06](06-workbench/README.md) fechou, e em 2026-10-01 o
@@ -285,6 +290,8 @@ empacota o que todos eles entregam, e por isso é o último:
 | [20 — Dev public](20-dev-public/README.md) | abrir o `pnpm dev` atrás de um túnel HTTPS, num domínio só, e usar o web e o app de fora desta máquina | 05 |
 | [21 — Rich previews](21-rich-previews/README.md) | ler PDF como num leitor de verdade, e markdown com tabelas largas e diagramas `mermaid` | 07 |
 | [22 — Histórico ao vivo](22-live-history/README.md) | ver ao vivo, no web e no app, a conversa conduzida em outro cliente, como o Claude Code a mostra | 04 |
+| [23 — Permissões fluidas](23-fluid-permissions/README.md) | parar de responder a mesma pergunta: Permitir tudo no chip da sessão, e regras que alcançam mais do que o comando exato | 03, 09, 10 |
+| [24 — Perguntas estruturadas](24-structured-questions/README.md) | responder, no web e no app, as perguntas que o Claude faz com `AskUserQuestion` — escolha única, múltipla e "Outro" —, e o Claude receber as respostas | 03, 09, 10, 22, 23 |
 
 ---
 
@@ -313,6 +320,7 @@ O que está em aberto **hoje** é a tabela gerada abaixo — uma linha por plano
 | [17-devices](17-devices/decisions.md) | D-01…D-12 | 12 |
 | [18-logs-and-diagnostics](18-logs-and-diagnostics/decisions.md) | D-02…D-10, D-12…D-16 | 14 |
 | [19-distribution](19-distribution/decisions.md) | D-02, D-03, D-06…D-08 | 5 |
+| [24-structured-questions](24-structured-questions/decisions.md) | D-04, D-07, D-08, D-11, D-15 | 5 |
 <!-- open-decisions:end -->
 
 Este é o recorte do que **trava** trabalho. A lista inteira, por fase e com o gap de
@@ -363,6 +371,10 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-10-08 | **Plano 22 — Histórico ao vivo concluído** (F0…F7) | 37/37 tarefas e 130 cenários. O leitor do web e do app acompanha, ao vivo, a conversa conduzida em outro cliente (assinatura `transcript.follow` com sondagem compartilhada no backend, "N novas", "trabalhando em outro cliente…", reset na cadeia reescrita) e a mostra como o Claude Code: pensamento rotulado e "até N s", autor por turno, título e IN/OUT da ferramenta com a saída completa sob demanda, imagem do prompt. `pnpm verify:full` com os onze portões verdes (e2e do web incluído) e `pnpm test:e2e:mobile` 32/32. No caminho, três defeitos fora do plano, corrigidos com teste: a corrida de duas respostas ao mesmo pedido de permissão e a janela da `PermissionBridge` (plano 23), o `<pre>` de saída sem alcance pelo teclado (F5), e a recusa de renovação que escapava pelo `DeviceController` do app (05·S-79, exposta pelo card do plano 23); e o par `@modelcontextprotocol/sdk` do Agent SDK passou a ser declarado pelo backend (GHSA-6qxp-vccf-f47h) |
+| 2026-10-08 | **Plano 24 — Perguntas estruturadas criado** | a partir da [proposta](../propostas/perguntas-estruturadas.md), por pedido do usuário: o `AskUserQuestion` aparecia como permissão genérica, com o JSON, e qualquer resposta deixava o Claude com "The user did not answer the questions." O plano normaliza a pergunta no backend (`interaction`), responde por id, valida antes do SDK, e tira as perguntas do alcance das regras de allow — que o alcance "a tool inteira" do plano 23 deixava gravar com um toque |
+| 2026-10-07 | **Plano 23 — Permissões fluidas concluído** (19/19 tarefas, 100/100 cenários) | Permitir tudo no chip da sessão, no web e no app, e o alcance das regras (prefixo, linha composta, tool inteira). Unitários, integração e os e2e do web e do app verdes; o `pnpm verify:full` da árvore ainda reprova por trabalho em andamento do plano 22 (`contracts-guards.spec.mjs`, `.env.example`, `failure_messages.dart`) — ver o [diário do plano](23-fluid-permissions/progress.md) |
+| 2026-10-07 | **Plano 23 — Permissões fluidas criado** | por pedido do usuário: web e mobile perguntavam o tempo todo, apesar das aprovações e regras. As 11 regras gravadas eram a linha exata e nunca voltaram a casar. O plano traz o modo Permitir tudo no chip da sessão (um modo nosso, o SDK continua em `default`, [ADR-022](../architecture/shared/00-decisions.md)) e o alcance das regras (prefixo, linha composta, tool inteira) |
 | 2026-10-05 | **Plano 10 — Layout do chat no app concluído** (F10, o e2e) | 48/48 tarefas e 177 de 178 cenários — a S-140, o APK num celular de verdade pelo cabo, é verificação manual que fica com o usuário; `pnpm test:e2e:mobile` 28/28 em duas rodadas seguidas e `pnpm verify:full` verde. Três suítes novas no emulador: o endereço de conexão (com a troca para outra origem da mesma stack, que a stack do e2e passou a aceitar), as pastas e sessões com o navegador como segundo cliente, e o layout do chat em 360×640 com teclado, em 200 % e nas diretrizes de acessibilidade. O e2e achou e a F10 corrigiu cinco defeitos do app — o `ApiClient` refeito no meio de um build depois de trocar de endereço, o replay perdido da sessão aberta pelo próprio app (sem pasta, modelo, modo e às vezes o primeiro prompt), a pílula que media um card descartado, o chip do modo espremido na barra e o "Encerrar" que tirava a tela da sessão — e dois de acessibilidade. Duas decisões do agente esperam o usuário: D-30 e D-31 |
 | 2026-10-04 | **Plano 22 — Histórico ao vivo criado** | a partir da [proposta](../propostas/historico-ao-vivo-e-fiel.md): tudo o que o Claude Code mostra de uma conversa chega ao vivo ao web e ao app, mesmo conduzida em outro cliente, e como ele mostra. 8 fases, 37 tarefas, 130 cenários e 17 decisões, respondidas na criação |
 | 2026-10-04 | **Plano 10 ganhou as pastas e sessões do web (F7…F9) e a instalação por USB (F6); o E2E voltou a ser a última fase (F10)** | por pedido do usuário: várias pastas abertas (as mesmas abas do web), a tela da pasta e várias sessões com um painel que troca entre elas; e `pnpm mobile:install`, o APK de debug no celular do cabo com os endereços da rede e do `pnpm dev:public`. As fases entraram antes do E2E, que foi renumerado para o fim; F6…F9 concluídas na mesma data |

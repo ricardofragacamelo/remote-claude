@@ -2,6 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/features/session/domain/usecases/list_live_sessions.dart';
+import 'package:remote_claude/features/session/data/datasources/transcript_follow_ws_data_source.dart';
+import 'package:remote_claude/features/session/domain/repositories/transcript_follow_repository.dart';
+import 'package:remote_claude/features/session/domain/usecases/follow_transcript.dart';
+import 'package:remote_claude/features/session/data/datasources/transcript_content_api_data_source.dart';
+import 'package:remote_claude/features/session/domain/repositories/transcript_content_repository.dart';
+import 'package:remote_claude/features/session/domain/usecases/read_transcript_content.dart';
+import 'package:remote_claude/features/session/domain/repositories/insight_repository.dart';
+import 'package:remote_claude/features/session/domain/usecases/read_insight.dart';
 import 'package:remote_claude/features/session/domain/repositories/live_session_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:remote_claude/app/bootstrap.dart';
@@ -173,6 +181,20 @@ void main() {
     expect(container.read(listCheckpointsProvider), isA<ListCheckpoints>());
     expect(container.read(liveSessionRepositoryProvider), isA<LiveSessionRepository>());
     expect(container.read(listLiveSessionsProvider), isA<ListLiveSessions>());
+    expect(
+      container.read(transcriptFollowWsDataSourceProvider),
+      isA<TranscriptFollowWsDataSource>(),
+    );
+    expect(container.read(transcriptFollowRepositoryProvider), isA<TranscriptFollowRepository>());
+    expect(container.read(followTranscriptProvider), isA<FollowTranscript>());
+    expect(
+      container.read(transcriptContentApiDataSourceProvider),
+      isA<TranscriptContentApiDataSource>(),
+    );
+    expect(container.read(transcriptContentRepositoryProvider), isA<TranscriptContentRepository>());
+    expect(container.read(readTranscriptContentProvider), isA<ReadTranscriptContent>());
+    expect(container.read(insightRepositoryProvider), isA<InsightRepository>());
+    expect(container.read(readInsightProvider), isA<ReadInsight>());
   });
 
   test('the transcript feature assembles end to end', () {

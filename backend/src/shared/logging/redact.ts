@@ -80,11 +80,14 @@ export function omitting(value: unknown, fields: readonly string[]): unknown {
 /**
  * What a frame of a given type carries that never reaches a log, though no name gives it away: the
  * text the person handed over as the context of a prompt — the output of a terminal — goes to Claude
- * and to no line of ours (plan 08, S-204). Each is replaced by the marker, so the line still says it
- * was there and how the frame was shaped.
+ * and to no line of ours (plan 08, S-204); and the entries of a conversation followed from the history
+ * — the history is the user's, and its log line says how many events went and of which types, never
+ * what they say (plan 22, S-72). Each is replaced by the marker, so the line still says it was there
+ * and how the frame was shaped.
  */
 const FRAME_CONTENT: Readonly<Record<string, { readonly list: string; readonly field: string }>> = {
   'session.prompt': { list: 'attachments', field: 'content' },
+  'transcript.appended': { list: 'events', field: 'payload' },
 };
 
 /** The payload of a frame of `type`, with what {@link FRAME_CONTENT} keeps out of the log replaced. */

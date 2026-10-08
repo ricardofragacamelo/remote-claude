@@ -18,6 +18,12 @@ export interface SettlementOptions {
    * put a card on screen only to take it away again.
    */
   readonly announce: boolean;
+
+  /**
+   * The patterns a `session` answer leaves a rule for, one each — the reach the person chose
+   * (plan 23, B-10). Absent, the `exact` pattern of the invocation, as before reaches existed.
+   */
+  readonly sessionPatterns?: readonly string[];
 }
 
 /**
@@ -63,7 +69,7 @@ export class PermissionSettlement {
     }
 
     this.registry.disarm(request.id);
-    this.rememberRule(request, answer);
+    this.rememberRules(request, answer, options.sessionPatterns);
 
     await this.requests.update(request);
 
@@ -80,38 +86,43 @@ export class PermissionSettlement {
   }
 
   /**
-   * Turns a `session`-scoped answer into a rule, when one can honestly be written.
+   * Turns a `session`-scoped answer into rules, when they can honestly be written — one per
+   * pattern of the reach that was chosen.
    *
-   * Two things stop it, and both fall back to a one-off rather than widening. An input with no
-   * field a pattern can name would only produce a **whole-tool** rule, which is far more than
-   * what was approved; and a value that would make the pattern read back as something else is a
-   * rule that means one thing to us and another to the SDK.
+   * With no reach chosen, the `exact` pattern; and when there is none either, nothing, rather than
+   * widening. An input with no field a pattern can name would only produce a **whole-tool** rule,
+   * which is far more than what was approved — unless the person chose the `tool` reach, which is
+   * exactly that, said in full on the card.
    */
-  private rememberRule(request: PermissionRequest, answer: PermissionAnswer): void {
+  private rememberRules(
+    request: PermissionRequest,
+    answer: PermissionAnswer,
+    chosen: readonly string[] | undefined,
+  ): void {
     if (answer.scope !== 'session' || answer.resolvedBy === null) {
       return;
     }
 
-    const pattern = patternForInvocation(request.toolName, request.input);
-    if (pattern === null) {
-      return;
-    }
+    const exact = patternForInvocation(request.toolName, request.input);
+    const patterns = chosen ?? (exact === null ? [] : [exact]);
 
-    this.registry.addRule(
-      PermissionRule.create(
-        {
-          id: this.ids.next(),
-          userId: answer.resolvedBy,
-          sessionId: request.sessionId,
-          projectPath: null,
-          pattern,
-          decision: answer.decision,
-          scope: 'session',
-          createdAt: answer.at,
-          expiresAt: new Date(answer.at.getTime() + this.settings.ruleLifetimeMs),
-        },
-        this.settings.ruleLifetimeMs,
-      ),
-    );
+    for (const pattern of patterns) {
+      this.registry.addRule(
+        PermissionRule.create(
+          {
+            id: this.ids.next(),
+            userId: answer.resolvedBy,
+            sessionId: request.sessionId,
+            projectPath: null,
+            pattern,
+            decision: answer.decision,
+            scope: 'session',
+            createdAt: answer.at,
+            expiresAt: new Date(answer.at.getTime() + this.settings.ruleLifetimeMs),
+          },
+          this.settings.ruleLifetimeMs,
+        ),
+      );
+    }
   }
 }

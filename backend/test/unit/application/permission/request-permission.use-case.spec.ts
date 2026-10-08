@@ -89,18 +89,63 @@ describe('RequestPermissionUseCase', () => {
       expect(offered[1]).not.toHaveProperty('lifetimeMs');
     });
 
-    it.each([
-      ['nothing a pattern can name', { note: 'x' }],
-      ['a value that would read back as another pattern', { command: 'echo )' }],
-    ])('offers only the ephemeral scopes for %s — S-64', async (_case, input) => {
+    it('offers only the ephemeral scopes for a shell call with nothing a pattern can name — S-64', async () => {
       // Answering with `project` or `always` would be refused (S-58); offering a button the server
       // refuses is worse than not offering it.
-      await harness.request.execute(aPermissionQuestion({ input }));
+      await harness.request.execute(aPermissionQuestion({ input: { note: 'x' } }));
 
       expect(scopesOffered(harness).map((suggestion) => suggestion['scope'])).toEqual([
         'once',
         'session',
       ]);
+      expect(harness.broadcaster.last('permission.requested')).toMatchObject({ reaches: [] });
+    });
+
+    it('offers the persisted scopes by prefix when the exact pattern would read back wrong — plan 23, S-53', async () => {
+      // `Bash(echo ))` is not a pattern; `Bash(echo:*)` is, and it is the only reach there is. The
+      // suggestions carry no `pattern`, so a client that only knows `pattern` does not offer them.
+      await harness.request.execute(aPermissionQuestion({ input: { command: 'echo )' } }));
+
+      const offered = scopesOffered(harness);
+      expect(offered.map((suggestion) => suggestion['scope'])).toEqual([
+        'once',
+        'session',
+        'project',
+        'always',
+      ]);
+      expect(offered[3]).not.toHaveProperty('pattern');
+      expect(harness.broadcaster.last('permission.requested')).toMatchObject({
+        reaches: [{ reach: 'prefix', patterns: ['Bash(echo:*)'] }],
+      });
+    });
+
+    it('sends every reach of the invocation, computed by the server — plan 23, S-55', async () => {
+      await harness.request.execute(
+        aPermissionQuestion({ input: { command: 'git push 2>&1 | tail -5' } }),
+      );
+
+      expect(harness.broadcaster.last('permission.requested')).toMatchObject({
+        reaches: [
+          { reach: 'exact', patterns: ['Bash(git push 2>&1 | tail -5)'] },
+          { reach: 'prefix', patterns: ['Bash(git push:*)', 'Bash(tail:*)'] },
+        ],
+      });
+    });
+
+    it('offers the persisted scopes for a tool known only by name — plan 23, S-55', async () => {
+      await harness.request.execute(
+        aPermissionQuestion({ toolName: 'WebSearch', input: { query: 'vitest' } }),
+      );
+
+      expect(scopesOffered(harness).map((suggestion) => suggestion['scope'])).toEqual([
+        'once',
+        'session',
+        'project',
+        'always',
+      ]);
+      expect(harness.broadcaster.last('permission.requested')).toMatchObject({
+        reaches: [{ reach: 'tool', patterns: ['WebSearch'] }],
+      });
     });
 
     it('leaves `project` out of a request that has no project', async () => {
@@ -230,6 +275,7 @@ describe('RequestPermissionUseCase', () => {
               auto: true,
               resolvedBy: PERMISSION_OWNER.value,
               toolUseId: 'toolu-1',
+              via: 'rule',
             },
           },
         },

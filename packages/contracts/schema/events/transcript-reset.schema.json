@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/transcript-reset.json",
+  "title": "TranscriptReset",
+  "description": "The subscription cannot go on from where the client is, and has ended: nothing more arrives for this `followId`. It carries the next `seq` of the subscription. On `rewritten` the client reads the latest page again and follows from its `lastMessageId`; on `gone` it says the conversation is no longer there.",
+  "x-kind": "event",
+  "x-type": "transcript.reset",
+  "type": "object",
+  "required": ["followId", "conversationId", "reason"],
+  "properties": {
+    "followId": { "type": "string" },
+    "conversationId": { "type": "string" },
+    "reason": {
+      "type": "string",
+      "enum": ["rewritten", "gone"],
+      "description": "`rewritten` — the entry the client had is no longer in the chain: a rewind, a compaction or a fork rebuilt it; `gone` — the store no longer has the conversation."
+    }
+  }
+}

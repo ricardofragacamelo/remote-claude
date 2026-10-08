@@ -73,7 +73,7 @@ describe('a message read back from history — plan 04, B-03', () => {
       payload: {
         messageId: 'u-1',
         role: 'user',
-        content: [{ type: 'text', text: 'continue from here' }],
+        content: [{ type: 'text', blockId: 'u-1:0', text: 'continue from here' }],
       },
     });
   });

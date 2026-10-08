@@ -42,6 +42,11 @@ void main() {
       'session.error.claudeTimeout',
       'session.error.locked',
       'session.error.rewindTargetUnknown',
+      // Plan 22, B-04: following a conversation, and the image of a prompt (S-05, S-81, S-100).
+      'transcript.error.followLimit',
+      'transcript.error.followLiveHere',
+      'transcript.error.imageTypeUnsupported',
+      'transcript.error.imageTooLarge',
     ];
 
     for (final String key in keys) {
@@ -98,6 +103,12 @@ void main() {
           // not put every file back (S-44).
           'session.error.unknownCommand': ('/heapdumb', <String, String>{'command': '/heapdumb'}),
           'session.error.rewindIncomplete': ('2', <String, String>{'failed': '2'}),
+          // Plan 22, B-04: the ceiling of followed conversations, and the image type refused.
+          'transcript.error.followLimit': ('16', <String, String>{'limit': '16'}),
+          'transcript.error.imageTypeUnsupported': (
+            'image/svg+xml',
+            <String, String>{'mediaType': 'image/svg+xml'},
+          ),
         };
 
     cases.forEach((String key, (String, Map<String, String>) expected) {
@@ -135,6 +146,8 @@ void main() {
       'transcript.error.invalidSessionId',
       'session.error.unknownCommand',
       'session.error.rewindIncomplete',
+      'transcript.error.followLimit',
+      'transcript.error.imageTypeUnsupported',
     ]) {
       expect(
         translateFailure(en, ServerFailure(code: 'X', messageKey: key, traceId: 't')),

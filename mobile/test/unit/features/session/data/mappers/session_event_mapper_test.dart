@@ -227,7 +227,13 @@ void main() {
     test('B-05 · a frame of another stream is no event of a session, whatever its seq', () {
       // The watch of a folder numbers its own stream; read as an unknown event of a session, its
       // seq would move the resume point of the session past events it never sent.
-      for (final String type in <String>['workspace.filesChanged', 'workspace.watchStopped']) {
+      // A followed conversation numbers its `followId` the same way (plan 22, B-24).
+      for (final String type in <String>[
+        'workspace.filesChanged',
+        'workspace.watchStopped',
+        'transcript.appended',
+        'transcript.reset',
+      ]) {
         expect(
           read(
             frame(
@@ -539,6 +545,148 @@ void main() {
         read(toolCompleted(toolUseId: 't1', seq: 3, taskId: '7')),
         const ToolFinished(3, toolUseId: 't1', status: ToolStatus.succeeded, taskId: '7'),
       );
+    });
+  });
+
+  group('plan 22, B-13 · the identity of each block', () {
+    test('reads the id of each text and thinking block, and leaves out what has none', () {
+      final SessionEvent? event = historyEventFrom(<String, Object?>{
+        'type': 'message.completed',
+        'payload': <String, Object?>{
+          'messageId': 'm1',
+          'role': 'assistant',
+          'content': <Object?>[
+            <String, Object?>{'type': 'thinking', 'blockId': 'u1:0'},
+            <String, Object?>{'type': 'redacted_thinking', 'blockId': 'u1:1'},
+            <String, Object?>{'type': 'text', 'text': 'A', 'blockId': 'u1:2'},
+            <String, Object?>{'type': 'text', 'text': 'B'},
+          ],
+        },
+      });
+
+      expect(
+        event,
+        const MessageFinished(
+          historySeq,
+          messageId: 'm1',
+          text: 'AB',
+          isFromUser: false,
+          textBlockIds: <String>['u1:2'],
+          thoughts: <Thought>[
+            Thought('', blockId: 'u1:0'),
+            Thought('', isRedacted: true, blockId: 'u1:1'),
+          ],
+        ),
+      );
+    });
+  });
+
+  group('what the Claude Code shows — plan 22, F6', () {
+    test('S-118 · an image block is a marker: its block, type and size — never bytes', () {
+      final SessionEvent? event = historyEventFrom(<String, Object?>{
+        'type': 'message.completed',
+        'payload': <String, Object?>{
+          'messageId': 'u1',
+          'role': 'user',
+          'at': '2026-10-07T12:00:00.000Z',
+          'content': <Object?>[
+            <String, Object?>{'type': 'text', 'text': 'see', 'blockId': 'u1:0'},
+            <String, Object?>{
+              'type': 'image',
+              'blockId': 'u1:1',
+              'mediaType': 'image/png',
+              'size': 48213,
+            },
+            <String, Object?>{'type': 'image', 'size': -1},
+            <String, Object?>{'type': 'image', 'mediaType': 7, 'size': '12'},
+          ],
+        },
+      });
+
+      expect(
+        event,
+        const MessageFinished(
+          historySeq,
+          messageId: 'u1',
+          text: 'see',
+          isFromUser: true,
+          textBlockIds: <String>['u1:0'],
+          images: <PromptImage>[
+            PromptImage(blockId: 'u1:1', mediaType: 'image/png', size: 48213),
+            PromptImage(),
+            PromptImage(),
+          ],
+          writtenAt: '2026-10-07T12:00:00.000Z',
+        ),
+      );
+    });
+
+    test('S-121 · a prompt of only an image reads as a prompt, with no text', () {
+      final MessageFinished prompt =
+          historyEventFrom(<String, Object?>{
+                'type': 'message.completed',
+                'payload': <String, Object?>{
+                  'messageId': 'u1',
+                  'role': 'user',
+                  'content': <Object?>[
+                    <String, Object?>{'type': 'image', 'blockId': 'u1:0'},
+                  ],
+                },
+              })!
+              as MessageFinished;
+
+      expect(prompt.isFromUser, isTrue);
+      expect(prompt.text, isEmpty);
+      expect(prompt.images, const <PromptImage>[PromptImage(blockId: 'u1:0')]);
+    });
+
+    test('S-111 · a call says what it is for when the model said; blank or absent is no title', () {
+      ToolInvoked started(Object? title) =>
+          historyEventFrom(<String, Object?>{
+                'type': 'tool.started',
+                'payload': <String, Object?>{
+                  'toolUseId': 't1',
+                  'toolName': 'Bash',
+                  'input': <String, Object?>{'command': 'pnpm test'},
+                  'title': ?title,
+                },
+              })!
+              as ToolInvoked;
+
+      expect(started('Run the tests').title, 'Run the tests');
+      expect(started('   ').title, isNull);
+      expect(started(null).title, isNull);
+      expect(started(3).title, isNull);
+    });
+
+    test('S-104 · the history dates the entries a duration is read between', () {
+      Map<String, Object?> dated(String raw) => <String, Object?>{
+        ...historyEntry(raw),
+        'payload': <String, Object?>{
+          ...historyEntry(raw)['payload']! as Map<String, Object?>,
+          'at': '2026-10-07T12:00:05.000Z',
+        },
+      };
+
+      expect(
+        historyEventFrom(dated(toolStarted(toolUseId: 't1', seq: 3)))!.writtenAt,
+        '2026-10-07T12:00:05.000Z',
+      );
+      expect(
+        historyEventFrom(dated(toolCompleted(toolUseId: 't1', seq: 4)))!.writtenAt,
+        '2026-10-07T12:00:05.000Z',
+      );
+      expect(
+        historyEventFrom(dated(messageCompleted(messageId: 'm1', text: 'x', seq: 5)))!.writtenAt,
+        '2026-10-07T12:00:05.000Z',
+      );
+    });
+
+    test('S-106 · live, and from a server older than the instants, nothing is dated', () {
+      expect(read(toolStarted(toolUseId: 't1', seq: 3))!.writtenAt, isEmpty);
+      expect(read(toolCompleted(toolUseId: 't1', seq: 4))!.writtenAt, isEmpty);
+      expect(historyEventFrom(historyEntry(toolStarted(toolUseId: 't1', seq: 3)))!.writtenAt, '');
+      expect(read(sessionStarted(sessionId: 'session-1'))!.writtenAt, isEmpty);
     });
   });
 }

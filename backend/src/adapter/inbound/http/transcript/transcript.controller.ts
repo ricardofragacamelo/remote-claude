@@ -1,11 +1,18 @@
-import { Controller, Get, Inject, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject, Param, Query, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 
-import { ListTranscriptsUseCase, ReadTranscriptUseCase } from '@application/transcript';
+import {
+  ListTranscriptsUseCase,
+  ReadPromptImageUseCase,
+  ReadToolResultUseCase,
+  ReadTranscriptUseCase,
+} from '@application/transcript';
 import type { UserId } from '@domain/auth';
 import { ClaudeSessionId } from '@domain/transcript';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
 import {
+  blockIdSchema,
   DEFAULT_PAGE_SIZE,
   listTranscriptsSchema,
   readTranscriptSchema,
@@ -13,6 +20,7 @@ import {
   toSessionListCursor,
   toSubagentPageDto,
   toTranscriptListDto,
+  toToolResultDto,
   toTranscriptPageDto,
   transcriptIdSchema,
 } from './transcript.dto';
@@ -20,6 +28,7 @@ import type {
   ListTranscriptsQueryDto,
   ReadTranscriptQueryDto,
   SubagentPageDto,
+  ToolResultDto,
   TranscriptListDto,
   TranscriptPageDto,
 } from './transcript.dto';
@@ -35,6 +44,7 @@ import type {
  * | `400` | a query this server cannot run: a malformed id or cursor, a page size out of bounds, a cursor whose message is gone (S-69) |
  * | `403` | a `workspacePath` outside the caller's roots (S-73) |
  * | `404` | a conversation that does not exist **or** is not the caller's — the same answer on purpose (S-04, S-56) |
+ * | `413` / `415` | the image of a prompt above the ceiling, or of a type never served (plan 22, D-10) |
  * | `502` / `504` | the Agent SDK failed, or did not answer in time (S-05, S-68) |
  */
 @Controller('transcripts')
@@ -43,6 +53,8 @@ export class TranscriptController {
   constructor(
     @Inject(ListTranscriptsUseCase) private readonly listing: ListTranscriptsUseCase,
     @Inject(ReadTranscriptUseCase) private readonly reading: ReadTranscriptUseCase,
+    @Inject(ReadToolResultUseCase) private readonly results: ReadToolResultUseCase,
+    @Inject(ReadPromptImageUseCase) private readonly images: ReadPromptImageUseCase,
   ) {}
 
   /** The conversations of one workspace, most recently written first. */
@@ -100,5 +112,53 @@ export class TranscriptController {
     });
 
     return toSubagentPageDto(page);
+  }
+
+  /**
+   * The whole output of one tool of the main chain, when its card is unfolded (plan 22, B-11). Cut
+   * above the ceiling, and said to be; `404` for a tool the chain has no result of.
+   */
+  @Get(':sessionId/tools/:toolUseId/result')
+  async readToolResult(
+    @Param('sessionId', new ZodPipe(transcriptIdSchema)) sessionId: string,
+    @Param('toolUseId', new ZodPipe(subagentToolSchema)) toolUseId: string,
+    @CurrentUser() userId: UserId,
+  ): Promise<ToolResultDto> {
+    const output = await this.results.execute({
+      userId,
+      sessionId: ClaudeSessionId.create(sessionId),
+      toolUseId,
+    });
+
+    return toToolResultDto(output);
+  }
+
+  /**
+   * The image a prompt carried, opened on demand (plan 22, B-12). The headers of D-10 go first, so a
+   * refusal carries them too: whatever this route answers is never a document of the product's origin.
+   */
+  @Get(':sessionId/images/:blockId')
+  async readImage(
+    @Param('sessionId', new ZodPipe(transcriptIdSchema)) sessionId: string,
+    @Param('blockId', new ZodPipe(blockIdSchema)) blockId: string,
+    @CurrentUser() userId: UserId,
+    @Res() response: Response,
+  ): Promise<void> {
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.setHeader('Content-Security-Policy', 'sandbox');
+    response.setHeader('Cache-Control', 'private, no-store');
+
+    const image = await this.images.execute({
+      userId,
+      sessionId: ClaudeSessionId.create(sessionId),
+      blockId,
+    });
+    const bytes = Buffer.from(image.data, 'base64');
+
+    response.status(200);
+    response.setHeader('Content-Type', image.mediaType);
+    response.setHeader('Content-Length', String(bytes.length));
+    response.setHeader('Content-Disposition', 'inline');
+    response.end(bytes);
   }
 }

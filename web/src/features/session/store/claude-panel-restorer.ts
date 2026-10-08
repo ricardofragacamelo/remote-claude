@@ -27,7 +27,7 @@ export interface KeptClaudePanel {
   readonly contexts: Readonly<Record<string, readonly ContextItem[]>>;
 }
 
-const MODES: readonly string[] = ['default', 'acceptEdits', 'plan'];
+const MODES: readonly string[] = ['default', 'acceptEdits', 'plan', 'allowAll'];
 const EFFORTS: readonly string[] = ['low', 'medium', 'high', 'xhigh', 'max'];
 
 /** The choices of a draft, as far as they can be trusted: anything unreadable is the default. */

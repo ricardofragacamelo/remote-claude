@@ -201,10 +201,12 @@ describe('the composer of the panel', () => {
       const said = await until(socket, ofType('message.completed'));
       await until(socket, ofType('turn.completed'));
 
+      const messageId = String(said.payload?.['messageId']);
       expect(said.payload).toEqual({
-        messageId: expect.any(String) as unknown,
+        messageId,
         role: 'user',
-        content: [{ type: 'text', text: 'what does it say?' }],
+        // The block under the id the conversation files it under (plan 22, D-06).
+        content: [{ type: 'text', blockId: `${messageId}:0`, text: 'what does it say?' }],
         promptedBy: 'web',
       });
       const stored = await store.getSessionMessages(conversationId);

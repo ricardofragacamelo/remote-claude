@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/responses/transcript-tool-result.json",
+  "title": "TranscriptToolResult",
+  "description": "What `GET /transcripts/:sessionId/tools/:toolUseId/result` answers: the whole output of one tool of a conversation, read from the transcript when a client unfolds the tool — never on the stream, whose `tool.completed.summary` is short on purpose. Over HTTP, but one contract in three languages all the same. An output above the ceiling is not an error: it comes cut, its beginning and its end, with `truncated: true`.",
+  "x-kind": "http",
+  "x-type": "transcript.toolResult",
+  "type": "object",
+  "required": ["text", "truncated", "bytes"],
+  "properties": {
+    "text": {
+      "type": "string",
+      "description": "The output as text — a result made of blocks is their text joined. Cut in the middle when `truncated`."
+    },
+    "truncated": {
+      "type": "boolean",
+      "description": "Whether the output was above the ceiling, and `text` holds only its first and its last part."
+    },
+    "bytes": {
+      "type": "integer",
+      "description": "The size of the whole output, in bytes of UTF-8 — what the screen says was there when it shows a cut."
+    },
+    "cutAt": {
+      "type": "integer",
+      "description": "Where in `text` the first part ends and the last begins, in characters — present only when `truncated`, so the screen can say there what was left out."
+    }
+  }
+}

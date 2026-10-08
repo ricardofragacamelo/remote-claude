@@ -18,6 +18,13 @@ import {
   WorkspaceWatchHandler,
   workspaceUnwatchHandler,
 } from '@adapter/inbound/ws/files/workspace-watch.gateway-handler';
+import { FollowTranscriptUseCase } from '@application/transcript';
+import { ConnectionFollowRelease } from '@adapter/inbound/ws/transcript/connection-follow.release';
+import { SocketFollowSinks } from '@adapter/inbound/ws/transcript/socket-follow.sinks';
+import {
+  TranscriptFollowHandler,
+  transcriptUnfollowHandler,
+} from '@adapter/inbound/ws/transcript/transcript-follow.gateway-handler';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
@@ -30,10 +37,14 @@ import { DiagModule } from './diag.module';
 import { FilesModule } from './files.module';
 import { PermissionModule } from './permission.module';
 import { SessionModule } from './session.module';
+import { TranscriptModule } from './transcript.module';
 import { WebsocketModule } from './websocket.module';
 
 /** DI token of `workspace.unwatch`, a plain contract command. */
 const FILES_UNWATCH_HANDLER = Symbol('workspace.unwatch handler');
+
+/** DI token of `transcript.unfollow`, a plain contract command. */
+const TRANSCRIPT_UNFOLLOW_HANDLER = Symbol('transcript.unfollow handler');
 
 /**
  * The gateway, and the table of commands it routes over.
@@ -48,10 +59,20 @@ const HANDLERS = [
   ...Object.values(PERMISSION_HANDLERS),
   WorkspaceWatchHandler,
   FILES_UNWATCH_HANDLER,
+  TranscriptFollowHandler,
+  TRANSCRIPT_UNFOLLOW_HANDLER,
 ];
 
 @Module({
-  imports: [AuthModule, DiagModule, FilesModule, PermissionModule, SessionModule, WebsocketModule],
+  imports: [
+    AuthModule,
+    DiagModule,
+    FilesModule,
+    PermissionModule,
+    SessionModule,
+    TranscriptModule,
+    WebsocketModule,
+  ],
   providers: [
     {
       // Composed here, where both kinds of session are already in scope: `session.attach` asks
@@ -106,6 +127,40 @@ const HANDLERS = [
       inject: [ConnectionRegistry, FolderWatches, LOGGER],
       useFactory: (registry: ConnectionRegistry, watches: FolderWatches, logger: Logger) =>
         new ConnectionWatchRelease(registry, watches, logger),
+    },
+    {
+      // The stream of a followed conversation: one sink per `followId`, numbering its own `seq`
+      // (plan 22, B-17).
+      provide: SocketFollowSinks,
+      inject: [ConnectionRegistry, FrameBuilder, SessionHub, LOGGER],
+      useFactory: (
+        registry: ConnectionRegistry,
+        frames: FrameBuilder,
+        hub: SessionHub,
+        logger: Logger,
+      ) => new SocketFollowSinks({ registry, frames, hub, logger }),
+    },
+    {
+      provide: TranscriptFollowHandler,
+      inject: [FollowTranscriptUseCase, SocketFollowSinks, LOGGER],
+      useFactory: (follower: FollowTranscriptUseCase, sinks: SocketFollowSinks, logger: Logger) =>
+        new TranscriptFollowHandler(follower, sinks, logger),
+    },
+    {
+      provide: TRANSCRIPT_UNFOLLOW_HANDLER,
+      inject: [FollowTranscriptUseCase, LOGGER],
+      useFactory: (follower: FollowTranscriptUseCase, logger: Logger) =>
+        transcriptUnfollowHandler(follower, logger),
+    },
+    {
+      // A socket that goes takes the conversations it followed with it, whatever closed it (S-67).
+      provide: ConnectionFollowRelease,
+      inject: [ConnectionRegistry, FollowTranscriptUseCase, LOGGER],
+      useFactory: (
+        registry: ConnectionRegistry,
+        follower: FollowTranscriptUseCase,
+        logger: Logger,
+      ) => new ConnectionFollowRelease(registry, follower, logger),
     },
     {
       provide: WS_COMMAND_HANDLERS,

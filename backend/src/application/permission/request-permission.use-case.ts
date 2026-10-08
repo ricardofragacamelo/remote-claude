@@ -7,11 +7,10 @@ import type { PermissionBroadcaster } from './ports/permission-broadcaster.port'
 import type { PermissionEvents } from './ports/permission-events.port';
 import type { PermissionRequestRepository } from './ports/permission-request.repository';
 import { requestedPayload } from './permission-payloads';
+import type { PermissionAutoAnswer } from './permission-auto-answer';
 import type { PermissionDeadlines } from './permission-deadlines';
 import type { PermissionRegistry } from './permission-registry';
-import type { PermissionRuleBook } from './permission-rule-book';
 import type { PermissionSettings } from './permission-settings';
-import type { PermissionSettlement } from './settle-permission';
 
 /** Either the question is already answered, or it is now on somebody's screen. */
 export type PermissionOutcome =
@@ -19,25 +18,17 @@ export type PermissionOutcome =
   | { readonly kind: 'pending'; readonly request: PermissionRequest };
 
 /**
- * What a shell refusal says to Claude when a rule is what refused it.
- *
- * English and technical on purpose: it is not shown to a person, it is handed to the model so it
- * can propose something else instead of retrying the same command. The prose a human reads comes
- * from a `messageKey`, and this is not that.
- */
-const DENIED_BY_RULE = 'denied by a permission rule the user granted earlier';
-
-/**
  * The four steps `canUseTool` takes, in the one order that is safe.
  *
  * 1. **idempotency.** The SDK redelivers a pending call after a transport gap, and a request id it
  *    has seen before gets the answer it already has — never a second question and never a second
  *    execution;
- * 2. **a rule answers without disturbing anybody.** Somebody who said "for this session", "in this
- *    project" or "always" is not asked again, and no push goes out. What **is** published is the
- *    resolution, with `auto: true`: the person has to be able to see that something was
- *    authorised in their name. The rules are read on every request, so a revoked one stops
- *    answering at once — in a session that is already running, too;
+ * 2. **a rule or Permitir tudo answers without disturbing anybody** ({@link PermissionAutoAnswer}).
+ *    Somebody who said "for this session", "in this project" or "always", or who switched the
+ *    session to Permitir tudo, is not asked again, and no push goes out. What **is** published is
+ *    the resolution, with `auto: true` and a `via`: the person has to be able to see that something
+ *    was authorised in their name. The rules and the mode are read on every request, so a revoked
+ *    rule or a mode switched off stops answering at once — in a session that is already running, too;
  * 3. **the question is recorded and published**, in that order, so a request nobody can account
  *    for afterwards cannot reach a screen;
  * 4. **the deadline is armed**, and only then is the fact published for whoever is not looking.
@@ -51,8 +42,7 @@ export class RequestPermissionUseCase {
   constructor(
     private readonly registry: PermissionRegistry,
     private readonly requests: PermissionRequestRepository,
-    private readonly rules: PermissionRuleBook,
-    private readonly settlement: PermissionSettlement,
+    private readonly autoAnswer: PermissionAutoAnswer,
     private readonly deadlines: PermissionDeadlines,
     private readonly broadcaster: PermissionBroadcaster,
     private readonly events: PermissionEvents,
@@ -88,45 +78,9 @@ export class RequestPermissionUseCase {
     this.registry.add(request);
     await this.requests.open(request);
 
-    const rule = await this.rules.answering(request.id, {
-      subject: {
-        userId: command.userId,
-        sessionId: command.sessionId,
-        projectPath: command.projectPath,
-      },
-      toolName: command.toolName,
-      input: command.input,
-      permissionMode: command.permissionMode,
-      now,
-    });
-
-    // Reading the rules is the one wait between recording the question and asking it, and the
-    // request is already in the registry by then — so something may have settled it meanwhile.
-    // Asking a question that is already answered would arm a deadline over it and put a dead card
-    // on screen; the answer it already has is the outcome.
-    if (!request.isPending) {
-      return outcomeOf(request);
-    }
-
-    if (rule !== null) {
-      // Announced, and never asked: there is no card and no push, but there is a
-      // `permission.resolved` with `auto: true` for every screen watching. A rule is an
-      // authorisation given in advance, and the person it acts for has to be able to see it act.
-      await this.settlement.settle(
-        request,
-        {
-          decision: rule.decision,
-          reason: rule.decision === 'deny' ? DENIED_BY_RULE : null,
-          scope: rule.scope,
-          resolvedBy: rule.userId,
-          resolvedFrom: null,
-          auto: true,
-          ruleId: rule.id,
-          at: now,
-        },
-        { announce: true },
-      );
-
+    // The mode as it is **now** — it can change while the session runs, and Permitir tudo switched
+    // off has to stop answering at the very next tool.
+    if (await this.autoAnswer.tryAnswer(request, command.permissionMode, now)) {
       return outcomeOf(request);
     }
 

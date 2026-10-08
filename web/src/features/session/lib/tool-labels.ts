@@ -6,6 +6,13 @@ export interface ToolLabel {
   /** One of `sessions.tool.*`. */
   readonly key: string;
   readonly params: Readonly<Record<string, string | number>>;
+
+  /**
+   * The label the tool would have without its title — "Bash: pnpm test" under "Bash · Run the
+   * tests" —, so the accessible name still says the command (plan 22, B-29). Absent when the label
+   * is that one already.
+   */
+  readonly detail?: ToolLabel;
 }
 
 /** A string field of the input, or `''`. */
@@ -159,12 +166,34 @@ function mcpOf(name: string): { readonly server: string; readonly tool: string }
  * "Read src/x.ts", "Edit src/x.ts (+3 −1)", "Bash: pnpm test". An MCP tool says its server and its
  * tool; one this build does not know says its name. The exact input is a click away, always.
  *
+ * With the description the model gave the call (`title`, plan 22, D-05), the line is the tool and that
+ * description — "Bash · Run the tests" —, as the Claude Code shows it. A subagent keeps its own line,
+ * which says the description already, and its kind besides.
+ *
  * @param absorbed the calls of the list tools the task list read — any other one says its name
  */
 export function toolLabel(
-  tool: Pick<ToolExecution, 'toolUseId' | 'toolName' | 'input'>,
+  tool: Pick<ToolExecution, 'toolUseId' | 'toolName' | 'input' | 'title'>,
   folder: string,
   absorbed: ReadonlySet<string> = new Set(),
+): ToolLabel {
+  const plain = untitledLabel(tool, folder, absorbed);
+
+  if (tool.title === undefined || opensSubagent(tool.toolName)) {
+    return plain;
+  }
+
+  const mcp = mcpOf(tool.toolName);
+  const name = mcp === null ? tool.toolName : `${mcp.server} · ${mcp.tool}`;
+
+  return { key: 'sessions.tool.titled', params: { name, title: tool.title }, detail: plain };
+}
+
+/** The line of a tool by what it is and its input — the one it has with no title. */
+function untitledLabel(
+  tool: Pick<ToolExecution, 'toolUseId' | 'toolName' | 'input'>,
+  folder: string,
+  absorbed: ReadonlySet<string>,
 ): ToolLabel {
   const labeller = LABELLERS.get(tool.toolName);
   // A call of the list the list could not read — out of the format, of a task it does not have —

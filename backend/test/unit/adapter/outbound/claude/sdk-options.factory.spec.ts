@@ -108,6 +108,14 @@ describe('buildSdkOptions', () => {
     expect(buildSdkOptions(input({ permissionMode: 'plan' })).permissionMode).toBe('plan');
   });
 
+  it('opens Permitir tudo as `default`, with the approval still on — plan 23, S-06', () => {
+    // The mode is ours: the CLI keeps calling `canUseTool`, and nothing skips it.
+    const options = buildSdkOptions(input({ permissionMode: 'allowAll' }));
+
+    expect(options.permissionMode).toBe('default');
+    expect(options.allowDangerouslySkipPermissions).toBe(false);
+  });
+
   describe('what it leaves out when it was given nothing', () => {
     it('omits the model, so the installation default applies', () => {
       expect('model' in buildSdkOptions(input())).toBe(false);

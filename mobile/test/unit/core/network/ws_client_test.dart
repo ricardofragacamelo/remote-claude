@@ -727,6 +727,33 @@ void main() {
 
       expect(client.status, ConnectionStatus.ready);
     });
+
+    test(
+      'plan 22 · the ack of a follow reaches whoever sent it, and the ack of a watch does not',
+      () async {
+        await connectAndHandshake();
+        final List<String> observed = <String>[];
+        client.observe((Envelope frame) => observed.add(frame.type));
+
+        socket()
+          ..deliver(
+            frame(
+              kind: 'ack',
+              type: 'transcript.following',
+              correlationId: 'cmd-1',
+              payload: <String, Object?>{
+                'followId': 't-1',
+                'conversationId': 'conv-1',
+                'activity': 'idle',
+              },
+            ),
+          )
+          ..deliver(frame(kind: 'ack', type: 'workspace.watching', correlationId: 'cmd-2'));
+        await settle();
+
+        expect(observed, <String>['transcript.following']);
+      },
+    );
   });
 
   group('after being rate limited — plan 05, B-05', () {

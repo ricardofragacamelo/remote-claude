@@ -12,7 +12,8 @@
     "listItems": 4,
     "tools": {
       "read": "Read \\S*notes\\.md",
-      "bash": "Bash: ls",
+      "bash": "Bash · List files in current directory (Bash: ls)",
+      "bashCommand": "ls",
       "write": "Write \\S*summary\\.md \\(2 lines\\)"
     },
     "wrote": "The project has two goals: safety and speed.",

@@ -92,6 +92,7 @@ class PermissionQueueController extends _$PermissionQueueController {
     PermissionScope scope, {
     required String lockReason,
     String? reason,
+    RuleReachKind? reach,
   }) async {
     switch (state.stepFor(requestId, decision, scope)) {
       case AnswerStep.ignored:
@@ -112,7 +113,7 @@ class PermissionQueueController extends _$PermissionQueueController {
         ? await _unlock(requestId, lockReason)
         : null;
 
-    return stopped ?? _send(requestId, decision, scope, reason);
+    return stopped ?? _send(requestId, decision, scope, reason, reach);
   }
 
   /// Asks the owner of the phone to confirm it is them, before a yes on [requestId] leaves.
@@ -143,6 +144,7 @@ class PermissionQueueController extends _$PermissionQueueController {
     PermissionDecision decision,
     PermissionScope scope,
     String? reason,
+    RuleReachKind? reach,
   ) {
     // Read again after the prompt: the request may have been answered elsewhere while the owner
     // was touching the sensor, and a reconnect may have re-delivered it under another frame.
@@ -153,13 +155,16 @@ class PermissionQueueController extends _$PermissionQueueController {
 
     final bool left =
         _feed?.answer(
-          frameId: frameId,
-          requestId: requestId,
-          decision: decision,
-          scope: scope,
-          reason: decision == PermissionDecision.deny
-              ? (reason == null || reason.trim().isEmpty ? refusedFromThePhone : reason.trim())
-              : null,
+          OutgoingAnswer(
+            frameId: frameId,
+            requestId: requestId,
+            decision: decision,
+            scope: scope,
+            reason: decision == PermissionDecision.deny
+                ? (reason == null || reason.trim().isEmpty ? refusedFromThePhone : reason.trim())
+                : null,
+            reach: reach,
+          ),
         ) ??
         false;
 

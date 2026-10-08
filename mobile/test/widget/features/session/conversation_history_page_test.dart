@@ -1,4 +1,5 @@
-/// One conversation of the history: the four states, the earlier pages, the cache — and resuming.
+/// One conversation of the history: the four states, the earlier pages, the cache, resuming — and
+/// following it while another client writes it (plan 22, B-26).
 library;
 
 import 'dart:async';
@@ -14,7 +15,9 @@ import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/features/session/domain/entities/history_page.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
+import 'package:remote_claude/features/session/domain/entities/transcript_follow.dart';
 import 'package:remote_claude/features/session/domain/repositories/history_repository.dart';
+import 'package:remote_claude/features/session/domain/repositories/transcript_follow_repository.dart';
 import 'package:remote_claude/features/session/presentation/widgets/conversation_view.dart';
 import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
@@ -23,6 +26,8 @@ import 'package:remote_claude/l10n/generated/app_localizations.dart';
 import '../../../support/builders/frames.dart';
 import '../../../support/fakes/fake_history_repository.dart';
 import '../../../support/fakes/fake_session_repository.dart';
+import '../../../support/fakes/fake_transcript_content_repository.dart';
+import '../../../support/fakes/fake_transcript_follow_repository.dart';
 import '../../../support/pump_app.dart';
 
 const String workspace = '/home/someone/project';
@@ -33,7 +38,12 @@ const Failure unavailable = ServerFailure(
   traceId: 'trace-17',
 );
 
-HistoryPage latest({bool beganElsewhere = false, String? nextCursor}) => HistoryPage(
+HistoryPage latest({
+  bool beganElsewhere = false,
+  String? nextCursor,
+  ConversationActivity? activity,
+  int answers = 0,
+}) => HistoryPage(
   conversationId: 'conv-1',
   workspacePath: workspace,
   beganElsewhere: beganElsewhere,
@@ -41,14 +51,43 @@ HistoryPage latest({bool beganElsewhere = false, String? nextCursor}) => History
   events: historyOf(<String>[
     messageCompleted(messageId: 'm3', text: 'what broke?', role: 'user', seq: 1),
     messageCompleted(messageId: 'm4', text: 'the build', seq: 2),
+    for (int index = 0; index < answers; index += 1)
+      messageCompleted(messageId: 'a$index', text: 'answer number $index', seq: 3 + index),
   ]),
   nextCursor: nextCursor,
+  activity: activity,
+  lastMessageId: 'u-41',
+);
+
+const Failure followLimit = ServerFailure(
+  code: 'TRANSCRIPT_FOLLOW_LIMIT',
+  messageKey: 'transcript.error.followLimit',
+  traceId: 'trace-22',
+  params: <String, String>{'limit': '8', 'scope': 'connection'},
+);
+
+/// What the followed conversation gained, in the frame [seq] of the subscription `t-1`.
+FollowAppended appendedOf(
+  int seq, {
+  List<String> lines = const <String>[],
+  ConversationActivity? activity = ConversationActivity.activeElsewhere,
+  bool working = false,
+}) => FollowAppended(
+  followId: 't-1',
+  conversationId: 'conv-1',
+  seq: seq,
+  events: historyOf(lines),
+  lastMessageId: 'u-${50 + seq}',
+  activity: activity,
+  working: working,
 );
 
 void main() {
   late AppLocalizations l10n;
   late FakeHistoryRepository history;
   late FakeSessionRepository sessions;
+  late FakeTranscriptFollowRepository follows;
+  late FakeTranscriptContentRepository content;
 
   setUpAll(() async {
     l10n = await englishCatalogue();
@@ -70,6 +109,9 @@ void main() {
     }
     sessions = FakeSessionRepository();
     addTearDown(sessions.dispose);
+    follows = FakeTranscriptFollowRepository();
+    addTearDown(follows.dispose);
+    content = FakeTranscriptContentRepository();
 
     await tester.pumpRouted(
       <RouteBase>[
@@ -93,6 +135,8 @@ void main() {
       overrides: <Override>[
         historyRepositoryProvider.overrideWithValue(history as HistoryRepository),
         sessionRepositoryProvider.overrideWithValue(sessions),
+        transcriptFollowRepositoryProvider.overrideWithValue(follows as TranscriptFollowRepository),
+        transcriptContentRepositoryProvider.overrideWithValue(content),
         connectionStatusProvider.overrideWith(
           (Ref ref) => Stream<ConnectionStatus>.value(connection),
         ),
@@ -367,6 +411,247 @@ void main() {
       expect(find.text(l10n.historyExternalNote), findsNothing);
       await leave(tester);
     });
+  });
+
+  group('following — plan 22, B-26', () {
+    /// The page open on [page], followed, and the follow answered as `t-1`.
+    Future<void> pumpFollowed(WidgetTester tester, {HistoryPage? page}) async {
+      await pumpHistory(tester, page: page);
+      expect(follows.follows.single, ('follow-1', 'conv-1', 'u-41'));
+      follows.ack('t-1', activity: page?.activity);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> arrive(WidgetTester tester, FollowUpdate update) async {
+      follows.emit(update);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('what the other client writes appears without reading the page again', (
+      WidgetTester tester,
+    ) async {
+      await pumpFollowed(tester);
+
+      await arrive(
+        tester,
+        appendedOf(
+          1,
+          lines: <String>[messageCompleted(messageId: 'm5', text: 'fixed it', seq: 3)],
+        ),
+      );
+
+      expect(find.text('fixed it'), findsOneWidget);
+      expect(history.reads, hasLength(1));
+      await leave(tester);
+    });
+
+    testWidgets('S-96 · the notice "active in another client" comes and goes with the activity', (
+      WidgetTester tester,
+    ) async {
+      await pumpFollowed(tester, page: latest(activity: ConversationActivity.activeElsewhere));
+
+      expect(find.text(l10n.historyActiveElsewhereNote), findsOneWidget);
+
+      await arrive(tester, appendedOf(1, activity: ConversationActivity.idle));
+      expect(find.text(l10n.historyActiveElsewhereNote), findsNothing);
+
+      await arrive(tester, appendedOf(2));
+      expect(find.text(l10n.historyActiveElsewhereNote), findsOneWidget);
+      await leave(tester);
+    });
+
+    testWidgets(
+      'S-97 · continuing an active conversation asks first, and cancelling forks nothing',
+      (WidgetTester tester) async {
+        await pumpFollowed(tester, page: latest(activity: ConversationActivity.activeElsewhere));
+
+        await tester.tap(find.text(l10n.historyResumeAction));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.sessionForkTitle), findsOneWidget);
+        expect(find.text(l10n.sessionForkDescription), findsOneWidget);
+
+        await tester.tap(find.text(l10n.sessionForkCancel));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.sessionForkTitle), findsNothing);
+        expect(sessions.commands, isEmpty);
+
+        await tester.tap(find.text(l10n.historyResumeAction));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.sessionForkConfirm));
+        await tester.pump();
+
+        expect(sessions.commands.single.$1, 'session.start');
+        expect(sessions.commands.single.$2['resumeSessionId'], 'conv-1');
+        await leave(tester);
+      },
+    );
+
+    testWidgets('S-97 · one that nothing else is writing continues at once', (
+      WidgetTester tester,
+    ) async {
+      await pumpFollowed(tester, page: latest(activity: ConversationActivity.activeElsewhere));
+      await arrive(tester, appendedOf(1, activity: ConversationActivity.idle));
+
+      await tester.tap(find.text(l10n.historyResumeAction));
+      await tester.pump();
+
+      expect(find.text(l10n.sessionForkTitle), findsNothing);
+      expect(sessions.commands.single.$1, 'session.start');
+      await leave(tester);
+    });
+
+    testWidgets(
+      'S-98 · "Working in another client…" comes with working, with its help, announced',
+      (WidgetTester tester) async {
+        final SemanticsHandle semantics = tester.ensureSemantics();
+        await pumpFollowed(tester, page: latest(activity: ConversationActivity.activeElsewhere));
+        expect(find.text(l10n.historyFollowWorking), findsNothing);
+
+        await arrive(tester, appendedOf(1, working: true));
+
+        expect(find.text(l10n.historyFollowWorking), findsOneWidget);
+        expect(
+          tester.getSemantics(find.text(l10n.historyFollowWorking)),
+          isSemantics(
+            label: l10n.historyFollowWorking,
+            hint: l10n.commonActionShowAll,
+            isLiveRegion: true,
+            isButton: true,
+            hasTapAction: true,
+          ),
+        );
+
+        await tester.tap(find.text(l10n.historyFollowWorking));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.historyFollowWorkingHelp), findsOneWidget);
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+
+        await arrive(tester, appendedOf(2));
+        expect(find.text(l10n.historyFollowWorking), findsNothing);
+        semantics.dispose();
+        await leave(tester);
+      },
+    );
+
+    testWidgets('S-99 · scrolled up, "N new" says what arrived and takes the reader to it', (
+      WidgetTester tester,
+    ) async {
+      await pumpFollowed(tester, page: latest(answers: 40));
+      await tester.drag(find.byType(ListView), const Offset(0, 1500));
+      await tester.pumpAndSettle();
+
+      await arrive(
+        tester,
+        appendedOf(
+          1,
+          lines: <String>[
+            messageCompleted(messageId: 'n1', text: 'news', seq: 50),
+            // A reply that only runs a tool is no message for whoever reads (S-84).
+            toolStarted(toolUseId: 'nt', seq: 51),
+            toolCompleted(toolUseId: 'nt', seq: 52),
+            messageCompleted(messageId: 'n2', text: 'more news', seq: 53),
+          ],
+        ),
+      );
+
+      expect(find.text(l10n.historyFollowNewer(2)), findsOneWidget);
+      expect(find.text('more news').hitTestable(), findsNothing);
+
+      await tester.tap(find.text(l10n.historyFollowNewer(2)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('more news').hitTestable(), findsOneWidget);
+      expect(find.text(l10n.historyFollowNewer(2)), findsNothing);
+
+      // At the end now, what comes next is followed.
+      await arrive(
+        tester,
+        appendedOf(
+          2,
+          lines: <String>[messageCompleted(messageId: 'n3', text: 'latest', seq: 52)],
+        ),
+      );
+      expect(find.text('latest').hitTestable(), findsOneWidget);
+      await leave(tester);
+    });
+
+    testWidgets('S-100 · the ceiling is said in words, and the conversation stays readable', (
+      WidgetTester tester,
+    ) async {
+      await pumpHistory(tester);
+
+      follows.emit(FollowRefused(commandId: follows.lastCommand, failure: followLimit));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.transcriptErrorFollowLimit('8')), findsOneWidget);
+      expect(find.text('the build'), findsOneWidget);
+      expect(find.text(l10n.historyResumeAction), findsOneWidget);
+      await leave(tester);
+    });
+
+    testWidgets('S-93 · the background lets the conversation go, and the return follows it again', (
+      WidgetTester tester,
+    ) async {
+      await pumpFollowed(tester);
+      await arrive(tester, appendedOf(1));
+
+      // The way a phone goes to the background, and comes back: one step at a time.
+      for (final AppLifecycleState step in <AppLifecycleState>[
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(step);
+      }
+      await tester.pump();
+      expect(follows.unfollows, <String>['t-1']);
+
+      for (final AppLifecycleState step in <AppLifecycleState>[
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(step);
+      }
+      await tester.pump();
+      expect(follows.follows.last, ('follow-2', 'conv-1', 'u-51'));
+      await leave(tester);
+    });
+
+    testWidgets('S-95 · leaving the page lets the subscription go', (WidgetTester tester) async {
+      await pumpFollowed(tester);
+
+      GoRouter.of(tester.element(find.byType(ConversationHistoryPage))).go('/');
+      await tester.pumpAndSettle();
+
+      expect(follows.unfollows, <String>['t-1']);
+      await leave(tester);
+    });
+  });
+
+  testWidgets('B-32 · a tool of the conversation opens its whole output from this conversation', (
+    WidgetTester tester,
+  ) async {
+    await pumpHistory(
+      tester,
+      page: HistoryPage(
+        conversationId: 'conv-1',
+        workspacePath: workspace,
+        events: historyOf(<String>[
+          toolStarted(toolUseId: 't1', seq: 1),
+          toolCompleted(toolUseId: 't1', seq: 2, summary: 'a.txt'),
+        ]),
+      ),
+    );
+
+    await tester.tap(find.text('Bash'));
+    await tester.pumpAndSettle();
+
+    expect(content.toolReads, <(String, String)>[('conv-1', 't1')]);
+    await leave(tester);
   });
 
   testWidgets('meets the tap-target and labelling guidelines', (WidgetTester tester) async {

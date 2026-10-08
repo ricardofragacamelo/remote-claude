@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
 
 import {
+  FollowTranscriptUseCase,
   LIVE_CONVERSATION_SOURCE,
   ListTranscriptsUseCase,
+  ReadPromptImageUseCase,
+  ReadToolResultUseCase,
   ReadTranscriptUseCase,
   TranscriptAudience,
   TRANSCRIPT_ORIGIN_SOURCE,
@@ -13,8 +16,10 @@ import type {
   TranscriptOriginSource,
   TranscriptStore,
 } from '@application/transcript';
-import { CLOCK } from '@application/shared';
-import type { Clock } from '@domain/shared';
+import { CLOCK, ID_GENERATOR, SCHEDULER } from '@application/shared';
+import type { Scheduler } from '@application/shared';
+import type { Clock, IdGenerator } from '@domain/shared';
+import { LOGGER, type Logger } from '@shared/logging/logger';
 import { WORKSPACE_ALLOWLIST_SOURCE } from '@application/workspace';
 import type { WorkspaceAllowlistSource } from '@application/workspace';
 import { TranscriptController } from '@adapter/inbound/http/transcript/transcript.controller';
@@ -88,9 +93,49 @@ import { WorkspaceModule } from './workspace.module';
       useFactory: (store: TranscriptStore, audience: TranscriptAudience) =>
         new ReadTranscriptUseCase(store, audience),
     },
+    {
+      provide: ReadToolResultUseCase,
+      inject: [TRANSCRIPT_STORE, TranscriptAudience, APP_CONFIG],
+      useFactory: (store: TranscriptStore, audience: TranscriptAudience, config: AppConfig) =>
+        new ReadToolResultUseCase(store, audience, config.transcript.toolResultMaxBytes),
+    },
+    {
+      provide: ReadPromptImageUseCase,
+      inject: [TRANSCRIPT_STORE, TranscriptAudience, APP_CONFIG],
+      useFactory: (store: TranscriptStore, audience: TranscriptAudience, config: AppConfig) =>
+        new ReadPromptImageUseCase(store, audience, config.transcript.imageMaxBytes),
+    },
+    {
+      // The follower of conversations begun elsewhere (plan 22, F2): what it sees of each tick is
+      // logged here, at `debug` — counts, never a word of the conversation (S-72).
+      provide: FollowTranscriptUseCase,
+      inject: [TRANSCRIPT_STORE, TranscriptAudience, SCHEDULER, ID_GENERATOR, APP_CONFIG, LOGGER],
+      useFactory: (
+        store: TranscriptStore,
+        audience: TranscriptAudience,
+        scheduler: Scheduler,
+        ids: IdGenerator,
+        config: AppConfig,
+        logger: Logger,
+      ) =>
+        new FollowTranscriptUseCase(store, audience, scheduler, ids, config.transcript.follow, {
+          looked: (conversationId, outcome) => {
+            logger.debug(
+              { op: 'transcript.follow', layer: 'application', conversationId, ...outcome },
+              'followed conversation looked at',
+            );
+          },
+          failed: (conversationId, error) => {
+            logger.warn(
+              { op: 'transcript.follow', layer: 'application', conversationId, err: error },
+              'a look at a followed conversation failed; the next one tries again',
+            );
+          },
+        }),
+    },
   ],
-  // The store alone: `session` asks it where a conversation ran before continuing one. The use
-  // cases stay here — nobody else lists or reads the history.
-  exports: [TRANSCRIPT_STORE],
+  // The store, for `session`, which asks it where a conversation ran before continuing one; and the
+  // follower, for the gateway, which hands it `transcript.follow`. The reads stay here.
+  exports: [TRANSCRIPT_STORE, FollowTranscriptUseCase],
 })
 export class TranscriptModule {}

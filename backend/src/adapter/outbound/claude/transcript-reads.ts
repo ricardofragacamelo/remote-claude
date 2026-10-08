@@ -15,6 +15,13 @@ export interface TranscriptReadLimits {
   readonly cachedSessions: number;
 
   /**
+   * How many conversations keep their whole tool outputs and prompt images indexed, for the two routes
+   * that serve them (plan 22, D-18). Fewer than {@link cachedSessions}: it is what weighs, and it is
+   * asked of the conversation somebody is reading — the one just read.
+   */
+  readonly cachedContents: number;
+
+  /**
    * How many reads of the store may run at the same time. The rest wait their turn.
    *
    * Each read of a large file holds tens of megabytes while it lasts; several phones opening
@@ -46,6 +53,7 @@ export interface TranscriptReadLimits {
  */
 export const TRANSCRIPT_READ_LIMITS: TranscriptReadLimits = {
   cachedSessions: 16,
+  cachedContents: 2,
   concurrentReads: 2,
   timeoutMs: 10_000,
   wholeStoreTtlMs: 2_000,

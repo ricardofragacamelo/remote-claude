@@ -226,9 +226,8 @@ void main() {
   );
 
   group('thinking — B-19', () {
-    testWidgets('S-59 · "Thinking…" while it arrives; "Thought for n s", folded, once it stopped', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('S-59 · "Thinking…" while it arrives; "Thought for n s" once it stopped — what it '
+        'thought in view, and folded by a tap (plan 22, D-15)', (WidgetTester tester) async {
       await screen.pump(tester);
       await emit(
         tester,
@@ -242,11 +241,11 @@ void main() {
       );
 
       expect(find.text(l10n.thinkingTook('2')), findsOneWidget);
-      expect(find.text('let me see'), findsNothing);
+      expect(find.text('let me see'), findsOneWidget);
 
       await tester.tap(find.text(l10n.thinkingTook('2')));
       await tester.pumpAndSettle();
-      expect(find.text('let me see'), findsOneWidget);
+      expect(find.text('let me see'), findsNothing);
     });
 
     testWidgets('S-60 · three thinkings between two tools are five rows, in their order', (

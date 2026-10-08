@@ -148,4 +148,44 @@ describe('a draft of the panel — plan 08, B-33', () => {
         .tabs.some((tab) => tab.key === key),
     ).toBe(false);
   });
+
+  it('opens the session in Permitir tudo when the draft chose it — plan 23, S-74', async () => {
+    const { key, hook } = aDraft();
+    live.connect();
+
+    act(() => {
+      hook.result.current.choose({ mode: 'allowAll' });
+    });
+    act(() => {
+      hook.result.current.send('go');
+    });
+    live.receive({
+      v: 1,
+      id: 'started',
+      kind: 'event',
+      type: 'session.started',
+      ts: '2026-09-30T12:00:00.000Z',
+      seq: 1,
+      correlationId: starts()[0]?.['id'],
+      payload: { sessionId: SESSION, workspacePath: FOLDER },
+    });
+
+    expect(starts()[0]).toMatchObject({ payload: { permissionMode: 'allowAll' } });
+    // The prompt waits for the attachments the draft held — none here — and then leaves.
+    await waitFor(() => {
+      expect(live.lastSent('session.prompt')).toMatchObject({
+        payload: { sessionId: SESSION, text: 'go' },
+      });
+    });
+    expect(
+      claudePanelStore(FOLDER)
+        .getState()
+        .tabs.map((tab) => tab.key),
+    ).toEqual([`session:${SESSION}`]);
+    expect(
+      claudePanelStore(FOLDER)
+        .getState()
+        .tabs.some((tab) => tab.key === key),
+    ).toBe(false);
+  });
 });

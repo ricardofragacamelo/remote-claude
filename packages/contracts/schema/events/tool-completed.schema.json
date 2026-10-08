@@ -18,7 +18,7 @@
     },
     "summary": {
       "type": "string",
-      "description": "A short result for the timeline. The full output is the transcript's job, not this event's."
+      "description": "A short result for the timeline: the output **as text** — a result made of blocks is their text joined, never JSON —, cut to its **last** 5 lines and at most 400 characters, with `…` in front when it was cut. The end is kept because that is where a build or a test says how it went. The whole output is the transcript's job: `GET /transcripts/:sessionId/tools/:toolUseId/result`."
     },
     "parentToolUseId": {
       "type": "string",
@@ -27,6 +27,10 @@
     "taskId": {
       "type": "string",
       "description": "The task of the list a `TaskCreate` made or a `TaskUpdate` changed — taken from the tool's structured result live, and from its result in the history. Absent for every other tool. The `summary` is the CLI's text, cut, and never carries it reliably (plan 08, B-20)."
+    },
+    "at": {
+      "type": "string",
+      "description": "When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for."
     }
   }
 }

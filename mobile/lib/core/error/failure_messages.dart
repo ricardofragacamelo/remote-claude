@@ -96,9 +96,14 @@ String translateFailure(AppLocalizations l10n, Failure failure) {
     case 'permission.error.ruleNotFound':
       return l10n.permissionErrorRuleNotFound;
     default:
-      return _workspaceMessage(l10n, failure) ?? l10n.commonErrorUnexpected;
+      return _groupedMessage(l10n, failure);
   }
 }
+
+/// The words of a refusal that a group of its own translates — the folder's, the history's — or the
+/// generic one when no group knows the key.
+String _groupedMessage(AppLocalizations l10n, Failure failure) =>
+    _workspaceMessage(l10n, failure) ?? _followMessage(l10n, failure) ?? l10n.commonErrorUnexpected;
 
 /// The words of a refusal about a folder, or `null` when [failure] is not one — apart, so the switch
 /// above stays readable as the folder screens add theirs (plan 10, F7).
@@ -113,5 +118,17 @@ String? _workspaceMessage(AppLocalizations l10n, Failure failure) => switch (fai
   'workspace.error.openFoldersLimitReached' => l10n.foldersLimitReached(
     failure.params['limit'] ?? '',
   ),
+  _ => null,
+};
+
+/// The words of a refusal about following a conversation of the history or opening what it holds,
+/// or `null` when [failure] is not one — apart, like the folder's (plan 22, B-04).
+String? _followMessage(AppLocalizations l10n, Failure failure) => switch (failure.messageKey) {
+  'transcript.error.followLimit' => l10n.transcriptErrorFollowLimit(failure.params['limit'] ?? ''),
+  'transcript.error.followLiveHere' => l10n.transcriptErrorFollowLiveHere,
+  'transcript.error.imageTypeUnsupported' => l10n.transcriptErrorImageTypeUnsupported(
+    failure.params['mediaType'] ?? '',
+  ),
+  'transcript.error.imageTooLarge' => l10n.transcriptErrorImageTooLarge,
   _ => null,
 };

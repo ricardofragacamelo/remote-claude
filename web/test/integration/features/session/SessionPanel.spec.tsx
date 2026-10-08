@@ -226,7 +226,7 @@ describe('the model, the mode — plan 08, B-36', () => {
     expect(box()).toBeEnabled();
   });
 
-  it('offers the three modes — never one that skips every question — S-170', async () => {
+  it('offers the modes, Permitir tudo last — never the SDK`s that skips the callback — S-170, plan 23 S-69', async () => {
     const user = userEvent.setup();
     served();
     opened();
@@ -237,6 +237,7 @@ describe('the model, the mode — plan 08, B-36', () => {
       `${t('sessions.mode.default')}${t('sessions.mode.defaultDescription')}`,
       `${t('sessions.mode.acceptEdits')}${t('sessions.mode.acceptEditsDescription')}`,
       `${t('sessions.mode.plan')}${t('sessions.mode.planDescription')}`,
+      `${t('sessions.mode.allowAll')}${t('sessions.mode.allowAllDescription')}`,
     ]);
 
     await user.click(
@@ -254,6 +255,34 @@ describe('the model, the mode — plan 08, B-36', () => {
     expect(await screen.findByRole('note')).toHaveTextContent(
       t('sessions.mode.acceptEditsWarning'),
     );
+  });
+
+  it('switches Permitir tudo on in the tone of danger, and off again — plan 23, S-70, S-71', async () => {
+    const user = userEvent.setup();
+    served();
+    opened();
+
+    await user.click(picker(t('sessions.mode.label'), t('sessions.mode.default')));
+    await user.click(
+      await screen.findByRole('menuitem', { name: new RegExp(t('sessions.mode.allowAll')) }),
+    );
+
+    expect(live.lastSent('session.setPermissionMode')).toMatchObject({
+      payload: { sessionId: SESSION, mode: 'allowAll' },
+    });
+    // Its name and its icon on the chip, not colour alone; the warning in full inside the menu.
+    const chip = picker(t('sessions.mode.label'), t('sessions.mode.allowAll'));
+    expect(chip).toHaveClass('text-destructive');
+    expect(chip.querySelector('svg')).not.toBeNull();
+    await user.click(chip);
+    expect(await screen.findByRole('note')).toHaveTextContent(t('sessions.mode.allowAllWarning'));
+
+    await user.click(
+      screen.getByRole('menuitem', { name: new RegExp(t('sessions.mode.defaultDescription')) }),
+    );
+    expect(live.lastSent('session.setPermissionMode')).toMatchObject({
+      payload: { sessionId: SESSION, mode: 'default' },
+    });
   });
 });
 

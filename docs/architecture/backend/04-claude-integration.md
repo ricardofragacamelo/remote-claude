@@ -76,7 +76,7 @@ O `for await` **é** a fonte do stream. Ele roda pela vida inteira da sessão.
   cwd: workspace.path.value,              // ← "workspace" é isto
   additionalDirectories: workspace.extraDirs,
   settingSources: ['project'],            // ← OBRIGATÓRIO. Nem mais, nem menos.
-  permissionMode: session.permissionMode,
+  permissionMode: sdkPermissionMode(session.permissionMode),  // allowAll → default
   canUseTool: permissionBridge.handle,    // ← aprovação humana
   hooks: { PreToolUse: [auditHook] },     // ← trilha de auditoria (cobertura total)
   includePartialMessages: true,           // deltas para UI fluida
@@ -99,6 +99,7 @@ Decisões tomadas:
 | `persistSession` | `true` | retomar do celular o que começou no VSCode |
 | `enableFileCheckpointing` | `true` | preserva o `/rewind` do próprio usuário no editor; o **nosso** desfazer não depende dele — ver [Desfazer arquivos](#desfazer-arquivos--o-store-é-nosso) |
 | `allowDangerouslySkipPermissions` | **`false`, sempre** | desligaria o `canUseTool`, que é o produto |
+| `permissionMode` | o da sessão, menos `allowAll`, que chega como `default` | o Permitir tudo é nosso: o `canUseTool` continua sendo chamado ([ADR-022](../shared/00-decisions.md#adr-022--permitir-tudo-é-um-modo-nosso-não-o-bypasspermissions-do-sdk)) |
 | `settingSources` | **`['project']`, sempre** | ver [A armadilha do `settingSources`](#a-armadilha-do-settingsources) |
 | `pathToClaudeCodeExecutable` | binário do SDK | versões casadas; atualiza pelo npm junto com o SDK |
 
@@ -189,7 +190,11 @@ const canUseTool: CanUseTool = async (toolName, input, options) => {
   // 2. regra — de sessão, de projeto ou "sempre" — resolve sem incomodar ninguém.
   //    Lida a cada pedido, nunca em cache: revogar vale na próxima invocação da sessão já de pé.
   const rule = await permissions.findMatchingRule(userId, sessionId, projectPath, toolName, input)
-  if (rule) return rule.toSdkResult()   // publica permission.resolved com auto: true
+  if (rule) return rule.toSdkResult()   // publica permission.resolved com auto: true, via: 'rule'
+
+  // 2b. Permitir tudo — o modo do MOMENTO do pedido, nunca o da abertura
+  if (session.permissionMode === 'allowAll' && !HUMAN_ONLY_TOOLS.has(toolName) && rulesWereRead)
+    return allow()                      // publica permission.resolved com auto: true, via: 'allowAll'
 
   // 3. cria o request, publica evento, dispara push, e ESPERA
   const request = await permissions.create({ ...options, toolName, input })
@@ -229,6 +234,23 @@ Uma regra devolvida ao SDK passa a ser aplicada pelo CLI **sem** chamar o `canUs
 sessão, e a execução autorizada pela regra deixaria de aparecer como `permission.resolved` com
 `auto: true`. A regra nossa é a única autoridade; o SDK pergunta, e quem responde é ela.
 
+### Permitir tudo — `allowAll`
+
+Um modo do contrato que o SDK nunca vê
+([ADR-022](../shared/00-decisions.md#adr-022--permitir-tudo-é-um-modo-nosso-não-o-bypasspermissions-do-sdk)).
+`sdkPermissionMode()`, em `domain/session`, traduz `allowAll` para `default` nos dois lugares onde o
+modo chega ao SDK: a abertura e o `setPermissionMode`. A entidade guarda o modo nosso, porque é ele que
+o pedido lê.
+
+| Regra | Por quê |
+|---|---|
+| a ordem é idempotência → regras → modo | um `deny` que casa recusa mesmo em Permitir tudo, e um `allow` de regra responde como regra (`via: 'rule'`) |
+| `HUMAN_ONLY_TOOLS` (`AskUserQuestion`, `ExitPlanMode`) sempre abre o card | não são permissões: são o Claude pedindo uma resposta |
+| a leitura das regras falhou → card | um `deny` não lido não pode virar aprovação automática |
+| a aprovação é uma resolução como as outras | `auto: true`, o dono da sessão como autor, `scope: 'once'`, `ruleId` nulo, `via: 'allowAll'`, uma linha em `permission_requests`, sem push |
+| ligar resolve os cards abertos da sessão | cada pendente passa de novo pelas regras e pelo modo: quem uma regra recusa é recusado, quem é pergunta fica, o resto é aprovado |
+| desligar não faz nada além de trocar o modo | o modo é lido a cada pedido; a próxima tool pergunta |
+
 ### A regra fala a gramática do Claude, não uma nossa
 
 A `PermissionRule` que persistimos e o `PermissionUpdate` que devolvemos ao SDK descrevem **o
@@ -257,17 +279,46 @@ Duas consequências que não são detalhe de implementação:
 2. **o prefixo respeita fronteira de token.** `Bash(git status:*)` não cobre `git statusx`. É o
    furo que passa despercebido num matcher escrito com igualdade de string;
 3. **numa linha de shell, a decisão muda a leitura — sempre para o lado seguro**
-   ([15 · D-07](../../plans/15-rules-management/decisions.md)). Um `allow` de **prefixo** só cobre
-   linha que é um comando só: `Bash(git status:*)` não responde `git status && curl … | sh`, nem
-   linha com substituição ou redirecionamento — mesmo entre aspas, porque não há parser, e sem
-   parser o único erro seguro é perguntar de novo. O `allow` **exato** continua casando a string
-   idêntica, que é o que alguém aprovou. Um `deny` casa se casar **qualquer comando dentro da
-   linha** (`Bash(rm:*)` recusa `ls && rm -rf build` e `echo $(rm -rf x)`) — é lombada, não
-   sandbox: alias, script e `xargs` passam por ele. A lista de operadores é **uma**, em
+   ([15 · D-07](../../plans/15-rules-management/decisions.md), emendada pela
+   [23 · D-07](../../plans/23-fluid-permissions/decisions.md#d-07--a-linha-composta)). Um `allow` de
+   **prefixo** cobre uma linha composta só quando **cada comando** dela é coberto por algum `allow`:
+   `git push 2>&1 | tail -5` passa com `Bash(git push:*)` e `Bash(tail:*)`, e
+   `git status && curl … | sh` continua perguntando. Os redirecionamentos que não mudam o que roda
+   (`N>&M`, `>/dev/null`, `2>/dev/null`, `&>/dev/null`) são neutralizados antes; qualquer outra
+   substituição ou redirecionamento faz a linha perguntar, mesmo entre aspas. E, havendo mais de um
+   comando, um pedaço com aspas desbalanceadas ou barra invertida também faz a linha perguntar: sem
+   parser, é o que garante que o pedaço é o comando que o shell roda. O `allow` **exato** continua
+   casando a string idêntica, a linha inteira ou um pedaço dela. Um `deny` casa se casar **qualquer
+   comando dentro da linha** (`Bash(rm:*)` recusa `ls && rm -rf build` e `echo $(rm -rf x)`) — é
+   lombada, não sandbox: alias, script e `xargs` passam por ele. A lista de operadores é **uma**, em
    `shell-syntax.ts`, lida pelo matcher e pelo classificador de risco.
 
 O casamento é **regra pura do domínio**, sem I/O: é o que permite testá-lo por fronteira e é
 dele que a UI tira o texto de alcance que mostra ao usuário.
+
+### O alcance de uma regra nascida no card
+
+Um card não grava mais só "o padrão mais estreito". O servidor calcula os **alcances** de cada pedido
+(`reachesFor`, em `domain/permission/services/rule-reach.ts`, puro) e os manda em `reaches`; o cliente
+escolhe **um** e responde com `reach`. Os padrões são recalculados no servidor a partir do pedido, e um
+alcance que não foi oferecido é recusado com `INVALID_INPUT`. O cliente nunca manda padrão.
+
+| Alcance | Para | Padrões |
+|---|---|---|
+| `exact` | toda tool com campo casável | o de hoje: `Bash(git push -u origin x)`, `Edit(/a/b.ts)` |
+| `prefix` | só shell, quando cada comando da linha tem um prefixo | um por comando, sem repetição: `Bash(git push:*)`, `Bash(tail:*)` |
+| `tool` | nunca shell | `Edit`, `WebSearch`, `mcp__x__y` |
+
+O prefixo de um comando tem **até dois tokens**: o primeiro, mais o segundo quando ele é uma palavra
+de subcomando (`git push`, `pnpm test`, mas `ls` de `ls -la` e `cat` de `cat file.txt`). Nunca vira
+prefixo um comando cujo primeiro token é interpretador, lançador ou elevação (`UNBOUNDED_COMMANDS`,
+a lista da [15 · D-09](../../plans/15-rules-management/decisions.md#d-09--o-que-é-largo-demais)), nem
+um com atribuição de ambiente. Tool de caminho não tem prefixo: a gramática de caminho continua fora
+([15 · D-08](../../plans/15-rules-management/decisions.md#d-08--prefixo-em-tool-de-caminho)).
+
+O alcance vale para `session`, `project` e `always`. Em `project`/`always`, todos os padrões são
+validados antes de gravar qualquer um, e se uma gravação falhar no meio, as regras criadas nesta
+resposta são revogadas ([23 · D-13](../../plans/23-fluid-permissions/decisions.md#f2--alcance-das-regras)).
 
 ---
 

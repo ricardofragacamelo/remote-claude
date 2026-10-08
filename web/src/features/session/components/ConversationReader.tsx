@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { useConversationFollow } from '../hooks/useConversationFollow';
 import { useConversationHistory } from '../hooks/useConversationHistory';
 import type { ConversationHistory } from '../hooks/useConversationHistory';
 import { useResumeSession } from '../hooks/useResumeSession';
@@ -13,6 +14,7 @@ import { tabKeyOf } from '../store/claude-panel.store';
 import { TaskStrip } from './composer/TaskStrip';
 import { Conversation } from './Conversation';
 import { ChatFrame } from './frame/ChatFrame';
+import { FollowRefusal, NewerPill, WorkingElsewhere } from './ReaderFollow';
 import { ForkDialog } from './sessions/ForkDialog';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { ErrorState } from '@/shared/components/ErrorState';
@@ -55,6 +57,11 @@ export interface ConversationReaderProps {
  * In the frame of the panel (plan 09, B-05), the way to continue it stays under the conversation, as
  * the box of a session does.
  *
+ * While it is on screen it is **followed** (plan 22, B-23): what the other client writes is added at
+ * the end, followed when the person is there and counted as "N new" when they scrolled up; the note
+ * that it is active elsewhere and "working in another client…" come and go with it. Continuing it lets
+ * go of the subscription first, before it becomes a live session.
+ *
  * It imports hooks, and nothing else: no service, no `api.ts`.
  */
 export function ConversationReader({
@@ -75,12 +82,23 @@ export function ConversationReader({
     [conversationId, summary],
   );
   const resume = useResumeSession(target, onResumed);
+  const follow = useConversationFollow(conversationId, history, resume.error);
   const taskList = useMemo(() => taskListOf(conversation.tools), [conversation.tools]);
+  const control: ResumeControl = {
+    ...resume,
+    resume: () => {
+      // The subscription goes before the session is asked for: the conversation is about to be
+      // shown live, and following it as history then would be two streams of one conversation.
+      follow.hold();
+      resume.resume();
+    },
+  };
 
   return (
     <ChatFrame
       label={title}
       keeper={keeper}
+      tail={(tail) => <NewerPill tail={tail} messages={conversation.messages} />}
       header={
         <div className="flex items-start gap-2">
           <div className="flex min-w-0 flex-1 flex-col">
@@ -94,7 +112,9 @@ export function ConversationReader({
         summary !== null && (
           <>
             <TaskStrip list={taskList} />
-            <ResumeControls resume={resume} summary={summary} />
+            <WorkingElsewhere working={follow.working} />
+            <FollowRefusal refusal={follow.refusal} />
+            <ResumeControls resume={control} summary={summary} />
           </>
         )
       }
@@ -132,7 +152,10 @@ export function ConversationReader({
   );
 }
 
-/** Where the conversation came from and where it ran — and, when begun elsewhere, what that means. */
+/**
+ * Where the conversation came from and where it ran — and, when begun elsewhere, what that means. That
+ * it is active elsewhere follows the most recent word on it, the follow's or the page's.
+ */
 function Origin({ summary }: { readonly summary: ConversationSummary }): React.JSX.Element {
   const { t } = useTranslation();
 

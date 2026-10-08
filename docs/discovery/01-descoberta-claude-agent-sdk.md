@@ -759,6 +759,17 @@ Sem opção de thinking, o modelo padrão manda o bloco `thinking` com o texto *
 `thinking: { type: 'adaptive', display: 'summarized' }` o bloco e os `thinking_delta` trazem o texto
 resumido (`thinking-summarized-turn`). Vários `system:thinking_tokens` acompanham os deltas.
 
+**O tempo do pensamento não é gravado** (plano 22, B-03). O `timestamp` de cada entrada do transcript
+marca o **fim** dela — o CLI grava um bloco por entrada, quando o bloco fecha —, e nenhuma entrada diz
+quando o pensamento começou. A duração que o stream vivo mede (do primeiro `thinking_delta` ao fim do
+bloco) **não** vai para o arquivo. O que o histórico permite é o intervalo entre o `timestamp` da
+entrada anterior e o do bloco, que inclui a latência até o primeiro token: um limite superior — por isso
+"Pensou por **até** *n* s" ([22 · D-14](../plans/22-live-history/decisions.md#f5--fidelidade-no-web)).
+O SDK devolve esse `timestamp` em `getSessionMessages`, embora o tipo `SessionMessage` não o declare
+(SDK 0.3.277, medido em 2026-10-07); as mensagens ao vivo também o trazem. E o `uuid` de cada mensagem
+`assistant`/`user` ao vivo é o da entrada do transcript — o que faz o `blockId` `<uuid>:<índice>` ser o
+mesmo ao vivo e no histórico ([22 · D-06](../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
+
 ### 10.8 — A lista de tarefas depende do modelo, e uma variável a liga (B-20, D-25)
 
 Desde o CLI 2.1.268, as tools de lista de tarefas só são oferecidas a Claude 3.x, Opus 4.0–4.7,

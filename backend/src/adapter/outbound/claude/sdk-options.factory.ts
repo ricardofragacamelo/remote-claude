@@ -1,5 +1,6 @@
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
 
+import { sdkPermissionMode } from '@domain/session';
 import type { EffortLevel, PermissionMode } from '@domain/session';
 import type { WorkspacePath } from '@domain/workspace';
 
@@ -72,7 +73,9 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
     // The workspace *is* `cwd`. It has already cleared the allowlist by the time it gets here.
     cwd: input.workspace.value,
 
-    permissionMode: input.permissionMode,
+    // Ours as the SDK knows it: Permitir tudo reaches it as `default`, so `canUseTool` keeps being
+    // called and our rules keep answering (ADR-022).
+    permissionMode: sdkPermissionMode(input.permissionMode),
 
     // Never `true`, and never read from configuration. It would switch off `canUseTool`, which is
     // the product.

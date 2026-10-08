@@ -56,18 +56,14 @@ class SocketPermissionFeed implements PermissionFeed, SessionSubscriber {
   void onGap(String? claudeSessionId) => _emit(const PermissionFeedReset());
 
   @override
-  bool answer({
-    required String frameId,
-    required String requestId,
-    required PermissionDecision decision,
-    required PermissionScope scope,
-    String? reason,
-  }) => _client.respond(PermissionFrames.resolve, <String, Object?>{
-    'requestId': requestId,
-    'decision': decision.name,
-    'scope': scope.name,
-    'reason': ?reason,
-  }, correlationId: frameId);
+  bool answer(OutgoingAnswer answer) => _client.respond(PermissionFrames.resolve, <String, Object?>{
+    'requestId': answer.requestId,
+    'decision': answer.decision.name,
+    'scope': answer.scope.name,
+    // A one-off leaves no rule, so it names no reach (plan 23, B-16).
+    if (answer.scope != PermissionScope.once) 'reach': ?answer.reach?.name,
+    'reason': ?answer.reason,
+  }, correlationId: answer.frameId);
 
   @override
   bool extend(String requestId) {

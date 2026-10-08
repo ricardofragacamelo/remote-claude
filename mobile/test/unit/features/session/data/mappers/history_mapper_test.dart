@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/features/session/data/mappers/history_mapper.dart';
 import 'package:remote_claude/features/session/domain/entities/history_page.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
+import 'package:remote_claude/features/session/domain/entities/transcript_follow.dart';
 
 import '../../../../../support/builders/frames.dart';
 
@@ -57,6 +58,47 @@ void main() {
     )!;
 
     expect(page.events, hasLength(1));
+  });
+
+  group('S-89 · what the conversation is doing, and the last entry it has — plan 22, B-24', () {
+    test('are read from the page', () {
+      final HistoryPage page = historyPageFrom(
+        historyBody(activity: 'activeElsewhere', lastMessageId: 'u-41'),
+      )!;
+
+      expect(page.activity, ConversationActivity.activeElsewhere);
+      expect(page.lastMessageId, 'u-41');
+      expect(historyPageFrom(historyBody(activity: 'idle'))!.activity, ConversationActivity.idle);
+      expect(
+        historyPageFrom(historyBody(activity: 'liveHere'))!.activity,
+        ConversationActivity.liveHere,
+      );
+    });
+
+    test('absent — a server older than plan 22 — are nothing, and the page is still a page', () {
+      final HistoryPage page = historyPageFrom(historyBody())!;
+
+      expect(page.activity, isNull);
+      expect(page.lastMessageId, isNull);
+      expect(page.events, isEmpty);
+    });
+
+    test('an activity this build does not know, or a last entry that is not text, say nothing', () {
+      final Map<String, Object?> body = historyBody(activity: 'somewhereNew')
+        ..['lastMessageId'] = 41;
+
+      final HistoryPage page = historyPageFrom(body)!;
+
+      expect(page.activity, isNull);
+      expect(page.lastMessageId, isNull);
+    });
+
+    test('two pages differ by them', () {
+      expect(
+        historyPageFrom(historyBody(lastMessageId: 'u-1')),
+        isNot(historyPageFrom(historyBody(lastMessageId: 'u-2'))),
+      );
+    });
   });
 
   test('a conversation with no summary is called nothing, not "null"', () {

@@ -429,8 +429,9 @@ class WsClient {
 
     // An acceptance answers a command, like an `error`, and belongs to no session: whoever sent the
     // command is the one listening. A change of model or mode has no event of its own, and this is
-    // the only word that it went through.
-    if (frame.type == commandAcceptedType) {
+    // the only word that it went through. The ack of a `transcript.follow` is the same kind of
+    // answer: it names the subscription its frames will carry (plan 22, B-24).
+    if (frame.type == commandAcceptedType || frame.type == transcriptFollowingType) {
       _notifyObservers(frame);
       return;
     }

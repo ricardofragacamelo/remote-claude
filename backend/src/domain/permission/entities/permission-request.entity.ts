@@ -16,6 +16,9 @@ export type PermissionOrigin = 'web' | 'mobile';
 /** Whether a request is still blocking the agent loop, and how it stopped. */
 export type PermissionRequestStatus = 'pending' | 'resolved' | 'expired';
 
+/** What answered a request nobody was asked about. */
+export type PermissionVia = 'rule' | 'allowAll';
+
 /** How a request was settled. */
 export interface PermissionAnswer {
   readonly decision: PermissionDecision;
@@ -33,8 +36,8 @@ export interface PermissionAnswer {
   /**
    * The server settled it with nobody answering.
    *
-   * Either the deadline passed or a rule matched. Silence never authorises, so an automatic
-   * decision is `deny` unless a rule allowed it.
+   * The deadline passed, a rule matched, or the session runs in Permitir tudo. Silence never
+   * authorises, so an automatic decision is `deny` unless a rule or Permitir tudo allowed it.
    */
   readonly auto: boolean;
 
@@ -45,6 +48,12 @@ export interface PermissionAnswer {
    * to the authorisation, including one that has since been revoked.
    */
   readonly ruleId?: string;
+
+  /**
+   * Why nobody was asked, when nobody was: a rule answered, or the session runs in Permitir tudo.
+   * Absent when a person answered or the deadline passed.
+   */
+  readonly via?: PermissionVia;
 
   readonly at: Date;
 }

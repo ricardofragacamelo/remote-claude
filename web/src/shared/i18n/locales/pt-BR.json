@@ -304,6 +304,12 @@
       "project": "Não perguntar de novo neste projeto",
       "always": "Não perguntar de novo em lugar nenhum"
     },
+    "reach": {
+      "label": "Alcance",
+      "exact": "Exatamente isto",
+      "prefix": "Comandos que começam igual",
+      "tool": "Qualquer uso desta tool"
+    },
     "tool": {
       "Bash": "Executar um comando de shell",
       "Write": "Escrever um arquivo",
@@ -371,7 +377,9 @@
       "by": "{{decision}} por {{who}}",
       "expired": "Recusado — ninguém respondeu a tempo",
       "rule": "Aprovado por uma regra sua",
-      "somebody": "alguém"
+      "ruleDenied": "Recusado por uma regra sua",
+      "somebody": "alguém",
+      "allowAll": "Aprovado automaticamente — Permitir tudo"
     }
   },
   "audit": {
@@ -564,7 +572,11 @@
       "invalidSessionId": "{{sessionId}} não é um identificador de conversa.",
       "claudeUnavailable": "O Claude não conseguiu ler o histórico nesta máquina.",
       "claudeTimeout": "O Claude demorou demais para ler o histórico. Tente de novo.",
-      "cursorStale": "Esta conversa mudou enquanto você a lia. Recarregue a partir das mensagens mais recentes."
+      "cursorStale": "Esta conversa mudou enquanto você a lia. Recarregue a partir das mensagens mais recentes.",
+      "followLimit": "Há conversas demais sendo acompanhadas agora (no máximo {{limit}}). Esta continua legível, mas não vai se atualizar sozinha.",
+      "followLiveHere": "Esta conversa está aberta numa sessão viva aqui. Abra essa sessão para vê-la enquanto anda.",
+      "imageTypeUnsupported": "Esta imagem não pode ser mostrada aqui: {{mediaType}} não é um tipo que o servidor serve.",
+      "imageTooLarge": "Esta imagem é grande demais para ser mostrada aqui."
     },
     "list": {
       "untitled": "Conversa sem título"
@@ -588,6 +600,14 @@
       "emptyDescription": "Continue-a para dizer a primeira coisa.",
       "close": "Fechar esta conversa",
       "activeElsewhereNote": "Outro processo escreveu nesta conversa há pouco — o editor ou um terminal pode estar com ela aberta. Continuar aqui cria uma cópia, e as duas vão divergir."
+    },
+    "follow": {
+      "working": "Trabalhando em outro cliente…",
+      "workingHelp": "Isto é uma inferência, não algo que o Claude informou: a última entrada da conversa deixa o turno aberto — uma ferramenta sem resultado, um pensamento ou um prompt sem resposta — e algo escreveu nela há pouco. O histórico não grava o estado de um turno, e nada aqui diz qual é o outro cliente.",
+      "workingHelpLabel": "O que “trabalhando” quer dizer aqui",
+      "newerOne": "1 nova",
+      "newer": "{{count}} novas",
+      "newerLabel": "Ir para o fim — {{newer}}"
     }
   },
   "undo": {
@@ -1749,7 +1769,10 @@
       "hidden": "Pensou — o modelo não mostrou",
       "done": "Pensou",
       "took": "Pensou por {{seconds}} s",
-      "nothingShown": "O modelo pensou aqui e não mostrou o que pensou."
+      "nothingShown": "O modelo pensou aqui e não mostrou o que pensou.",
+      "tookMinutes": "Pensou por {{minutes}} min {{seconds}} s",
+      "tookUpTo": "Pensou por até {{seconds}} s",
+      "tookUpToMinutes": "Pensou por até {{minutes}} min {{seconds}} s"
     },
     "output": {
       "showAll": "Mostrar toda a saída ({{count}} caracteres) — só o fim está à vista"
@@ -1758,7 +1781,15 @@
       "label": "{{tool}} — {{status}}. Mostrar o input exato",
       "input": "O input exato",
       "denied": "Recusada: {{reason}}",
-      "trail": "Ver na trilha de auditoria"
+      "trail": "Ver na trilha de auditoria",
+      "labelTitled": "{{tool}} ({{detail}}) — {{status}}. Mostrar o input exato",
+      "in": "IN",
+      "out": "OUT",
+      "output": "O que ela disse",
+      "outputLoading": "Carregando a saída inteira…",
+      "outputFailed": "A saída inteira não carregou — aqui está só o fim dela.",
+      "outputTruncated": "A saída tinha {{size}}: aqui estão só o começo e o fim, cortada onde está marcado.",
+      "outputCut": "[… o meio da saída foi deixado de fora aqui …]"
     },
     "tool": {
       "read": "Ler {{path}}",
@@ -1780,7 +1811,8 @@
       "taskCreate": "Adicionou uma tarefa: {{subject}}",
       "taskUpdate": "Mudou a tarefa #{{id}}",
       "taskGet": "Leu a tarefa #{{id}}",
-      "taskList": "Leu a lista de tarefas"
+      "taskList": "Leu a lista de tarefas",
+      "titled": "{{name}} · {{title}}"
     },
     "subagent": {
       "loading": "Carregando o que o subagent disse…",
@@ -1993,7 +2025,10 @@
       "acceptEdits": "Aceitar edições",
       "acceptEditsDescription": "O Claude edita e grava arquivos sem perguntar; ainda pergunta antes do resto.",
       "plan": "Plan",
-      "planDescription": "O Claude planeja sem mudar nada, e pede que você aprove o plano."
+      "planDescription": "O Claude planeja sem mudar nada, e pede que você aprove o plano.",
+      "allowAll": "Permitir tudo",
+      "allowAllDescription": "O Claude executa toda tool sem perguntar, menos o que uma regra sua recusa. As perguntas dele a você continuam chegando.",
+      "allowAllWarning": "O Claude vai executar qualquer comando nesta máquina sem perguntar a você, até você trocar o modo."
     },
     "model": {
       "default": "Padrão da instalação",
@@ -2078,6 +2113,15 @@
     "rewound": {
       "summary": "Arquivos devolvidos: {{restored}} voltaram, {{kept}} ficaram como estavam",
       "failed": "Arquivos devolvidos: {{restored}} voltaram, {{kept}} ficaram como estavam, {{failed}} não puderam voltar"
+    },
+    "image": {
+      "attached": "Imagem anexada",
+      "attachedWith": "Imagem anexada ({{details}})",
+      "open": "Abrir a imagem",
+      "close": "Fechar",
+      "description": "A imagem que este prompt levou, como o Claude a recebeu.",
+      "loading": "Carregando a imagem…",
+      "alt": "A imagem anexada ao prompt"
     }
   },
   "sessionsGroup": {

@@ -420,7 +420,7 @@ describe('the permission queue', () => {
 
       expect(answers()).toEqual([
         expect.objectContaining({
-          payload: { requestId: 'req-1', decision: 'allow', scope: 'project' },
+          payload: { requestId: 'req-1', decision: 'allow', scope: 'project', reach: 'exact' },
         }),
       ]);
     });
@@ -502,6 +502,223 @@ describe('the permission queue', () => {
       await waitFor(async () => {
         expect(await axe(container)).toHaveNoViolations();
       });
+    });
+  });
+
+  describe('how far a rule reaches — plan 23, B-13', () => {
+    const LIFETIME = 90 * 86_400_000;
+    const PREFIX = ['Bash(git push:*)', 'Bash(tail:*)'];
+    const EXACT = ['Bash(git push 2>&1 | tail -5)'];
+
+    function askWithReaches(reaches: readonly Record<string, unknown>[]): void {
+      ask({
+        description: 'git push 2>&1 | tail -5',
+        input: { command: 'git push 2>&1 | tail -5' },
+        riskHint: 'write',
+        suggestions: [
+          { scope: 'once', labelKey: 'permission.scope.once' },
+          { scope: 'session', labelKey: 'permission.scope.session' },
+          { scope: 'always', labelKey: 'permission.scope.always', lifetimeMs: LIFETIME },
+        ],
+        reaches,
+      });
+    }
+
+    function answers(): readonly Record<string, unknown>[] {
+      return sockets.latest.frames().filter((sent) => sent['type'] === 'permission.resolve');
+    }
+
+    const both = [
+      { reach: 'exact', patterns: EXACT },
+      { reach: 'prefix', patterns: PREFIX },
+    ];
+
+    it('shows each reach with its patterns, and starts on the prefix — S-75, S-77', () => {
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      askWithReaches(both);
+
+      const reach = screen.getByRole('group', { name: t('permission.reach.label') });
+      expect(
+        within(reach).getByRole('radio', { name: new RegExp(t('permission.reach.prefix')) }),
+      ).toBeChecked();
+      expect(
+        within(reach).getByRole('radio', { name: new RegExp(t('permission.reach.exact')) }),
+      ).not.toBeChecked();
+      expect(within(reach).getByText(PREFIX.join(' · '))).toBeInTheDocument();
+      expect(within(reach).getByText(EXACT[0] ?? '')).toBeInTheDocument();
+    });
+
+    it('shows no choice when there is only one reach — S-76', () => {
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      askWithReaches([{ reach: 'exact', patterns: EXACT }]);
+
+      expect(screen.queryByRole('group', { name: t('permission.reach.label') })).toBeNull();
+    });
+
+    it('starts on the exact path for a file, and on the tool when it is all there is — S-77, D-09', () => {
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      ask({
+        toolName: 'Edit',
+        title: 'permission.tool.Edit',
+        description: '/a/b.ts',
+        input: { file_path: '/a/b.ts' },
+        reaches: [
+          { reach: 'exact', patterns: ['Edit(/a/b.ts)'] },
+          { reach: 'tool', patterns: ['Edit'] },
+        ],
+      });
+
+      expect(
+        screen.getByRole('radio', { name: new RegExp(t('permission.reach.exact')) }),
+      ).toBeChecked();
+    });
+
+    it('answers the session with the reach chosen, never a pattern — S-78', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      askWithReaches(both);
+
+      await user.click(screen.getByRole('button', { name: t('permission.scope.session') }));
+
+      expect(answers()).toEqual([
+        expect.objectContaining({
+          payload: { requestId: 'req-1', decision: 'allow', scope: 'session', reach: 'prefix' },
+        }),
+      ]);
+    });
+
+    it('names no reach for a one-off', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      askWithReaches(both);
+
+      await user.click(screen.getByRole('button', { name: t('permission.scope.once') }));
+
+      expect(answers()[0]?.['payload']).toEqual({
+        requestId: 'req-1',
+        decision: 'allow',
+        scope: 'once',
+      });
+    });
+
+    it('says every pattern of the reach in the second step, and sends the reach — S-79', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      askWithReaches(both);
+
+      await user.click(screen.getByRole('button', { name: t('permission.scope.always') }));
+      const step = screen.getByRole('group', { name: t('permission.persist.title') });
+      expect(
+        within(step).getByText(PREFIX.join(' '), {
+          normalizer: (text) => text.replace(/\s+/g, ' '),
+        }),
+      ).toBeInTheDocument();
+      expect(answers()).toHaveLength(0);
+
+      await user.click(within(step).getByRole('button', { name: t('permission.persist.confirm') }));
+      expect(answers()).toEqual([
+        expect.objectContaining({
+          payload: { requestId: 'req-1', decision: 'allow', scope: 'always', reach: 'prefix' },
+        }),
+      ]);
+    });
+
+    it('answers with the reach the person switched to', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      askWithReaches(both);
+
+      await user.click(
+        screen.getByRole('radio', { name: new RegExp(t('permission.reach.exact')) }),
+      );
+      await user.click(screen.getByRole('button', { name: t('permission.scope.session') }));
+
+      expect(answers()[0]?.['payload']).toMatchObject({ reach: 'exact' });
+    });
+
+    it('does not offer a persisted scope when nothing can be persisted', () => {
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      askWithReaches([]);
+
+      expect(screen.queryByRole('button', { name: t('permission.scope.always') })).toBeNull();
+      expect(
+        screen.getByRole('button', { name: t('permission.scope.session') }),
+      ).toBeInTheDocument();
+    });
+
+    it('reads a server that sends no reaches as offering the exact pattern — S-80', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      const rule = { pattern: 'Bash(git status)', lifetimeMs: LIFETIME };
+      ask({
+        description: 'git status',
+        input: { command: 'git status' },
+        suggestions: [
+          { scope: 'once', labelKey: 'permission.scope.once' },
+          { scope: 'always', labelKey: 'permission.scope.always', ...rule },
+        ],
+      });
+
+      expect(screen.queryByRole('group', { name: t('permission.reach.label') })).toBeNull();
+      await user.click(screen.getByRole('button', { name: t('permission.scope.always') }));
+      expect(
+        within(screen.getByRole('group', { name: t('permission.persist.title') })).getByText(
+          'Bash(git status)',
+        ),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('who answered without asking — plan 23, B-14', () => {
+    function settle(payload: Record<string, unknown>): void {
+      act(() => {
+        sockets.latest.receive({
+          v: 1,
+          id: 'evt-via',
+          kind: 'event',
+          type: 'permission.resolved',
+          ts: NOW.toISOString(),
+          sessionId: SESSION,
+          seq: 1,
+          payload: { requestId: 'req-1', auto: true, ...payload },
+        });
+      });
+    }
+
+    it('says Permitir tudo allowed it — S-81', () => {
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      ask();
+      settle({ decision: 'allow', via: 'allowAll' });
+
+      expect(screen.getByText(t('permission.outcome.allowAll'))).toBeInTheDocument();
+    });
+
+    it('says a rule refused it, rather than that nobody answered — S-81', () => {
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      ask();
+      settle({ decision: 'deny', via: 'rule' });
+
+      expect(screen.getByText(t('permission.outcome.ruleDenied'))).toBeInTheDocument();
+    });
+
+    it('reads a `via` it does not know as a rule — S-82', () => {
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      ask();
+      settle({ decision: 'allow', via: 'magic' });
+
+      expect(screen.getByText(t('permission.outcome.rule'))).toBeInTheDocument();
     });
   });
 

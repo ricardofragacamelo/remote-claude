@@ -435,6 +435,8 @@ Map<String, Object?> historyBody({
   String summary = 'Fix the build',
   List<Map<String, Object?>> events = const <Map<String, Object?>>[],
   String? nextCursor,
+  String? activity,
+  String? lastMessageId,
 }) => <String, Object?>{
   'session': <String, Object?>{
     'sessionId': conversationId,
@@ -444,9 +446,11 @@ Map<String, Object?> historyBody({
     'gitBranch': 'main',
     'createdAt': '2026-09-20T10:00:00.000Z',
     'lastModified': '2026-09-24T18:30:00.000Z',
+    'activity': ?activity,
   },
   'events': events,
   'nextCursor': nextCursor,
+  'lastMessageId': ?lastMessageId,
 };
 
 /// The events of a history made of [raws], through the real mapper — the one the live frames go
@@ -461,3 +465,64 @@ String sessionRewound({
   String sessionId = 'session-1',
 }) =>
     frame(kind: 'event', type: 'session.rewound', sessionId: sessionId, seq: seq, payload: payload);
+
+/// The ack of a `transcript.follow` whose id was [correlationId] (plan 22, B-24).
+String transcriptFollowing({
+  required String correlationId,
+  String followId = 't-1',
+  String conversationId = 'conv-1',
+  String activity = 'activeElsewhere',
+}) => frame(
+  kind: 'ack',
+  type: 'transcript.following',
+  id: 'ack-$correlationId',
+  correlationId: correlationId,
+  payload: <String, Object?>{
+    'followId': followId,
+    'conversationId': conversationId,
+    'activity': activity,
+  },
+);
+
+/// What a followed conversation gained: [raws] are frames of the live contract, carried as entries
+/// of the history.
+String transcriptAppended({
+  required int seq,
+  String followId = 't-1',
+  String conversationId = 'conv-1',
+  List<String> raws = const <String>[],
+  String? lastMessageId,
+  String activity = 'activeElsewhere',
+  bool working = false,
+}) => frame(
+  kind: 'event',
+  type: 'transcript.appended',
+  id: 'appended-$seq',
+  seq: seq,
+  payload: <String, Object?>{
+    'followId': followId,
+    'conversationId': conversationId,
+    'events': raws.map(historyEntry).toList(growable: false),
+    'lastMessageId': ?lastMessageId,
+    'activity': activity,
+    'working': working,
+  },
+);
+
+/// The end of a subscription that cannot go on.
+String transcriptReset({
+  required int seq,
+  String followId = 't-1',
+  String conversationId = 'conv-1',
+  String reason = 'rewritten',
+}) => frame(
+  kind: 'event',
+  type: 'transcript.reset',
+  id: 'reset-$seq',
+  seq: seq,
+  payload: <String, Object?>{
+    'followId': followId,
+    'conversationId': conversationId,
+    'reason': reason,
+  },
+);

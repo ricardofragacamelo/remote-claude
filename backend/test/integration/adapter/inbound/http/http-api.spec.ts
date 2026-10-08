@@ -86,6 +86,15 @@ describe('the HTTP surface', () => {
       expect(response.body.error.traceId).toEqual(expect.any(String));
     });
 
+    it('has no door into Claude`s store: the route the e2e entry point mounts is unknown here — plan 22, S-123', async () => {
+      const response = await http()
+        .post('/e2e/conversations-elsewhere')
+        .send({ conversationId: 'x', cwd: '/tmp', fixture: 'text-turn', title: 'planted' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toMatchObject({ code: 'NOT_FOUND' });
+    });
+
     it('never puts a stack or a server path in the body', async () => {
       const response = await http().get('/nothing-here');
 

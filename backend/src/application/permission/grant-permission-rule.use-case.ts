@@ -37,7 +37,55 @@ export class GrantPermissionRuleUseCase {
    */
   async execute(command: GrantPermissionRuleCommand): Promise<PermissionRule> {
     const at = this.clock.now();
-    const rule = PermissionRule.create(
+    const { rule } = await this.store(this.build(command, at), command.userId, at);
+
+    return rule;
+  }
+
+  /**
+   * Several rules from one answer — the `prefix` reach of a line of several commands (plan 23,
+   * D-13). **All or none**, as far as this answer goes: every pattern is validated before any is
+   * stored, and when storing one fails, the rules this call created are taken back — with the trail
+   * saying so — before the failure goes up. A rule that already existed is left alone: it was
+   * somebody's before this answer.
+   *
+   * @throws the same as {@link execute}, for any of them
+   */
+  async executeAll(commands: readonly GrantPermissionRuleCommand[]): Promise<PermissionRule[]> {
+    const at = this.clock.now();
+    const drafts = commands.map((command) => ({ command, rule: this.build(command, at) }));
+    const stored: PermissionRule[] = [];
+    const created: { rule: PermissionRule; command: GrantPermissionRuleCommand }[] = [];
+
+    try {
+      for (const { command, rule } of drafts) {
+        const grant = await this.store(rule, command.userId, at);
+        stored.push(grant.rule);
+
+        if (grant.created) {
+          created.push({ rule: grant.rule, command });
+        }
+      }
+    } catch (error) {
+      for (const { rule, command } of created) {
+        await this.rules.saveRevocation(rule.revoke(at));
+        await this.trail.execute({
+          userId: command.userId,
+          kind: 'permission.ruleRevoked',
+          subjectId: rule.id,
+          subjectLabel: rule.ruleContent,
+          at,
+        });
+      }
+      throw error;
+    }
+
+    return stored;
+  }
+
+  /** Step 1: the domain validates the pattern, the lifetime and the scope. Nothing is stored. */
+  private build(command: GrantPermissionRuleCommand, at: Date): PermissionRule {
+    return PermissionRule.create(
       {
         id: this.ids.next(),
         userId: command.userId,
@@ -52,13 +100,20 @@ export class GrantPermissionRuleUseCase {
       },
       this.settings.ruleMaxLifetimeMs,
     );
+  }
 
+  /** Steps 2 and 3: the atomic grant, and the trail of a grant that created something. */
+  private async store(
+    rule: PermissionRule,
+    userId: GrantPermissionRuleCommand['userId'],
+    at: Date,
+  ): Promise<{ rule: PermissionRule; created: boolean }> {
     const grant = await this.rules.grant(rule, at);
 
     if (grant.created) {
       try {
         await this.trail.execute({
-          userId: command.userId,
+          userId,
           kind: 'permission.ruleGranted',
           subjectId: grant.rule.id,
           subjectLabel: grant.rule.ruleContent,
@@ -73,6 +128,6 @@ export class GrantPermissionRuleUseCase {
       }
     }
 
-    return grant.rule;
+    return grant;
   }
 }

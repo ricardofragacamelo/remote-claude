@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { PERMISSION_SCOPES } from '@domain/permission';
+import { PERMISSION_SCOPES, RULE_REACHES } from '@domain/permission';
 
 /** The payloads the permission frames carry, as the contract declares them. */
 export const permissionSchemas = {
@@ -16,6 +16,7 @@ export const permissionSchemas = {
     requestId: z.string().min(1),
     decision: z.enum(['allow', 'deny']),
     scope: z.enum(PERMISSION_SCOPES).optional(),
+    reach: z.enum(RULE_REACHES).optional(),
     reason: z.string().min(1).optional(),
   }),
 

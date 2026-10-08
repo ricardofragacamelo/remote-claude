@@ -480,7 +480,7 @@ abstract class AppLocalizations {
   /// Tool invocation that finished well
   ///
   /// In en, this message translates to:
-  /// **'Succeeded'**
+  /// **'Done'**
   String get sessionToolStatusSucceeded;
 
   /// Tool invocation that failed
@@ -492,14 +492,110 @@ abstract class AppLocalizations {
   /// Tool invocation somebody refused
   ///
   /// In en, this message translates to:
-  /// **'Denied'**
+  /// **'Refused'**
   String get sessionToolStatusDenied;
 
-  /// Label above what a tool printed
+  /// Label of a tool with the description the model gave the call
   ///
   /// In en, this message translates to:
-  /// **'Output'**
-  String get sessionToolOutputLabel;
+  /// **'{name} · {title}'**
+  String sessionToolTitled(String name, String title);
+
+  /// Accessible name of the line of a tool, which opens its card
+  ///
+  /// In en, this message translates to:
+  /// **'{tool} — {status}. Show the exact input'**
+  String sessionToolRowLabel(String tool, String status);
+
+  /// Tag of what went into a shell command
+  ///
+  /// In en, this message translates to:
+  /// **'IN'**
+  String get sessionToolRowIn;
+
+  /// Tag of what came out of a shell command
+  ///
+  /// In en, this message translates to:
+  /// **'OUT'**
+  String get sessionToolRowOut;
+
+  /// Accessible name of the exact input of a tool
+  ///
+  /// In en, this message translates to:
+  /// **'The exact input'**
+  String get sessionToolRowInput;
+
+  /// Accessible name of what a tool said
+  ///
+  /// In en, this message translates to:
+  /// **'What it said'**
+  String get sessionToolRowOutput;
+
+  /// The whole output of a tool is being read
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the whole output…'**
+  String get sessionToolRowOutputLoading;
+
+  /// The whole output of a tool could not be read; its end stays
+  ///
+  /// In en, this message translates to:
+  /// **'The whole output did not load — this is only its end.'**
+  String get sessionToolRowOutputFailed;
+
+  /// The server sent only the start and the end of a large output
+  ///
+  /// In en, this message translates to:
+  /// **'The output had {size}: only its start and its end are here, cut where it is marked.'**
+  String sessionToolRowOutputTruncated(String size);
+
+  /// Marker where the middle of a large output was left out
+  ///
+  /// In en, this message translates to:
+  /// **'[… the middle of the output was left out here …]'**
+  String get sessionToolRowOutputCut;
+
+  /// Marker of an image a prompt carried, of unknown type and size
+  ///
+  /// In en, this message translates to:
+  /// **'Attached image'**
+  String get sessionImageAttached;
+
+  /// Marker of an image a prompt carried, with its type and size
+  ///
+  /// In en, this message translates to:
+  /// **'Attached image ({details})'**
+  String sessionImageAttachedWith(String details);
+
+  /// Opens the image a prompt carried
+  ///
+  /// In en, this message translates to:
+  /// **'Open the image'**
+  String get sessionImageOpen;
+
+  /// Closes the screen of a prompt's image
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get sessionImageClose;
+
+  /// What the screen of a prompt's image shows
+  ///
+  /// In en, this message translates to:
+  /// **'The image this prompt carried, as Claude received it.'**
+  String get sessionImageDescription;
+
+  /// The image of a prompt is being read
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the image…'**
+  String get sessionImageLoading;
+
+  /// Accessible name of the image of a prompt
+  ///
+  /// In en, this message translates to:
+  /// **'The image attached to the prompt'**
+  String get sessionImageAlt;
 
   /// Why the session closed
   ///
@@ -813,6 +909,36 @@ abstract class AppLocalizations {
   /// **'Refused by one of your rules, without asking anybody.'**
   String get permissionOutcomeRefusedByRule;
 
+  /// Allow everything (allowAll) answered — the session runs without asking
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed by Allow everything, without asking anybody.'**
+  String get permissionOutcomeAllowedByAllowAll;
+
+  /// The reach of a rule left by this answer — label
+  ///
+  /// In en, this message translates to:
+  /// **'How far'**
+  String get permissionReachLabel;
+
+  /// The reach of a rule left by this answer — exact
+  ///
+  /// In en, this message translates to:
+  /// **'Exactly this'**
+  String get permissionReachExact;
+
+  /// The reach of a rule left by this answer — prefix
+  ///
+  /// In en, this message translates to:
+  /// **'Commands that start the same way'**
+  String get permissionReachPrefix;
+
+  /// The reach of a rule left by this answer — tool
+  ///
+  /// In en, this message translates to:
+  /// **'Any use of this tool'**
+  String get permissionReachTool;
+
   /// The deadline refused the request
   ///
   /// In en, this message translates to:
@@ -1119,6 +1245,30 @@ abstract class AppLocalizations {
   /// **'This conversation changed while you were reading it. Reload it from the latest messages.'**
   String get transcriptErrorCursorStale;
 
+  /// The server answered TRANSCRIPT_FOLLOW_LIMIT to following a conversation
+  ///
+  /// In en, this message translates to:
+  /// **'Too many conversations are being followed right now ({limit} at most). This one stays readable, but it will not update by itself.'**
+  String transcriptErrorFollowLimit(String limit);
+
+  /// The server answered TRANSCRIPT_FOLLOW_LIVE_HERE: a live session of the caller holds the conversation
+  ///
+  /// In en, this message translates to:
+  /// **'This conversation is open in a live session here. Open that session to see it as it goes.'**
+  String get transcriptErrorFollowLiveHere;
+
+  /// The image of a prompt of the history is of a type the route does not serve (415)
+  ///
+  /// In en, this message translates to:
+  /// **'This image cannot be shown here: {mediaType} is not a type the server serves.'**
+  String transcriptErrorImageTypeUnsupported(String mediaType);
+
+  /// The image of a prompt of the history is above the ceiling of the route (413)
+  ///
+  /// In en, this message translates to:
+  /// **'This image is too large to show here.'**
+  String get transcriptErrorImageTooLarge;
+
   /// Title of the screen listing the conversations of one folder
   ///
   /// In en, this message translates to:
@@ -1218,7 +1368,7 @@ abstract class AppLocalizations {
   /// Continues the conversation in a live session
   ///
   /// In en, this message translates to:
-  /// **'Resume'**
+  /// **'Continue this conversation'**
   String get historyResumeAction;
 
   /// While the resume waits for the session that continues it
@@ -1244,6 +1394,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This conversation began outside this app. Resuming it here continues it under a new id: the editor or terminal it came from will not see the answers given here.'**
   String get historyExternalNote;
+
+  /// Said while the conversation's activity is activeElsewhere (plan 22, B-26); the same text as the web's history.screen.activeElsewhereNote
+  ///
+  /// In en, this message translates to:
+  /// **'Something else wrote this conversation a moment ago — the editor or a terminal may have it open. Continuing it here makes a copy, and the two will diverge.'**
+  String get historyActiveElsewhereNote;
+
+  /// The followed conversation seems to have a turn running in another client — an inference (plan 22, D-12)
+  ///
+  /// In en, this message translates to:
+  /// **'Working in another client…'**
+  String get historyFollowWorking;
+
+  /// The help of "Working in another client…": why it is an inference
+  ///
+  /// In en, this message translates to:
+  /// **'This is an inference, not something Claude reported: the conversation\'s last entry leaves the turn open — a tool without its result, a thought, or a prompt without an answer — and something wrote it a moment ago. The history does not record the state of a turn, and nothing here says which client it is.'**
+  String get historyFollowWorkingHelp;
+
+  /// The pill over a followed conversation scrolled up, with one entry arrived below; the same as the web's history.follow.newerOne
+  ///
+  /// In en, this message translates to:
+  /// **'1 new'**
+  String get historyFollowNewerOne;
+
+  /// The pill over a followed conversation scrolled up: how many entries arrived below; the same as the web's history.follow.newer
+  ///
+  /// In en, this message translates to:
+  /// **'{count} new'**
+  String historyFollowNewer(int count);
+
+  /// What the pill does, for a screen reader and a long press
+  ///
+  /// In en, this message translates to:
+  /// **'Go to the end — {newer}'**
+  String historyFollowNewerLabel(String newer);
+
+  /// Asks before continuing a conversation that is active elsewhere; the same as the web's sessions.fork.title
+  ///
+  /// In en, this message translates to:
+  /// **'Continue a conversation that is being written now?'**
+  String get sessionForkTitle;
+
+  /// What continuing an active conversation does
+  ///
+  /// In en, this message translates to:
+  /// **'Something else — the editor or a terminal — wrote this conversation a moment ago. Continuing it here makes a copy under a new id; the other one keeps going on its own, and the two will diverge.'**
+  String get sessionForkDescription;
+
+  /// Does not continue the active conversation
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get sessionForkCancel;
+
+  /// Continues the active conversation as a copy
+  ///
+  /// In en, this message translates to:
+  /// **'Continue as a copy'**
+  String get sessionForkConfirm;
 
   /// While the history of a resumed or reloaded session is being read
   ///
@@ -1659,6 +1869,24 @@ abstract class AppLocalizations {
   /// **'Thought for {seconds} s'**
   String thinkingTook(String seconds);
 
+  /// Thinking line once it stopped, with its duration of a minute or more
+  ///
+  /// In en, this message translates to:
+  /// **'Thought for {minutes} min {seconds} s'**
+  String thinkingTookMinutes(String minutes, String seconds);
+
+  /// Thinking line read from the history: at most how long it took
+  ///
+  /// In en, this message translates to:
+  /// **'Thought for up to {seconds} s'**
+  String thinkingTookUpTo(String seconds);
+
+  /// Thinking line read from the history: at most how long it took, a minute or more
+  ///
+  /// In en, this message translates to:
+  /// **'Thought for up to {minutes} min {seconds} s'**
+  String thinkingTookUpToMinutes(String minutes, String seconds);
+
   /// Thinking line of a redacted thinking
   ///
   /// In en, this message translates to:
@@ -1826,6 +2054,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Claude plans without changing anything, and asks you to approve the plan.'**
   String get modePlanDescription;
+
+  /// modeAllowAll
+  ///
+  /// In en, this message translates to:
+  /// **'Allow everything'**
+  String get modeAllowAll;
+
+  /// modeAllowAllDescription
+  ///
+  /// In en, this message translates to:
+  /// **'Claude runs every tool without asking, except what one of your rules refuses. Its questions to you still come.'**
+  String get modeAllowAllDescription;
+
+  /// modeAllowAllWarning
+  ///
+  /// In en, this message translates to:
+  /// **'Claude will run any command on this machine without asking you, until you change the mode.'**
+  String get modeAllowAllWarning;
 
   /// Model chip
   ///
@@ -2316,7 +2562,7 @@ abstract class AppLocalizations {
   /// Help: the working indicator
   ///
   /// In en, this message translates to:
-  /// **'While a turn runs, its last line moves: an asterisk, what Claude is doing — the tool it runs, that it waits for you, or a word for the turn — and for how long. Its thinking is a line of its own, in order: \"Thinking…\" while it arrives, \"Thought for n s\" once it is over, folded — tap it to read it. When the turn ends, the line gives way to what the turn cost.'**
+  /// **'While a turn runs, its last line moves: an asterisk, what Claude is doing — the tool it runs, that it waits for you, or a word for the turn — and for how long. Its thinking is a line of its own, in order: \"Thinking…\" while it arrives, \"Thought for n s\" once it is over — what it thought in view, quieter than the answer, when the model showed it; folded when it did not. A tool is one line, folded: tap it for what went in and what came out. When the turn ends, the line gives way to what the turn cost.'**
   String get sessionHelpWorking;
 
   /// Help heading

@@ -193,7 +193,7 @@ describe('the line of a turn that runs — plan 09, B-21', () => {
 });
 
 describe('thinking, in the order of the conversation — plan 09, B-22', () => {
-  it('is alive while it arrives, and folds into how long it took once it ends — S-54', async () => {
+  it('is alive while it arrives, and says how long it took once it ends — S-54', async () => {
     const user = userEvent.setup();
     opened();
 
@@ -216,10 +216,11 @@ describe('thinking, in the order of the conversation — plan 09, B-22', () => {
       '2026-10-03T12:00:03.000Z',
     );
 
-    const folded = screen.getByText(t('sessions.thinking.took', { seconds: 3 }));
-    expect(folded.closest('details')).not.toHaveAttribute('open');
-    await user.click(folded);
+    // Summarised, it stays in view (plan 22, D-15) — and folds at a click.
+    const took = screen.getByText(t('sessions.thinking.took', { seconds: 3 }));
     expect(screen.getByText('Let me see')).toBeVisible();
+    await user.click(took);
+    expect(took.closest('details')).not.toHaveAttribute('open');
   });
 
   it('draws three thinkings between two tools as five lines, in the order they came — S-55', () => {

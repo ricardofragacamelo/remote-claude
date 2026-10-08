@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
 
 import { atEnd, useFollowTail } from '@/features/session/hooks/useFollowTail';
@@ -113,6 +113,62 @@ describe('the end of the conversation, followed — plan 09, B-05', () => {
 
     expect(scroller.current.scrollTop).toBe(0);
     expect(observed.size).toBe(0);
+  });
+
+  it('says whether the end is followed, and goes back to it on request — plan 22, S-84', () => {
+    const sizes = { scrollHeight: 1_000, clientHeight: 200 };
+    const scroller = { current: aScroller(sizes) };
+    const keeper = aKeeper('conversation:a');
+    const { result } = renderHook(() => useFollowTail(scroller, { current: null }, keeper));
+
+    expect(result.current.following).toBe(true);
+
+    scroller.current.scrollTop = 300;
+    act(() => {
+      fireEvent.scroll(scroller.current);
+    });
+    expect(result.current.following).toBe(false);
+
+    sizes.scrollHeight = 1_600;
+    act(() => {
+      result.current.toEnd();
+    });
+
+    expect(result.current.following).toBe(true);
+    expect(scroller.current.scrollTop).toBe(1_600);
+    expect(keeper.kept).toEqual({ top: 1_600, following: true });
+    sizes.scrollHeight = 2_000;
+    grew();
+    expect(scroller.current.scrollTop).toBe(2_000);
+  });
+
+  it('starts each new content where it was left', () => {
+    const scroller = { current: aScroller({ scrollHeight: 1_000, clientHeight: 200 }) };
+    let keeper = aKeeper('conversation:a');
+    const { result, rerender } = renderHook(() =>
+      useFollowTail(scroller, { current: null }, keeper),
+    );
+    expect(result.current.following).toBe(true);
+
+    keeper = aKeeper('conversation:b', { top: 10, following: false });
+    rerender();
+
+    expect(result.current.following).toBe(false);
+  });
+
+  it('goes nowhere without a scroller or a keeper', () => {
+    const none = renderHook(() =>
+      useFollowTail({ current: null }, { current: null }, aKeeper('a')),
+    );
+    const scroller = { current: aScroller({ scrollHeight: 1_000, clientHeight: 200 }) };
+    const unkept = renderHook(() => useFollowTail(scroller, { current: null }, null));
+
+    act(() => {
+      none.result.current.toEnd();
+      unkept.result.current.toEnd();
+    });
+
+    expect(scroller.current.scrollTop).toBe(0);
   });
 
   it('does nothing before there is a scroller', () => {

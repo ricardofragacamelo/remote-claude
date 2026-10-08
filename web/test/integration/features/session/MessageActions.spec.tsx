@@ -71,6 +71,7 @@ describe('an inline card', () => {
       defaultToNo: false,
       expiresAt: '2999-01-01T00:00:00.000Z',
       suggestions: [],
+      reaches: [],
       isAnswering: false,
     };
     const requests = {

@@ -89,6 +89,7 @@ describe('answering a permission request', () => {
         frameId: 'frame-1',
         decision: 'allow',
         scope: 'once',
+        reach: null,
         reason: null,
       }),
     ).toBe('answer-1');
@@ -102,6 +103,7 @@ describe('answering a permission request', () => {
       frameId: 'frame-1',
       decision: 'allow',
       scope: 'session',
+      reach: null,
       reason: null,
     });
 
@@ -122,6 +124,7 @@ describe('answering a permission request', () => {
       frameId: 'frame-1',
       decision: 'deny',
       scope: 'once',
+      reach: null,
       reason: 'not now',
     });
 
@@ -157,6 +160,7 @@ describe('reading the permission frames', () => {
       resolvedBy: null,
       resolvedFrom: null,
       toolUseId: null,
+      via: null,
       answeredHere: false,
     });
   });
@@ -333,5 +337,94 @@ describe('the scopes a question offers — plan 03, D-12', () => {
     const read = offering([{ scope: 'forever', labelKey: 'permission.scope.forever' }]);
 
     expect(read?.suggestions).toEqual([]);
+  });
+});
+
+describe('the reach of an answer — plan 23, B-13', () => {
+  const asked = (payload: Record<string, unknown>) =>
+    toRequest(
+      frame({
+        kind: 'request',
+        type: 'permission.requested',
+        payload: {
+          requestId: 'req-1',
+          toolName: 'Bash',
+          title: 'permission.tool.Bash',
+          expiresAt: '2026-09-19T12:01:00.000Z',
+          riskHint: 'write',
+          input: { command: 'git push | tail -5' },
+          ...payload,
+        },
+      }),
+    );
+
+  it('reads the reaches it knows, and drops the ones it does not or cannot read', () => {
+    const request = asked({
+      reaches: [
+        { reach: 'prefix', patterns: ['Bash(git push:*)', 'Bash(tail:*)'] },
+        { reach: 'glob', patterns: ['Bash(*)'] },
+        { reach: 'exact', patterns: [] },
+        { reach: 'tool', patterns: [3] },
+        'exact',
+      ],
+    });
+
+    expect(request?.reaches).toEqual([
+      { reach: 'prefix', patterns: ['Bash(git push:*)', 'Bash(tail:*)'] },
+    ]);
+  });
+
+  it('offers a persisted scope with no exact pattern when the server sends reaches', () => {
+    const request = asked({
+      suggestions: [{ scope: 'always', labelKey: 'permission.scope.always', lifetimeMs: 1_000 }],
+      reaches: [{ reach: 'prefix', patterns: ['Bash(git push:*)'] }],
+    });
+
+    expect(request?.suggestions).toEqual([
+      {
+        scope: 'always',
+        labelKey: 'permission.scope.always',
+        rule: { pattern: null, lifetimeMs: 1_000 },
+      },
+    ]);
+  });
+
+  it('does not offer it with no pattern and no reach, as before reaches existed', () => {
+    const request = asked({
+      suggestions: [{ scope: 'always', labelKey: 'permission.scope.always', lifetimeMs: 1_000 }],
+    });
+
+    expect(request?.suggestions).toEqual([]);
+    expect(request?.reaches).toEqual([]);
+  });
+
+  it('sends the reach of a session answer, and none for a one-off', () => {
+    const { client, responses } = aClient();
+    const answer = {
+      requestId: 'req-1',
+      frameId: 'frame-1',
+      decision: 'allow' as const,
+      reason: null,
+    };
+
+    sendAnswer(client, { ...answer, scope: 'session', reach: 'prefix' });
+    sendAnswer(client, { ...answer, scope: 'once', reach: 'prefix' });
+
+    expect(responses.map((response) => response.payload)).toEqual([
+      { requestId: 'req-1', decision: 'allow', scope: 'session', reach: 'prefix' },
+      { requestId: 'req-1', decision: 'allow', scope: 'once' },
+    ]);
+  });
+
+  it.each([
+    ['rule', 'rule'],
+    ['allowAll', 'allowAll'],
+    ['magic', null],
+    [undefined, null],
+  ])('reads a `via` of %s as %s', (via, read) => {
+    expect(
+      toOutcome(frame({ payload: { requestId: 'req-1', decision: 'allow', auto: true, via } }))
+        ?.via,
+    ).toBe(read);
   });
 });

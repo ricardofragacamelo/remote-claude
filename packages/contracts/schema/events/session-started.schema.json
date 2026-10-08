@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/events/session-started.json",
   "title": "SessionStarted",
-  "description": "The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` \u2014 an SDKMessage is never emitted raw (ADR-006).",
+  "description": "The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` — an SDKMessage is never emitted raw (ADR-006).",
   "x-kind": "event",
   "x-type": "session.started",
   "type": "object",
@@ -20,7 +20,8 @@
     },
     "permissionMode": {
       "type": "string",
-      "enum": ["default", "acceptEdits", "bypassPermissions", "plan"]
+      "enum": ["default", "acceptEdits", "bypassPermissions", "plan", "allowAll"],
+      "description": "The permission mode. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured."
     },
     "claudeSessionId": {
       "type": "string",
@@ -28,7 +29,7 @@
     },
     "resumedFrom": {
       "type": "string",
-      "description": "The conversation this session continues, when it is a resume. Absent for a fresh session. The history before the first turn of this session is read from it, over HTTP \u2014 the replay buffer only ever holds what this session said."
+      "description": "The conversation this session continues, when it is a resume. Absent for a fresh session. The history before the first turn of this session is read from it, over HTTP — the replay buffer only ever holds what this session said."
     }
   }
 }

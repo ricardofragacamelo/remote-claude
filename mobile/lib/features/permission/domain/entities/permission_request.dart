@@ -39,14 +39,40 @@ enum PermissionScope {
 class RuleOffer extends Equatable {
   const RuleOffer({required this.pattern, required this.lifetime});
 
-  /// In the grammar of the Claude Code settings: `Bash(git status)`.
-  final String pattern;
+  /// The `exact` pattern, in the grammar of the Claude Code settings: `Bash(git status)`. `null`
+  /// when the invocation has no exact reach — the patterns of the others travel in the reaches.
+  final String? pattern;
 
   /// How long the rule lives, counted from the answer.
   final Duration lifetime;
 
   @override
   List<Object?> get props => <Object?>[pattern, lifetime];
+}
+
+/// How far a rule left by an answer reaches (plan 23, B-16).
+enum RuleReachKind { exact, prefix, tool }
+
+/// One reach the server offered, with the rules it would leave — one per pattern.
+///
+/// Computed by the server and named by the answer: the app never sends a pattern of its own.
+class RuleReach extends Equatable {
+  const RuleReach({required this.kind, required this.patterns});
+
+  final RuleReachKind kind;
+  final List<String> patterns;
+
+  @override
+  List<Object?> get props => <Object?>[kind, patterns];
+}
+
+/// The reach a card starts on (plan 23, D-09): commands that start the same way when there is such a
+/// reach, this very input otherwise, and the whole tool when it is the only one there is.
+RuleReach? preselectedReach(List<RuleReach> reaches) {
+  RuleReach? of(RuleReachKind kind) =>
+      reaches.where((RuleReach each) => each.kind == kind).firstOrNull;
+
+  return of(RuleReachKind.prefix) ?? of(RuleReachKind.exact) ?? of(RuleReachKind.tool);
 }
 
 /// Yes or no. There is no third value: silence is the deadline's, and it denies.
@@ -66,6 +92,7 @@ class PermissionRequest extends Equatable {
     this.defaultToNo = true,
     this.scopes = const <PermissionScope>[PermissionScope.once],
     this.rule,
+    this.reaches = const <RuleReach>[],
   });
 
   /// Idempotency is by **this**, never by [toolUseId].
@@ -93,8 +120,13 @@ class PermissionRequest extends Equatable {
   /// What a yes may reach. `once` is always first, and always there.
   final List<PermissionScope> scopes;
 
-  /// The rule `project` and `always` would grant. Present exactly when one of them is offered.
+  /// The lifetime of the rules `project` and `always` would grant, and their exact pattern when
+  /// there is one. Present exactly when one of them is offered.
   final RuleOffer? rule;
+
+  /// How far a rule left by the answer may reach, as the server computed it. More than one is a
+  /// choice on the card; the answer names one.
+  final List<RuleReach> reaches;
 
   /// Whether the deadline has already refused it at [now].
   bool isExpiredAt(DateTime now) => !now.isBefore(expiresAt);
@@ -132,6 +164,7 @@ class PermissionRequest extends Equatable {
     expiresAt: deadline,
     scopes: scopes,
     rule: rule,
+    reaches: reaches,
   );
 
   @override
@@ -147,5 +180,6 @@ class PermissionRequest extends Equatable {
     expiresAt,
     scopes,
     rule,
+    reaches,
   ];
 }

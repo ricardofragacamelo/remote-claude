@@ -18,25 +18,25 @@ fala com o `ws-client`.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-20 — O serviço de acompanhamento 🔲
+### B-20 — O serviço de acompanhamento ✅
 
 `features/session/services/transcript-follow.service.ts`, sobre o [ws-client](../../../web/src/shared/api/ws-client.ts):
 manda `follow` e `unfollow`, filtra por `followId`, confere o `seq` (buraco → pede reset) e entrega `appended`
 e `reset` a quem assinou.
 
-### B-21 — O hook `useConversationFollow` 🔲
+### B-21 — O hook `useConversationFollow` ✅
 
 Em `features/session/hooks/`: assina com o `lastMessageId` da página; junta os anexados pelo mesmo redutor;
 `reset` relê a página 1 e reassina; aba escondida (`visibilitychange`) solta e, ao voltar, reassina; o WS que
 volta reassina; `TRANSCRIPT_FOLLOW_LIMIT` vira um estado com a mensagem traduzida, e o leitor continua legível.
 
-### B-22 — `useConversationHistory` com os anexados 🔲
+### B-22 — `useConversationHistory` com os anexados ✅
 
 [useConversationHistory.ts](../../../web/src/features/session/hooks/useConversationHistory.ts) expõe
 `lastMessageId` e aceita os anexados; a `activity` deixa de vir só da primeira página e passa a ser a do envio
 mais recente. Carregar página antiga durante um envio não perde nem duplica nada (o `blockId` da B-13).
 
-### B-23 — O leitor que acompanha 🔲
+### B-23 — O leitor que acompanha ✅
 
 Em [ConversationReader.tsx](../../../web/src/features/session/components/ConversationReader.tsx): no fim,
 acompanha o fim; rolado para cima, a pílula "N novas" (N mensagens) leva ao fim; o aviso "ativa em outro

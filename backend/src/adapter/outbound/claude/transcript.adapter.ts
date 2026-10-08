@@ -3,7 +3,7 @@ import type { SDKSessionInfo, SessionMessage } from '@anthropic-ai/claude-agent-
 
 import { SCHEDULER } from '@application/shared';
 import type { Scheduler } from '@application/shared';
-import type { TranscriptStore } from '@application/transcript';
+import type { StoredImage, TranscriptStore } from '@application/transcript';
 import {
   ClaudeSessionId,
   TranscriptTimeoutError,
@@ -13,6 +13,8 @@ import type { TranscriptMessage, TranscriptSession } from '@domain/transcript';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { withinDeadline } from './deadline';
 import { historicalEvents } from './sdk-message.mapper';
+import { contentsOf } from './transcript-contents';
+import type { TranscriptContents } from './transcript-contents';
 import { ReadLimiter, SharedListing, TRANSCRIPT_LIMITS, TranscriptCache } from './transcript-reads';
 import type { TranscriptReadLimits } from './transcript-reads';
 import { TRANSCRIPT_SDK } from './transcript-sdk';
@@ -52,6 +54,9 @@ export class AgentSdkTranscriptAdapter implements TranscriptStore {
   private readonly limiter: ReadLimiter;
   private readonly cache: TranscriptCache<readonly TranscriptMessage[]>;
 
+  /** The whole outputs and the images, of fewer conversations — what weighs (plan 22, D-18). */
+  private readonly contents: TranscriptCache<TranscriptContents>;
+
   /** A folder's listing, shared by whoever asks for it at the same time (plan 08, S-31). */
   private readonly listings = new SharedListing<readonly TranscriptSession[]>(0);
 
@@ -66,6 +71,7 @@ export class AgentSdkTranscriptAdapter implements TranscriptStore {
   ) {
     this.limiter = new ReadLimiter(limits.concurrentReads);
     this.cache = new TranscriptCache(limits.cachedSessions);
+    this.contents = new TranscriptCache(limits.cachedContents);
     this.wholeStore = new SharedListing(limits.wholeStoreTtlMs);
   }
 
@@ -159,12 +165,18 @@ export class AgentSdkTranscriptAdapter implements TranscriptStore {
 
     // No `limit` and no `offset`: they cut what comes back and not what the SDK does, which parses
     // the whole file either way. The whole conversation is read once and sliced from the cache.
-    const { value, hit } = await this.cache.read(claudeSessionId, session.lastModified, async () =>
-      (
-        await this.call('read messages', { claudeSessionId }, () =>
-          this.sdk.getSessionMessages(claudeSessionId),
-        )
-      ).map(toMessage),
+    const { value, hit } = await this.cache.read(
+      claudeSessionId,
+      session.lastModified,
+      async () => {
+        const read = await this.readWhole(session);
+
+        // The same read fills the index of contents: the SDK has just returned everything it holds.
+        void this.contents.read(claudeSessionId, session.lastModified, () =>
+          Promise.resolve(contentsOf(read)),
+        );
+        return read.map(toMessage);
+      },
     );
 
     this.logger.debug(
@@ -227,6 +239,77 @@ export class AgentSdkTranscriptAdapter implements TranscriptStore {
     );
 
     return value === NO_SUBAGENT ? null : value;
+  }
+
+  async toolResult(session: TranscriptSession, toolUseId: string): Promise<string | null> {
+    const { value, hit } = await this.contentsFor(session);
+    const text = value.results.get(toolUseId) ?? null;
+
+    // The id, whether it was there and how long it is — never what it says (S-27).
+    this.logger.debug(
+      {
+        op: 'claude.transcript.toolResult',
+        layer: 'adapter',
+        claudeSessionId: session.id.value,
+        toolUseId,
+        found: text !== null,
+        characters: text?.length ?? 0,
+        cache: hit ? 'hit' : 'miss',
+      },
+      'tool result read',
+    );
+
+    return text;
+  }
+
+  async promptImage(session: TranscriptSession, blockId: string): Promise<StoredImage | null> {
+    const { value, hit } = await this.contentsFor(session);
+    const image = value.images.get(blockId) ?? null;
+
+    // The type and the length of the encoding — never a byte of the image (S-33).
+    this.logger.debug(
+      {
+        op: 'claude.transcript.promptImage',
+        layer: 'adapter',
+        claudeSessionId: session.id.value,
+        blockId,
+        found: image !== null,
+        mediaType: image?.mediaType ?? null,
+        encodedLength: image?.data.length ?? 0,
+        cache: hit ? 'hit' : 'miss',
+      },
+      'prompt image read',
+    );
+
+    return image;
+  }
+
+  /**
+   * The contents of a conversation at its version — indexed when its messages were read, or read again
+   * when the index let it go. The second read fills the cache of the events too: it paid for both.
+   */
+  private contentsFor(
+    session: TranscriptSession,
+  ): Promise<{ readonly value: TranscriptContents; readonly hit: boolean }> {
+    const claudeSessionId = session.id.value;
+
+    return this.contents.read(claudeSessionId, session.lastModified, async () => {
+      const read = await this.readWhole(session);
+
+      void this.cache.read(claudeSessionId, session.lastModified, () =>
+        Promise.resolve(read.map(toMessage)),
+      );
+      return contentsOf(read);
+    });
+  }
+
+  /** Everything the SDK holds of a conversation's main chain, in one call. */
+  private readWhole(session: TranscriptSession): Promise<SessionMessage[]> {
+    const claudeSessionId = session.id.value;
+
+    return this.call('read messages', { claudeSessionId }, () =>
+      this.sdk.getSessionMessages(claudeSessionId),
+    );
   }
 
   /**

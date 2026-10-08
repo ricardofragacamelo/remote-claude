@@ -1,9 +1,11 @@
 import { z } from 'zod';
+import type { TranscriptToolResultPayload } from '@remote-claude/contracts';
 
 import type { ListedTranscript, TranscriptPage } from '@application/transcript';
 import type {
   Page,
   SessionListCursor,
+  ToolOutput,
   TranscriptEvent,
   TranscriptMessage,
   VisibleTranscriptSession,
@@ -119,6 +121,12 @@ export interface TranscriptPageDto {
   readonly session: ListedTranscriptDto;
   readonly events: readonly TranscriptEvent[];
   readonly nextCursor: string | null;
+
+  /**
+   * The last entry of the conversation, `null` when it has none — what `transcript.follow` takes as
+   * `afterMessageId`, so nothing written after this page is missed (plan 22, B-10).
+   */
+  readonly lastMessageId: string | null;
 }
 
 /** The transport shape of a conversation. */
@@ -156,11 +164,37 @@ export function toTranscriptListDto(
 }
 
 /** The transport shape of a page of a conversation. */
-export function toTranscriptPageDto({ session, page }: TranscriptPage): TranscriptPageDto {
+export function toTranscriptPageDto({
+  session,
+  page,
+  lastMessageId,
+}: TranscriptPage): TranscriptPageDto {
   return {
     session: toListedTranscriptDto(session),
     events: page.items.flatMap((message) => message.events),
     nextCursor: page.next,
+    lastMessageId,
+  };
+}
+
+/**
+ * The block of an image, as its marker names it: `<uuid>:<index>` — the conversation's entry, and the
+ * block's place in it (plan 22, D-06). Anything else names no block this server minted.
+ */
+export const blockIdSchema = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:\d{1,4}$/);
+
+/** The whole output of a tool, as `GET /transcripts/:sessionId/tools/:toolUseId/result` answers it. */
+export type ToolResultDto = TranscriptToolResultPayload;
+
+/** The transport shape of a tool's output — `cutAt` only when it was cut. */
+export function toToolResultDto(output: ToolOutput): ToolResultDto {
+  return {
+    text: output.text,
+    truncated: output.truncated,
+    bytes: output.bytes,
+    ...(output.cutAt === undefined ? {} : { cutAt: output.cutAt }),
   };
 }
 

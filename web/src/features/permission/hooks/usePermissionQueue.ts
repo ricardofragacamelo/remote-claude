@@ -12,6 +12,7 @@ import type {
   PermissionOutcome,
   PermissionRequest,
   PermissionScope,
+  RuleReachKind,
 } from '../types/permission';
 
 /** What the screen gets: the questions, how the last ones ended, and the two things it can do. */
@@ -31,12 +32,14 @@ export interface PermissionQueue {
   /**
    * @param reason why it was refused, when the person said — "keep planning, and…" (plan 08,
    *   B-22). A refusal without one carries the screen's own.
+   * @param reach which of the request's reaches the rules of the answer take (plan 23, B-13)
    */
   answer(
     request: PermissionRequest,
     decision: PermissionDecision,
     scope: PermissionScope,
     reason?: string,
+    reach?: RuleReachKind,
   ): void;
   extend(request: PermissionRequest): void;
 }
@@ -86,6 +89,7 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
       decision: PermissionDecision,
       scope: PermissionScope,
       reason?: string,
+      reach?: RuleReachKind,
     ) => {
       if (request.isAnswering) {
         return;
@@ -101,6 +105,7 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
         // The contract requires a reason on a refusal: it goes into the trail and back to Claude
         // as a message, which is how the agent learns to propose something else.
         reason: decision === 'deny' ? refusalReason(reason) : null,
+        reach: reach ?? null,
       });
 
       if (left === null) {

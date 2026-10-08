@@ -174,6 +174,12 @@ export function testEnvironment(
   process.env['RC_FILES_HISTORY_RETENTION_DAYS'] = '30';
   process.env['RC_FILES_HISTORY_MAX_BATCH_ENTRIES'] = '1000';
   process.env['RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS'] = '120';
+  process.env['RC_TRANSCRIPT_TOOL_RESULT_MAX_BYTES'] = '262144';
+  process.env['RC_TRANSCRIPT_IMAGE_MAX_BYTES'] = '10485760';
+  process.env['RC_TRANSCRIPT_FOLLOW_ACTIVE_MS'] = '1000';
+  process.env['RC_TRANSCRIPT_FOLLOW_IDLE_MS'] = '10000';
+  process.env['RC_TRANSCRIPT_FOLLOW_MAX_PER_CONNECTION'] = '4';
+  process.env['RC_TRANSCRIPT_FOLLOW_MAX'] = '16';
   process.env['RC_ATTACHMENT_MAX_BYTES'] = '5242880';
   process.env['RC_ATTACHMENT_TTL_SECONDS'] = '3600';
   process.env['RC_ATTACHMENT_MEMORY_BYTES'] = '67108864';
@@ -194,6 +200,8 @@ export function testEnvironment(
  * a suite that mocks the transport leaves the transport uncovered.
  *
  * @param environment variables this suite needs different from the defaults, applied last
+ * @param mount what the suite adds to the application before it starts — the door the e2e entry
+ *   point opens into Claude's store, mounted as `scripted-main.ts` mounts it (plan 22, S-123)
  */
 export async function startTestApp(
   databaseUrl: string,
@@ -201,6 +209,7 @@ export async function startTestApp(
   customise: (builder: TestingModuleBuilder) => TestingModuleBuilder = (builder) => builder,
   allowlist: TestAllowlist = writeTestAllowlist(),
   environment: Readonly<Record<string, string>> = {},
+  mount: (app: INestApplication) => void = () => undefined,
 ): Promise<TestApp> {
   testEnvironment(databaseUrl, identity.issuer, allowlist.file);
 
@@ -233,6 +242,7 @@ export async function startTestApp(
   // parser and the shutdown hooks all come from `src/bootstrap.ts`. A suite that configured its
   // own application would be a suite proving nothing about the one that ships.
   configureApp(app);
+  mount(app);
 
   await app.init();
   await listen(app, 0, '127.0.0.1');

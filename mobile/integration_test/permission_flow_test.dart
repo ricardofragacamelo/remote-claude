@@ -148,6 +148,9 @@ void main() {
 
     // Plan 10, S-74 — "open the session" lands on the conversation, scrolled to this same card, in
     // the place of its tool; it is answered there.
+    // The card above it grew with the reaches (plan 23): the button is below the fold, and the
+    // page scrolls to it as a person would.
+    await tester.ensureVisible(find.text(app.l10n.permissionOpenSession));
     await tester.tap(find.text(app.l10n.permissionOpenSession));
     await app.robot(tester).cardOnScreen();
 

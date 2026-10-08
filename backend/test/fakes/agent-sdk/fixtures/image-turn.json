@@ -10,6 +10,80 @@
   "preToolUse": [],
   "canUseTool": [],
   "stderr": [],
+  "history": [
+    {
+      "type": "user",
+      "uuid": "6a351b24-ee87-4f0d-9b53-226fdb4af4c1",
+      "session_id": "3b8e5b3c-6158-46c8-a053-489994fc8cff",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "What is the dominant colour of this image? Reply with one lowercase word."
+          },
+          {
+            "type": "image",
+            "source": {
+              "type": "base64",
+              "media_type": "image/png",
+              "data": "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFklEQVR4nGO4I2JDEmIY1TCqYfhqAAAeBCwQ8YdREQAAAABJRU5ErkJggg=="
+            }
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-01T20:20:24.886Z"
+    },
+    {
+      "type": "assistant",
+      "uuid": "36a4fc59-82d2-4c47-bd3b-e6ed9a2dfdfb",
+      "session_id": "3b8e5b3c-6158-46c8-a053-489994fc8cff",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cfc8wt1fMVkMPXgCc3pJE",
+        "type": "message",
+        "role": "assistant",
+        "content": [{ "type": "text", "text": "red" }],
+        "container": null,
+        "stop_reason": "end_turn",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3617,
+          "cache_read_input_tokens": 11667,
+          "output_tokens": 3,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+          "service_tier": "standard",
+          "cache_creation": { "ephemeral_1h_input_tokens": 3617, "ephemeral_5m_input_tokens": 0 },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 3,
+              "cache_read_input_tokens": 11667,
+              "cache_creation_input_tokens": 3617,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 3617
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-01T20:20:26.251Z"
+    }
+  ],
   "messages": [
     {
       "type": "system",

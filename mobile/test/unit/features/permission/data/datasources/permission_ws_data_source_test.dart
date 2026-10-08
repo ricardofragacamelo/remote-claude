@@ -14,6 +14,7 @@ import 'package:remote_claude/features/permission/data/datasources/permission_ws
 import 'package:remote_claude/features/permission/domain/entities/permission_event.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_outcome.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/repositories/permission_repository.dart';
 
 import '../../../../../support/builders/frames.dart';
 import '../../../../../support/fakes/fake_credentials.dart';
@@ -214,10 +215,12 @@ void main() {
       await connectAndHandshake();
 
       final bool left = watch().answer(
-        frameId: 'req-frame-1',
-        requestId: 'req-1',
-        decision: PermissionDecision.allow,
-        scope: PermissionScope.session,
+        const OutgoingAnswer(
+          frameId: 'req-frame-1',
+          requestId: 'req-1',
+          decision: PermissionDecision.allow,
+          scope: PermissionScope.session,
+        ),
       );
 
       final Map<String, Object?> sent = sentOfType('permission.resolve').single;
@@ -235,11 +238,13 @@ void main() {
       await connectAndHandshake();
 
       watch().answer(
-        frameId: 'req-frame-1',
-        requestId: 'req-1',
-        decision: PermissionDecision.deny,
-        scope: PermissionScope.once,
-        reason: 'not now',
+        const OutgoingAnswer(
+          frameId: 'req-frame-1',
+          requestId: 'req-1',
+          decision: PermissionDecision.deny,
+          scope: PermissionScope.once,
+          reason: 'not now',
+        ),
       );
 
       expect(sentOfType('permission.resolve').single['payload'], <String, Object?>{
@@ -250,12 +255,54 @@ void main() {
       });
     });
 
+    test(
+      'plan 23 · S-91 · names the reach of a yes that leaves rules, and none for a one-off',
+      () async {
+        await connectAndHandshake();
+
+        watch()
+          ..answer(
+            const OutgoingAnswer(
+              frameId: 'req-frame-1',
+              requestId: 'req-1',
+              decision: PermissionDecision.allow,
+              scope: PermissionScope.always,
+              reach: RuleReachKind.prefix,
+            ),
+          )
+          ..answer(
+            const OutgoingAnswer(
+              frameId: 'req-frame-1',
+              requestId: 'req-1',
+              decision: PermissionDecision.allow,
+              scope: PermissionScope.once,
+              reach: RuleReachKind.prefix,
+            ),
+          );
+
+        expect(
+          sentOfType('permission.resolve').map((Map<String, Object?> sent) => sent['payload']),
+          <Object?>[
+            <String, Object?>{
+              'requestId': 'req-1',
+              'decision': 'allow',
+              'scope': 'always',
+              'reach': 'prefix',
+            },
+            <String, Object?>{'requestId': 'req-1', 'decision': 'allow', 'scope': 'once'},
+          ],
+        );
+      },
+    );
+
     test('says so when the socket is not ready, and sends nothing', () {
       final bool left = watch().answer(
-        frameId: 'req-frame-1',
-        requestId: 'req-1',
-        decision: PermissionDecision.allow,
-        scope: PermissionScope.once,
+        const OutgoingAnswer(
+          frameId: 'req-frame-1',
+          requestId: 'req-1',
+          decision: PermissionDecision.allow,
+          scope: PermissionScope.once,
+        ),
       );
 
       expect(left, isFalse);

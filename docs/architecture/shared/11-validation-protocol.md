@@ -114,9 +114,15 @@ Ordem **obrigatória**: do mais barato ao mais caro. O objetivo é falhar em 5 s
 Atalhos:
 
 ```bash
-pnpm verify        # portões 1-7   — o ciclo rápido, use durante a implementação
-pnpm verify:full   # portões 1-11  — o que define "pronto"
+pnpm verify        # portões 1-7   — o ciclo rápido; o que fecha cada FASE
+pnpm verify:full   # portões 1-11  — o que fecha o PLANO, depois da última task (a da fase de E2E)
 ```
+
+**Qual roda quando** ([ADR-023](00-decisions.md#adr-023--portão-rápido-por-fase-portão-completo-no-fim-do-plano)):
+ao fim de cada fase, o `pnpm verify` e as checagens baratas que a fase tocou (`pnpm docs:check`,
+`pnpm contracts:check`, `pnpm i18n:check`); ao fim do plano — depois da última task, que é a da fase de
+E2E, sempre a última —, o `pnpm verify:full` e os e2e que o plano exige. Fase verde no portão rápido está
+fechada como fase; o plano só está concluído com o portão completo verde.
 
 O portão 12 **não existe hoje**: o Sonar foi adiado ([D-07 do plano 05](../../plans/05-hardening-operations/decisions.md)).
 Fica na tabela como ausente declarado, não como verde. A complexidade, que era dele, foi para o
@@ -247,7 +253,8 @@ Todos os portões verdes:
 1. Percorra o checklist da [Definition of Done](10-definition-of-done.md).
 2. Confirme que **toda** linha da matriz de cenários está coberta e marcada.
 3. Atualize contrato, catálogo de erros, ADR e documentos de arquitetura afetados.
-4. Rode `pnpm verify:full` **uma última vez**, limpo.
+4. Rode o portão da etapa **uma última vez**, limpo: `pnpm verify` ao fechar uma fase,
+   `pnpm verify:full` ao fechar o plano.
 5. Relate.
 
 ### O relatório
@@ -273,7 +280,8 @@ Resumo operacional:
 2. **Implementou? Rode `pnpm verify`.** Não anuncie nada antes disso.
 2b. **Repetiu uma sequência de comandos? Vire script.** Na segunda vez, não na terceira.
 3. **Vermelho? Corrija e rode desde o portão 1.** Não retome do meio.
-4. **Verde no `verify`? Rode `pnpm verify:full`.** É o que define pronto.
+4. **Verde no `verify`? A fase fechou.** O `pnpm verify:full` roda uma vez, no fim do plano, depois
+   da fase de E2E — é o que define o plano pronto.
 5. **Três ciclos sem progresso? Pare e escale.** Não contorne portão.
 6. **Nunca desative uma regra para passar.** Isso não é entregar; é esconder.
 7. **Relate com honestidade**, incluindo o que não foi feito.

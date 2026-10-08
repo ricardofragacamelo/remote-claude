@@ -304,6 +304,12 @@
       "project": "Don't ask again in this project",
       "always": "Don't ask again anywhere"
     },
+    "reach": {
+      "label": "How far",
+      "exact": "Exactly this",
+      "prefix": "Commands that start the same way",
+      "tool": "Any use of this tool"
+    },
     "tool": {
       "Bash": "Run a shell command",
       "Write": "Write a file",
@@ -371,7 +377,9 @@
       "by": "{{decision}} by {{who}}",
       "expired": "Refused — nobody answered in time",
       "rule": "Allowed by one of your rules",
-      "somebody": "somebody"
+      "ruleDenied": "Refused by one of your rules",
+      "somebody": "somebody",
+      "allowAll": "Allowed automatically — Allow everything"
     }
   },
   "audit": {
@@ -564,7 +572,11 @@
       "invalidSessionId": "{{sessionId}} is not a conversation identifier.",
       "claudeUnavailable": "Claude could not read its history on this machine.",
       "claudeTimeout": "Claude took too long to read its history. Try again.",
-      "cursorStale": "This conversation changed while you were reading it. Reload it from the latest messages."
+      "cursorStale": "This conversation changed while you were reading it. Reload it from the latest messages.",
+      "followLimit": "Too many conversations are being followed right now ({{limit}} at most). This one stays readable, but it will not update by itself.",
+      "followLiveHere": "This conversation is open in a live session here. Open that session to see it as it goes.",
+      "imageTypeUnsupported": "This image cannot be shown here: {{mediaType}} is not a type the server serves.",
+      "imageTooLarge": "This image is too large to show here."
     },
     "list": {
       "untitled": "Untitled conversation"
@@ -588,6 +600,14 @@
       "emptyDescription": "Continue it to say the first thing.",
       "close": "Close this conversation",
       "activeElsewhereNote": "Something else wrote this conversation a moment ago — the editor or a terminal may have it open. Continuing it here makes a copy, and the two will diverge."
+    },
+    "follow": {
+      "working": "Working in another client…",
+      "workingHelp": "This is an inference, not something Claude reported: the conversation's last entry leaves the turn open — a tool without its result, a thought, or a prompt without an answer — and something wrote it a moment ago. The history does not record the state of a turn, and nothing here says which client it is.",
+      "workingHelpLabel": "What “working” means here",
+      "newerOne": "1 new",
+      "newer": "{{count}} new",
+      "newerLabel": "Go to the end — {{newer}}"
     }
   },
   "undo": {
@@ -1749,7 +1769,10 @@
       "hidden": "Thought — the model did not show it",
       "done": "Thought",
       "took": "Thought for {{seconds}} s",
-      "nothingShown": "The model thought here and did not show what it thought."
+      "nothingShown": "The model thought here and did not show what it thought.",
+      "tookMinutes": "Thought for {{minutes}} min {{seconds}} s",
+      "tookUpTo": "Thought for up to {{seconds}} s",
+      "tookUpToMinutes": "Thought for up to {{minutes}} min {{seconds}} s"
     },
     "output": {
       "showAll": "Show all the output ({{count}} characters) — only the end is shown"
@@ -1758,7 +1781,15 @@
       "label": "{{tool}} — {{status}}. Show the exact input",
       "input": "The exact input",
       "denied": "Refused: {{reason}}",
-      "trail": "See it in the audit trail"
+      "trail": "See it in the audit trail",
+      "labelTitled": "{{tool}} ({{detail}}) — {{status}}. Show the exact input",
+      "in": "IN",
+      "out": "OUT",
+      "output": "What it said",
+      "outputLoading": "Loading the whole output…",
+      "outputFailed": "The whole output did not load — this is only its end.",
+      "outputTruncated": "The output had {{size}}: only its start and its end are here, cut where it is marked.",
+      "outputCut": "[… the middle of the output was left out here …]"
     },
     "tool": {
       "read": "Read {{path}}",
@@ -1780,7 +1811,8 @@
       "taskCreate": "Added a task: {{subject}}",
       "taskUpdate": "Changed task #{{id}}",
       "taskGet": "Read task #{{id}}",
-      "taskList": "Read the task list"
+      "taskList": "Read the task list",
+      "titled": "{{name}} · {{title}}"
     },
     "subagent": {
       "loading": "Loading what the subagent said…",
@@ -1993,7 +2025,10 @@
       "acceptEdits": "Accept edits",
       "acceptEditsDescription": "Claude edits and writes files without asking; it still asks before anything else.",
       "plan": "Plan",
-      "planDescription": "Claude plans without changing anything, and asks you to approve the plan."
+      "planDescription": "Claude plans without changing anything, and asks you to approve the plan.",
+      "allowAll": "Allow everything",
+      "allowAllDescription": "Claude runs every tool without asking, except what one of your rules refuses. Its questions to you still come.",
+      "allowAllWarning": "Claude will run any command on this machine without asking you, until you change the mode."
     },
     "model": {
       "default": "Installation default",
@@ -2078,6 +2113,15 @@
     "rewound": {
       "summary": "Files put back: {{restored}} back, {{kept}} kept as they were",
       "failed": "Files put back: {{restored}} back, {{kept}} kept as they were, {{failed}} could not go back"
+    },
+    "image": {
+      "attached": "Attached image",
+      "attachedWith": "Attached image ({{details}})",
+      "open": "Open the image",
+      "close": "Close",
+      "description": "The image this prompt carried, as Claude received it.",
+      "loading": "Loading the image…",
+      "alt": "The image attached to the prompt"
     }
   },
   "sessionsGroup": {

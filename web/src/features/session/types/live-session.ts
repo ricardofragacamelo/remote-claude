@@ -6,8 +6,11 @@ export type SessionStatus =
 export type SessionCloseReason =
   'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown' | 'idleTimeout';
 
-/** What one block of a message is: the answer, the model's thinking, or thinking it would not show. */
-export type BlockKind = 'text' | 'thinking' | 'redactedThinking';
+/**
+ * What one block of a message is: the answer, the model's thinking, thinking it would not show, or an
+ * image the prompt carried — a marker of it, never its bytes (plan 22, D-09).
+ */
+export type BlockKind = 'text' | 'thinking' | 'redactedThinking' | 'image';
 
 /** One finished block of a message, in the order the model wrote it. */
 export interface MessageBlock {
@@ -15,6 +18,26 @@ export interface MessageBlock {
 
   /** The text of the block — empty for a thinking the model omitted or redacted. */
   readonly text: string;
+
+  /**
+   * The block's identity, `<entry>:<index>` — the same live and in the history (plan 22, D-06). Two
+   * blocks equal in kind and text are still two when their ids differ. Absent from an older server.
+   */
+  readonly blockId?: string;
+
+  /**
+   * How long, **at most**, the model thought before this block — from the `at` of the entry before it
+   * to its own, read off the history (plan 22, D-14). The `at` marks when an entry was written, which
+   * is after the first token, so it is an upper bound and says so. Absent live, where the stream
+   * measures it, and from the history without both instants.
+   */
+  readonly atMostMs?: number;
+
+  /** The type of an image, as the prompt declared it — absent when it did not. */
+  readonly mediaType?: string;
+
+  /** The size of an image, in bytes — absent for an image given by URL. */
+  readonly size?: number;
 }
 
 /**
@@ -78,6 +101,12 @@ export interface ToolExecution {
 
   /** The tool that opened the subagent this invocation is of — `null` on the main conversation. */
   readonly parentToolUseId: string | null;
+
+  /**
+   * The description the model gave the call (`tool.started.title`, plan 22, D-05) — what the row is
+   * named by. Absent when it gave none, and from an older server.
+   */
+  readonly title?: string;
 
   /** The task of the list a `TaskCreate` made or a `TaskUpdate` changed, once it ended (B-20). */
   readonly taskId: string | null;
@@ -170,4 +199,11 @@ export interface Conversation {
    * history, which keeps no instant (plan 09, B-21).
    */
   readonly turnSince: string | null;
+
+  /**
+   * When the last entry of the history folded so far was written (its `at`) — what the upper bound of
+   * the next thinking is read from (plan 22, D-14). Absent before the first, and on the live stream,
+   * whose frames carry no `at`.
+   */
+  readonly writtenAt?: string;
 }

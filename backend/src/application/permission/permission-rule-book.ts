@@ -24,6 +24,19 @@ export type RuleLookupFailureReporter = (error: unknown, requestId: string) => v
  * Read on every request and never cached, which is what makes a revocation take effect in a
  * session that is already running.
  */
+/**
+ * What reading the rules for one invocation found.
+ *
+ * Three answers and not a nullable rule, because "nothing matched" and "the rules could not be read"
+ * have to lead to different places: the first lets Permitir tudo approve, the second must not — a
+ * `deny` nobody read cannot be traded for an automatic yes
+ * ([23 · D-12](../../../../docs/plans/23-fluid-permissions/decisions.md)).
+ */
+export type RuleLookup =
+  | { readonly kind: 'rule'; readonly rule: PermissionRule }
+  | { readonly kind: 'none' }
+  | { readonly kind: 'unread' };
+
 export class PermissionRuleBook {
   constructor(
     private readonly registry: PermissionRegistry,
@@ -31,7 +44,15 @@ export class PermissionRuleBook {
     private readonly reportFailure: RuleLookupFailureReporter,
   ) {}
 
+  /** The rule that answers, or `null` when a human has to — whatever the reason. */
   async answering(requestId: string, question: RuleQuestion): Promise<PermissionRule | null> {
+    const lookup = await this.lookup(requestId, question);
+
+    return lookup.kind === 'rule' ? lookup.rule : null;
+  }
+
+  /** The rule that answers, or why there is none. */
+  async lookup(requestId: string, question: RuleQuestion): Promise<RuleLookup> {
     let persisted: readonly PermissionRule[];
 
     try {
@@ -42,12 +63,14 @@ export class PermissionRuleBook {
       );
     } catch (error) {
       this.reportFailure(error, requestId);
-      return null;
+      return { kind: 'unread' };
     }
 
-    return answeringRule(
+    const rule = answeringRule(
       [...this.registry.rulesOf(question.subject.sessionId), ...persisted],
       question,
     );
+
+    return rule === null ? { kind: 'none' } : { kind: 'rule', rule };
   }
 }

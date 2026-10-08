@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import type { ReactNode } from 'react';
 
 import { useFollowTail } from '../../hooks/useFollowTail';
-import type { ScrollKeeper } from '../../hooks/useFollowTail';
+import type { ScrollKeeper, TailControl } from '../../hooks/useFollowTail';
 
 export interface ChatFrameProps {
   /** What the frame is, said to assistive technology — the session, the draft, the conversation. */
@@ -19,6 +19,12 @@ export interface ChatFrameProps {
 
   /** Where the conversation was left, and that it follows its end — `null` for what does not. */
   readonly keeper?: ScrollKeeper | null;
+
+  /**
+   * What floats at the bottom of the conversation, given whether its end is followed and the way
+   * back to it — the "N new" of a conversation that grows while it is read (plan 22, B-23).
+   */
+  readonly tail?: (control: TailControl) => ReactNode;
 }
 
 /**
@@ -37,10 +43,11 @@ export function ChatFrame({
   children,
   dock,
   keeper = null,
+  tail,
 }: ChatFrameProps): React.JSX.Element {
   const scroller = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
-  useFollowTail(scroller, content, keeper);
+  const control = useFollowTail(scroller, content, keeper);
 
   return (
     <section
@@ -63,6 +70,7 @@ export function ChatFrame({
         <div ref={content} className="flex min-w-0 flex-col gap-3 p-3">
           {children}
         </div>
+        {tail?.(control)}
       </div>
       {/* Positioned, for the same reason as the scroller: what only a screen reader reads stays in. */}
       <div className="relative flex min-w-0 flex-col gap-2 border-t border-border p-3 empty:hidden">

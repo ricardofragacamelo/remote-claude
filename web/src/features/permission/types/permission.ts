@@ -23,11 +23,23 @@ export type PermissionDecision = 'allow' | 'deny';
  * ([D-12](../../../../../docs/plans/03-rules-and-audit/decisions.md)).
  */
 export interface RuleOffer {
-  /** In the grammar of the Claude Code settings: `Bash(git status)`. */
-  readonly pattern: string;
+  /**
+   * The `exact` pattern, in the grammar of the Claude Code settings: `Bash(git status)`. `null`
+   * when the invocation has no exact reach — the patterns of the others travel in `reaches`.
+   */
+  readonly pattern: string | null;
 
   /** How long the rule lives, counted from the answer. */
   readonly lifetimeMs: number;
+}
+
+/** How far a rule left by an answer reaches (plan 23, B-13). */
+export type RuleReachKind = 'exact' | 'prefix' | 'tool';
+
+/** One reach the server offered, with the rules it would leave — one per pattern. */
+export interface RuleReach {
+  readonly reach: RuleReachKind;
+  readonly patterns: readonly string[];
 }
 
 /** A scope the UI may offer, with the key it is labelled by. */
@@ -71,6 +83,12 @@ export interface PermissionRequest {
   readonly suggestions: readonly ScopeSuggestion[];
 
   /**
+   * How far a rule left by the answer may reach, as the server computed it — the card offers a
+   * choice when there is more than one, and the answer names one, never a pattern.
+   */
+  readonly reaches: readonly RuleReach[];
+
+  /**
    * An answer of ours is in flight.
    *
    * While it holds, the card takes no second click: two clicks are two answers, and the second is
@@ -84,8 +102,11 @@ export interface PermissionOutcome {
   readonly requestId: string;
   readonly decision: PermissionDecision;
 
-  /** The server decided it: the deadline passed, or a rule matched. */
+  /** The server decided it: the deadline passed, a rule matched, or Permitir tudo answered. */
   readonly auto: boolean;
+
+  /** What answered when nobody was asked: a rule, or Permitir tudo. `null` otherwise. */
+  readonly via: 'rule' | 'allowAll' | null;
 
   /** Who answered, when somebody did. */
   readonly resolvedBy: string | null;

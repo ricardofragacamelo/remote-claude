@@ -112,3 +112,42 @@ describe('the one line that says what a tool did — plan 08 B-17', () => {
     expect(opensSubagent('Bash')).toBe(false);
   });
 });
+
+/** The tool by the description the model gave the call — plan 22, B-29 (D-05). */
+describe('the line of a tool with a title — plan 22 B-29', () => {
+  function titled(toolName: string, input: Record<string, unknown>, title?: string) {
+    return toolLabel(
+      { toolUseId: 't-1', toolName, input, ...(title === undefined ? {} : { title }) },
+      FOLDER,
+      new Set(['t-1']),
+    );
+  }
+
+  it('is the tool and its description, and keeps the line it had for the name — S-111', () => {
+    expect(titled('Bash', { command: 'pnpm test\n--watch' }, 'Run the tests')).toEqual({
+      key: 'sessions.tool.titled',
+      params: { name: 'Bash', title: 'Run the tests' },
+      detail: { key: 'sessions.tool.bash', params: { command: 'pnpm test' } },
+    });
+  });
+
+  it('is the line of today without a title — S-111', () => {
+    expect(titled('Bash', { command: 'ls' })).toEqual({
+      key: 'sessions.tool.bash',
+      params: { command: 'ls' },
+    });
+  });
+
+  it('names an MCP tool by its server and its tool', () => {
+    expect(titled('mcp__github__create_issue', {}, 'Open the issue').params).toEqual({
+      name: 'github · create_issue',
+      title: 'Open the issue',
+    });
+  });
+
+  it('keeps a subagent its own line, which says the description and the kind', () => {
+    expect(
+      titled('Agent', { description: 'Find it', subagent_type: 'Explore' }, 'Find it').key,
+    ).toBe('sessions.tool.agent');
+  });
+});

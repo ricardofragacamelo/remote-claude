@@ -99,6 +99,7 @@ describe('permission rules', () => {
         auto: true,
         resolvedBy: PERMISSION_OWNER.value,
         toolUseId: 'toolu-1',
+        via: 'rule',
       });
       // `requested` is what the push listens to: nothing was asked, so nobody is notified.
       expect(harness.events.askedIds).toEqual([]);

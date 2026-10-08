@@ -9,6 +9,13 @@
 /// What happens in a turn is drawn **inside** it (plan 10, F4): the question about a tool in the
 /// place of that tool's line — or at the tail while the line has not arrived —, the decision on the
 /// line once it is settled, and the line that moves while the turn runs, last of all.
+///
+/// Reading a followed conversation of the history (plan 22, B-26), it also **counts** what arrives
+/// below somebody who scrolled up: a pill says how many messages are new and takes them to the end.
+/// It counts as the web does (S-84, S-99): **messages** of the conversation with something drawn — a
+/// thinking and an answer of one reply are one, a reply that only calls a tool is none —, from the
+/// last one there was when the person left the end, so an earlier page read meanwhile, which goes
+/// before, is never new.
 library;
 
 import 'package:flutter/material.dart';
@@ -16,6 +23,7 @@ import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/presentation/widgets/conversation_lines.dart';
+import 'package:remote_claude/features/session/presentation/widgets/image_marker.dart';
 import 'package:remote_claude/features/session/presentation/widgets/message_actions.dart';
 import 'package:remote_claude/features/session/presentation/widgets/pending_pill.dart';
 import 'package:remote_claude/features/session/presentation/widgets/thinking_line.dart';
@@ -68,9 +76,19 @@ class ConversationView extends StatefulWidget {
     this.inline,
     this.working,
     this.prompts,
+    this.countsUnseen = false,
+    this.conversationId,
   });
 
   final Conversation conversation;
+
+  /// The conversation in Claude's store this is — what a tool's whole output and a prompt's image
+  /// are read from (plan 22, B-32, B-33). `null` while nothing said which.
+  final String? conversationId;
+
+  /// Whether what arrives below a reader who scrolled up is counted, with a pill that takes them to
+  /// the end — "*N* new" (docs/architecture/mobile/04-ui.md, plan 22 · F4).
+  final bool countsUnseen;
 
   /// What sits above the first entry and scrolls with it — the strip of a partial history, say.
   final Widget? header;
@@ -100,6 +118,13 @@ class _ConversationViewState extends State<ConversationView> {
   /// The rows of the last build — what going to a card that is not drawn yet looks through.
   List<_Row> _rows = const <_Row>[];
 
+  /// The last message drawn when the person left the end — what the pill counts from. `null` at
+  /// the end.
+  String? _mark;
+
+  /// Messages that arrived while the person read further up — what the pill says.
+  int _unseen = 0;
+
   @override
   void initState() {
     super.initState();
@@ -115,6 +140,8 @@ class _ConversationViewState extends State<ConversationView> {
 
     if (_following && _grew(old)) {
       _toEnd();
+    } else if (widget.countsUnseen) {
+      _unseen = countAfter(widget.conversation.entries, _mark);
     }
   }
 
@@ -156,7 +183,35 @@ class _ConversationViewState extends State<ConversationView> {
     }
 
     final ScrollPosition position = _scroll.position;
-    _following = position.pixels >= position.maxScrollExtent - followSlack;
+    final bool following = position.pixels >= position.maxScrollExtent - followSlack;
+
+    // Leaving the end is where counting begins: from the last message there is now.
+    if (_following && !following) {
+      _mark = lastShown(widget.conversation.entries);
+    }
+
+    _following = following;
+
+    // Back at the end by hand: what was new is seen.
+    if (_following) {
+      _seen();
+    }
+  }
+
+  /// Nothing below is new any more.
+  void _seen() {
+    _mark = null;
+
+    if (_unseen > 0) {
+      setState(() => _unseen = 0);
+    }
+  }
+
+  /// The pill was tapped: to the end, and followed from there.
+  void _catchUp() {
+    _seen();
+    _following = true;
+    _toEnd();
   }
 
   /// Tells the pill whether the card of any open question is out of view — scrolled away, or not
@@ -229,6 +284,7 @@ class _ConversationViewState extends State<ConversationView> {
       if (_scroll.position.pixels < end) {
         _scroll.jumpTo(end);
         _following = true;
+        _mark = null;
         _toEnd(attempts - 1);
       }
     });
@@ -249,7 +305,7 @@ class _ConversationViewState extends State<ConversationView> {
       }
     });
 
-    return ListView.builder(
+    final Widget list = ListView.builder(
       controller: _scroll,
       padding: const EdgeInsets.all(Tokens.spaceMd),
       itemCount: rows.length,
@@ -262,6 +318,27 @@ class _ConversationViewState extends State<ConversationView> {
           child: row.build(context),
         );
       },
+    );
+
+    if (!widget.countsUnseen) {
+      return list;
+    }
+
+    // Always the stack, pill or not: changing the tree around the list would build it again, and
+    // the reader would lose the place they scrolled to.
+    return Stack(
+      children: <Widget>[
+        list,
+        if (_unseen > 0)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: Tokens.spaceSm,
+            child: Center(
+              child: UnseenPill(count: _unseen, onTap: _catchUp),
+            ),
+          ),
+      ],
     );
   }
 
@@ -308,9 +385,67 @@ class _ConversationViewState extends State<ConversationView> {
               entry: entry,
               decision: entry is ToolExecution ? inline?.decisionFor(entry.toolUseId) : null,
               prompts: widget.prompts,
+              conversationId: widget.conversationId,
             )
           : _InlineCard(card: card, inline: inline),
       requestId: card?.requestId,
+    );
+  }
+}
+
+/// Whether [entry] is a message a person sees: what was said, with something drawn — text, an
+/// image, or a fragment still arriving —, or what was thought. A tool call is not one (S-84).
+String? _shownMessage(ConversationEntry entry) => switch (entry) {
+  StreamMessage(
+    :final String messageId,
+    :final List<String> blocks,
+    :final String? streaming,
+    :final List<PromptImage> images,
+  )
+      when blocks.isNotEmpty || streaming != null || images.isNotEmpty =>
+    messageId,
+  ThinkingEntry(:final String messageId) => messageId,
+  _ => null,
+};
+
+/// The messages a person sees, in the order they first appear — one each, however many entries
+/// they are drawn as.
+List<String> _shownMessages(List<ConversationEntry> entries) =>
+    entries.map(_shownMessage).nonNulls.toSet().toList(growable: false);
+
+/// The last message a person sees in [entries], or `null` with none.
+String? lastShown(List<ConversationEntry> entries) => _shownMessages(entries).lastOrNull;
+
+/// How many messages a person sees came after [mark] — the last one there was when they left the
+/// end. None without a mark, or when the mark is no longer there (the conversation was read again).
+int countAfter(List<ConversationEntry> entries, String? mark) {
+  final List<String> shown = _shownMessages(entries);
+  final int at = mark == null ? -1 : shown.indexOf(mark);
+
+  return at < 0 ? 0 : shown.length - 1 - at;
+}
+
+/// "*N* new", over a followed conversation scrolled up: what arrived below, and the way to it. It is
+/// announced as the count changes, without taking the focus.
+class UnseenPill extends StatelessWidget {
+  const UnseenPill({required this.count, required this.onTap, super.key});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String newer = count == 1 ? l10n.historyFollowNewerOne : l10n.historyFollowNewer(count);
+
+    return Semantics(
+      liveRegion: true,
+      child: ActionChip(
+        avatar: const Icon(Icons.arrow_downward),
+        label: Text(newer),
+        tooltip: l10n.historyFollowNewerLabel(newer),
+        onPressed: onTap,
+      ),
     );
   }
 }
@@ -337,9 +472,18 @@ class _InlineCard extends StatelessWidget {
 
 /// One entry, drawn as what it is.
 class EntryView extends StatelessWidget {
-  const EntryView({required this.entry, super.key, this.decision, this.prompts});
+  const EntryView({
+    required this.entry,
+    super.key,
+    this.decision,
+    this.prompts,
+    this.conversationId,
+  });
 
   final ConversationEntry entry;
+
+  /// The conversation a tool's output and a prompt's image are read from.
+  final String? conversationId;
 
   /// How the question about this tool was settled, when it is a tool that asked.
   final PermissionOutcome? decision;
@@ -351,7 +495,11 @@ class EntryView extends StatelessWidget {
   Widget build(BuildContext context) => switch (entry) {
     final StreamMessage message => _message(message),
     final ThinkingEntry thinking => ThinkingLine(thinking: thinking),
-    final ToolExecution tool => ToolCard(tool: tool, decision: decision),
+    final ToolExecution tool => ToolCard(
+      tool: tool,
+      decision: decision,
+      conversationId: conversationId,
+    ),
     final TurnSummary turn => TurnLine(turn: turn),
     final CompactionLine compaction => CompactedLine(line: compaction),
     final RewoundLine rewound => RewoundRow(line: rewound),
@@ -360,7 +508,7 @@ class EntryView extends StatelessWidget {
 
   Widget _message(StreamMessage message) {
     final PromptActions? actions = prompts;
-    final Widget bubble = MessageBubble(message: message);
+    final Widget bubble = MessageBubble(message: message, conversationId: conversationId);
 
     // A prompt of the person, whole, is what an action can start from: the one still arriving has
     // no id in Claude's store yet.
@@ -370,11 +518,15 @@ class EntryView extends StatelessWidget {
   }
 }
 
-/// One message. Still streaming, or whole.
+/// One message. Still streaming, or whole — with a marker for each image a prompt carried, and no
+/// empty bubble for a prompt of only an image (plan 22, S-118, S-121).
 class MessageBubble extends StatelessWidget {
-  const MessageBubble({required this.message, super.key});
+  const MessageBubble({required this.message, super.key, this.conversationId});
 
   final StreamMessage message;
+
+  /// The conversation an image of the prompt is read from.
+  final String? conversationId;
 
   @override
   Widget build(BuildContext context) {
@@ -388,7 +540,18 @@ class MessageBubble extends StatelessWidget {
         color: message.isFromUser ? theme.colorScheme.secondaryContainer : null,
         child: Padding(
           padding: const EdgeInsets.all(Tokens.spaceMd),
-          child: Text(message.text, style: theme.textTheme.bodyMedium),
+          child: message.images.isEmpty
+              ? Text(message.text, style: theme.textTheme.bodyMedium)
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    if (message.text.isNotEmpty)
+                      Text(message.text, style: theme.textTheme.bodyMedium),
+                    for (final PromptImage image in message.images)
+                      ImageMarker(image: image, conversationId: conversationId),
+                  ],
+                ),
         ),
       ),
     );

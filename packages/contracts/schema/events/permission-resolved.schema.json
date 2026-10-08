@@ -29,7 +29,7 @@
     },
     "auto": {
       "type": "boolean",
-      "description": "The server decided it, with nobody answering — the deadline passed, or a rule the user granted earlier (`session`, `project` or `always`) matched. A request a rule settles is never put to anybody, and this event is how every screen watching still learns that something ran in the user's name. Silence never authorises, so an automatic decision is always `deny` unless a rule allowed it."
+      "description": "The server decided it, with nobody answering — the deadline passed, a rule the user granted earlier (`session`, `project` or `always`) matched, or the session runs in Permitir tudo (`allowAll`). `via` says which. A request a rule settles is never put to anybody, and this event is how every screen watching still learns that something ran in the user's name. Silence never authorises, so an automatic decision is always `deny` unless a rule or Permitir tudo allowed it."
     },
     "resolvedBy": {
       "type": "string",
@@ -43,6 +43,11 @@
     "toolUseId": {
       "type": "string",
       "description": "The tool call the request was about, when the SDK named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`."
+    },
+    "via": {
+      "type": "string",
+      "enum": ["rule", "allowAll"],
+      "description": "Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), or the session running in Permitir tudo (`allowAll`). Absent when a human answered or the deadline passed."
     }
   }
 }

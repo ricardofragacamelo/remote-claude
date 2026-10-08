@@ -95,14 +95,14 @@ em qualquer ordem entre si.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Normas e contrato](F0-norms.md) | o 05 e o REST escritos, schemas, normas das telas, i18n e ARB, pares do mapa, fixtures | B-01…B-05 | 🔲 |
-| F1 | [Mapeamento e leituras](F1-mapping.md) | `blockId`, `at`, `title`, `summary`, imagem, `lastMessageId`, as duas rotas, deduplicação por `blockId` | B-06…B-13 | 🔲 |
-| F2 | [Seguidor no backend](F2-follower.md) | `transcriptTail`, `inferWorking`, `TranscriptFollower`, handler WS, tetos, configuração, medição | B-14…B-19 | 🔲 |
-| F3 | [Acompanhar no web](F3-web-follow.md) | serviço, hook, junção, pílula, aviso vivo, "trabalhando" | B-20…B-23 | 🔲 |
-| F4 | [Acompanhar no mobile](F4-mobile-follow.md) | data source, controller, ciclo de vida, aviso e confirmação de fork, "trabalhando" | B-24…B-26 | 🔲 |
-| F5 | [Fidelidade no web](F5-web-fidelity.md) | pensamento, autor por turno, IN/OUT, imagem | B-27…B-30 | 🔲 |
-| F6 | [Fidelidade no mobile](F6-mobile-fidelity.md) | pensamento, card recolhível com IN/OUT, imagem | B-31…B-33 | 🔲 |
-| F7 | [E2E](F7-e2e.md) | tudo acima pela porta do usuário, no web e no app | B-34…B-37 | 🔲 |
+| F0 | [Normas e contrato](F0-norms.md) | o 05 e o REST escritos, schemas, normas das telas, i18n e ARB, pares do mapa, fixtures | B-01…B-05 | ✅ |
+| F1 | [Mapeamento e leituras](F1-mapping.md) | `blockId`, `at`, `title`, `summary`, imagem, `lastMessageId`, as duas rotas, deduplicação por `blockId` | B-06…B-13 | ✅ |
+| F2 | [Seguidor no backend](F2-follower.md) | `transcriptTail`, `inferWorking`, `TranscriptFollower`, handler WS, tetos, configuração, medição | B-14…B-19 | ✅ |
+| F3 | [Acompanhar no web](F3-web-follow.md) | serviço, hook, junção, pílula, aviso vivo, "trabalhando" | B-20…B-23 | ✅ |
+| F4 | [Acompanhar no mobile](F4-mobile-follow.md) | data source, controller, ciclo de vida, aviso e confirmação de fork, "trabalhando" | B-24…B-26 | ✅ |
+| F5 | [Fidelidade no web](F5-web-fidelity.md) | pensamento, autor por turno, IN/OUT, imagem | B-27…B-30 | ✅ |
+| F6 | [Fidelidade no mobile](F6-mobile-fidelity.md) | pensamento, card recolhível com IN/OUT, imagem | B-31…B-33 | ✅ |
+| F7 | [E2E](F7-e2e.md) | tudo acima pela porta do usuário, no web e no app | B-34…B-37 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 
@@ -206,7 +206,7 @@ Os nomes são indicativos. A fase decide o arquivo pela estrutura normativa de c
 | R-04 | `working` inferido errado (o VS Code fechado no meio de um turno) | **aberto** — só com `activity = 'activeElsewhere'`, expira com a janela, e a ajuda diz que é inferência ([D-12](decisions.md#f2--seguidor-no-backend)) |
 | R-05 | Assinaturas órfãs (cliente some sem `unfollow`) | **aberto** — soltura no `disconnect`; conversa sem assinante para o tick (S-67, S-68) |
 | R-06 | Alguém "corrige" a ordem pelos timestamps | **aberto** — S-21 prende a ordem do SDK com o prompt enfileirado da fixture |
-| R-07 | O `blockId` muda a deduplicação também da sessão viva | **aberto** — o id ao vivo e o do histórico não coincidem, e a junção do histórico com o vivo continua por `messageId` (S-38) |
+| R-07 | O `blockId` muda a deduplicação também da sessão viva | **aberto** — desde a revisão da D-06 o id ao vivo e o do histórico coincidem; a junção do histórico com o vivo continua por `messageId` (S-38) |
 | R-08 | As rotas de saída e de imagem expõem conteúdo (um `Read` de arquivo, um print) a quem não deveria | **aberto** — o mesmo cercado de leitura do transcript; nada do conteúdo no log; tetos; imagem só de tipos permitidos, sem SVG, com `nosniff` ([D-10](decisions.md#f1--mapeamento-e-leituras)) |
 | R-09 | O plano 10 está em andamento e toca os mesmos widgets do app (`tool_card.dart`, `thinking_line.dart`, `conversation_view.dart`) | **aberto** — F6 começa depois de conferir o estado do 10; conflito vira linha no `progress.md` dos dois planos |
 | R-10 | Outras sessões do agente trabalham na mesma árvore | **aberto** — conferir `ps` e `git status` antes de cada `pnpm verify` |

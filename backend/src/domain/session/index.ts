@@ -11,8 +11,15 @@ export type {
   TurnFileCheckpointSnapshot,
 } from './entities/turn-file-checkpoint.entity';
 export { SessionId } from './value-objects/session-id.value-object';
-export { PERMISSION_MODES, isPermissionMode } from './value-objects/permission-mode.value-object';
-export type { PermissionMode } from './value-objects/permission-mode.value-object';
+export {
+  PERMISSION_MODES,
+  isPermissionMode,
+  sdkPermissionMode,
+} from './value-objects/permission-mode.value-object';
+export type {
+  PermissionMode,
+  SdkPermissionMode,
+} from './value-objects/permission-mode.value-object';
 export {
   ALLOWED_TRANSITIONS,
   SESSION_STATUSES,

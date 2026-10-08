@@ -428,6 +428,21 @@ pnpm verify
 `;
 }
 
+/** The name of the phase every plan ends with. */
+export const E2E_PHASE = 'e2e';
+
+/**
+ * The phases of a plan, with the E2E phase last — always there, always the last one (docs/plans/README.md
+ * §As regras estruturais). An `e2e` asked for anywhere else moves to the end, and a plan asked without
+ * one gets it: a phase added later goes **before** it, never after.
+ *
+ * @param {readonly string[]} phases
+ * @returns {string[]}
+ */
+export function e2eLast(phases) {
+  return [...phases.filter((phase) => phase !== E2E_PHASE), E2E_PHASE];
+}
+
 /**
  * Every file of a new plan, in the normative format: four fixed files, one per phase.
  *

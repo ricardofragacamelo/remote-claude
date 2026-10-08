@@ -191,6 +191,67 @@ void main() {
     expect(find.text(l10n.permissionOutcomeAllowedWeb), findsOneWidget);
   });
 
+  testWidgets('plan 23 · S-93 · a request Permitir tudo answered says so', (
+    WidgetTester tester,
+  ) async {
+    await pumpQueue(tester);
+    await ask(tester, aPermissionRequest());
+
+    repository.feed.emit(
+      settled('request-1', auto: true, origin: AnswerOrigin.unknown, via: AnswerVia.allowAll),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.permissionOutcomeAllowedByAllowAll), findsOneWidget);
+  });
+
+  testWidgets('plan 23 · S-93 · a rule that refused still says it was a rule', (
+    WidgetTester tester,
+  ) async {
+    await pumpQueue(tester);
+    await ask(tester, aPermissionRequest());
+
+    repository.feed.emit(
+      settled(
+        'request-1',
+        decision: PermissionDecision.deny,
+        auto: true,
+        origin: AnswerOrigin.unknown,
+        via: AnswerVia.rule,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.permissionOutcomeRefusedByRule), findsOneWidget);
+  });
+
+  testWidgets('plan 23 · S-91 · the reach chosen on the card leaves with the yes, past the lock', (
+    WidgetTester tester,
+  ) async {
+    await pumpQueue(tester);
+    await ask(
+      tester,
+      aPermissionRequest(
+        riskHint: RiskHint.write,
+        description: 'git push | tail -5',
+        reaches: const <RuleReach>[
+          RuleReach(kind: RuleReachKind.exact, patterns: <String>['Bash(git push | tail -5)']),
+          RuleReach(
+            kind: RuleReachKind.prefix,
+            patterns: <String>['Bash(git push:*)', 'Bash(tail:*)'],
+          ),
+        ],
+      ),
+    );
+
+    await tester.tap(find.text(l10n.permissionScopeSession));
+    await tester.pumpAndSettle();
+
+    expect(lock.asked, <String>[l10n.permissionLockReason]);
+    expect(repository.feed.answers.single.scope, PermissionScope.session);
+    expect(repository.feed.answers.single.reach, RuleReachKind.prefix);
+  });
+
   // S-65 — more time moves the countdown; at the ceiling the action goes, with the reason.
   testWidgets('extending moves the countdown, and the ceiling takes the action away', (
     WidgetTester tester,

@@ -1,8 +1,6 @@
 import 'reflect-metadata';
 
 import { Test } from '@nestjs/testing';
-import { json } from 'express';
-import type { NextFunction, Request, Response } from 'express';
 
 import { AppModule } from '../../src/app.module';
 import { ALL_INTERFACES, configureApp, listen, loadDotEnv } from '../../src/bootstrap';
@@ -17,8 +15,9 @@ import type { AppConfig } from '@infra/config/environment';
 import type { PushTranslator } from '@shared/i18n/push-translator';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { scriptedSdk } from '../fakes/agent-sdk/scripted-query';
-import { capturedTranscript, ScriptedTranscripts } from '../fakes/agent-sdk/scripted-transcripts';
+import { ScriptedTranscripts } from '../fakes/agent-sdk/scripted-transcripts';
 import { FailFirstPushSender } from '../fakes/fail-first-push';
+import { conversationsElsewhere, ELSEWHERE_PATH } from './conversations-elsewhere';
 
 /**
  * The product, with a scripted Agent SDK behind it.
@@ -73,61 +72,9 @@ async function bootstrap(): Promise<void> {
 
   const app = moduleRef.createNestApplication({ bufferLogs: true });
   const port = configureApp(app);
-  app.use(ELSEWHERE_PATH, plantsElsewhere(transcripts));
+  app.use(ELSEWHERE_PATH, conversationsElsewhere(transcripts));
 
   await listen(app, port, ALL_INTERFACES);
-}
-
-/** Where the suite plants a conversation begun elsewhere — on this entry point only. */
-const ELSEWHERE_PATH = '/e2e/conversations-elsewhere';
-
-/** What the suite asks for: the conversation's id, the folder it runs in, and what it said. */
-interface PlantedConversation {
-  readonly conversationId: string;
-  readonly cwd: string;
-  readonly fixture: string;
-  readonly title: string;
-}
-
-/** How many conversations were planted, so no two of them share a message id. */
-let planted = 0;
-
-/**
- * The one door of the suite into the store of conversations: a conversation **begun elsewhere** —
- * the editor of the person, writing it at this moment — which no session of this backend opened
- * (plan 08, F6).
- *
- * Everything else the suite reads back the product wrote during the run; this one cannot be, since
- * what makes it external is that the product never opened it. So it is planted with the store's own
- * function, `add`, out of the messages of a captured run — never a transcript somebody typed — and
- * written now, which is what "active elsewhere" means. It is mounted here, beside the providers it
- * replaces, and the product's entry point has no such route.
- */
-function plantsElsewhere(
-  transcripts: ScriptedTranscripts,
-): (request: Request, response: Response, next: NextFunction) => void {
-  const body = json();
-
-  return (request, response, next) => {
-    if (request.method !== 'POST') {
-      next();
-      return;
-    }
-
-    body(request, response, () => {
-      const seed = request.body as PlantedConversation;
-      planted += 1;
-      transcripts.add({
-        sessionId: seed.conversationId,
-        directory: seed.cwd,
-        cwd: seed.cwd,
-        summary: seed.title,
-        lastModified: Date.now(),
-        messages: capturedTranscript(seed.fixture, planted),
-      });
-      response.status(201).end();
-    });
-  };
 }
 
 await bootstrap();

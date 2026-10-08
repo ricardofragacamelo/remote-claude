@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/api/errors';
+import { unfoldedOf } from './loaded';
 import { conversationFrom } from '../services/conversation-reducer';
 import { fetchSubagentPage } from '../services/subagent.service';
 import type { Conversation } from '../types/live-session';
@@ -30,12 +31,7 @@ export function useSubagentHistory(
     enabled: enabled && conversationId !== null,
   });
 
-  return {
-    conversation: query.data ?? null,
-    isLoading: query.isFetching && query.data === undefined,
-    error: query.data === undefined ? query.error : null,
-    retry: () => {
-      void query.refetch();
-    },
-  };
+  const { data, ...loaded } = unfoldedOf(query);
+
+  return { conversation: data, ...loaded };
 }

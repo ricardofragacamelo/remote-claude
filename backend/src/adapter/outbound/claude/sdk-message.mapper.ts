@@ -1,6 +1,7 @@
 import type { SDKMessage, SessionMessage } from '@anthropic-ai/claude-agent-sdk';
 
 import type { SessionEvent } from '@application/session';
+import { base64Size } from '@domain/shared';
 import { isPlainObject } from '@shared/utils/plain-object';
 
 /** What a mapping produced: the events, and whatever the caller should log a warning about. */
@@ -249,6 +250,7 @@ function parentOf(parent: string | null | undefined): { readonly parentToolUseId
 function fromAssistant(message: Extract<SDKMessage, { type: 'assistant' }>): MappedMessage {
   return assistantEvents({
     messageId: message.message.id,
+    uuid: idOf(message.uuid),
     content: message.message.content,
     parent: message.parent_tool_use_id,
   });
@@ -257,7 +259,17 @@ function fromAssistant(message: Extract<SDKMessage, { type: 'assistant' }>): Map
 /** A message of the conversation as both readers see it: the live stream, and the transcript. */
 interface ReadMessage {
   readonly messageId: string;
+
+  /**
+   * The id of the transcript entry the message is — the same live and read back (measured, plan 22,
+   * D-06) —, which the blocks are identified by. Empty when the SDK gave none: no `blockId` then.
+   */
+  readonly uuid: string;
+
   readonly content: unknown;
+
+  /** When the entry was written — read back only; live, the frame's own instant is the clock. */
+  readonly at?: string | undefined;
 
   /** The tool that opened the subagent it is of — absent on the main conversation. */
   readonly parent: string | null | undefined;
@@ -270,21 +282,28 @@ interface ReadMessage {
 }
 
 /** The events of an assistant message, from its id and its content — live or read back. */
-function assistantEvents({ messageId, content, parent }: ReadMessage): MappedMessage {
+function assistantEvents({ messageId, uuid, content, parent, at }: ReadMessage): MappedMessage {
   const blocks = asArray(content);
   const subagent = parentOf(parent);
+  const written = atOf(at);
 
   const started = blocks
     .filter((block) => block.type === 'tool_use')
-    .map((block) => ({
-      type: 'tool.started',
-      payload: {
-        toolUseId: String(block.id ?? ''),
-        toolName: String(block.name ?? ''),
-        input: isPlainObject(block.input) ? block.input : {},
-        ...subagent,
-      },
-    }));
+    .map((block) => {
+      const input = isPlainObject(block.input) ? block.input : {};
+
+      return {
+        type: 'tool.started',
+        payload: {
+          toolUseId: String(block.id ?? ''),
+          toolName: String(block.name ?? ''),
+          input,
+          ...titleOf(input),
+          ...subagent,
+          ...written,
+        },
+      };
+    });
 
   return events(
     {
@@ -292,12 +311,36 @@ function assistantEvents({ messageId, content, parent }: ReadMessage): MappedMes
       payload: {
         messageId,
         role: 'assistant',
-        content: blocks.map(toContentBlock),
+        content: contentOf(blocks, uuid),
         ...subagent,
+        ...written,
       },
     },
     ...started,
   );
+}
+
+/**
+ * The label of a tool call: the `description` the model gave it, when it gave one in words (plan 22,
+ * D-05). `Bash` always carries one; any other tool that does gets the same. Absent otherwise — the
+ * client then labels the tool as it always has.
+ */
+function titleOf(input: Readonly<Record<string, unknown>>): { readonly title?: string } {
+  const description = input['description'];
+
+  return typeof description === 'string' && description.trim() !== ''
+    ? { title: description.trim() }
+    : {};
+}
+
+/** An id the SDK gave, or `''` when it gave none — the type promises one, a release may not. */
+function idOf(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+/** When an entry of the history was written, as the contract carries it — nothing when unknown. */
+function atOf(at: string | undefined): { readonly at?: string } {
+  return at === undefined ? {} : { at };
 }
 
 /**
@@ -309,6 +352,7 @@ function assistantEvents({ messageId, content, parent }: ReadMessage): MappedMes
 function fromUser(message: Extract<SDKMessage, { type: 'user' }>): MappedMessage {
   return userEvents({
     messageId: message.uuid ?? '',
+    uuid: message.uuid ?? '',
     content: message.message.content,
     parent: message.parent_tool_use_id,
     result: message.tool_use_result,
@@ -316,10 +360,11 @@ function fromUser(message: Extract<SDKMessage, { type: 'user' }>): MappedMessage
 }
 
 /** The events of a user message, from its id and its content — live or read back. */
-function userEvents({ messageId, content, parent, result }: ReadMessage): MappedMessage {
+function userEvents({ messageId, uuid, content, parent, result, at }: ReadMessage): MappedMessage {
   const blocks = asArray(content);
   const results = blocks.filter((block) => block.type === 'tool_result');
   const subagent = parentOf(parent);
+  const written = atOf(at);
 
   if (results.length === 0) {
     return events({
@@ -327,8 +372,9 @@ function userEvents({ messageId, content, parent, result }: ReadMessage): Mapped
       payload: {
         messageId,
         role: 'user',
-        content: blocks.map(toContentBlock),
+        content: contentOf(blocks, uuid),
         ...subagent,
+        ...written,
       },
     });
   }
@@ -342,6 +388,7 @@ function userEvents({ messageId, content, parent, result }: ReadMessage): Mapped
         summary: summarise(block.content),
         ...taskOf(results.length === 1 ? result : undefined, block.content),
         ...subagent,
+        ...written,
       },
     })),
   );
@@ -373,7 +420,7 @@ function taskOf(result: unknown, content: unknown): { readonly taskId?: string }
 }
 
 /** The text of a `tool_result`, which is a string or a list of text blocks. */
-function resultText(content: unknown): string {
+export function resultText(content: unknown): string {
   return asArray(content)
     .map((block) => (typeof block.text === 'string' ? block.text : ''))
     .join('');
@@ -407,6 +454,12 @@ function fromResult(message: Extract<SDKMessage, { type: 'result' }>): MappedMes
  */
 export function historicalEvents(message: SessionMessage): readonly SessionEvent[] {
   const body = isPlainObject(message.message) ? message.message : {};
+  const read = {
+    uuid: message.uuid,
+    content: body['content'],
+    parent: message.parent_tool_use_id,
+    at: timestampOf(message),
+  };
 
   switch (message.type) {
     case 'assistant':
@@ -414,20 +467,30 @@ export function historicalEvents(message: SessionMessage): readonly SessionEvent
       // key the client already accumulated deltas under.
       return assistantEvents({
         messageId: typeof body['id'] === 'string' ? body['id'] : message.uuid,
-        content: body['content'],
-        parent: message.parent_tool_use_id,
+        ...read,
       }).events;
 
     case 'user':
-      return userEvents({
-        messageId: message.uuid,
-        content: body['content'],
-        parent: message.parent_tool_use_id,
-      }).events;
+      return userEvents({ messageId: message.uuid, ...read }).events;
 
     default:
       return [];
   }
+}
+
+/**
+ * When the entry was written, as the transcript recorded it.
+ *
+ * The SDK returns the `timestamp` of every entry although `SessionMessage` does not declare it (SDK
+ * 0.3.277, measured in plan 22). It marks the **end** of what the entry holds — the CLI files a block
+ * when it closes —, so a duration read off two of them is an upper bound (D-14). Read defensively: a
+ * release that drops it costs the duration, never the conversation.
+ */
+function timestampOf(message: SessionMessage): string | undefined {
+  const timestamp: unknown = (message as SessionMessage & { readonly timestamp?: unknown })
+    .timestamp;
+
+  return typeof timestamp === 'string' && timestamp !== '' ? timestamp : undefined;
 }
 
 /** One or more events, in the order they should reach the client. */
@@ -455,7 +518,10 @@ function describe(message: unknown): string {
  * client can read. A thinking the model sent empty — omitted, which is the default display — keeps
  * its block and no text: it says the model thought, and nothing it thought (plan 08, D-17).
  */
-function toContentBlock(block: Record<string, unknown>): Record<string, unknown> {
+function toContentBlock(
+  block: Record<string, unknown>,
+  blockId: string | null,
+): Record<string, unknown> {
   const type = String(block['type'] ?? 'unknown');
   const text = block['text'];
   const thinking = block['thinking'];
@@ -463,22 +529,67 @@ function toContentBlock(block: Record<string, unknown>): Record<string, unknown>
 
   return {
     type,
+    ...(blockId === null ? {} : { blockId }),
     ...(typeof text === 'string' ? { text } : {}),
     ...(type === 'thinking' && typeof thinking === 'string' && thinking !== '' ? { thinking } : {}),
     ...(typeof toolUseId === 'string' ? { toolUseId } : {}),
+    ...(type === 'image' ? imageMarker(block['source']) : {}),
   };
 }
 
 /**
- * A short result for the timeline.
- *
- * Truncated on purpose, and never the whole thing: a `Read` of a large file would otherwise put
- * the file into the event stream, into the replay buffer and into everybody's browser.
+ * The blocks of an entry, each with its identity: `<uuid>:<index>` — the entry, and the block's place
+ * in it (plan 22, D-06). The same block has the same id live and read back, read once or a hundred
+ * times; two thinkings the model did not show are equal in kind and text, and still two.
  */
-function summarise(content: unknown): string {
-  const text = typeof content === 'string' ? content : JSON.stringify(content ?? '');
+function contentOf(
+  blocks: readonly Record<string, unknown>[],
+  uuid: string,
+): Record<string, unknown>[] {
+  return blocks.map((block, index) =>
+    toContentBlock(block, uuid === '' ? null : `${uuid}:${String(index)}`),
+  );
+}
 
-  return text.length <= 200 ? text : `${text.slice(0, 200)}…`;
+/**
+ * What an image block says of itself: its type, and its size in bytes — **never** the bytes (plan 22,
+ * D-09). The image is fetched on demand, by its `blockId`; on the stream, in the replay buffer and in a
+ * page it is a marker. An image given by URL has no size to say.
+ */
+function imageMarker(source: unknown): { readonly mediaType?: string; readonly size?: number } {
+  if (!isPlainObject(source)) {
+    return {};
+  }
+
+  const mediaType = source['media_type'];
+  const data = source['data'];
+
+  return {
+    ...(typeof mediaType === 'string' && mediaType !== '' ? { mediaType } : {}),
+    ...(source['type'] === 'base64' && typeof data === 'string' ? { size: base64Size(data) } : {}),
+  };
+}
+
+/** How many lines of a tool's output the timeline keeps, and how many characters at most (D-07). */
+export const SUMMARY_LINES = 5;
+export const SUMMARY_CHARACTERS = 400;
+
+/**
+ * A short result for the timeline: the **end** of the output, as text (plan 22, D-07).
+ *
+ * Text, because a result made of blocks is their text joined — never the JSON of them, which reached
+ * the screen as `[{"type":"text"…` until plan 22. The end, because that is where a build or a test says
+ * how it went: the last {@link SUMMARY_LINES} lines, at most {@link SUMMARY_CHARACTERS} characters,
+ * with `…` in front when anything was cut. Short on purpose, and never the whole thing: a `Read` of a
+ * large file would otherwise put the file into the event stream, into the replay buffer and into
+ * everybody's browser — the whole output is the route's (B-11).
+ */
+export function summarise(content: unknown): string {
+  const lines = resultText(content).trimEnd().split('\n');
+  const kept = lines.slice(-SUMMARY_LINES).join('\n');
+  const tail = kept.slice(-SUMMARY_CHARACTERS);
+
+  return lines.length > SUMMARY_LINES || tail.length < kept.length ? `…${tail}` : tail;
 }
 
 /** Message content, which the SDK gives as a string or as blocks, always as blocks. */

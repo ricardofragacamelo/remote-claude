@@ -9,6 +9,7 @@ import type { Page, WebSocketRoute } from '@playwright/test';
 import { callApi } from './api';
 import { openSignedIn } from './auth';
 import { connectedStatus } from './claude-panel';
+import { environment } from './environment';
 import { attachFrom, closeSession, connected, prompt } from './live-session';
 import type { AuthenticatedUser } from './auth';
 import type { E2eSocket } from './ws';
@@ -255,4 +256,63 @@ export class SwitchableSocket {
   restore(): void {
     this.down = false;
   }
+}
+
+/** Entries of a recording's `history` — from `from` up to, not including, `to`; all by default. */
+export interface RecordedEntries {
+  readonly fixture: string;
+  readonly from?: number;
+  readonly to?: number;
+}
+
+/**
+ * Asks the door the scripted backend opens into Claude's store (`/e2e/conversations-elsewhere`,
+ * plan 22, B-34) for one write, and checks it was made.
+ */
+async function throughTheDoor(
+  method: 'POST' | 'PUT',
+  route: string,
+  body: Record<string, unknown>,
+  status: number,
+): Promise<void> {
+  const response = await fetch(`${environment.backendUrl}/e2e/conversations-elsewhere${route}`, {
+    method,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  expect(response.status, await response.text()).toBe(status);
+}
+
+/**
+ * Plants a conversation **begun elsewhere** in `cwd` — the editor of the person, writing it now —
+ * out of what the SDK read back of a recording: its `history`, with the prompts and the instant of
+ * every entry, as the editor's file holds them (plan 22, B-34, D-17).
+ *
+ * @returns the id of the conversation
+ */
+export async function plantedHistory(cwd: string, fixture: string, title: string): Promise<string> {
+  const conversationId = randomUUID();
+
+  await throughTheDoor('POST', '', { conversationId, cwd, fixture, title, history: true }, 201);
+  return conversationId;
+}
+
+/**
+ * The other client writes: the entries given land at the end of a planted conversation, written
+ * now — which is what the follower of the backend looks at.
+ */
+export async function writtenElsewhere(
+  conversationId: string,
+  entries: RecordedEntries,
+): Promise<void> {
+  await throughTheDoor('POST', `/${conversationId}/entries`, { ...entries }, 204);
+}
+
+/**
+ * The other client compacts: the chain of a planted conversation becomes what a recording said
+ * after its `compact_boundary`, and every entry a reader had is gone from it.
+ */
+export async function compactedElsewhere(conversationId: string, fixture: string): Promise<void> {
+  await throughTheDoor('PUT', `/${conversationId}/chain`, { fixture }, 204);
 }

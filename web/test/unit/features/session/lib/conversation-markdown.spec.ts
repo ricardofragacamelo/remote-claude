@@ -94,4 +94,24 @@ describe('the conversation as Markdown — plan 08, B-39', () => {
       conversationMarkdown({ messages: [], tools: [], timeline: [] }, labels, { outputs: false }),
     ).toBe('# Conversation\n');
   });
+
+  it('leaves out the marker of an image, whose bytes it never had — plan 22, D-09', () => {
+    const markdown = conversationMarkdown(
+      {
+        messages: [
+          message('p1', 'user', [
+            { kind: 'text', text: 'look' },
+            { kind: 'image', text: '', blockId: 'p1:1', mediaType: 'image/png', size: 3 },
+          ]),
+        ],
+        tools: [],
+        timeline: [{ kind: 'message', id: 'p1' }],
+      },
+      labels,
+      { outputs: false },
+    );
+
+    expect(markdown).toContain('look');
+    expect(markdown).not.toContain('<details>');
+  });
 });

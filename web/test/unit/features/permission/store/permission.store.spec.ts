@@ -75,6 +75,7 @@ describe('the permission queue', () => {
           { scope: 'session', labelKey: 'permission.scope.session', rule: null },
         ],
         isAnswering: false,
+        reaches: [],
       },
     ]);
   });
@@ -110,6 +111,7 @@ describe('the permission queue', () => {
         resolvedBy: 'auth|42',
         resolvedFrom: null,
         toolUseId: 'toolu-1',
+        via: null,
         answeredHere: false,
       },
     ]);
@@ -175,6 +177,7 @@ describe('the permission queue', () => {
       resolvedBy: null,
       resolvedFrom: null,
       toolUseId: 'toolu-1',
+      via: null,
       answeredHere: false,
     });
   });

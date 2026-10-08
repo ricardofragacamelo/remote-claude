@@ -32,11 +32,14 @@ function fenced(text: string, language = ''): string {
 }
 
 function messageOf(message: StreamMessage, labels: MarkdownLabels): string {
-  const blocks = message.blocks.map((block) =>
-    block.kind === 'text'
-      ? block.text
-      : `<details>\n<summary>${labels.thinking}</summary>\n\n${block.text}\n\n</details>`,
-  );
+  // The image of a prompt is a marker on screen, with no bytes here to export (plan 22, D-09).
+  const blocks = message.blocks
+    .filter((block) => block.kind !== 'image')
+    .map((block) =>
+      block.kind === 'text'
+        ? block.text
+        : `<details>\n<summary>${labels.thinking}</summary>\n\n${block.text}\n\n</details>`,
+    );
 
   return [`### ${message.role === 'user' ? labels.you : labels.claude}`, ...blocks].join('\n\n');
 }

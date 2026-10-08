@@ -100,6 +100,16 @@ void main() {
     },
   );
 
+  test('plan 23 · S-87 · a draft in Permitir tudo opens the session in it', () {
+    final ProviderContainer container = build();
+    hold(container);
+
+    drafts(container).chooseMode('allowAll');
+
+    expect(drafts(container).send('fix the build'), isTrue);
+    expect(sessions.commands.single.$2, containsPair('permissionMode', 'allowAll'));
+  });
+
   test('S-34 · choosing another model puts the effort back to the default', () {
     final ProviderContainer container = build();
     hold(container);

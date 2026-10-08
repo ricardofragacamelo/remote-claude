@@ -5,6 +5,8 @@
 /// It knows no endpoint — that is the data source's job — and it holds no business rule.
 library;
 
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:remote_claude/core/device/install_id.dart';
 import 'package:remote_claude/core/error/failure.dart';
@@ -48,6 +50,9 @@ Dio buildDio({
   return dio;
 }
 
+/// A body read as bytes, and the type the server said it is.
+typedef ByteAnswer = ({Uint8List bytes, String? contentType});
+
 /// The client the data sources call.
 class ApiClient {
   ApiClient(Dio dio, TraceIds traceIds) : this.over(() => dio, traceIds);
@@ -89,6 +94,34 @@ class ApiClient {
   /// @throws [Failure] always, for the same reason as [get]
   Future<Object?> delete(String path, {Map<String, Object?>? query}) =>
       _send(() => _transport().delete<Object?>(path, queryParameters: query));
+
+  /// A `GET` whose answer is not JSON — an image, say: the bytes as they came, and their type.
+  ///
+  /// The credential travels in the header like every other request, never in the URL (plan 22,
+  /// D-10). The bytes are never logged: the logging interceptor reports the path and the status.
+  ///
+  /// @throws [Failure] always, for the same reason as [get] — a refusal's envelope is read from the
+  ///   bytes it came in
+  Future<ByteAnswer> bytes(String path) async {
+    final String fallbackTraceId = _traceIds.next();
+
+    try {
+      final Response<List<int>> response = await _transport().get<List<int>>(
+        path,
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: <String, Object?>{'accept': '*/*'},
+        ),
+      );
+
+      return (
+        bytes: Uint8List.fromList(response.data ?? const <int>[]),
+        contentType: response.headers.value(Headers.contentTypeHeader),
+      );
+    } on DioException catch (exception) {
+      throw failureFromDio(exception, fallbackTraceId);
+    }
+  }
 
   Future<Object?> _send(Future<Response<Object?>> Function() call) async {
     final String fallbackTraceId = _traceIds.next();

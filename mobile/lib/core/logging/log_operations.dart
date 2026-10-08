@@ -69,6 +69,11 @@ abstract final class LogOp {
   /// The live sessions of a folder were read, and what in them this build could not name
   /// (plan 10, S-154).
   static const String sessionList = 'session.list';
+
+  /// Following a conversation of the history over the socket: the follow and unfollow sent, and
+  /// what each frame of a subscription carried — ids, counts and states, never what an entry says
+  /// (plan 22, B-24). The same `op` the backend logs the subscription with.
+  static const String transcriptFollow = 'transcript.follow';
 }
 
 /// How many trailing characters of a push token may be logged.

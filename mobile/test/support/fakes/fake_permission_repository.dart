@@ -7,27 +7,13 @@ import 'dart:async';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_event.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
-import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
 import 'package:remote_claude/features/permission/domain/repositories/approval_lock.dart';
 import 'package:remote_claude/features/permission/domain/repositories/permission_repository.dart';
 import 'package:remote_claude/features/permission/permission_providers.dart';
 
 /// One answer the app sent.
-class SentAnswer {
-  const SentAnswer({
-    required this.frameId,
-    required this.requestId,
-    required this.decision,
-    required this.scope,
-    this.reason,
-  });
-
-  final String frameId;
-  final String requestId;
-  final PermissionDecision decision;
-  final PermissionScope scope;
-  final String? reason;
-}
+/// What a test reads of an answer that left: the answer itself.
+typedef SentAnswer = OutgoingAnswer;
 
 /// A feed the test pushes events into.
 class FakePermissionFeed implements PermissionFeed {
@@ -54,26 +40,12 @@ class FakePermissionFeed implements PermissionFeed {
   void emit(PermissionEvent event) => _events.add(event);
 
   @override
-  bool answer({
-    required String frameId,
-    required String requestId,
-    required PermissionDecision decision,
-    required PermissionScope scope,
-    String? reason,
-  }) {
+  bool answer(OutgoingAnswer answer) {
     if (!connected) {
       return false;
     }
 
-    answers.add(
-      SentAnswer(
-        frameId: frameId,
-        requestId: requestId,
-        decision: decision,
-        scope: scope,
-        reason: reason,
-      ),
-    );
+    answers.add(answer);
     return true;
   }
 

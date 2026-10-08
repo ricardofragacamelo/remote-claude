@@ -1,6 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { EndSessionPermissionsUseCase, RequestPermissionUseCase } from '@application/permission';
+import {
+  ApplyPermissionModeUseCase,
+  EndSessionPermissionsUseCase,
+  RequestPermissionUseCase,
+} from '@application/permission';
 import type { PermissionResolvedEvent } from '@application/permission';
 import type {
   PermissionQuestion,
@@ -11,7 +15,7 @@ import type {
 import { SESSION_BROADCASTER, SessionRegistry, observedStatus } from '@application/session';
 import type { PermissionResolution } from '@domain/permission';
 import { UserId } from '@domain/auth';
-import type { SessionId } from '@domain/session';
+import type { PermissionMode, SessionId } from '@domain/session';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 
 /** What the agent is told when the session it was asking about has gone. */
@@ -48,45 +52,41 @@ const UNKNOWN_OWNER = UserId.create('unknown');
 @Injectable()
 export class PermissionBridge implements SessionPermissionGate {
   /** Requests whose promise is still pending, by request id. */
-  private readonly waiting = new Map<string, (verdict: PermissionVerdict) => void>();
+  private readonly waiting = new Map<string, Waiter>();
 
   constructor(
     @Inject(RequestPermissionUseCase) private readonly requestPermission: RequestPermissionUseCase,
     @Inject(EndSessionPermissionsUseCase)
     private readonly endPermissions: EndSessionPermissionsUseCase,
+    @Inject(ApplyPermissionModeUseCase)
+    private readonly applyMode: ApplyPermissionModeUseCase,
     @Inject(SessionRegistry) private readonly sessions: SessionRegistry,
     @Inject(SESSION_BROADCASTER) private readonly broadcaster: SessionBroadcaster,
     @Inject(LOGGER) private readonly logger: Logger,
   ) {}
 
   async ask(question: PermissionQuestion): Promise<PermissionVerdict> {
-    const live = this.sessions.find(question.sessionId);
+    this.logger.debug(fieldsOf(question), 'canUseTool blocked the agent loop');
 
-    this.logger.debug(
-      {
-        op: 'claude.permission.request',
-        layer: 'adapter',
-        sessionId: question.sessionId.value,
-        requestId: question.requestId,
-        toolName: question.toolName,
-      },
-      'canUseTool blocked the agent loop',
-    );
-
-    const outcome = await this.requestPermission.execute({
-      requestId: question.requestId,
-      sessionId: question.sessionId,
-      userId: live?.session.ownerId ?? UNKNOWN_OWNER,
-      // What a `project` rule is granted for, and the mode as it is **now** — it can change while
-      // the session runs. A session already forgotten reads as `plan`, where no `allow` answers.
-      projectPath: live?.session.workspace.value ?? null,
-      permissionMode: live?.session.permissionMode ?? 'plan',
-      toolUseId: question.toolUseId,
-      toolName: question.toolName,
-      input: question.input,
-    });
+    // Listening starts before asking: an answer that settles the request while it is still being
+    // written down would otherwise go past nobody, and the loop would wait for ever.
+    const answered = this.wait(question);
+    const outcome = await this.asked(question);
 
     if (outcome.kind === 'settled') {
+      this.waiting.get(question.requestId)?.drop();
+
+      // Nobody was asked — a rule, Permitir tudo, or an answer it already had. Said once, with what
+      // answered and never with the input, which can carry anything the model wrote (plan 23, S-20).
+      this.logger.debug(
+        {
+          ...fieldsOf(question),
+          decision: outcome.resolution.decision,
+          via: outcome.resolution.via ?? null,
+        },
+        'canUseTool answered without asking anybody',
+      );
+
       return verdictOf(outcome.resolution);
     }
 
@@ -95,7 +95,32 @@ export class PermissionBridge implements SessionPermissionGate {
     // announced from here because this is the only place that knows.
     this.announce(question.sessionId, 'permission.requested');
 
-    return this.wait(question);
+    return answered;
+  }
+
+  /** Hands the question to the `permission` module; a failure drops the listener `ask` set up. */
+  private async asked(
+    question: PermissionQuestion,
+  ): Promise<Awaited<ReturnType<RequestPermissionUseCase['execute']>>> {
+    const live = this.sessions.find(question.sessionId);
+
+    try {
+      return await this.requestPermission.execute({
+        requestId: question.requestId,
+        sessionId: question.sessionId,
+        userId: live?.session.ownerId ?? UNKNOWN_OWNER,
+        // What a `project` rule is granted for, and the mode as it is **now** — it can change while
+        // the session runs. A session already forgotten reads as `plan`, where no `allow` answers.
+        projectPath: live?.session.workspace.value ?? null,
+        permissionMode: live?.session.permissionMode ?? 'plan',
+        toolUseId: question.toolUseId,
+        toolName: question.toolName,
+        input: question.input,
+      });
+    } catch (error) {
+      this.waiting.get(question.requestId)?.drop();
+      throw error;
+    }
   }
 
   /**
@@ -120,6 +145,39 @@ export class PermissionBridge implements SessionPermissionGate {
   }
 
   /**
+   * The session switched mode: hands its open questions to the `permission` module, which answers
+   * the ones Permitir tudo covers. Never rejects — the mode has already changed, and a failure here
+   * leaves the cards on screen for a person, which is the safe side.
+   */
+  async modeChanged(sessionId: SessionId, mode: PermissionMode): Promise<void> {
+    try {
+      const answered = await this.applyMode.execute(sessionId, mode);
+
+      this.logger.debug(
+        {
+          op: 'claude.permission.mode',
+          layer: 'adapter',
+          sessionId: sessionId.value,
+          mode,
+          answered,
+        },
+        'the open requests of the session were re-read under its new mode',
+      );
+    } catch (error) {
+      this.logger.error(
+        {
+          op: 'claude.permission.mode',
+          layer: 'adapter',
+          sessionId: sessionId.value,
+          mode,
+          err: error,
+        },
+        'the open requests of the session could not be re-read under its new mode',
+      );
+    }
+  }
+
+  /**
    * The `permission.resolved` consumer that releases the loop.
    *
    * It is called for every resolution, including the ones this process is not waiting on — a rule
@@ -138,7 +196,7 @@ export class PermissionBridge implements SessionPermissionGate {
 
     // Not every resolution is one this process is waiting on: a rule may have answered without
     // anybody being asked, and another session's request reaches every consumer of the bus.
-    waiting?.(verdictOf(resolution));
+    waiting?.release(verdictOf(resolution));
   }
 
   /** Moves the session's status from an event of the permission flow, and publishes the move. */
@@ -167,14 +225,18 @@ export class PermissionBridge implements SessionPermissionGate {
    */
   private wait(question: PermissionQuestion): Promise<PermissionVerdict> {
     return new Promise<PermissionVerdict>((resolve) => {
-      const settle = (verdict: PermissionVerdict): void => {
+      const drop = (): void => {
         this.waiting.delete(question.requestId);
         question.signal.removeEventListener('abort', onAbort);
+      };
+
+      const release = (verdict: PermissionVerdict): void => {
+        drop();
         resolve(verdict);
       };
 
       const onAbort = (): void => {
-        settle({ decision: 'deny', reason: SESSION_ENDED });
+        release({ decision: 'deny', reason: SESSION_ENDED });
       };
 
       if (question.signal.aborted) {
@@ -183,9 +245,26 @@ export class PermissionBridge implements SessionPermissionGate {
       }
 
       question.signal.addEventListener('abort', onAbort, { once: true });
-      this.waiting.set(question.requestId, settle);
+      this.waiting.set(question.requestId, { release, drop });
     });
   }
+}
+
+/** The loop held open on one request: released with a verdict, or dropped when nobody was asked. */
+interface Waiter {
+  readonly release: (verdict: PermissionVerdict) => void;
+  readonly drop: () => void;
+}
+
+/** What every line about one question says: which session, which request, which tool — never the input. */
+function fieldsOf(question: PermissionQuestion): Record<string, unknown> {
+  return {
+    op: 'claude.permission.request',
+    layer: 'adapter',
+    sessionId: question.sessionId.value,
+    requestId: question.requestId,
+    toolName: question.toolName,
+  };
 }
 
 /** A settled request, in the two values the agent loop understands. */

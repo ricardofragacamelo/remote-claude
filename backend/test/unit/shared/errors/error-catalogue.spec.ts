@@ -48,6 +48,12 @@ import {
 import { RateLimitedError } from '@shared/errors/rate-limited.error';
 import { InputValidationError } from '@shared/errors/input-validation.error';
 import { PayloadTooLargeError } from '@shared/errors/payload-too-large.error';
+import {
+  PromptImageTooLargeError,
+  PromptImageTypeUnsupportedError,
+  TranscriptFollowLimitError,
+  TranscriptFollowLiveHereError,
+} from '@domain/transcript';
 
 describe('httpStatusFor', () => {
   it.each([
@@ -359,6 +365,54 @@ describe('the codes the Claude panel adds — plan 08, B-04', () => {
     expect(toErrorEnvelope(new EffortUnsupportedError('max', 'm'), 't').error).toMatchObject({
       code: 'INVALID_INPUT',
       params: { level: 'max', model: 'm' },
+    });
+  });
+});
+
+/** The codes the live history adds — plan 22, B-01 (S-05). */
+describe('the codes the live history adds — plan 22, B-01', () => {
+  const repository = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../../..');
+  const keyOf = (catalogue: string, key: string): unknown =>
+    key
+      .split('.')
+      .reduce<unknown>(
+        (node, part) => (node as Record<string, unknown> | undefined)?.[part],
+        JSON.parse(
+          readFileSync(path.join(repository, 'web/src/shared/i18n/locales', catalogue), 'utf8'),
+        ) as unknown,
+      );
+
+  const errors = [
+    new TranscriptFollowLimitError(16, 'server'),
+    new TranscriptFollowLiveHereError('ses_1'),
+    new PromptImageTypeUnsupportedError('image/svg+xml'),
+    new PromptImageTooLargeError(11, 10),
+  ];
+
+  it.each(errors.map((error) => [error.code, error] as const))(
+    'carries %s with the status doc 04 declares, and a sentence in both languages',
+    (code, error) => {
+      expect(documentedStatuses().get(code)).toBe(httpStatusFor(code));
+      expect(error.messageKey).toMatch(/^transcript\.error\.[a-zA-Z]+$/);
+      expect(keyOf('en.json', error.messageKey)).toEqual(expect.any(String));
+      expect(keyOf('pt-BR.json', error.messageKey)).toEqual(expect.any(String));
+    },
+  );
+
+  it('answers 429 with a wait, 409, 415 and 413 — never the 500 of an uncatalogued code', () => {
+    const limit = toErrorEnvelope(new TranscriptFollowLimitError(4, 'connection'), 't');
+
+    expect(limit.error).toMatchObject({
+      code: 'TRANSCRIPT_FOLLOW_LIMIT',
+      httpEquivalent: 429,
+      params: { limit: 4, scope: 'connection' },
+    });
+    expect(retryAfterFor(429, limit)).toBe(DEFAULT_RETRY_AFTER_SECONDS);
+    expect(httpStatusFor('TRANSCRIPT_FOLLOW_LIVE_HERE')).toBe(409);
+    expect(httpStatusFor('UNSUPPORTED_MEDIA_TYPE')).toBe(415);
+    expect(toErrorEnvelope(new PromptImageTooLargeError(11, 10), 't').error).toMatchObject({
+      httpEquivalent: 413,
+      params: { size: 11, limit: 10 },
     });
   });
 });

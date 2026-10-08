@@ -78,6 +78,52 @@ void main() {
       },
     );
 
+    testWidgets('plan 23 · S-83 · offers Permitir tudo last, with its warning in full', (
+      WidgetTester tester,
+    ) async {
+      await pumpChip(
+        tester,
+        (BuildContext context) => modeChoice(context, current: null, onPick: picked.add),
+      );
+
+      await tester.tap(find.text(l10n.modeDefault));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.modeAllowAll), findsOneWidget);
+      expect(find.textContaining(l10n.modeAllowAllWarning), findsOneWidget);
+      expect(offeredModes.last, 'allowAll');
+
+      await tester.tap(find.text(l10n.modeAllowAll));
+      await tester.pumpAndSettle();
+      expect(picked, <Object?>['allowAll']);
+    });
+
+    testWidgets('plan 23 · S-85 · Permitir tudo looks different: its own icon and its words', (
+      WidgetTester tester,
+    ) async {
+      await pumpChip(
+        tester,
+        (BuildContext context) => modeChoice(context, current: 'allowAll', onPick: picked.add),
+      );
+
+      expect(find.text(l10n.modeAllowAll), findsOneWidget);
+      expect(find.byIcon(Icons.lock_open), findsOneWidget);
+    });
+
+    testWidgets(
+      'plan 23 · S-86 · a mode this build does not know is shown by its name, not offered',
+      (WidgetTester tester) async {
+        await pumpChip(
+          tester,
+          (BuildContext context) => modeChoice(context, current: 'dontAsk', onPick: picked.add),
+        );
+
+        expect(find.text('dontAsk'), findsOneWidget);
+        expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
+        expect(offeredModes, isNot(contains('dontAsk')));
+      },
+    );
+
     testWidgets('picking what is already chosen sends nothing', (WidgetTester tester) async {
       await pumpChip(
         tester,

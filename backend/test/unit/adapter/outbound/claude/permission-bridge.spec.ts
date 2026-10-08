@@ -46,6 +46,7 @@ describe('PermissionBridge', () => {
     bridge = new PermissionBridge(
       harness.request,
       harness.endSession,
+      harness.applyMode,
       sessions,
       broadcaster,
       log.logger,
@@ -102,6 +103,7 @@ describe('PermissionBridge', () => {
     const alone = new PermissionBridge(
       orphan.request,
       orphan.endSession,
+      orphan.applyMode,
       aRegistry([]).registry,
       quiet,
       log.logger,
@@ -127,6 +129,35 @@ describe('PermissionBridge', () => {
     });
 
     await expect(pending).resolves.toEqual({ decision: 'allow', reason: null });
+  });
+
+  it('is released by an answer that arrives while the request is still being written down', async () => {
+    // The request is in the registry — answerable — before its row is stored. An answer in that
+    // window settles it before `ask` has its outcome, and has to reach the loop all the same.
+    const open = harness.requests.open.bind(harness.requests);
+    harness.requests.open = async (request) => {
+      await open(request);
+      await harness.resolve.execute({
+        requestId: request.id,
+        decision: 'deny',
+        reason: 'not now',
+        scope: 'once',
+        userId: PERMISSION_OWNER,
+        resolvedFrom: 'mobile',
+        watchesSession: () => true,
+      });
+    };
+
+    await expect(bridge.ask(question())).resolves.toEqual({
+      decision: 'deny',
+      reason: 'not now',
+    });
+  });
+
+  it('stops listening when the question could not be asked', async () => {
+    harness.requests.open = () => Promise.reject(new Error('database down'));
+
+    await expect(bridge.ask(question())).rejects.toThrow('database down');
   });
 
   it('returns immediately when a rule already answered — S-60', async () => {
@@ -242,6 +273,54 @@ describe('PermissionBridge', () => {
     }).not.toThrow();
   });
 
+  describe('Permitir tudo — plan 23', () => {
+    it('returns at once, and says what answered without the input — S-09, S-20', async () => {
+      live.setPermissionMode('allowAll');
+
+      await expect(bridge.ask(question({ input: { command: 'pnpm test' } }))).resolves.toEqual({
+        decision: 'allow',
+        reason: null,
+      });
+
+      const said = log.lines.find(
+        (line) => line['msg'] === 'canUseTool answered without asking anybody',
+      );
+      expect(said).toMatchObject({
+        op: 'claude.permission.request',
+        sessionId: PERMISSION_SESSION.value,
+        requestId: 'request-1',
+        toolName: 'Bash',
+        decision: 'allow',
+        via: 'allowAll',
+      });
+      expect(JSON.stringify(said)).not.toContain('pnpm test');
+    });
+
+    it('releases a loop already waiting when the session switches to it — S-22', async () => {
+      const pending = bridge.ask(question({ input: { command: 'pnpm test' } }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      live.setPermissionMode('allowAll');
+      await bridge.modeChanged(PERMISSION_SESSION, 'allowAll');
+
+      await expect(pending).resolves.toEqual({ decision: 'allow', reason: null });
+      expect(log.lines.map((line) => line['msg'])).toContain(
+        'the open requests of the session were re-read under its new mode',
+      );
+    });
+
+    it('logs, rather than throwing, when the open requests cannot be re-read', async () => {
+      void bridge.ask(question({ input: { command: 'pnpm test' } }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      harness.requests.failWith = new Error('the database is gone');
+
+      await expect(bridge.modeChanged(PERMISSION_SESSION, 'allowAll')).resolves.toBeUndefined();
+      expect(log.lines.map((line) => line['msg'])).toContain(
+        'the open requests of the session could not be re-read under its new mode',
+      );
+    });
+  });
+
   it('asks on behalf of a session that has already gone, rather than inventing an owner', async () => {
     // A tool call can reach `canUseTool` during teardown. The invocation is still put through the
     // module — a question nobody can answer is better than one nobody records.
@@ -249,6 +328,7 @@ describe('PermissionBridge', () => {
     const alone = new PermissionBridge(
       orphan.request,
       orphan.endSession,
+      orphan.applyMode,
       aRegistry([]).registry,
       new RecordingBroadcaster(),
       log.logger,

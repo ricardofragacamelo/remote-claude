@@ -35,6 +35,8 @@ class StreamMessage extends ConversationEntry {
     this.blocks = const <String>[],
     this.streaming,
     this.isFromUser = false,
+    this.blockIds = const <String>[],
+    this.images = const <PromptImage>[],
   });
 
   final String messageId;
@@ -42,11 +44,17 @@ class StreamMessage extends ConversationEntry {
   /// The text blocks that finished, in order.
   final List<String> blocks;
 
+  /// The identities of the finished text blocks a server named (plan 22, D-06).
+  final List<String> blockIds;
+
   /// The block arriving now, fragment by fragment — `null` once it finished.
   final String? streaming;
 
   /// Whether the person wrote it. Everything else came from the model.
   final bool isFromUser;
+
+  /// The images the prompt carried — markers of them, never their bytes (plan 22, D-09).
+  final List<PromptImage> images;
 
   /// Everything of this message the client has: the finished blocks and the one arriving.
   String get text => <String>[...blocks, ?streaming].join();
@@ -63,10 +71,30 @@ class StreamMessage extends ConversationEntry {
     blocks: blocks ?? this.blocks,
     streaming: streaming == null ? this.streaming : streaming(),
     isFromUser: isFromUser,
+    blockIds: blockIds,
+    images: images,
   );
 
   @override
-  List<Object?> get props => <Object?>[messageId, blocks, streaming, isFromUser];
+  List<Object?> get props => <Object?>[messageId, blocks, streaming, isFromUser, blockIds, images];
+}
+
+/// An image a prompt carried, as the conversation keeps it: what it is and how large, never the
+/// bytes. They are asked for when the person opens it (plan 22, D-09).
+class PromptImage extends Equatable {
+  const PromptImage({this.blockId, this.mediaType, this.size});
+
+  /// What the image is asked for by — `null` from a server older than it, and then it cannot be.
+  final String? blockId;
+
+  /// The type the prompt declared — `image/png` —, when it said.
+  final String? mediaType;
+
+  /// How many bytes it has, when the prompt carried them and not a URL.
+  final int? size;
+
+  @override
+  List<Object?> get props => <Object?>[blockId, mediaType, size];
 }
 
 /// What the model thought before answering — an entry of its own, never part of the answer.
@@ -81,12 +109,17 @@ class ThinkingEntry extends ConversationEntry {
     this.isRedacted = false,
     this.startedAt,
     this.endedAt,
+    this.blockId,
+    this.atMost,
   });
 
   final String messageId;
 
   /// Which thinking of the message, from 0.
   final int index;
+
+  /// The block's identity, once a finished block named it (plan 22, D-06).
+  final String? blockId;
 
   /// What it thought, as far as it has arrived. Empty when the model would not show it.
   final String text;
@@ -101,6 +134,11 @@ class ThinkingEntry extends ConversationEntry {
   /// instant per block.
   final String? startedAt;
   final String? endedAt;
+
+  /// How long it took **at most**, from the history: the time between the entry before and the one
+  /// that holds it, which also holds the wait for the first token (plan 22, D-14). `null` live, and
+  /// without both instants.
+  final Duration? atMost;
 
   /// How long it thought, or `null` when there is no honest answer: still thinking, or read from the
   /// history. "0 s" or "NaN" would be a lie about the one thing the line says (S-61).
@@ -119,15 +157,18 @@ class ThinkingEntry extends ConversationEntry {
   String get entryId => 'thinking:$messageId:$index';
 
   /// The same thinking, stopped — with the text that finished it, when one did.
-  ThinkingEntry finished({String? text, bool? isRedacted, String at = ''}) => ThinkingEntry(
-    messageId: messageId,
-    index: index,
-    text: text ?? this.text,
-    isComplete: true,
-    isRedacted: isRedacted ?? this.isRedacted,
-    startedAt: startedAt,
-    endedAt: endedAt ?? (at.isEmpty ? null : at),
-  );
+  ThinkingEntry finished({String? text, bool? isRedacted, String at = '', String? blockId}) =>
+      ThinkingEntry(
+        messageId: messageId,
+        index: index,
+        text: text ?? this.text,
+        isComplete: true,
+        isRedacted: isRedacted ?? this.isRedacted,
+        startedAt: startedAt,
+        endedAt: endedAt ?? (at.isEmpty ? null : at),
+        blockId: blockId ?? this.blockId,
+        atMost: atMost,
+      );
 
   /// The same thinking with [delta] added.
   ThinkingEntry continued(String delta) =>
@@ -142,6 +183,8 @@ class ThinkingEntry extends ConversationEntry {
     isRedacted,
     startedAt,
     endedAt,
+    blockId,
+    atMost,
   ];
 }
 
@@ -159,10 +202,15 @@ class ToolExecution extends ConversationEntry {
     this.summary,
     this.taskId,
     this.isSubagent = false,
+    this.title,
   });
 
   final String toolUseId;
   final String toolName;
+
+  /// What the model said the call is for — the `description` of a shell command —, when it said
+  /// (plan 22, D-05).
+  final String? title;
 
   /// What the tool was asked to do, exactly as the contract carried it.
   final Map<String, Object?> input;
@@ -195,6 +243,7 @@ class ToolExecution extends ConversationEntry {
         summary: summary ?? this.summary,
         taskId: taskId ?? this.taskId,
         isSubagent: isSubagent,
+        title: title,
       );
 
   @override
@@ -207,6 +256,7 @@ class ToolExecution extends ConversationEntry {
     summary,
     taskId,
     isSubagent,
+    title,
   ];
 }
 

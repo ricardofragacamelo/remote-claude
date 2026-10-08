@@ -9,14 +9,32 @@ part of 'conversation_history_controller.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 /// The history of one conversation, keyed by it.
+///
+/// After the first page it **follows** the conversation (`transcript.follow` from the page's
+/// `lastMessageId`), and what arrives joins the events. It lets go when nobody shows it, when the app
+/// goes to the background and when it is thrown away; it follows again when shown again, when the app
+/// comes back and when the socket does — always from the last entry it has, so nothing is missed and
+/// nothing comes twice (docs/architecture/mobile/04-ui.md, plan 22 · F4).
 
 @ProviderFor(ConversationHistoryController)
 final conversationHistoryControllerProvider = ConversationHistoryControllerFamily._();
 
 /// The history of one conversation, keyed by it.
+///
+/// After the first page it **follows** the conversation (`transcript.follow` from the page's
+/// `lastMessageId`), and what arrives joins the events. It lets go when nobody shows it, when the app
+/// goes to the background and when it is thrown away; it follows again when shown again, when the app
+/// comes back and when the socket does — always from the last entry it has, so nothing is missed and
+/// nothing comes twice (docs/architecture/mobile/04-ui.md, plan 22 · F4).
 final class ConversationHistoryControllerProvider
     extends $AsyncNotifierProvider<ConversationHistoryController, HistoryBoard> {
   /// The history of one conversation, keyed by it.
+  ///
+  /// After the first page it **follows** the conversation (`transcript.follow` from the page's
+  /// `lastMessageId`), and what arrives joins the events. It lets go when nobody shows it, when the app
+  /// goes to the background and when it is thrown away; it follows again when shown again, when the app
+  /// comes back and when the socket does — always from the last entry it has, so nothing is missed and
+  /// nothing comes twice (docs/architecture/mobile/04-ui.md, plan 22 · F4).
   ConversationHistoryControllerProvider._({
     required ConversationHistoryControllerFamily super.from,
     required String super.argument,
@@ -53,9 +71,15 @@ final class ConversationHistoryControllerProvider
   }
 }
 
-String _$conversationHistoryControllerHash() => r'718827f64345e54ff1355f97d1f8536b00fada57';
+String _$conversationHistoryControllerHash() => r'1e5051636659be6651ffdbc38685c42ac12896ad';
 
 /// The history of one conversation, keyed by it.
+///
+/// After the first page it **follows** the conversation (`transcript.follow` from the page's
+/// `lastMessageId`), and what arrives joins the events. It lets go when nobody shows it, when the app
+/// goes to the background and when it is thrown away; it follows again when shown again, when the app
+/// comes back and when the socket does — always from the last entry it has, so nothing is missed and
+/// nothing comes twice (docs/architecture/mobile/04-ui.md, plan 22 · F4).
 
 final class ConversationHistoryControllerFamily extends $Family
     with
@@ -76,6 +100,12 @@ final class ConversationHistoryControllerFamily extends $Family
       );
 
   /// The history of one conversation, keyed by it.
+  ///
+  /// After the first page it **follows** the conversation (`transcript.follow` from the page's
+  /// `lastMessageId`), and what arrives joins the events. It lets go when nobody shows it, when the app
+  /// goes to the background and when it is thrown away; it follows again when shown again, when the app
+  /// comes back and when the socket does — always from the last entry it has, so nothing is missed and
+  /// nothing comes twice (docs/architecture/mobile/04-ui.md, plan 22 · F4).
 
   ConversationHistoryControllerProvider call(String conversationId) =>
       ConversationHistoryControllerProvider._(argument: conversationId, from: this);
@@ -85,6 +115,12 @@ final class ConversationHistoryControllerFamily extends $Family
 }
 
 /// The history of one conversation, keyed by it.
+///
+/// After the first page it **follows** the conversation (`transcript.follow` from the page's
+/// `lastMessageId`), and what arrives joins the events. It lets go when nobody shows it, when the app
+/// goes to the background and when it is thrown away; it follows again when shown again, when the app
+/// comes back and when the socket does — always from the last entry it has, so nothing is missed and
+/// nothing comes twice (docs/architecture/mobile/04-ui.md, plan 22 · F4).
 
 abstract class _$ConversationHistoryController extends $AsyncNotifier<HistoryBoard> {
   late final _$args = ref.$arg as String;

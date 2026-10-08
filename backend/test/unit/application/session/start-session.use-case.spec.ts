@@ -569,7 +569,7 @@ describe('StartSessionUseCase', () => {
           payload: {
             messageId: 'prompt-1',
             role: 'user',
-            content: [{ type: 'text', text: 'second' }],
+            content: [{ type: 'text', blockId: 'prompt-1:0', text: 'second' }],
             promptedBy: 'mobile',
           },
         },

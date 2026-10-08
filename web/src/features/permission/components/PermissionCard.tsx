@@ -3,11 +3,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/components/ui/button';
 import { claimArrival } from '../store/permission.store';
+import { patternsToConfirm, preselectedReach } from '../lib/reach';
 import { EditPreviewView } from './EditPreviewView';
 import type {
   PermissionDecision,
   PermissionRequest,
   PermissionScope,
+  RuleReach,
+  RuleReachKind,
   ScopeSuggestion,
 } from '../types/permission';
 
@@ -17,7 +20,13 @@ export interface PermissionCardProps {
   /** Milliseconds left before the deadline refuses it. */
   readonly remainingMs: number;
 
-  onAnswer(request: PermissionRequest, decision: PermissionDecision, scope: PermissionScope): void;
+  onAnswer(
+    request: PermissionRequest,
+    decision: PermissionDecision,
+    scope: PermissionScope,
+    reason?: string,
+    reach?: RuleReachKind,
+  ): void;
   onExtend(request: PermissionRequest): void;
 
   /** Where the rules are revoked. Absent, the second step says so without offering the way. */
@@ -46,8 +55,11 @@ const RISK_STYLE = {
  * - **a card that is answering takes no second click.** Two clicks are two answers;
  * - **a yes that outlives the session takes a second step**, whatever the risk. `project` and
  *   `always` mean "don't ask me again", and the second step is where that is said in full — the
- *   pattern, where it holds, for how long — with the way to the rules that take it back
- *   ([D-14](../../../../../docs/plans/03-rules-and-audit/decisions.md)).
+ *   patterns, where they hold, for how long — with the way to the rules that take them back
+ *   ([D-14](../../../../../docs/plans/03-rules-and-audit/decisions.md));
+ * - **how far a rule reaches is chosen, not guessed** (plan 23, B-13). The server sends the reaches
+ *   with their patterns; with more than one, the card shows each one in full and the answer names
+ *   the one chosen — never a pattern of its own.
  */
 export function PermissionCard({
   request,
@@ -60,6 +72,7 @@ export function PermissionCard({
   const { t } = useTranslation();
   const seconds = Math.ceil(remainingMs / 1_000);
   const [armed, setArmed] = useState<ScopeSuggestion | null>(null);
+  const [reach, setReach] = useState<RuleReach | null>(() => preselectedReach(request.reaches));
   const denyRef = useArrivalFocus(request);
 
   return (
@@ -97,6 +110,16 @@ export function PermissionCard({
 
       <EditPreviewView request={request} folder={folder} />
 
+      {armed === null && request.reaches.length > 1 && (
+        <ReachChooser
+          requestId={request.requestId}
+          reaches={request.reaches}
+          chosen={reach}
+          disabled={request.isAnswering}
+          onChoose={setReach}
+        />
+      )}
+
       {armed === null ? (
         <div className="flex flex-wrap gap-2">
           <Button
@@ -119,7 +142,13 @@ export function PermissionCard({
               disabled={request.isAnswering}
               onClick={() => {
                 if (suggestion.rule === null) {
-                  onAnswer(request, 'allow', suggestion.scope);
+                  onAnswer(
+                    request,
+                    'allow',
+                    suggestion.scope,
+                    undefined,
+                    reachOf(suggestion, reach),
+                  );
                 } else {
                   setArmed(suggestion);
                 }
@@ -143,9 +172,10 @@ export function PermissionCard({
       ) : (
         <PersistConfirmation
           suggestion={armed}
+          patterns={patternsToConfirm(reach)}
           disabled={request.isAnswering}
           onConfirm={() => {
-            onAnswer(request, 'allow', armed.scope);
+            onAnswer(request, 'allow', armed.scope, undefined, reach?.reach);
           }}
           onBack={() => {
             setArmed(null);
@@ -156,6 +186,64 @@ export function PermissionCard({
 
       {request.isAnswering && <p className="text-xs opacity-70">{t('permission.card.sending')}</p>}
     </li>
+  );
+}
+
+/** The reach an answer names: none for a one-off, which leaves no rule. */
+function reachOf(suggestion: ScopeSuggestion, reach: RuleReach | null): RuleReachKind | undefined {
+  return suggestion.scope === 'once' ? undefined : reach?.reach;
+}
+
+interface ReachChooserProps {
+  readonly requestId: string;
+  readonly reaches: readonly RuleReach[];
+  readonly chosen: RuleReach | null;
+  readonly disabled: boolean;
+  onChoose(reach: RuleReach): void;
+}
+
+/**
+ * How far a rule left by the answer reaches — each reach with its patterns, exactly as they would be
+ * stored. Radios, so the arrows walk them and the choice is read out with its group.
+ */
+function ReachChooser({
+  requestId,
+  reaches,
+  chosen,
+  disabled,
+  onChoose,
+}: ReachChooserProps): React.JSX.Element {
+  const { t } = useTranslation();
+  const name = `reach-${requestId}`;
+
+  return (
+    <fieldset className="flex flex-col gap-1" disabled={disabled}>
+      <legend className="text-xs uppercase opacity-70">{t('permission.reach.label')}</legend>
+      {reaches.map((each) => {
+        const id = `${name}-${each.reach}`;
+
+        return (
+          <div key={each.reach} className="flex items-start gap-2 text-sm">
+            <input
+              id={id}
+              type="radio"
+              name={name}
+              className="mt-1"
+              checked={chosen?.reach === each.reach}
+              onChange={() => {
+                onChoose(each);
+              }}
+            />
+            <label htmlFor={id} className="flex min-w-0 flex-col">
+              {t(`permission.reach.${each.reach}`)}
+              <code className="font-mono text-xs break-all opacity-80">
+                {each.patterns.join('  ·  ')}
+              </code>
+            </label>
+          </div>
+        );
+      })}
+    </fieldset>
   );
 }
 
@@ -189,6 +277,9 @@ function useArrivalFocus(request: PermissionRequest): React.RefObject<HTMLButton
 
 interface PersistConfirmationProps {
   readonly suggestion: ScopeSuggestion;
+
+  /** The rules the answer would leave — the patterns of the reach chosen. */
+  readonly patterns: readonly string[];
   readonly disabled: boolean;
   onConfirm(): void;
   onBack(): void;
@@ -211,6 +302,7 @@ const HOUR_MS = 60 * 60 * 1_000;
  */
 function PersistConfirmation({
   suggestion,
+  patterns,
   disabled,
   onConfirm,
   onBack,
@@ -242,7 +334,7 @@ function PersistConfirmation({
           : t('permission.persist.project', { duration })}
       </p>
       <pre className="overflow-auto rounded bg-muted p-2 font-mono text-xs whitespace-pre-wrap">
-        {rule?.pattern}
+        {patterns.join('\n')}
       </pre>
       <p className="text-xs opacity-70">{t('permission.persist.revocable')}</p>
 

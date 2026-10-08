@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import {
+  ApplyPermissionModeUseCase,
   DescribePermissionRuleUseCase,
   DescribePermissionUseCase,
   EndSessionPermissionsUseCase,
@@ -11,6 +12,7 @@ import {
   PERMISSION_EVENTS,
   PERMISSION_REQUEST_REPOSITORY,
   PERMISSION_RULE_REPOSITORY,
+  PermissionAutoAnswer,
   PermissionDeadlines,
   PermissionRegistry,
   PermissionRuleBook,
@@ -168,12 +170,17 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
         new DescribePermissionRuleUseCase(rules, clock),
     },
     {
+      provide: PermissionAutoAnswer,
+      inject: [PermissionRuleBook, PermissionSettlement],
+      useFactory: (rules: PermissionRuleBook, settlement: PermissionSettlement) =>
+        new PermissionAutoAnswer(rules, settlement),
+    },
+    {
       provide: RequestPermissionUseCase,
       inject: [
         PermissionRegistry,
         PERMISSION_REQUEST_REPOSITORY,
-        PermissionRuleBook,
-        PermissionSettlement,
+        PermissionAutoAnswer,
         PermissionDeadlines,
         PERMISSION_BROADCASTER,
         PERMISSION_EVENTS,
@@ -183,8 +190,7 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
       useFactory: (
         registry: PermissionRegistry,
         requests: PermissionRequestRepository,
-        rules: PermissionRuleBook,
-        settlement: PermissionSettlement,
+        autoAnswer: PermissionAutoAnswer,
         deadlines: PermissionDeadlines,
         broadcaster: PermissionBroadcaster,
         events: PermissionEvents,
@@ -194,14 +200,19 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
         new RequestPermissionUseCase(
           registry,
           requests,
-          rules,
-          settlement,
+          autoAnswer,
           deadlines,
           broadcaster,
           events,
           clock,
           settings,
         ),
+    },
+    {
+      provide: ApplyPermissionModeUseCase,
+      inject: [PermissionRegistry, PermissionAutoAnswer, CLOCK],
+      useFactory: (registry: PermissionRegistry, autoAnswer: PermissionAutoAnswer, clock: Clock) =>
+        new ApplyPermissionModeUseCase(registry, autoAnswer, clock),
     },
     {
       provide: ResolvePermissionUseCase,
@@ -270,6 +281,7 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
               decision: command.decision,
               reason: command.reason ?? null,
               scope: command.scope ?? null,
+              reach: command.reach ?? null,
               userId: context.userId,
               // The socket said which installation it is in the handshake; no installation is a
               // browser, which is the only other client there is.
@@ -305,6 +317,7 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
     ...Object.values(PERMISSION_HANDLERS),
     PermissionRegistry,
     RequestPermissionUseCase,
+    ApplyPermissionModeUseCase,
     ResolvePermissionUseCase,
     ExtendPermissionUseCase,
     EndSessionPermissionsUseCase,

@@ -1,38 +1,23 @@
-import type { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-
 import type { FolderWatches } from '@application/files';
 import type { ConnectionRegistry } from '@infra/websocket/connection-registry';
 import type { Logger } from '@shared/logging/logger';
+import { ConnectionRelease } from '../connection-release';
 
 /**
  * A socket that goes takes its watched folders with it — 07 · B-21, S-142, S-147.
  *
- * Whatever took the connection out of the registry — the client closing, the heartbeat, a
- * revocation closing it with `4401`, a failed send, the shutdown — this hears it once and releases
- * every subscription of it; the last one of a folder closes the watcher. The gateway keeps no
- * branch for it: the registry tells, and this is who listens.
+ * Every subscription of it is released; the last one of a folder closes the watcher.
  */
-export class ConnectionWatchRelease implements OnModuleInit, OnModuleDestroy {
-  private stopListening: (() => void) | null = null;
-
+export class ConnectionWatchRelease extends ConnectionRelease {
   constructor(
-    private readonly registry: ConnectionRegistry,
+    registry: ConnectionRegistry,
     private readonly watches: FolderWatches,
     private readonly logger: Logger,
-  ) {}
-
-  onModuleInit(): void {
-    this.stopListening = this.registry.onRemoved((connectionId) => {
-      void this.release(connectionId);
-    });
+  ) {
+    super(registry);
   }
 
-  onModuleDestroy(): void {
-    this.stopListening?.();
-    this.stopListening = null;
-  }
-
-  private async release(connectionId: string): Promise<void> {
+  protected async release(connectionId: string): Promise<void> {
     const released = await this.watches.release(connectionId);
 
     if (released > 0) {

@@ -5,6 +5,7 @@ import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/lib/utils';
 import { ansiSegments } from '../../lib/ansi';
 import type { AnsiTone } from '../../lib/ansi';
+import { ScrollingPre } from './ScrollingPre';
 
 /** How much of an output a row shows before "show all": the end of it, which is what matters most. */
 export const OUTPUT_CEILING = 4_000;
@@ -42,7 +43,7 @@ export function AnsiText({ output }: { readonly output: string }): React.JSX.Ele
           {t('sessions.output.showAll', { count: output.length })}
         </Button>
       )}
-      <pre className="max-h-64 overflow-auto rounded bg-muted p-2 font-code text-ui-xs whitespace-pre-wrap">
+      <ScrollingPre>
         {ansiSegments(shown).map((segment, index) => (
           <span
             key={index}
@@ -54,7 +55,7 @@ export function AnsiText({ output }: { readonly output: string }): React.JSX.Ele
             {segment.text}
           </span>
         ))}
-      </pre>
+      </ScrollingPre>
     </div>
   );
 }

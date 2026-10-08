@@ -15,6 +15,12 @@ class ScriptedAdapter implements HttpClientAdapter {
   /// The body to answer with, as it would arrive on the wire.
   String body = '{}';
 
+  /// A body of bytes to answer with instead of [body] — an image, say —, of [contentType].
+  List<int>? bytes;
+
+  /// The type of what is answered.
+  String contentType = Headers.jsonContentType;
+
   /// A status of its own for a path, over [status] — what an endpoint that answers differently
   /// from the others looks like.
   final Map<String, int> statusByPath = <String, int>{};
@@ -37,13 +43,15 @@ class ScriptedAdapter implements HttpClientAdapter {
       throw DioException.connectionError(requestOptions: options, reason: 'nothing answered');
     }
 
-    return ResponseBody.fromString(
-      body,
-      statusByPath[options.uri.path] ?? status,
-      headers: <String, List<String>>{
-        Headers.contentTypeHeader: <String>[Headers.jsonContentType],
-      },
-    );
+    final int answered = statusByPath[options.uri.path] ?? status;
+    final Map<String, List<String>> headers = <String, List<String>>{
+      Headers.contentTypeHeader: <String>[contentType],
+    };
+    final List<int>? raw = bytes;
+
+    return raw == null
+        ? ResponseBody.fromString(body, answered, headers: headers)
+        : ResponseBody.fromBytes(raw, answered, headers: headers);
   }
 
   @override

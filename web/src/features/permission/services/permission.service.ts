@@ -11,6 +11,8 @@ import type {
   PermissionScope,
   RiskHint,
   RuleOffer,
+  RuleReach,
+  RuleReachKind,
   ScopeSuggestion,
 } from '../types/permission';
 
@@ -30,6 +32,9 @@ export interface Answer {
   readonly decision: PermissionDecision;
   readonly scope: PermissionScope;
   readonly reason: string | null;
+
+  /** Which of the request's reaches the rules of `session`, `project` or `always` take. */
+  readonly reach: RuleReachKind | null;
 }
 
 /**
@@ -48,6 +53,8 @@ export function sendAnswer(client: WsClient, answer: Answer): string | null {
       requestId: answer.requestId,
       decision: answer.decision,
       scope: answer.scope,
+      // A one-off leaves no rule, so it names no reach.
+      ...(answer.reach === null || answer.scope === 'once' ? {} : { reach: answer.reach }),
       ...(answer.reason === null ? {} : { reason: answer.reason }),
     },
     answer.frameId,
@@ -107,9 +114,57 @@ export function toRequest(frame: Envelope): PermissionRequest | null {
     // Absent reads as `true`. The safe default is not a convenience here: it is the rule.
     defaultToNo: payload['defaultToNo'] !== false,
     expiresAt,
-    suggestions: readSuggestions(payload['suggestions']),
+    ...offersOf(payload),
     isAnswering: false,
   };
+}
+
+/** The reaches this build knows. One it does not is dropped, never offered. */
+const REACHES = new Set<string>(['exact', 'prefix', 'tool']);
+
+/**
+ * The scopes and the reaches of a request, read together because each needs the other: a
+ * persisted scope is offered only with something to persist.
+ *
+ * A server that does not send `reaches` is read as offering the one reach it always had — the
+ * `exact` pattern of the persisted suggestions — so the card behaves as it did (plan 23, S-80).
+ */
+function offersOf(
+  payload: Readonly<Record<string, unknown>>,
+): Pick<PermissionRequest, 'reaches' | 'suggestions'> {
+  const sent = Array.isArray(payload['reaches']) ? readReaches(payload['reaches']) : null;
+  const read = readSuggestions(payload['suggestions'], sent !== null && sent.length > 0);
+  const exact = read.find((suggestion) => suggestion.rule?.pattern != null)?.rule?.pattern;
+  const reaches = sent ?? (exact == null ? [] : [{ reach: 'exact' as const, patterns: [exact] }]);
+
+  return {
+    reaches,
+    // Without a reach, a persisted scope would leave nothing behind: it is not offered.
+    suggestions: read.filter((suggestion) => suggestion.rule === null || reaches.length > 0),
+  };
+}
+
+function readReaches(value: readonly unknown[]): RuleReach[] {
+  return value.flatMap((entry): RuleReach[] => {
+    if (!isRecord(entry)) {
+      return [];
+    }
+
+    const reach = text(entry, 'reach');
+    const patterns = entry['patterns'];
+
+    if (
+      reach === null ||
+      !REACHES.has(reach) ||
+      !Array.isArray(patterns) ||
+      patterns.length === 0 ||
+      !patterns.every((pattern) => typeof pattern === 'string')
+    ) {
+      return [];
+    }
+
+    return [{ reach: reach as RuleReachKind, patterns: patterns as string[] }];
+  });
 }
 
 /** What a request cannot be answered without. */
@@ -186,11 +241,17 @@ export function toOutcome(frame: Envelope): PermissionOutcome | null {
     auto: payload['auto'] === true,
     resolvedBy: text(payload, 'resolvedBy'),
     resolvedFrom: resolvedFrom !== null && ORIGINS.has(resolvedFrom) ? resolvedFrom : null,
+    via: viaOf(text(payload, 'via')),
     // The tool it was about, when the server said — a request a rule settled was never asked here,
     // and this is the only way its tool's line learns how it ended (plan 10, B-20).
     toolUseId: text(payload, 'toolUseId'),
     answeredHere: false,
   };
+}
+
+/** What answered without asking, as far as this build knows it. Anything else is no answer at all. */
+function viaOf(value: string | null): PermissionOutcome['via'] {
+  return value === 'rule' || value === 'allowAll' ? value : null;
 }
 
 /** The new deadline of a `permission.extended` frame, or `null` when it is not one. */
@@ -209,7 +270,11 @@ export function toExtension(
   return requestId === null || expiresAt === null ? null : { requestId, expiresAt };
 }
 
-function readSuggestions(value: unknown): readonly ScopeSuggestion[] {
+/**
+ * @param patternless whether a persisted scope may arrive without its `exact` pattern — when the
+ *   server sends `reaches`, the patterns travel there
+ */
+function readSuggestions(value: unknown, patternless: boolean): readonly ScopeSuggestion[] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -234,16 +299,19 @@ function readSuggestions(value: unknown): readonly ScopeSuggestion[] {
 
     // "Don't ask again" without saying about what, or for how long, is the button the plan's R-02
     // is about. A persisted scope that arrives without its rule is not offered at all (S-67).
-    const rule = readRuleOffer(entry);
+    const rule = readRuleOffer(entry, patternless);
     return rule === null ? [] : [{ scope: scope as PermissionScope, labelKey, rule }];
   });
 }
 
-function readRuleOffer(entry: Readonly<Record<string, unknown>>): RuleOffer | null {
+function readRuleOffer(
+  entry: Readonly<Record<string, unknown>>,
+  patternless: boolean,
+): RuleOffer | null {
   const pattern = text(entry, 'pattern');
   const lifetimeMs = entry['lifetimeMs'];
 
-  return pattern === null ||
+  return (pattern === null && !patternless) ||
     typeof lifetimeMs !== 'number' ||
     !Number.isInteger(lifetimeMs) ||
     lifetimeMs <= 0

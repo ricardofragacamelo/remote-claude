@@ -1,4 +1,5 @@
 import type { PromptExtras } from '@domain/session';
+import { base64Size } from '@domain/shared';
 import type { SessionBroadcaster } from './ports/session-broadcaster.port';
 import type { LiveSession } from './session-registry';
 
@@ -38,9 +39,17 @@ export function handOverPrompt(
     payload: {
       messageId,
       role: 'user',
+      // Each block under the id the CLI files it under — `<uuid>:<index>`, the text first and then the
+      // images, as the input queue sends them — so the history read later names the same blocks
+      // (plan 22, D-06). An image is its type and its size, never its bytes (D-09).
       content: [
-        { type: 'text', text: prompt.extras?.typed ?? prompt.text },
-        ...images.map(() => ({ type: 'image' })),
+        { type: 'text', blockId: `${messageId}:0`, text: prompt.extras?.typed ?? prompt.text },
+        ...images.map((image, index) => ({
+          type: 'image',
+          blockId: `${messageId}:${String(index + 1)}`,
+          mediaType: image.mediaType,
+          size: base64Size(image.data),
+        })),
       ],
       promptedBy: prompt.promptedBy,
     },

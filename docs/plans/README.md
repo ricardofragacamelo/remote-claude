@@ -37,7 +37,9 @@ Voltar para o [índice geral](../architecture/README.md).
 | 19 | [Distribuição](19-distribution/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm dist:verify` saem com código 0 |
 | 20 | [Dev public](20-dev-public/README.md) | 🔄 em andamento | `pnpm verify:full` sai com código 0 |
 | 21 | [Rich previews](21-rich-previews/README.md) | 🔄 em andamento | `pnpm verify:full` sai com código 0 |
-| 22 | [Histórico ao vivo](22-live-history/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
+| 22 | [Histórico ao vivo](22-live-history/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
+| 23 | [Permissões fluidas](23-fluid-permissions/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
+| 24 | [Perguntas estruturadas](24-structured-questions/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -79,7 +81,7 @@ docs/plans/
 Dentro do plano: **quatro** arquivos fixos, mais **um arquivo por fase**. Fora dele, um único
 [progresso geral](progress.md), que todo plano mantém.
 
-### As três regras estruturais
+### As quatro regras estruturais
 
 1. **Plano é dividido em fases.** Fase é a unidade do ciclo de validação: implementa, roda os
    portões, corrige, repete até verde. Só então começa a próxima.
@@ -87,6 +89,12 @@ Dentro do plano: **quatro** arquivos fixos, mais **um arquivo por fase**. Fora d
    do plano — lá fica só o índice.
 3. **Toda task tem ID** e aparece no rastreio. Trabalho sem ID não é rastreável e, na prática,
    não é verificável.
+4. **Todo plano termina com a fase de E2E, e ela é sempre a última.** Fase nova entra **antes** dela,
+   e a de E2E é renumerada para o fim — arquivo, índice do `README.md`, `progress.md` e as referências
+   a ela. É ao fim dela que o portão completo roda
+   ([ADR-023](../architecture/shared/00-decisions.md#adr-023--portão-rápido-por-fase-portão-completo-no-fim-do-plano)).
+   `pnpm plan new` cria o plano com a fase `e2e` no fim. Planos concluídos antes desta regra ficam
+   como estão.
 
 **Por que uma fase por arquivo:** a fase é o que se carrega para trabalhar. Mantê-la num
 arquivo próprio permite ao agente (e à pessoa) ler só o que a tarefa exige, em vez de um
@@ -244,9 +252,9 @@ IDs **nunca são reaproveitados**. Task removida mantém o número vago, com not
 
 1. **Plano sem matriz de cenários não é plano.** É exigência do
    [Estágio 0](../architecture/shared/11-validation-protocol.md) do protocolo.
-2. **O critério de conclusão é um comando.** "Está pronto" não é critério; `pnpm verify:full`
-   saindo com 0 é.
-3. **Fase só fecha com os portões verdes.** Ver
+2. **O critério de conclusão é um comando.** "Está pronto" não é critério; `pnpm verify` saindo com 0
+   fecha uma fase, e `pnpm verify:full` saindo com 0, depois da fase de E2E, fecha o plano.
+3. **Fase só fecha com os portões verdes** — os do portão rápido. Ver
    [Definition of Done](../architecture/shared/10-definition-of-done.md).
 4. **Escopo reduzido é decisão comunicada**, registrada no `progress.md` — nunca omissão.
 5. **Plano é contrato, progresso é diário.** Não misture: plano que vira diário perde a função

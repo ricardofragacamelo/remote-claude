@@ -31,7 +31,13 @@ class DeviceController extends _$DeviceController {
     // `.future` and not the `AsyncValue`: restoring the session from the secure store is itself
     // asynchronous, and reading the value while that is still in flight answers `null` — which
     // would be read as "nobody is signed in" and would skip the registration of somebody who is.
-    final AuthSession? session = await ref.watch(authControllerProvider.future);
+    //
+    // A sign-in or renewal that failed is nobody signed in, here: the sign-in screen says why. Let
+    // through, the failure would also outlive this build when a newer one has replaced it — the
+    // refusal of a renewal in the middle of a turn did, as an error nobody handled (05 · S-79).
+    final AuthSession? session = await ref
+        .watch(authControllerProvider.future)
+        .then<AuthSession?>((AuthSession? signedIn) => signedIn, onError: (Object _) => null);
 
     if (session == null) {
       return null;

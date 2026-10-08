@@ -18,6 +18,9 @@ export interface LiveSocket {
   /** The last frame of a type the client sent. */
   lastSent(type: string): Record<string, unknown> | undefined;
 
+  /** The connection drops, as the network would drop it: the client will want to come back. */
+  drop(): void;
+
   close(): void;
 }
 
@@ -58,6 +61,9 @@ export function aLiveSocket(): LiveSocket {
     receive,
     sent: () => sockets.latest.frames(),
     lastSent: (type) => sockets.latest.frames().findLast((frame) => frame['type'] === type),
+    drop: () => {
+      sockets.latest.drop();
+    },
     close: () => {
       wsClient.close();
       setAccessToken(null);

@@ -11,6 +11,7 @@ const List<String> frameTypes = <String>[
   'command.accepted',
   'connection.ready',
   'session.attached',
+  'transcript.following',
   'workspace.watching',
   'connection.authenticate',
   'connection.reauthenticate',
@@ -29,6 +30,8 @@ const List<String> frameTypes = <String>[
   'session.setModel',
   'session.setPermissionMode',
   'session.start',
+  'transcript.follow',
+  'transcript.unfollow',
   'workspace.unwatch',
   'workspace.watch',
   'diag.pong',
@@ -48,6 +51,8 @@ const List<String> frameTypes = <String>[
   'tool.completed',
   'tool.progress',
   'tool.started',
+  'transcript.appended',
+  'transcript.reset',
   'turn.completed',
   'workspace.filesChanged',
   'workspace.watchStopped',
@@ -71,6 +76,12 @@ const String sessionAttachedKind = 'ack';
 
 /// `type` of a session.attached frame.
 const String sessionAttachedType = 'session.attached';
+
+/// `kind` of a transcript.following frame.
+const String transcriptFollowingKind = 'ack';
+
+/// `type` of a transcript.following frame.
+const String transcriptFollowingType = 'transcript.following';
 
 /// `kind` of a workspace.watching frame.
 const String workspaceWatchingKind = 'ack';
@@ -179,6 +190,18 @@ const String sessionStartKind = 'command';
 
 /// `type` of a session.start frame.
 const String sessionStartType = 'session.start';
+
+/// `kind` of a transcript.follow frame.
+const String transcriptFollowKind = 'command';
+
+/// `type` of a transcript.follow frame.
+const String transcriptFollowType = 'transcript.follow';
+
+/// `kind` of a transcript.unfollow frame.
+const String transcriptUnfollowKind = 'command';
+
+/// `type` of a transcript.unfollow frame.
+const String transcriptUnfollowType = 'transcript.unfollow';
 
 /// `kind` of a workspace.unwatch frame.
 const String workspaceUnwatchKind = 'command';
@@ -293,6 +316,18 @@ const String toolStartedKind = 'event';
 
 /// `type` of a tool.started frame.
 const String toolStartedType = 'tool.started';
+
+/// `kind` of a transcript.appended frame.
+const String transcriptAppendedKind = 'event';
+
+/// `type` of a transcript.appended frame.
+const String transcriptAppendedType = 'transcript.appended';
+
+/// `kind` of a transcript.reset frame.
+const String transcriptResetKind = 'event';
+
+/// `type` of a transcript.reset frame.
+const String transcriptResetType = 'transcript.reset';
 
 /// `kind` of a turn.completed frame.
 const String turnCompletedKind = 'event';
@@ -576,6 +611,42 @@ class SessionAttachedPayload {
     if (resumedFrom != null) {
       json['resumedFrom'] = resumedFrom;
     }
+
+    return json;
+  }
+}
+
+/// Answer to `transcript.follow`: the subscription exists, and what the conversation gains will arrive as `transcript.appended` with this `followId`. Nothing of the subscription arrives before this ack.
+class TranscriptFollowingPayload {
+  const TranscriptFollowingPayload({
+    required this.followId,
+    required this.conversationId,
+    required this.activity,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TranscriptFollowingPayload.fromJson(Map<String, Object?> json) => TranscriptFollowingPayload(
+        followId: json['followId']! as String,
+        conversationId: json['conversationId']! as String,
+        activity: json['activity']! as String,
+      );
+
+  /// The subscription. Its events carry it, and `seq` is monotonic per `followId`, from 1.
+  final String followId;
+
+  /// The conversation being followed.
+  final String conversationId;
+
+  /// What the conversation is doing now, by the rule of the listing: `activeElsewhere` is an estimate — something wrote to it recently —, never a fact about which client has it open.
+  final String activity;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'followId': followId,
+      'conversationId': conversationId,
+      'activity': activity,
+    };
 
     return json;
   }
@@ -1371,7 +1442,7 @@ class SessionSetPermissionModePayload {
 
   final String sessionId;
 
-  /// The mode to switch to.
+  /// The mode to switch to. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured.
   final String mode;
 
   /// A JSON map with the absent optional fields left out.
@@ -1412,7 +1483,7 @@ class SessionStartPayload {
   /// Model to open with. Absent means the server default.
   final String? model;
 
-  /// Permission mode to open with. Absent means the server default.
+  /// Permission mode to open with. Absent means the server default. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured.
   final String? permissionMode;
 
   /// How much effort the model puts in, for the whole session. Absent is the installation's default. Chosen before the session exists, because changing it on a live one (`applyFlagSettings`) restarts the CLI's query and drops its hooks — measured in plan 08, D-16. A level the model does not take is `INVALID_INPUT` (`session.error.effortUnsupported`). An enum read as a string, so a level added later does not break a client.
@@ -1464,6 +1535,63 @@ bool sessionStartPayloadConditionalsHold(Map<String, Object?> json) {
   }
 
   return true;
+}
+
+/// Starts following a conversation of the history that this backend does not run — begun in the editor or the terminal, and maybe still being written there. Answered with `transcript.following`, which names the subscription; what the transcript gains then arrives as `transcript.appended`, with a `seq` of its own that starts at 1. The first `transcript.appended` carries **everything** after `afterMessageId`, even what was written between the page the client read and this command, so there is no hole between the two. There is **no replay**: after a reconnect the client follows again with the last `lastMessageId` it has. Refused with `INVALID_INPUT` (every invalid field in `details[]`), `NOT_FOUND` for a conversation that does not exist **or** that the caller does not read — the same answer on purpose —, `TRANSCRIPT_FOLLOW_LIVE_HERE` for a conversation a live session of the caller holds (`session.attach` shows it), and `TRANSCRIPT_FOLLOW_LIMIT` past the ceiling of the connection or of the server.
+class TranscriptFollowPayload {
+  const TranscriptFollowPayload({
+    required this.conversationId,
+    this.afterMessageId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TranscriptFollowPayload.fromJson(Map<String, Object?> json) => TranscriptFollowPayload(
+        conversationId: json['conversationId']! as String,
+        afterMessageId: json['afterMessageId'] as String?,
+      );
+
+  /// The conversation in Claude's store, a canonical UUID — the `sessionId` of `GET /transcripts/:sessionId/messages`.
+  final String conversationId;
+
+  /// The last entry the client has: the `lastMessageId` of the page it read, or of the last `transcript.appended`. Absent when the conversation it read was empty — then everything is new.
+  final String? afterMessageId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'conversationId': conversationId,
+    };
+
+    if (afterMessageId != null) {
+      json['afterMessageId'] = afterMessageId;
+    }
+
+    return json;
+  }
+}
+
+/// Stops following a conversation. Idempotent: a subscription that already ended — or never was this connection's — is acknowledged all the same, because a client that unfollows as it leaves a screen races its own reconnection.
+class TranscriptUnfollowPayload {
+  const TranscriptUnfollowPayload({
+    required this.followId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TranscriptUnfollowPayload.fromJson(Map<String, Object?> json) => TranscriptUnfollowPayload(
+        followId: json['followId']! as String,
+      );
+
+  /// The subscription, as `transcript.following` named it.
+  final String followId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'followId': followId,
+    };
+
+    return json;
+  }
 }
 
 /// Stops following a folder. Idempotent: a subscription that already ended — or never was this connection's — is acknowledged all the same, because a client that unwatches as it closes a tab races its own reconnection.
@@ -1651,6 +1779,9 @@ class MessageCompletedPayloadContentItem {
     this.text,
     this.thinking,
     this.toolUseId,
+    this.blockId,
+    this.mediaType,
+    this.size,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -1659,9 +1790,12 @@ class MessageCompletedPayloadContentItem {
         text: json['text'] as String?,
         thinking: json['thinking'] as String?,
         toolUseId: json['toolUseId'] as String?,
+        blockId: json['blockId'] as String?,
+        mediaType: json['mediaType'] as String?,
+        size: json['size'] as int?,
       );
 
-  /// Block kind — `text`, `thinking`, `redacted_thinking`, `tool_use`, `tool_result` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped.
+  /// Block kind — `text`, `thinking`, `redacted_thinking`, `tool_use`, `tool_result`, `image` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped.
   final String type;
 
   /// The text of a `text` block.
@@ -1671,6 +1805,15 @@ class MessageCompletedPayloadContentItem {
   final String? thinking;
 
   final String? toolUseId;
+
+  /// The identity of the block: `<uuid>:<index>` — the uuid of the transcript entry the block is in, which the live message carries too, and its place in that entry. The same block has the same id live and in the history, read twice or a hundred times. A client keeps one block per id: two blocks equal in kind and text — two thinkings the model did not show — are still two. Absent from a server older than it; the client then compares kind and text.
+  final String? blockId;
+
+  /// The type of an `image` block, as the prompt declared it (`image/png`, …). Absent when it declared none.
+  final String? mediaType;
+
+  /// The size of an `image` block in bytes, decoded. The bytes themselves never travel on the stream or in a page: the image is fetched on demand, by `GET /transcripts/:sessionId/images/:blockId`. Absent for an image given by URL.
+  final int? size;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -1690,6 +1833,18 @@ class MessageCompletedPayloadContentItem {
       json['toolUseId'] = toolUseId;
     }
 
+    if (blockId != null) {
+      json['blockId'] = blockId;
+    }
+
+    if (mediaType != null) {
+      json['mediaType'] = mediaType;
+    }
+
+    if (size != null) {
+      json['size'] = size;
+    }
+
     return json;
   }
 }
@@ -1701,6 +1856,7 @@ class MessageCompletedPayload {
     required this.role,
     this.promptedBy,
     required this.content,
+    this.at,
     this.parentToolUseId,
   });
 
@@ -1710,6 +1866,7 @@ class MessageCompletedPayload {
         role: json['role']! as String,
         promptedBy: json['promptedBy'] as String?,
         content: (json['content']! as List<Object?>).map((item) => MessageCompletedPayloadContentItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        at: json['at'] as String?,
         parentToolUseId: json['parentToolUseId'] as String?,
       );
 
@@ -1722,6 +1879,9 @@ class MessageCompletedPayload {
 
   /// The blocks of the message, in order.
   final List<MessageCompletedPayloadContentItem> content;
+
+  /// When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for.
+  final String? at;
 
   /// Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation.
   final String? parentToolUseId;
@@ -1736,6 +1896,10 @@ class MessageCompletedPayload {
 
     if (promptedBy != null) {
       json['promptedBy'] = promptedBy;
+    }
+
+    if (at != null) {
+      json['at'] = at;
     }
 
     if (parentToolUseId != null) {
@@ -1850,7 +2014,7 @@ class PermissionRequestedPayloadSuggestionsItem {
   /// An i18n key. The server never sends prose.
   final String labelKey;
 
-  /// What a rule granted by this suggestion would match, in the grammar of the Claude Code settings — the narrowest pattern that covers this invocation. Present on `project` and `always`; a client never offers one of those without it.
+  /// What a rule granted with the `exact` reach would match, in the grammar of the Claude Code settings. Kept for clients that do not read `reaches`; absent when there is no `exact` reach.
   final String? pattern;
 
   /// How long a rule granted by this suggestion would live, counted from the answer. Present on `project` and `always`; the number is the installation's, never the client's.
@@ -1875,6 +2039,35 @@ class PermissionRequestedPayloadSuggestionsItem {
   }
 }
 
+class PermissionRequestedPayloadReachesItem {
+  const PermissionRequestedPayloadReachesItem({
+    required this.reach,
+    required this.patterns,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRequestedPayloadReachesItem.fromJson(Map<String, Object?> json) => PermissionRequestedPayloadReachesItem(
+        reach: json['reach']! as String,
+        patterns: (json['patterns']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+      );
+
+  /// `exact` is this very input; `prefix` (shell only) covers every command that starts like each command of this line; `tool` (never shell) is every invocation of the tool.
+  final String reach;
+
+  /// The rules this reach would leave, one per pattern, in the grammar of the Claude Code settings. Shown in full before anybody confirms.
+  final List<String> patterns;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'reach': reach,
+      'patterns': patterns,
+    };
+
+    return json;
+  }
+}
+
 /// The one `request` that travels server to client, and the reason the whole protocol is a socket instead of a stream: `canUseTool` has blocked the agent loop and it stays blocked until somebody answers or the deadline passes. Answered with the `permission.resolve` response.
 class PermissionRequestedPayload {
   const PermissionRequestedPayload({
@@ -1888,6 +2081,7 @@ class PermissionRequestedPayload {
     required this.defaultToNo,
     required this.expiresAt,
     this.suggestions,
+    this.reaches,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -1902,6 +2096,7 @@ class PermissionRequestedPayload {
         defaultToNo: json['defaultToNo']! as bool,
         expiresAt: json['expiresAt']! as String,
         suggestions: json['suggestions'] == null ? null : (json['suggestions']! as List<Object?>).map((item) => PermissionRequestedPayloadSuggestionsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        reaches: json['reaches'] == null ? null : (json['reaches']! as List<Object?>).map((item) => PermissionRequestedPayloadReachesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
       );
 
   /// Idempotency is by **this** field, never by `toolUseId`.
@@ -1930,8 +2125,11 @@ class PermissionRequestedPayload {
   /// When the request is denied automatically, ISO 8601 in UTC. Ours is the only timeout there is — the CLI imposes none.
   final String expiresAt;
 
-  /// Scopes the UI may offer beyond a one-off yes.
+  /// Scopes the UI may offer beyond a one-off yes. `project` and `always` come whenever the request has at least one reach in `reaches` (and `project` only with a workspace).
   final List<PermissionRequestedPayloadSuggestionsItem>? suggestions;
+
+  /// How far a rule left by this answer may reach, computed by the server from the invocation. The client picks one and answers with its `reach`, never with a pattern: the server computes the patterns again and refuses a reach it did not offer. Applies to `session`, `project` and `always`.
+  final List<PermissionRequestedPayloadReachesItem>? reaches;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -1954,6 +2152,10 @@ class PermissionRequestedPayload {
       json['suggestions'] = suggestions?.map((item) => item.toJson()).toList(growable: false);
     }
 
+    if (reaches != null) {
+      json['reaches'] = reaches?.map((item) => item.toJson()).toList(growable: false);
+    }
+
     return json;
   }
 }
@@ -1967,6 +2169,7 @@ class PermissionResolvedPayload {
     this.resolvedBy,
     this.resolvedFrom,
     this.toolUseId,
+    this.via,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -1977,6 +2180,7 @@ class PermissionResolvedPayload {
         resolvedBy: json['resolvedBy'] as String?,
         resolvedFrom: json['resolvedFrom'] as String?,
         toolUseId: json['toolUseId'] as String?,
+        via: json['via'] as String?,
       );
 
   /// The request that was settled. A client matches it against the card it is showing, never against `toolUseId`.
@@ -1985,7 +2189,7 @@ class PermissionResolvedPayload {
   /// What was decided. First answer wins, so this is the decision that reached `canUseTool`, not necessarily the one this client sent.
   final String decision;
 
-  /// The server decided it, with nobody answering — the deadline passed, or a rule the user granted earlier (`session`, `project` or `always`) matched. A request a rule settles is never put to anybody, and this event is how every screen watching still learns that something ran in the user's name. Silence never authorises, so an automatic decision is always `deny` unless a rule allowed it.
+  /// The server decided it, with nobody answering — the deadline passed, a rule the user granted earlier (`session`, `project` or `always`) matched, or the session runs in Permitir tudo (`allowAll`). `via` says which. A request a rule settles is never put to anybody, and this event is how every screen watching still learns that something ran in the user's name. Silence never authorises, so an automatic decision is always `deny` unless a rule or Permitir tudo allowed it.
   final bool auto;
 
   /// Who answered. Required whenever `auto` is false, so "approved on your phone 2 min ago" is something the UI can actually say.
@@ -1996,6 +2200,9 @@ class PermissionResolvedPayload {
 
   /// The tool call the request was about, when the SDK named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`.
   final String? toolUseId;
+
+  /// Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), or the session running in Permitir tudo (`allowAll`). Absent when a human answered or the deadline passed.
+  final String? via;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -2015,6 +2222,10 @@ class PermissionResolvedPayload {
 
     if (toolUseId != null) {
       json['toolUseId'] = toolUseId;
+    }
+
+    if (via != null) {
+      json['via'] = via;
     }
 
     return json;
@@ -2351,6 +2562,7 @@ class SessionStartedPayload {
 
   final String model;
 
+  /// The permission mode. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured.
   final String permissionMode;
 
   /// The id of the conversation in Claude's store, which is not ours: it is what `GET /transcripts/:sessionId/messages` reads and what a later `session.start` takes as `resumeSessionId`. Equal to `resumedFrom` when one of our own conversations is continued in place; new when a conversation begun elsewhere is forked.
@@ -2409,6 +2621,7 @@ class ToolCompletedPayload {
     this.summary,
     this.parentToolUseId,
     this.taskId,
+    this.at,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -2418,6 +2631,7 @@ class ToolCompletedPayload {
         summary: json['summary'] as String?,
         parentToolUseId: json['parentToolUseId'] as String?,
         taskId: json['taskId'] as String?,
+        at: json['at'] as String?,
       );
 
   final String toolUseId;
@@ -2425,7 +2639,7 @@ class ToolCompletedPayload {
   /// `denied` is not a failure of the tool: it is a human having said no, and the UI reads the two differently.
   final String status;
 
-  /// A short result for the timeline. The full output is the transcript's job, not this event's.
+  /// A short result for the timeline: the output **as text** — a result made of blocks is their text joined, never JSON —, cut to its **last** 5 lines and at most 400 characters, with `…` in front when it was cut. The end is kept because that is where a build or a test says how it went. The whole output is the transcript's job: `GET /transcripts/:sessionId/tools/:toolUseId/result`.
   final String? summary;
 
   /// Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation.
@@ -2433,6 +2647,9 @@ class ToolCompletedPayload {
 
   /// The task of the list a `TaskCreate` made or a `TaskUpdate` changed — taken from the tool's structured result live, and from its result in the history. Absent for every other tool. The `summary` is the CLI's text, cut, and never carries it reliably (plan 08, B-20).
   final String? taskId;
+
+  /// When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for.
+  final String? at;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -2451,6 +2668,10 @@ class ToolCompletedPayload {
 
     if (taskId != null) {
       json['taskId'] = taskId;
+    }
+
+    if (at != null) {
+      json['at'] = at;
     }
 
     return json;
@@ -2503,6 +2724,7 @@ class ToolStartedPayload {
     required this.input,
     this.title,
     this.parentToolUseId,
+    this.at,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -2512,6 +2734,7 @@ class ToolStartedPayload {
         input: json['input']! as Map<String, Object?>,
         title: json['title'] as String?,
         parentToolUseId: json['parentToolUseId'] as String?,
+        at: json['at'] as String?,
       );
 
   /// The SDK's id for this invocation. It is what ties started, progress and completed together.
@@ -2522,11 +2745,14 @@ class ToolStartedPayload {
   /// The exact input the tool was called with.
   final Map<String, Object?> input;
 
-  /// A short human label for the invocation, already derived by the backend.
+  /// A short human label for the invocation, already derived by the backend: the `description` the model gave the call (`Bash` always carries one), when it is non-blank text. Absent otherwise, and the client labels the tool as it did before.
   final String? title;
 
   /// Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation.
   final String? parentToolUseId;
+
+  /// When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for.
+  final String? at;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -2543,6 +2769,126 @@ class ToolStartedPayload {
     if (parentToolUseId != null) {
       json['parentToolUseId'] = parentToolUseId;
     }
+
+    if (at != null) {
+      json['at'] = at;
+    }
+
+    return json;
+  }
+}
+
+class TranscriptAppendedPayloadEventsItem {
+  const TranscriptAppendedPayloadEventsItem({
+    required this.type,
+    required this.payload,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TranscriptAppendedPayloadEventsItem.fromJson(Map<String, Object?> json) => TranscriptAppendedPayloadEventsItem(
+        type: json['type']! as String,
+        payload: json['payload']! as Map<String, Object?>,
+      );
+
+  final String type;
+
+  final Map<String, Object?> payload;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'type': type,
+      'payload': payload,
+    };
+
+    return json;
+  }
+}
+
+/// What a followed conversation gained since the last frame of the subscription — or, on the first one, since the `afterMessageId` it was followed from. The frame's `seq` belongs to the subscription, not to any session: monotonic per `followId`, from 1, and never replayed. A hole in it is a lost frame, and the client reads the conversation again rather than patching. It also goes out with no `events` when only `activity` or `working` changed, so the screen never says the conversation is busy after it stopped.
+class TranscriptAppendedPayload {
+  const TranscriptAppendedPayload({
+    required this.followId,
+    required this.conversationId,
+    required this.events,
+    this.lastMessageId,
+    required this.activity,
+    required this.working,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TranscriptAppendedPayload.fromJson(Map<String, Object?> json) => TranscriptAppendedPayload(
+        followId: json['followId']! as String,
+        conversationId: json['conversationId']! as String,
+        events: (json['events']! as List<Object?>).map((item) => TranscriptAppendedPayloadEventsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        lastMessageId: json['lastMessageId'] as String?,
+        activity: json['activity']! as String,
+        working: json['working']! as bool,
+      );
+
+  final String followId;
+
+  final String conversationId;
+
+  /// The new entries as events of the history — `{ type, payload }`, the same `message.completed`, `tool.started` and `tool.completed` a page of `GET /transcripts/:sessionId/messages` carries, oldest first, in the order of the SDK's chain and never of the clock. A client folds them with the same reducer as the page.
+  final List<TranscriptAppendedPayloadEventsItem> events;
+
+  /// The last entry of the conversation now — what a reconnect follows again from. Absent while the conversation has no entry.
+  final String? lastMessageId;
+
+  /// What the conversation is doing now, as `transcript.following` says it.
+  final String activity;
+
+  /// Whether Claude seems to be working on it in another client: the conversation is `activeElsewhere` **and** its last entry leaves the turn open — a tool call without its result, a thinking, or a prompt without an answer. An inference from the transcript, which records no state of the turn; the screen says it is one.
+  final bool working;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'followId': followId,
+      'conversationId': conversationId,
+      'events': events.map((item) => item.toJson()).toList(growable: false),
+      'activity': activity,
+      'working': working,
+    };
+
+    if (lastMessageId != null) {
+      json['lastMessageId'] = lastMessageId;
+    }
+
+    return json;
+  }
+}
+
+/// The subscription cannot go on from where the client is, and has ended: nothing more arrives for this `followId`. It carries the next `seq` of the subscription. On `rewritten` the client reads the latest page again and follows from its `lastMessageId`; on `gone` it says the conversation is no longer there.
+class TranscriptResetPayload {
+  const TranscriptResetPayload({
+    required this.followId,
+    required this.conversationId,
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TranscriptResetPayload.fromJson(Map<String, Object?> json) => TranscriptResetPayload(
+        followId: json['followId']! as String,
+        conversationId: json['conversationId']! as String,
+        reason: json['reason']! as String,
+      );
+
+  final String followId;
+
+  final String conversationId;
+
+  /// `rewritten` — the entry the client had is no longer in the chain: a rewind, a compaction or a fork rebuilt it; `gone` — the store no longer has the conversation.
+  final String reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'followId': followId,
+      'conversationId': conversationId,
+      'reason': reason,
+    };
 
     return json;
   }
@@ -2707,6 +3053,7 @@ class PermissionResolvePayload {
     required this.requestId,
     required this.decision,
     this.scope,
+    this.reach,
     this.reason,
   });
 
@@ -2715,6 +3062,7 @@ class PermissionResolvePayload {
         requestId: json['requestId']! as String,
         decision: json['decision']! as String,
         scope: json['scope'] as String?,
+        reach: json['reach'] as String?,
         reason: json['reason'] as String?,
       );
 
@@ -2724,8 +3072,11 @@ class PermissionResolvePayload {
   /// Yes or no. There is no third value: silence is handled by the deadline, and it denies.
   final String decision;
 
-  /// How far the decision reaches. Absent means `once`. `session` leaves a rule that dies with the session; `project` and `always` persist a rule — the narrowest pattern covering this invocation, with the configured default lifetime — that answers future requests without asking and is revoked through `DELETE /permission-rules/:ruleId`. An invocation with nothing a pattern can name cannot be granted `project` or `always`: that is `INVALID_INPUT`, never a rule for the whole tool.
+  /// How far the decision reaches. Absent means `once`. `session` leaves rules that die with the session; `project` and `always` persist rules — the patterns of the chosen `reach`, with the configured default lifetime — that answer future requests without asking and are revoked through `DELETE /permission-rules/:ruleId`. A scope with no pattern for the chosen reach is `INVALID_INPUT`.
   final String? scope;
+
+  /// Which of the request's `reaches` the rules left by `session`, `project` or `always` take. Absent means `exact`. A reach the request did not offer is `INVALID_INPUT`, and the request stays open. Ignored for `once`.
+  final String? reach;
 
   /// Why it was refused. Required whenever `decision` is `deny` — the schema carries the condition, so no end has to remember it.
   final String? reason;
@@ -2739,6 +3090,10 @@ class PermissionResolvePayload {
 
     if (scope != null) {
       json['scope'] = scope;
+    }
+
+    if (reach != null) {
+      json['reach'] = reach;
     }
 
     if (reason != null) {
@@ -2759,4 +3114,49 @@ bool permissionResolvePayloadConditionalsHold(Map<String, Object?> json) {
   }
 
   return true;
+}
+
+/// What `GET /transcripts/:sessionId/tools/:toolUseId/result` answers: the whole output of one tool of a conversation, read from the transcript when a client unfolds the tool — never on the stream, whose `tool.completed.summary` is short on purpose. Over HTTP, but one contract in three languages all the same. An output above the ceiling is not an error: it comes cut, its beginning and its end, with `truncated: true`.
+class TranscriptToolResultPayload {
+  const TranscriptToolResultPayload({
+    required this.text,
+    required this.truncated,
+    required this.bytes,
+    this.cutAt,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TranscriptToolResultPayload.fromJson(Map<String, Object?> json) => TranscriptToolResultPayload(
+        text: json['text']! as String,
+        truncated: json['truncated']! as bool,
+        bytes: json['bytes']! as int,
+        cutAt: json['cutAt'] as int?,
+      );
+
+  /// The output as text — a result made of blocks is their text joined. Cut in the middle when `truncated`.
+  final String text;
+
+  /// Whether the output was above the ceiling, and `text` holds only its first and its last part.
+  final bool truncated;
+
+  /// The size of the whole output, in bytes of UTF-8 — what the screen says was there when it shows a cut.
+  final int bytes;
+
+  /// Where in `text` the first part ends and the last begins, in characters — present only when `truncated`, so the screen can say there what was left out.
+  final int? cutAt;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'text': text,
+      'truncated': truncated,
+      'bytes': bytes,
+    };
+
+    if (cutAt != null) {
+      json['cutAt'] = cutAt;
+    }
+
+    return json;
+  }
 }

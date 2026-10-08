@@ -41,6 +41,7 @@ import {
 import { directoryMoves, shiftReferences, suspectLines } from './lib/plan-renumber.mjs';
 import {
   buildPlanFiles,
+  e2eLast,
   isValidSlug,
   withPlanIndexed,
   withPlanInOverallProgress,
@@ -68,7 +69,7 @@ function existingPlans() {
 
 /**
  * The phases asked for with `--phases a,b,c` — just `foundation` when the flag is absent, and
- * none at all when it is given empty.
+ * none at all when it is given empty. Asked for or not, the plan ends with its E2E phase.
  *
  * @param {readonly string[]} args
  * @returns {string[]}
@@ -76,12 +77,13 @@ function existingPlans() {
 function phasesOf(args) {
   const phasesFlag = args.indexOf('--phases');
   if (phasesFlag === -1) {
-    return ['foundation'];
+    return e2eLast(['foundation']);
   }
-  return (args[phasesFlag + 1] ?? '')
+  const asked = (args[phasesFlag + 1] ?? '')
     .split(',')
     .map((phase) => phase.trim())
     .filter((phase) => phase !== '');
+  return asked.length === 0 ? [] : e2eLast(asked);
 }
 
 /**

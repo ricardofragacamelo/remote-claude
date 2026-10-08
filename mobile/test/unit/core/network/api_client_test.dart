@@ -121,6 +121,54 @@ void main() {
     );
   });
 
+  group('a GET of bytes — plan 22, B-33', () {
+    test('answers the bytes as they came, and their type', () async {
+      final _Adapter adapter = _Adapter(body: 'PNGDATA');
+
+      final ByteAnswer answer = await clientWith(adapter).bytes('/transcripts/c/images/b');
+
+      expect(String.fromCharCodes(answer.bytes), 'PNGDATA');
+      expect(answer.contentType, Headers.jsonContentType);
+      expect(adapter.lastRequest!.responseType, ResponseType.bytes);
+      expect(adapter.lastRequest!.headers['accept'], '*/*');
+    });
+
+    test(
+      'a refusal is read from the bytes it came in, and reaches the caller as a Failure',
+      () async {
+        final _Adapter adapter = _Adapter(
+          status: 413,
+          body:
+              '{"error":{"code":"PAYLOAD_TOO_LARGE","messageKey":"transcript.error.imageTooLarge",'
+              '"traceId":"t-9"}}',
+        );
+
+        await expectLater(
+          clientWith(adapter).bytes('/transcripts/c/images/b'),
+          throwsA(
+            isA<ServerFailure>()
+                .having((Failure f) => f.code, 'code', 'PAYLOAD_TOO_LARGE')
+                .having((Failure f) => f.traceId, 'traceId', 't-9'),
+          ),
+        );
+      },
+    );
+
+    test('a refusal whose bytes are not the envelope is the generic failure', () async {
+      await expectLater(
+        clientWith(_Adapter(status: 502, body: '<html>bad gateway</html>')).bytes('/x'),
+        throwsA(isA<UnexpectedFailure>()),
+      );
+    });
+
+    test('a network that is not there reaches the caller as a NetworkFailure', () async {
+      await expectLater(
+        clientWith(_Adapter(fail: true)).bytes('/x'),
+        throwsA(isA<NetworkFailure>()),
+      );
+    });
+  });
+
   test('the request carries a deadline', () {
     final Dio dio = buildDio(
       baseUrl: 'http://localhost:3000',

@@ -120,9 +120,10 @@ describe('the session screen', () => {
     });
     expect(line).toHaveTextContent('Bash · 3s');
 
+    // A shell call shows its command as it is, under IN (plan 22, B-29).
     await user.click(line);
     expect(screen.getByLabelText(t('sessions.toolRow.input'))).toHaveTextContent(
-      '"command": "rm -rf build/ && echo done"',
+      'rm -rf build/ && echo done',
     );
   });
 

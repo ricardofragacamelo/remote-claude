@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/transcript-follow.json",
+  "title": "TranscriptFollow",
+  "description": "Starts following a conversation of the history that this backend does not run — begun in the editor or the terminal, and maybe still being written there. Answered with `transcript.following`, which names the subscription; what the transcript gains then arrives as `transcript.appended`, with a `seq` of its own that starts at 1. The first `transcript.appended` carries **everything** after `afterMessageId`, even what was written between the page the client read and this command, so there is no hole between the two. There is **no replay**: after a reconnect the client follows again with the last `lastMessageId` it has. Refused with `INVALID_INPUT` (every invalid field in `details[]`), `NOT_FOUND` for a conversation that does not exist **or** that the caller does not read — the same answer on purpose —, `TRANSCRIPT_FOLLOW_LIVE_HERE` for a conversation a live session of the caller holds (`session.attach` shows it), and `TRANSCRIPT_FOLLOW_LIMIT` past the ceiling of the connection or of the server.",
+  "x-kind": "command",
+  "x-type": "transcript.follow",
+  "type": "object",
+  "required": ["conversationId"],
+  "properties": {
+    "conversationId": {
+      "type": "string",
+      "description": "The conversation in Claude's store, a canonical UUID — the `sessionId` of `GET /transcripts/:sessionId/messages`."
+    },
+    "afterMessageId": {
+      "type": "string",
+      "description": "The last entry the client has: the `lastMessageId` of the page it read, or of the last `transcript.appended`. Absent when the conversation it read was empty — then everything is new."
+    }
+  }
+}

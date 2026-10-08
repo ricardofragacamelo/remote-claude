@@ -37,7 +37,7 @@ const expected = rendered.expect as {
   toolTurn: string;
   bold: string;
   listItems: number;
-  tools: Record<'read' | 'bash' | 'write', string>;
+  tools: Record<'read' | 'bash' | 'bashCommand' | 'write', string>;
   wrote: string;
   diffTab: string;
   thinkingTurn: string;
@@ -121,9 +121,10 @@ test(`${rendered.id} — a prompt, its markdown answer, the tools in one line ea
   const bash = toolRow(page, expected.tools.bash);
   await bash.click();
   await expect(bash).toHaveAttribute('aria-expanded', 'true');
-  await expect(panelOf(page).getByLabel('The exact input', { exact: true })).toContainText(
-    '"command": "ls"',
-  );
+  // A shell call unfolds into IN, the command as it was sent (plan 22, B-29).
+  await expect(
+    panelOf(page).getByRole('region', { name: 'The exact input', exact: true }).locator('pre'),
+  ).toHaveText(expected.tools.bashCommand);
 
   // The write shows its diff in the chat, and opens it in the editor — the same folder tab.
   await expect(toolRow(page, new RegExp(expected.tools.write))).toBeVisible();

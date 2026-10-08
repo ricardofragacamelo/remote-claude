@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
 import type { ScrollMemory } from '../store/claude-panel.store';
@@ -22,6 +22,15 @@ export interface ScrollKeeper {
   write(memory: ScrollMemory): void;
 }
 
+/** Whether the end is followed, and the way back to it — what "N new" needs (plan 22, B-23). */
+export interface TailControl {
+  /** The end is in view, and what arrives keeps it there. */
+  readonly following: boolean;
+
+  /** Goes to the end, and follows it from there. */
+  toEnd(): void;
+}
+
 /**
  * Keeps the end of a conversation in view as it grows — **while the person is there**: once they
  * scrolled up to read, what arrives does not pull them down again, and coming back to the end
@@ -38,8 +47,16 @@ export function useFollowTail(
   scroller: RefObject<HTMLElement | null>,
   content: RefObject<HTMLElement | null>,
   keeper: ScrollKeeper | null,
-): void {
+): TailControl {
   const following = useRef(false);
+
+  // Whether the end is in view, for the screen to draw — what the ref holds, for the next render. It
+  // starts again with each new content, from where that content was left.
+  const [tracked, setTracked] = useState(() => ({ keeper, following: startsFollowing(keeper) }));
+
+  if (tracked.keeper !== keeper) {
+    setTracked({ keeper, following: startsFollowing(keeper) });
+  }
 
   useLayoutEffect(() => {
     const element = scroller.current;
@@ -61,7 +78,9 @@ export function useFollowTail(
     }
 
     const onScroll = (): void => {
-      following.current = atEnd(element);
+      const now = atEnd(element);
+      following.current = now;
+      setTracked((before) => (before.following === now ? before : { ...before, following: now }));
       keeper.write({ top: element.scrollTop, following: following.current });
     };
     const onResize = (): void => {
@@ -82,6 +101,27 @@ export function useFollowTail(
       element.removeEventListener('scroll', onScroll);
     };
   }, [scroller, content, keeper]);
+
+  return {
+    following: tracked.following,
+    toEnd: () => {
+      const element = scroller.current;
+
+      if (element === null || keeper === null) {
+        return;
+      }
+
+      following.current = true;
+      setTracked((before) => ({ ...before, following: true }));
+      scrollTo(element, element.scrollHeight);
+      keeper.write({ top: element.scrollTop, following: true });
+    },
+  };
+}
+
+/** Whether a content starts at its end: where it was left, or at the end the first time. */
+function startsFollowing(keeper: ScrollKeeper | null): boolean {
+  return keeper?.read()?.following ?? true;
 }
 
 /** Moves a scroller — the one write this hook makes to the page. */

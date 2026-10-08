@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/transcript-unfollow.json",
+  "title": "TranscriptUnfollow",
+  "description": "Stops following a conversation. Idempotent: a subscription that already ended — or never was this connection's — is acknowledged all the same, because a client that unfollows as it leaves a screen races its own reconnection.",
+  "x-kind": "command",
+  "x-type": "transcript.unfollow",
+  "type": "object",
+  "required": ["followId"],
+  "properties": {
+    "followId": {
+      "type": "string",
+      "description": "The subscription, as `transcript.following` named it."
+    }
+  }
+}

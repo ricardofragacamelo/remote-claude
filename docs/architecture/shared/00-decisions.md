@@ -676,3 +676,93 @@ o `OIDC_ISSUER` incluído) — não deixa o processo subir.
 - Trocar de origem no app é um login novo: o token e o refresh são do issuer de onde vieram.
 
 Detalhes: [08-authentication.md](08-authentication.md#validação-no-backend).
+
+---
+
+## ADR-022 — Permitir tudo é um modo nosso, não o `bypassPermissions` do SDK
+
+**Status:** aceita · 2026-10-07 · decisão do usuário, na
+[D-01 do plano 23](../../plans/23-fluid-permissions/decisions.md#f0--normas-e-contrato). **Emenda a regra
+"`bypassPermissions` nunca"** dos planos 08 (S-170), 09 (S-25), 10 (S-33) e 13 (S-40): o produto passa a
+oferecer um modo que não pergunta, e continua sem oferecer o do SDK.
+
+**Contexto.** Em 2026-10-07 o usuário relatou que o web e o mobile pedem aprovação o tempo todo, apesar
+de ele aprovar e criar regras, e pediu uma opção nas duas telas que permita tudo, e que ele possa
+desligar. O banco de desenvolvimento mostrou 47 aprovações de Bash "para esta sessão" em 14 dias, e 11
+regras persistidas, todas com a linha exata do comando, nenhuma voltando a casar. Até aqui, o único
+modo sem perguntas era o `bypassPermissions` do SDK, que nunca foi oferecido: ele desliga o
+`canUseTool`, que é o produto.
+
+**Alternativas consideradas.**
+
+| Alternativa | Por que não |
+|---|---|
+| oferecer o `bypassPermissions` do SDK, com `allowDangerouslySkipPermissions: true` | o CLI para de chamar o `canUseTool`: um `deny` nosso deixa de recusar, nenhuma aprovação fica em `permission_requests`, e voltar a perguntar no meio da sessão depende do CLI aceitar a troca. A flag ficaria configurável, e uma flag assim acaba ligada |
+| `acceptEdits` | só cobre edição de arquivo. É exatamente o que o usuário já tinha e continuava sendo perguntado |
+| só alargar as regras | resolve a repetição, não o pedido: o usuário quer uma chave que desligue as perguntas, e outra que as religue |
+
+**Decisão.** Um modo novo no contrato, **`allowAll`**, implementado pelo backend:
+
+- o SDK recebe `default` na abertura e em toda troca de modo. O `canUseTool` continua sendo chamado
+  para toda tool, e `allowDangerouslySkipPermissions` continua `false`, escrito uma vez;
+- a ordem de um pedido é idempotência → regras → modo. Um `deny` que casa ainda recusa, um `allow` de
+  regra ainda responde como regra, e só depois o modo aprova;
+- `AskUserQuestion` e `ExitPlanMode` continuam abrindo o card: são o Claude pedindo uma resposta, não
+  uma permissão;
+- a aprovação por modo é uma resolução como as outras: `auto: true`, o dono como autor, `via: 'allowAll'`
+  no `permission.resolved`, e uma linha em `permission_requests`;
+- ligar resolve os cards já abertos da sessão pelas mesmas regras. Desligar vale na próxima tool, porque
+  o modo é lido a cada pedido;
+- o modo vale **para a sessão**, escolhido no chip. Não é padrão em configuração nenhuma.
+
+**O que não muda.** `bypassPermissions` continua no contrato com o significado do SDK, nunca oferecido
+pelas telas e nunca aceito como padrão; o `pnpm scan:security` continua reprovando
+`allowDangerouslySkipPermissions` fora de `false` e `bypassPermissions` como padrão. A trilha de
+auditoria continua sendo o hook `PreToolUse`, que não depende do modo.
+
+**Consequências.**
+
+- Uma sessão em `allowAll` roda qualquer comando que nenhuma regra recuse. O chip fica em tom
+  destrutivo, com ícone e texto, e o atalho que gira os modos não passa por ele
+  ([23 · D-10](../../plans/23-fluid-permissions/decisions.md#f3--web)).
+- Um `deny` nas settings do projeto continua recusando antes de nós. É o certo, mas a tela não sabe
+  dizer por quê (R-04 do plano 23).
+
+Detalhes: [backend/04-claude-integration.md](../backend/04-claude-integration.md#permitir-tudo--allowall).
+
+---
+
+## ADR-023 — Portão rápido por fase, portão completo no fim do plano
+
+**Status:** aceita · 2026-10-07 · decisão do usuário, durante as F0…F2 do
+[plano 22](../../plans/22-live-history/progress.md#decisões-tomadas-durante-a-execução). **Emenda** o
+[protocolo de validação](11-validation-protocol.md), a [Definition of Done](10-definition-of-done.md) e o
+[AGENTS.md](../../../AGENTS.md), que pediam `pnpm verify:full` ao fim de toda fase.
+
+**Contexto.** O `pnpm verify:full` leva ~25 min, sobe stacks efêmeras e roda o e2e, que divide portas,
+`web/dist` e `e2e/.env` com qualquer outra execução na mesma árvore. Rodado ao fim de cada fase, ele
+custava mais tempo que a fase em vários planos, e duas sessões na mesma máquina derrubavam o portão uma
+da outra sem defeito nenhum no código. O usuário já pedia, plano a plano, para rodá-lo só no fim do lote
+(planos 07, 10 e 22).
+
+**Decisão.**
+
+- **Fim de cada fase: o portão rápido**, `pnpm verify` (portões 1-7 — formatação, lint, tipos,
+  arquitetura, duplicação, unit e cobertura) e as checagens baratas que a fase tocou (`pnpm docs:check`,
+  `pnpm contracts:check`, `pnpm i18n:check`). Vermelho reinicia do portão 1, como sempre.
+- **Fim do plano: o portão completo**, `pnpm verify:full` (portões 1-11) e os e2e que o plano exige
+  (`pnpm test:e2e:mobile`, `pnpm test:e2e:live`), uma vez, depois da última task do plano.
+- **Todo plano termina com a fase de E2E**, e ela é sempre a última: fase nova entra **antes** dela, e
+  a de E2E é renumerada para o fim. É nela que o portão completo roda. `pnpm plan new` já cria o plano
+  com a fase `e2e` no fim. Planos concluídos antes desta decisão ficam como estão.
+
+**O que não muda.** A conjunção da DoD continua: nada é desligado, nenhum limiar baixa, e o plano só
+está **concluído** com `pnpm verify:full` verde. Uma fase verde no portão rápido está pronta como fase;
+o plano só está pronto no fim.
+
+**Consequências.**
+
+- Uma regressão de integração ou de e2e pode atravessar várias fases antes de aparecer. O preço é
+  aceito: a fase de E2E é a última, e é onde ela aparece.
+- Os e2e e o portão completo deixam de disputar a máquina a cada fase com outras sessões.
+

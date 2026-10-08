@@ -60,4 +60,25 @@ export interface HistoryPage {
 
   /** Opaque: the page **before** this one. `null` on the first message of the conversation. */
   readonly nextCursor: string | null;
+
+  /**
+   * The last entry of the whole conversation when the page was read — what following it starts
+   * after, so nothing written since is missed (plan 22, B-10). `null` for a conversation with none,
+   * or from a server older than it.
+   */
+  readonly lastMessageId: string | null;
+}
+
+/**
+ * What following a conversation brought since the last update (plan 22, B-21): the entries it gained,
+ * as events of the history — folded by the same reducer as a page —, the last entry it has now, and
+ * what it is doing now.
+ */
+export interface TranscriptUpdate {
+  readonly events: readonly HistoryEvent[];
+
+  /** The last entry now — `null` when the update does not say, which leaves the one known before. */
+  readonly lastMessageId: string | null;
+
+  readonly activity: ConversationActivity;
 }

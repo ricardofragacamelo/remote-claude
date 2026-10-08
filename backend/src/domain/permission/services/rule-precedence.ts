@@ -1,5 +1,7 @@
 import type { PermissionMode } from '@domain/session';
 import type { PermissionRule, RuleSubject } from '../entities/permission-rule.entity';
+import { matchedInput } from './rule-pattern';
+import { commandsOf, SHELL_TOOLS } from './shell-syntax';
 
 /** One invocation, as the rules are asked about it. */
 export interface RuleQuestion {
@@ -25,6 +27,12 @@ export interface RuleQuestion {
  *   an old rule to execute on their behalf, so the question goes to them. A `deny` still refuses:
  *   refusing is never less restrictive than asking.
  *
+ * - **a shell line of several commands is allowed when every command is**
+ *   ([23 · D-07](../../../../../docs/plans/23-fluid-permissions/decisions.md)): `git push 2>&1 |
+ *   tail -5` with `Bash(git push:*)` and `Bash(tail:*)`. Each command is read as a line of its own,
+ *   so a prefix still respects its token boundary, and a line {@link commandsOf} cannot read safely
+ *   is asked about. The rule answering is the first command's (D-11).
+ *
  * Pure, and in the domain, for the same reason the matcher is: it is a security decision, and a
  * security decision is tested by boundary rather than through a database.
  */
@@ -45,5 +53,30 @@ export function answeringRule(
     return null;
   }
 
-  return matching[0] ?? null;
+  return matching[0] ?? commandByCommand(rules, question);
+}
+
+/** The rule of the first command, when every command of a shell line is allowed by some rule. */
+function commandByCommand(
+  rules: readonly PermissionRule[],
+  question: RuleQuestion,
+): PermissionRule | null {
+  const line = SHELL_TOOLS.has(question.toolName) ? matchedInput(question.input) : null;
+  const commands = line === null ? null : commandsOf(line);
+
+  // One command identical to the line was already asked about, as the line.
+  if (commands === null || (commands.length === 1 && commands[0] === line?.trim())) {
+    return null;
+  }
+
+  const answering = commands.map(
+    (command) =>
+      rules.find(
+        (rule) =>
+          rule.decision === 'allow' &&
+          rule.matches(question.subject, question.toolName, { command }, question.now),
+      ) ?? null,
+  );
+
+  return answering.every((rule) => rule !== null) ? (answering[0] ?? null) : null;
 }

@@ -680,4 +680,126 @@ void main() {
       expect(opened.apply(const SessionOpened(2, 's-2')).facts.resumedFrom, 'c-1');
     });
   });
+
+  group('the identity of a block — plan 22, B-13', () {
+    test('S-35 · two thinkings the model did not show in one answer are two', () {
+      final Conversation after = applyAll(<SessionEvent>[
+        const MessageFinished(
+          1,
+          messageId: 'm1',
+          text: '',
+          isFromUser: false,
+          thoughts: <Thought>[Thought('', blockId: 'u1:0')],
+        ),
+        const MessageFinished(
+          2,
+          messageId: 'm1',
+          text: '',
+          isFromUser: false,
+          thoughts: <Thought>[Thought('', blockId: 'u2:0')],
+        ),
+      ]);
+
+      expect(after.thinking.map((ThinkingEntry each) => each.blockId), <String>['u1:0', 'u2:0']);
+    });
+
+    test('S-36 · the block a page and a follower both delivered is shown once', () {
+      const MessageFinished block = MessageFinished(
+        0,
+        messageId: 'm1',
+        text: 'Once.',
+        isFromUser: false,
+        textBlockIds: <String>['u1:0'],
+        thoughts: <Thought>[Thought('', blockId: 'u0:0')],
+      );
+      final Conversation shown = const Conversation().withHistory(<SessionEvent>[block, block]);
+
+      expect(shown.messages.single.blocks, <String>['Once.']);
+      expect(shown.messages.single.blockIds, <String>['u1:0']);
+      expect(shown.thinking, hasLength(1));
+    });
+
+    test('S-37 · a block with no identity keeps the old rule', () {
+      final Conversation after = applyAll(<SessionEvent>[
+        const MessageFinished(1, messageId: 'm1', text: 'Same.', isFromUser: false),
+        const MessageFinished(
+          2,
+          messageId: 'm1',
+          text: 'Same.',
+          isFromUser: false,
+          textBlockIds: <String>['u1:0'],
+        ),
+        const MessageFinished(
+          3,
+          messageId: 'm1',
+          text: '',
+          isFromUser: false,
+          thoughts: <Thought>[Thought('t', blockId: 'u2:0')],
+        ),
+        const MessageFinished(
+          4,
+          messageId: 'm1',
+          text: '',
+          isFromUser: false,
+          thoughts: <Thought>[Thought('t')],
+        ),
+      ]);
+
+      expect(after.messages.single.blocks, <String>['Same.']);
+      expect(after.thinking, hasLength(1));
+    });
+
+    test('S-38 · a live session joins its history by message, nothing doubled or lost', () {
+      final Conversation shown =
+          applyAll(<SessionEvent>[
+            const MessageFinished(
+              5,
+              messageId: 'h2',
+              text: 'live',
+              isFromUser: false,
+              textBlockIds: <String>['u4:0'],
+            ),
+          ]).withHistory(const <SessionEvent>[
+            MessageFinished(
+              0,
+              messageId: 'h1',
+              text: 'old',
+              isFromUser: true,
+              textBlockIds: <String>['u1:0'],
+            ),
+            MessageFinished(
+              0,
+              messageId: 'h2',
+              text: 'live',
+              isFromUser: false,
+              textBlockIds: <String>['u4:0'],
+            ),
+          ]);
+
+      expect(idsOf(shown), <String>['message:h1', 'message:h2']);
+      expect(shown.messages.last.blocks, <String>['live']);
+    });
+
+    test('S-39 · new entries of an answer already begun fall into it, in order', () {
+      final Conversation after = applyAll(<SessionEvent>[
+        const MessageFinished(
+          1,
+          messageId: 'm1',
+          text: 'A',
+          isFromUser: false,
+          textBlockIds: <String>['u1:0'],
+        ),
+        const MessageFinished(
+          2,
+          messageId: 'm1',
+          text: 'B',
+          isFromUser: false,
+          textBlockIds: <String>['u2:0'],
+        ),
+      ]);
+
+      expect(after.messages.single.text, 'AB');
+      expect(after.messages.single.blockIds, <String>['u1:0', 'u2:0']);
+    });
+  });
 }

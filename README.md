@@ -307,7 +307,8 @@ Isso não é entregar; é esconder.
 | `pnpm test:coverage` | mínimo **90 % em statements, branches, functions e lines — por arquivo** |
 | `node scripts/coverage-gaps.mjs <web\|backend> [trecho do caminho]` | lê o `coverage/lcov.info` que o último `test:coverage` do módulo deixou e diz, arquivo por arquivo, as linhas, as funções e as linhas com ramo que nenhum teste alcançou — o próximo teste a escrever, nomeado. Não roda nada |
 | `cd mobile && flutter test` | unit e widget do app |
-| `pnpm fixtures:record` | grava o stream do Agent SDK **real** como fixture — sob demanda, exige o Claude logado |
+| `pnpm fixtures:record` | grava o stream do Agent SDK **real** como fixture — sob demanda, exige o Claude logado; `--history <cenário>` acrescenta o que o SDK relê daquela execução |
+| `pnpm transcript:follow-bench` | mede, no store de quem roda, o que o seguidor de conversas custa: `getSessionInfo`, a releitura do maior transcript e 4 conversas juntas — só tempo e heap, nunca conteúdo ([22 · B-19](docs/plans/22-live-history/F2-follower.md#b-19--a-medição-)) |
 
 `pnpm test:e2e` sai com o **código dos testes**, não com 0 fixo — senão o CI fica verde com
 teste vermelho. E pode rodar com o `pnpm dev` de pé, porque usa portas aleatórias e um projeto
@@ -357,7 +358,10 @@ fake escrito de memória prova que o fake funciona — ver
 cenário `commands` não manda prompt nenhum — abre a `query()`, pergunta `supportedCommands()` e
 fecha —, então não gasta cota; os demais (`text-turn`, `tool-turn`, `init-turn`) gastam.
 `pnpm fixtures:record --normalise` reaplica a normalização (caminho descartável, slug do projeto e
-home da máquina) às fixtures commitadas, sem chamar o SDK.
+home da máquina) às fixtures commitadas, sem chamar o SDK. Cada gravação guarda também o `history` —
+o que `getSessionMessages` relê da execução, com os prompts e o `timestamp` de cada entrada —, e
+`pnpm fixtures:record --history <cenário>` o acrescenta a uma gravação antiga cuja conversa ainda está
+no store desta máquina, sem rodar de novo ([22 · B-05](docs/plans/22-live-history/F0-norms.md#b-05--as-fixtures-gravadas-)).
 
 Na cobertura não há média que compense: um arquivo em 70 % não é salvo por outro em 99 %.
 

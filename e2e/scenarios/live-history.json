@@ -1,0 +1,146 @@
+{
+  "id": "22·S-124…S-129",
+  "title": "a conversation begun elsewhere grows while it is read: what the other client writes arrives without a reload, \"working in another client\" comes and goes, scrolled up it is \"N new\" and the way to the end, a rewritten chain is read again and still followed — and it is read as the Claude Code shows it: the thought and how long, the title of the Bash call, its IN and its whole OUT, the image of a prompt opened",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "planted": {
+      "fixture": "tool-turn",
+      "title": "Being written in the editor",
+      "answer": "Done, in order:"
+    },
+    "steps": [
+      {
+        "name": "asks",
+        "append": { "fixture": "bash-output-turn", "from": 0, "to": 2 },
+        "prompt": "Run exactly this command with the Bash tool, in the foreground: seq 1 600. Then reply with exactly: done.",
+        "working": true
+      },
+      {
+        "name": "answers",
+        "append": { "fixture": "bash-output-turn", "from": 2, "to": 4 },
+        "answer": "done",
+        "working": false
+      },
+      {
+        "name": "newer",
+        "append": { "fixture": "thinking-turn", "from": 0, "to": 3 },
+        "newer": 2,
+        "answer": "17:22",
+        "working": false
+      },
+      {
+        "name": "rewritten",
+        "chain": "compact-turn",
+        "said": "This session is being continued from a previous conversation",
+        "gone": "17:22",
+        "working": true
+      },
+      {
+        "name": "after",
+        "append": { "fixture": "image-turn", "from": 0, "to": 2 },
+        "prompt": "What is the dominant colour of this image? Reply with one lowercase word.",
+        "answer": "red",
+        "working": false
+      }
+    ],
+    "bash": {
+      "command": "seq 1 600",
+      "title": "Print numbers 1 through 600",
+      "lines": 600,
+      "first": "1",
+      "last": "600"
+    },
+    "texts": {
+      "activeElsewhere": {
+        "web": "history.screen.activeElsewhereNote",
+        "app": "historyActiveElsewhereNote",
+        "en": "Something else wrote this conversation a moment ago — the editor or a terminal may have it open. Continuing it here makes a copy, and the two will diverge."
+      },
+      "working": {
+        "web": "history.follow.working",
+        "app": "historyFollowWorking",
+        "en": "Working in another client…"
+      },
+      "newer": {
+        "web": "history.follow.newer",
+        "app": "historyFollowNewer",
+        "params": { "count": 2 },
+        "en": "2 new"
+      },
+      "newerLabel": {
+        "web": "history.follow.newerLabel",
+        "app": "historyFollowNewerLabel",
+        "params": { "newer": "2 new" },
+        "en": "Go to the end — 2 new"
+      },
+      "thought": {
+        "web": "sessions.thinking.tookUpTo",
+        "app": "thinkingTookUpTo",
+        "params": { "seconds": 4 },
+        "en": "Thought for up to 4 s"
+      },
+      "bashTitle": {
+        "web": "sessions.tool.titled",
+        "app": "sessionToolTitled",
+        "params": { "name": "Bash", "title": "Print numbers 1 through 600" },
+        "en": "Bash · Print numbers 1 through 600"
+      },
+      "bashRunning": {
+        "web": "sessions.toolRow.labelTitled",
+        "params": {
+          "tool": "Bash · Print numbers 1 through 600",
+          "detail": "Bash: seq 1 600",
+          "status": "Running"
+        },
+        "en": "Bash · Print numbers 1 through 600 (Bash: seq 1 600) — Running. Show the exact input"
+      },
+      "bashDone": {
+        "web": "sessions.toolRow.labelTitled",
+        "params": {
+          "tool": "Bash · Print numbers 1 through 600",
+          "detail": "Bash: seq 1 600",
+          "status": "Done"
+        },
+        "en": "Bash · Print numbers 1 through 600 (Bash: seq 1 600) — Done. Show the exact input"
+      },
+      "input": {
+        "web": "sessions.toolRow.input",
+        "app": "sessionToolRowInput",
+        "en": "The exact input"
+      },
+      "output": {
+        "web": "sessions.toolRow.output",
+        "app": "sessionToolRowOutput",
+        "en": "What it said"
+      },
+      "in": { "web": "sessions.toolRow.in", "app": "sessionToolRowIn", "en": "IN" },
+      "out": { "web": "sessions.toolRow.out", "app": "sessionToolRowOut", "en": "OUT" },
+      "openImage": {
+        "web": "sessions.image.open",
+        "app": "sessionImageOpen",
+        "en": "Open the image"
+      },
+      "imageAlt": {
+        "web": "sessions.image.alt",
+        "app": "sessionImageAlt",
+        "en": "The image attached to the prompt"
+      },
+      "closeImage": { "web": "sessions.image.close", "app": "sessionImageClose", "en": "Close" },
+      "resume": {
+        "web": "history.screen.resume",
+        "app": "historyResumeAction",
+        "en": "Continue this conversation"
+      },
+      "forkTitle": {
+        "web": "sessions.fork.title",
+        "app": "sessionForkTitle",
+        "en": "Continue a conversation that is being written now?"
+      },
+      "forkCancel": { "web": "sessions.fork.cancel", "app": "sessionForkCancel", "en": "Cancel" }
+    },
+    "tags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]
+  }
+}

@@ -80,6 +80,12 @@ const complete: RawEnvironment = {
   RC_CONTEXT_WARN_PERCENT: '25',
   RC_CONTEXT_DRAFT_WINDOW_TOKENS: '200000',
   RC_CONTEXT_MAX_BYTES: '8388608',
+  RC_TRANSCRIPT_TOOL_RESULT_MAX_BYTES: '262144',
+  RC_TRANSCRIPT_IMAGE_MAX_BYTES: '10485760',
+  RC_TRANSCRIPT_FOLLOW_ACTIVE_MS: '1000',
+  RC_TRANSCRIPT_FOLLOW_IDLE_MS: '10000',
+  RC_TRANSCRIPT_FOLLOW_MAX_PER_CONNECTION: '4',
+  RC_TRANSCRIPT_FOLLOW_MAX: '16',
 };
 
 /** The complete environment, with one variable changed or removed. */
@@ -156,7 +162,12 @@ describe('loadConfig', () => {
           maxBatchEntries: 1_000,
         },
       },
-      transcript: { activeWindowMs: 120_000 },
+      transcript: {
+        activeWindowMs: 120_000,
+        toolResultMaxBytes: 262_144,
+        imageMaxBytes: 10_485_760,
+        follow: { activeMs: 1_000, idleMs: 10_000, maxPerConnection: 4, max: 16 },
+      },
       composer: {
         attachments: { maxBytes: 5_242_880, ttlMs: 3_600_000, memoryBytes: 67_108_864 },
         context: {
@@ -236,6 +247,12 @@ describe('loadConfig', () => {
     'RC_CONTEXT_WARN_PERCENT',
     'RC_CONTEXT_DRAFT_WINDOW_TOKENS',
     'RC_CONTEXT_MAX_BYTES',
+    'RC_TRANSCRIPT_TOOL_RESULT_MAX_BYTES',
+    'RC_TRANSCRIPT_IMAGE_MAX_BYTES',
+    'RC_TRANSCRIPT_FOLLOW_ACTIVE_MS',
+    'RC_TRANSCRIPT_FOLLOW_IDLE_MS',
+    'RC_TRANSCRIPT_FOLLOW_MAX_PER_CONNECTION',
+    'RC_TRANSCRIPT_FOLLOW_MAX',
   ] as const)('refuses to produce a configuration when %s is missing', (variable) => {
     expect(() => loadConfig(withChange({ [variable]: undefined }))).toThrow(ConfigurationError);
   });
@@ -301,6 +318,15 @@ describe('loadConfig', () => {
     ['RC_CONTEXT_WARN_PERCENT', '101'],
     ['RC_CONTEXT_DRAFT_WINDOW_TOKENS', '999'],
     ['RC_CONTEXT_MAX_BYTES', '1023'],
+    // Plan 22, S-71.
+    ['RC_TRANSCRIPT_TOOL_RESULT_MAX_BYTES', '1023'],
+    ['RC_TRANSCRIPT_IMAGE_MAX_BYTES', '67108865'],
+    ['RC_TRANSCRIPT_FOLLOW_ACTIVE_MS', '99'],
+    ['RC_TRANSCRIPT_FOLLOW_IDLE_MS', 'often'],
+    ['RC_TRANSCRIPT_FOLLOW_MAX_PER_CONNECTION', '0'],
+    ['RC_TRANSCRIPT_FOLLOW_MAX', '257'],
+    ['RC_TRANSCRIPT_FOLLOW_ACTIVE_MS', '20000'],
+    ['RC_TRANSCRIPT_FOLLOW_MAX_PER_CONNECTION', '17'],
   ] as const)('refuses %s set to %s', (variable, value) => {
     expect(() => loadConfig(withChange({ [variable]: value }))).toThrow(ConfigurationError);
   });
