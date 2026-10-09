@@ -473,6 +473,29 @@ catálogo. Se uma fase achar um dado que falte, ele entra no
 
 ---
 
+### Configuração do Claude — uma tela, sete seções
+
+`/claude-settings?section=&folder=` ([plano 13](../../plans/13-claude-settings/README.md)): como o Claude
+desta máquina trabalha. Uma tela **própria** na navegação global — nunca uma seção das Configurações do
+app, que são do app ([13 · D-09](../../plans/13-claude-settings/decisions.md#d-09--a-seção-claude-das-configurações-do-app)).
+
+- **A moldura de tela** do plano 06 (título, uma linha de propósito, gaveta de ajuda) e, dentro dela, a
+  navegação lateral das sete seções — Conta, Instalação, Modelos e padrões, Servidores MCP, Plugins,
+  Skills, Projeto —, uma fileira acima do conteúdo abaixo de `md`. A seção e a pasta ficam na search: o
+  link reproduz a tela.
+- **Os quatro estados em cada seção**, cada uma carregando por conta própria: a instalação que não
+  responde numa seção não apaga as outras.
+- **Segundo passo para toda ação que amplia o que roda na máquina** — acrescentar ou trocar o comando de
+  um servidor MCP, aprovar uma entrada do `.mcp.json`, adicionar ou atualizar um plugin, ligar as skills
+  do usuário ou do sistema. O segundo passo diz **por extenso** o que vai rodar, onde vale e o que cai
+  (as regras `allow` que a troca revoga), com o texto que o servidor calculou; o foco inicial é o
+  "voltar", e sem confirmar nada é gravado.
+- **Segredo só escrita**: um valor de env ou de cabeçalho é um campo que mostra "definido", nunca o
+  valor; salvar sem tocar mantém, apagar é uma ação explícita.
+- **O que é do projeto e não se edita aqui** — hooks, permissões, plugins habilitados pelo repositório —
+  aparece só leitura, explicado sem eufemismo ("este comando roda na máquina em todo `PreToolUse`, sem
+  ninguém aprovar"), com o caminho para o arquivo no editor do plano 07.
+
 ## Workbench
 
 O web é um **workbench no molde do VS Code**, construído em React

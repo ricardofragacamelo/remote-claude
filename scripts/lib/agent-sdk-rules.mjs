@@ -262,6 +262,143 @@ const SKIP_PERMISSIONS = /allowDangerouslySkipPermissions\s*:\s*(?!false\b)([A-Z
 const BYPASS_MODE = /permissionMode\s*:\s*['"]bypassPermissions['"]/g;
 
 /**
+ * The doors of plan 13 — every way an extension of Claude could reach a session past the backend's
+ * composition, each a pattern and the reason it fails (ADR-018).
+ *
+ * `view` says which reading of the file the pattern runs on: `code` has comments and strings
+ * blanked, so a name explained in prose is never a finding; `strings` keeps the strings, for the
+ * names that would arrive as one (a control request's subtype). `only` narrows a rule to the files
+ * where the key means the SDK's option.
+ *
+ * @type {readonly { rule: string, view: 'code' | 'strings', pattern: RegExp, detail: string, only?: RegExp }[]}
+ */
+const EXTENSION_RULES = [
+  {
+    rule: 'no-update-settings',
+    view: 'code',
+    pattern: /(?<![\w$])updateSettings\s*\(/g,
+    detail: 'updateSettings() writes a settings file of the user, past canUseTool (ADR-018)',
+  },
+  {
+    rule: 'no-apply-flag-settings',
+    view: 'code',
+    pattern: /(?<![\w$])applyFlagSettings\s*\(/g,
+    detail:
+      'applyFlagSettings() mid-session restarts the query and loses the hooks — the flag layer ' +
+      'goes in at the start, through flagSettings() (ADR-018, discovery §10.3)',
+  },
+  {
+    rule: 'no-managed-settings',
+    view: 'code',
+    pattern: /(?<![\w$])managedSettings\s*:/g,
+    detail:
+      'managedSettings does not hold the shell inline off (measured); the restrictive keys go in ' +
+      'through flagSettings() (plan 13, D-24)',
+  },
+  {
+    rule: 'flag-settings-only-through-the-builder',
+    view: 'code',
+    pattern: /(?<![\w$.])settings\s*:(?!\s*flagSettings\s*\()/g,
+    only: /adapter\/outbound\/claude\//,
+    detail:
+      'the flag layer sits above user and project and takes `permissions`; it is built by ' +
+      'flagSettings(), which takes an allowlist of keys and refuses the rest (ADR-018)',
+  },
+  {
+    rule: 'no-mcp-tool-policy',
+    view: 'strings',
+    pattern: /\b(?:permission_policy|alwaysLoad)\b/g,
+    detail:
+      "an MCP server's permission_policy: 'always_allow' approves its tools without canUseTool; " +
+      'neither it nor alwaysLoad is ever configured (ADR-018)',
+  },
+  {
+    rule: 'plugin-needs-skip-mcp-discovery',
+    view: 'code',
+    pattern: /(?<![\w$])skipMcpDiscovery\s*:(?!\s*true\b)/g,
+    detail:
+      'a plugin brings its own MCP servers; skipMcpDiscovery: true keeps them for the approval of ' +
+      'plan 13, F2 (ADR-018)',
+  },
+  {
+    rule: 'no-private-control-request',
+    view: 'strings',
+    pattern: /\b(?:get_hooks_listing|list_permission_rules|get_settings)\b/g,
+    detail:
+      'a control request with no public method on Query changes without notice; read the ' +
+      'published files instead (plan 13, D-16)',
+  },
+];
+
+/** A local plugin, in an object literal: what must carry `skipMcpDiscovery: true` beside it. */
+const LOCAL_PLUGIN = /type\s*:\s*['"]local['"]/g;
+
+/**
+ * The text of the object literal around [index] — from its `{` to the `}` that closes it.
+ *
+ * @param {string} source
+ * @param {number} index
+ * @returns {string}
+ */
+export function enclosingObject(source, index) {
+  let depth = 0;
+  let open = -1;
+
+  for (let at = index; at >= 0; at -= 1) {
+    if (source[at] === '}') {
+      depth += 1;
+    } else if (source[at] === '{') {
+      if (depth === 0) {
+        open = at;
+        break;
+      }
+      depth -= 1;
+    }
+  }
+
+  if (open === -1) {
+    return source.slice(0, index);
+  }
+
+  const close = argumentsAt(source.replaceAll('{', '(').replaceAll('}', ')'), open);
+  return source.slice(open + 1, open + 1 + close.length);
+}
+
+/**
+ * The findings of the extension rules in one file.
+ *
+ * @param {string} file
+ * @param {{ code: string, strings: string }} views
+ * @returns {Finding[]}
+ */
+function extensionFindings(file, views) {
+  /** @type {Finding[]} */
+  const findings = [];
+
+  for (const { rule, view, pattern, detail, only } of EXTENSION_RULES) {
+    if (only !== undefined && !only.test(file)) {
+      continue;
+    }
+    for (const match of views[view].matchAll(pattern)) {
+      findings.push({ rule, file, line: lineAt(views[view], match.index), detail });
+    }
+  }
+
+  for (const match of views.strings.matchAll(LOCAL_PLUGIN)) {
+    if (!/skipMcpDiscovery\s*:\s*true\b/.test(enclosingObject(views.strings, match.index))) {
+      findings.push({
+        rule: 'plugin-needs-skip-mcp-discovery',
+        file,
+        line: lineAt(views.strings, match.index),
+        detail: "a { type: 'local' } plugin without skipMcpDiscovery: true starts its MCP servers",
+      });
+    }
+  }
+
+  return findings;
+}
+
+/**
  * Inspects one source file.
  *
  * @param {string} file path to report
@@ -303,6 +440,17 @@ export function inspectSource(file, rawSource) {
       });
     }
 
+    if (!/strictMcpConfig\s*:\s*true\b/.test(args)) {
+      findings.push({
+        rule: 'query-needs-strict-mcp-config',
+        file,
+        line,
+        detail:
+          "query() without strictMcpConfig: true starts the repository's own .mcp.json — which it " +
+          'can approve itself —, its plugins and the claude.ai connectors (ADR-018)',
+      });
+    }
+
     if (!/canUseTool\s*:/.test(args)) {
       findings.push({
         rule: 'query-needs-can-use-tool',
@@ -332,6 +480,8 @@ export function inspectSource(file, rawSource) {
       detail: "permissionMode: 'bypassPermissions' answers every permission request with yes",
     });
   }
+
+  findings.push(...extensionFindings(file, { code: calls, strings: source }));
 
   return findings;
 }

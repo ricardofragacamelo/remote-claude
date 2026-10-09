@@ -25,22 +25,22 @@ function entryOf(id: string, position: number, sections: readonly string[]): Nav
 }
 
 describe('the global navigation — plan 06, S-89', () => {
-  it('lists, in order, every screen plan 06 has — and no link for the places it holds — B-29…B-31', () => {
+  it('lists, in order, every screen there is — and no link for the place it holds — B-29…B-31, plan 13 B-09', () => {
     expect(globalNavigation.entries().map((entry) => entry.id)).toEqual([
       'workbench',
       'audit',
       'rules',
       'devices',
       'diagnostics',
+      'claude',
       'settings',
     ]);
   });
 
-  it('holds the places of plans 13 and 16 without a link, and puts their entries there', () => {
+  it('holds the place of plan 16 without a link, and puts its entry there', () => {
     const navigation = createNavigation();
     expect(navigation.entries().some((entry) => entry.id === 'usage')).toBe(false);
 
-    navigation.register(entryOf('claude', NAVIGATION_POSITIONS.claude, ['claude']));
     navigation.register(entryOf('usage', NAVIGATION_POSITIONS.usage, ['usage']));
 
     expect(navigation.entries().map((entry) => entry.id)).toEqual([
@@ -92,7 +92,23 @@ describe('the global navigation — plan 06, S-89', () => {
   it('leads the others to their screens', () => {
     const hrefs = globalNavigation.entries().map((entry) => entry.href(nowhere));
 
-    expect(hrefs).toEqual(['/', '/audit', '/rules', '/devices', '/diagnostics', '/settings']);
+    expect(hrefs).toEqual([
+      '/',
+      '/audit',
+      '/rules',
+      '/devices',
+      '/diagnostics',
+      '/claude-settings',
+      '/settings',
+    ]);
+  });
+
+  it("gives Claude's settings a place of its own, never a section of the app's — plan 13, S-55", () => {
+    const claude = globalNavigation.entries().find((entry) => entry.id === 'claude');
+
+    expect(claude?.position).toBe(NAVIGATION_POSITIONS.claude);
+    expect(claude?.href(nowhere)).toBe('/claude-settings');
+    expect(claude?.sections).toEqual(['claude-settings']);
   });
 
   it('gives Devices a place of its own, never a section of Settings — S-138', () => {

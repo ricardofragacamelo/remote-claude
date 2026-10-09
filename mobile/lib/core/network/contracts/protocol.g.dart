@@ -23,6 +23,7 @@ const List<String> frameTypes = <String>[
   'session.detach',
   'session.interrupt',
   'session.prompt',
+  'session.reconnectMcpServer',
   'session.rejectChange',
   'session.restoreChange',
   'session.rewindFiles',
@@ -30,6 +31,7 @@ const List<String> frameTypes = <String>[
   'session.setModel',
   'session.setPermissionMode',
   'session.start',
+  'session.toggleMcpServer',
   'transcript.follow',
   'transcript.unfollow',
   'workspace.unwatch',
@@ -45,6 +47,7 @@ const List<String> frameTypes = <String>[
   'prompt.queued',
   'session.closed',
   'session.compacted',
+  'session.mcpStatusChanged',
   'session.rewound',
   'session.started',
   'session.statusChanged',
@@ -149,6 +152,12 @@ const String sessionPromptKind = 'command';
 /// `type` of a session.prompt frame.
 const String sessionPromptType = 'session.prompt';
 
+/// `kind` of a session.reconnectMcpServer frame.
+const String sessionReconnectMcpServerKind = 'command';
+
+/// `type` of a session.reconnectMcpServer frame.
+const String sessionReconnectMcpServerType = 'session.reconnectMcpServer';
+
 /// `kind` of a session.rejectChange frame.
 const String sessionRejectChangeKind = 'command';
 
@@ -190,6 +199,12 @@ const String sessionStartKind = 'command';
 
 /// `type` of a session.start frame.
 const String sessionStartType = 'session.start';
+
+/// `kind` of a session.toggleMcpServer frame.
+const String sessionToggleMcpServerKind = 'command';
+
+/// `type` of a session.toggleMcpServer frame.
+const String sessionToggleMcpServerType = 'session.toggleMcpServer';
 
 /// `kind` of a transcript.follow frame.
 const String transcriptFollowKind = 'command';
@@ -280,6 +295,12 @@ const String sessionCompactedKind = 'event';
 
 /// `type` of a session.compacted frame.
 const String sessionCompactedType = 'session.compacted';
+
+/// `kind` of a session.mcpStatusChanged frame.
+const String sessionMcpStatusChangedKind = 'event';
+
+/// `type` of a session.mcpStatusChanged frame.
+const String sessionMcpStatusChangedType = 'session.mcpStatusChanged';
 
 /// `kind` of a session.rewound frame.
 const String sessionRewoundKind = 'event';
@@ -1493,6 +1514,44 @@ bool sessionPromptPayloadLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
+/// Reconnects one MCP server of a running session — the way back from `failed`. Only the owner of the session may, and only a server the session has. The result arrives as `session.mcpStatusChanged`.
+class SessionReconnectMcpServerPayload {
+  const SessionReconnectMcpServerPayload({
+    required this.sessionId,
+    required this.name,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionReconnectMcpServerPayload.fromJson(Map<String, Object?> json) => SessionReconnectMcpServerPayload(
+        sessionId: json['sessionId']! as String,
+        name: json['name']! as String,
+      );
+
+  final String sessionId;
+
+  /// The server's name, as `session.mcpStatusChanged` gave it.
+  final String name;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+      'name': name,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionReconnectMcpServerPayload].
+bool sessionReconnectMcpServerPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['name'] is String && (json['name']! as String).length > 64) {
+    return false;
+  }
+
+  return true;
+}
+
 /// Puts one hunk of what a session changed in a file back the way it was before the session. Only while the disk still has what the session left — otherwise the file is `modifiedOutside` and is rejected whole, preserving it, by `session.rewindFiles` with `paths`. The outcome arrives as `session.rewound`, with `hunkId`. A `revision` that is no longer the disk's is `SESSION_CHANGE_STALE`; the same locks as an undo apply (`SESSION_LOCKED`).
 class SessionRejectChangePayload {
   const SessionRejectChangePayload({
@@ -1758,6 +1817,49 @@ class SessionStartPayload {
 /// is present — a fork point is a message of a conversation, and only a resumed conversation has one.
 bool sessionStartPayloadConditionalsHold(Map<String, Object?> json) {
   if (json['forkAt'] != null && json['resumeSessionId'] is! String) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Switches one MCP server of a running session on or off. Only the owner of the session may, and only a server the session has. The ack comes before the effect; the result arrives as `session.mcpStatusChanged`, with the session's `seq` — and none when nothing changed.
+class SessionToggleMcpServerPayload {
+  const SessionToggleMcpServerPayload({
+    required this.sessionId,
+    required this.name,
+    required this.enabled,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionToggleMcpServerPayload.fromJson(Map<String, Object?> json) => SessionToggleMcpServerPayload(
+        sessionId: json['sessionId']! as String,
+        name: json['name']! as String,
+        enabled: json['enabled']! as bool,
+      );
+
+  final String sessionId;
+
+  /// The server's name, as `session.mcpStatusChanged` gave it.
+  final String name;
+
+  final bool enabled;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+      'name': name,
+      'enabled': enabled,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionToggleMcpServerPayload].
+bool sessionToggleMcpServerPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['name'] is String && (json['name']! as String).length > 64) {
     return false;
   }
 
@@ -2631,6 +2733,100 @@ class SessionCompactedPayload {
   }
 }
 
+class SessionMcpStatusChangedPayloadServersItem {
+  const SessionMcpStatusChangedPayloadServersItem({
+    required this.name,
+    required this.status,
+    required this.source,
+    required this.toolCount,
+    this.error,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionMcpStatusChangedPayloadServersItem.fromJson(Map<String, Object?> json) => SessionMcpStatusChangedPayloadServersItem(
+        name: json['name']! as String,
+        status: json['status']! as String,
+        source: json['source']! as String,
+        toolCount: json['toolCount']! as int,
+        error: json['error'] as String?,
+      );
+
+  /// As configured — text a person wrote, to be escaped before display.
+  final String name;
+
+  /// `needs-auth` asks for a browser on the machine (OAuth); no OAuth address ever travels through the product.
+  final String status;
+
+  /// Where the definition came from, read off the SDK's `source` and never off the name: `ours` is a server of the store, `project` an approved entry of `.mcp.json` (both reach the CLI as `dynamic`), `plugin` one a plugin brought, `other` anything else — never trusted as ours.
+  final String source;
+
+  final int toolCount;
+
+  /// Why it failed, redacted — a URL with a token in it never reaches a client. Absent unless `failed`.
+  final String? error;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'status': status,
+      'source': source,
+      'toolCount': toolCount,
+    };
+
+    if (error != null) {
+      json['error'] = error;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionMcpStatusChangedPayloadServersItem].
+bool sessionMcpStatusChangedPayloadServersItemLimitsHold(Map<String, Object?> json) {
+  if (json['toolCount'] is int && (json['toolCount']! as int) < 0) {
+    return false;
+  }
+
+  if (json['error'] is String && (json['error']! as String).length > 512) {
+    return false;
+  }
+
+  return true;
+}
+
+/// The MCP servers of a session and where each one stands — the whole list, every time, so a client never patches. An event of the session, with its `seq`: published once the servers the backend composed have been handed to the CLI, after every `session.toggleMcpServer` or `session.reconnectMcpServer` that changed something, and when a server is switched off because its configuration was removed or switched off (tightening applies at once). A client that does not know it ignores it.
+class SessionMcpStatusChangedPayload {
+  const SessionMcpStatusChangedPayload({
+    required this.servers,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionMcpStatusChangedPayload.fromJson(Map<String, Object?> json) => SessionMcpStatusChangedPayload(
+        servers: (json['servers']! as List<Object?>).map((item) => SessionMcpStatusChangedPayloadServersItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<SessionMcpStatusChangedPayloadServersItem> servers;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'servers': servers.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionMcpStatusChangedPayload].
+bool sessionMcpStatusChangedPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['servers'] is List<Object?> && (json['servers']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  return true;
+}
+
 class SessionRewoundPayloadRevertedItem {
   const SessionRewoundPayloadRevertedItem({
     required this.path,
@@ -2797,6 +2993,9 @@ class SessionStartedPayload {
     required this.permissionMode,
     required this.claudeSessionId,
     this.resumedFrom,
+    this.effort,
+    this.outputStyle,
+    this.defaultsFrom,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -2807,6 +3006,9 @@ class SessionStartedPayload {
         permissionMode: json['permissionMode']! as String,
         claudeSessionId: json['claudeSessionId']! as String,
         resumedFrom: json['resumedFrom'] as String?,
+        effort: json['effort'] as String?,
+        outputStyle: json['outputStyle'] as String?,
+        defaultsFrom: json['defaultsFrom'] as String?,
       );
 
   final String sessionId;
@@ -2825,6 +3027,15 @@ class SessionStartedPayload {
   /// The conversation this session continues, when it is a resume. Absent for a fresh session. The history before the first turn of this session is read from it, over HTTP — the replay buffer only ever holds what this session said.
   final String? resumedFrom;
 
+  /// How hard the model thinks for the life of the session, when one was chosen — by the client, a folder's default or the user's. Absent for the model's own default.
+  final String? effort;
+
+  /// The output style the session was opened with, when a default chose one. Absent for the installation's.
+  final String? outputStyle;
+
+  /// Where the model the session runs with came from: what the client sent in `session.start`, the default of the nearest folder, the user's default, or the installation's — a default that went stale falls back to it (plan 13, B-15).
+  final String? defaultsFrom;
+
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
@@ -2839,8 +3050,29 @@ class SessionStartedPayload {
       json['resumedFrom'] = resumedFrom;
     }
 
+    if (effort != null) {
+      json['effort'] = effort;
+    }
+
+    if (outputStyle != null) {
+      json['outputStyle'] = outputStyle;
+    }
+
+    if (defaultsFrom != null) {
+      json['defaultsFrom'] = defaultsFrom;
+    }
+
     return json;
   }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionStartedPayload].
+bool sessionStartedPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['outputStyle'] is String && (json['outputStyle']! as String).length > 128) {
+    return false;
+  }
+
+  return true;
 }
 
 /// Where the session stands. Derived by us, not read off a single SDK message.

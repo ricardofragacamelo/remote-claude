@@ -107,6 +107,59 @@ describe('SessionRunner', () => {
     harness = runner();
   });
 
+  describe('a call under a wider mode than the session — plan 13, D-23', () => {
+    /** The audit hook the runner registered, called the way the CLI calls it. */
+    const auditHook = (input: Record<string, unknown>): Promise<unknown> => {
+      const hook = harness.record.options?.hooks?.PreToolUse?.[0]?.hooks[0];
+      if (hook === undefined) throw new Error('no audit hook');
+      return hook(input as never, 'toolu_1', { signal: new AbortController().signal });
+    };
+    const write = { tool_name: 'Write', tool_input: { file_path: '/srv/projects/app/a.txt' } };
+
+    it("asks the person for a subagent's write under its own acceptEdits, recorded first", async () => {
+      harness.runner.run();
+
+      const answer = await auditHook({
+        ...write,
+        permission_mode: 'acceptEdits',
+        agent_type: 'writer',
+      });
+
+      expect(answer).toEqual({
+        hookSpecificOutput: expect.objectContaining({
+          hookEventName: 'PreToolUse',
+          permissionDecision: 'ask',
+        }) as unknown,
+      });
+      expect(harness.recorded.map((call) => call.toolName)).toEqual(['Write']);
+      expect(harness.log.lines.some((line) => line['callMode'] === 'acceptEdits')).toBe(true);
+    });
+
+    it('lets a call in the session’s own mode, or a narrower one, through', async () => {
+      harness.runner.run();
+
+      await expect(auditHook({ ...write, permission_mode: 'default' })).resolves.toEqual({
+        continue: true,
+      });
+      await expect(auditHook({ ...write, permission_mode: 'plan' })).resolves.toEqual({
+        continue: true,
+      });
+      await expect(auditHook(write)).resolves.toEqual({ continue: true });
+    });
+
+    it('compares with the mode the session was switched to, not the one it opened with', async () => {
+      harness.runner.run();
+      await harness.runner.setPermissionMode('acceptEdits');
+
+      await expect(auditHook({ ...write, permission_mode: 'acceptEdits' })).resolves.toEqual({
+        continue: true,
+      });
+      await expect(auditHook({ ...write, permission_mode: 'bypassPermissions' })).resolves.toEqual({
+        hookSpecificOutput: expect.objectContaining({ permissionDecision: 'ask' }) as unknown,
+      });
+    });
+  });
+
   describe('the options it opens with', () => {
     it("states `settingSources: ['project']` at the call site", () => {
       // Omitting it loads the user scope and its personal `allow` rules, which skip `canUseTool`

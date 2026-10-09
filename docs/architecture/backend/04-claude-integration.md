@@ -87,6 +87,12 @@ O `for await` **é** a fonte do stream. Ele roda pela vida inteira da sessão.
   ...conversationOptions(session.conversation),  // sessionId · resume · forkSession — ver Retomada
   persistSession: true,                   // mantém o JSONL, compartilhado com o VSCode
   enableFileCheckpointing: true,          // o /rewind do usuário no editor, não o nosso desfazer
+  strictMcpConfig: true,                  // ← só os servidores que o backend compõe (ADR-018)
+  mcpServers: {},                         // ← vazio: os nossos chegam por setMcpServers(), nunca pelo argv
+  settings: flagSettings({ outputStyle }),// ← montador com allowlist; sempre disableSkillShellExecution
+  plugins: [...],                         // ← só local, sempre skipMcpDiscovery: true
+  skills,                                 // ← omitido quando nada está desligado (plano 13 · B-34)
+  effort, fallbackModel,                  // ← os padrões do usuário e da pasta (plano 13 · B-15)
   abortController,
 }
 ```
@@ -102,6 +108,12 @@ Decisões tomadas:
 | `permissionMode` | o da sessão, menos `allowAll`, que chega como `default` | o Permitir tudo é nosso: o `canUseTool` continua sendo chamado ([ADR-022](../shared/00-decisions.md#adr-022--permitir-tudo-é-um-modo-nosso-não-o-bypasspermissions-do-sdk)) |
 | `settingSources` | **`['project']`, sempre** | ver [A armadilha do `settingSources`](#a-armadilha-do-settingsources) |
 | `pathToClaudeCodeExecutable` | binário do SDK | versões casadas; atualiza pelo npm junto com o SDK |
+| `strictMcpConfig` | **`true`, sempre** | sem ele, o `.mcp.json` que o próprio repositório auto-aprova e os conectores claude.ai da conta sobem — medido ([ADR-018](../shared/00-decisions.md#adr-018--extensões-do-claude-só-entram-pelo-produto)) |
+| `mcpServers` | **`{}`, sempre** | o que vai aqui vira `--mcp-config` no argv, legível em `/proc`; os servidores da sessão chegam por `setMcpServers()` logo depois do início, e o primeiro prompt espera por ele |
+| `settings` | só pelo montador `flagSettings` | a camada de flag fica acima de user/project e aceita `permissions`; a allowlist é `outputStyle` e `disableSkillShellExecution`, esta sempre ligada |
+| `managedSettings` · `applyFlagSettings` · `updateSettings` | **nunca** | o primeiro não desliga o shell inline (medido); o segundo reinicia a query e perde os hooks (§10.3); o terceiro escreve arquivo de settings do usuário |
+| `plugins` | só `local`, com `skipMcpDiscovery: true` | os de marketplace são baixados pelo backend; o das skills do usuário é sintético |
+| `effort` · `thinking` · `fallbackModel` | dos padrões efetivos, ou ausentes | `fallbackModel` igual ao modelo principal é erro do SDK — o domínio recusa antes |
 
 `allowDangerouslySkipPermissions` nunca vira configurável. Um flag assim acaba ligado.
 
@@ -163,6 +175,21 @@ Três consequências, e nenhuma delas é opcional:
    como `allowedTools: ['Write']` auto-aprova a tool antes do callback, e o próprio SDK avisa
    (`CLAUDE_SDK_CAN_USE_TOOL_SHADOWED`). A fábrica de opções não pode usar nomes simples ali.
 
+### O que o projeto ainda injeta, com a confiança limpa — medido
+
+Medido em 2026-10-09 ([descoberta §11](../../discovery/01-descoberta-claude-agent-sdk.md#11--quinta-rodada-de-spikes-2026-10-09),
+plano 13 · B-01), com `settingSources: ['project']` e a marca de confiança limpa:
+
+| O projeto declara | Nas nossas sessões |
+|---|---|
+| hook em `.claude/settings.json` | **roda**, sem aprovação, em todo evento que casa — a tela de projeto diz isso (R-03 do plano 13) |
+| `CLAUDE.local.md`, `.claude/settings.local.json` | **não** carregam (a fonte `local` está fora) |
+| subagent com `permissionMode: acceptEdits` | escreveria sem o `canUseTool`; o `PreToolUse` da trilha responde `ask` para a chamada cujo modo é mais largo que o da sessão, e ela volta a perguntar ([13 · D-23](../../plans/13-claude-settings/decisions.md#d-23--modo-próprio-de-subagent-volta-a-perguntar)) |
+| `mcpServers` em frontmatter de subagent, `.mcp.json`, `enableAllProjectMcpServers` | nada sobe: `strictMcpConfig` |
+| `enabledPlugins` | nada carrega: o plugin só entra pela opção `plugins` |
+| bloco `!` em comando ou skill com `allowed-tools` | rodaria na expansão sem `canUseTool` nem `PreToolUse`; desligado pela flag `disableSkillShellExecution` |
+| `allow` em `permissions` | sem efeito (confiança limpa); `deny` aplicado |
+
 > Existe uma regra própria que reprova `query()` sem `settingSources: ['project']` e sem o hook
 > `PreToolUse`. Ver [qualidade](../shared/09-code-quality.md#segurança-estática).
 >
@@ -177,6 +204,20 @@ Três consequências, e nenhuma delas é opcional:
 > subprocesso sem passar por ela. Uma verifica, a outra impede.
 
 ---
+
+### A `query()` que só pergunta — sonda e teste de conexão
+
+Duas `query()` do backend não são sessão de ninguém (plano 13): a **sonda da instalação**, que nunca
+cede prompt e faz uma pergunta — `initializationResult()` (comandos, agents, modelos, output styles e
+conta de uma vez) — e o **teste de conexão**, um turno com prompt fixo mínimo. As duas passam por
+`openEphemeralQuery` (`adapter/outbound/claude/ephemeral-query.ts`), que as abre com tudo o que uma
+sessão tem — `settingSources: ['project']`, `PreToolUse`, `canUseTool`, `strictMcpConfig: true` com
+`mcpServers: {}`, a camada de flag do montador, o ambiente sem a configuração do backend, a marca de
+confiança limpa — e mais estreitas: hook e callback negam tudo, `tools: []`, `persistSession: false`.
+Cada uma ocupa um lugar da capacidade enquanto vive e é fechada no `finally`; a sonda tem o prazo dos
+comandos (`COMMANDS_TIMEOUT_MS`), o teste o seu (`MODEL_CHECK_TIMEOUT_MS`) e o teto de custo
+`RC_MODEL_CHECK_MAX_BUDGET_USD`. Com sessão viva do chamador na pasta, o catálogo pergunta a ela em
+vez de abrir sonda (`initialization()` do handle).
 
 ## A ponte de permissão
 

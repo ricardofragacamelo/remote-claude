@@ -691,7 +691,8 @@
       "devices": "Dispositivos",
       "diagnostics": "Logs e diagnóstico",
       "settings": "Configurações",
-      "about": "Sobre"
+      "about": "Sobre",
+      "claude": "Configuração do Claude"
     },
     "menu": {
       "open": "Abrir o menu",
@@ -943,7 +944,9 @@
       "previousConversation": "Claude: Conversa anterior",
       "cycleMode": "Claude: trocar o modo da conversa",
       "goToRequest": "Claude: Ir para a pergunta que espera você ({{count}})",
-      "goToRequestNone": "Claude: Ir para a pergunta que espera você — nada espera"
+      "goToRequestNone": "Claude: Ir para a pergunta que espera você — nada espera",
+      "defaultModel": "Claude: trocar o modelo padrão",
+      "testConnection": "Claude: testar a conexão com o modelo"
     }
   },
   "palette": {
@@ -1081,6 +1084,9 @@
       "default": "Padrão: {{value}}",
       "restore": "Restaurar padrão",
       "restoreLabel": "Restaurar o padrão de {{option}}"
+    },
+    "links": {
+      "claude": "Como o Claude trabalha — modelos, padrões, servidores MCP, plugins, skills — fica na Configuração do Claude."
     }
   },
   "about": {
@@ -2368,6 +2374,149 @@
     },
     "refusal": {
       "close": "Fechar esta mensagem"
+    }
+  },
+  "claudeConfig": {
+    "error": {
+      "mcpServerNotFound": "Esse servidor MCP não existe, ou esta sessão não o tem.",
+      "mcpServerNameTaken": "Você já tem um servidor MCP chamado {{name}} aqui. Escolha outro nome.",
+      "mcpServerConfigInvalid": "Essa configuração de servidor MCP não pode ser usada: confira o campo {{field}} e tente de novo.",
+      "mcpApprovalStale": "O .mcp.json desta pasta mudou desde que foi mostrado. Veja a entrada {{name}} de novo antes de aprovar.",
+      "modelNotAvailable": "Esta instalação não oferece o modelo {{model}}. Atualize a lista de modelos e escolha um deles.",
+      "defaultModeNotAllowed": "{{mode}} desliga a aprovação, por isso nunca pode ser padrão.",
+      "pluginNotFound": "Esse plugin não existe.",
+      "pluginPathInvalid": "Isso não é um plugin que este produto consiga carregar ({{reason}}).",
+      "pluginMarketplaceNotAllowed": "O marketplace {{marketplace}} não está declarado no arquivo de allowlist desta máquina, então nada é instalado dele.",
+      "pluginSourceUnavailable": "A fonte do marketplace {{marketplace}} não respondeu. Nada foi instalado; tente de novo mais tarde.",
+      "forbidden": "Isso é de outra pessoa.",
+      "secretStoreUnavailable": "Esta máquina não tem o arquivo de chave dos segredos de MCP, então um servidor com segredo não pode ser gravado. Os servidores sem segredo continuam funcionando.",
+      "effortUnsupported": "O modelo {{model}} não aceita o nível de esforço {{level}}. Escolha um que ele oferece, ou nenhum.",
+      "fallbackSameAsModel": "O modelo reserva precisa ser outro que não {{model}}.",
+      "skillNameInvalid": "O nome de uma skill usa só letras minúsculas, dígitos e hífen, até 64 caracteres."
+    }
+  },
+  "claudeSettings": {
+    "screen": {
+      "title": "Configuração do Claude",
+      "purpose": "Como o Claude trabalha nesta máquina: a conta, modelos e padrões, servidores MCP, plugins, skills e o que um projeto traz."
+    },
+    "help": {
+      "what": "Tudo aqui muda como o Claude roda as suas sessões nesta máquina. A conta e a instalação dizem para quem o Claude cobra e qual versão roda. Os padrões escolhem o modelo e o modo com que uma sessão nova começa — para você, ou para uma pasta e as subpastas dela. Servidores MCP e plugins são programas que sobem com a sessão e rodam com as suas credenciais, por isso cada um entra por um segundo passo que diz, por extenso, o que ele roda. A seção Projeto mostra o que um repositório traz ao Claude: memória, slash commands, skills, subagents, output styles, hooks e permissões.",
+      "states": "Cada seção carrega por conta própria: enquanto carrega, mantém o lugar; se a instalação não responde, diz por quê e oferece tentar de novo; e uma seção vazia diz como preenchê-la. Mudar um servidor ou um padrão vale para a próxima sessão; remover ou desligar um servidor vale já, nas sessões abertas.",
+      "notRecorded": "Valores de segredo — as variáveis de ambiente e os cabeçalhos de um servidor MCP — nunca são mostrados, devolvidos nem gravados na trilha: só os nomes. A trilha registra toda mudança que amplia o que roda nesta máquina, antes de ela valer.",
+      "accountHeading": "A conta",
+      "accountBody": "Toda sessão de toda pessoa nesta máquina gasta a mesma conta do Claude — a que o CLI da máquina logou. A tela mostra o provedor, o plano, a organização e o e-mail, e da origem da credencial só o nome, nunca um token.",
+      "checkHeading": "O teste de conexão",
+      "checkBody": "Um turno do modelo com uma frase fixa e nenhuma tool: diz se o Claude responde aqui, quanto demorou e quanto custou. É a única coisa desta tela que gasta cota, e só roda quando você clica.",
+      "modelHeading": "Modelos",
+      "modelBody": "O modelo é quem responde na sessão. A lista vem da própria instalação e muda com a versão e o plano dela. O modelo reserva é usado quando o principal está sobrecarregado.",
+      "modesHeading": "Modos de permissão",
+      "modesBody": "Perguntar antes de toda tool que precise — o padrão seguro. Editar arquivos sem perguntar — o Claude escreve e edita arquivos da pasta sem ninguém aprovar cada mudança. Só planejar — o Claude lê e propõe, e não muda nada. Permitir tudo que nenhuma regra recuse — toda tool roda a menos que uma regra sua a recuse, e as perguntas continuam vindo para você. Ignorar as permissões nunca pode ser padrão: desligaria a aprovação de toda sessão que começasse.",
+      "effortHeading": "Esforço",
+      "effortBody": "O quanto o modelo pensa antes de responder. Mais esforço custa mais e demora mais; só alguns modelos aceitam, cada um com os seus níveis.",
+      "thinkingHeading": "Thinking",
+      "thinkingBody": "Se o modelo raciocina passo a passo antes de responder, mostrado dobrado na sessão. Desligado é mais rápido e mais barato.",
+      "outputStyleHeading": "Output style",
+      "outputStyleBody": "Como o Claude escreve as respostas — conciso, explicativo, um estilo do projeto. Um estilo que não existe mais cai no da instalação."
+    },
+    "sections": {
+      "label": "Seções da configuração do Claude"
+    },
+    "account": {
+      "title": "Conta",
+      "purpose": "Para quem o Claude cobra nesta máquina, e como entrou.",
+      "refresh": "Ler a conta de novo",
+      "loading": "Lendo a conta da instalação",
+      "loginRequiredTitle": "O Claude não está logado nesta máquina",
+      "loginRequiredBody": "Este produto usa o login do Claude instalado na máquina e nunca loga ninguém remotamente. Na máquina, rode `claude`, digite `/login` e siga os passos; depois leia a conta de novo aqui.",
+      "provider": "Provedor",
+      "plan": "Plano",
+      "organization": "Organização",
+      "email": "E-mail",
+      "tokenSource": "De onde vem o token",
+      "apiKeySource": "De onde vem a chave de API",
+      "notSaid": "não informado"
+    },
+    "installation": {
+      "title": "Instalação",
+      "purpose": "Qual Claude roda aqui, e por que ele pode não funcionar.",
+      "notInstalled": "não instalado",
+      "unreadable": "não pôde ser lido",
+      "loading": "Lendo a instalação",
+      "checkOk": "O modelo respondeu.",
+      "checkNotLoggedIn": "O Claude não está logado nesta máquina: rode `claude` e `/login` nela.",
+      "checkRateLimited": "O plano desta conta chegou ao limite de uso: espere e tente de novo.",
+      "checkFailed": "O modelo não respondeu como esperado.",
+      "loginReady": "logado",
+      "loginRequired": "não logado",
+      "loginUnknown": "ainda não se sabe — abra a seção Conta ou teste a conexão",
+      "agentSdk": "Agent SDK",
+      "bundledCli": "Claude que o produto roda",
+      "pathCli": "claude no PATH",
+      "pathCliDiffers": "Difere do que o produto roda: o terminal e este produto rodam versões diferentes.",
+      "configDir": "Diretório de configuração",
+      "configDirFromEnvironment": "definido por CLAUDE_CONFIG_DIR",
+      "configDirDefault": "o padrão — CLAUDE_CONFIG_DIR não está definido",
+      "login": "Login",
+      "checkTitle": "Testar a conexão com o modelo",
+      "checkCost": "O teste manda uma frase fixa ao modelo e espera uma palavra de volta: gasta um pouco da cota desta conta, e não é registrado como sessão.",
+      "check": "Testar a conexão",
+      "checking": "Testando…",
+      "checkDetails": "Modelo: {{model}} · {{latency}} ms · US$ {{cost}}"
+    },
+    "models": {
+      "title": "Modelos e padrões",
+      "purpose": "O modelo e o modo com que uma sessão nova começa — para você, ou para uma pasta.",
+      "model": "Modelo",
+      "permissionMode": "Modo de permissão",
+      "effort": "Esforço",
+      "thinking": "Thinking",
+      "outputStyle": "Output style",
+      "fallbackModel": "Modelo reserva",
+      "modeDefault": "Perguntar antes de toda tool que precise",
+      "modeAcceptEdits": "Editar arquivos sem perguntar",
+      "modePlan": "Só planejar, sem mudar nada",
+      "modeAllowAll": "Permitir tudo que nenhuma regra recuse",
+      "effortLow": "Baixo",
+      "effortMedium": "Médio",
+      "effortHigh": "Alto",
+      "effortXhigh": "Muito alto",
+      "effortMax": "Máximo",
+      "thinkingOn": "Ligado",
+      "thinkingOff": "Desligado",
+      "fromFolder": "Em vigor: {{value}} — do padrão de {{folder}}",
+      "fromUser": "Em vigor: {{value}} — do seu padrão",
+      "fromInstallation": "Em vigor: o da própria instalação",
+      "installationDefault": "O padrão da instalação",
+      "effortRefused": "Este modelo não aceita esse nível de esforço. Escolha um que ele oferece, ou o padrão da instalação.",
+      "noFallback": "Sem reserva",
+      "save": "Salvar",
+      "clearFolder": "Usar o meu padrão nesta pasta",
+      "loading": "Lendo os padrões",
+      "noModelsTitle": "Nenhum modelo para escolher",
+      "noModelsBody": "A instalação não listou modelos, ou a lista não pôde ser lida. Só o padrão da instalação pode ser escolhido: uma sessão nova abre com o modelo do CLI. Tente de novo depois de atualizar o CLI ou entrar nele.",
+      "forUser": "O seu padrão — todas as pastas",
+      "forFolder": "O padrão de {{folder}} e das subpastas"
+    },
+    "mcp": {
+      "title": "Servidores MCP",
+      "purpose": "Os programas e endereços que dão mais tools ao Claude — cada um aprovado por você."
+    },
+    "plugins": {
+      "title": "Plugins",
+      "purpose": "Pacotes de comandos, agents, skills e hooks, de uma pasta ou de um marketplace declarado."
+    },
+    "skills": {
+      "title": "Skills",
+      "purpose": "As skills do projeto, as suas e as do sistema — ligadas ou não, para você ou para uma pasta."
+    },
+    "project": {
+      "title": "Projeto",
+      "purpose": "O que um repositório traz ao Claude, e o que disso vale aqui."
+    },
+    "folder": {
+      "label": "Pasta",
+      "none": "Nenhuma — só os meus padrões"
     }
   }
 }

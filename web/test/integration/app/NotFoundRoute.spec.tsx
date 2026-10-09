@@ -47,8 +47,9 @@ describe('an address nobody answers — plan 06, S-07', () => {
       .getAllByRole('link')
       .map((link) => link.getAttribute('href'));
 
+    // Plan 13 took `/claude-settings`; `/usage…` is still plan 16's, and nothing links to it.
     expect(
-      hrefs.filter((href) => href?.startsWith('/claude') || href?.startsWith('/usage')),
+      hrefs.filter((href) => href?.startsWith('/claude/') || href?.startsWith('/usage')),
     ).toEqual([]);
     expect(await axe(container)).toHaveNoViolations();
   });

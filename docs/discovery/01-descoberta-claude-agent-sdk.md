@@ -831,16 +831,60 @@ as carrega pelo `ToolSearch` antes da primeira chamada. Nenhuma passa pelo `canU
 
 ---
 
+## 11 — Quinta rodada de spikes (2026-10-09)
+
+Feita para a F0 do [plano 13](../plans/13-claude-settings/F0-contract.md) — a B-01, as medições de que
+dependem as decisões D-01, D-02, D-05, D-06, D-11, D-13, D-17, D-20, D-21 e D-22. Contra o Claude real,
+sobre um `CLAUDE_CONFIG_DIR` isolado com a credencial **copiada** (o `~/.claude` de quem roda não é
+tocado), num repositório gerado por execução e com o servidor MCP de fixture nosso
+(`e2e/fixtures/mcp-server/fixture-mcp-server.mjs`, [13 · D-19](../plans/13-claude-settings/decisions.md#d-19--servidor-mcp-de-fixture)).
+CLI **2.1.277**, SDK **0.3.277**, turnos em `haiku`. Toda sessão com `settingSources: ['project']`, o
+`PreToolUse` e o `canUseTool`, como o produto.
+
+| # | Pergunta | Medido | Decide |
+|---|---|---|---|
+| 1 | o que sobe com `strictMcpConfig: true` | só o passado em `mcpServers` (`source: dynamic`). Nenhum servidor do `.mcp.json` — nem com `enableAllProjectMcpServers: true` e `enabledMcpjsonServers` no `.claude/settings.json` —, de plugin, de frontmatter de subagent, nem os **conectores claude.ai** da conta subiram, e nenhum processo deles nasceu. **Sem** o strict, no mesmo repositório: o `projectsrv` do `.mcp.json` subiu aprovado pelo próprio repositório, e 19 conectores claude.ai (um `connected`, 18 `needs-auth`) | D-01: o strict isola, inclusive dos conectores; o repositório **se auto-aprova** sem ele |
+| 2 | tool MCP e aprovação | as três tools MCP chamadas — inclusive a que se declara `readOnly` — dispararam o `PreToolUse` **e** o `canUseTool`, em `default` e em `acceptEdits`. O `ToolSearch` que as carrega (são deferidas) só o hook | D-13: nada de tool MCP é auto-aprovado pelo CLI |
+| 3 | o segredo | pelo `mcpServers` do `query()`, o valor **está** em `/proc/<pid>/cmdline` (`--mcp-config`). Por `setMcpServers()` logo depois do início: fora do argv, **512 ms**, o servidor `connected` com as 4 tools na resposta, e o primeiro turno chamou a tool e recebeu o segredo. `${VAR}` é expandido pelo caminho do argv, contra o ambiente do CLI; pelo `setMcpServers()` **não** — chega literal | D-02: entrega por `setMcpServers()`; a expansão de `${VAR}` é nossa |
+| 4 | custo da sonda | `initializationResult()` sem prompt: **~0,3–1,3 s**, **~230–240 MB** de RSS, 1 processo, **0** mensagens no stream, 0 servidores MCP. Responde 52 comandos, 5 agents, 5 modelos (`default`, `opus[1m]`, `claude-fable-5-1`, `sonnet`, `haiku`), o estilo atual e 5 disponíveis, e a conta com `apiProvider`, `email` e `subscriptionType` (sem `organization` nesta conta) | D-05 |
+| 5 | o que o projeto injeta com a confiança limpa | o hook `PreToolUse` do `.claude/settings.json` **roda** nas nossas sessões, sem ninguém aprovar. `CLAUDE.local.md`, `.claude/settings.local.json` (e o hook dele) e o `CLAUDE.md` do usuário **não** são carregados. O subagent de projeto com `permissionMode: acceptEdits` **escreveu sem o `canUseTool`** — o `PreToolUse` viu a escrita com `permission_mode: 'acceptEdits'` e `agent_type: 'writer'`. Com o hook respondendo `permissionDecision: 'ask'` para um modo mais largo que o da sessão, a escrita **voltou ao `canUseTool`** (e, negada, não aconteceu). `mcpServers` de frontmatter não subiu com o strict | D-17, R-03, D-23 |
+| 6 | herança de ambiente | o servidor stdio enxerga **todo** o ambiente do CLI — inclusive um `DATABASE_URL` e um `RC_*` postos nele | B-20: o filtro do subprocesso protege o servidor também |
+| 7 | shell inline (`!`) | sem `allowed-tools` no frontmatter, o bloco não roda. **Com** `allowed-tools: Bash(touch:*)`, roda na expansão — do `/comando` digitado e do `Skill` de projeto e de plugin — **sem `canUseTool` e sem `PreToolUse`**. `managedSettings: { disableSkillShellExecution: true }` **não** o impede; `settings: { disableSkillShellExecution: true }` (camada de flag) impede as três origens. O `Skill` em si passa pelo `canUseTool` | D-21, D-24 |
+| 8 | skills | com `['project']`, nem as skills de `~/.claude/skills`, nem as sincronizadas do claude.ai (`skills/synced`), nem as de um plugin que o CLI instalou (habilitado no `settings.json` do usuário **e** no do projeto) carregam. Um plugin local sintético com links para as pastas de skill as traz como `rc-user-skills:<nome>` — inclusive a que declara `hooks:` no frontmatter, que então cabe a nós recusar. `reloadSkills()` devolve as skills **e** os comandos de prompt (os de `.claude/commands/` e builtins como `init`): 15–17 itens contra 52 de `supportedCommands()`. Com a `allow` de `Write` no `settings.json` do usuário e o plugin sintético ligado, o `canUseTool` **foi** chamado e nada foi escrito | D-20, D-22, B-34 |
+| 9 | camada de flag no início | `settings: { outputStyle: 'Explanatory' }` no `query()`: o `initializationResult()` responde o estilo, e o `PreToolUse` continua disparando — o problema do §10.3 é do `applyFlagSettings` no meio da sessão, não da opção | D-06, B-15 |
+| 10 | de onde o CLI lê o `.mcp.json` | aberto numa subpasta de um repositório (`.git` na raiz), o CLI subiu o servidor do `.mcp.json` da **raiz** | D-11: a tela lê da pasta até a raiz do repositório |
+
+**Consequências para o produto**, todas registradas nas decisões do plano 13 e na
+[ADR-018](../architecture/shared/00-decisions.md#adr-018--extensões-do-claude-só-entram-pelo-produto):
+
+- a sessão leva `strictMcpConfig: true` e nada mais de MCP no `query()`; os nossos servidores chegam por
+  `setMcpServers()` depois do início, e `${VAR}` é expandido pelo backend, no ambiente já sem os
+  segredos dele;
+- o hook `PreToolUse` da trilha passa a **devolver `ask`** quando a chamada roda num modo mais largo que
+  o da sessão (o `permission_mode` que o hook recebe): o subagent de projeto que pede `acceptEdits`
+  volta a perguntar ([13 · D-23](../plans/13-claude-settings/decisions.md#d-23--modo-próprio-de-subagent-volta-a-perguntar));
+- a sessão leva `settings: { disableSkillShellExecution: true }` pelo montador de flag settings — não
+  `managedSettings`, que não segura ([13 · D-24](../plans/13-claude-settings/decisions.md#d-24--shell-inline-desligado-pela-camada-de-flag));
+- o hook de projeto continua rodando, e a tela diz isso sem eufemismo (R-03 aberto).
+
+### Como reproduzir
+
+`pnpm spike:claude-config` — ou uma sonda pelo nome (`strict`, `approval`, `secret`, `probe`,
+`project`, `shell`, `skills`, `flags`, `locations`), e `--json <arquivo>` para os números crus. Exige o
+Claude logado; as sondas `probe`, `strict` e `locations` não gastam cota.
+
+---
+
 ## Versões verificadas
 
 | Item | Versão |
 |---|---|
-| `@anthropic-ai/claude-agent-sdk` | 0.3.270 na descoberta · **0.3.273** na rodada de 2026-09-16 · **0.3.277** na de 2026-10-01 (CLI embutido 2.1.277) |
+| `@anthropic-ai/claude-agent-sdk` | 0.3.270 na descoberta · **0.3.273** na rodada de 2026-09-16 · **0.3.277** nas de 2026-10-01 e 2026-10-09 (CLI embutido 2.1.277) |
 | Claude Code CLI (PATH) | 2.1.226 — e **2.1.273** na extensão do VSCode: há dois binários na máquina |
 | Node | v24.16.0 |
 | npm | 11.13.0 |
 | Flutter / Dart | presentes em `~/middleware/flutter/flutter/bin` |
-| Data da descoberta | 2026-09-13 · terceira rodada de spikes em 2026-09-16 · quarta em 2026-10-01 |
+| Data da descoberta | 2026-09-13 · terceira rodada de spikes em 2026-09-16 · quarta em 2026-10-01 · quinta em 2026-10-09 |
 
 Fontes: `sdk.d.ts` (9221 linhas) e `README.md` do pacote, inspecionados localmente.
 Doc oficial: <https://platform.claude.com/docs/en/agent-sdk/overview>

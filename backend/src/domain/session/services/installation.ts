@@ -1,5 +1,6 @@
 import { EffortUnsupportedError } from '../errors/effort-unsupported.error';
 import { ForkPointUnknownError } from '../errors/fork-point-unknown.error';
+import type { SlashCommand } from './slash-commands';
 
 /** The levels of effort the SDK knows. */
 export const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
@@ -19,6 +20,38 @@ export interface InstallationModel {
   readonly description: string;
   readonly supportsEffort: boolean;
   readonly supportedEffortLevels: readonly EffortLevel[];
+}
+
+/** The account the CLI is signed in to — never a token, never the path of a credential (plan 13, D-07). */
+export interface InstallationAccount {
+  readonly email: string | null;
+  readonly organization: string | null;
+  readonly plan: string | null;
+  readonly provider: string | null;
+
+  /** The **name** of where the credential comes from, never the credential. */
+  readonly tokenSource: string | null;
+  readonly apiKeySource: string | null;
+}
+
+/** A subagent the installation offers. */
+export interface InstallationAgent {
+  readonly name: string;
+  readonly description: string;
+  readonly model: string | null;
+}
+
+/**
+ * What the installation says about itself in one question — `initializationResult()` (plan 13,
+ * D-05): commands, agents, models, output styles and the account.
+ */
+export interface SessionInitialization {
+  readonly commands: readonly SlashCommand[];
+  readonly agents: readonly InstallationAgent[];
+  readonly models: readonly InstallationModel[];
+  readonly outputStyle: string;
+  readonly outputStyles: readonly string[];
+  readonly account: InstallationAccount;
 }
 
 /**

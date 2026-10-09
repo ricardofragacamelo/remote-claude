@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import type {
+  AccountInfo,
+  AgentInfo,
   McpServerStatus,
+  SDKControlInitializeResponse,
   ModelInfo,
   SDKControlGetContextUsageResponse,
   SDKMessage,
@@ -73,4 +76,19 @@ export function loadInstallation(): InstallationFixture {
   return JSON.parse(
     readFileSync(path.join(DIRECTORY, 'installation.json'), 'utf8'),
   ) as InstallationFixture;
+}
+
+/** What the installation said at initialisation (plan 13, B-10) — the account replaced by an example. */
+export interface InitializationFixture {
+  readonly initialization: SDKControlInitializeResponse;
+  readonly account: AccountInfo;
+  readonly agents: AgentInfo[];
+  readonly skills: SlashCommand[];
+}
+
+/** The recorded initialisation — `pnpm fixtures:record initialization`, which says nothing to the model. */
+export function loadInitialization(): InitializationFixture {
+  return JSON.parse(
+    readFileSync(path.join(DIRECTORY, 'initialization.json'), 'utf8'),
+  ) as InitializationFixture;
 }

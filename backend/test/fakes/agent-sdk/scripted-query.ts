@@ -3,7 +3,13 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { sep } from 'node:path';
 
 import type {
+  AccountInfo,
+  AgentInfo,
   HookCallbackMatcher,
+  McpServerConfig,
+  McpSetServersResult,
+  SDKControlInitializeResponse,
+  SDKControlReloadSkillsResponse,
   McpServerStatus,
   ModelInfo,
   Options,
@@ -15,10 +21,18 @@ import type {
   SlashCommand,
 } from '@anthropic-ai/claude-agent-sdk';
 
-import { loadCommands, loadFixture, loadInstallation } from './fixture';
+import { loadCommands, loadFixture, loadInitialization, loadInstallation } from './fixture';
 import type { AgentSdkFixture, InstallationFixture } from './fixture';
 import { renumber } from './scripted-transcripts';
 import type { ScriptedTranscripts } from './scripted-transcripts';
+
+/** The tools of the fixture MCP server (`e2e/fixtures/mcp-server/`), as a connected server lists them. */
+const FIXTURE_TOOLS: NonNullable<McpServerStatus['tools']> = [
+  { name: 'echo', annotations: {} },
+  { name: 'peek', annotations: { readOnly: true } },
+  { name: 'secret', annotations: {} },
+  { name: 'env_names', annotations: {} },
+];
 
 /** How many scripted runs this process has opened, so each one can name itself. */
 let runs = 0;
@@ -95,6 +109,12 @@ export interface ScriptRecord {
 
   /** How many times each question about the installation was asked. */
   installationCalls: Record<keyof InstallationFixture, number>;
+  /** How many times `initializationResult()` was asked — the probe of plan 13 counts here. */
+  initializationCalls: number;
+  /** Every set of MCP servers handed to `setMcpServers()`, in order — values of secrets included. */
+  readonly mcpSets: Record<string, McpServerConfig>[];
+  /** Every `toggleMcpServer` and `reconnectMcpServer`, in order. */
+  readonly mcpCommands: string[];
   /** The options the runner built, so a test can assert on what was sent to the SDK. */
   options: Options | null;
   /** The modes `setPermissionMode()` was called with, in order — what the SDK was told. */
@@ -137,6 +157,12 @@ export interface ScriptOptions {
 
   /** The MCP servers of the session: none were configured where the installation was recorded. */
   readonly mcpServers?: readonly McpServerStatus[];
+
+  /** What `initializationResult()` answers instead of the recording, field by field (plan 13). */
+  readonly initialization?: Partial<SDKControlInitializeResponse>;
+
+  /** Thrown by `setMcpServers`, `toggleMcpServer` and `reconnectMcpServer`. */
+  readonly mcpFails?: Error;
 
   /** A failure for the three questions about the installation — or a CLI that never answers them. */
   readonly installationFails?: Error | 'hang';
@@ -961,8 +987,74 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
   mcpServerStatus(): Promise<McpServerStatus[]> {
     return this.installation('mcpServers', () => [
       ...(this.script.mcpServers ?? loadInstallation().mcpServers),
+      ...this.dynamic.values(),
     ]);
   }
+
+  /**
+   * The initialisation, as recorded (`initialization.json`) — or as the script says. Answered with
+   * no prompt, like every control request.
+   */
+  initializationResult(): Promise<SDKControlInitializeResponse> {
+    this.record.initializationCalls += 1;
+    const failure = this.script.installationFails;
+    if (failure === 'hang') return new Promise(() => undefined);
+    if (failure instanceof Error) return Promise.reject(failure);
+
+    return Promise.resolve({
+      ...loadInitialization().initialization,
+      ...this.script.initialization,
+    });
+  }
+
+  accountInfo(): Promise<AccountInfo> {
+    return Promise.resolve(loadInitialization().account);
+  }
+
+  supportedAgents(): Promise<AgentInfo[]> {
+    return Promise.resolve([...loadInitialization().agents]);
+  }
+
+  reloadSkills(): Promise<SDKControlReloadSkillsResponse> {
+    return Promise.resolve({ skills: [...loadInitialization().skills] });
+  }
+
+  /** The servers handed over after the start: each comes up connected with the fixture's tools. */
+  setMcpServers(servers: Record<string, McpServerConfig>): Promise<McpSetServersResult> {
+    if (this.script.mcpFails !== undefined) return Promise.reject(this.script.mcpFails);
+    this.record.mcpSets.push(servers);
+    this.dynamic = new Map(
+      Object.keys(servers).map((name) => [
+        name,
+        { name, status: 'connected', source: 'dynamic', tools: FIXTURE_TOOLS },
+      ]),
+    );
+    return Promise.resolve({ added: Object.keys(servers), removed: [], errors: {} });
+  }
+
+  toggleMcpServer(name: string, enabled: boolean): Promise<void> {
+    return this.mcpCommand(
+      `toggle ${name} ${String(enabled)}`,
+      name,
+      enabled ? 'connected' : 'disabled',
+    );
+  }
+
+  reconnectMcpServer(name: string): Promise<void> {
+    return this.mcpCommand(`reconnect ${name}`, name, 'connected');
+  }
+
+  private mcpCommand(what: string, name: string, status: McpServerStatus['status']): Promise<void> {
+    if (this.script.mcpFails !== undefined) return Promise.reject(this.script.mcpFails);
+    const server = this.dynamic.get(name);
+    if (server === undefined) return Promise.reject(new Error(`no MCP server named ${name}`));
+    this.record.mcpCommands.push(what);
+    this.dynamic.set(name, { ...server, status });
+    return Promise.resolve();
+  }
+
+  /** The servers `setMcpServers` brought up, as `mcpServerStatus()` lists them. */
+  private dynamic = new Map<string, McpServerStatus>();
 
   /** One answer about the installation, or the failure the script asks for. */
   private installation<T>(what: keyof InstallationFixture, answer: () => T): Promise<T> {
@@ -1005,6 +1097,9 @@ export function scriptedSdk(script: ScriptOptions = {}): {
     closes: 0,
     commandCalls: 0,
     installationCalls: { models: 0, mcpServers: 0, contextUsage: 0 },
+    initializationCalls: 0,
+    mcpSets: [],
+    mcpCommands: [],
     options: null,
     modes: [],
   };

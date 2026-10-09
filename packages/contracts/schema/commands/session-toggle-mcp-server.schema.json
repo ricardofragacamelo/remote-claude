@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-toggle-mcp-server.json",
+  "title": "SessionToggleMcpServer",
+  "description": "Switches one MCP server of a running session on or off. Only the owner of the session may, and only a server the session has. The ack comes before the effect; the result arrives as `session.mcpStatusChanged`, with the session's `seq` — and none when nothing changed.",
+  "x-kind": "command",
+  "x-type": "session.toggleMcpServer",
+  "type": "object",
+  "required": ["sessionId", "name", "enabled"],
+  "properties": {
+    "sessionId": { "type": "string" },
+    "name": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "The server's name, as `session.mcpStatusChanged` gave it."
+    },
+    "enabled": { "type": "boolean" }
+  }
+}

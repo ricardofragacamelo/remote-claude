@@ -21,6 +21,7 @@ export const FRAME_TYPES = [
   'session.detach',
   'session.interrupt',
   'session.prompt',
+  'session.reconnectMcpServer',
   'session.rejectChange',
   'session.restoreChange',
   'session.rewindFiles',
@@ -28,6 +29,7 @@ export const FRAME_TYPES = [
   'session.setModel',
   'session.setPermissionMode',
   'session.start',
+  'session.toggleMcpServer',
   'transcript.follow',
   'transcript.unfollow',
   'workspace.unwatch',
@@ -43,6 +45,7 @@ export const FRAME_TYPES = [
   'prompt.queued',
   'session.closed',
   'session.compacted',
+  'session.mcpStatusChanged',
   'session.rewound',
   'session.started',
   'session.statusChanged',
@@ -299,6 +302,13 @@ export interface SessionPromptPayload {
   readonly attachments?: readonly SessionPromptPayloadAttachmentsItem[];
 }
 
+/** Reconnects one MCP server of a running session — the way back from `failed`. Only the owner of the session may, and only a server the session has. The result arrives as `session.mcpStatusChanged`. */
+export interface SessionReconnectMcpServerPayload {
+  readonly sessionId: string;
+  /** The server's name, as `session.mcpStatusChanged` gave it. */
+  readonly name: string;
+}
+
 /** Puts one hunk of what a session changed in a file back the way it was before the session. Only while the disk still has what the session left — otherwise the file is `modifiedOutside` and is rejected whole, preserving it, by `session.rewindFiles` with `paths`. The outcome arrives as `session.rewound`, with `hunkId`. A `revision` that is no longer the disk's is `SESSION_CHANGE_STALE`; the same locks as an undo apply (`SESSION_LOCKED`). */
 export interface SessionRejectChangePayload {
   readonly sessionId: string;
@@ -360,6 +370,14 @@ export interface SessionStartPayload {
   readonly resumeSessionId?: string;
   /** Edit and resend: the `messageId` of the user prompt to rewrite. The conversation `resumeSessionId` names continues from **just before** it, always in a new id — the original stays as it was (plan 08, D-19). A point the conversation does not have is `INVALID_INPUT` (`session.error.forkPointUnknown`); one the CLI refuses is `SESSION_FORK_REJECTED`. */
   readonly forkAt?: string;
+}
+
+/** Switches one MCP server of a running session on or off. Only the owner of the session may, and only a server the session has. The ack comes before the effect; the result arrives as `session.mcpStatusChanged`, with the session's `seq` — and none when nothing changed. */
+export interface SessionToggleMcpServerPayload {
+  readonly sessionId: string;
+  /** The server's name, as `session.mcpStatusChanged` gave it. */
+  readonly name: string;
+  readonly enabled: boolean;
 }
 
 /** Starts following a conversation of the history that this backend does not run — begun in the editor or the terminal, and maybe still being written there. Answered with `transcript.following`, which names the subscription; what the transcript gains then arrives as `transcript.appended`, with a `seq` of its own that starts at 1. The first `transcript.appended` carries **everything** after `afterMessageId`, even what was written between the page the client read and this command, so there is no hole between the two. There is **no replay**: after a reconnect the client follows again with the last `lastMessageId` it has. Refused with `INVALID_INPUT` (every invalid field in `details[]`), `NOT_FOUND` for a conversation that does not exist **or** that the caller does not read — the same answer on purpose —, `TRANSCRIPT_FOLLOW_LIVE_HERE` for a conversation a live session of the caller holds (`session.attach` shows it), and `TRANSCRIPT_FOLLOW_LIMIT` past the ceiling of the connection or of the server. */
@@ -569,6 +587,23 @@ export interface SessionCompactedPayload {
   readonly preTokens?: number;
 }
 
+export interface SessionMcpStatusChangedPayloadServersItem {
+  /** As configured — text a person wrote, to be escaped before display. */
+  readonly name: string;
+  /** `needs-auth` asks for a browser on the machine (OAuth); no OAuth address ever travels through the product. */
+  readonly status: 'connected' | 'failed' | 'needs-auth' | 'pending' | 'disabled';
+  /** Where the definition came from, read off the SDK's `source` and never off the name: `ours` is a server of the store, `project` an approved entry of `.mcp.json` (both reach the CLI as `dynamic`), `plugin` one a plugin brought, `other` anything else — never trusted as ours. */
+  readonly source: 'ours' | 'project' | 'plugin' | 'other';
+  readonly toolCount: number;
+  /** Why it failed, redacted — a URL with a token in it never reaches a client. Absent unless `failed`. */
+  readonly error?: string;
+}
+
+/** The MCP servers of a session and where each one stands — the whole list, every time, so a client never patches. An event of the session, with its `seq`: published once the servers the backend composed have been handed to the CLI, after every `session.toggleMcpServer` or `session.reconnectMcpServer` that changed something, and when a server is switched off because its configuration was removed or switched off (tightening applies at once). A client that does not know it ignores it. */
+export interface SessionMcpStatusChangedPayload {
+  readonly servers: readonly SessionMcpStatusChangedPayloadServersItem[];
+}
+
 export interface SessionRewoundPayloadRevertedItem {
   readonly path: string;
   /** `deleted` for a file the session created: before the turn it was not there. */
@@ -617,6 +652,12 @@ export interface SessionStartedPayload {
   readonly claudeSessionId: string;
   /** The conversation this session continues, when it is a resume. Absent for a fresh session. The history before the first turn of this session is read from it, over HTTP — the replay buffer only ever holds what this session said. */
   readonly resumedFrom?: string;
+  /** How hard the model thinks for the life of the session, when one was chosen — by the client, a folder's default or the user's. Absent for the model's own default. */
+  readonly effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+  /** The output style the session was opened with, when a default chose one. Absent for the installation's. */
+  readonly outputStyle?: string;
+  /** Where the model the session runs with came from: what the client sent in `session.start`, the default of the nearest folder, the user's default, or the installation's — a default that went stale falls back to it (plan 13, B-15). */
+  readonly defaultsFrom?: 'client' | 'folder' | 'user' | 'installation';
 }
 
 /** Where the session stands. Derived by us, not read off a single SDK message. */
@@ -813,9 +854,35 @@ export const SESSION_PROMPT_PAYLOAD_LIMITS = {
   attachments: { maxItems: 20 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link SessionReconnectMcpServerPayload}. */
+export const SESSION_RECONNECT_MCP_SERVER_PAYLOAD_LIMITS = {
+  name: { maxLength: 64 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SessionToggleMcpServerPayload}. */
+export const SESSION_TOGGLE_MCP_SERVER_PAYLOAD_LIMITS = {
+  name: { maxLength: 64 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link PermissionResolvedPayload}. */
 export const PERMISSION_RESOLVED_PAYLOAD_LIMITS = {
   answers: { maxItems: 4 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SessionMcpStatusChangedPayloadServersItem}. */
+export const SESSION_MCP_STATUS_CHANGED_PAYLOAD_SERVERS_ITEM_LIMITS = {
+  toolCount: { minimum: 0 },
+  error: { maxLength: 512 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SessionMcpStatusChangedPayload}. */
+export const SESSION_MCP_STATUS_CHANGED_PAYLOAD_LIMITS = {
+  servers: { maxItems: 64 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SessionStartedPayload}. */
+export const SESSION_STARTED_PAYLOAD_LIMITS = {
+  outputStyle: { maxLength: 128 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link ToolCompletedPayloadQuestion}. */
@@ -1306,6 +1373,23 @@ export function isSessionPromptPayload(value: unknown): value is SessionPromptPa
 }
 
 /**
+ * Whether `value` carries every required field of {@link SessionReconnectMcpServerPayload}. Unknown fields are accepted.
+ */
+export function isSessionReconnectMcpServerPayload(value: unknown): value is SessionReconnectMcpServerPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['name'] === 'string',
+    withinMaxLength(record['name'], 64),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link SessionRejectChangePayload}. Unknown fields are accepted.
  */
 export function isSessionRejectChangePayload(value: unknown): value is SessionRejectChangePayload {
@@ -1417,6 +1501,24 @@ export function isSessionStartPayload(value: unknown): value is SessionStartPayl
   return [
     typeof record['workspacePath'] === 'string',
     requiredWhen(record['forkAt'] !== undefined, typeof record['resumeSessionId'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionToggleMcpServerPayload}. Unknown fields are accepted.
+ */
+export function isSessionToggleMcpServerPayload(value: unknown): value is SessionToggleMcpServerPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['sessionId'] === 'string',
+    typeof record['name'] === 'string',
+    typeof record['enabled'] === 'boolean',
+    withinMaxLength(record['name'], 64),
   ].every(Boolean);
 }
 
@@ -1737,6 +1839,42 @@ export function isSessionCompactedPayload(value: unknown): value is SessionCompa
 }
 
 /**
+ * Whether `value` carries every required field of {@link SessionMcpStatusChangedPayloadServersItem}. Unknown fields are accepted.
+ */
+export function isSessionMcpStatusChangedPayloadServersItem(value: unknown): value is SessionMcpStatusChangedPayloadServersItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    typeof record['status'] === 'string',
+    typeof record['source'] === 'string',
+    typeof record['toolCount'] === 'number',
+    atLeast(record['toolCount'], 0),
+    withinMaxLength(record['error'], 512),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionMcpStatusChangedPayload}. Unknown fields are accepted.
+ */
+export function isSessionMcpStatusChangedPayload(value: unknown): value is SessionMcpStatusChangedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['servers']),
+    withinMaxItems(record['servers'], 64),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link SessionRewoundPayloadRevertedItem}. Unknown fields are accepted.
  */
 export function isSessionRewoundPayloadRevertedItem(value: unknown): value is SessionRewoundPayloadRevertedItem {
@@ -1833,6 +1971,7 @@ export function isSessionStartedPayload(value: unknown): value is SessionStarted
     typeof record['model'] === 'string',
     typeof record['permissionMode'] === 'string',
     typeof record['claudeSessionId'] === 'string',
+    withinMaxLength(record['outputStyle'], 128),
   ].every(Boolean);
 }
 
@@ -2371,6 +2510,26 @@ export function isSessionPromptFrame(value: unknown): value is SessionPromptFram
   );
 }
 
+/** Reconnects one MCP server of a running session — the way back from `failed`. Only the owner of the session may, and only a server the session has. The result arrives as `session.mcpStatusChanged`. */
+export interface SessionReconnectMcpServerFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.reconnectMcpServer';
+  readonly payload: SessionReconnectMcpServerPayload;
+}
+
+/** Whether `value` is a {@link SessionReconnectMcpServerFrame}. */
+export function isSessionReconnectMcpServerFrame(value: unknown): value is SessionReconnectMcpServerFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.reconnectMcpServer' &&
+    isSessionReconnectMcpServerPayload(value.payload)
+  );
+}
+
 /** Puts one hunk of what a session changed in a file back the way it was before the session. Only while the disk still has what the session left — otherwise the file is `modifiedOutside` and is rejected whole, preserving it, by `session.rewindFiles` with `paths`. The outcome arrives as `session.rewound`, with `hunkId`. A `revision` that is no longer the disk's is `SESSION_CHANGE_STALE`; the same locks as an undo apply (`SESSION_LOCKED`). */
 export interface SessionRejectChangeFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'command';
@@ -2508,6 +2667,26 @@ export function isSessionStartFrame(value: unknown): value is SessionStartFrame 
     value.kind === 'command' &&
     value.type === 'session.start' &&
     isSessionStartPayload(value.payload)
+  );
+}
+
+/** Switches one MCP server of a running session on or off. Only the owner of the session may, and only a server the session has. The ack comes before the effect; the result arrives as `session.mcpStatusChanged`, with the session's `seq` — and none when nothing changed. */
+export interface SessionToggleMcpServerFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.toggleMcpServer';
+  readonly payload: SessionToggleMcpServerPayload;
+}
+
+/** Whether `value` is a {@link SessionToggleMcpServerFrame}. */
+export function isSessionToggleMcpServerFrame(value: unknown): value is SessionToggleMcpServerFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.toggleMcpServer' &&
+    isSessionToggleMcpServerPayload(value.payload)
   );
 }
 
@@ -2808,6 +2987,26 @@ export function isSessionCompactedFrame(value: unknown): value is SessionCompact
     value.kind === 'event' &&
     value.type === 'session.compacted' &&
     isSessionCompactedPayload(value.payload)
+  );
+}
+
+/** The MCP servers of a session and where each one stands — the whole list, every time, so a client never patches. An event of the session, with its `seq`: published once the servers the backend composed have been handed to the CLI, after every `session.toggleMcpServer` or `session.reconnectMcpServer` that changed something, and when a server is switched off because its configuration was removed or switched off (tightening applies at once). A client that does not know it ignores it. */
+export interface SessionMcpStatusChangedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'session.mcpStatusChanged';
+  readonly payload: SessionMcpStatusChangedPayload;
+}
+
+/** Whether `value` is a {@link SessionMcpStatusChangedFrame}. */
+export function isSessionMcpStatusChangedFrame(value: unknown): value is SessionMcpStatusChangedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'session.mcpStatusChanged' &&
+    isSessionMcpStatusChangedPayload(value.payload)
   );
 }
 

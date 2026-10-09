@@ -22,6 +22,11 @@ import type {
   SessionEvent,
 } from './ports/claude-session.port';
 import type { ResumableConversationSource } from './ports/resumable-conversation.source';
+import type {
+  DefaultsFrom,
+  SessionConfiguration,
+  SessionConfigurationSource,
+} from './ports/session-configuration.source';
 import type { SessionBroadcaster } from './ports/session-broadcaster.port';
 import type { SessionOriginRepository } from './ports/session-origin.repository';
 import type { WorkspaceResolver } from './ports/workspace-resolver.port';
@@ -65,6 +70,26 @@ export interface StartedSession {
    * the session that holds it. Resuming what is live is an attach (S-24).
    */
   readonly joined: boolean;
+
+  /** What the defaults gave the session beyond its model and mode — what `session.started` says. */
+  readonly applied: {
+    readonly effort: string | null;
+    readonly outputStyle: string | null;
+    readonly defaultsFrom: DefaultsFrom;
+  };
+}
+
+/** What a session opens with when nobody configured anything: the client's choice, as before. */
+function asChosen(command: StartSessionCommand): SessionConfiguration {
+  return {
+    model: command.model,
+    permissionMode: command.permissionMode,
+    effort: command.effort ?? null,
+    thinking: null,
+    outputStyle: null,
+    fallbackModel: null,
+    defaultsFrom: command.model === null ? 'installation' : 'client',
+  };
 }
 
 /**
@@ -104,6 +129,7 @@ export class StartSessionUseCase {
     private readonly provenance: SessionProvenance,
     private readonly resumption: SessionResumption,
     private readonly models: ModelCatalog | null = null,
+    private readonly configuration: SessionConfigurationSource | null = null,
   ) {}
 
   /**
@@ -284,6 +310,10 @@ export class StartSessionUseCase {
     conversationFor: (session: Session) => Promise<SessionConversation>,
     forkAt: ClaudeSessionStart['forkAt'] = null,
   ): Promise<StartedSession> {
+    // The configuration of the owner, put together with what the client chose — before a slot is
+    // taken: a session never spawns on defaults nobody could read (plan 13, B-15).
+    const applied = await this.configured(command, workspace);
+
     // Taken before anything is spawned, and given back in the `finally`. Checking the count and
     // only then awaiting a subprocess would let two starts both see room and both spawn, which is
     // the orphan the limit exists to prevent.
@@ -291,8 +321,8 @@ export class StartSessionUseCase {
       id: SessionId.create(this.ids.next()),
       ownerId: command.userId,
       workspace,
-      model: command.model ?? this.defaults.model,
-      permissionMode: command.permissionMode ?? this.defaults.permissionMode,
+      model: applied.model ?? this.defaults.model,
+      permissionMode: applied.permissionMode ?? this.defaults.permissionMode,
       openedAt: this.clock.now(),
       openedFrom: command.openedFrom,
     });
@@ -305,10 +335,13 @@ export class StartSessionUseCase {
       const handle = await this.claude.start({
         sessionId: session.id,
         workspace,
-        model: command.model,
+        model: applied.model,
         permissionMode: session.permissionMode,
         conversation,
-        effort: command.effort ?? null,
+        effort: applied.effort,
+        thinking: applied.thinking,
+        outputStyle: applied.outputStyle,
+        fallbackModel: applied.fallbackModel,
         forkAt,
         onEvent: (event) => {
           this.onEvent(session, event);
@@ -336,13 +369,32 @@ export class StartSessionUseCase {
       session.observe('idle');
       this.registry.add({ session, handle, conversation });
 
-      return { session, conversation, joined: false };
+      return { session, conversation, joined: false, applied: appliedOf(applied) };
     } finally {
       // A start that failed is listed as starting no longer; one that succeeded already moved to
       // the live sessions, and withdrawing it is a no-op.
       this.registry.withdraw(session.id);
       this.registry.release();
     }
+  }
+
+  /** What the session opens with: the owner's configuration, or the client's choice alone. */
+  private configured(
+    command: StartSessionCommand,
+    workspace: WorkspacePath,
+  ): Promise<SessionConfiguration> {
+    return this.configuration === null
+      ? Promise.resolve(asChosen(command))
+      : this.configuration.configurationFor({
+          userId: command.userId,
+          workspace,
+          client: {
+            model: command.model,
+            permissionMode: command.permissionMode,
+            effort: command.effort ?? null,
+          },
+          models: this.models?.latestFor(workspace.value) ?? null,
+        });
   }
 
   /** Mints the id of a new conversation and records it as ours, before anything is spawned. */
@@ -435,5 +487,19 @@ export class StartSessionUseCase {
 
 /** A live session, as the answer to a resume that found it already running. */
 function joined(live: LiveSession): StartedSession {
-  return { session: live.session, conversation: live.conversation, joined: true };
+  return {
+    session: live.session,
+    conversation: live.conversation,
+    joined: true,
+    applied: { effort: null, outputStyle: null, defaultsFrom: 'installation' },
+  };
+}
+
+/** What `session.started` says of the configuration a session opened with. */
+function appliedOf(applied: SessionConfiguration): StartedSession['applied'] {
+  return {
+    effort: applied.effort,
+    outputStyle: applied.outputStyle,
+    defaultsFrom: applied.defaultsFrom,
+  };
 }

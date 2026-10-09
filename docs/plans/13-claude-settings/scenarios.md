@@ -24,88 +24,88 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-01 | `smoke-live`: com `strictMcpConfig: true` e só `mcpServers` nossos, nenhum servidor do `.mcp.json` (nem com `enableAllProjectMcpServers: true` no `.claude/settings.json`), de frontmatter de subagent, de plugin ou de conector claude.ai sobe — `mcpServerStatus()` lista só os passados | est | e2e | — | B-01 | ⬜ |
-| S-02 | `smoke-live`: uma tool MCP dispara o hook `PreToolUse` sempre e o `canUseTool` em `default` — inclusive a que se declara `readOnly` | eq | e2e | — | B-01 | ⬜ |
-| S-03 | `smoke-live`: o valor de um segredo de servidor MCP não aparece em `/proc/<pid>/cmdline` do subprocesso do CLI | err | e2e | — | B-01 | ⬜ |
-| S-04 | `smoke-live`: a sonda efêmera responde modelos, conta, agents e output styles por `initializationResult()` sem ceder prompt, sem turno e sem subir servidor MCP | eq | e2e | — | B-01 | ⬜ |
-| S-05 | `smoke-live`: servidor MCP stdio herda o ambiente do CLI — o que ele enxerga é medido e é o que a B-20 corrige | est | e2e | — | B-01 | ⬜ |
-| S-06 | `query(` sem `strictMcpConfig: true` literal → `pnpm scan:security` reprova | err | unit | — | B-08 | ⬜ |
-| S-07 | `updateSettings(` em qualquer lugar, ou `settings`/`applyFlagSettings` fora do montador com allowlist de chave → `pnpm scan:security` reprova | err | unit | — | B-08 | ⬜ |
-| S-08 | o montador de flag settings recusa chave fora da allowlist (`permissions`, `hooks`, `enabledPlugins`, `enableAllProjectMcpServers`, `env`) e aceita `outputStyle` e `effortLevel`; em `managedSettings`, só `disableSkillShellExecution` | fron | unit | — | B-08 | ⬜ |
-| S-09 | configuração de servidor com `tools[].permission_policy`, ou plugin sem `skipMcpDiscovery: true` → `pnpm scan:security` reprova | err | unit | — | B-08 | ⬜ |
-| S-10 | os dois comandos e o evento novos existem nas três pontas → `pnpm contracts:check` verde, Dart regenerado | eq | unit | — | B-05 | ⬜ |
-| S-11 | cliente que não conhece `session.mcpStatusChanged` nem os campos novos de `session.started` os ignora sem quebrar | eq | integração | — | B-05 | ⬜ |
-| S-12 | todo código novo tem status no mapa e `messageKey` en/pt-BR → `pnpm i18n:check` verde; código sem status responderia `500` e o teste falha | err | unit | — | B-06 | ⬜ |
-| S-13 | a migration nova acrescenta os kinds `claude.*` ao CHECK sem tocar migration aplicada; kind fora da lista é recusado pelo banco | err | integração | — | B-07 | ⬜ |
-| S-14 | `claude-config` importando o SDK fora de `adapter/outbound/claude/`, ou o interior de outro módulo → `pnpm lint:arch` reprova | err | unit | — | B-03 | ⬜ |
-| S-15 | a rota da tela é própria (`/claude-settings`), com seção e pasta na search: o link reproduz a tela | eq | integração | — | B-09 | ⬜ |
+| S-01 | `smoke-live`: com `strictMcpConfig: true` e só `mcpServers` nossos, nenhum servidor do `.mcp.json` (nem com `enableAllProjectMcpServers: true` no `.claude/settings.json`), de frontmatter de subagent, de plugin ou de conector claude.ai sobe — `mcpServerStatus()` lista só os passados | est | e2e | — | B-01 | ✅ |
+| S-02 | `smoke-live`: uma tool MCP dispara o hook `PreToolUse` sempre e o `canUseTool` em `default` — inclusive a que se declara `readOnly` | eq | e2e | — | B-01 | ✅ |
+| S-03 | `smoke-live`: o valor de um segredo de servidor MCP não aparece em `/proc/<pid>/cmdline` do subprocesso do CLI | err | e2e | — | B-01 | ✅ |
+| S-04 | `smoke-live`: a sonda efêmera responde modelos, conta, agents e output styles por `initializationResult()` sem ceder prompt, sem turno e sem subir servidor MCP | eq | e2e | — | B-01 | ✅ |
+| S-05 | `smoke-live`: servidor MCP stdio herda o ambiente do CLI — o que ele enxerga é medido e é o que a B-20 corrige | est | e2e | — | B-01 | ✅ |
+| S-06 | `query(` sem `strictMcpConfig: true` literal → `pnpm scan:security` reprova | err | unit | — | B-08 | ✅ |
+| S-07 | `updateSettings(` em qualquer lugar, ou `settings`/`applyFlagSettings` fora do montador com allowlist de chave → `pnpm scan:security` reprova | err | unit | — | B-08 | ✅ |
+| S-08 | o montador de flag settings recusa chave fora da allowlist (`permissions`, `hooks`, `enabledPlugins`, `enableAllProjectMcpServers`, `env`) e aceita `outputStyle` e `effortLevel`; em `managedSettings`, só `disableSkillShellExecution` | fron | unit | — | B-08 | ✅ |
+| S-09 | configuração de servidor com `tools[].permission_policy`, ou plugin sem `skipMcpDiscovery: true` → `pnpm scan:security` reprova | err | unit | — | B-08 | ✅ |
+| S-10 | os dois comandos e o evento novos existem nas três pontas → `pnpm contracts:check` verde, Dart regenerado | eq | unit | — | B-05 | ✅ |
+| S-11 | cliente que não conhece `session.mcpStatusChanged` nem os campos novos de `session.started` os ignora sem quebrar | eq | integração | — | B-05 | ✅ |
+| S-12 | todo código novo tem status no mapa e `messageKey` en/pt-BR → `pnpm i18n:check` verde; código sem status responderia `500` e o teste falha | err | unit | — | B-06 | ✅ |
+| S-13 | a migration nova acrescenta os kinds `claude.*` ao CHECK sem tocar migration aplicada; kind fora da lista é recusado pelo banco | err | integração | — | B-07 | ✅ |
+| S-14 | `claude-config` importando o SDK fora de `adapter/outbound/claude/`, ou o interior de outro módulo → `pnpm lint:arch` reprova | err | unit | — | B-03 | ✅ |
+| S-15 | a rota da tela é própria (`/claude-settings`), com seção e pasta na search: o link reproduz a tela | eq | integração | — | B-09 | ✅ |
 
 ## Catálogo da instalação — B-10
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-16 | com sessão viva do chamador na pasta, modelos e agents vêm dela, sem sonda | eq | integração | — | B-10 | ⬜ |
-| S-17 | sem sessão viva, uma sonda efêmera responde e é encerrada no `finally` — nenhum processo órfão | est | integração | — | B-10 | ⬜ |
-| S-18 | duas telas pedindo o catálogo ao mesmo tempo fazem **uma** sonda | conc | unit | — | B-10 | ⬜ |
-| S-19 | o cache é chaveado por versão do CLI, `CLAUDE_CONFIG_DIR` efetivo e pasta; versão nova → sonda nova | idem | unit | — | B-10 | ⬜ |
-| S-20 | falha ou prazo estourado da sonda não fica no cache | err | integração | `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT` | B-10 | ⬜ |
-| S-21 | capacidade de sessões cheia e nenhuma sessão viva na pasta → a sonda é recusada, sem subprocesso | fron | integração | `SESSION_LIMIT_REACHED` | B-10 | ⬜ |
-| S-22 | a sonda leva `settingSources: ['project']`, o hook `PreToolUse`, `strictMcpConfig: true`, `mcpServers: {}`, e limpa a marca de confiança da pasta antes de subir | eq | unit | — | B-10 | ⬜ |
-| S-23 | pasta fora da allowlist, de outra pessoa ou inexistente → recusada antes de qualquer sonda | err | integração | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`, `WORKSPACE_NOT_FOUND` | B-10 | ⬜ |
+| S-16 | com sessão viva do chamador na pasta, modelos e agents vêm dela, sem sonda | eq | integração | — | B-10 | ✅ |
+| S-17 | sem sessão viva, uma sonda efêmera responde e é encerrada no `finally` — nenhum processo órfão | est | integração | — | B-10 | ✅ |
+| S-18 | duas telas pedindo o catálogo ao mesmo tempo fazem **uma** sonda | conc | unit | — | B-10 | ✅ |
+| S-19 | o cache é chaveado por versão do CLI, `CLAUDE_CONFIG_DIR` efetivo e pasta; versão nova → sonda nova | idem | unit | — | B-10 | ✅ |
+| S-20 | falha ou prazo estourado da sonda não fica no cache | err | integração | `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT` | B-10 | ✅ |
+| S-21 | capacidade de sessões cheia e nenhuma sessão viva na pasta → a sonda é recusada, sem subprocesso | fron | integração | `SESSION_LIMIT_REACHED` | B-10 | ✅ |
+| S-22 | a sonda leva `settingSources: ['project']`, o hook `PreToolUse`, `strictMcpConfig: true`, `mcpServers: {}`, e limpa a marca de confiança da pasta antes de subir | eq | unit | — | B-10 | ✅ |
+| S-23 | pasta fora da allowlist, de outra pessoa ou inexistente → recusada antes de qualquer sonda | err | integração | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`, `WORKSPACE_NOT_FOUND` | B-10 | ✅ |
 
 ## Conta, instalação e diagnóstico — B-11, B-12
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-24 | `GET /claude/account` traz provedor, plano, organização e e-mail — nunca token, nunca caminho de credencial | eq | integração | — | B-11 | ⬜ |
-| S-25 | CLI sem login → estado `loginRequired` com a instrução para a máquina, não `500` | est | integração | — | B-11 | ⬜ |
-| S-26 | `refresh=true` ignora o cache da conta: um novo login no CLI aparece | idem | integração | — | B-11 | ⬜ |
-| S-27 | a instalação mostra a versão do binário que o SDK spawna (manifesto) e a do `claude` no `PATH`, e marca quando divergem | eq | unit | — | B-11 | ⬜ |
-| S-28 | `CLAUDE_CONFIG_DIR` vazio é lido como ausente, e a tela mostra o diretório efetivo — o defeito corrigido no plano 04 não volta por aqui | fron | unit | — | B-11 | ⬜ |
-| S-29 | sem credencial válida, qualquer rota `/claude/*` | err | integração | `UNAUTHENTICATED` | B-11 | ⬜ |
-| S-30 | o teste de conexão com o modelo devolve modelo que respondeu, latência e custo estimado, com um turno, sem tools e sob teto de custo | eq | integração | — | B-12 | ⬜ |
-| S-31 | teste sem login ou com o modelo recusando → resultado `notLoggedIn`/`failed` descrito, e o `502` fica para o CLI que morreu | err | integração | `CLAUDE_UNAVAILABLE` | B-12 | ⬜ |
-| S-32 | o teste que não termina no prazo encerra o subprocesso | err | integração | `CLAUDE_TIMEOUT` | B-12 | ⬜ |
-| S-33 | dois testes do mesmo usuário ao mesmo tempo → um em voo, o segundo recebe o resultado do primeiro | conc | unit | — | B-12 | ⬜ |
+| S-24 | `GET /claude/account` traz provedor, plano, organização e e-mail — nunca token, nunca caminho de credencial | eq | integração | — | B-11 | ✅ |
+| S-25 | CLI sem login → estado `loginRequired` com a instrução para a máquina, não `500` | est | integração | — | B-11 | ✅ |
+| S-26 | `refresh=true` ignora o cache da conta: um novo login no CLI aparece | idem | integração | — | B-11 | ✅ |
+| S-27 | a instalação mostra a versão do binário que o SDK spawna (manifesto) e a do `claude` no `PATH`, e marca quando divergem | eq | unit | — | B-11 | ✅ |
+| S-28 | `CLAUDE_CONFIG_DIR` vazio é lido como ausente, e a tela mostra o diretório efetivo — o defeito corrigido no plano 04 não volta por aqui | fron | unit | — | B-11 | ✅ |
+| S-29 | sem credencial válida, qualquer rota `/claude/*` | err | integração | `UNAUTHENTICATED` | B-11 | ✅ |
+| S-30 | o teste de conexão com o modelo devolve modelo que respondeu, latência e custo estimado, com um turno, sem tools e sob teto de custo | eq | integração | — | B-12 | ✅ |
+| S-31 | teste sem login ou com o modelo recusando → resultado `notLoggedIn`/`failed` descrito, e o `502` fica para o CLI que morreu | err | integração | `CLAUDE_UNAVAILABLE` | B-12 | ✅ |
+| S-32 | o teste que não termina no prazo encerra o subprocesso | err | integração | `CLAUDE_TIMEOUT` | B-12 | ✅ |
+| S-33 | dois testes do mesmo usuário ao mesmo tempo → um em voo, o segundo recebe o resultado do primeiro | conc | unit | — | B-12 | ✅ |
 
 ## Modelos e padrões — B-13…B-15
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-34 | `GET /claude/models` devolve a lista da instalação — nunca constante no código —, com esforço suportado por modelo | eq | integração | — | B-13 | ⬜ |
-| S-35 | instalação com um modelo a menos reflete na lista | eq | integração | — | B-13 | ⬜ |
-| S-36 | lista de modelos vazia → a tela explica, e o seletor oferece só "padrão da instalação" | fron | integração | — | B-13 | ⬜ |
-| S-37 | `PUT /claude/defaults` grava o padrão do usuário, e o `GET` devolve o efetivo com a origem de cada campo | eq | integração | — | B-14 | ⬜ |
-| S-38 | a sobreposição de uma pasta vale para ela e para as subpastas; a mais próxima vence | fron | unit | — | B-14 | ⬜ |
-| S-39 | modelo que a instalação não oferece | err | integração | `MODEL_NOT_AVAILABLE` | B-14 | ⬜ |
-| S-40 | `bypassPermissions` como padrão | err | integração | `DEFAULT_MODE_NOT_ALLOWED` | B-14 | ⬜ |
-| S-41 | esforço que o modelo não suporta, ou modelo reserva igual ao principal | err | unit | `INVALID_INPUT` | B-14 | ⬜ |
-| S-42 | corpo malformado lista **todos** os campos inválidos em `details[]` | err | integração | `INVALID_INPUT` | B-14 | ⬜ |
-| S-43 | o mesmo `PUT` duas vezes grava **um** evento de trilha — só quando algo muda | idem | integração | — | B-14 | ⬜ |
-| S-44 | mudar padrão grava `claude.defaultsChanged` antes de responder; trilha indisponível não grava o padrão | err | integração | `INTERNAL_ERROR` | B-14 | ⬜ |
-| S-45 | dois `PUT` simultâneos → um vence por inteiro, sem mistura de campos, e a trilha tem os dois na ordem do banco | conc | integração | — | B-14 | ⬜ |
-| S-46 | sobreposição de pasta de outra pessoa: ler ou alterar | err | integração | `FORBIDDEN` | B-14 | ⬜ |
-| S-47 | catálogo indisponível no `PUT` com modelo → recusa honesta, não grava sem validar | err | integração | `CLAUDE_UNAVAILABLE` | B-14 | ⬜ |
-| S-48 | o cliente que manda `model`/`permissionMode` no `session.start` vence o padrão | eq | unit | — | B-15 | ⬜ |
-| S-49 | sem padrão nenhum, a sessão abre como hoje: modelo do CLI e `default` | fron | unit | — | B-15 | ⬜ |
-| S-50 | sessão nova depois de trocar o padrão nasce com ele; a sessão viva não muda | est | integração | — | B-15 | ⬜ |
-| S-51 | padrão que ficou velho (o modelo sumiu depois de atualizar o CLI) → a sessão abre com o da instalação, `warn`, e `session.started` diz o modelo real e `defaultsFrom` | est | integração | — | B-15 | ⬜ |
-| S-52 | a retomada aplica os padrões como uma sessão nova | eq | unit | — | B-15 | ⬜ |
-| S-53 | output style padrão entra pelo montador de flag settings; estilo que não existe mais cai no da instalação, com `warn` | fron | unit | — | B-15 | ⬜ |
+| S-34 | `GET /claude/models` devolve a lista da instalação — nunca constante no código —, com esforço suportado por modelo | eq | integração | — | B-13 | ✅ |
+| S-35 | instalação com um modelo a menos reflete na lista | eq | integração | — | B-13 | ✅ |
+| S-36 | lista de modelos vazia → a tela explica, e o seletor oferece só "padrão da instalação" | fron | integração | — | B-13 | ✅ |
+| S-37 | `PUT /claude/defaults` grava o padrão do usuário, e o `GET` devolve o efetivo com a origem de cada campo | eq | integração | — | B-14 | ✅ |
+| S-38 | a sobreposição de uma pasta vale para ela e para as subpastas; a mais próxima vence | fron | unit | — | B-14 | ✅ |
+| S-39 | modelo que a instalação não oferece | err | integração | `MODEL_NOT_AVAILABLE` | B-14 | ✅ |
+| S-40 | `bypassPermissions` como padrão | err | integração | `DEFAULT_MODE_NOT_ALLOWED` | B-14 | ✅ |
+| S-41 | esforço que o modelo não suporta, ou modelo reserva igual ao principal | err | unit | `INVALID_INPUT` | B-14 | ✅ |
+| S-42 | corpo malformado lista **todos** os campos inválidos em `details[]` | err | integração | `INVALID_INPUT` | B-14 | ✅ |
+| S-43 | o mesmo `PUT` duas vezes grava **um** evento de trilha — só quando algo muda | idem | integração | — | B-14 | ✅ |
+| S-44 | mudar padrão grava `claude.defaultsChanged` antes de responder; trilha indisponível não grava o padrão | err | integração | `INTERNAL_ERROR` | B-14 | ✅ |
+| S-45 | dois `PUT` simultâneos → um vence por inteiro, sem mistura de campos, e a trilha tem os dois na ordem do banco | conc | integração | — | B-14 | ✅ |
+| S-46 | sobreposição de pasta de outra pessoa: ler ou alterar | err | integração | `FORBIDDEN` | B-14 | ✅ |
+| S-47 | catálogo indisponível no `PUT` com modelo → recusa honesta, não grava sem validar | err | integração | `CLAUDE_UNAVAILABLE` | B-14 | ✅ |
+| S-48 | o cliente que manda `model`/`permissionMode` no `session.start` vence o padrão | eq | unit | — | B-15 | ✅ |
+| S-49 | sem padrão nenhum, a sessão abre como hoje: modelo do CLI e `default` | fron | unit | — | B-15 | ✅ |
+| S-50 | sessão nova depois de trocar o padrão nasce com ele; a sessão viva não muda | est | integração | — | B-15 | ✅ |
+| S-51 | padrão que ficou velho (o modelo sumiu depois de atualizar o CLI) → a sessão abre com o da instalação, `warn`, e `session.started` diz o modelo real e `defaultsFrom` | est | integração | — | B-15 | ✅ |
+| S-52 | a retomada aplica os padrões como uma sessão nova | eq | unit | — | B-15 | ✅ |
+| S-53 | output style padrão entra pelo montador de flag settings; estilo que não existe mais cai no da instalação, com `warn` | fron | unit | — | B-15 | ✅ |
 
 ## Tela — conta, modelos e padrões — B-16, B-17
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-54 | as seções Conta, Instalação e Modelos e padrões mostram os quatro estados, com skeleton que mantém o layout | est | integração | — | B-16 | ⬜ |
-| S-55 | a tela vive fora das Configurações do app; a seção "Claude" de lá leva para cá | eq | integração | — | B-16 | ⬜ |
-| S-56 | o seletor de modelo do painel (plano 08) e esta tela leem o mesmo catálogo | eq | integração | — | B-16 | ⬜ |
-| S-57 | a ajuda está presente e traduzida en/pt-BR: o que é um modelo, esforço, output style, e cada permission mode por extenso com a consequência (`acceptEdits` escreve sem perguntar) | eq | integração | — | B-17 | ⬜ |
-| S-58 | literal apresentável nas telas novas → `pnpm lint` e `pnpm i18n:check` falham | err | unit | — | B-17 | ⬜ |
-| S-59 | "Claude: trocar modelo padrão" e "Claude: testar conexão" existem na palette, e o atalho registrado funciona | eq | integração | — | B-17 | ⬜ |
-| S-60 | validação inline: esforço incompatível com o modelo fica desabilitado com tooltip explicando, antes de enviar | fron | integração | — | B-17 | ⬜ |
-| S-61 | recusa do servidor chega traduzida e diz o que fazer (atualizar a lista de modelos) | err | integração | `MODEL_NOT_AVAILABLE` | B-17 | ⬜ |
-| S-62 | foco e teclado percorrem a seção; axe sem violação | eq | integração | — | B-17 | ⬜ |
+| S-54 | as seções Conta, Instalação e Modelos e padrões mostram os quatro estados, com skeleton que mantém o layout | est | integração | — | B-16 | ✅ |
+| S-55 | a tela vive fora das Configurações do app; a seção "Claude" de lá leva para cá | eq | integração | — | B-16 | ✅ |
+| S-56 | o seletor de modelo do painel (plano 08) e esta tela leem o mesmo catálogo | eq | integração | — | B-16 | ✅ |
+| S-57 | a ajuda está presente e traduzida en/pt-BR: o que é um modelo, esforço, output style, e cada permission mode por extenso com a consequência (`acceptEdits` escreve sem perguntar) | eq | integração | — | B-17 | ✅ |
+| S-58 | literal apresentável nas telas novas → `pnpm lint` e `pnpm i18n:check` falham | err | unit | — | B-17 | ✅ |
+| S-59 | "Claude: trocar modelo padrão" e "Claude: testar conexão" existem na palette, e o atalho registrado funciona | eq | integração | — | B-17 | ✅ |
+| S-60 | validação inline: esforço incompatível com o modelo fica desabilitado com tooltip explicando, antes de enviar | fron | integração | — | B-17 | ✅ |
+| S-61 | recusa do servidor chega traduzida e diz o que fazer (atualizar a lista de modelos) | err | integração | `MODEL_NOT_AVAILABLE` | B-17 | ✅ |
+| S-62 | foco e teclado percorrem a seção; axe sem violação | eq | integração | — | B-17 | ✅ |
 
 ## Servidor MCP — domínio, store e segredo — B-18…B-20
 
@@ -247,7 +247,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-142 | pasta fora da allowlist, de outra pessoa ou inexistente | err | integração | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`, `WORKSPACE_NOT_FOUND` | B-31 | ⬜ |
 | S-143 | `.claude/settings.json` malformado ou acima do teto → a parte é explicada, e o resto da tela funciona | err | integração | — | B-31 | ⬜ |
 | S-144 | arquivo de configuração que é symlink para fora da raiz não é lido | err | integração | — | B-31 | ⬜ |
-| S-145 | nenhum control request não público (`get_hooks_listing`, `list_permission_rules`, `get_settings`) é usado → a regra de máquina reprova | err | unit | — | B-31 | ⬜ |
+| S-145 | nenhum control request não público (`get_hooks_listing`, `list_permission_rules`, `get_settings`) é usado → a regra de máquina reprova | err | unit | — | B-31 | ✅ |
 | S-146 | ler enquanto o Claude escreve em `.claude/` devolve o antes ou o depois, nunca um arquivo pela metade | conc | integração | — | B-31 | ⬜ |
 | S-147 | a segunda leitura sem mudança em `.claude/` não refaz sonda; mudança de mtime invalida | idem | integração | — | B-31 | ⬜ |
 | S-148 | memória: diz qual arquivo existe e qual é **carregado** pelas sessões deste produto; com sessão viva, a lista vem de `getContextUsage` | eq | integração | — | B-32 | ⬜ |
@@ -307,6 +307,8 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-197 | `smoke-live`: skill de usuário real carrega pelo plugin sintético, a `allow` de `~/.claude/settings.json` continua sem dispensar o `canUseTool`, e a política de shell inline vale como a D-21 decidiu | err | e2e | — | B-46 | ⬜ |
 | S-198 | `smoke-live`: subagent de projeto com `permissionMode: acceptEdits` não escreve sem o `canUseTool` — ou o resultado medido vira aviso na tela e risco aberto | est | e2e | — | B-46 | ⬜ |
 | S-199 | `pnpm test:e2e:mobile` verde com os tipos Dart regenerados | eq | e2e | — | B-46 | ⬜ |
+| S-214 | as fixtures deste plano (tool MCP composta, skill de usuário, slash command e subagent de projeto, output style padrão) dão o mesmo conteúdo no web e no app pela paridade do plano 26, e o `render:check` sai verde sem `pending` (D-31) | eq | unit | — | B-46 | ⬜ |
+| S-215 | app: `session.mcpStatusChanged` vira o chip da sessão com o status agregado; ao tocar, a lista com status e erro redigido de cada servidor; nenhuma ação de ligar, desligar ou reconectar no app; a lista inteira substitui a anterior a cada evento (D-32) | eq | widget | — | B-22 | ⬜ |
 
 ---
 

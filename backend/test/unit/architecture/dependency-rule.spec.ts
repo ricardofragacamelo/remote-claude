@@ -178,6 +178,22 @@ describe('the Dependency Rule, as the build enforces it', () => {
     ).toBe(true);
   });
 
+  it('refuses `claude-config` reaching `session`, even through its barrel — plan 13, S-14', async () => {
+    expect(
+      broke(
+        await violations(),
+        'claude-config-never-reaches-session',
+        'application/claude-config/reaches-session.ts',
+      ),
+    ).toBe(true);
+  });
+
+  it('refuses `claude-config` importing the SDK outside the Claude adapter — plan 13, S-14', async () => {
+    expect(
+      broke(await violations(), 'sdk-is-isolated', 'application/claude-config/talks-to-the-sdk.ts'),
+    ).toBe(true);
+  });
+
   it('lets `files` reach `workspace` through its barrel — plan 07, D-01', async () => {
     const found = await violations();
 

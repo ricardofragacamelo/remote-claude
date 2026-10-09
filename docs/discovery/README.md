@@ -12,7 +12,7 @@ fica no cabeçalho de cada documento; o da implementação, no plano que a absor
 
 ## Panorama
 
-**Última atualização:** 2026-10-08
+**Última atualização:** 2026-10-09
 
 | # | Discovery | Criada em | Plano | Implementação |
 |---|---|---|---|---|
@@ -23,6 +23,8 @@ fica no cabeçalho de cada documento; o da implementação, no plano que a absor
 | 05 | [Perguntas estruturadas (`AskUserQuestion`)](05-perguntas-estruturadas.md) | 2026-10-04 | [24 — Perguntas estruturadas](../plans/24-structured-questions/README.md) | 🔄 em andamento — F0…F2 (backend e fixtures) prontas; web, mobile, histórico e e2e por fazer |
 | 06 | [O remote-claude como app desktop (Tauri)](06-app-desktop-tauri.md) | 2026-10-08 | — | 🔲 discovery, sem plano |
 | 07 | [Navegar e ler os arquivos da pasta pelo app](07-navegador-de-arquivos-no-app.md) | 2026-10-08 | [25 — Navegador de arquivos no app](../plans/25-mobile-file-browser/README.md) | 🔲 plano criado, não iniciado |
+| 08 | [Paridade da conversa no app: o plano 13 e o markdown](08-paridade-da-conversa-no-app.md) | 2026-10-09 | [26 — Paridade da conversa no app](../plans/26-mobile-conversation-parity/README.md) | 🔲 plano criado, não iniciado |
+| 09 | [O que o backend perde da conversa, e a mensagem desconhecida na tela](09-perdas-do-backend-na-conversa.md) | 2026-10-09 | — | 🔲 discovery, sem plano |
 
 Legenda: 🔲 não implementada · 🔄 em andamento · ✅ implementada
 
@@ -78,6 +80,24 @@ trabalho é só no app. Reabre a exclusão dos planos 07 e 21. Achado colateral:
 não notifica quando há uma tela empilhada sobre a sessão, o que já acontece com o histórico (§4.3).
 Virou o plano 25 em 2026-10-08, com as decisões do §16 com os mesmos IDs e o fatiamento do §19
 em oito fases (o spike é a F0, e o markdown e o PDF ficaram em fases separadas).
+
+
+### 08 — Paridade da conversa no app
+
+Respondeu se o plano 13 muda o que aparece na conversa (sim: o conteúdo, não o contrato) e mediu o que o app
+perde do que o web desenha — texto de subagent descartado, markdown cru, rótulo de tool, diff, ANSI, tokens — e
+o que o backend descarta para as duas pontas. Pela regra do usuário ("no conteúdo e no formato"), propõe um mapa
+de paridade conferido por máquina. Virou o plano 26 em 2026-10-09, rodado antes da F2 do plano 13.
+
+### 09 — Perdas do backend na conversa
+
+O que **nenhuma** das duas pontas mostra, porque o backend descarta antes do WS. Aprofunda a F6 do
+plano 26, e a medição corrigiu as premissas dela (§2): 22 das 39 variantes do SDK só viram `warn`, o
+`/compact` põe dois balões "Você" fantasmas na tela, e o histórico nem pede as mensagens `system`.
+Acrescenta duas regras do usuário: a mensagem desconhecida aparece na conversa, não só no log (§7), e
+todo evento novo é canônico, para servir a outro motor de agente (§8.1). O plano 26 fica com a
+paridade do que já existe; esta vira um plano próprio, que complementa o que falta nas duas pontas (D-01).
+A ordem é 26 → 13 → o plano desta discovery.
 
 ---
 

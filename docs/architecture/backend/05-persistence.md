@@ -13,6 +13,7 @@ Voltar para o [índice do backend](README.md).
 | Histórico de permission requests | Conteúdo de arquivo do workspace — inclusive o do histórico local, que é blob no disco |
 | **Trilha de auditoria** | Credencial do Claude — é do SO, em `~/.claude/` |
 | Metadados de workspace (allowlist, último uso) | |
+| Configuração do Claude por usuário: padrões, servidores MCP (segredo **cifrado**), aprovações do `.mcp.json`, plugins, preferências de skills | O conteúdo de arquivos de `.claude/` e de plugins — lido do disco a cada pedido |
 
 **Não duplique o transcript.** O Claude já persiste em `~/.claude/projects/*.jsonl`, e é o
 mesmo arquivo que o VSCode usa. Copiar para o Postgres cria duas fontes de verdade que
@@ -209,6 +210,32 @@ A F7 e a F8 do plano 07 acrescentam dois kinds, cada um por migration nova: `fil
 (`0017_file_downloads`) — baixar tira conteúdo da máquina, e entra antes do primeiro byte — e
 `file.restored` (`0018_file_history`), a restauração de uma versão do histórico local. O upload
 grava os `file.created`/`file.written` de sempre, com `details.source: upload`.
+
+**A configuração do Claude** ([plano 13](../../plans/13-claude-settings/README.md)) acrescenta os kinds
+`claude.defaultsChanged`, `claude.mcpServerAdded`, `claude.mcpServerChanged`, `claude.mcpServerRemoved`,
+`claude.mcpServerToggled`, `claude.mcpServerTested`, `claude.mcpProjectServerApproved`,
+`claude.mcpProjectServerRejected`, `claude.pluginAdded`, `claude.pluginUpdated`, `claude.pluginToggled`,
+`claude.pluginRemoved` e `claude.skillSourceToggled`, pela `0020_claude_config`. São autorização
+antecipada do mesmo peso de uma regra `always`: cada um amplia o que roda antes de alguém ser perguntado.
+Entram **antes** do efeito; `details` leva o comando, os argumentos (redigidos quando têm forma de
+segredo) e a URL por extenso e só os **nomes** das variáveis e cabeçalhos — nunca um valor.
+
+### A configuração do Claude
+
+As tabelas da `0020_claude_config`, todas **por usuário** — o CLI da máquina tem um login, e o que uma
+pessoa configurou nunca chega à sessão de outra:
+
+| Tabela | O quê | Chave |
+|---|---|---|
+| `claude_defaults` | o padrão do usuário (`folder_path` nulo) e a sobreposição de uma pasta, que vale para as subpastas: modelo, modo (nunca `bypassPermissions`, pelo `CHECK`), esforço, thinking, output style, modelo reserva; campo nulo é "não definido aqui" | `(user_id, folder_path)` `NULLS NOT DISTINCT` |
+| `mcp_servers` | o store de servidores: nome, escopo `user`/`folder` (e a pasta), transporte, comando e argumentos, ou URL, ligado | `(user_id, scope, folder_path, name)` `NULLS NOT DISTINCT` |
+| `mcp_server_secrets` | os valores de env e de cabeçalho, **AES-256-GCM** com a chave lida de um arquivo (`RC_MCP_SECRET_KEY_FILE`): `ciphertext`, `iv`, `tag` — nunca o valor em claro, e nunca de volta pela API ([13 · D-02](../../plans/13-claude-settings/decisions.md#d-02--segredo-de-servidor-mcp)) | `(server_id, kind, name)`, apagada com o servidor |
+| `mcp_project_approvals` | a aprovação **nossa** de uma entrada do `.mcp.json` de uma pasta, pelo digest da entrada normalizada: mudou, volta a pendente | `(user_id, folder_path, name)` |
+| `claude_plugins` | plugin local (diretório da allowlist) ou de marketplace (baixado pelo backend para `RC_CLAUDE_PLUGINS_DIR`, fixado no commit), o digest **aprovado**, ligado | `(user_id, path)` |
+| `claude_skill_preferences` | quais origens de skill estão ligadas e quais skills desligadas, do usuário ou de uma pasta | `(user_id, folder_path)` `NULLS NOT DISTINCT` |
+
+Uma escrita concorrente vence por inteiro: cada gravação é um `INSERT … ON CONFLICT DO UPDATE` da linha
+inteira, nunca campo a campo.
 
 ### O histórico local
 

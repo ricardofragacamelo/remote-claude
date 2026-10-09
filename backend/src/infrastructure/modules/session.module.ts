@@ -45,6 +45,7 @@ import {
   StartSessionUseCase,
   TOOL_INVOCATION_RECORDER,
   WORKSPACE_RESOLVER,
+  SESSION_CONFIGURATION_SOURCE,
 } from '@application/session';
 import type {
   ChangeStores,
@@ -60,6 +61,7 @@ import type {
   SessionOriginRepository,
   SessionPermissionGate,
   WorkspaceResolver,
+  SessionConfigurationSource,
 } from '@application/session';
 import { CLOCK, ID_GENERATOR, PATH_LOCK } from '@application/shared';
 import type { PathLock } from '@application/shared';
@@ -92,8 +94,8 @@ import {
 import { SESSION_HANDLERS, sessionSchemas } from '@adapter/inbound/ws/session/session-commands';
 import { SessionStartHandler } from '@adapter/inbound/ws/session/session-start.gateway-handler';
 import { AgentSdkClaudeSessionAdapter } from '@adapter/outbound/claude/agent-sdk.adapter';
-import { QUERY_FACTORY, realQueryFactory } from '@adapter/outbound/claude/query.factory';
-import { BUNDLED_CLI_VERSION, bundledCliVersion } from '@adapter/outbound/claude/cli-version';
+import { BUNDLED_CLI_VERSION } from '@adapter/outbound/claude/cli-version';
+import { ClaudeConfigModuleConfiguration } from '@adapter/outbound/session/claude-config-module.configuration';
 import { SESSION_LIMITS } from '@adapter/outbound/claude/session-limits';
 import { FileSnapshotStore } from '@adapter/outbound/checkpoint/file-snapshot.store';
 import { DrizzleSessionFileRepository } from '@adapter/outbound/persistence/session/drizzle-session-file.repository';
@@ -116,6 +118,8 @@ import { UuidGenerator } from '@shared/ids/uuid-generator';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { AuditModule } from './audit.module';
 import { AuthModule } from './auth.module';
+import { ClaudeConfigModule } from './claude-config.module';
+import { ClaudeSdkModule } from './claude-sdk.module';
 import { PermissionModule } from './permission.module';
 import { WebsocketModule } from './websocket.module';
 import { SessionOriginModule } from './session-origin.module';
@@ -140,6 +144,8 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
   imports: [
     AuditModule,
     AuthModule,
+    ClaudeConfigModule,
+    ClaudeSdkModule,
     PermissionModule,
     SessionOriginModule,
     SessionRegistryModule,
@@ -156,8 +162,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     CatalogController,
   ],
   providers: [
-    { provide: QUERY_FACTORY, useValue: realQueryFactory },
-    { provide: BUNDLED_CLI_VERSION, useFactory: () => bundledCliVersion() },
+    { provide: SESSION_CONFIGURATION_SOURCE, useClass: ClaudeConfigModuleConfiguration },
     {
       provide: SESSION_LIMITS,
       inject: [APP_CONFIG],
@@ -352,6 +357,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
         RESUMABLE_CONVERSATION_SOURCE,
         RecordAuditEventUseCase,
         ModelCatalog,
+        SESSION_CONFIGURATION_SOURCE,
       ],
       useFactory: (
         workspaces: WorkspaceResolver,
@@ -366,6 +372,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
         conversations: ResumableConversationSource,
         trail: RecordAuditEventUseCase,
         models: ModelCatalog,
+        configuration: SessionConfigurationSource,
       ) =>
         new StartSessionUseCase(
           workspaces,
@@ -378,6 +385,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
           { ids: claudeIds, origins },
           { conversations, trail },
           models,
+          configuration,
         ),
     },
 

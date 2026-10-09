@@ -122,6 +122,7 @@ export const E2E_POSTGRES = {
  * @property {string} RC_WS_MAX_ATTACHED_SESSIONS
  * @property {string} RC_SESSION_MAX_TURNS
  * @property {string} RC_SESSION_MAX_BUDGET_USD
+ * @property {string} RC_MODEL_CHECK_MAX_BUDGET_USD
  * @property {string} RC_SESSION_DEFAULT_MODEL
  * @property {string} RC_SESSION_DEFAULT_PERMISSION_MODE
  * @property {string} RC_PERMISSION_TIMEOUT_MS
@@ -241,6 +242,7 @@ export function ephemeralEnvironment(ports, options = {}) {
     RC_SESSION_IDLE_TTL_MS: '1800000',
     RC_SESSION_MAX_TURNS: '100',
     RC_SESSION_MAX_BUDGET_USD: '10',
+    RC_MODEL_CHECK_MAX_BUDGET_USD: '0.05',
     RC_SESSION_DEFAULT_MODEL: 'claude-sonnet-5',
     RC_SESSION_DEFAULT_PERMISSION_MODE: 'default',
 

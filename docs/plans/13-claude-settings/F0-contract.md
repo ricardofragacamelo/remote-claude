@@ -46,7 +46,7 @@ instalado (não é spike; é leitura de tipo e de código):
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — Spike: as medições que mandam no desenho 🔲
+### B-01 — Spike: as medições que mandam no desenho ✅
 
 Contra o Claude real, sobre um `CLAUDE_CONFIG_DIR` isolado com a credencial copiada — como a
 [B-45 do plano 01](../01-live-session/F0-contract.md) fez, sem disputar o `~/.claude.json` com o
@@ -81,7 +81,14 @@ nova seção de spikes, com o "como reproduzir", e cada decisão acima é fechad
 Resultado ruim **não** é falha do spike: é o que ele existe para achar. Cenários S-01…S-05 — e os
 `smoke-live` da [F4](F4-e2e.md), que repetem as medições a cada versão do CLI.
 
-### B-02 — ADR-018: extensões do Claude só entram pelo produto 🔲
+**Medido em 2026-10-09** com `pnpm spike:claude-config` (`scripts/claude-config-spike.mjs`): os dez
+números e o que cada um decidiu estão na [descoberta §11](../../discovery/01-descoberta-claude-agent-sdk.md#11--quinta-rodada-de-spikes-2026-10-09)
+e nas [decisões](decisions.md) (D-01…D-22 com o medido; D-23…D-25 nasceram dele). Dois achados mudaram o
+desenho: o subagent de projeto com `permissionMode` próprio escrevia sem o `canUseTool` (o hook da
+trilha agora responde `ask`, D-23), e o bloco `!` com `allowed-tools` rodava sem aprovação e sem trilha,
+com o `managedSettings` sem efeito (desligado pela camada de flag, D-24).
+
+### B-02 — ADR-018: extensões do Claude só entram pelo produto ✅
 
 ADR-018 em [00-decisions](../../architecture/shared/00-decisions.md) (a numeração segue a ordem dos
 planos: 014 no 06, 015 no 07, 016 no 11, 017 no 12, 018 aqui, 019 no 14). Registra, decorrente da ADR-011 e da B-01:
@@ -108,7 +115,7 @@ Atualiza também [backend/04-claude-integration](../../architecture/backend/04-c
 (tabela de opções: `strictMcpConfig`, `mcpServers`, `plugins`, `effort`, `thinking`, `fallbackModel`)
 e a seção "Diretório confiado" com o que a B-01 mediu sobre hooks e subagents.
 
-### B-03 — Módulo `claude-config` 🔲
+### B-03 — Módulo `claude-config` ✅
 
 Módulo novo ([D-03](decisions.md#d-03--módulo-novo-ou-parte-de-session)) no catálogo de
 [backend/03-modules](../../architecture/backend/03-modules.md#o-catálogo): padrões, servidores MCP,
@@ -123,7 +130,7 @@ usuário numa pasta chega por uma porta que o `session` implementa. Todo contato
 teste de conexão — fica em `adapter/outbound/claude/`, como manda
 [backend/04](../../architecture/backend/04-claude-integration.md#onde-isso-mora). Cenário S-14.
 
-### B-04 — Contrato HTTP 🔲
+### B-04 — Contrato HTTP ✅
 
 Documentado em [backend/03-modules](../../architecture/backend/03-modules.md) na seção do módulo, com
 tabela de status por rota, no formato das rotas de `permission`. Todas Bearer, escopadas por quem
@@ -149,7 +156,7 @@ memória — só metadado. Os endpoints entram nos limites do
 [plano 05](../05-hardening-operations/README.md) (ritmo por usuário) quando ele rodar; a sonda e o teste
 têm, desde já, um em voo por chave.
 
-### B-05 — Contrato WebSocket, nas três pontas 🔲
+### B-05 — Contrato WebSocket, nas três pontas ✅
 
 Mudança de contrato: schema em `packages/contracts/schema`, TS, **Dart regenerado** e o
 [documento](../../architecture/shared/05-websocket-protocol.md#comandos-cliente--servidor) na mesma
@@ -166,7 +173,7 @@ entrega. Campos e eventos novos, sem subir `v`
 O indicador que consome o evento vai para o painel do plano 08 ([D-14](decisions.md#d-14--quem-entrega-o-indicador-de-mcp-da-sessão)).
 Cenários S-10, S-11.
 
-### B-06 — Códigos de erro 🔲
+### B-06 — Códigos de erro ✅
 
 No [catálogo](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio) e em
 `error-catalogue.ts`, com `messageKey` en/pt-BR (`claudeConfig.error.*`): `MCP_SERVER_NOT_FOUND` 404,
@@ -180,7 +187,7 @@ inacessível). Reusados: `INVALID_INPUT`, `FORBIDDEN`,
 `INTERNAL_ERROR`. `400` para o que não se entende (tipo errado), `422` para o que se entende e é
 impossível (nome com `__`, URL `file:`). Cenário S-12.
 
-### B-07 — Tabelas e kinds de trilha 🔲
+### B-07 — Tabelas e kinds de trilha ✅
 
 Migration versionada nova (não chute número): `claude_defaults` (usuário, pasta opcional, modelo,
 modo, esforço, thinking, output style, modelo reserva), `mcp_servers` (usuário, nome, escopo
@@ -198,7 +205,7 @@ Os kinds novos entram no CHECK de `audit_events` por migration nova, nunca edita
 [backend/05-persistence](../../architecture/backend/05-persistence.md#os-fatos-de-conta); a linha do
 tempo do [plano 14](../14-audit-explained/README.md) mostra esses kinds quando existir. Cenário S-13.
 
-### B-08 — Regras de máquina 🔲
+### B-08 — Regras de máquina ✅
 
 Em `pnpm scan:security` (`scripts/lib/agent-sdk-rules.mjs`), junto das que já exigem
 `settingSources: ['project']` e o `PreToolUse` — ver
@@ -216,7 +223,7 @@ mesma entrega:
 
 Cenários S-06…S-09, S-145.
 
-### B-09 — Rota, i18n e o documento de UI 🔲
+### B-09 — Rota, i18n e o documento de UI ✅
 
 A tela é **uma** rota na navegação global do plano 06, fora das Configurações do app:
 `/claude-settings?section=account|installation|models|mcp|plugins|skills|project&folder=<caminho>` — seção e pasta na

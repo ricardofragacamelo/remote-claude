@@ -16,6 +16,10 @@ const safe: Options = {
   hooks: { PreToolUse: [{ hooks: [() => Promise.resolve({ continue: true })] }] },
   canUseTool: () => Promise.resolve({ behavior: 'deny', message: 'no' }),
   env: { PATH: '/usr/bin', HOME: '/home/me', CLAUDE_CONFIG_DIR: '/home/me/.claude' },
+  strictMcpConfig: true,
+  mcpServers: {},
+  settings: { disableSkillShellExecution: true, outputStyle: 'Concise' },
+  plugins: [{ type: 'local', path: '/srv/plugin', skipMcpDiscovery: true }],
 };
 
 /**
@@ -32,7 +36,7 @@ describe('realQueryFactory', () => {
     query.close();
   });
 
-  it.each(['settingSources', 'hooks', 'canUseTool', 'env'] as const)(
+  it.each(['settingSources', 'hooks', 'canUseTool', 'env', 'strictMcpConfig'] as const)(
     'refuses to open a session when %s is absent altogether',
     (field) => {
       // Built by omission rather than by setting the field to `undefined`: with
@@ -132,5 +136,45 @@ describe('realQueryFactory', () => {
     } catch (error) {
       expect((error as Error).message).toContain('canUseTool');
     }
+  });
+
+  it.each([
+    ['strictMcpConfig is false — S-06', { strictMcpConfig: false }],
+    [
+      'a server is on the argv — plan 13, D-02',
+      { mcpServers: { gh: { command: 'npx', env: { GITHUB_TOKEN: 'secret' } } } },
+    ],
+    [
+      'managedSettings is set — plan 13, D-24',
+      { managedSettings: { disableSkillShellExecution: true } },
+    ],
+    ['settings is a file', { settings: '/tmp/settings.json' }],
+    ['settings carries permissions — S-08', { settings: { permissions: { allow: ['Bash'] } } }],
+    ['settings carries hooks — S-08', { settings: { hooks: {} } }],
+    [
+      'a plugin starts its own MCP servers — S-09',
+      { plugins: [{ type: 'local', path: '/srv/p' }] },
+    ],
+  ] as [string, Options][])('refuses to open a session when %s — ADR-018', (_case, options) => {
+    expect(() => realQueryFactory({ prompt: nothing, options: { ...safe, ...options } })).toThrow(
+      UnsafeSdkOptionsError,
+    );
+  });
+
+  it('names the flag settings it refused, and opens with no settings and no plugins at all', () => {
+    expect(() =>
+      realQueryFactory({
+        prompt: nothing,
+        options: { ...safe, settings: { enabledPlugins: {}, env: {} } },
+      }),
+    ).toThrow(/enabledPlugins, env/);
+
+    const bare = Object.fromEntries(
+      Object.entries(safe).filter(
+        ([name]) => !['settings', 'plugins', 'mcpServers'].includes(name),
+      ),
+    ) as Options;
+    const query = realQueryFactory({ prompt: nothing, options: bare });
+    query.close();
   });
 });

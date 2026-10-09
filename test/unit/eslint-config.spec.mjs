@@ -145,6 +145,10 @@ describe('react/jsx-no-literals — nothing presentable is born hardcoded', () =
     'web/src/features/permission/components/RuleList.tsx',
     'web/src/features/permission/components/RuleRow.tsx',
     'web/src/app/RulesRoute.tsx',
+    // S-58 of plan 13: the screen of Claude's configuration, and the route that frames it.
+    'web/src/features/claude-settings/components/DefaultsForm.tsx',
+    'web/src/features/claude-settings/components/InstallationSection.tsx',
+    'web/src/app/ClaudeSettingsRoute.tsx',
   ])('rejects a literal sentence in %s', async (filePath) => {
     const code = 'export const Row = () => <button>Revoke</button>;\n';
 

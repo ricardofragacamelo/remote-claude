@@ -71,6 +71,7 @@ describe('the frame of the app — plan 06, B-18', () => {
       t('navigation.entry.rules'),
       t('navigation.entry.devices'),
       t('navigation.entry.diagnostics'),
+      t('navigation.entry.claude'),
       t('navigation.entry.settings'),
     ]);
   });

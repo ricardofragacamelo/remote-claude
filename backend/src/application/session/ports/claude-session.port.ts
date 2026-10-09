@@ -3,6 +3,7 @@ import type {
   EffortLevel,
   InstallationModel,
   McpServer,
+  SessionInitialization,
   PermissionMode,
   PromptExtras,
   SessionCloseReason,
@@ -69,6 +70,15 @@ export interface ClaudeSessionStart {
 
   /** How hard the model thinks, chosen when the session opens — `null` for its default (D-16). */
   readonly effort?: EffortLevel | null;
+
+  /** Whether the model thinks before answering — `null` for the product's own (plan 13, B-15). */
+  readonly thinking?: 'on' | 'off' | null;
+
+  /** The output style a default chose, through the flag layer — `null` for the installation's. */
+  readonly outputStyle?: string | null;
+
+  /** The model used when the main one is overloaded — `null` for none. */
+  readonly fallbackModel?: string | null;
 
   /**
    * Where a fork for an edit-and-resend starts (plan 08, D-19): the conversation is kept up to and
@@ -137,6 +147,14 @@ export interface ClaudeSessionHandle {
    * @throws {import('@domain/session').ClaudeTimeoutError} the CLI did not answer in time
    */
   supportedCommands(): Promise<readonly SlashCommand[]>;
+
+  /**
+   * What the installation says about itself in one question — `initializationResult()`: commands,
+   * agents, models, output styles and the account (plan 13, D-05). No quota.
+   *
+   * @throws as {@link supportedCommands}
+   */
+  initialization(): Promise<SessionInitialization>;
 
   /** The installation's models — `supportedModels()`; no quota. @throws as {@link supportedCommands} */
   supportedModels(): Promise<readonly InstallationModel[]>;

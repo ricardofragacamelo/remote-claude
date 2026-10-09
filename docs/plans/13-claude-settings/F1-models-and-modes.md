@@ -24,7 +24,7 @@ usa, e nasce aqui, pequeno.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-10 — Catálogo da instalação 🔲
+### B-10 — Catálogo da instalação ✅
 
 `InstallationCatalog`, generalizando o padrão que o `CommandCatalog` do plano 04 já provou
 ([backend/03 · session](../../architecture/backend/03-modules.md#session),
@@ -44,7 +44,7 @@ de sessões enquanto vive: com a capacidade cheia e nenhuma sessão viva na past
 Testes: unit do cache e do single-flight com relógio e fábrica falsos; integração com o SDK fake e o
 processo real de contagem de capacidade; o custo real vem do `smoke-live` (S-04). Cenários S-16…S-23.
 
-### B-11 — Conta e instalação 🔲
+### B-11 — Conta e instalação ✅
 
 `GET /claude/account`: `accountInfo()` — provedor (`apiProvider`), plano (`subscriptionType`),
 organização, e-mail ([D-07](decisions.md#d-07--o-que-da-conta-aparece-e-para-quem)); de
@@ -63,7 +63,7 @@ resultado do último teste de conexão. A tela "Logs e diagnóstico" do plano 06
 [plano 18](../18-logs-and-diagnostics/README.md) **reusam** esta rota, não a refazem
 ([D-08](decisions.md#d-08--teste-de-conexão-com-o-modelo)). Cenários S-24…S-29.
 
-### B-12 — Teste de conexão com o modelo 🔲
+### B-12 — Teste de conexão com o modelo ✅
 
 `POST /claude/diagnostics/model-check { model? }`: uma `query()` de **um** turno com um prompt mínimo
 fixo, sem tools (`tools: []`), `maxTurns: 1` e `maxBudgetUsd` baixo de configuração; mede latência,
@@ -76,7 +76,7 @@ que morreu ou não respondeu no prazo, que é falha do teste, não resultado del
 usuário. Não vira sessão, não entra no histórico, não vai para a trilha (não executa tool); o custo é
 o que o [plano 16](../16-usage-and-cost/README.md) contabilizar. Cenários S-30…S-33.
 
-### B-13 — Modelos da instalação 🔲
+### B-13 — Modelos da instalação ✅
 
 `GET /claude/models?folder=`: `supportedModels()` pelo catálogo — `value`, `displayName`,
 `description`, `resolvedModel`, `supportsEffort`, `supportedEffortLevels`, `supportsAdaptiveThinking`.
@@ -84,7 +84,7 @@ o que o [plano 16](../16-usage-and-cost/README.md) contabilizar. Cenários S-30�
 lista fixa de comandos. Os permission modes vêm do domínio (`PERMISSION_MODES`), cada um com a
 descrição traduzida do que ele faz. Cenários S-34…S-36.
 
-### B-14 — Padrões: store e regras 🔲
+### B-14 — Padrões: store e regras ✅
 
 Regra pura no domínio do `claude-config` ([D-04](decisions.md#d-04--padrões-por-usuário-e-por-pasta),
 [D-06](decisions.md#d-06--o-que-entra-como-padrão)): o padrão do usuário, sobreposto pelo da pasta mais
@@ -103,7 +103,7 @@ reserva diferente do principal (o SDK lança erro se forem iguais). Toda mudanç
 Rotas da [B-04](F0-contract.md); o `GET` devolve o efetivo e a origem de cada campo, que é o que a tela
 mostra ("vem do padrão da pasta"). Cenários S-37…S-47.
 
-### B-15 — Aplicar no `session.start` 🔲
+### B-15 — Aplicar no `session.start` ✅
 
 O `StartSessionUseCase` pergunta pela porta `SessionConfigurationSource` quando o cliente não mandou
 modelo ou modo; a `sdk-options.factory` ganha `effort`, `thinking` e `fallbackModel`; o output style
@@ -114,7 +114,7 @@ Padrão velho — o modelo sumiu numa atualização do CLI, o estilo foi apagado
 no da instalação, `warn` no log, e `session.started` diz o que valeu e `defaultsFrom`. Sessão viva não
 muda quando o padrão muda: trocar dentro dela é o seletor do plano 08. Cenários S-48…S-53.
 
-### B-16 — A tela e as primeiras seções 🔲
+### B-16 — A tela e as primeiras seções ✅
 
 `web/src/features/claude-settings/`, cadeia Component → Hook → Service → `api.ts`
 ([web/01](../../architecture/web/01-architecture.md)), dentro do screen frame do plano 06 (título, uma
@@ -129,7 +129,7 @@ painel do plano 08 passa a ler o **mesmo** `GET /claude/models` se ainda não l�
 são duas listas divergindo ([D-09](decisions.md#d-09--a-seção-claude-das-configurações-do-app)).
 Cenários S-54…S-56.
 
-### B-17 — Usabilidade e ajuda: conta, modelos e padrões 🔲
+### B-17 — Usabilidade e ajuda: conta, modelos e padrões ✅
 
 A task que os princípios globais exigem por tela: gaveta de ajuda escrita para quem nunca viu o produto,
 en e pt-BR — o que é um modelo, o que esforço e thinking mudam (custo e latência), o que é output style,

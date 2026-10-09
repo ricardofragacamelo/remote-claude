@@ -1,3 +1,4 @@
+import { SingleFlight } from '@application/shared';
 import type { LiveSession } from './session-registry';
 
 /**
@@ -22,7 +23,7 @@ export const MAX_CACHED_LISTS = 16;
  */
 export class InstallationCache<T> {
   private readonly answers = new Map<string, T>();
-  private readonly asking = new Map<string, Promise<T>>();
+  private readonly asking = new SingleFlight<T>();
 
   constructor(private readonly capacity: number = MAX_CACHED_LISTS) {}
 
@@ -44,24 +45,14 @@ export class InstallationCache<T> {
       return Promise.resolve(known);
     }
 
-    const pending = this.asking.get(key);
-    if (pending !== undefined) {
-      return pending;
-    }
-
-    const asked = ask(live)
-      .then((answer) => {
+    return this.asking.run(key, () =>
+      ask(live).then((answer) => {
         if (version !== null) {
           this.remember(key, answer);
         }
         return answer;
-      })
-      .finally(() => {
-        this.asking.delete(key);
-      });
-
-    this.asking.set(key, asked);
-    return asked;
+      }),
+    );
   }
 
   /**

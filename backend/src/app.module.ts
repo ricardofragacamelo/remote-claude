@@ -9,6 +9,7 @@ import { TraceMiddleware } from '@shared/logging/trace.middleware';
 import { AuthModule } from '@infra/modules/auth.module';
 import { AuditModule } from '@infra/modules/audit.module';
 import { AuditQueryModule } from '@infra/modules/audit-query.module';
+import { ClaudeConfigModule } from '@infra/modules/claude-config.module';
 import { DatabaseModule } from '@infra/modules/database.module';
 import { GatewayModule } from '@infra/modules/gateway.module';
 import { HealthModule } from '@infra/modules/health.module';
@@ -45,6 +46,7 @@ import { WorkspaceModule } from '@infra/modules/workspace.module';
     DiagModule,
     PermissionModule,
     NotificationModule,
+    ClaudeConfigModule,
     SessionModule,
     TranscriptModule,
     GatewayModule,

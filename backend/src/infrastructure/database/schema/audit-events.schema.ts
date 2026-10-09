@@ -40,7 +40,7 @@ export const auditEvents = pgTable(
     index('audit_events_at_idx').on(table.at),
     check(
       'audit_events_kind_known',
-      sql`${table.kind} IN ('device.registered', 'device.approved', 'device.revoked', 'device.expired', 'permission.ruleGranted', 'permission.ruleRevoked', 'session.resumed', 'session.forked', 'session.filesRewound', 'file.created', 'file.written', 'file.moved', 'file.copied', 'file.deleted', 'file.failed', 'file.downloaded', 'file.restored')`,
+      sql`${table.kind} IN ('device.registered', 'device.approved', 'device.revoked', 'device.expired', 'permission.ruleGranted', 'permission.ruleRevoked', 'session.resumed', 'session.forked', 'session.filesRewound', 'file.created', 'file.written', 'file.moved', 'file.copied', 'file.deleted', 'file.failed', 'file.downloaded', 'file.restored', 'claude.defaultsChanged', 'claude.mcpServerAdded', 'claude.mcpServerChanged', 'claude.mcpServerRemoved', 'claude.mcpServerToggled', 'claude.mcpServerTested', 'claude.mcpProjectServerApproved', 'claude.mcpProjectServerRejected', 'claude.pluginAdded', 'claude.pluginUpdated', 'claude.pluginToggled', 'claude.pluginRemoved', 'claude.skillSourceToggled')`,
     ),
   ],
 );

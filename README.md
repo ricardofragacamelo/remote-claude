@@ -317,6 +317,7 @@ Isso não é entregar; é esconder.
 | `cd mobile && flutter test` | unit e widget do app |
 | `pnpm fixtures:record` | grava o stream do Agent SDK **real** como fixture — sob demanda, exige o Claude logado; `--history <cenário>` acrescenta o que o SDK relê daquela execução |
 | `pnpm transcript:follow-bench` | mede, no store de quem roda, o que o seguidor de conversas custa: `getSessionInfo`, a releitura do maior transcript e 4 conversas juntas — só tempo e heap, nunca conteúdo ([22 · B-19](docs/plans/22-live-history/F2-follower.md#b-19--a-medição-)) |
+| `pnpm spike:claude-config [sonda…]` | o spike da B-01 do plano 13: contra o Claude **real**, num `CLAUDE_CONFIG_DIR` isolado com a credencial copiada, o que o `strictMcpConfig` segura, se tool MCP passa pelo `canUseTool`, como o segredo de um servidor chega sem o argv, o custo da sonda, o que o projeto injeta, os blocos `!` e as skills do usuário pelo plugin sintético — sob demanda, gasta poucos turnos ([13 · B-01](docs/plans/13-claude-settings/F0-contract.md#b-01--spike-as-medições-que-mandam-no-desenho-)) |
 
 `pnpm test:e2e` sai com o **código dos testes**, não com 0 fixo — senão o CI fica verde com
 teste vermelho. E pode rodar com o `pnpm dev` de pé, porque usa portas aleatórias e um projeto

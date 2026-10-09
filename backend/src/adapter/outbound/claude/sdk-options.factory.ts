@@ -3,6 +3,7 @@ import type { Options } from '@anthropic-ai/claude-agent-sdk';
 import { sdkPermissionMode } from '@domain/session';
 import type { EffortLevel, PermissionMode } from '@domain/session';
 import type { WorkspacePath } from '@domain/workspace';
+import { flagSettings } from './flag-settings';
 
 /** Limits the installation puts on a session. Numbers, from configuration — never from a client. */
 export interface SessionLimits {
@@ -29,6 +30,15 @@ export interface SdkOptionsInput {
 
   /** How hard the model thinks, for the life of the session — absent for its default (D-16). */
   readonly effort?: EffortLevel | null;
+
+  /** The output style a default chose (plan 13, B-15) — absent for the installation's. */
+  readonly outputStyle?: string | null;
+
+  /** Thinking switched off by a default — absent or `on` for the product's own (plan 13, B-15). */
+  readonly thinking?: 'on' | 'off' | null;
+
+  /** The model used when the main one is overloaded — never equal to it, the domain says. */
+  readonly fallbackModel?: string | null;
 
   /**
    * Where a fork for an edit-and-resend starts (plan 08, D-19) — absent for any other session. The
@@ -93,7 +103,9 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
     // Thinking is shown, folded (plan 08, D-17), and by default it comes **omitted** — a block with
     // no text, measured. Summarised is what gives the panel something to show; adaptive is what the
     // CLI does anyway on a model that has it, and an older one takes the option too (discovery §10.7).
-    thinking: { type: 'adaptive', display: 'summarized' },
+    // A default may switch it off: faster and cheaper, and nothing to show (plan 13, D-06).
+    thinking:
+      input.thinking === 'off' ? { type: 'disabled' } : { type: 'adaptive', display: 'summarized' },
 
     // A subagent's text and thinking, not only its tools, with `parent_tool_use_id` — what lets the
     // panel nest it under the tool that opened it (D-15). One that reads a file costs a handful of
@@ -103,6 +115,17 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
     // The user's own `/rewind` in the editor. Our undo does not depend on it — `rewindFiles()`
     // overwrites manual edits in silence and takes no file filter, so the snapshot store is ours.
     enableFileCheckpointing: true,
+
+    // Only the servers the backend composes, and none of them on the argv: with the strict flag the
+    // CLI starts nothing of `.mcp.json`, of a plugin, of an agent's frontmatter nor a claude.ai
+    // connector — measured — and the servers of the session reach it through `setMcpServers()`
+    // right after the start, over the control channel (ADR-018, plan 13 · D-02).
+    strictMcpConfig: true,
+    mcpServers: {},
+
+    // The flag layer, from its builder: the shell inline of skills and slash commands off — it runs
+    // with no `canUseTool` and no `PreToolUse`, measured — and the output style when one was chosen.
+    settings: flagSettings({ outputStyle: input.outputStyle ?? null }),
 
     maxBudgetUsd: input.limits.maxBudgetUsd,
     maxTurns: input.limits.maxTurns,
@@ -119,6 +142,7 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
 
     ...(input.model === null ? {} : { model: input.model }),
     ...(input.effort == null ? {} : { effort: input.effort }),
+    ...(input.fallbackModel == null ? {} : { fallbackModel: input.fallbackModel }),
     ...conversationOptions(input.conversation),
     ...forkOptions(input.forkAt),
   };

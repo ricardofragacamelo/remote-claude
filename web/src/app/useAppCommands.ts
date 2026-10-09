@@ -1,6 +1,7 @@
-import { CircleHelp, Info, Languages, Moon, Sun } from 'lucide-react';
+import { CircleHelp, Gauge, Info, Languages, Moon, Sparkles, Sun } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 
+import { claudeSettingsHref } from '@/features/claude-settings';
 import { useCommands } from '@/features/commands';
 import type { CommandDeclaration } from '@/features/commands';
 import { useWorkbenchTarget } from '@/features/workbench';
@@ -70,6 +71,28 @@ export function useAppCommands(): void {
         useLocale.getState().setLocale(each);
       },
     })),
+    {
+      // The defaults of Claude, and the test of the connection: their place is the screen of plan
+      // 13, and the palette goes there (plan 13, B-17, S-59; the keys, D-26).
+      id: 'claude.defaultModel',
+      labelKey: 'command.claude.defaultModel',
+      category: 'go',
+      icon: Sparkles,
+      run: () => {
+        void navigate({ href: claudeSettingsHref({ section: 'models' }) });
+      },
+      keys: [{ key: 'Mod+K M', context: 'global' }],
+    },
+    {
+      id: 'claude.testConnection',
+      labelKey: 'command.claude.testConnection',
+      category: 'go',
+      icon: Gauge,
+      run: () => {
+        void navigate({ href: claudeSettingsHref({ section: 'installation' }) });
+      },
+      keys: [{ key: 'Mod+K T', context: 'global' }],
+    },
     {
       id: 'help.show',
       labelKey: 'command.help.show',

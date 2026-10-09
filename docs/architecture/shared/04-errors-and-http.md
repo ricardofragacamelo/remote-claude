@@ -74,15 +74,15 @@ novo sem esses três campos não compila.
 |---|---|---|
 | `400` | `INVALID_INPUT` | Payload malformado, tipo errado, JSON inválido |
 | `401` | `UNAUTHENTICATED` | Sem credencial, ou token inválido/expirado |
-| `403` | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN` | Autenticado, mas não pode. **Workspace fora da allowlist e recurso de outra pessoa moram aqui.** |
-| `404` | `SESSION_NOT_FOUND`, `TOOL_USE_NOT_FOUND`, `QUEUED_PROMPT_NOT_FOUND`, `ATTACHMENT_NOT_FOUND` | O recurso **não existe** |
-| `409` | `CONFLICT`, `OPEN_FOLDERS_LIMIT_REACHED`, `FILE_EXISTS`, `DIRECTORY_NOT_EMPTY`, `SESSION_CHANGE_STALE`, `SESSION_FORK_REJECTED`, `TRANSCRIPT_FOLLOW_LIVE_HERE` | Conflito com o estado atual — inclusive o teto de abas de pasta, que fechar uma resolve, o destino ocupado de um criar/mover/copiar (com o `ETag` do que está lá), a pasta não vazia que pede a contagem, o trecho calculado sobre um disco que mudou, o ponto de fork que o CLI recusou e a conversa que uma sessão viva do chamador já mostra |
+| `403` | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`, `PLUGIN_MARKETPLACE_NOT_ALLOWED` | Autenticado, mas não pode. **Workspace fora da allowlist e recurso de outra pessoa moram aqui.** |
+| `404` | `SESSION_NOT_FOUND`, `TOOL_USE_NOT_FOUND`, `QUEUED_PROMPT_NOT_FOUND`, `ATTACHMENT_NOT_FOUND`, `MCP_SERVER_NOT_FOUND`, `PLUGIN_NOT_FOUND` | O recurso **não existe** |
+| `409` | `CONFLICT`, `OPEN_FOLDERS_LIMIT_REACHED`, `FILE_EXISTS`, `DIRECTORY_NOT_EMPTY`, `SESSION_CHANGE_STALE`, `SESSION_FORK_REJECTED`, `TRANSCRIPT_FOLLOW_LIVE_HERE`, `MCP_SERVER_NAME_TAKEN`, `MCP_APPROVAL_STALE` | Conflito com o estado atual — inclusive o teto de abas de pasta, que fechar uma resolve, o destino ocupado de um criar/mover/copiar (com o `ETag` do que está lá), a pasta não vazia que pede a contagem, o trecho calculado sobre um disco que mudou, o ponto de fork que o CLI recusou e a conversa que uma sessão viva do chamador já mostra |
 | `410` | `PERMISSION_REQUEST_EXPIRED` | Existiu, não existe mais, e não volta |
 | `412` | `FILE_CHANGED` | A versão que o cliente nomeou em `If-Match` não é a do disco — **inclusive o arquivo apagado**, que nunca é recriado em silêncio. Leva o `ETag` atual no cabeçalho e em `params.currentEtag` ([07 · D-03](../../plans/07-explorer-and-editor/decisions.md#d-03--a-semântica-de-concorrência)) |
 | `413` | `PAYLOAD_TOO_LARGE`, `FILE_TOO_LARGE` | Prompt, upload ou corpo acima do limite — e o arquivo acima do teto de edição (`params.size`, `params.limit`, `params.measure`), e a imagem de um prompt do histórico acima do teto que a rota serve |
 | `415` | `FILE_NOT_TEXT`, `ATTACHMENT_TYPE_UNSUPPORTED`, `UNSUPPORTED_MEDIA_TYPE` | O arquivo não é texto que o servidor decodifique: binário, ou bytes que não são UTF-8 sem encoding pedido (`params.reason`) — nunca um palpite. E o anexo do prompt de tipo que ele não leva, e a imagem do histórico de tipo que a rota não serve |
 | `416` | `RANGE_NOT_SATISFIABLE` | `Range` que começa depois do fim do arquivo — inclua `Content-Range: bytes */<tamanho>` |
-| `422` | `WORKSPACE_NOT_A_DIRECTORY`, `WORKSPACE_DIRECTORY_UNREADABLE`, `FILE_NOT_A_FILE`, `FILE_OPERATION_INVALID`, `FILE_NOT_ENCODABLE`, `FILE_ACCESS_DENIED`, `DIFF_NOT_APPLICABLE` | Sintaxe válida, semântica impossível — inclusive a pasta liberada, ou o arquivo dela, que o processo do backend não pode ler ou escrever: a autorização passou, é o disco que recusa; e o diff pedido de uma tool que não escreve arquivo |
+| `422` | `WORKSPACE_NOT_A_DIRECTORY`, `WORKSPACE_DIRECTORY_UNREADABLE`, `FILE_NOT_A_FILE`, `FILE_OPERATION_INVALID`, `FILE_NOT_ENCODABLE`, `FILE_ACCESS_DENIED`, `DIFF_NOT_APPLICABLE`, `MCP_SERVER_CONFIG_INVALID`, `MODEL_NOT_AVAILABLE`, `DEFAULT_MODE_NOT_ALLOWED`, `PLUGIN_PATH_INVALID` | Sintaxe válida, semântica impossível — inclusive a pasta liberada, ou o arquivo dela, que o processo do backend não pode ler ou escrever: a autorização passou, é o disco que recusa; e o diff pedido de uma tool que não escreve arquivo |
 | `423` | `SESSION_LOCKED` | Sessão em uso exclusivo por outra connection, **ou com um turno em execução** — é o que recusa o desfazer no meio de um turno |
 | `428` | `PRECONDITION_REQUIRED` | Falta uma condição antes de tocar o disco: o `PUT` sem `If-Match` (ou com `*`, que seria "qualquer versão"), o arquivo que muda a permissão sem a confirmação, o apagar recursivo sem a contagem, o apagar que pediu o histórico e não coube nele (`params.reason`) |
 | `429` | `RATE_LIMITED`, `WATCH_LIMIT_REACHED`, `TRANSCRIPT_FOLLOW_LIMIT` | Limite nosso **ou** do plano Claude — ou o teto de pastas assistidas por connection, ou de conversas acompanhadas. Inclua `Retry-After`. |
@@ -95,7 +95,7 @@ novo sem esses três campos não compila.
 | Status | Código típico | Quando |
 |---|---|---|
 | `500` | `INTERNAL_ERROR` | Bug nosso. **Nunca** por causa de input do cliente. |
-| `502` | `CLAUDE_UNAVAILABLE` | O Agent SDK / CLI falhou ou morreu |
+| `502` | `CLAUDE_UNAVAILABLE`, `PLUGIN_SOURCE_UNAVAILABLE` | O Agent SDK / CLI falhou ou morreu — ou a fonte de um marketplace declarado não respondeu |
 | `503` | `SERVICE_UNAVAILABLE`, `WATCH_UNAVAILABLE` | Em shutdown, ou dependência fora — inclusive a trilha que não grava a escrita humana, e o sistema que recusou mais um watch. Inclua `Retry-After`. |
 | `504` | `CLAUDE_TIMEOUT` | O Claude não respondeu no prazo |
 | `507` | `STORAGE_FULL` | O disco (ou a cota) encheu ao escrever: o original fica intacto e nenhum temporário fica para trás |
@@ -166,6 +166,16 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `TRANSCRIPT_FOLLOW_LIMIT` | 429 | transcript | Teto de conversas acompanhadas: por connection ou no total do servidor (`transcript.error.followLimit`, `params.limit`, `params.scope`: `connection`·`server`). Soltar uma assinatura abre lugar ([22 · D-11](../../plans/22-live-history/decisions.md#f2--seguidor-no-backend)) |
 | `TRANSCRIPT_FOLLOW_LIVE_HERE` | 409 | transcript | `transcript.follow` de uma conversa que uma sessão viva **do chamador** segura: quem a mostra é a tela da sessão, por `session.attach` (`transcript.error.followLiveHere`, `params.liveSessionId`) |
 | `UNSUPPORTED_MEDIA_TYPE` | 415 | transcript | A imagem de um prompt do histórico em tipo que a rota não serve — só `image/png`, `image/jpeg`, `image/gif` e `image/webp`; SVG executa script (`transcript.error.imageTypeUnsupported`, `params.mediaType`). Acima do teto é `PAYLOAD_TOO_LARGE` com `transcript.error.imageTooLarge` (`params.size`, `params.limit`) ([22 · D-10](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)) |
+| `MCP_SERVER_NOT_FOUND` | 404 | claude-config | Servidor MCP do store que não existe, ou nome que a sessão viva não tem (`claudeConfig.error.mcpServerNotFound`, `params.serverId`) ([plano 13](../../plans/13-claude-settings/README.md)) |
+| `MCP_SERVER_NAME_TAKEN` | 409 | claude-config | Outro servidor do mesmo usuário, no mesmo escopo, tem o nome — as tools são chamadas por ele (`claudeConfig.error.mcpServerNameTaken`, `params.name`) |
+| `MCP_SERVER_CONFIG_INVALID` | 422 | claude-config | Configuração entendida e impossível: nome com `__`, URL fora de `http(s)`, variável que muda como o processo carrega, teto passado (`claudeConfig.error.mcpServerConfigInvalid`, `params.rule`, `params.field`) |
+| `MCP_APPROVAL_STALE` | 409 | claude-config | O `.mcp.json` mudou entre mostrar e aprovar: o digest enviado não é o da entrada de agora (`claudeConfig.error.mcpApprovalStale`, `params.folder`, `params.name`) |
+| `MODEL_NOT_AVAILABLE` | 422 | claude-config | Padrão com um modelo que a instalação não oferece, conferido no catálogo ao gravar (`claudeConfig.error.modelNotAvailable`, `params.model`) |
+| `DEFAULT_MODE_NOT_ALLOWED` | 422 | claude-config | `bypassPermissions` como padrão (`claudeConfig.error.defaultModeNotAllowed`, `params.mode`) |
+| `PLUGIN_NOT_FOUND` | 404 | claude-config | Plugin do store que não existe (`claudeConfig.error.pluginNotFound`, `params.pluginId`) |
+| `PLUGIN_PATH_INVALID` | 422 | claude-config | Diretório sem manifesto de plugin, fonte de marketplace de tipo que não buscamos, caminho que sai do repositório (`claudeConfig.error.pluginPathInvalid`, `params.reason`) |
+| `PLUGIN_MARKETPLACE_NOT_ALLOWED` | 403 | claude-config | Marketplace fora do arquivo da allowlist: só quem tem acesso ao disco acrescenta fonte (`claudeConfig.error.pluginMarketplaceNotAllowed`, `params.marketplace`) |
+| `PLUGIN_SOURCE_UNAVAILABLE` | 502 | claude-config | A fonte de um marketplace declarado não respondeu, ou não tem o commit; nada foi gravado nem ficou pela metade (`claudeConfig.error.pluginSourceUnavailable`, `params.marketplace`) |
 | `CLAUDE_UNAVAILABLE` | 502 | session, transcript | Subprocesso do CLI falhou — ou a leitura do histórico pelo SDK, ou a lista de slash commands |
 | `CLAUDE_TIMEOUT` | 504 | session, transcript | Sem resposta no prazo — inclusive a leitura do histórico e a lista de slash commands (`session.error.claudeTimeout`) |
 | `RATE_LIMITED` | 429 | — | Limite nosso ou do plano Claude. `params: { scope, limit, retryAfterSeconds }` — no WebSocket, `scope` é `frames` ou `attachedSessions` |
@@ -185,6 +195,12 @@ respondeu no prazo do cliente ([plano 05 · B-26](../../plans/05-hardening-opera
 Ver [backend/03](../backend/03-modules.md#session).
 
 ---
+
+O `claude-config` reusa ainda `INVALID_INPUT` (`claudeConfig.error.effortUnsupported`,
+`claudeConfig.error.fallbackSameAsModel`, `claudeConfig.error.skillNameInvalid`), `FORBIDDEN`
+(`claudeConfig.error.forbidden` — servidor, plugin ou sobreposição de outra pessoa) e `SERVICE_UNAVAILABLE`
+(`claudeConfig.error.secretStoreUnavailable` — sem o arquivo de chave, servidor **com** segredo não é
+gravado; o resto funciona).
 
 ## Erro no WebSocket
 

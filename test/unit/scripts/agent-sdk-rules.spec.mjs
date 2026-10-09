@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   argumentsAt,
+  enclosingObject,
   inspectAll,
   inspectSource,
   lineAt,
@@ -20,6 +21,7 @@ const answer = query({
   prompt,
   options: {
     settingSources: ['project'],
+    strictMcpConfig: true,
     canUseTool: bridge.canUseTool,
     hooks: { PreToolUse: [auditHook] },
   },
@@ -38,35 +40,37 @@ describe('inspectSource', () => {
 
   it('refuses a query() that omits settingSources — the hole opens in silence', () => {
     const source =
-      'query({ prompt, options: { canUseTool: gate, hooks: { PreToolUse: [audit] } } });';
+      'query({ prompt, options: { strictMcpConfig: true, canUseTool: gate, hooks: { PreToolUse: [audit] } } });';
 
     expect(rulesBrokenBy(source)).toEqual(['query-needs-project-setting-sources']);
   });
 
   it('refuses a settingSources that does not carry the project scope', () => {
     const source =
-      'query({ options: { settingSources: [], canUseTool: g, hooks: { PreToolUse: [a] } } });';
+      'query({ options: { settingSources: [], strictMcpConfig: true, canUseTool: g, hooks: { PreToolUse: [a] } } });';
 
     expect(rulesBrokenBy(source)).toEqual(['query-needs-project-setting-sources']);
   });
 
   it('refuses a query() with no PreToolUse hook — there is no audit trail without it', () => {
-    const source = "query({ options: { settingSources: ['project'], canUseTool: gate } });";
+    const source =
+      "query({ options: { settingSources: ['project'], strictMcpConfig: true, canUseTool: gate } });";
 
     expect(rulesBrokenBy(source)).toEqual(['query-needs-pretooluse-hook']);
   });
 
   it('refuses a query() with no canUseTool — the CLI then decides, and nobody is asked', () => {
     const source =
-      "query({ options: { settingSources: ['project'], hooks: { PreToolUse: [a] } } });";
+      "query({ options: { settingSources: ['project'], strictMcpConfig: true, hooks: { PreToolUse: [a] } } });";
 
     expect(rulesBrokenBy(source)).toEqual(['query-needs-can-use-tool']);
   });
 
-  it('reports all three when a call breaks all three', () => {
+  it('reports all four when a call breaks all four', () => {
     expect(rulesBrokenBy('query({ prompt });')).toEqual([
       'query-needs-project-setting-sources',
       'query-needs-pretooluse-hook',
+      'query-needs-strict-mcp-config',
       'query-needs-can-use-tool',
     ]);
   });
@@ -116,7 +120,7 @@ describe('inspectSource', () => {
   });
 
   it('still catches the bare call, which is how the SDK is imported', () => {
-    expect(rulesBrokenBy('const answer = query({ prompt });')).toHaveLength(3);
+    expect(rulesBrokenBy('const answer = query({ prompt });')).toHaveLength(4);
   });
 });
 
@@ -147,7 +151,7 @@ describe('inspectAll', () => {
     ]);
 
     expect(findings.every((finding) => finding.file === 'a.ts')).toBe(true);
-    expect(findings).toHaveLength(3);
+    expect(findings).toHaveLength(4);
   });
 });
 
@@ -229,6 +233,7 @@ describe('the rules, against prose', () => {
     expect(inspectSource('src/claude.ts', source).map((finding) => finding.rule)).toEqual([
       'query-needs-project-setting-sources',
       'query-needs-pretooluse-hook',
+      'query-needs-strict-mcp-config',
       'query-needs-can-use-tool',
     ]);
   });
@@ -243,5 +248,99 @@ describe('the rules, against prose', () => {
     const source = '// allowDangerouslySkipPermissions: true would be a disaster\nconst a = 1;\n';
 
     expect(inspectSource('src/claude.ts', source)).toEqual([]);
+  });
+});
+
+/** A file of the Claude adapter, where `settings:` is the SDK's option. */
+const ADAPTER = 'backend/src/adapter/outbound/claude/sdk-options.factory.ts';
+
+/** @param {string} source @param {string} [file] */
+function extensionRulesBrokenBy(source, file = ADAPTER) {
+  return inspectSource(file, source).map((finding) => finding.rule);
+}
+
+describe('the doors of plan 13 — ADR-018', () => {
+  it('refuses a query() without strictMcpConfig: true — S-06', () => {
+    const source =
+      "query({ options: { settingSources: ['project'], strictMcpConfig: false, canUseTool: g, " +
+      'hooks: { PreToolUse: [a] } } });';
+
+    expect(rulesBrokenBy(source)).toEqual(['query-needs-strict-mcp-config']);
+  });
+
+  it('refuses updateSettings, applyFlagSettings and managedSettings anywhere — S-07', () => {
+    expect(extensionRulesBrokenBy("await q.updateSettings('userSettings', {});", 'a.ts')).toEqual([
+      'no-update-settings',
+    ]);
+    expect(extensionRulesBrokenBy('await q.applyFlagSettings({ effortLevel });', 'a.ts')).toEqual([
+      'no-apply-flag-settings',
+    ]);
+    expect(extensionRulesBrokenBy('const o = { managedSettings: {} };', 'a.ts')).toEqual([
+      'no-managed-settings',
+    ]);
+  });
+
+  it('refuses the flag layer in the Claude adapter unless the builder makes it — S-07', () => {
+    expect(extensionRulesBrokenBy('const o = { settings: { permissions: {} } };')).toEqual([
+      'flag-settings-only-through-the-builder',
+    ]);
+    expect(
+      extensionRulesBrokenBy('const o = { settings: flagSettings({ outputStyle }) };'),
+    ).toEqual([]);
+    expect(extensionRulesBrokenBy('const o = { settings: 1 };', 'backend/src/x/config.ts')).toEqual(
+      [],
+    );
+  });
+
+  it("refuses an MCP server's tool policy, and alwaysLoad — S-09", () => {
+    expect(
+      extensionRulesBrokenBy("const s = { tools: [{ permission_policy: 'always_allow' }] };"),
+    ).toEqual(['no-mcp-tool-policy']);
+    expect(extensionRulesBrokenBy('const s = { alwaysLoad: true };')).toEqual([
+      'no-mcp-tool-policy',
+    ]);
+  });
+
+  it('refuses a local plugin without skipMcpDiscovery: true — S-09', () => {
+    expect(extensionRulesBrokenBy("const p = [{ type: 'local', path }];")).toEqual([
+      'plugin-needs-skip-mcp-discovery',
+    ]);
+    expect(
+      extensionRulesBrokenBy("const p = [{ type: 'local', path, skipMcpDiscovery: false }];"),
+    ).toEqual(['plugin-needs-skip-mcp-discovery', 'plugin-needs-skip-mcp-discovery']);
+    expect(
+      extensionRulesBrokenBy(
+        "const p = [{ type: 'local', nested: { a: 1 }, skipMcpDiscovery: true }];",
+      ),
+    ).toEqual([]);
+  });
+
+  it('refuses the control requests that have no public method — S-145', () => {
+    for (const subtype of ['get_hooks_listing', 'list_permission_rules', 'get_settings']) {
+      expect(extensionRulesBrokenBy(`send({ subtype: '${subtype}' });`, 'a.ts')).toEqual([
+        'no-private-control-request',
+      ]);
+    }
+  });
+
+  it('reads none of these names out of a comment', () => {
+    const source =
+      '// updateSettings( and applyFlagSettings( and managedSettings: are refused\nexport {};\n';
+
+    expect(extensionRulesBrokenBy(source)).toEqual([]);
+  });
+});
+
+describe('enclosingObject', () => {
+  it('reads the object literal around a position, nested objects included', () => {
+    const source = "x = [{ a: { b: 1 }, type: 'local', c: 2 }];";
+
+    expect(enclosingObject(source, source.indexOf('type'))).toBe(
+      " a: { b: 1 }, type: 'local', c: 2 ",
+    );
+  });
+
+  it('reads from the start when no brace opens before the position', () => {
+    expect(enclosingObject("type: 'local'", 3)).toBe('typ');
   });
 });

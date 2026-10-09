@@ -17,32 +17,33 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 **Última atualização:** 2026-10-09
 
 ```
-00-bootstrap             ████████████████████ 100%   ✅ concluído
-01-live-session          ████████████████████ 100%   ✅ concluído
-02-mobile-approval       ████████████████████ 100%   ✅ concluído
-03-rules-and-audit       ████████████████████ 100%   ✅ concluído
-04-transcript-and-resume ████████████████████ 100%   ✅ concluído
-05-hardening-operations  ████████████████████ 100%   ✅ concluído
-06-workbench             ████████████████████ 100%   ✅ concluído
-07-explorer-and-editor   ████████████████████ 100%   ✅ concluído
-08-claude-panel          ████████████████████ 100%   ✅ concluído
-09-chat-layout           ████████████████████ 100%   ✅ concluído
-10-mobile-chat-layout    ████████████████████ 100%   ✅ concluído
-11-search                ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
-12-integrated-terminal   ░░░░░░░░░░░░░░░░░░░░   0%   🔄 em andamento
-13-claude-settings       ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
-14-audit-explained       ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
-15-rules-management      ░░░░░░░░░░░░░░░░░░░░   0%   🔄 em andamento
-16-usage-and-cost        ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
-17-devices               ██░░░░░░░░░░░░░░░░░░   9%   🔄 em andamento
-18-logs-and-diagnostics  ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
-19-distribution          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
-20-dev-public            █████████████████░░░  86%   🔄 em andamento
-21-rich-previews         ████████████████████ 100%   ✅ concluído
-22-live-history          ████████████████████ 100%   ✅ concluído
-23-fluid-permissions     ████████████████████ 100%   ✅ concluído
-24-structured-questions  ████████████████████ 100%   ✅ concluído
-25-mobile-file-browser   ████████████████████ 100%   ✅ concluído
+00-bootstrap                  ████████████████████ 100%   ✅ concluído
+01-live-session               ████████████████████ 100%   ✅ concluído
+02-mobile-approval            ████████████████████ 100%   ✅ concluído
+03-rules-and-audit            ████████████████████ 100%   ✅ concluído
+04-transcript-and-resume      ████████████████████ 100%   ✅ concluído
+05-hardening-operations       ████████████████████ 100%   ✅ concluído
+06-workbench                  ████████████████████ 100%   ✅ concluído
+07-explorer-and-editor        ████████████████████ 100%   ✅ concluído
+08-claude-panel               ████████████████████ 100%   ✅ concluído
+09-chat-layout                ████████████████████ 100%   ✅ concluído
+10-mobile-chat-layout         ████████████████████ 100%   ✅ concluído
+11-search                     ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+12-integrated-terminal        ░░░░░░░░░░░░░░░░░░░░   0%   🔄 em andamento
+13-claude-settings            ███████░░░░░░░░░░░░░  36%   🔄 em andamento
+14-audit-explained            ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+15-rules-management           ░░░░░░░░░░░░░░░░░░░░   0%   🔄 em andamento
+16-usage-and-cost             ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+17-devices                    ██░░░░░░░░░░░░░░░░░░   9%   🔄 em andamento
+18-logs-and-diagnostics       ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+19-distribution               ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+20-dev-public                 █████████████████░░░  86%   🔄 em andamento
+21-rich-previews              ████████████████████ 100%   ✅ concluído
+22-live-history               ████████████████████ 100%   ✅ concluído
+23-fluid-permissions          ████████████████████ 100%   ✅ concluído
+24-structured-questions       ████████████████████ 100%   ✅ concluído
+25-mobile-file-browser        ████████████████████ 100%   ✅ concluído
+26-mobile-conversation-parity ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 ```
 
 ---
@@ -66,7 +67,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [10 — Layout do chat no app](10-mobile-chat-layout/README.md) | 11/11 | 48/48 | 177/178 | 30/31 | ✅ |
 | [11 — Busca](11-search/README.md) | 0/4 | 0/25 | 0/174 | 8/8 | 🔲 |
 | [12 — Terminal integrado](12-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 13/13 | 🔄 |
-| [13 — Configuração do Claude](13-claude-settings/README.md) | 0/5 | 0/47 | 0/213 | 22/22 | 🔲 |
+| [13 — Configuração do Claude](13-claude-settings/README.md) | 2/5 | 17/47 | 63/215 | 30/30 | 🔄 |
 | [14 — Auditoria explicada](14-audit-explained/README.md) | 0/5 | 0/38 | 0/151 | 0/14 | 🔲 |
 | [15 — Gestão de regras](15-rules-management/README.md) | 0/5 | 0/36 | 8/223 | 1/19 | 🔄 |
 | [16 — Uso e custo](16-usage-and-cost/README.md) | 0/5 | 0/33 | 0/123 | 0/15 | 🔲 |
@@ -79,7 +80,8 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [23 — Permissões fluidas](23-fluid-permissions/README.md) | 6/6 | 19/19 | 100/100 | 14/14 | ✅ |
 | [24 — Perguntas estruturadas](24-structured-questions/README.md) | 7/7 | 25/25 | 110/111 | 39/39 | ✅ |
 | [25 — Navegador de arquivos no app](25-mobile-file-browser/README.md) | 8/8 | 32/32 | 153/153 | 34/34 | ✅ |
-| **Total** | **111/153** | **587/875** | **2313/3642** | **406/487** | 🔄 |
+| [26 — Paridade da conversa no app](26-mobile-conversation-parity/README.md) | 0/8 | 0/26 | 0/78 | 12/13 | 🔲 |
+| **Total** | **113/161** | **604/901** | **2376/3722** | **426/508** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -295,6 +297,7 @@ empacota o que todos eles entregam, e por isso é o último:
 | [23 — Permissões fluidas](23-fluid-permissions/README.md) | parar de responder a mesma pergunta: Permitir tudo no chip da sessão, e regras que alcançam mais do que o comando exato | 03, 09, 10 |
 | [24 — Perguntas estruturadas](24-structured-questions/README.md) | responder, no web e no app, as perguntas que o Claude faz com `AskUserQuestion` — escolha única, múltipla e "Outro" —, e o Claude receber as respostas | 03, 09, 10, 22, 23 |
 | [25 — Navegador de arquivos no app](25-mobile-file-browser/README.md) | navegar pela pasta aberta pelo app, também de dentro de uma sessão, e ler os arquivos sem editar — texto com quebra ligável, markdown com diagramas `mermaid`, PDF e imagem, com zoom —, e baixá-los, sem enviar | 07, 10, 22 |
+| [26 — Paridade da conversa no app](26-mobile-conversation-parity/README.md) | ver no app cada mensagem da conversa com o mesmo conteúdo e formato do web — markdown, código com realce, subagent aninhado, rótulo, diff e saída colorida da tool, tokens, o link da trilha —, conferido por máquina; roda antes da F2 do plano 13 | 10, 22, 25 |
 
 ---
 
@@ -323,6 +326,7 @@ O que está em aberto **hoje** é a tabela gerada abaixo — uma linha por plano
 | [17-devices](17-devices/decisions.md) | D-01…D-12 | 12 |
 | [18-logs-and-diagnostics](18-logs-and-diagnostics/decisions.md) | D-02…D-10, D-12…D-16 | 14 |
 | [19-distribution](19-distribution/decisions.md) | D-02, D-03, D-06…D-08 | 5 |
+| [26-mobile-conversation-parity](26-mobile-conversation-parity/decisions.md) | D-10 | 1 |
 <!-- open-decisions:end -->
 
 Este é o recorte do que **trava** trabalho. A lista inteira, por fase e com o gap de

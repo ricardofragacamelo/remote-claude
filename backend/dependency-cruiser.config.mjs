@@ -156,6 +156,21 @@ export default {
       to: { path: '^src/(domain|application)/(session|transcript)/' },
     },
     {
+      name: 'claude-config-never-reaches-session',
+      comment:
+        'The `claude-config` module is asked by `session` through a port `session` declares, and ' +
+        'reaches the live sessions through the registry module, `workspace` and `permission` through ' +
+        'ports of its own — the outbound adapters that implement those ports are the whole of the ' +
+        'coupling. An import of the application of `session` here would close the cycle session → ' +
+        'claude-config → session; the pure types of its domain (a model, a mode) are not a module. ' +
+        'See docs/architecture/backend/03-modules.md#claude-config and plan 13, B-03, S-14.',
+      severity: 'error',
+      from: {
+        path: '^src/(domain/claude-config|application/claude-config|adapter/inbound/http/claude-config)',
+      },
+      to: { path: '^src/application/session/' },
+    },
+    {
       name: 'no-test-in-src',
       comment: 'Tests mirror the source from test/; they never sit beside it.',
       severity: 'error',

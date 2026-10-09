@@ -30,6 +30,21 @@
     "resumedFrom": {
       "type": "string",
       "description": "The conversation this session continues, when it is a resume. Absent for a fresh session. The history before the first turn of this session is read from it, over HTTP — the replay buffer only ever holds what this session said."
+    },
+    "effort": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "xhigh", "max"],
+      "description": "How hard the model thinks for the life of the session, when one was chosen — by the client, a folder's default or the user's. Absent for the model's own default."
+    },
+    "outputStyle": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "The output style the session was opened with, when a default chose one. Absent for the installation's."
+    },
+    "defaultsFrom": {
+      "type": "string",
+      "enum": ["client", "folder", "user", "installation"],
+      "description": "Where the model the session runs with came from: what the client sent in `session.start`, the default of the nearest folder, the user's default, or the installation's — a default that went stale falls back to it (plan 13, B-15)."
     }
   }
 }

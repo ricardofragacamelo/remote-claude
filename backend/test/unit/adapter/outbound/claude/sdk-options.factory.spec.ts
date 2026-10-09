@@ -67,6 +67,21 @@ describe('buildSdkOptions', () => {
     expect(options.hooks).toBeUndefined();
   });
 
+  it('takes only the MCP servers the backend composes, and none on the argv — ADR-018', () => {
+    const options = buildSdkOptions(input());
+
+    expect(options.strictMcpConfig).toBe(true);
+    expect(options.mcpServers).toEqual({});
+  });
+
+  it('switches the shell inline off, and carries the output style a default chose — plan 13, D-24', () => {
+    expect(buildSdkOptions(input()).settings).toEqual({ disableSkillShellExecution: true });
+    expect(buildSdkOptions(input({ outputStyle: 'Explanatory' })).settings).toEqual({
+      disableSkillShellExecution: true,
+      outputStyle: 'Explanatory',
+    });
+  });
+
   it('asks for partial messages, so the UI is not stuck on "thinking"', () => {
     expect(buildSdkOptions(input()).includePartialMessages).toBe(true);
   });

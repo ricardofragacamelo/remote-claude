@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -36,6 +37,7 @@ const complete: RawEnvironment = {
   RC_WS_MAX_ATTACHED_SESSIONS: '16',
   RC_SESSION_MAX_TURNS: '100',
   RC_SESSION_MAX_BUDGET_USD: '10',
+  RC_MODEL_CHECK_MAX_BUDGET_USD: '0.05',
   RC_SESSION_DEFAULT_MODEL: 'claude-sonnet-5',
   RC_SESSION_DEFAULT_PERMISSION_MODE: 'default',
   RC_PERMISSION_TIMEOUT_MS: '120000',
@@ -106,6 +108,7 @@ describe('loadConfig', () => {
       databaseUrl: 'postgresql://u:p@localhost:5432/db',
       workspaceAllowlistFile: '/etc/remote-claude/workspaces.yaml',
       pidFile: null,
+      claudeConfig: { modelCheck: { maxBudgetUsd: 0.05, cwd: tmpdir() } },
       session: {
         capacity: { floor: 1, ceiling: 10, memoryFraction: 0.5, perSessionBytes: 268_435_456 },
         idleTtlMs: 1_800_000,
@@ -212,6 +215,7 @@ describe('loadConfig', () => {
     'RC_WS_MAX_ATTACHED_SESSIONS',
     'RC_SESSION_MAX_TURNS',
     'RC_SESSION_MAX_BUDGET_USD',
+    'RC_MODEL_CHECK_MAX_BUDGET_USD',
     'RC_SESSION_DEFAULT_MODEL',
     'RC_SESSION_DEFAULT_PERMISSION_MODE',
     'RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS',

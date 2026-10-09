@@ -65,20 +65,33 @@ fica aberto. E, pelas skills: uma skill de usuário real carregando pelo plugin 
 
 `pnpm test:e2e:mobile` verde com os tipos Dart regenerados: o app não ganha tela nova, mas não pode
 quebrar com os campos e o evento novos (mobile fora do escopo, exceto compatibilidade de contrato).
+
+E a **conversa** do app em paridade com a do web ([D-31](decisions.md#decididas-durante-a-execução-b-01-2026-10-09)):
+as fixtures que só este plano consegue gravar, pela via real e não pelo spike do 26, entram na paridade de
+conteúdo do [plano 26 · B-28](../26-mobile-conversation-parity/F6-parity-gate.md#b-28--a-paridade-de-conteúdo-por-fixture-) e passam nas duas pontas:
+
+- uma tool de servidor MCP **composto pelo backend** (`setMcpServers()`), sem título;
+- uma skill de **usuário** carregada pelo plugin sintético (B-35);
+- um slash command e um subagent de **projeto** criados pelo modelo inicial (B-33, B-36), com a permissão que o
+  subagent volta a pedir (D-23);
+- uma sessão com o output style padrão da B-15.
+
+O `render:check` sai verde, sem entrada `pending`: um componente que este plano acrescentar à conversa do web
+(o indicador de MCP não é da conversa) entra no mapa com o par no app. Cenário S-214.
 Cenários S-196…S-199.
 
 ---
 
 ## Cenários cobertos
 
-S-185…S-199.
+S-185…S-199, S-214.
 
 ---
 
 ## Critério de conclusão
 
 ```bash
-pnpm verify:full
+pnpm verify:full       # o portão 11 roda o render:check do plano 26
 pnpm test:e2e:mobile
 pnpm test:e2e:live
 ```

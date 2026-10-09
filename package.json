@@ -24,6 +24,7 @@
     "contracts:check": "node scripts/contracts.mjs --check",
     "fixtures:record": "node scripts/record-agent-sdk-fixtures.mjs",
     "transcript:follow-bench": "node scripts/transcript-follow-bench.mjs",
+    "spike:claude-config": "node scripts/claude-config-spike.mjs",
     "i18n:check": "node scripts/i18n-check.mjs",
     "scan:secrets": "node scripts/secrets-scan.mjs",
     "scan:security": "node scripts/scan-security.mjs",

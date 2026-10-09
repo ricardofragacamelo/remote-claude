@@ -278,6 +278,14 @@ Fica em aberto, e bloqueia ligar as skills de usuário e de sistema: se o shell 
 (os blocos `!`) passa pelo `canUseTool` e pelo `PreToolUse`. Se não passar, ele é desligado por
 `managedSettings` para essas origens ([13 · D-21](../../plans/13-claude-settings/decisions.md)).
 
+**Medido em 2026-10-09** ([descoberta §11](../../discovery/01-descoberta-claude-agent-sdk.md#11--quinta-rodada-de-spikes-2026-10-09),
+#7 e #8): o bloco `!` de um comando ou skill com `allowed-tools` roda na expansão **sem** `canUseTool` e
+**sem** `PreToolUse` — de qualquer origem, a do projeto inclusive —, e `managedSettings` **não** o
+desliga. Toda sessão leva `settings: { disableSkillShellExecution: true }`, pela camada de flag, para
+todas as origens ([13 · D-24](../../plans/13-claude-settings/decisions.md#d-24--shell-inline-desligado-pela-camada-de-flag)).
+O plugin sintético carrega as skills do usuário como `rc-user-skills:<nome>`, e a `allow` pessoal
+continua sem dispensar o `canUseTool`. Ver a [ADR-018](#adr-018--extensões-do-claude-só-entram-pelo-produto).
+
 ---
 
 ## ADR-012 — Reconexão não usa `reinitialize()`; o registro de pendentes é nosso
@@ -558,6 +566,50 @@ Cada trava tem o seu limite dito no [plano 12](../../plans/12-integrated-termina
 "só do web" não barra quem tem as credenciais do usuário. Job desacoplado pelo próprio usuário
 (`nohup`, `setsid`) sobrevive ao fechamento, como em qualquer terminal; um PTY não sobrevive ao
 restart do backend.
+
+---
+
+## ADR-018 — Extensões do Claude só entram pelo produto
+
+**Status:** aceita · 2026-10-09 · **decorre de spike** ([plano 13 · B-01](../../plans/13-claude-settings/F0-contract.md),
+[descoberta §11](../../discovery/01-descoberta-claude-agent-sdk.md#11--quinta-rodada-de-spikes-2026-10-09)),
+e da ADR-011
+
+**Contexto.** Servidor MCP, plugin, skill, subagent, hook e camada de flag são, cada um, uma forma de o
+Claude rodar código na máquina ou de a aprovação ser decidida por outra coisa que não o `canUseTool`.
+O produto já aprendeu três vezes que essas portas desligam a aprovação **em silêncio** — o
+`settingSources` omitido, a marca de confiança do diretório e o `allowedTools` de nome simples. A
+medição do plano 13 achou mais três: o `.mcp.json` que o próprio repositório auto-aprova
+(`enableAllProjectMcpServers`), o subagent de projeto que pede `permissionMode: acceptEdits` e
+escreve sem o `canUseTool`, e o bloco `!` de comando e skill que roda sem `canUseTool` e sem
+`PreToolUse`. E uma de vazamento: o `mcpServers` do `query()` vai para o **argv** do CLI
+(`--mcp-config`), legível em `/proc/<pid>/cmdline` por qualquer usuário da máquina.
+
+**Decisão.** O conjunto do que uma sessão carrega é **composto pelo backend**, e por nada mais:
+
+| Porta | Regra | Medido |
+|---|---|---|
+| servidores MCP | toda `query()` passa `strictMcpConfig: true` e `mcpServers` **vazio**; os servidores da sessão — o store nosso e as entradas do `.mcp.json` **aprovadas por nós**, por digest — chegam por `setMcpServers()` logo depois do início, pelo canal de controle (stdin), nunca pelo argv. `${VAR}` é expandido pelo backend, contra o ambiente do subprocesso | com o strict só sobe o passado, nem os conectores claude.ai; `setMcpServers()` em ~0,5 s, tools prontas antes do primeiro turno; ele não expande `${VAR}` |
+| plugins | só pela opção `plugins`, como `type: 'local'` e com `skipMcpDiscovery: true`; os de marketplace **baixados pelo backend** para diretório próprio, por usuário, só de marketplace declarado no arquivo da allowlist, fixados no commit — nunca `claude plugin install`, nunca `~/.claude` | com `['project']`, plugin instalado pelo CLI não carrega, nem habilitado pelo `.claude/settings.json` |
+| skills de usuário e de sistema | um plugin local sintético, por usuário, que expõe **só** `skills/` (emenda à ADR-011) | carregam como `rc-user-skills:<nome>`; a `allow` pessoal não dispensa o `canUseTool` |
+| camada de flag | `Options.settings` só pelo montador de flag settings, com allowlist de chave: `outputStyle` e `disableSkillShellExecution` — nunca `permissions`, `hooks`, `env`, `enabledPlugins` ou chave de MCP. `applyFlagSettings` não é usado (no meio da sessão ele reinicia a query e perde os hooks, §10.3); `updateSettings` e `managedSettings` são proibidos | o estilo pela flag vale e mantém os hooks; `managedSettings` não desliga o `!` |
+| shell inline (`!`) | desligado em toda sessão e sonda: `settings: { disableSkillShellExecution: true }` | sem a flag, roda sem aprovação e sem trilha |
+| modo de subagent | o hook `PreToolUse` da trilha responde `permissionDecision: 'ask'` quando o `permission_mode` da chamada é mais largo que o da sessão | com o `ask`, a escrita do subagent volta ao `canUseTool` |
+| configuração de projeto | permissões, hooks e plugins do `.claude/settings.json` são **mostrados**, não editados por tela estruturada (o arquivo continua editável pelo editor do plano 07) | o hook `PreToolUse` de projeto roda nas sessões — risco aberto, dito na tela |
+| superfície não pública | nenhum control request sem método em `Query` (`get_hooks_listing`, `list_permission_rules`, `get_settings`) | — |
+
+**Verificado por máquina** ([09-code-quality](09-code-quality.md#segurança-estática)): `pnpm scan:security`
+reprova `query(` sem `strictMcpConfig: true`, `updateSettings(`, `managedSettings`, `applyFlagSettings(`,
+`settings:` fora do montador, `permission_policy`, `alwaysLoad`, plugin local sem `skipMcpDiscovery: true`
+e os control requests não públicos. **E impedido em tempo de execução:** o `realQueryFactory` recusa
+opções sem `strictMcpConfig: true`, com `mcpServers` não vazio, com `managedSettings`, com chave de
+`settings` fora da allowlist ou com plugin sem `skipMcpDiscovery` — a máquina lê, o processo impede.
+
+**Consequências aceitas.** O hook de projeto continua rodando nas sessões: desligá-lo é decisão de
+produto maior, e o time conta com ele ([R-03 do plano 13](../../plans/13-claude-settings/README.md#riscos-e-decisões-em-aberto)).
+O shell inline fica desligado também para o que o próprio usuário escreveu: o bloco vira um marcador, e
+a ajuda diz isso. Um servidor MCP sobe meio segundo depois da sessão, e um prompt chegado antes espera
+por ele.
 
 ---
 

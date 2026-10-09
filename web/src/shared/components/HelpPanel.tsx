@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { IconButton } from '@/shared/components/IconButton';
 import { useHelpPanel } from '@/shared/hooks/useHelpPanel';
-import type { HelpSection } from '@/shared/hooks/useHelpPanel';
+import type { HelpSection, HelpTarget } from '@/shared/hooks/useHelpPanel';
 
 /** A shortcut of the screen, as the help lists it. */
 export interface ScreenShortcut {
@@ -48,7 +48,7 @@ export interface HelpPanelProps {
 }
 
 /** The anchor of one part — what a "learn more" of a control scrolls to. */
-export function helpAnchor(section: HelpSection): string {
+export function helpAnchor(section: HelpTarget): string {
   return `help-${section}`;
 }
 

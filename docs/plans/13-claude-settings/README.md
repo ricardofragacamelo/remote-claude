@@ -20,6 +20,9 @@ para criar e editar os arquivos de `.claude/`. Consome os planos 03 (regras), 04
 retomada) e 01 (a ponte de permissão e a limpeza da marca de confiança). O
 [plano 14](../14-audit-explained/README.md) mostra os kinds `claude.*` na linha do tempo quando existir
 — não depende dele. Uso e custo são do [plano 16](../16-usage-and-cost/README.md).
+A **F2 depende do [plano 26 — Paridade da conversa no app](../26-mobile-conversation-parity/README.md)**
+concluído ([D-31](decisions.md#decididas-durante-a-execução-b-01-2026-10-09)): o que este plano traz para a conversa — tool MCP,
+skill, subagent e hook do projeto, output style — tem de chegar ao app com o mesmo conteúdo e formato do web.
 
 Arquivos irmãos: [matriz de cenários](scenarios.md) · [decisões em aberto](decisions.md) ·
 [progresso](progress.md).
@@ -90,7 +93,9 @@ Só o que é de outro plano ou o que a arquitetura proíbe:
   [D-17](decisions.md#d-17--permissões-hooks-e-plugins-de-projeto); o arquivo continua editável pelo
   editor do plano 07.
 - **Telas novas no app Flutter**: só compatibilidade de contrato; o web é mobile-first e responde no
-  celular.
+  celular. A exceção é o chip só de leitura do status de MCP na sessão do app ([D-32](decisions.md#decididas-durante-a-execução-b-01-2026-10-09), B-22). A **conversa** do app não entra nesta exclusão: o que este plano põe nela aparece no app em
+  paridade com o web, pelo [plano 26](../26-mobile-conversation-parity/README.md), conferido pelo `render:check` e
+  pela paridade de conteúdo na B-46 ([D-31](decisions.md#decididas-durante-a-execução-b-01-2026-10-09)).
 
 ---
 
@@ -102,8 +107,8 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Contrato](F0-contract.md) | medições, ADR, módulo, contrato nas três pontas, erros, tabelas, regras de máquina | B-01…B-09 | 🔲 |
-| F1 | [Conta, modelos, padrões e diagnóstico](F1-models-and-modes.md) | catálogo da instalação, diagnóstico, padrões aplicados na sessão, a tela | B-10…B-17 | 🔲 |
+| F0 | [Contrato](F0-contract.md) | medições, ADR, módulo, contrato nas três pontas, erros, tabelas, regras de máquina | B-01…B-09 | ✅ |
+| F1 | [Conta, modelos, padrões e diagnóstico](F1-models-and-modes.md) | catálogo da instalação, diagnóstico, padrões aplicados na sessão, a tela | B-10…B-17 | ✅ |
 | F2 | [Servidores MCP e plugins](F2-mcp-servers.md) | MCP e plugins (locais e de marketplace) com segundo passo, trilha e segredo que não volta; `.mcp.json` aprovado por conteúdo | B-18…B-30, B-47 | 🔲 |
 | F3 | [Configuração de projeto](F3-project-config.md) | tudo o que o `.claude/` injeta, visível e criável; skills das três origens | B-31…B-40 | 🔲 |
 | F4 | [E2E e smoke-live](F4-e2e.md) | o plano pela porta do usuário e contra o Claude real | B-41…B-46 | 🔲 |
@@ -132,7 +137,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Padrões por usuário e por pasta chegam à sessão nova, e nunca `bypassPermissions` | B-14, B-15 | [backend/03 · session](../../architecture/backend/03-modules.md#session) | S-37…S-53 |
 | Servidor MCP é validado, descrito por extenso e gravado com segredo que nunca volta | B-18, B-19 | [03-logging](../../architecture/shared/03-logging.md#redação-o-que-nunca-vai-para-o-log) | S-63…S-80 |
 | Servidor MCP não recebe os segredos do backend, e o segredo dele não passa pelo argv | B-20, B-21 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#options--o-que-amarramos) | S-81…S-87, S-03 |
-| Status vivo, e controle de MCP dentro da sessão; apertar vale já | B-22, B-23 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#comandos-cliente--servidor) | S-88…S-99 |
+| Status vivo, e controle de MCP dentro da sessão (no app, só o status); apertar vale já | B-22, B-23 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#comandos-cliente--servidor) | S-88…S-99, S-215 |
 | O `.mcp.json` do repositório só entra aprovado por nós, e volta a pendente quando muda | B-24 | [plano 03 · D-09](../03-rules-and-audit/decisions.md#d-09--a-regra-nossa-é-a-única-autoridade) | S-100…S-110 |
 | Testar um servidor é executar o comando: auditado e sob a capacidade | B-25 | [backend/03 · audit](../../architecture/backend/03-modules.md#audit) | S-111…S-115 |
 | Toda tool MCP passa pelo `canUseTool` e pelo `PreToolUse`; regra não sobrevive à troca do programa | B-26 | [backend/04 · a ponte de permissão](../../architecture/backend/04-claude-integration.md#a-ponte-de-permissão) | S-116…S-122, S-02 |
@@ -145,6 +150,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Hooks, permissões e plugins do projeto: só leitura, explicados sem eufemismo | B-38 | [backend/04 · diretório confiado](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido) | S-179…S-181, S-198 |
 | Telas de projeto e skills completas | B-39 | [web/01-architecture](../../architecture/web/01-architecture.md) | S-182 |
 | Toda tela com ajuda de verdade, tooltips, palette, teclado e axe, traduzida | B-17, B-30, B-40, B-45 | [02-i18n](../../architecture/shared/02-i18n.md), [web/03-ui-system](../../architecture/web/03-ui-system.md#acessibilidade--não-é-opcional) | S-57…S-62, S-138…S-140, S-183, S-184, S-195 |
+| O que este plano põe na conversa chega ao app com o mesmo conteúdo e formato do web (D-31) | B-46 | [plano 26](../26-mobile-conversation-parity/README.md), [mobile/04-ui](../../architecture/mobile/04-ui.md) | S-214 |
 | O plano pela porta do usuário | B-41…B-45 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md#cenários-e2e-obrigatórios) | S-185…S-195 |
 
 Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
@@ -197,6 +203,7 @@ scripts/lib/agent-sdk-rules.mjs    strictMcpConfig · updateSettings · flag/man
 | R-07 | Uma regra `allow` de `mcp__<nome>` autorizando um programa diferente do avaliado | **aberto** — [D-12](decisions.md#d-12--regra-de-tool-mcp-quando-o-servidor-muda): a troca revoga |
 | R-08 | Hoje o subprocesso do CLI recebe o ambiente inteiro do backend — todo servidor stdio o herdaria | **aberto** — a B-20 corrige, com a lista vinda do schema de configuração; o plano 12 precisa da mesma função |
 | R-09 | Divergir dos planos 06 e 08 (seção "Claude" das Configurações, seletor de modelo, indicador de MCP) | **aberto** — [D-09](decisions.md#d-09--a-seção-claude-das-configurações-do-app), [D-14](decisions.md#d-14--quem-entrega-o-indicador-de-mcp-da-sessão); os dois são avisados por nota ao executar |
+| R-10 | O que este plano traz para a conversa (tool MCP, skill, subagent e hook do projeto, output style) chegar ao app sem conteúdo ou sem formato — hoje o app descarta texto de subagent, mostra markdown cru e o nome cru da tool MCP | **aberto** — [D-31](decisions.md#decididas-durante-a-execução-b-01-2026-10-09): a F2 espera o [plano 26](../26-mobile-conversation-parity/README.md), e a B-46 exige a paridade com as fixtures deste plano |
 
 ---
 

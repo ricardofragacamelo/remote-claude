@@ -257,9 +257,14 @@ formalidade:
 | Regra própria | `allowDangerouslySkipPermissions` fora de `false`; `permissionMode: 'bypassPermissions'` como default |
 | **Regra própria** | **`query()` sem `settingSources: ['project']`** — omitir carrega o escopo `user` e desliga o `canUseTool` em silêncio; `[]` desliga o `CLAUDE.md` do projeto. Ver [ADR-011](00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) |
 | Regra própria | `hooks.PreToolUse` ausente na fábrica de `Options` — sem ele não há trilha de auditoria |
+| Regra própria | `canUseTool` ausente no `query()` — o CLI decide sozinho, e ninguém é perguntado |
+| **Regra própria** | **`query()` sem `strictMcpConfig: true`** — sobem o `.mcp.json` que o próprio repositório auto-aprova, os servidores de plugin e os conectores claude.ai ([ADR-018](00-decisions.md#adr-018--extensões-do-claude-só-entram-pelo-produto)) |
+| Regra própria | `updateSettings(` e `applyFlagSettings(` em qualquer lugar; `managedSettings:` em qualquer lugar (não segura o shell inline, medido); `settings:` no adapter do Claude que não venha de `flagSettings(` — o montador com allowlist (`outputStyle`, `disableSkillShellExecution`) |
+| Regra própria | `permission_policy` e `alwaysLoad` em configuração de servidor MCP; plugin `{ type: 'local' }` sem `skipMcpDiscovery: true`, e `skipMcpDiscovery` diferente de `true` |
+| Regra própria | control request sem método público (`get_hooks_listing`, `list_permission_rules`, `get_settings`) |
 
-As três últimas são específicas deste produto, e duas delas existem porque um spike mostrou
-que o furo acontece **em silêncio**: nem `settingSources` omitido nem hook ausente produzem
+As regras próprias são específicas deste produto, e existem porque um spike mostrou que o furo
+acontece **em silêncio**: nem `settingSources` omitido nem hook ausente produzem
 erro ou aviso — apenas desligam a proteção. Ver
 [backend/04](../backend/04-claude-integration.md#a-armadilha-do-settingsources).
 
@@ -277,8 +282,11 @@ Duas notas sobre como a regra própria funciona, e por que ela é assim:
   comentário que explica `query()` é um portão que se aprende a rolar para baixo;
 - **ela não é a única barreira.** A fábrica de `Query` — a costura que permite injetar um stream
   roteirizado em teste — deixou o único `query(` literal do backend num passthrough. Por isso
-  `realQueryFactory` também **recusa** opções sem `settingSources: ['project']` e sem o hook. A
-  regra verifica em tempo de commit; a fábrica impede em tempo de execução.
+  `realQueryFactory` também **recusa** opções sem `settingSources: ['project']`, sem o hook, sem
+  `canUseTool`, sem `env` isolado, sem `strictMcpConfig: true`, com `mcpServers` não vazio (o argv),
+  com `managedSettings`, com chave de `settings` fora da allowlist ou com plugin sem
+  `skipMcpDiscovery: true`. A regra verifica em tempo de commit; a fábrica impede em tempo de
+  execução.
 
 Atualização de dependência é automatizada (Renovade/Dependabot), com agrupamento e
 atualização de segurança em prioridade.

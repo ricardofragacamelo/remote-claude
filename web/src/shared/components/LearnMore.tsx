@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
 
 import { useHelpPanel } from '@/shared/hooks/useHelpPanel';
-import type { HelpSection } from '@/shared/hooks/useHelpPanel';
+import type { HelpTarget } from '@/shared/hooks/useHelpPanel';
 
 export interface LearnMoreProps {
   /** The part of the screen's help that answers the doubt. */
-  readonly section: HelpSection;
+  readonly section: HelpTarget;
 
   /** What the doubt is about, translated — "the allowlist" — for the name a screen reader hears. */
   readonly topic: string;

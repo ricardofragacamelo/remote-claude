@@ -42,6 +42,7 @@ import {
   planTurnProblems,
   questionTurnProblems,
 } from './lib/fixture-questions.mjs';
+import { withoutParentSession } from './lib/parent-session.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { bold, dim, fail, info, ok, title, warn } from './lib/ui.mjs';
 
@@ -58,32 +59,9 @@ const RED_PNG =
 /** How long a run whose prompts are all in waits for a turn that may never come (D-14). */
 const QUIET_MS = 20_000;
 
-/**
- * Variables a running Claude Code session puts in the environment of what it spawns.
- *
- * Recorded from inside one — a terminal of the editor, an agent of Claude Code itself — the CLI the
- * SDK spawns would read them and behave as that session's child: another entrypoint, its tools and
- * MCP servers, its own task tools instead of `TodoWrite`, its Bash guards. The recording would then
- * be of that host, not of the CLI the product runs — measured in plan 08, where every turn of the
- * first recording carried `entrypoint: claude-vscode`.
- */
-const PARENT_SESSION_VARIABLES = [
-  'CLAUDECODE',
-  'CLAUDE_PID',
-  'CLAUDE_EFFORT',
-  'CLAUDE_AGENT_SDK_VERSION',
-  'MCP_CONNECTION_NONBLOCKING',
-];
-const PARENT_SESSION_PREFIX = 'CLAUDE_CODE_';
-
-/** The machine's environment, without what a parent Claude Code session put in it. */
+/** The machine's environment, without what a parent Claude Code session put in it (§10.0). */
 function recordingEnvironment() {
-  return Object.fromEntries(
-    Object.entries(process.env).filter(
-      ([name]) =>
-        !name.startsWith(PARENT_SESSION_PREFIX) && !PARENT_SESSION_VARIABLES.includes(name),
-    ),
-  );
+  return withoutParentSession(process.env);
 }
 
 /** How often the transcript of a scenario that watches it is looked at. */
@@ -401,6 +379,32 @@ const CATALOGUE = {
  * window of an idle session (plan 08, B-36…B-38). Like the catalogue, it says nothing to the model:
  * three control requests, answered from the initialisation of the subprocess.
  */
+const INITIALIZATION = {
+  name: 'initialization',
+  why: 'what initializationResult(), accountInfo(), supportedAgents() and reloadSkills() answer before the first prompt — the catalogue of plan 13 (B-10), one question for the models, agents, output styles and account; the account is replaced by an example, never recorded',
+};
+
+/** What the account of a recording says instead of the account of whoever recorded it. */
+const EXAMPLE_ACCOUNT = { email: 'person@example.com', organization: 'Example Organization' };
+
+/**
+ * The account, with who it is replaced by the example: the fields that name a person or an
+ * organization are never written to a fixture; the rest — the plan, the provider, the names of the
+ * credential's sources — is what the tests read.
+ *
+ * @param {Record<string, unknown> | undefined} account
+ */
+function exampleAccount(account) {
+  return Object.fromEntries(
+    Object.entries(account ?? {}).map(([key, value]) => [
+      key,
+      key in EXAMPLE_ACCOUNT
+        ? EXAMPLE_ACCOUNT[/** @type {keyof typeof EXAMPLE_ACCOUNT} */ (key)]
+        : value,
+    ]),
+  );
+}
+
 const INSTALLATION = {
   name: 'installation',
   why: 'what supportedModels(), mcpServerStatus() and getContextUsage({ detail: "summary" }) answer before the first prompt — the selectors and the meter of the panel',
@@ -789,6 +793,24 @@ async function recordInstallation(query) {
 }
 
 /**
+ * Asks an idle session what it says of itself at initialisation, saying nothing to the model — the
+ * account replaced by the example (plan 13, B-10).
+ *
+ * @param {(params: unknown) => any} query
+ */
+async function recordInitialization(query) {
+  return idleSession(query, async (session) => {
+    const init = await session.initializationResult();
+    return {
+      initialization: { ...init, commands: [], account: exampleAccount(init.account) },
+      account: exampleAccount(await session.accountInfo()),
+      agents: await session.supportedAgents(),
+      skills: (await session.reloadSkills()).skills,
+    };
+  });
+}
+
+/**
  * Opens a session that is never prompted, asks it `ask`, and closes it — the throwaway directory
  * with it.
  *
@@ -1041,6 +1063,43 @@ async function writeInstallation(query) {
 }
 
 /**
+ * Records what the installation says at initialisation and writes it beside the turns.
+ *
+ * @param {(params: unknown) => any} query
+ */
+async function writeInitialization(query) {
+  info(`${bold(INITIALIZATION.name)} — ${dim(INITIALIZATION.why)}`);
+
+  let answers;
+  try {
+    answers = await recordInitialization(query);
+  } catch (error) {
+    fail(`${INITIALIZATION.name} failed`, String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  await writeFixture(path.join(FIXTURES_DIR, `${INITIALIZATION.name}.json`), {
+    $comment:
+      'Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. ' +
+      'Do not edit by hand — re-record instead. See docs/plans/13-claude-settings/F1-models-and-modes.md.',
+    name: INITIALIZATION.name,
+    why: INITIALIZATION.why,
+    recordedAt: new Date().toISOString().slice(0, 10),
+    sdkVersion: sdkVersion(),
+    counts: {
+      models: answers.initialization.models.length,
+      agents: answers.agents.length,
+      skills: answers.skills.length,
+    },
+    // The home of the machine appears in what the CLI says of its own directories.
+    ...JSON.parse(anonymised(JSON.stringify(answers))),
+  });
+
+  ok(INITIALIZATION.name, `${String(answers.initialization.models.length)} models`);
+}
+
+/**
  * Records one scenario and writes its fixture, or reports why it could not — which fails the run
  * without stopping the scenarios after it.
  *
@@ -1156,13 +1215,37 @@ function chosenRecordings(wanted) {
   const chosen = all ? SCENARIOS : SCENARIOS.filter((s) => wanted.includes(s.name));
   const catalogue = all || wanted.includes(CATALOGUE.name);
   const installation = all || wanted.includes(INSTALLATION.name);
+  const initialization = all || wanted.includes(INITIALIZATION.name);
 
-  if (chosen.length === 0 && !catalogue && !installation) {
-    const known = [...SCENARIOS.map((s) => s.name), CATALOGUE.name, INSTALLATION.name];
+  if (chosen.length === 0 && !catalogue && !installation && !initialization) {
+    const known = [
+      ...SCENARIOS.map((s) => s.name),
+      CATALOGUE.name,
+      INSTALLATION.name,
+      INITIALIZATION.name,
+    ];
     abort(`no scenario named ${wanted.join(', ')}; known: ${known.join(', ')}`);
   }
 
-  return { chosen, catalogue, installation };
+  return { chosen, catalogue, installation, initialization };
+}
+
+/**
+ * The recordings that ask the installation instead of running a turn, each when it was chosen.
+ *
+ * @param {(params: unknown) => any} query
+ * @param {{ catalogue: boolean, installation: boolean, initialization: boolean }} chosen
+ */
+async function writeAsked(query, chosen) {
+  if (chosen.catalogue) {
+    await writeCatalogue(query);
+  }
+  if (chosen.installation) {
+    await writeInstallation(query);
+  }
+  if (chosen.initialization) {
+    await writeInitialization(query);
+  }
 }
 
 async function main() {
@@ -1178,8 +1261,8 @@ async function main() {
     title('Agent SDK — recording fixtures');
   }
 
-  const { chosen, catalogue, installation } = readBack
-    ? { chosen: [], catalogue: false, installation: false }
+  const { chosen, catalogue, installation, initialization } = readBack
+    ? { chosen: [], catalogue: false, installation: false, initialization: false }
     : chosenRecordings(names);
 
   if (!fs.existsSync(path.join(os.homedir(), '.claude', '.credentials.json'))) {
@@ -1206,13 +1289,7 @@ async function main() {
     await recordScenario(sdk, scenario);
   }
 
-  if (catalogue) {
-    await writeCatalogue(sdk.query);
-  }
-
-  if (installation) {
-    await writeInstallation(sdk.query);
-  }
+  await writeAsked(sdk.query, { catalogue, installation, initialization });
 
   if (chosen.some((s) => s.name === 'tool-turn')) {
     warn(

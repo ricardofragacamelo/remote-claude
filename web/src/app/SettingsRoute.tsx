@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useNavigate, useParams } from '@tanstack/react-router';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
 import { SettingsScreen } from '@/features/settings';
@@ -34,6 +34,16 @@ export function SettingsRoute(): React.JSX.Element {
       shortcuts={shortcuts}
     >
       <SettingsScreen section={section} onSection={goTo} />
+      {/* Claude's own settings are not a section here: they have a screen of their own (13 · D-27). */}
+      <p className="text-ui-sm text-muted-foreground">
+        <Link
+          to="/claude-settings"
+          search={{ section: 'account' }}
+          className="underline underline-offset-4"
+        >
+          {t('settings.links.claude')}
+        </Link>
+      </p>
     </ScreenFrame>
   );
 }

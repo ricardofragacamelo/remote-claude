@@ -421,6 +421,52 @@ void main() {
       },
     );
 
+    test('13 · S-11 · the MCP status of a session is unread, and still moves the resume point', () {
+      final SessionEvent? event = read(
+        frame(
+          kind: 'event',
+          type: 'session.mcpStatusChanged',
+          seq: 12,
+          payload: <String, Object?>{
+            'servers': <Object?>[
+              <String, Object?>{
+                'name': 'github',
+                'status': 'connected',
+                'source': 'ours',
+                'toolCount': 3,
+              },
+            ],
+          },
+        ),
+      );
+
+      expect(event, isA<UnreadEvent>());
+      expect(event!.seq, 12);
+    });
+
+    test('13 · S-11 · a session opening with the fields of plan 13 still reads as an opening', () {
+      final SessionEvent? event = read(
+        frame(
+          kind: 'event',
+          type: 'session.started',
+          seq: 1,
+          payload: <String, Object?>{
+            'sessionId': 'session-1',
+            'workspacePath': '/srv/app',
+            'model': 'sonnet',
+            'permissionMode': 'default',
+            'claudeSessionId': 'conv-1',
+            'effort': 'high',
+            'outputStyle': 'Concise',
+            'defaultsFrom': 'folder',
+          },
+        ),
+      );
+
+      expect(event, isA<SessionOpened>());
+      expect((event! as SessionOpened).sessionId, 'session-1');
+    });
+
     test('a queue event that names no prompt is unread, with its seq', () {
       for (final String type in <String>['prompt.queued', 'prompt.dequeued']) {
         final SessionEvent? event = read(

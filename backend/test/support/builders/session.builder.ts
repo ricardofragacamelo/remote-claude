@@ -9,6 +9,7 @@ import type {
   PermissionMode,
   PromptExtras,
   SessionClient,
+  SessionInitialization,
   SlashCommand,
 } from '@domain/session';
 import { ClaudeSessionId } from '@domain/transcript';
@@ -151,6 +152,30 @@ export class RecordingHandle implements ClaudeSessionHandle {
 
   mcpServers(): Promise<readonly McpServer[]> {
     return this.answer(this.servers);
+  }
+
+  /** The account and the output styles `initialization()` answers beside the lists above. */
+  account: SessionInitialization['account'] = {
+    email: 'person@example.com',
+    organization: null,
+    plan: 'max',
+    provider: 'firstParty',
+    tokenSource: null,
+    apiKeySource: null,
+  };
+  outputStyles: string[] = ['default'];
+  initializationCalls = 0;
+
+  initialization(): Promise<SessionInitialization> {
+    this.initializationCalls += 1;
+    return this.answer({
+      commands: this.commands,
+      agents: [],
+      models: this.offered,
+      outputStyle: 'default',
+      outputStyles: this.outputStyles,
+      account: this.account,
+    });
   }
 
   private answer<T>(value: T): Promise<T> {

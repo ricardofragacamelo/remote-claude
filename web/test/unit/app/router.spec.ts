@@ -162,6 +162,7 @@ describe('the settings, one section at a time — plan 06, S-142', () => {
 
 describe('the other screens of the navigation, reached by their links', () => {
   it.each([
+    ['/claude-settings', '/_frame/claude-settings'],
     ['/devices', '/_frame/devices'],
     ['/diagnostics', '/_frame/diagnostics'],
     ['/about', '/_frame/about'],
@@ -178,9 +179,9 @@ describe('the addresses no plan has registered yet — plan 06, S-07', () => {
     },
   );
 
-  it('reserves /claude and /usage by leaving them out of the table, not by an empty route', () => {
+  it('reserves /usage — and anything under /claude/ — by leaving them out of the table', () => {
     const reserved = Object.keys(router.routesById).filter(
-      (id) => id.startsWith('/claude') || id.startsWith('/usage'),
+      (id) => id.startsWith('/claude/') || id.startsWith('/usage') || id.includes('/claude/'),
     );
 
     expect(reserved).toEqual([]);

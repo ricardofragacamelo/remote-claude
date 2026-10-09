@@ -85,6 +85,12 @@ export class SessionStartHandler implements WsCommandHandler {
             model: session.model,
             permissionMode: session.permissionMode,
             ...conversationFields(conversation),
+            // Where the model came from, and what the defaults gave beyond it (plan 13, B-15).
+            defaultsFrom: started.applied.defaultsFrom,
+            ...(started.applied.effort === null ? {} : { effort: started.applied.effort }),
+            ...(started.applied.outputStyle === null
+              ? {}
+              : { outputStyle: started.applied.outputStyle }),
           },
           ...causedBy(context),
         });

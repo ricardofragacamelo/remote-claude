@@ -368,7 +368,8 @@ mapa; as fases dele o constroem, e o router o testa.
 | `/diagnostics` | Logs e diagnóstico |
 | `/settings/$section` | Configurações do app, uma seção por vez; `/settings` sozinho e seção desconhecida caem na primeira, com o endereço substituído |
 | `/about` | Sobre |
-| `/claude…`, `/usage…` | **reservadas** aos planos [12](../../plans/13-claude-settings/README.md) e [15](../../plans/16-usage-and-cost/README.md): ninguém as registra ainda, e caem no "não encontrado" |
+| `/claude-settings?section=&folder=` | Configuração do Claude ([plano 13](../../plans/13-claude-settings/README.md)): a seção (`account`·`installation`·`models`·`mcp`·`plugins`·`skills`·`project`) e a pasta na search; seção desconhecida cai na primeira, pasta que não é absoluta é ignorada |
+| `/usage…` | **reservada** ao [plano 16](../../plans/16-usage-and-cost/README.md): ninguém a registra ainda, e cai no "não encontrado" — como tudo sob `/claude/` |
 | `/sessions/$sessionId`, `/history`, `/history/$conversationId` | **removidas** ([B-33](../../plans/06-workbench/F5-screens.md#b-33--a-home-desmontada-e-as-rotas-antigas-)), sem deep link de compatibilidade: caem no "não encontrado". A sessão viva mora na secondary side bar da aba, e o histórico volta com o plano 08 |
 | o callback do login (`CALLBACK_PATH`) | não muda — voltar ao link pedido depois do login vale para todas |
 

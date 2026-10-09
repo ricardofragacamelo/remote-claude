@@ -1,5 +1,6 @@
 import {
   Activity,
+  Bot,
   Info,
   LayoutPanelLeft,
   ListChecks,
@@ -17,8 +18,8 @@ import type { Registry, RegistryEntry } from '@/shared/lib/registry';
 /**
  * The places of the global navigation, in order — one screen per subject
  * (docs/architecture/web/03-ui-system.md#a-moldura-do-app). A place is reserved by its position; the
- * plan that owns it registers the entry. "Usage and cost" (plan 16) and "Claude settings" (plan 13)
- * are held here and render **no link** until they do: a link with no destination is worse than none.
+ * plan that owns it registers the entry. "Usage and cost" (plan 16) is held here and renders **no
+ * link** until it does: a link with no destination is worse than none.
  */
 export const NAVIGATION_POSITIONS = {
   workbench: 100,
@@ -67,7 +68,8 @@ export interface ManageEntry extends RegistryEntry {
 }
 
 /**
- * The entries plan 06 declares: every place of the navigation but the two held for plans 13 and 16.
+ * The entries of the navigation: plan 06's, and plan 13's "Claude settings" — every place but the
+ * one held for plan 16.
  */
 const DECLARED: readonly NavigationEntry[] = [
   {
@@ -114,6 +116,16 @@ const DECLARED: readonly NavigationEntry[] = [
     icon: Activity,
     href: () => '/diagnostics',
     sections: ['diagnostics'],
+  },
+  {
+    // How Claude works on this machine (plan 13): a screen of its own, never a section of the app's
+    // Settings (13 · D-09, D-27).
+    id: 'claude',
+    position: NAVIGATION_POSITIONS.claude,
+    labelKey: 'navigation.entry.claude',
+    icon: Bot,
+    href: () => '/claude-settings',
+    sections: ['claude-settings'],
   },
   {
     // The app's settings — never Claude's, which is the screen plan 13 registers at its own place.

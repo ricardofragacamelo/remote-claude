@@ -8,6 +8,8 @@ import { RecordAuditEventUseCase } from '@application/audit';
 import { AUDIT_EVENT_KINDS } from '@domain/audit';
 import type { AuditEventKind } from '@domain/audit';
 import { UserId } from '@domain/auth';
+import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
+import type { PersistenceContext } from '@infra/database/persistence-context';
 import { startPostgres } from '../../../../support/containers/postgres';
 import type { DisposablePostgres } from '../../../../support/containers/postgres';
 import { startIdentityServer } from '../../../../support/identity/identity-server';
@@ -83,6 +85,29 @@ describe('reading the account facts', () => {
 
     expect(undo).not.toContain("'file.");
     expect(files).toContain("'file.failed'");
+  });
+
+  it('accepts every claude kind through 0020, which left 0019 alone — plan 13, S-13', async () => {
+    for (const kind of AUDIT_EVENT_KINDS.filter((each) => each.startsWith('claude.'))) {
+      await expect(record(kind, `kinds/${kind}`)).resolves.toEqual(expect.any(String));
+    }
+
+    const answers = await readFile(path.join(MIGRATIONS, '0019_permission_answers.sql'), 'utf8');
+    const claude = await readFile(path.join(MIGRATIONS, '0020_claude_config.sql'), 'utf8');
+
+    expect(answers).not.toContain("'claude.");
+    expect(claude).toContain("'claude.skillSourceToggled'");
+  });
+
+  it('refuses, in the database, a kind no migration declared — plan 13, S-13', async () => {
+    const { db } = harness.app.get<PersistenceContext>(PERSISTENCE_CONTEXT);
+
+    await expect(
+      db.execute(
+        `INSERT INTO audit_events (id, user_id, kind, subject_id, subject_label, at)
+         VALUES ('01JUNKNOWNKIND0000000000000', 'auth|42', 'claude.somethingElse', 's', 's', now())`,
+      ),
+    ).rejects.toMatchObject({ cause: { constraint: 'audit_events_kind_known' } });
   });
 
   it("answers the caller's file facts, newest first — S-120", async () => {

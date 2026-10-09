@@ -2,6 +2,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { Options, Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 
 import { isBackendVariable } from './claude-environment';
+import { assertAllowed, UnsafeFlagSettingsError } from './flag-settings';
 
 /**
  * How a `Query` comes into being.
@@ -51,6 +52,13 @@ export class UnsafeSdkOptionsError extends Error {
  * every `Bash` Claude runs the database password — both in silence
  * ([12 · D-10](../../../../../docs/plans/12-integrated-terminal/decisions.md)). The error names the
  * variables and never their values.
+ *
+ * And the doors of plan 13 (ADR-018), each of which a scanner reads and this refuses: no
+ * `strictMcpConfig: true` starts the repository's own `.mcp.json`, its plugins and the claude.ai
+ * connectors; a non-empty `mcpServers` puts the servers — and their secrets — on the argv, readable
+ * in `/proc`; `managedSettings` was measured not to hold the shell inline off; a `settings` key
+ * outside the allowlist reaches the layer above the user's and the project's; and a plugin without
+ * `skipMcpDiscovery: true` starts its own MCP servers.
  */
 export const realQueryFactory: QueryFactory = ({ prompt, options }) => {
   const hooks = options.hooks?.PreToolUse ?? [];
@@ -66,12 +74,14 @@ export const realQueryFactory: QueryFactory = ({ prompt, options }) => {
   }
 
   assertIsolatedEnvironment(options.env);
+  assertComposedExtensions(options);
 
   return query({
     prompt,
     options: {
       ...options,
       settingSources: ['project'],
+      strictMcpConfig: true,
       canUseTool: options.canUseTool,
       hooks: { ...options.hooks, PreToolUse: hooks },
     },
@@ -95,6 +105,48 @@ function assertIsolatedEnvironment(env: Options['env']): void {
   if (leaked.length > 0) {
     throw new UnsafeSdkOptionsError(
       `env must not carry the backend configuration (${leaked.join(', ')})`,
+    );
+  }
+}
+
+/** The fifth check: only what the backend composed reaches the session (ADR-018). */
+function assertComposedExtensions(options: Options): void {
+  assertComposedServers(options);
+  assertFlagLayer(options);
+
+  if ((options.plugins ?? []).some((plugin) => plugin.skipMcpDiscovery !== true)) {
+    throw new UnsafeSdkOptionsError('every plugin must carry skipMcpDiscovery: true');
+  }
+}
+
+/** Strict, and no server on the argv: they arrive through `setMcpServers()` (plan 13, D-02). */
+function assertComposedServers(options: Options): void {
+  if (options.strictMcpConfig !== true) {
+    throw new UnsafeSdkOptionsError('strictMcpConfig must be true');
+  }
+
+  if (options.mcpServers !== undefined && Object.keys(options.mcpServers).length > 0) {
+    throw new UnsafeSdkOptionsError(
+      'mcpServers must be empty — servers go through setMcpServers(), never the argv',
+    );
+  }
+}
+
+/** The flag layer from its builder, and never the policy tier (plan 13, D-24). */
+function assertFlagLayer(options: Options): void {
+  if ('managedSettings' in options && options['managedSettings'] !== undefined) {
+    throw new UnsafeSdkOptionsError('managedSettings is never used');
+  }
+
+  if (typeof options.settings === 'string') {
+    throw new UnsafeSdkOptionsError('settings must be built by flagSettings(), never a file');
+  }
+
+  try {
+    assertAllowed(Object.keys(options.settings ?? {}));
+  } catch (error) {
+    throw new UnsafeSdkOptionsError(
+      error instanceof UnsafeFlagSettingsError ? error.message : 'settings refused',
     );
   }
 }

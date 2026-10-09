@@ -203,6 +203,7 @@ Todos em `.mjs`, executados direto pelo `node`, sem build.
 | `db.mjs` | B-51, [03 · B-18](../03-rules-and-audit/F3-retention.md) | `migrate`, `reset`, `seed`, e `purge` — a purga da trilha, a mesma rotina do job do backend, com o relatório do que saiu e do que ficou | `pnpm db migrate` · `pnpm db purge` |
 | `clean.mjs` | B-50 | purga projetos e volumes compose órfãos, build, coverage | `pnpm clean` |
 | `transcript-follow-bench.mjs` | [22 · B-19](../22-live-history/F2-follower.md#b-19--a-medição-) | mede o custo do seguidor de conversas no store de quem roda — tempo e heap, nunca conteúdo | `pnpm transcript:follow-bench` |
+| `claude-config-spike.mjs` | [13 · B-01](../13-claude-settings/F0-contract.md#b-01--spike-as-medições-que-mandam-no-desenho-) | as medições do plano 13 contra o Claude real, num `CLAUDE_CONFIG_DIR` isolado — MCP strict, segredo fora do argv, hooks e subagents de projeto, blocos `!`, skills | `pnpm spike:claude-config` |
 | `pdf-fixtures.mjs` | [21 · B-04](../21-rich-previews/F0-norms.md#b-04--os-pdfs-de-teste-) | escreve à mão os PDFs de teste do leitor (`reader`, `scripted`, `locked`) em `e2e/fixtures/files/`; `--check` falha quando o versionado não é o que ele escreve | `node scripts/pdf-fixtures.mjs` · `--check` |
 | `plan.mjs` | B-52 | cria pasta de plano no [formato normativo](../README.md#formato-obrigatório); `--progress` recalcula os contadores | `pnpm plan new <nome>` |
 

@@ -22,6 +22,13 @@
  * Downloading is a read, and it is here all the same: `file.downloaded` takes contents off the
  * machine, which is what the trail exists to tell — recorded before the first byte (07 · F7).
  *
+ * And so is changing how Claude works on this machine (plan 13): a default, an MCP server — a
+ * program that runs with the user's credentials whenever a session opens —, an approval of a
+ * repository's `.mcp.json`, a plugin, and switching on the skills of the user or of the system. Each
+ * widens what runs before anybody is asked, and is recorded **before** the effect, with the command
+ * or address in full and only the **names** of variables, never a value. Testing a server is here
+ * too: it runs the command.
+ *
  * They do not fit `audit_entries`, which is shaped around one invocation — a session, a tool, an
  * input — so they get their own table in the same module rather than three nullable columns in
  * that one.
@@ -44,6 +51,19 @@ export const AUDIT_EVENT_KINDS = [
   'file.failed',
   'file.downloaded',
   'file.restored',
+  'claude.defaultsChanged',
+  'claude.mcpServerAdded',
+  'claude.mcpServerChanged',
+  'claude.mcpServerRemoved',
+  'claude.mcpServerToggled',
+  'claude.mcpServerTested',
+  'claude.mcpProjectServerApproved',
+  'claude.mcpProjectServerRejected',
+  'claude.pluginAdded',
+  'claude.pluginUpdated',
+  'claude.pluginToggled',
+  'claude.pluginRemoved',
+  'claude.skillSourceToggled',
 ] as const;
 
 export type AuditEventKind = (typeof AUDIT_EVENT_KINDS)[number];

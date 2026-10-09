@@ -1,0 +1,255 @@
+{
+  "$comment": "Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. Do not edit by hand — re-record instead. See docs/plans/13-claude-settings/F1-models-and-modes.md.",
+  "name": "initialization",
+  "why": "what initializationResult(), accountInfo(), supportedAgents() and reloadSkills() answer before the first prompt — the catalogue of plan 13 (B-10), one question for the models, agents, output styles and account; the account is replaced by an example, never recorded",
+  "recordedAt": "2026-10-09",
+  "sdkVersion": "0.3.277",
+  "counts": { "models": 5, "agents": 6, "skills": 17 },
+  "initialization": {
+    "commands": [],
+    "agents": [
+      {
+        "name": "claude",
+        "description": "Catch-all for any task that doesn't fit a more specific agent. FleetView's default when no agent name is typed."
+      },
+      {
+        "name": "claude-code-guide",
+        "description": "Use this agent when the user asks questions (\"Can Claude...\", \"Does Claude...\", \"How do I...\") about: (1) Claude Code (the CLI tool) - features, hooks, slash commands, MCP servers, settings, IDE integrations, keyboard shortcuts; (2) Claude Agent SDK - building custom agents; (3) Claude API (formerly Anthropic API) - Messages API for directly passing messages to Claude, Tool Runner (`client.beta.messages.tool_runner`) for running an agentic loop over your own tools, manual tool-use loops, Managed Agents for server-hosted agents with a managed sandbox, prompt caching, and general Anthropic SDK usage; (4) Claude Tag (Claude in Slack) - what it is, setting it up for a Slack workspace, `/install-slack-app`; (5) `claude plugin eval` (writing and running plugin eval suites, its JSON/report, sandbox, CI) and the `/skill-doctor` report. **IMPORTANT:** Before spawning a new agent, check if there is already a running or recently completed claude-code-guide agent that you can continue via SendMessage.",
+        "model": "haiku"
+      },
+      {
+        "name": "Explore",
+        "description": "Fast read-only search agent for locating code. Use it to find files by pattern (eg. \"src/components/**/*.tsx\"), grep for symbols or keywords (eg. \"API endpoints\"), or answer \"where is X defined / which files reference Y.\" Do NOT use it for code review, design-doc auditing, cross-file consistency checks, or open-ended analysis — it reads excerpts rather than whole files and will miss content past its read window. When calling, specify search breadth: \"quick\" for a single targeted lookup, \"medium\" for moderate exploration, or \"very thorough\" to search across multiple locations and naming conventions.",
+        "model": "inherit"
+      },
+      {
+        "name": "general-purpose",
+        "description": "General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks. When you are searching for a keyword or file and are not confident that you will find the right match in the first few tries use this agent to perform the search for you."
+      },
+      {
+        "name": "Plan",
+        "description": "Software architect agent for designing implementation plans. Use this when you need to plan the implementation strategy for a task. Returns step-by-step plans, identifies critical files, and considers architectural trade-offs.",
+        "model": "inherit"
+      },
+      {
+        "name": "statusline-setup",
+        "description": "Use this agent to configure the user's Claude Code status line setting.",
+        "model": "sonnet"
+      }
+    ],
+    "output_style": "default",
+    "available_output_styles": ["default", "Proactive", "Concise", "Explanatory", "Learning"],
+    "user_output_styles_dir": "/home/user/.claude/output-styles",
+    "models": [
+      {
+        "value": "default",
+        "resolvedModel": "claude-opus-5[1m]",
+        "displayName": "Default (recommended)",
+        "description": "Opus 5 with 1M context · Best for everyday, complex tasks",
+        "supportsEffort": true,
+        "supportedEffortLevels": ["low", "medium", "high", "xhigh", "max"],
+        "supportsAdaptiveThinking": true,
+        "supportsFastMode": true,
+        "supportsAutoMode": true
+      },
+      {
+        "value": "opus[1m]",
+        "resolvedModel": "claude-opus-5[1m]",
+        "displayName": "Opus (1M context)",
+        "description": "Opus 5 with 1M context · Best for everyday, complex tasks",
+        "supportsEffort": true,
+        "supportedEffortLevels": ["low", "medium", "high", "xhigh", "max"],
+        "supportsAdaptiveThinking": true,
+        "supportsFastMode": true,
+        "supportsAutoMode": true
+      },
+      {
+        "value": "claude-fable-5-1[1m]",
+        "resolvedModel": "claude-fable-5-1",
+        "displayName": "Fable",
+        "description": "Fable 5.1 · Most capable for your hardest and longest-running tasks",
+        "supportsEffort": true,
+        "supportedEffortLevels": ["low", "medium", "high", "xhigh", "max"],
+        "supportsAdaptiveThinking": true,
+        "supportsAutoMode": true
+      },
+      {
+        "value": "sonnet",
+        "resolvedModel": "claude-sonnet-5",
+        "displayName": "Sonnet",
+        "description": "Sonnet 5 · Efficient for routine tasks",
+        "supportsEffort": true,
+        "supportedEffortLevels": ["low", "medium", "high", "xhigh", "max"],
+        "supportsAdaptiveThinking": true,
+        "supportsAutoMode": true
+      },
+      {
+        "value": "haiku",
+        "resolvedModel": "claude-haiku-4-5-20251001",
+        "displayName": "Haiku",
+        "description": "Haiku 4.5 · Fastest for quick answers"
+      }
+    ],
+    "account": {
+      "email": "person@example.com",
+      "organization": "Example Organization",
+      "subscriptionType": "Claude Team",
+      "apiProvider": "firstParty"
+    },
+    "pid": 1222267,
+    "current_permission_mode": "default",
+    "hooks_applied": true,
+    "analytics_disabled": false,
+    "remote_control_auto_enable": false,
+    "remote_control_auto_connect_default": false,
+    "remote_control_available": true,
+    "remote_control_auto_on_by_default": false,
+    "ide_rc_auto_enable_gate": true,
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "unknown",
+    "session_state": "idle"
+  },
+  "account": {
+    "email": "person@example.com",
+    "organization": "Example Organization",
+    "subscriptionType": "Claude Team",
+    "apiProvider": "firstParty"
+  },
+  "agents": [
+    {
+      "name": "claude",
+      "description": "Catch-all for any task that doesn't fit a more specific agent. FleetView's default when no agent name is typed."
+    },
+    {
+      "name": "claude-code-guide",
+      "description": "Use this agent when the user asks questions (\"Can Claude...\", \"Does Claude...\", \"How do I...\") about: (1) Claude Code (the CLI tool) - features, hooks, slash commands, MCP servers, settings, IDE integrations, keyboard shortcuts; (2) Claude Agent SDK - building custom agents; (3) Claude API (formerly Anthropic API) - Messages API for directly passing messages to Claude, Tool Runner (`client.beta.messages.tool_runner`) for running an agentic loop over your own tools, manual tool-use loops, Managed Agents for server-hosted agents with a managed sandbox, prompt caching, and general Anthropic SDK usage; (4) Claude Tag (Claude in Slack) - what it is, setting it up for a Slack workspace, `/install-slack-app`; (5) `claude plugin eval` (writing and running plugin eval suites, its JSON/report, sandbox, CI) and the `/skill-doctor` report. **IMPORTANT:** Before spawning a new agent, check if there is already a running or recently completed claude-code-guide agent that you can continue via SendMessage.",
+      "model": "haiku"
+    },
+    {
+      "name": "Explore",
+      "description": "Fast read-only search agent for locating code. Use it to find files by pattern (eg. \"src/components/**/*.tsx\"), grep for symbols or keywords (eg. \"API endpoints\"), or answer \"where is X defined / which files reference Y.\" Do NOT use it for code review, design-doc auditing, cross-file consistency checks, or open-ended analysis — it reads excerpts rather than whole files and will miss content past its read window. When calling, specify search breadth: \"quick\" for a single targeted lookup, \"medium\" for moderate exploration, or \"very thorough\" to search across multiple locations and naming conventions.",
+      "model": "inherit"
+    },
+    {
+      "name": "general-purpose",
+      "description": "General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks. When you are searching for a keyword or file and are not confident that you will find the right match in the first few tries use this agent to perform the search for you."
+    },
+    {
+      "name": "Plan",
+      "description": "Software architect agent for designing implementation plans. Use this when you need to plan the implementation strategy for a task. Returns step-by-step plans, identifies critical files, and considers architectural trade-offs.",
+      "model": "inherit"
+    },
+    {
+      "name": "statusline-setup",
+      "description": "Use this agent to configure the user's Claude Code status line setting.",
+      "model": "sonnet"
+    }
+  ],
+  "skills": [
+    {
+      "name": "dataviz",
+      "description": "Use this skill whenever you are about to create ANY chart, graph, plot, dashboard, or data visualization, in ANY output medium — an HTML or React artifact, inline SVG, plotting code in any library (matplotlib, plotly, d3, Recharts, …), an image/PNG you will render and upload, or a chart shared into Slack. Read it BEFORE writing the first line of chart code, choosing chart colors, building a stat tile / meter / KPI row, or laying out a dashboard. When the destination is a first-party document connector (host-designated, never self-described) that renders live charts, hand it the rows (inline, or as an uploaded data file the chart cites) rather than a rendered PNG/SVG — a picture of a chart loses hover, data inspection and per-value comments. Produces visualizations that read as one system — elegant, accessible, consistent in light and dark — using a brand-neutral placeholder palette you swap for your own. Teaches a design-system-agnostic method: a form heuristic, a color formula with a runnable validator, mark specs, and interaction rules. A validated default palette is documented in `references/palette.md` — swap that file's values for your brand's. Triggers on: \"chart\", \"graph\", \"plot\", \"data viz\", \"visualization\", \"dashboard\", \"analytics\", \"visualize data\", \"categorical colors\", \"sequential / diverging palette\", \"stat tile\", \"sparkline\", \"heatmap\", \"legend\", \"axis\", \"tooltip\", \"chart colors\", \"color by series\".",
+      "argumentHint": "",
+      "builtin": true
+    },
+    {
+      "name": "artifact-design",
+      "description": "Design guidance and fundamentals for Artifacts.",
+      "argumentHint": "",
+      "builtin": true
+    },
+    {
+      "name": "artifact-diagramming",
+      "description": "Diagramming know-how for Artifacts - when a picture earns its place, how to draw one that shows the real mechanism, and the inline-SVG mechanics that keep it legible in both themes.",
+      "argumentHint": "",
+      "builtin": true
+    },
+    {
+      "name": "artifact-capabilities",
+      "description": "Runtime capabilities a published Artifact page can be granted — behavior static HTML cannot provide on its own, such as the page reading live or connected data, remembering what people do on it (a poll, a sign-up sheet, a checklist, a document edited in place — it saves new versions of itself), keeping state shared across viewers, knowing who is viewing, asking Claude a question of its own, storing files people add, or handing the viewer a file to save. Serves this user's live capability roster and the typed call definitions. Load it whenever any such runtime behavior would make an artifact more useful, before writing the page.",
+      "argumentHint": "",
+      "builtin": true
+    },
+    {
+      "name": "update-config",
+      "description": "Use this skill to configure the Claude Code harness via settings.json. Automated behaviors (\"from now on when X\", \"each time X\", \"whenever X\", \"before/after X\") require hooks configured in settings.json - the harness executes these, not Claude, so memory/preferences cannot fulfill them. Also use for: permissions (\"allow X\", \"add permission\", \"move permission to\"), env vars (\"set X=Y\"), hook troubleshooting, or any changes to settings.json/settings.local.json files. Examples: \"allow npm commands\", \"add bq permission to global settings\", \"move permission to user settings\", \"set DEBUG=true\", \"when claude stops show X\". For simple settings like theme/model, suggest the /config command.",
+      "argumentHint": "",
+      "builtin": true
+    },
+    {
+      "name": "keybindings-help",
+      "description": "Use when the user wants to customize keyboard shortcuts, rebind keys, add chord bindings, or modify ~/.claude/keybindings.json. Examples: \"rebind ctrl+s\", \"add a chord shortcut\", \"change the submit key\", \"customize keybindings\".",
+      "argumentHint": "",
+      "builtin": true
+    },
+    {
+      "name": "code-review",
+      "description": "Review the current diff, or a PR number/branch/path target, for correctness bugs (plus reuse/simplification/efficiency cleanups where the model's review recipe covers them) at the given effort level (low/medium: fewer, high-confidence findings; high→max: broader coverage, may include uncertain findings); with no level given, it reuses the level you typed last. Pass --comment to post findings as inline PR comments, or --fix to apply the findings to the working tree after the review.",
+      "argumentHint": "[low|medium|high|xhigh|max] [--fix] [--comment] [<pr#>|<branch>|<path>]",
+      "aliases": ["review"],
+      "builtin": true
+    },
+    {
+      "name": "simplify",
+      "description": "Review the changed code for reuse, simplification, efficiency, and altitude cleanups, then apply the fixes. Quality only — it does not hunt for bugs; use /code-review for that.",
+      "argumentHint": "[<target>]",
+      "builtin": true
+    },
+    {
+      "name": "fewer-permission-prompts",
+      "description": "Scan your transcripts for common read-only Bash and MCP tool calls, then add a prioritized allowlist to project .claude/settings.json to reduce permission prompts.",
+      "argumentHint": "",
+      "builtin": true
+    },
+    {
+      "name": "loop",
+      "description": "Run a prompt or slash command on a recurring interval (e.g. /loop 5m /foo). Omit the interval to let the model self-pace.",
+      "argumentHint": "[interval] [prompt]",
+      "aliases": ["proactive"],
+      "builtin": true
+    },
+    {
+      "name": "schedule",
+      "description": "Create, update, list, or run scheduled cloud agents (routines) that execute on a cron schedule.",
+      "argumentHint": "",
+      "aliases": ["routines"],
+      "builtin": true
+    },
+    {
+      "name": "claude-api",
+      "description": "Reference for the Claude API / Anthropic SDK — model ids, pricing, params, streaming, tool use, MCP, agents, caching, token counting, model migration.\nTRIGGER — read BEFORE opening the target file; don't skip because it \"looks like a one-liner\" — whenever: the prompt names Claude/Anthropic in any form (Claude, Anthropic, Fable, Opus, Sonnet, Haiku, `anthropic`, `@anthropic-ai`, `claude-*`, `us.anthropic.*`, `[1m]`); the user asks about an LLM (pricing/model choice/limits/caching) — never answer from memory; OR the task is LLM-shaped with provider unstated (agent/MCP/tool-definition/multi-agent/RAG/LLM-judge/computer-use; generate/summarize/extract/classify/rewrite/converse over NL; debugging refusals/cutoffs/streaming/tool-calls/tokens).\nSKIP only when another provider is being worked on (overrides all triggers): OpenAI/GPT/Gemini/Llama/Mistral/Cohere/Ollama named in the query; OR `grep -rE 'openai|langchain_openai|google.generativeai|genai|mistralai|cohere|ollama'` over the project hits (run this grep FIRST if no provider named — don't Read the file).",
+      "argumentHint": "",
+      "builtin": true
+    },
+    {
+      "name": "workflow-authoring",
+      "description": "Reference for writing a Workflow tool script (script API and gotchas, resume, quality patterns, worked examples). Load before authoring a script for a workflow the user already opted into; it does not itself authorize running one.",
+      "argumentHint": "",
+      "builtin": true
+    },
+    {
+      "name": "run",
+      "description": "Launch and drive this project's app to see a change working. Use when asked to run, start, or screenshot the app, or to confirm a change works in the real app (not just tests). First looks for a project skill that already covers launching the app; otherwise falls back to built-in patterns per project type (CLI, server, TUI, Electron, browser-driven, library).",
+      "argumentHint": "",
+      "builtin": true
+    },
+    {
+      "name": "plugin-authoring",
+      "description": "Write or debug a Claude Code plugin made of function hooks (a hooks module exporting register(on, options), hooks ($, e, next) on events like tool.call, prompt.submit, ui.render, session.start). Load it before writing or changing such a plugin; it says where the exact types come from, how to run a plugin under development, and where the engine reports what it refused.",
+      "argumentHint": "",
+      "builtin": true
+    },
+    {
+      "name": "init",
+      "description": "Initialize a new CLAUDE.md file with codebase documentation",
+      "argumentHint": "",
+      "builtin": true
+    },
+    {
+      "name": "security-review",
+      "description": "Complete a security review of the pending changes on the current branch",
+      "argumentHint": "",
+      "builtin": true
+    }
+  ]
+}

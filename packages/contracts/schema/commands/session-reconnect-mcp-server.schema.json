@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-reconnect-mcp-server.json",
+  "title": "SessionReconnectMcpServer",
+  "description": "Reconnects one MCP server of a running session — the way back from `failed`. Only the owner of the session may, and only a server the session has. The result arrives as `session.mcpStatusChanged`.",
+  "x-kind": "command",
+  "x-type": "session.reconnectMcpServer",
+  "type": "object",
+  "required": ["sessionId", "name"],
+  "properties": {
+    "sessionId": { "type": "string" },
+    "name": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "The server's name, as `session.mcpStatusChanged` gave it."
+    }
+  }
+}

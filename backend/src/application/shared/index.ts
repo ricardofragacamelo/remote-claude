@@ -1,6 +1,7 @@
 /** Public surface of the tokens no single domain owns. */
 export { CLOCK, ID_GENERATOR } from './tokens';
 export { SCHEDULER } from './scheduler.port';
+export { SingleFlight } from './single-flight';
 export type { CancelScheduled, Scheduler } from './scheduler.port';
 export { PATH_LOCK } from './path-lock.port';
 export type { PathLock } from './path-lock.port';

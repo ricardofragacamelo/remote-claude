@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { HelpDrawer } from '@/shared/components/HelpDrawer';
 import { HelpPanel } from '@/shared/components/HelpPanel';
-import type { ScreenShortcut } from '@/shared/components/HelpPanel';
+import type { HelpExtra, ScreenShortcut } from '@/shared/components/HelpPanel';
 import { IconButton } from '@/shared/components/IconButton';
 import { useHelpPanel } from '@/shared/hooks/useHelpPanel';
 import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
@@ -30,6 +30,9 @@ export interface ScreenFrameProps {
   /** The screen's own actions, at the right of the heading. */
   readonly actions?: ReactNode;
 
+  /** Parts of the help of its own, after the three written ones — what a "learn more" opens. */
+  readonly extra?: readonly HelpExtra[];
+
   readonly children: ReactNode;
 }
 
@@ -48,6 +51,7 @@ export function ScreenFrame({
   help,
   shortcuts = [],
   actions,
+  extra,
   children,
 }: ScreenFrameProps): React.JSX.Element {
   const { t } = useTranslation();
@@ -57,6 +61,13 @@ export function ScreenFrame({
   const attach = useHelpPanel((state) => state.attach);
   const headingId = useId();
   const panelId = useId();
+  // What the panel and the drawer both show: the same help, in either place.
+  const helpProps = {
+    help,
+    shortcuts,
+    headingId: `${headingId}-help`,
+    ...(extra === undefined ? {} : { extra }),
+  };
 
   // While a screen with a help is on screen, the palette and its shortcut can open it.
   useEffect(() => attach(), [attach]);
@@ -94,12 +105,7 @@ export function ScreenFrame({
             aria-labelledby={`${headingId}-help`}
             className="w-80 shrink-0 overflow-y-auto border-l border-border bg-sidebar p-4 text-sidebar-foreground"
           >
-            <HelpPanel
-              title={title}
-              help={help}
-              shortcuts={shortcuts}
-              headingId={`${headingId}-help`}
-            />
+            <HelpPanel title={title} {...helpProps} />
           </aside>
         )
       ) : (
@@ -110,9 +116,7 @@ export function ScreenFrame({
           id={panelId}
           title={title}
           purpose={purpose}
-          help={help}
-          shortcuts={shortcuts}
-          headingId={`${headingId}-help`}
+          {...helpProps}
         />
       )}
     </div>

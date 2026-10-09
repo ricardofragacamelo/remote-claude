@@ -3,7 +3,9 @@
 Plano: [13 — Configuração do Claude](README.md) · Cenários: [scenarios.md](scenarios.md) · Progresso: [progress.md](progress.md)
 
 **Depende de:** [F1](F1-models-and-modes.md) — o catálogo e a sonda efêmera, que o teste de servidor
-reusa.
+reusa — e do [plano 26 — Paridade da conversa no app](../26-mobile-conversation-parity/README.md) concluído
+([D-31](decisions.md#decididas-durante-a-execução-b-01-2026-10-09)): a tool MCP sem título e o resultado com
+imagem, que esta fase põe na conversa, chegam ao app com o rótulo `servidor · tool` e a mídia, não com o nome cru.
 **Entrega:** servidores MCP e plugins — locais e de marketplace — configurados pela tela, com segundo passo, trilha e
 segredo que nunca volta; o `.mcp.json` do projeto aprovado por nós, por conteúdo; status vivo e
 ligar/desligar/reconectar dentro da sessão; e a prova de que toda tool MCP passa pela aprovação e
@@ -110,7 +112,11 @@ nenhuma URL de OAuth trafega pelo produto.
 
 O **indicador** de MCP no painel do plano 08 (status agregado na barra do composer, lista ao clicar,
 ligar/desligar e reconectar) é entregue por esta task, no painel que o 08 já construiu
-([D-14](decisions.md#d-14--quem-entrega-o-indicador-de-mcp-da-sessão)). Cenários S-88…S-96.
+([D-14](decisions.md#d-14--quem-entrega-o-indicador-de-mcp-da-sessão)). No **app**, um chip **só de leitura** no
+cabeçalho da sessão, com o status agregado e, ao tocar, a lista com o status e o erro redigido de cada
+servidor, lidos do `session.mcpStatusChanged` que o mapper do app hoje ignora; sem ações, que ficam no web
+([D-32](decisions.md#decididas-durante-a-execução-b-01-2026-10-09)). Os rótulos de status entram no `i18n-shared.json`.
+Cenários S-88…S-96, S-215.
 
 ### B-23 — Mudança de configuração e sessões vivas 🔲
 

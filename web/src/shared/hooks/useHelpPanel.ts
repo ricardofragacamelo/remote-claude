@@ -8,6 +8,13 @@ export const HELP_SECTIONS = ['what', 'states', 'notRecorded', 'shortcuts'] as c
 
 export type HelpSection = (typeof HELP_SECTIONS)[number];
 
+/**
+ * A part of a screen's help a "learn more" can open: one of the four fixed ones, or the id of a part
+ * of the screen's own (`HelpExtra.id`) — the field of a form that needs more than the four say
+ * (plan 13, B-17).
+ */
+export type HelpTarget = HelpSection | (string & {});
+
 const HELP_KEY = 'help.open';
 
 /** Whether the help was left open in this browser — closed for somebody who never opened it. */
@@ -22,7 +29,7 @@ export interface HelpPanelState {
   readonly open: boolean;
 
   /** The part a "learn more" asked for, until the panel has shown it. */
-  readonly section: HelpSection | null;
+  readonly section: HelpTarget | null;
 
   /** How many screens with a help are on screen. */
   readonly hosts: number;
@@ -40,7 +47,7 @@ export interface HelpPanelState {
   setOpen(open: boolean): void;
 
   /** Opens the panel — at one of its parts, when a control asked about that one. */
-  show(section?: HelpSection): void;
+  show(section?: HelpTarget): void;
 
   /** The part asked for is on screen. */
   shown(): void;

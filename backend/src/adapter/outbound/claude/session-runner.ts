@@ -5,7 +5,6 @@ import type {
   PermissionResult,
   Query,
   SDKMessage,
-  SlashCommand as SdkSlashCommand,
 } from '@anthropic-ai/claude-agent-sdk';
 
 import type {
@@ -18,7 +17,12 @@ import type {
 } from '@application/session';
 import type { Scheduler } from '@application/shared';
 import type { Clock } from '@domain/shared';
-import { ClaudeTimeoutError, ClaudeUnavailableError, sdkPermissionMode } from '@domain/session';
+import {
+  ClaudeTimeoutError,
+  ClaudeUnavailableError,
+  sdkPermissionMode,
+  widensSessionMode,
+} from '@domain/session';
 import type {
   ContextUse,
   InstallationModel,
@@ -26,6 +30,7 @@ import type {
   PermissionMode,
   PromptExtras,
   SessionCloseReason,
+  SessionInitialization,
   SlashCommand,
 } from '@domain/session';
 import type { Logger } from '@shared/logging/logger';
@@ -37,7 +42,9 @@ import type { QueryFactory } from './query.factory';
 import { claudeEnvironment } from './claude-environment';
 import { markedEnvironment } from './process-marker';
 import { toContextUse, toInstallationModel, toMcpServer } from './installation-mapping';
+import { toSessionInitialization } from './initialization-mapping';
 import { withAnswers } from './question-answers';
+import { toSlashCommand } from './slash-command-mapping';
 import { buildSdkOptions } from './sdk-options.factory';
 import type { SessionLimits } from './sdk-options.factory';
 import { SdkMessageMapper } from './sdk-message.mapper';
@@ -117,10 +124,15 @@ export class SessionRunner implements ClaudeSessionHandle {
   /** What the CLI said its own version is, in `system:init`. It wins over the manifest. */
   private reportedVersion: string | null = null;
 
+  /** The mode the SDK runs the session in, now — what a call's own mode is compared with (D-23). */
+  private sdkMode: string;
+
   constructor(
     private readonly start: ClaudeSessionStart,
     private readonly deps: SessionRunnerDeps,
-  ) {}
+  ) {
+    this.sdkMode = sdkPermissionMode(start.permissionMode);
+  }
 
   /**
    * Opens the subprocess and starts consuming it.
@@ -163,6 +175,9 @@ export class SessionRunner implements ClaudeSessionHandle {
         resumedFrom: this.start.conversation.resumedFrom?.value ?? null,
       },
       effort: this.start.effort ?? null,
+      thinking: this.start.thinking ?? null,
+      outputStyle: this.start.outputStyle ?? null,
+      fallbackModel: this.start.fallbackModel ?? null,
       forkAt: this.start.forkAt ?? null,
       limits: this.deps.limits,
       abortController: this.abort,
@@ -291,6 +306,7 @@ export class SessionRunner implements ClaudeSessionHandle {
   async setPermissionMode(mode: PermissionMode): Promise<void> {
     // Permitir tudo is ours and reaches the SDK as `default` — the same translation as at the start.
     await this.query?.setPermissionMode(sdkPermissionMode(mode));
+    this.sdkMode = sdkPermissionMode(mode);
   }
 
   get cliVersion(): string | null {
@@ -309,6 +325,15 @@ export class SessionRunner implements ClaudeSessionHandle {
       query.supportedCommands(),
     );
     return listed.map(toSlashCommand);
+  }
+
+  /** `initializationResult()`, under the same deadline — the catalogue of plan 13 (B-10). */
+  async initialization(): Promise<SessionInitialization> {
+    return toSessionInitialization(
+      await this.control('answer its initialisation', 'claude.initialization', (query) =>
+        query.initializationResult(),
+      ),
+    );
   }
 
   /** `supportedModels()`, under the same deadline — the selector of the panel (plan 08, B-36). */
@@ -522,6 +547,8 @@ export class SessionRunner implements ClaudeSessionHandle {
           tool_name?: string;
           tool_input?: Record<string, unknown>;
           prompt_id?: string;
+          permission_mode?: string;
+          agent_type?: string;
         };
 
         try {
@@ -577,8 +604,45 @@ export class SessionRunner implements ClaudeSessionHandle {
           );
         }
 
-        return { continue: true };
+        return this.askWhenWider(hook) ?? { continue: true };
       });
+  }
+
+  /**
+   * The answer of the hook to a call that runs under a mode wider than the session's own — a
+   * project's subagent that declared `permissionMode: acceptEdits` writes, measured, with no
+   * `canUseTool` at all. `ask` sends the call back to the person; the trail has it already
+   * (plan 13, D-23).
+   */
+  private askWhenWider(hook: {
+    tool_name?: string;
+    permission_mode?: string;
+    agent_type?: string;
+  }): HookJSONOutput | null {
+    if (!widensSessionMode(this.sdkMode, hook.permission_mode)) {
+      return null;
+    }
+
+    this.deps.logger.debug(
+      {
+        op: 'claude.permission.request',
+        layer: 'adapter',
+        sessionId: this.start.sessionId.value,
+        toolName: hook.tool_name,
+        sessionMode: this.sdkMode,
+        callMode: hook.permission_mode,
+        agentType: hook.agent_type,
+      },
+      'a call under a wider mode than the session asks the person',
+    );
+
+    return {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'ask',
+        permissionDecisionReason: 'this runs under a wider mode than the session, so it asks',
+      },
+    };
   }
 
   /**
@@ -729,18 +793,4 @@ function isForkRefusal(message: SDKMessage): boolean {
     message.subtype === 'error_during_execution' &&
     message.errors.some((error) => error.startsWith(FORK_REFUSAL))
   );
-}
-
-/**
- * A command as the SDK describes it → ours. An absent list of aliases is an empty one, and an absent
- * marker is a command that is not Claude Code's own (plan 08, B-50).
- */
-function toSlashCommand(command: SdkSlashCommand): SlashCommand {
-  return {
-    name: command.name,
-    description: command.description,
-    argumentHint: command.argumentHint,
-    aliases: command.aliases ?? [],
-    builtin: command.builtin === true,
-  };
 }

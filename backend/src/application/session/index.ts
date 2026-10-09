@@ -126,6 +126,13 @@ export type {
   UploadedAttachment,
 } from './prompt-attachments';
 export { WORKSPACE_RESOLVER } from './ports/workspace-resolver.port';
+export type {
+  DefaultsFrom,
+  SessionConfiguration,
+  SessionConfigurationRequest,
+  SessionConfigurationSource,
+} from './ports/session-configuration.source';
+export { SESSION_CONFIGURATION_SOURCE } from './ports/session-configuration.source';
 export type { SessionOrigin, SessionOriginRepository } from './ports/session-origin.repository';
 export {
   CLAUDE_SESSION_ID_GENERATOR,

@@ -120,6 +120,8 @@ Regras:
 | `session.cancelQueuedPrompt` | `{ sessionId, queueId }` | tira da fila um prompt que ainda não começou — ver [A fila de prompts](#a-fila-de-prompts) |
 | `session.interrupt` | `{ sessionId }` | `query.interrupt()` |
 | `session.setPermissionMode` | `{ sessionId, mode }` | troca o modo em execução. `allowAll` é o **Permitir tudo**, um modo nosso: o SDK roda em `default` e o servidor aprova sozinho toda tool que nenhuma regra recuse, menos as que são perguntas ([ADR-022](00-decisions.md#adr-022--permitir-tudo-é-um-modo-nosso-não-o-bypasspermissions-do-sdk)). Trocar **para** `allowAll` resolve os pedidos já abertos da sessão pelas mesmas regras. `bypassPermissions` continua sendo o do SDK, nunca honrado |
+| `session.toggleMcpServer` | `{ sessionId, name, enabled }` | liga ou desliga um servidor MCP **desta** sessão (`toggleMcpServer` do SDK); só o dono, só servidor que a sessão tem (`MCP_SERVER_NOT_FOUND`), `CLAUDE_UNAVAILABLE` se o SDK falha. `ack` antes do efeito; o resultado vem em `session.mcpStatusChanged` — e nenhum, quando nada mudou ([plano 13 · B-22](../../plans/13-claude-settings/F2-mcp-servers.md#b-22--status-vivo-e-comandos-da-sessão-)) |
+| `session.reconnectMcpServer` | `{ sessionId, name }` | reconecta um servidor MCP desta sessão — o caminho de volta de `failed`; mesmas recusas |
 | `session.setModel` | `{ sessionId, model }` | troca o modelo em execução |
 | `session.close` | `{ sessionId }` | encerra e libera o subprocesso |
 | `session.setLocale` | `{ locale }` | muda o idioma da connection |
@@ -152,7 +154,8 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 
 | `type` | Payload | Origem no SDK |
 |---|---|---|
-| `session.started` | `{ sessionId, workspacePath, model, permissionMode, claudeSessionId, resumedFrom? }` | `system:init` |
+| `session.started` | `{ sessionId, workspacePath, model, permissionMode, claudeSessionId, resumedFrom?, effort?, outputStyle?, defaultsFrom? }` — `defaultsFrom` diz de onde veio o modelo que a sessão usa: `client`·`folder`·`user`·`installation` ([plano 13 · B-15](../../plans/13-claude-settings/F1-models-and-modes.md#b-15--aplicar-no-sessionstart-)) | `system:init` |
+| `session.mcpStatusChanged` | `{ servers: [{ name, status, source, toolCount, error? }] }` — a lista inteira, sempre; `status` `connected`·`failed`·`needs-auth`·`pending`·`disabled`; `source` `ours`·`project`·`plugin`·`other`, lido do `source` do SDK, nunca do nome; `error` redigido. Evento **da sessão**, com o `seq` dela: depois que os servidores compostos chegam ao CLI, depois de cada comando que mudou algo, e quando um servidor é desligado por ter saído do store ou sido desligado lá (apertar vale já) | derivado de `mcpServerStatus()` |
 | `session.statusChanged` | `{ status }` — `idle`·`thinking`·`running`·`waitingPermission`·`closed` | derivado |
 | `message.delta` | `{ messageId, delta, blockType?, parentToolUseId? }` — `blockType`: `text`·`thinking` | `stream_event` |
 | `message.completed` | `{ messageId, role, content[], promptedBy?, parentToolUseId? }` | `assistant` / `user` — e o **prompt**, dito pelo backend (ver abaixo) |

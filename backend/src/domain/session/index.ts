@@ -28,6 +28,7 @@ export {
 export type { SessionStatus } from './value-objects/session-status.value-object';
 export { statusFor } from './services/session-status.projection';
 export { resumeStrategyFor } from './services/resume-strategy';
+export { widensSessionMode } from './services/mode-widening';
 export { sessionCapacity } from './services/session-capacity';
 export type { CapacityInputs } from './services/session-capacity';
 export type { ResumeCaller, ResumeCandidate, ResumeStrategy } from './services/resume-strategy';
@@ -147,7 +148,10 @@ export type {
   ContextUse,
   EffortLevel,
   ForkPoint,
+  InstallationAccount,
+  InstallationAgent,
   InstallationModel,
   McpServer,
   McpStatus,
+  SessionInitialization,
 } from './services/installation';

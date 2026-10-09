@@ -123,6 +123,7 @@ export function testEnvironment(
   process.env['RC_WS_MAX_ATTACHED_SESSIONS'] = '16';
   process.env['RC_SESSION_MAX_TURNS'] = '100';
   process.env['RC_SESSION_MAX_BUDGET_USD'] = '10';
+  process.env['RC_MODEL_CHECK_MAX_BUDGET_USD'] = '0.05';
   process.env['RC_SESSION_DEFAULT_MODEL'] = 'claude-sonnet-5';
   process.env['RC_SESSION_DEFAULT_PERMISSION_MODE'] = 'default';
   // Small and explicit, because every scenario has to fix the values it uses or stop being

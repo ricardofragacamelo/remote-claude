@@ -6,6 +6,7 @@ import type {
   ClaudeSessionHandle,
   ClaudeSessionPort,
   ClaudeSessionStart,
+  SessionConfigurationSource,
   SessionEvent,
 } from '@application/session';
 import { UserId } from '@domain/auth';
@@ -594,6 +595,111 @@ describe('StartSessionUseCase', () => {
       claude.emit({ type: 'turn.completed', payload: {} });
 
       expect(claude.handle.prompts).toEqual([]);
+    });
+  });
+
+  describe('the configuration of the owner — plan 13, B-15', () => {
+    const asked: Parameters<SessionConfigurationSource['configurationFor']>[0][] = [];
+    const configured: SessionConfigurationSource = {
+      configurationFor: (query) => {
+        asked.push(query);
+        return Promise.resolve({
+          model: query.client.model ?? 'claude-opus-5',
+          permissionMode: query.client.permissionMode ?? 'plan',
+          effort: 'high',
+          thinking: 'off',
+          outputStyle: 'Concise',
+          fallbackModel: 'claude-sonnet-5',
+          defaultsFrom: query.client.model === null ? 'folder' : 'client',
+        });
+      },
+    };
+    const withConfiguration = () =>
+      new StartSessionUseCase(
+        workspaces,
+        registry,
+        claude,
+        broadcaster,
+        clock,
+        ids,
+        defaults,
+        { ids: new SequentialUuids(), origins },
+        { conversations, trail: new RecordAuditEventUseCase(trail, new SequentialIds()) },
+        null,
+        configured,
+      );
+
+    beforeEach(() => {
+      asked.length = 0;
+    });
+
+    it('opens with what the owner configured, and says what it applied', async () => {
+      const started = await withConfiguration().execute({
+        workspacePath: '/srv/projects/app',
+        model: null,
+        permissionMode: null,
+        resumeSessionId: null,
+        userId: owner,
+        openedFrom: 'web',
+      });
+
+      expect(started.session.model).toBe('claude-opus-5');
+      expect(started.session.permissionMode).toBe('plan');
+      expect(claude.starts[0]).toMatchObject({
+        model: 'claude-opus-5',
+        effort: 'high',
+        thinking: 'off',
+        outputStyle: 'Concise',
+        fallbackModel: 'claude-sonnet-5',
+      });
+      expect(started.applied).toEqual({
+        effort: 'high',
+        outputStyle: 'Concise',
+        defaultsFrom: 'folder',
+      });
+      expect(asked[0]).toMatchObject({
+        client: { model: null, permissionMode: null, effort: null },
+        models: null,
+      });
+    });
+
+    it('applies the defaults to a resume as to a new session — S-52', async () => {
+      conversations.add({ id: '0f0e0d0c-0b0a-4908-8706-050403020100', openedBy: owner.value });
+
+      const started = await withConfiguration().execute({
+        workspacePath: '/srv/projects/app',
+        model: 'claude-haiku-5',
+        permissionMode: null,
+        resumeSessionId: '0f0e0d0c-0b0a-4908-8706-050403020100',
+        userId: owner,
+        openedFrom: 'web',
+      });
+
+      expect(started.conversation.resumedFrom?.value).toBe('0f0e0d0c-0b0a-4908-8706-050403020100');
+      expect(claude.starts[0]).toMatchObject({
+        model: 'claude-haiku-5',
+        thinking: 'off',
+        outputStyle: 'Concise',
+      });
+      expect(started.applied.defaultsFrom).toBe('client');
+    });
+
+    it('asks nothing when no configuration is wired: the client’s choice, as before — S-49', async () => {
+      const started = await build().execute({
+        workspacePath: '/srv/projects/app',
+        model: 'claude-sonnet-5',
+        permissionMode: null,
+        resumeSessionId: null,
+        userId: owner,
+        openedFrom: 'web',
+      });
+
+      expect(started.applied).toEqual({ effort: null, outputStyle: null, defaultsFrom: 'client' });
+      expect(claude.starts[0]).toMatchObject({
+        thinking: null,
+        outputStyle: null,
+        fallbackModel: null,
+      });
     });
   });
 

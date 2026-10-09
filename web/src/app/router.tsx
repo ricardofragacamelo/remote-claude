@@ -7,11 +7,13 @@ import {
 } from '@tanstack/react-router';
 
 import { CALLBACK_PATH } from '@/features/auth';
+import { readClaudeSettingsSearch } from '@/features/claude-settings';
 import { firstSectionId, settingsSections } from '@/features/settings';
 import { AboutRoute } from './AboutRoute';
 import { App } from './App';
 import { AuditRoute, readAuditSearch } from './AuditRoute';
 import { Callback } from './Callback';
+import { ClaudeSettingsRoute } from './ClaudeSettingsRoute';
 import { DevicesRoute } from './DevicesRoute';
 import { DiagnosticsRoute } from './DiagnosticsRoute';
 import { FramedOutlet } from './FramedOutlet';
@@ -147,6 +149,17 @@ const settingsRoute = createRoute({
   component: SettingsRoute,
 });
 
+/**
+ * How Claude works on this machine (plan 13): the section and the folder in the search, so the link
+ * reproduces the screen. A section nobody knows is the first one, without an error.
+ */
+const claudeSettingsRoute = createRoute({
+  getParentRoute: () => frameRoute,
+  path: '/claude-settings',
+  validateSearch: readClaudeSettingsSearch,
+  component: ClaudeSettingsRoute,
+});
+
 /** The versions of the installation, the documentation and the license (B-32). */
 const aboutRoute = createRoute({
   getParentRoute: () => frameRoute,
@@ -157,8 +170,9 @@ const aboutRoute = createRoute({
 /**
  * Every route, as one tree — exported so a test can mount the real table on a memory history.
  *
- * The map is in docs/architecture/web/04-state-and-data.md#o-mapa-de-rotas. `/claude…` and
- * `/usage…` are **reserved** to plans 13 and 16 and are deliberately absent: an address nobody
+ * The map is in docs/architecture/web/04-state-and-data.md#o-mapa-de-rotas. `/usage…` is
+ * **reserved** to plan 16 and deliberately absent, and so is anything under `/claude/` — plan 13
+ * took `/claude-settings`: an address nobody
  * registered answers the translated not-found, never an empty screen. So do `/sessions/$sessionId`,
  * `/history` and `/history/$conversationId`, removed without a compatibility link
  * ([06 · D-07](../../../docs/plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)):
@@ -176,6 +190,7 @@ export const routeTree = rootRoute.addChildren([
     diagnosticsRoute,
     settingsIndexRoute,
     settingsRoute,
+    claudeSettingsRoute,
     aboutRoute,
   ]),
 ]);

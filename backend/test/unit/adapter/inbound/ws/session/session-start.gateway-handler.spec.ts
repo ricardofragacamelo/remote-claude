@@ -44,6 +44,9 @@ function answering(started: StartedSession): {
   return { useCase, commands };
 }
 
+/** What a session opened with when nobody configured anything (plan 13, B-15). */
+const NOTHING_APPLIED = { effort: null, outputStyle: null, defaultsFrom: 'installation' } as const;
+
 describe('SessionStartHandler', () => {
   const run = async (
     started: StartedSession,
@@ -77,6 +80,7 @@ describe('SessionStartHandler', () => {
       session: aSession(),
       conversation: aConversation(),
       joined: false,
+      applied: NOTHING_APPLIED,
     });
 
     expect(result.ack).toEqual({ type: 'command.accepted', payload: { command: 'session.start' } });
@@ -92,6 +96,7 @@ describe('SessionStartHandler', () => {
             model: 'claude-sonnet-5',
             permissionMode: 'default',
             claudeSessionId: CONVERSATION_ID,
+            defaultsFrom: 'installation',
           },
           correlationId: 'cmd-1',
           traceId: 'trace-1',
@@ -100,11 +105,27 @@ describe('SessionStartHandler', () => {
     ]);
   });
 
+  it('says where the model came from, and what the defaults gave beyond it — plan 13, S-51', async () => {
+    const result = await run({
+      session: aSession(),
+      conversation: aConversation(),
+      joined: false,
+      applied: { effort: 'high', outputStyle: 'Explanatory', defaultsFrom: 'folder' },
+    });
+
+    expect(result.published[0]?.event.payload).toMatchObject({
+      defaultsFrom: 'folder',
+      effort: 'high',
+      outputStyle: 'Explanatory',
+    });
+  });
+
   it('says what a resumed session continues — B-11', async () => {
     const result = await run({
       session: aSession(),
       conversation: aConversation(CONVERSATION_ID, SOURCE),
       joined: false,
+      applied: NOTHING_APPLIED,
     });
 
     expect(result.published[0]?.event.payload).toMatchObject({
@@ -115,7 +136,12 @@ describe('SessionStartHandler', () => {
 
   it('answers a resume of what is live as an attach, and announces nothing — S-24', async () => {
     const result = await run(
-      { session: aSession(), conversation: aConversation(CONVERSATION_ID, SOURCE), joined: true },
+      {
+        session: aSession(),
+        conversation: aConversation(CONVERSATION_ID, SOURCE),
+        joined: true,
+        applied: NOTHING_APPLIED,
+      },
       { workspacePath: '/srv/projects/app', resumeSessionId: SOURCE },
     );
 
@@ -136,7 +162,12 @@ describe('SessionStartHandler', () => {
 
   it('hands the use case what the client asked, and `null` for what it did not', async () => {
     const result = await run(
-      { session: aSession(), conversation: aConversation(), joined: false },
+      {
+        session: aSession(),
+        conversation: aConversation(),
+        joined: false,
+        applied: NOTHING_APPLIED,
+      },
       { workspacePath: '/srv/projects/app', model: 'claude-opus-5', resumeSessionId: SOURCE },
     );
 
@@ -149,7 +180,12 @@ describe('SessionStartHandler', () => {
   });
 
   it('says which client opened the session: a browser, or the app — plan 08, B-07', async () => {
-    const started = { session: aSession(), conversation: aConversation(), joined: false };
+    const started = {
+      session: aSession(),
+      conversation: aConversation(),
+      joined: false,
+      applied: NOTHING_APPLIED,
+    };
 
     expect((await run(started)).commands[0]?.openedFrom).toBe('web');
     expect(
@@ -164,7 +200,15 @@ describe('SessionStartHandler', () => {
     ['an unknown permission mode', { workspacePath: '/srv/projects/app', permissionMode: 'yolo' }],
   ])('refuses a frame with %s', async (_case, payload) => {
     await expect(
-      run({ session: aSession(), conversation: aConversation(), joined: false }, payload),
+      run(
+        {
+          session: aSession(),
+          conversation: aConversation(),
+          joined: false,
+          applied: NOTHING_APPLIED,
+        },
+        payload,
+      ),
     ).rejects.toThrow(InputValidationError);
   });
 });

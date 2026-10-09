@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 
@@ -115,6 +116,7 @@ export const environmentSchema = z.object({
   RC_WS_MAX_ATTACHED_SESSIONS: z.coerce.number().int().min(1),
   RC_SESSION_MAX_TURNS: z.coerce.number().int().min(1),
   RC_SESSION_MAX_BUDGET_USD: z.coerce.number().positive(),
+  RC_MODEL_CHECK_MAX_BUDGET_USD: z.coerce.number().positive().max(1),
   RC_SESSION_DEFAULT_MODEL: z.string().min(1),
   RC_SESSION_DEFAULT_PERMISSION_MODE: z.enum(PERMISSION_MODES),
   RC_PERMISSION_TIMEOUT_MS: z.coerce.number().int().positive(),
@@ -248,6 +250,10 @@ export interface AppConfig {
   readonly workspaceAllowlistFile: string;
   /** Absolute path the process writes its pid to, or `null` when it writes none. */
   readonly pidFile: string | null;
+  /** The configuration of Claude (plan 13): the ceiling of the test of the connection. */
+  readonly claudeConfig: {
+    readonly modelCheck: { readonly maxBudgetUsd: number; readonly cwd: string };
+  };
   /** What a session may cost this installation, and what it opens with. */
   readonly session: {
     /**
@@ -426,6 +432,10 @@ export function loadConfig(source: RawEnvironment): AppConfig {
     databaseUrl: env.DATABASE_URL,
     workspaceAllowlistFile: resolve(env.RC_WORKSPACE_ALLOWLIST_FILE),
     pidFile: env.RC_PID_FILE === 'off' ? null : resolve(env.RC_PID_FILE),
+    claudeConfig: {
+      // A folder of nobody's: the test reads no project and writes no transcript.
+      modelCheck: { maxBudgetUsd: env.RC_MODEL_CHECK_MAX_BUDGET_USD, cwd: tmpdir() },
+    },
     session: {
       capacity: {
         floor: env.RC_SESSION_MIN_CONCURRENT,

@@ -21,6 +21,7 @@ Voltar para o [índice do backend](README.md).
 | `transcript` | Histórico: listar sessões, carregar mensagens, retomar | Sessão viva |
 | `notification` | Push para device quando ninguém está online | Decidir se algo merece notificação (quem decide é `permission`) |
 | `diag` | O ping de ponta a ponta (`diag.ping`) e as versões da instalação para a tela "Sobre" | Saúde para o balanceador (é `GET /health`, sem autenticação) |
+| `claude-config` | Como o Claude desta máquina trabalha, por usuário: padrões (modelo, modo, esforço, thinking, output style, reserva), servidores MCP com segredo cifrado, aprovação do `.mcp.json`, plugins, preferências de skills, e a leitura da configuração de projeto e da instalação ([plano 13](../../plans/13-claude-settings/README.md)) | Sessão viva (é `session`, que pergunta por porta) · regra de permissão (é `permission`, que revoga por porta) · escrever `.claude/` (é `files`) |
 | `audit` | Trilha imutável de **toda** invocação de tool, via hook `PreToolUse`, e dos fatos de conta do mesmo peso (registro, aprovação e revogação de device) | Autorizar |
 
 ### Por que `permission` é módulo separado de `session`
@@ -56,6 +57,16 @@ comando arbitrário na máquina do usuário, a trilha precisa sobreviver à falh
         workspace.allowlistReloaded
         (barramento, sem import)
 ```
+
+`claude-config` é consultado pelo `session` (porta `SessionConfigurationSource`, declarada no
+`session`) e consulta, por portas declaradas nele, o registro de sessões vivas (`SessionRegistryModule`),
+o `workspace` (resolver a pasta) e o `permission` (revogar as `allow` de `mcp__<nome>`); escreve em
+`audit`. O domínio, a aplicação e o controller dele **não** importam a aplicação do `session` — a
+regra `claude-config-never-reaches-session` do `dependency-cruiser` o recusa, porque o `SessionModule`
+importa o `ClaudeConfigModule` e o contrário fecharia o ciclo. Os tipos puros do domínio do `session`
+(um modelo, um modo, um nível de esforço) não são módulo e podem ser usados; os adaptadores de saída
+do `claude-config` que implementam as portas acima são o acoplamento inteiro. A fábrica de `query()` e
+a versão do binário vêm de um `ClaudeSdkModule` próprio, importado pelos dois módulos.
 
 `files` **não tem seta para `session`** nem para `transcript` — a regra `files-never-reaches-session`
 do `dependency-cruiser` a recusa: o que o Claude escreveu chega pelo barramento interno, e a trava
@@ -926,6 +937,67 @@ estender ao HTTP.
   vem do mesmo `cli-version` do [plano 04 · F3](../../plans/04-transcript-and-resume/F3-commands.md),
   com o cache por versão — pedir o "Sobre" não sobe um subprocesso. `web` é opcional: a tela mostra a
   versão do próprio bundle, e o campo só vem quando o backend a conhece.
+
+### `claude-config`
+
+A tela "Configuração do Claude" ([plano 13](../../plans/13-claude-settings/README.md)) e o que ela
+decide para as sessões. Módulo próprio, e não parte do `session` ([13 · D-03](../../plans/13-claude-settings/decisions.md#d-03--módulo-novo-ou-parte-de-session)):
+padrões, servidores, aprovações, plugins e skills têm vocabulário e regra próprios — digest de
+aprovação, escopo, segredo só escrita — e um ciclo de vida que sobrevive à sessão, que só **consome** o
+resultado.
+
+- **O que a sessão pergunta** (`SessionConfigurationSource`, porta do `session`, implementada por um
+  adapter que chama o `ComposeSessionConfigurationUseCase` daqui): os padrões efetivos e de onde vieram,
+  os servidores MCP da sessão já com os segredos decifrados e o `${VAR}` expandido (entregues por
+  `setMcpServers()`, nunca pelo argv), os plugins (`local`, `skipMcpDiscovery: true`), o plugin
+  sintético das skills do usuário e do sistema, e a opção `skills` ([ADR-018](../shared/00-decisions.md#adr-018--extensões-do-claude-só-entram-pelo-produto)).
+- **A sonda** (`InstallationProbe`): uma `query()` que nunca cede prompt e faz uma pergunta,
+  `initializationResult()`, com as mesmas opções obrigatórias de toda sessão; ocupa um lugar na
+  capacidade (`SESSION_LIMIT_REACHED`) e fecha no `finally`. A sessão viva do chamador na pasta responde
+  primeiro, sem sonda. O SDK continua só em `adapter/outbound/claude/`.
+- **Trilha antes do efeito**: toda escrita que amplia o que roda grava o kind `claude.*` antes, e trilha
+  indisponível não grava nada ([05-persistence](05-persistence.md#os-fatos-de-conta)).
+- **Apertar vale já**: remover ou desligar um servidor desliga-o nas sessões vivas do usuário
+  (`toggleMcpServer`), com `session.mcpStatusChanged`; acrescentar ou ligar vale na próxima sessão.
+- **Erros:** `MCP_SERVER_NOT_FOUND`, `MCP_SERVER_NAME_TAKEN`, `MCP_SERVER_CONFIG_INVALID`,
+  `MCP_APPROVAL_STALE`, `MODEL_NOT_AVAILABLE`, `DEFAULT_MODE_NOT_ALLOWED`, `PLUGIN_NOT_FOUND`,
+  `PLUGIN_PATH_INVALID`, `PLUGIN_MARKETPLACE_NOT_ALLOWED`, `PLUGIN_SOURCE_UNAVAILABLE`, e os reusados
+  `INVALID_INPUT`, `FORBIDDEN`, `WORKSPACE_*`, `SESSION_LIMIT_REACHED`, `CLAUDE_UNAVAILABLE`,
+  `CLAUDE_TIMEOUT`, `SERVICE_UNAVAILABLE`.
+
+#### As rotas HTTP do `claude-config`
+
+Todas Bearer, escopadas por quem pergunta; a pasta (`folder`, absoluta, em search ou corpo, nunca como
+segmento) passa pelo `ResolveWorkspaceUseCase` antes de qualquer outra coisa — as recusas dele (`400`,
+`403` `WORKSPACE_NOT_ALLOWED`/`FORBIDDEN`, `404` `WORKSPACE_NOT_FOUND`, `422` `WORKSPACE_NOT_A_DIRECTORY`)
+valem para toda rota com `folder`, e não se repetem abaixo. **Nenhuma resposta carrega valor de segredo,
+token, caminho de credencial nem conteúdo de arquivo de memória** — só metadado.
+
+| Rota | Resposta | Recusas |
+|---|---|---|
+| `GET /claude/account?refresh=` | `{ state: ready·loginRequired, provider, plan, organization, email, tokenSource, apiKeySource }` — das fontes de credencial, só o **nome**; `refresh=true` ignora o cache curto da conta | `401`, `429` `SESSION_LIMIT_REACHED`, `502`, `504` |
+| `GET /claude/installation` | `{ agentSdk, bundledCli, pathCli: { version, differs }, configDir: { path, fromEnvironment }, login, lastModelCheck }` — cada versão `{ version, reason }`, `null` com o motivo, **nunca** `5xx` porque o CLI não respondeu | `401` |
+| `POST /claude/diagnostics/model-check` `{ model? }` | `200` `{ result: ok·notLoggedIn·rateLimited·failed, model, latencyMs, costUsd, reason? }` — o diagnóstico rodou; um em voo por usuário, o segundo recebe o resultado do primeiro | `400`, `401`, `422` `MODEL_NOT_AVAILABLE`, `429`, `502` (o CLI morreu), `504` (não respondeu no prazo) |
+| `GET /claude/models?folder=` | `{ cliVersion, models: [{ value, displayName, description, resolvedModel, supportsEffort, supportedEffortLevels, supportsAdaptiveThinking }], permissionModes }` — da instalação, nunca de lista no código | `401`, `429`, `502`, `504` |
+| `GET /claude/defaults?folder=` | `{ effective: { <campo>: { value, from: folder·user·installation, folder? } }, user: {…}, folder: { path, values } \| null }` | `401` |
+| `PUT /claude/defaults` `{ model?, permissionMode?, effort?, thinking?, outputStyle?, fallbackModel? }` | `200` com o mesmo corpo do `GET`; `null` limpa o campo | `400` (todos os campos em `details[]`), `401`, `422` `MODEL_NOT_AVAILABLE`/`DEFAULT_MODE_NOT_ALLOWED`, `400` `INVALID_INPUT` (esforço, reserva), `502` `CLAUDE_UNAVAILABLE` (catálogo fora: recusa, não grava sem validar), `503` (trilha) |
+| `PUT /claude/defaults/folder` `{ folder, …campos }` · `DELETE /claude/defaults/folder?folder=` | `200` como acima · `204`, também quando não havia | as de cima, e `403` `FORBIDDEN` |
+| `GET /claude/mcp-servers?folder=` | `{ servers: [{ id, name, scope, folder, transport, command, args, url, env: [{ name, set }], headers: [{ name, set }], enabled, description, status?, tools? }], project: { files, state, entries: [{ name, digest, state: pending·approved·rejected·changed, shadowed, description, variables }] }, suggestions }` — o status vem do `mcpServerStatus()` das sessões vivas do chamador na pasta, pelo `source` | `401`, `403` |
+| `POST /claude/mcp-servers/preview` `{ id?, …servidor }` | `200` `{ description, revokes: [{ ruleId, pattern }] }` — sem efeito nenhum | `400`, `401`, `422` `MCP_SERVER_CONFIG_INVALID` |
+| `POST /claude/mcp-servers` · `PUT /claude/mcp-servers/:id` | `201`/`200` `{ server, appliesTo: nextSession }`; no `PUT`, segredo omitido fica, `null` remove, texto substitui | `400`, `401`, `403`, `404` `MCP_SERVER_NOT_FOUND`, `409` `MCP_SERVER_NAME_TAKEN`, `422`, `503` (chave dos segredos ausente, ou trilha) |
+| `PATCH /claude/mcp-servers/:id` `{ enabled }` · `DELETE /claude/mcp-servers/:id` | `200` `{ server, appliesTo }` · `204`; desligar e remover valem já nas sessões vivas | `401`, `403`, `404` (remover de novo também), `503` |
+| `POST /claude/mcp-servers/:id/test` | `200` `{ status, tools: [{ name, annotations }], error?, durationMs }` — **executa** o comando, e grava `claude.mcpServerTested` | `401`, `403`, `404`, `429`, `503` |
+| `PUT /claude/project-mcp-approvals` `{ folder, name, digest, decision }` · `DELETE /claude/project-mcp-approvals?folder=&name=` | `200` com a entrada · `204` | `400`, `401`, `404` (entrada que o arquivo não tem), `409` `MCP_APPROVAL_STALE`, `503` |
+| `GET /claude/plugins` | `{ plugins: [{ id, name, origin, path, marketplace, commit, version, enabled, state: approved·changed·missing, contents }], marketplaces: [{ name, state }] }` | `401` |
+| `POST /claude/plugins/preview` `{ path }` ou `{ marketplace, plugin }` | `200` `{ name, version, contents: { hooks, commands, agents, skills, mcpServers }, digest }` | `400`, `401`, `403` `WORKSPACE_NOT_ALLOWED`/`PLUGIN_MARKETPLACE_NOT_ALLOWED`, `422` `PLUGIN_PATH_INVALID`, `502` `PLUGIN_SOURCE_UNAVAILABLE` |
+| `POST /claude/plugins` · `PATCH /claude/plugins/:id` `{ enabled }` · `DELETE /claude/plugins/:id` | `201` (`200` com o existente: o mesmo diretório, ou o mesmo plugin no mesmo commit) · `200` · `204` | as de cima, `404` `PLUGIN_NOT_FOUND`, `409` `MCP_APPROVAL_STALE` (o digest mostrado não é o de agora), `503` |
+| `GET /claude/marketplaces/:name/plugins?q=` · `POST /claude/plugins/:id/update` `{ commit, digest }` | a lista do marketplace declarado · `200` com o plugin no commit novo, depois da prévia da diferença | `403`, `404`, `409`, `502` |
+| `GET /claude/skills?folder=` · `PUT /claude/skills/preferences` `{ folder?, sources, disabledSkills }` | `{ skills: [{ name, qualified, source: project·user·system, description, state, file?, reason? }], preferences, from }` · `200` | `400`, `401`, `403`, `503` |
+| `GET /claude/project-config?folder=` | `{ memory, commands, agents, outputStyles, hooks, permissions, plugins, mcpJson, problems }` — "declarado" lido do arquivo e "em uso" vindo do CLI | `401`, `429`, `502`, `504` |
+
+O `400` é para o que não se entende (tipo errado); o `422`, para o que se entende e é impossível (nome
+com `__`, URL `file:`). A sonda e o teste de conexão têm um em voo por chave desde já; os limites de ritmo
+do [plano 05](../../plans/05-hardening-operations/README.md) valem quando ele os estender ao HTTP.
 
 ### `audit`
 
