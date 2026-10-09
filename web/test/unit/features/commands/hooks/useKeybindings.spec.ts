@@ -168,6 +168,23 @@ describe('which binding a press answers', () => {
   it('is none for a chord nobody bound', () => {
     expect(bindingFor([global], 'Alt+2', false)).toBeUndefined();
   });
+
+  it("is the PDF reader's over the workbench's, whatever the order they came in — plan 21, D-10", () => {
+    const reader: Keybinding = { command: 'c', key: 'Alt+1', context: 'pdfReader' };
+    const pointer: Keybinding = { command: 'd', key: 'Alt+1', context: 'pdfPointer' };
+    const explorer: Keybinding = { command: 'e', key: 'Alt+1', context: 'explorer' };
+
+    expect(bindingFor([reader, workbench, global], 'Alt+1', false, () => true)).toBe(reader);
+    expect(bindingFor([workbench, pointer, explorer], 'Alt+1', false, () => true)).toBe(pointer);
+    expect(
+      bindingFor(
+        [reader, pointer, workbench],
+        'Alt+1',
+        false,
+        (context) => context !== 'pdfReader',
+      ),
+    ).toBe(pointer);
+  });
 });
 
 describe('a sequence pressed — plan 07, B-34', () => {

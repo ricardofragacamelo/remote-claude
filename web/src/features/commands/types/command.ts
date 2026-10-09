@@ -61,11 +61,14 @@ export interface Command {
 }
 
 /**
- * Where a shortcut applies. `global` is everywhere; `workbench` only while the workbench is on
- * screen, and wins over `global` there; `explorer` only while the focus is in the tree of the
- * Explorer (plan 07, B-26) — `Delete`, `F2` and `Ctrl+C` there act on files, and nowhere else.
+ * Where a shortcut applies, the most specific last — a press answers to the binding of the most
+ * specific live context. `global` is everywhere; `workbench` only while the workbench is on screen,
+ * and wins over `global` there; `explorer` only while the focus is in the tree of the Explorer
+ * (plan 07, B-26) — `Delete`, `F2` and `Ctrl+C` there act on files, and nowhere else; `pdfPointer`
+ * while the pointer is over a PDF reader, and `pdfReader` while the focus is in one (plan 21,
+ * D-10) — its `Ctrl+F` finds in the PDF, over the editor's.
  */
-export const KEY_CONTEXTS = ['global', 'workbench', 'explorer'] as const;
+export const KEY_CONTEXTS = ['global', 'workbench', 'explorer', 'pdfPointer', 'pdfReader'] as const;
 
 export type KeyContext = (typeof KEY_CONTEXTS)[number];
 

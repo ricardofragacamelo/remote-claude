@@ -134,14 +134,15 @@ describe('the code of a fenced block', () => {
     expect(fencedCodeOf(<code className="language-py">{text}</code>)).toEqual({
       code: 'x = 1',
       language: 'py',
+      closed: false,
     });
   });
 
   it('reads an empty block, and a block with no language, as nothing', () => {
-    expect(fencedCodeOf(<code />)).toEqual({ code: '', language: '' });
+    expect(fencedCodeOf(<code />)).toEqual({ code: '', language: '', closed: false });
   });
 
   it('reads anything but one code element as no code', () => {
-    expect(fencedCodeOf('just text')).toEqual({ code: '', language: '' });
+    expect(fencedCodeOf('just text')).toEqual({ code: '', language: '', closed: false });
   });
 });

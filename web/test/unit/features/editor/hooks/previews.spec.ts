@@ -9,7 +9,12 @@ import {
   closeNow,
   togglePreview,
 } from '@/features/editor/hooks/tabs';
-import { activePathTab, previewCommands } from '@/features/editor/hooks/preview-commands';
+import {
+  activePathTab,
+  pdfReaderCommands,
+  previewCommands,
+} from '@/features/editor/hooks/preview-commands';
+import { leavePdfReader, reachPdfReader } from '@/features/editor/store/pdf-readers';
 import { FOLDER, editorState } from '../../../../support/editor';
 import { fakeDisk } from '../../../../support/editor-disk';
 
@@ -118,5 +123,32 @@ describe('preview tabs — plan 07, B-50', () => {
     run('editor.openPreviewToSide');
     expect(ids(1)).toEqual(['preview:a.md']);
     expect(available()).toEqual([false, false, true]);
+  });
+});
+
+describe('the commands of the PDF reader — plan 21, S-14', () => {
+  it('act on the reader reached last, and on none when there is none', () => {
+    const commands = pdfReaderCommands();
+    const reader = { zoomIn: vi.fn(), zoomOut: vi.fn(), zoomReset: vi.fn(), openFind: vi.fn() };
+
+    for (const command of commands) {
+      expect(command.when?.()).toBe(false);
+      void command.run();
+    }
+    expect(reader.zoomIn).not.toHaveBeenCalled();
+
+    reachPdfReader(reader);
+    for (const command of commands) {
+      expect(command.when?.()).toBe(true);
+      void command.run();
+    }
+    leavePdfReader(reader);
+
+    expect(
+      [reader.zoomIn, reader.zoomOut, reader.zoomReset].map((spy) => spy.mock.calls.length),
+    ).toEqual([1, 1, 1]);
+    expect(commands.flatMap((command) => command.keys ?? []).map((key) => key.context)).toEqual(
+      expect.arrayContaining(['pdfReader', 'pdfPointer']),
+    );
   });
 });

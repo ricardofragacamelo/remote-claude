@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { expect, vi } from 'vitest';
 import { act, screen } from '@testing-library/react';
 import type { RenderResult } from '@testing-library/react';
@@ -28,12 +29,15 @@ function WorkbenchKeys(): null {
 }
 
 /**
- * The editor of a folder tab as the workbench shows it — with the commands of the app live, so its
+ * The editor of a folder tab as the workbench shows it — inside `StrictMode` when `strict` — with the commands of the app live, so its
  * shortcuts and its palette work — "Open editors" beside it, as the Explorer view shows it, and its
  * part of the status bar.
  */
-export function renderEditor(folder = FOLDER): RenderResult {
-  return render(
+export function renderEditor(
+  folder = FOLDER,
+  options: { readonly strict?: boolean } = {},
+): RenderResult {
+  const editor = (
     <>
       <WorkbenchKeys />
       <CommandHost />
@@ -43,8 +47,12 @@ export function renderEditor(folder = FOLDER): RenderResult {
       <EditorStatus
         tab={{ path: folder, name: 'app', rootLabel: null, state: 'available', kept: true }}
       />
-    </>,
+    </>
   );
+
+  // `StrictMode` runs every effect twice in development, as the app's dev server does — what a
+  // reader drawn on a canvas, or laid out in a container, has to survive (plan 21, R-05).
+  return render(options.strict === true ? <StrictMode>{editor}</StrictMode> : editor);
 }
 
 /** The editor of a file, once it is on screen — the simplified mode's text area, in jsdom. */

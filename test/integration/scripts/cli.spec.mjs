@@ -223,3 +223,14 @@ describe('db.mjs', () => {
     expect(result.stderr).toContain('RC_AUDIT_RETENTION_DAYS');
   });
 });
+
+describe('pdf-fixtures.mjs', () => {
+  it('passes --check while the versioned PDFs are what it writes (plan 21, S-05)', () => {
+    const result = runScript('pdf-fixtures.mjs', ['--check']);
+
+    expect(result.code).toBe(0);
+    for (const name of ['reader.pdf', 'scripted.pdf', 'locked.pdf']) {
+      expect(result.stdout).toContain(`✓ ${name}`);
+    }
+  });
+});

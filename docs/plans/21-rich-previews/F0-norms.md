@@ -15,7 +15,7 @@ ADR-020; as chaves i18n nos dois idiomas; o desenho cancelado (já entregue); e 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — As normas em `web/03` e a ADR-020 🔲
+### B-01 — As normas em `web/03` e a ADR-020 ✅
 
 Em [web/03-ui-system](../../architecture/web/03-ui-system.md), uma seção **Prévias** com:
 
@@ -35,12 +35,16 @@ sanitizado em três camadas**: o contexto (D-18 do 07 manda SVG por `<img>`), a 
 camadas, as alternativas (imagem isolada, `iframe` sandbox) e o que a revoga (CVE do Mermaid sem correção, ou
 script que escape do S-56).
 
-### B-02 — As chaves i18n 🔲
+### B-02 — As chaves i18n ✅
 
-`editor.preview.pdf.*` (barra, zoom, ajustes, ir para a página, painel, índice, miniaturas, busca, senha,
+`editor.pdf.*` (barra, zoom, ajustes, ir para a página, painel, índice, miniaturas, busca, senha,
 protegido, sem índice, sem resultado) e `markdown.diagram.*` (nome acessível, ver código, ver diagrama, copiar,
 inválido com a linha, grande demais, não carregou), em `en` e `pt-BR`. Saem `pdfPrevious` e `pdfNext` quando o
 leitor da F1 substituir a página única. Ver [shared/02-i18n](../../architecture/shared/02-i18n.md).
+
+> **Na execução ([D-16](decisions.md#f0--normas)):** as chaves do leitor são `editor.pdf.*` (o catálogo
+> aceita três níveis), e cada uma entra com a fase que a usa — o `i18n:check` do portão 7 reprova chave
+> órfã. A F0 entrega as da ajuda do editor (`editor.help.pdfReader`, `editor.help.diagrams`).
 
 ### B-03 — Uma página deixada para trás não diz que falhou ✅
 
@@ -50,7 +54,7 @@ recebe um `AbortSignal`: o adapter não desenha se o sinal abortou enquanto a p�
 repassada. O efeito do `PdfPreview` aborta no cleanup e não diz "falhou" por um desenho abandonado. É o mesmo
 `renderPage` que as miniaturas da [B-13](F2-pdf-navigation.md) usam.
 
-### B-04 — Os PDFs de teste 🔲
+### B-04 — Os PDFs de teste ✅
 
 `scripts/pdf-fixtures.mjs` ([D-03](decisions.md#f0--normas)) escreve em `e2e/fixtures/files/`:
 

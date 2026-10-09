@@ -55,6 +55,20 @@ describe('a module of the previews', () => {
     ).toBe(true);
     expect(isPreviewModule('/repo/web/src/features/editor/lib/pdfjs-engine.ts')).toBe(false);
   });
+
+  it('is one of Mermaid too — and the first page that carries it fails (plan 21, S-67)', () => {
+    const mermaid =
+      '/repo/node_modules/.pnpm/mermaid@12.1.0/node_modules/mermaid/dist/mermaid.core.mjs';
+    expect(isPreviewModule(mermaid)).toBe(true);
+    expect(isPreviewModule('/repo/web/src/shared/components/markdown/mermaid-engine.ts')).toBe(
+      false,
+    );
+
+    const eager = aChunk('index.js', { isEntry: true, modules: [mermaid] });
+    const bundle = analyseEditorBundle([eager]);
+    expect(bundle.initialPreviewModules).toEqual([mermaid]);
+    expect(editorBundleProblems(bundle)).toContain(`the first page loads ${mermaid}`);
+  });
 });
 
 describe('the chunks of the first page', () => {

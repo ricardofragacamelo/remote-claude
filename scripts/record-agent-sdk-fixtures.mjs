@@ -346,6 +346,25 @@ const SCENARIOS = [
     watchTranscript: true,
   },
   {
+    name: 'diagram-turn',
+    why: 'plan 21, D-15 — an answer with a table and a closed mermaid block: the diagram drawn in the chat once the message is complete',
+    prompt:
+      'Do not use any tool. Reply with exactly the markdown between the lines START and END, ' +
+      'without the lines START and END, and nothing else:\n' +
+      'START\n' +
+      'Here is the flow.\n\n' +
+      '| Step | What happens |\n' +
+      '|---|---|\n' +
+      '| 1 | a question arrives |\n' +
+      '| 2 | an answer leaves |\n\n' +
+      '```mermaid\n' +
+      'graph TD\n' +
+      '  Question --> Answer\n' +
+      '```\n' +
+      'END',
+    files: {},
+  },
+  {
     name: 'bash-output-turn',
     why: 'plan 22, B-05 — a Bash call with its `description` and an output of several hundred lines: the title of the tool, and a summary that keeps the end',
     prompt:

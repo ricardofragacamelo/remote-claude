@@ -14,7 +14,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 
 ## Panorama
 
-**Última atualização:** 2026-10-08
+**Última atualização:** 2026-10-09
 
 ```
 00-bootstrap             ████████████████████ 100%   ✅ concluído
@@ -38,7 +38,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 18-logs-and-diagnostics  ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 19-distribution          ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 20-dev-public            █████████████████░░░  86%   🔄 em andamento
-21-rich-previews         █░░░░░░░░░░░░░░░░░░░   4%   🔄 em andamento
+21-rich-previews         ████████████████████ 100%   ✅ concluído
 22-live-history          ████████████████████ 100%   ✅ concluído
 23-fluid-permissions     ████████████████████ 100%   ✅ concluído
 24-structured-questions  ████████████████████ 100%   ✅ concluído
@@ -74,12 +74,12 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [18 — Logs e diagnóstico](18-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 2/16 | 🔲 |
 | [19 — Distribuição](19-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/8 | 🔲 |
 | [20 — Dev public](20-dev-public/README.md) | 0/1 | 6/7 | 38/41 | 8/8 | 🔄 |
-| [21 — Rich previews](21-rich-previews/README.md) | 0/5 | 1/23 | 2/74 | 15/15 | 🔄 |
+| [21 — Rich previews](21-rich-previews/README.md) | 5/5 | 23/23 | 74/74 | 17/17 | ✅ |
 | [22 — Histórico ao vivo](22-live-history/README.md) | 8/8 | 37/37 | 130/130 | 18/18 | ✅ |
 | [23 — Permissões fluidas](23-fluid-permissions/README.md) | 6/6 | 19/19 | 100/100 | 14/14 | ✅ |
 | [24 — Perguntas estruturadas](24-structured-questions/README.md) | 7/7 | 25/25 | 110/111 | 39/39 | ✅ |
 | [25 — Navegador de arquivos no app](25-mobile-file-browser/README.md) | 0/8 | 0/32 | 0/153 | 18/24 | 🔲 |
-| **Total** | **98/153** | **533/875** | **2088/3642** | **388/475** | 🔄 |
+| **Total** | **103/153** | **555/875** | **2160/3642** | **390/477** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -374,6 +374,7 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-10-09 | **Plano 21 — Rich previews concluído** (F0…F4) | 23/23 tarefas e 74 de 74 cenários. A prévia de PDF virou o leitor do pdf.js: rolagem corrida, zoom e ajustes (também por `Ctrl+=`/`-`/`0` e `Ctrl`+roda), texto selecionável, links pela regra do `Markdown`, PDF com senha só em memória, painel com índice e miniaturas, busca com `Ctrl+F` no leitor, e a posição lembrada por aba. O `Markdown` — prévia, resposta do Claude e plano para aprovar — desenha tabela larga numa caixa que rola e bloco `mermaid` fechado como SVG sanitizado em três camadas ([ADR-020](../architecture/shared/00-decisions.md#adr-020--diagrama-mermaid-é-svg-inline-sanitizado-em-três-camadas)). `pnpm verify:full` com os onze portões verdes; o app Flutter não é tocado pelo plano, e o `test:e2e:mobile` não foi rodado |
 | 2026-10-08 | **Plano 24 — Perguntas estruturadas concluído** (F0…F6) | 25/25 tarefas e 110 de 111 cenários. O `AskUserQuestion` deixou de ser uma permissão genérica com o JSON: o backend normaliza a pergunta (`interaction`), valida e entrega as respostas por id ao SDK, com prazo próprio, push e trilha; o web e o app respondem por um card feito para isso — escolha única, múltipla e "Outro", em passos no app, "Não responder" com motivo —, e a linha da tool mostra o que foi respondido, ao vivo e ao reabrir o histórico (também no seguidor do plano 22). `pnpm verify:full` com os onze portões verdes; `pnpm test:e2e:mobile` 34/35: o 05·S-79 (a renovação recusada no meio de um turno escapando como erro não tratado) falha nas corridas completas sem instrumentação e passa com qualquer sonda — a causa não foi achada em cinco ciclos, e o usuário decidiu fechar e abri-lo como pendência própria ([D-39](24-structured-questions/decisions.md#f6--e2e)) |
 | 2026-10-08 | **Plano 22 — Histórico ao vivo concluído** (F0…F7) | 37/37 tarefas e 130 cenários. O leitor do web e do app acompanha, ao vivo, a conversa conduzida em outro cliente (assinatura `transcript.follow` com sondagem compartilhada no backend, "N novas", "trabalhando em outro cliente…", reset na cadeia reescrita) e a mostra como o Claude Code: pensamento rotulado e "até N s", autor por turno, título e IN/OUT da ferramenta com a saída completa sob demanda, imagem do prompt. `pnpm verify:full` com os onze portões verdes (e2e do web incluído) e `pnpm test:e2e:mobile` 32/32. No caminho, três defeitos fora do plano, corrigidos com teste: a corrida de duas respostas ao mesmo pedido de permissão e a janela da `PermissionBridge` (plano 23), o `<pre>` de saída sem alcance pelo teclado (F5), e a recusa de renovação que escapava pelo `DeviceController` do app (05·S-79, exposta pelo card do plano 23); e o par `@modelcontextprotocol/sdk` do Agent SDK passou a ser declarado pelo backend (GHSA-6qxp-vccf-f47h) |
 | 2026-10-08 | **Plano 25 — Navegador de arquivos no app criado** | a partir da [discovery](../discovery/07-navegador-de-arquivos-no-app.md), por pedido do usuário: o app mostrava a conversa, mas não os arquivos que ela produz. O plano dá ao app um painel de arquivos à direita e um leitor somente leitura (texto, markdown com `mermaid`, PDF, imagem, com zoom) e o download pelo "salvar como" do sistema, sem tocar no web; no backend, só um guard: a pasta é lida só por aparelho aprovado (D-12, pelo usuário). Começa por um spike que escolhe os motores com medida, e conserta antes a sessão que deixava de notificar sob uma tela empilhada (o histórico já tinha o problema) |

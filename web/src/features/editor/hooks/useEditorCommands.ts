@@ -39,7 +39,7 @@ import {
   offerChoice,
 } from './choices';
 import { reloadFromDisk } from './documents';
-import { previewCommands } from './preview-commands';
+import { pdfReaderCommands, previewCommands } from './preview-commands';
 import { save, saveAll } from './saving';
 import {
   activeFileOf,
@@ -74,6 +74,10 @@ export const EDITOR_SHORTCUTS = [
   'editor.replace',
   'editor.goToLine',
   'editor.addToClaude',
+  'editor.pdf.find',
+  'editor.pdf.zoomIn',
+  'editor.pdf.zoomOut',
+  'editor.pdf.zoomReset',
 ] as const;
 
 /** What the commands read of the editor of a folder, now. */
@@ -491,5 +495,6 @@ export function useEditorCommands(folder: string, recentMenu: ComponentType): vo
     ...textCommands(folder, read, t),
     ...linkCommands(folder, read, t),
     ...previewCommands(folder),
+    ...pdfReaderCommands(),
   ]);
 }

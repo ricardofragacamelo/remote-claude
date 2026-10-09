@@ -22,10 +22,13 @@ const MarkdownPreview = lazy(() =>
 export interface PreviewPaneProps {
   readonly folder: string;
   readonly path: string;
+
+  /** The editor tab it is in, with its group — a PDF remembers its place per tab (21 · D-06). */
+  readonly tab: string;
 }
 
 /** A preview drawn from the file's text — markdown rendered, HTML as its source. */
-function TextPreview({ folder, path }: PreviewPaneProps): React.JSX.Element {
+function TextPreview({ folder, path }: Omit<PreviewPaneProps, 'tab'>): React.JSX.Element {
   const { t } = useTranslation();
   const { doc, text } = usePreviewText(folder, path);
   const failure = doc?.failure ?? null;
@@ -77,7 +80,7 @@ function TextPreview({ folder, path }: PreviewPaneProps): React.JSX.Element {
  * blob in an `<img>`, a PDF drawn by our pdf.js, an HTML file as its source — never as a page
  * (07 · D-18). The scrolling region is named, so a screen reader knows which preview it is in.
  */
-export function PreviewPane({ folder, path }: PreviewPaneProps): React.JSX.Element {
+export function PreviewPane({ folder, path, tab }: PreviewPaneProps): React.JSX.Element {
   const { t } = useTranslation();
   const kind = previewKindOf(path);
   const name = baseName(path);
@@ -87,7 +90,7 @@ export function PreviewPane({ folder, path }: PreviewPaneProps): React.JSX.Eleme
       aria-label={t('editor.preview.label', { name })}
       className="flex size-full min-h-0 min-w-0 flex-col overflow-auto"
     >
-      {kind === 'pdf' && <PdfPreview folder={folder} path={path} />}
+      {kind === 'pdf' && <PdfPreview folder={folder} path={path} tab={tab} />}
       {(kind === 'image' || kind === 'svg') && (
         <div className="flex flex-1 items-center justify-center p-4">
           <RawImage folder={folder} path={path} alt={name} />

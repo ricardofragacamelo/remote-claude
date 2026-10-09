@@ -33,13 +33,16 @@ export const CDN_HOSTS = ['cdn.jsdelivr.net', 'unpkg.com', 'cdnjs.cloudflare.com
  * @property {string[]} lazyChunks the chunks holding Monaco, every one reached only by a dynamic import
  * @property {string | null} worker the editor's worker, as our build emits it
  * @property {string[]} cdnHits `file: host` for each file of the build that names a CDN
- * @property {string[]} initialPreviewModules modules of pdf.js or of the markdown renderer the first
+ * @property {string[]} initialPreviewModules modules of pdf.js, of the markdown renderer or of Mermaid the first
  *   page would load — none, or it fails
  * @property {string | null} pdfWorker the PDF worker, as our build emits it
  */
 
-/** The libraries of the previews, which the first page never loads (plan 07, B-50). */
-export const PREVIEW_LIBRARIES = ['pdfjs-dist', 'react-markdown', 'remark-gfm'];
+/**
+ * The libraries of the previews, which the first page never loads (plan 07, B-50) — Mermaid among
+ * them, several megabytes with d3, drawn only when a diagram is (plan 21, R-01, S-67).
+ */
+export const PREVIEW_LIBRARIES = ['pdfjs-dist', 'react-markdown', 'remark-gfm', 'mermaid'];
 
 /** @param {string} id */
 export function isPreviewModule(id) {

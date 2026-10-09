@@ -134,6 +134,7 @@ silencioso.
 | `pnpm clean` | purga projetos e **volumes docker órfãos**, `dist/`, `coverage/`, relatórios |
 | `node scripts/watcher-spike.mjs --tree <pasta> --libs <pasta>` | o spike da D-08 do plano 07: quantos watches de inotify `fs.watch` recursivo, `chokidar` e `@parcel/watcher` gastam numa árvore e se ouvem uma pasta excluída; `--limit <n>` roda cada um com o limite baixado num user namespace (`unshare -Ur`, sem root), `--midflight` esgota o limite depois da subida. As bibliotecas ficam em `--libs`, fora do repositório; Linux só |
 | `node scripts/editor-bundle.mjs` | constrói o web em memória (nada vai para `web/dist`) e confere como o editor sai no build, pela D-09 do plano 07: o Monaco só em chunks que um import dinâmico alcança, o worker dele emitido pelo nosso build, nenhum arquivo citando CDN — e diz quanto cada parte pesa com gzip, a medida que a D-09 registra. `--json` imprime a análise para o teste de integração do web |
+| `node scripts/pdf-fixtures.mjs` | escreve os PDFs de teste do leitor de PDF do [plano 21](docs/plans/21-rich-previews/README.md) em `e2e/fixtures/files/` — 12 páginas com texto, índice e links; um com script e formulário; e uma cópia com senha — byte a byte iguais a cada execução, sem nada além do Node. `--check` sai ≠ 0 e diz qual arquivo versionado não é o que o script escreve |
 
 `pnpm dev` deixa de pé:
 

@@ -1,0 +1,28 @@
+{
+  "id": "21·S-15…S-74",
+  "title": "rich previews through the user's door: a PDF read in one scroll, zoomed, its text selected, its links followed, its outline, thumbnails and search; a PDF with a password; a markdown preview with a wide table and a diagram; a diagram in an answer of Claude; axe and the keyboard alone",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "folder": "papers",
+    "reader": "reader.pdf",
+    "locked": "locked.pdf",
+    "password": "reader-secret",
+    "pages": 12,
+    "pageTwoLine": "The lighthouse keeper starts the day.",
+    "search": "light",
+    "matches": 4,
+    "outlineEntry": "Chapter three",
+    "outlinePage": 9,
+    "thumbnailPage": 11,
+    "namedLink": "Go to chapter three",
+    "namedLinkPage": 9,
+    "explicitLink": "Go to page ten",
+    "explicitLinkPage": 10,
+    "webLink": "https://example.com/reader",
+    "markdown": "notes.md",
+    "diagramText": "Request",
+    "answerTurn": "diagram-turn",
+    "answerDiagramText": "Answer",
+    "tags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]
+  }
+}

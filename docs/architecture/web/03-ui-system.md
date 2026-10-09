@@ -289,7 +289,11 @@ uma injeção de prompt escreve no que ele responde (R-01 do plano 08). Por isso
 - markdown incompleto do delta (bloco aberto) renderiza sem quebrar, e o `message.completed` o substitui;
   só a mensagem em voo re-renderiza;
 - carregado **sob demanda** (`lazy()`), nunca no primeiro chunk — o `editor-bundle` reprova o build que
-  o puser lá.
+  o puser lá;
+- **diagrama `mermaid` é SVG inline, sanitizado em três camadas** — `securityLevel: 'strict'` do
+  Mermaid, um passe do DOMPurify nosso e a regra de link acima —, e só a cerca fechada desenha
+  ([ADR-020](../shared/00-decisions.md#adr-020--diagrama-mermaid-é-svg-inline-sanitizado-em-três-camadas),
+  [Prévias](#prévias)).
 
 **Tools compactas, a permissão nunca.** Cada tool é **uma linha** com rótulo traduzido e o sujeito
 relativo à pasta — "Read src/x.ts", "Edit src/x.ts (+3 −1)", "Bash: pnpm test"; tool MCP mostra servidor
@@ -663,6 +667,64 @@ o 13 os reusem em vez de reinventar ([07 · B-06](../../plans/07-explorer-and-ed
   `.claude/settings.local.json`, `.mcp.json`) diz **o que** o arquivo faz antes de salvar —
   "isto muda o que o Claude pode fazer sem perguntar" — e a resposta vai como `confirmSensitive`
   ([07 · D-15](../../plans/07-explorer-and-editor/decisions.md#d-15--arquivos-que-mudam-a-permissão)).
+
+### Prévias
+
+O que o [plano 21](../../plans/21-rich-previews/README.md) acrescenta à prévia do 07 (B-50) e ao
+`Markdown` único do 08. As regras valem **antes** das telas.
+
+**O leitor de PDF** é o do pdf.js (`PDFViewer`, `EventBus`, `PDFLinkService`, `PDFFindController`),
+servido pelo nosso build e só num chunk que um `import()` alcança — nunca o visualizador do navegador
+([07 · D-18](../../plans/07-explorer-and-editor/decisions.md#d-18--servir-conteúdo-do-usuário-para-prévia),
+[21 · D-04](../../plans/21-rich-previews/decisions.md#f1--leitor-de-pdf)):
+
+- **rolagem corrida**, com o indicador "página *n* de *m*" editável (fora do intervalo não vai e volta à
+  página atual), anterior e próxima, Home e End com o foco no leitor;
+- **zoom e ajustes**: começa em "ajustar à largura" ([D-05](../../plans/21-rich-previews/decisions.md#f1--leitor-de-pdf));
+  "automático", "ajustar à página" e os degraus de 25 % a 500 % ([D-09](../../plans/21-rich-previews/decisions.md#f1--leitor-de-pdf));
+  `Ctrl+=`, `Ctrl+-`, `Ctrl+0` (volta à largura) e `Ctrl`+roda com o foco ou o ponteiro no leitor, sem
+  dar zoom na página inteira. Um ajuste se recalcula quando a prévia muda de tamanho; um percentual fica;
+- **sem script nem formulário do PDF**: scripting e XFA desligados, anotações sem interação de formulário;
+- **links pela regra do `Markdown`** ([D-08](../../plans/21-rich-previews/decisions.md#f1--leitor-de-pdf)):
+  `http`, `https` e `mailto`, em nova aba com `rel="noopener noreferrer nofollow"`, pelo mesmo
+  `kindOfUrl`; o resto fica sem `href`. O link fica sobre o texto da página, vazio: o endereço vira o
+  seu `title` — nome acessível e tooltip que diz para onde vai. Link interno navega dentro do documento;
+- **senha só em memória** ([D-07](../../plans/21-rich-previews/decisions.md#f1--leitor-de-pdf)): pedida num
+  campo `type="password"`, passada direto ao pdf.js — nunca em log (nem em `debug`), URL, `localStorage`,
+  store ou requisição. Errada pede de novo com o campo limpo; cancelar diz "protegido por senha", com
+  "tentar de novo";
+- **o que se lembra, por aba de editor, em memória** ([D-06](../../plans/21-rich-previews/decisions.md#f1--leitor-de-pdf)):
+  página, zoom (o modo ou o número) e o painel lateral (aberto, e qual aba). Recarregar recomeça;
+- **painel lateral** com índice (`role="tree"`, o padrão WAI-ARIA, só o primeiro nível aberto) e
+  miniaturas desenhadas só perto da vista, no máximo duas ao mesmo tempo; abaixo de 480 px de prévia,
+  abre por cima do leitor e fecha depois de navegar ([D-11](../../plans/21-rich-previews/decisions.md#f2--navegação-no-pdf));
+- **`Ctrl+F` só com o foco no leitor** ([D-10](../../plans/21-rich-previews/decisions.md#f2--navegação-no-pdf)):
+  abre a busca do PDF e não deixa o navegador abrir a dele; fora do leitor, nada muda. Os atalhos do
+  leitor estão no registro, no contexto `pdfReader`, que vence o `workbench` com o foco ali.
+
+**As tabelas do markdown** no molde do GitHub ([D-12](../../plans/21-rich-previews/decisions.md#f3--markdown)):
+dentro de uma caixa que rola na horizontal, `max-width: 100%` e `contain: inline-size` — a prévia e a
+página não rolam por causa dela, e nem um `pre` de linha longa alarga o texto —; células com padding nas duas direções, alinhadas ao topo; cabeçalho com fundo `muted`; linhas
+alternadas; token longo (caminho, URL) quebra dentro da célula; o alinhamento das colunas do GFM é
+mantido. Tudo por token de tema.
+
+**Os diagramas** ([ADR-020](../shared/00-decisions.md#adr-020--diagrama-mermaid-é-svg-inline-sanitizado-em-três-camadas)):
+
+- só pelo `Markdown`, em todo lugar em que ele aparece — a prévia, a resposta do Claude, o plano para
+  aprovar —, nunca por outro componente;
+- só a **cerca fechada** desenha ([D-14](../../plans/21-rich-previews/decisions.md#f3--markdown)): a
+  aberta, no meio do streaming, é código; o diagrama é memorizado pela fonte e pelo tema, e o delta
+  seguinte não o redesenha;
+- fonte acima de **20 000 caracteres** fica como código, com o aviso ([D-13](../../plans/21-rich-previews/decisions.md#f3--markdown));
+- as **três camadas** ([D-02](../../plans/21-rich-previews/decisions.md#f0--normas)): `securityLevel:
+  'strict'` do Mermaid, com rótulos em texto SVG; o DOMPurify nosso, perfil SVG, sem `<script>`, `on*`,
+  `<iframe>`, `<object>`, `<embed>`, `<foreignObject>`, `<image>`, nem `url()` para fora do SVG — um
+  diagrama não faz a página chamar um host; e o `<a>` reescrito pela regra de link do `Markdown`;
+- o diagrama é **uma** imagem: a moldura tem `role="img"` e o nome (o `accTitle` ou "Diagrama"), e a raiz
+  do SVG perde os papéis ARIA próprios e fica `aria-hidden`; a moldura tem "ver código" / "ver diagrama" e
+  "copiar"; inválido diz a linha do erro, traduzido, com a fonte à vista; ids únicos por instância;
+- o Mermaid carrega por `import()`, uma vez, desenha **um diagrama por vez** e fica fora do primeiro
+  chunk (`PREVIEW_LIBRARIES` do `editor-bundle`).
 
 ---
 

@@ -50,6 +50,8 @@ export function EditorHelp(): React.JSX.Element {
           body: (
             <>
               <p>{t('editor.help.previews')}</p>
+              <p>{t('editor.help.pdfReader')}</p>
+              <p>{t('editor.help.diagrams')}</p>
               <p>{t('editor.help.previewsHtml')}</p>
               <p>{t('editor.help.paged')}</p>
             </>

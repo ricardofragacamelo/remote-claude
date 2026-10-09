@@ -603,6 +603,50 @@ publicada, outra ferramenta de duplicação, ou uma emenda a esta ADR com outra 
 **O que não muda.** Aviso **com** versão corrigida continua sendo atualizado, nunca aceito — a regra
 não ganha uma porta, ganha uma exceção para o caso em que a porta não existe.
 
+## ADR-020 — Diagrama Mermaid é SVG inline, sanitizado em três camadas
+
+**Status:** aceita · 2026-10-03 · decisão do usuário, contra a recomendação, na
+[D-02 do plano 21](../../plans/21-rich-previews/decisions.md#f0--normas)
+
+**Contexto.** O `Markdown` único do produto desenha a prévia de arquivo, a resposta do Claude e o plano
+para aprovar — e a resposta do Claude é **conteúdo não confiável**: o modelo leu o que ninguém revisou, e
+uma injeção de prompt escreve no que ele responde ([08 · R-01](../../plans/08-claude-panel/README.md)).
+A [D-18 do plano 07](../../plans/07-explorer-and-editor/decisions.md#d-18--servir-conteúdo-do-usuário-para-prévia)
+manda SVG entrar **só** por `<img src=blob:>`, onde script nenhum roda. Um bloco `mermaid` desenhado
+pelo Mermaid **é** um SVG, gerado na página a partir de texto do modelo, e o Mermaid tem histórico de
+CVE de XSS.
+
+**Alternativas consideradas.**
+
+| Alternativa | Por que não |
+|---|---|
+| SVG como imagem isolada (`<img src=blob:>`) — a recomendação | isola tudo, mas o texto do diagrama não se seleciona nem se copia, e os links do diagrama não funcionam. O usuário escolheu o contrário |
+| `iframe` com `sandbox` | um documento por diagrama, altura que não acompanha o conteúdo, tema e foco que não atravessam a fronteira; mais peso para o mesmo isolamento da imagem |
+| deixar o bloco como código | é o que o usuário pediu para mudar |
+
+**Decisão.** O diagrama entra como **SVG inline**, e só depois de passar por três camadas, cada uma
+suficiente contra uma classe de ataque e as três provadas por teste (21 · S-56):
+
+1. **O Mermaid em `securityLevel: 'strict'`**, `startOnLoad: false`, `maxTextSize` de 20 000 e
+   rótulos em texto SVG (`htmlLabels: false`): HTML nos rótulos é codificado, `click` não chama função,
+   e uma diretiva `%%{init}%%` do texto não troca tema, CSS nem fonte (chaves em `secure`).
+2. **Um passe do DOMPurify nosso** sobre o SVG que o Mermaid devolve, perfil SVG: sem `<script>`, sem
+   atributo `on*`, sem `<iframe>`, `<object>`, `<embed>`, `<foreignObject>` nem `<image>`; `href` fora
+   de `<a>` só para `#` do próprio SVG; e nenhum `url()` nem `@import` no CSS que aponte para fora dele —
+   a regra da imagem remota do `Markdown`: um diagrama não faz a página chamar um host. O que um CVE
+   futuro do Mermaid deixar passar, este passe tira.
+3. **Os `<a>` reescritos pela regra de link do `Markdown`** (`kindOfUrl`): só `http`, `https` e `mailto`
+   ficam com `href`, em nova aba com `rel="noopener noreferrer nofollow"`; `javascript:`, `data:`,
+   `file:` e o resto perdem o `href`.
+
+O Mermaid carrega por `import()`, fora do primeiro chunk, e desenha um diagrama por vez. A D-18 do 07
+continua valendo para SVG **de arquivo** (prévia de `.svg`): esta ADR abre a exceção só para o SVG que
+o próprio app gera a partir de um bloco `mermaid`.
+
+**O que a revoga.** Um CVE do Mermaid sem versão corrigida que alcance o SVG mesmo em `strict`, ou um
+script que escape do S-56 — nos dois casos o diagrama volta a ser imagem isolada (a alternativa
+recomendada), e esta ADR fica `Substituída`.
+
 
 ## ADR-021 — O backend aceita uma lista explícita de issuers, do mesmo realm
 

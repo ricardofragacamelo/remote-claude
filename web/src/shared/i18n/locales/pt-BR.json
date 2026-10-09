@@ -917,7 +917,11 @@
       "showHelp": "Ajuda do editor",
       "openPreview": "Abrir prévia",
       "openPreviewToSide": "Abrir prévia ao lado",
-      "togglePreview": "Alternar entre o editor e a prévia"
+      "togglePreview": "Alternar entre o editor e a prévia",
+      "pdfZoomIn": "Aumentar o zoom do PDF",
+      "pdfZoomOut": "Diminuir o zoom do PDF",
+      "pdfZoomReset": "Ajustar o PDF à largura",
+      "pdfFind": "Buscar no PDF"
     },
     "sessions": {
       "refresh": "Sessões do Claude: atualizar",
@@ -1349,9 +1353,11 @@
       "states": "O salvar diz qual versão do arquivo você abriu. Se o disco mudou desde então — provavelmente o Claude escreveu nele —, o salvar é recusado e você escolhe: comparar os dois, sobrescrever de propósito, ou recarregar e descartar suas alterações; nada é sobrescrito sozinho. Quando um arquivo muda no disco com a aba limpa, a aba recarrega e mantém sua posição; com alterações não salvas, um aviso diz quem mudou e oferece as mesmas três escolhas. Arquivo apagado no disco fica marcado, e salvá-lo oferece recriá-lo. Arquivos grandes abrem no modo leve — sem minimapa, sem dobrar trechos, sem realce —, arquivos binários abrem em visualização hexadecimal e arquivos acima do limite de edição em leitura paginada, os dois somente leitura; um arquivo que esta máquina não deixa o servidor ler abre uma página que diz o motivo no lugar do editor.",
       "notRecorded": "Alterações não salvas vivem só nesta página: nunca ficam guardadas no navegador, por isso recarregar ou fechar a página pergunta antes. Seus salvamentos ficam na trilha de auditoria, sem o conteúdo; abrir e ler um arquivo não é registrado. Prévias, a visualização hexadecimal e a leitura paginada só leem o arquivo: também não são registradas.",
       "previewsHeading": "Prévias, arquivos binários e arquivos grandes",
-      "previews": "Abrir prévia (Ctrl+Shift+V), ou abri-la ao lado (Ctrl+K V), mostra o arquivo renderizado: markdown, imagens, SVG e PDF; o botão de olho da aba alterna entre o arquivo e a prévia. A prévia de um markdown acompanha o que você digita, antes de salvar. Imagens e PDFs abrem já na prévia; o PDF é desenhado página a página pelo visualizador deste app, nunca pelo do navegador. Link para um arquivo desta pasta abre-o no editor; imagens da internet não são carregadas — viram links.",
+      "previews": "Abrir prévia (Ctrl+Shift+V), ou abri-la ao lado (Ctrl+K V), mostra o arquivo renderizado: markdown, imagens, SVG e PDF; o botão de olho da aba alterna entre o arquivo e a prévia. A prévia de um markdown acompanha o que você digita, antes de salvar. Imagens e PDFs abrem já na prévia. Link para um arquivo desta pasta abre-o no editor; imagens da internet não são carregadas — viram links.",
       "previewsHtml": "HTML nunca roda numa prévia — nem no markdown, nem num arquivo .html, nem um script dentro de um SVG. Uma página mostrada aqui rodaria com a sua sessão, dentro deste app; por isso o markdown mantém o texto e descarta as tags, o arquivo .html é mostrado como código-fonte e o SVG é desenhado como imagem, que não roda nada.",
-      "paged": "Um arquivo binário abre em visualização hexadecimal, e um texto acima do limite de edição abre como páginas de texto; os dois são somente leitura e leem uma página por vez. Se o arquivo mudar no disco enquanto você lê, a visualização avisa e recomeça na versão nova — nunca mistura páginas de duas versões."
+      "paged": "Um arquivo binário abre em visualização hexadecimal, e um texto acima do limite de edição abre como páginas de texto; os dois são somente leitura e leem uma página por vez. Se o arquivo mudar no disco enquanto você lê, a visualização avisa e recomeça na versão nova — nunca mistura páginas de duas versões.",
+      "pdfReader": "Um PDF abre no leitor deste app, nunca no do navegador: todas as páginas numa rolagem só, ajustadas à largura. Digite o número de uma página e Enter para ir até ela; dê zoom pelos botões, pela lista ou por Ctrl+= e Ctrl+- (Ctrl+0 volta a ajustar à largura, e Ctrl com a roda do mouse também dá zoom); selecione e copie o texto. O painel lateral mostra o índice do PDF, quando ele tem um, e as miniaturas das páginas; Ctrl+F, com o foco no leitor, busca texto nele. Link para outro lugar do PDF leva até ele; link para a web abre em nova aba, e qualquer outro tipo não é seguido. Um PDF com senha a pede, e a senha fica só nesta página. Nada que um PDF carrega roda: nem script, nem campo de formulário preenchível. A página, o zoom e o painel de cada aba ficam guardados enquanto a página está aberta.",
+      "diagrams": "Tabela mais larga que a prévia rola na própria caixa. Um bloco de código cercado com o nome mermaid vira diagrama — aqui, nas respostas do Claude e nos planos para aprovar — assim que a cerca de fechamento chega; Ver o código mostra a fonte, e um erro diz em que linha está. O diagrama é desenhado com segurança: nada nele roda, os links seguem a regra de todo link daqui, e ele nunca carrega nada da internet."
     },
     "load": {
       "failed": "Não foi possível carregar o editor. Verifique a conexão e tente de novo — o resto da aba continua funcionando."
@@ -1604,13 +1610,50 @@
       "sourceLabel": "Código-fonte de {{name}}",
       "pdfLoadFailed": "O visualizador de PDF não carregou. Confira a conexão e tente de novo.",
       "pdfBroken": "{{name}} não pôde ser lido como PDF — pode estar danificado.",
-      "pdfPages": "Páginas de {{name}}",
-      "pdfPrevious": "Página anterior",
-      "pdfNext": "Próxima página",
-      "pdfPage": "Página {{page}} de {{pages}}",
-      "pdfPageFailed": "A página {{page}} não pôde ser desenhada.",
-      "pdfCanvas": "Página {{page}} de {{name}}",
       "tooLarge": "{{path}} passa do limite de download de {{limit}}, por isso não tem prévia. Abra-o na visualização hexadecimal, que o lê uma página por vez."
+    },
+    "pdf": {
+      "reader": "Leitor de PDF de {{name}}",
+      "toolbar": "Ferramentas de {{name}}",
+      "pages": "Páginas de {{name}}",
+      "pageField": "Página",
+      "pageCount": "de {{pages}}",
+      "pageStatus": "Página {{page}} de {{pages}}",
+      "previous": "Página anterior",
+      "next": "Próxima página",
+      "zoomIn": "Aumentar o zoom",
+      "zoomOut": "Diminuir o zoom",
+      "zoom": "Zoom",
+      "zoomAuto": "Automático",
+      "zoomPageWidth": "Ajustar à largura",
+      "zoomPageFit": "Ajustar à página",
+      "zoomPercent": "{{value}}%",
+      "pageLabel": "Página {{page}}",
+      "passwordTitle": "{{name}} é protegido por senha",
+      "passwordNeeded": "Digite a senha para abri-lo. A senha fica só nesta página: não é guardada, não vai para o log e não é enviada ao servidor.",
+      "passwordIncorrect": "Essa senha não está certa. Digite de novo.",
+      "passwordField": "Senha",
+      "passwordOpen": "Abrir",
+      "passwordCancel": "Cancelar",
+      "protected": "{{name}} é protegido por senha, e não foi aberto.",
+      "sidebarShow": "Mostrar o índice e as miniaturas",
+      "sidebarHide": "Esconder o painel lateral",
+      "sidebar": "Painel lateral de {{name}}",
+      "outline": "Índice",
+      "thumbnails": "Miniaturas",
+      "outlineTree": "Índice de {{name}}",
+      "noOutline": "Este PDF não tem índice. As miniaturas levam a qualquer página.",
+      "thumbnailList": "Miniaturas de {{name}}",
+      "thumbnail": "Página {{page}}",
+      "findOpen": "Buscar no PDF",
+      "find": "Buscar em {{name}}",
+      "findPrevious": "Resultado anterior",
+      "findNext": "Próximo resultado",
+      "findClose": "Fechar a busca",
+      "matchCase": "Diferenciar maiúsculas",
+      "wholeWord": "Palavra inteira",
+      "findCount": "{{current}} de {{total}}",
+      "findNone": "Nenhum resultado"
     }
   },
   "fileHistory": {
@@ -1704,6 +1747,20 @@
   "markdown": {
     "image": {
       "remote": "Imagem remota, não carregada: {{name}}"
+    },
+    "diagram": {
+      "label": "Diagrama",
+      "showCode": "Ver o código",
+      "showDiagram": "Ver o diagrama",
+      "copy": "Copiar o código do diagrama",
+      "copied": "Código copiado",
+      "copyFailed": "O código não pôde ser copiado",
+      "drawing": "Desenhando o diagrama…",
+      "invalidLine": "Este diagrama tem um erro na linha {{line}}, por isso aparece como código.",
+      "invalid": "Este diagrama tem um erro, por isso aparece como código.",
+      "tooLarge": "Este diagrama é grande demais para desenhar — {{size}} caracteres, acima do limite de {{limit}} — por isso aparece como código.",
+      "loadFailed": "O desenhista de diagramas não carregou. Confira a conexão e tente de novo.",
+      "source": "Código do diagrama"
     }
   },
   "sessions": {

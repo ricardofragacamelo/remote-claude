@@ -7,7 +7,6 @@ import { openFile, openPreview } from '@/features/editor';
 import { aPreviewTab, emptyLayout, openIn } from '@/features/editor/lib/layout';
 import { setPdfLoader } from '@/features/editor/lib/pdf-loader';
 import { editorStoreOf } from '@/features/editor/store/editor.store';
-import type { PdfDocument, PdfEngine } from '@/features/editor/types/pdf';
 import {
   FOLDER,
   editorOf,
@@ -17,6 +16,7 @@ import {
   typeInto,
 } from '../../../support/editor';
 import { fakeDisk, refused } from '../../../support/editor-disk';
+import { aFakePdf } from '../../../support/pdf-fake';
 import { fakeObjectUrls, fakeRaw } from '../../../support/raw-api';
 import { translator } from '../../../support/render';
 
@@ -56,76 +56,6 @@ const README = [
   '',
   '![logo](img/logo.png) ![remote](https://example.com/x.png) ![data](data:image/png;base64,AAAA)',
 ].join('\n');
-
-/** A PDF engine that draws nothing, and says which page it was asked for. */
-function aPdfEngine(
-  pages: number,
-  fail?: Error,
-): { engine: PdfEngine; drawn: number[]; destroyed: () => number } {
-  const drawn: number[] = [];
-  let destroyed = 0;
-  const doc: PdfDocument = {
-    pageCount: pages,
-    renderPage: (page) => {
-      drawn.push(page);
-      return page === 3 ? Promise.reject(new Error('page')) : Promise.resolve();
-    },
-    destroy: () => {
-      destroyed += 1;
-    },
-  };
-
-  return {
-    engine: { open: () => (fail === undefined ? Promise.resolve(doc) : Promise.reject(fail)) },
-    drawn,
-    destroyed: () => destroyed,
-  };
-}
-
-/**
- * A PDF engine that keeps the rule of pdf.js: one drawing on a canvas at a time, a second one
- * refused until the first is done or given up on. A drawing ends when the test says so.
- */
-function aStrictPdfEngine(pages: number): {
-  engine: PdfEngine;
-  finish: () => void;
-  givenUp: () => number[];
-} {
-  const inUse = new WeakSet<HTMLCanvasElement>();
-  const pending: (() => void)[] = [];
-  const givenUp: number[] = [];
-  const doc: PdfDocument = {
-    pageCount: pages,
-    renderPage: (page, canvas, _scale, signal) => {
-      if (inUse.has(canvas)) {
-        return Promise.reject(new Error('Cannot use the same canvas during multiple render()'));
-      }
-      inUse.add(canvas);
-      return new Promise<void>((resolve) => {
-        const done = (): void => {
-          inUse.delete(canvas);
-          resolve();
-        };
-        signal.addEventListener('abort', () => {
-          givenUp.push(page);
-          done();
-        });
-        pending.push(done);
-      });
-    },
-    destroy: () => undefined,
-  };
-
-  return {
-    engine: { open: () => Promise.resolve(doc) },
-    finish: () => {
-      for (const done of pending.splice(0)) {
-        done();
-      }
-    },
-    givenUp: () => givenUp,
-  };
-}
 
 describe('previews — plan 07, B-50', () => {
   it('renders markdown safely: raw HTML never runs, a link to a file opens it, a relative image loads through raw (S-308)', async () => {
@@ -229,98 +159,6 @@ describe('previews — plan 07, B-50', () => {
       within(group()).getByRole('button', { name: t('editor.strip.togglePreview') }),
     );
     expect(await previewOf('logo.png')).toBeVisible();
-  });
-
-  it('draws a PDF with the pdf.js of the build, a page at a time (S-311)', async () => {
-    const user = userEvent.setup();
-    const pdf = aPdfEngine(3);
-    setPdfLoader(() => Promise.resolve(pdf.engine));
-    fakeDisk(FOLDER, {});
-    fakeRaw(FOLDER, { 'doc.pdf': '%PDF-1.7' });
-    renderEditor();
-    open('doc.pdf');
-
-    const preview = await previewOf('doc.pdf');
-    expect(
-      await within(preview).findByText(t('editor.preview.pdfPage', { page: 1, pages: 3 })),
-    ).toBeVisible();
-    expect(
-      within(preview).getByRole('img', {
-        name: t('editor.preview.pdfCanvas', { name: 'doc.pdf', page: 1 }),
-      }),
-    ).toBeVisible();
-    expect(
-      within(preview).getByRole('button', { name: t('editor.preview.pdfPrevious') }),
-    ).toBeDisabled();
-
-    await user.click(within(preview).getByRole('button', { name: t('editor.preview.pdfNext') }));
-    await user.click(within(preview).getByRole('button', { name: t('editor.preview.pdfNext') }));
-    expect(await within(preview).findByRole('alert')).toHaveTextContent(
-      t('editor.preview.pdfPageFailed', { page: 3 }),
-    );
-    expect(
-      within(preview).getByRole('button', { name: t('editor.preview.pdfNext') }),
-    ).toBeDisabled();
-    await user.click(
-      within(preview).getByRole('button', { name: t('editor.preview.pdfPrevious') }),
-    );
-    expect(pdf.drawn).toEqual([1, 2, 3, 2]);
-    expect(within(preview).queryByRole('alert')).toBeNull();
-
-    // Another file in the place of the preview: the document is let go of.
-    act(() => {
-      openFile(FOLDER, 'other.pdf');
-    });
-    await waitFor(() => {
-      expect(pdf.destroyed()).toBe(1);
-    });
-  });
-
-  it('gives up the drawing of a page left behind, so the next one has the canvas', async () => {
-    const user = userEvent.setup();
-    const pdf = aStrictPdfEngine(3);
-    setPdfLoader(() => Promise.resolve(pdf.engine));
-    fakeDisk(FOLDER, {});
-    fakeRaw(FOLDER, { 'doc.pdf': '%PDF-1.7' });
-    renderEditor();
-    open('doc.pdf');
-
-    const preview = await previewOf('doc.pdf');
-    const next = await within(preview).findByRole('button', {
-      name: t('editor.preview.pdfNext'),
-    });
-    // Page 1 still being drawn when page 2 is asked for, and page 2 when page 3 is.
-    await user.click(next);
-    await user.click(next);
-    expect(
-      await within(preview).findByText(t('editor.preview.pdfPage', { page: 3, pages: 3 })),
-    ).toBeVisible();
-    act(() => {
-      pdf.finish();
-    });
-
-    expect(pdf.givenUp()).toEqual([1, 2]);
-    expect(within(preview).queryByRole('alert')).toBeNull();
-  });
-
-  it('says so when a PDF cannot be read, or the viewer did not load — and tries again', async () => {
-    const user = userEvent.setup();
-    const broken = aPdfEngine(1, new Error('Invalid PDF structure'));
-    let loads = 0;
-    setPdfLoader(() => {
-      loads += 1;
-      return loads === 1 ? Promise.reject(new Error('chunk')) : Promise.resolve(broken.engine);
-    });
-    fakeDisk(FOLDER, {});
-    fakeRaw(FOLDER, { 'doc.pdf': 'not a pdf' });
-    renderEditor();
-    open('doc.pdf');
-
-    expect(await screen.findByText(t('editor.preview.pdfLoadFailed'))).toBeVisible();
-    await user.click(screen.getByRole('button', { name: t('common.action.retry') }));
-    expect(
-      await screen.findByText(t('editor.preview.pdfBroken', { name: 'doc.pdf' })),
-    ).toBeVisible();
   });
 
   it('follows the buffer beside the editor, as it is typed and before it is saved (S-312)', async () => {
@@ -446,7 +284,7 @@ describe('previews in their edges — plan 07, B-50', () => {
   });
 
   it('lets go of what arrives after its preview went — the image read, the PDF opened', async () => {
-    const pdf = aPdfEngine(1);
+    const pdf = aFakePdf({ pages: 1 });
     setPdfLoader(() => Promise.resolve(pdf.engine));
     fakeDisk(FOLDER, { 'b.ts': 'b' });
     const raw = fakeRaw(FOLDER, { 'a.png': 'PNG', 'c.pdf': '%PDF' });

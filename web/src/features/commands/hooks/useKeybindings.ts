@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { commandRegistry } from '../store/command-registry';
 import type { CommandRegistry } from '../store/command-registry';
 import { isKeyContextActive } from '../store/key-contexts';
+import { KEY_CONTEXTS } from '../types/command';
 import type { Keybinding } from '../types/command';
 import { chordOf, chordOfEvent, onMac } from './chords';
 import { executeCommand } from './execute-command';
@@ -34,9 +35,14 @@ function inDialog(target: EventTarget | null): boolean {
   );
 }
 
+/** How specific a context is: the later in {@link KEY_CONTEXTS}, the more. */
+function specificity(binding: Keybinding): number {
+  return KEY_CONTEXTS.indexOf(binding.context);
+}
+
 /**
- * The binding a press answers: among the live contexts, the more specific first — the workbench's
- * over the global one.
+ * The binding a press answers: among the live contexts, the most specific — the workbench's over the
+ * global one, the PDF reader's over the workbench's.
  */
 export function bindingFor(
   bindings: readonly Keybinding[],
@@ -44,11 +50,13 @@ export function bindingFor(
   mac: boolean,
   isActive: (context: Keybinding['context']) => boolean = isKeyContextActive,
 ): Keybinding | undefined {
-  const matching = bindings.filter(
-    (binding) => isActive(binding.context) && chordOf(binding, mac) === chord,
-  );
-
-  return matching.find((binding) => binding.context !== 'global') ?? matching[0];
+  return bindings
+    .filter((binding) => isActive(binding.context) && chordOf(binding, mac) === chord)
+    .reduce<Keybinding | undefined>(
+      (best, binding) =>
+        best === undefined || specificity(binding) > specificity(best) ? binding : best,
+      undefined,
+    );
 }
 
 /** A key that is only a modifier: pressed on its way to a chord, never a chord of its own. */

@@ -78,11 +78,11 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Normas](F0-norms.md) | normas em `web/03`, ADR-020, chaves i18n, o desenho cancelado, os PDFs de fixture | B-01…B-04 | 🔄 |
-| F1 | [Leitor de PDF](F1-pdf-reader.md) | rolagem corrida, zoom e ajustes, texto, links, senha, estado por aba | B-05…B-10 | 🔲 |
-| F2 | [Navegação no PDF](F2-pdf-navigation.md) | painel lateral com índice e miniaturas, e a busca | B-11…B-14 | 🔲 |
-| F3 | [Markdown](F3-markdown.md) | tabelas que não quebram e diagramas Mermaid | B-15…B-19 | 🔲 |
-| F4 | [E2E](F4-e2e.md) | tudo acima provado no navegador de verdade, com acessibilidade | B-20…B-23 | 🔲 |
+| F0 | [Normas](F0-norms.md) | normas em `web/03`, ADR-020, chaves i18n, o desenho cancelado, os PDFs de fixture | B-01…B-04 | ✅ |
+| F1 | [Leitor de PDF](F1-pdf-reader.md) | rolagem corrida, zoom e ajustes, texto, links, senha, estado por aba | B-05…B-10 | ✅ |
+| F2 | [Navegação no PDF](F2-pdf-navigation.md) | painel lateral com índice e miniaturas, e a busca | B-11…B-14 | ✅ |
+| F3 | [Markdown](F3-markdown.md) | tabelas que não quebram e diagramas Mermaid | B-15…B-19 | ✅ |
+| F4 | [E2E](F4-e2e.md) | tudo acima provado no navegador de verdade, com acessibilidade | B-20…B-23 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 

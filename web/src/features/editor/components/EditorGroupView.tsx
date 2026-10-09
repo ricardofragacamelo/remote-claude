@@ -80,7 +80,8 @@ function TabBody({
   }
 
   return tab.kind === 'preview' ? (
-    <PreviewPane key={tab.id} folder={folder} path={tab.path} />
+    // A tab's id is its file's: the same preview in two groups is told apart by its group (S-26).
+    <PreviewPane key={tab.id} folder={folder} path={tab.path} tab={`${group}/${tab.id}`} />
   ) : (
     <FilePane key={tab.path} folder={folder} group={group} path={tab.path} />
   );

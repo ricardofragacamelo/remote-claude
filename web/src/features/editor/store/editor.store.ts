@@ -6,6 +6,7 @@ import { emptyLayout } from '../lib/layout';
 import type { Layout } from '../lib/layout';
 import { languageOf } from '../lib/languages';
 import type { ClosedTab, FileDocument, SaveOutcome } from '../types/editor';
+import type { PdfReaderMemory } from '../types/pdf';
 
 /** Tabs whose closing waits on a question: some of them have unsaved changes (S-210). */
 export interface CloseRequest {
@@ -58,6 +59,9 @@ export interface EditorState extends Layout {
   /** How the last "save all" went, file by file, until it is dismissed (S-234). */
   readonly saveReport: readonly SaveOutcome[] | null;
   readonly announcement: Announcement | null;
+
+  /** What the PDF reader of each editor tab remembers, by the tab's id — in memory (21 · D-06). */
+  readonly readers: Readonly<Record<string, PdfReaderMemory>>;
 }
 
 export type EditorStore = StoreApi<EditorState>;
@@ -115,6 +119,7 @@ function emptyState(): EditorState {
     saveAs: null,
     saveReport: null,
     announcement: null,
+    readers: {},
   };
 }
 

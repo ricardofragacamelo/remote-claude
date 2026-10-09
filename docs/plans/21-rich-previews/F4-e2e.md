@@ -15,24 +15,24 @@ build de produção, com acessibilidade e só pelo teclado.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-20 — O leitor pela porta do usuário 🔲
+### B-20 — O leitor pela porta do usuário ✅
 
 Em `e2e/specs/rich-previews.spec.ts`, com os PDFs da [B-04](F0-norms.md) copiados para a pasta do teste:
 abrir o `reader.pdf` pela árvore e ler rolando até a última página (S-69); o zoom mantém a página (S-15);
 selecionar e copiar o texto (S-17); o link interno (S-18); o `locked.pdf` com a senha errada e depois a certa
 (S-70).
 
-### B-21 — A navegação pela porta do usuário 🔲
+### B-21 — A navegação pela porta do usuário ✅
 
 O índice leva ao destino (S-34), a miniatura leva à página (S-40), e a busca conta, destaca e anda (S-44).
 
-### B-22 — Tabelas e diagramas pela porta do usuário 🔲
+### B-22 — Tabelas e diagramas pela porta do usuário ✅
 
 Uma prévia de markdown com a tabela de 7 colunas e o token longo (S-50, S-51) e com um diagrama (S-71). O
 cenário roteirizado `rich-previews.json` ([D-15](decisions.md#f4--e2e)) traz uma resposta com tabela e
 diagrama, desenhado quando a mensagem completa (S-72).
 
-### B-23 — Acessibilidade e teclado 🔲
+### B-23 — Acessibilidade e teclado ✅
 
 axe sem violação no leitor com o painel e a busca abertos, e na prévia com tabela e diagrama (S-73). Só pelo
 teclado: abrir o painel, andar pelo índice, buscar e dar zoom (S-74).

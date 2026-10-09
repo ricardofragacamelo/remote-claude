@@ -917,7 +917,11 @@
       "showHelp": "Help for the editor",
       "openPreview": "Open preview",
       "openPreviewToSide": "Open preview to the side",
-      "togglePreview": "Toggle between the editor and the preview"
+      "togglePreview": "Toggle between the editor and the preview",
+      "pdfZoomIn": "Zoom in on the PDF",
+      "pdfZoomOut": "Zoom out of the PDF",
+      "pdfZoomReset": "Fit the PDF to the width",
+      "pdfFind": "Find in the PDF"
     },
     "sessions": {
       "refresh": "Claude sessions: refresh",
@@ -1349,9 +1353,11 @@
       "states": "A save names the version of the file you opened. If the disk changed since — Claude, probably, wrote to it — the save is refused and you choose: compare the two, overwrite on purpose, or reload and drop your changes; nothing is overwritten on its own. When a file changes on disk under a clean tab, the tab reloads and keeps your place; under a tab with unsaved changes, a warning says who changed it and offers the same three choices. A file deleted on disk is marked, and saving it offers to recreate it. Large files open in light mode — no minimap, no folding, no highlighting — binary files open in a hexadecimal view and files above the editing limit in a paged reading, both read-only; a file this machine does not let the server read opens a page that says why instead of the editor.",
       "notRecorded": "Unsaved changes live only in this page: they are never kept in the browser, so reloading or closing the page asks first. Your saves are recorded in the audit trail, without their content; opening and reading a file is not recorded. Previews, the hexadecimal view and the paged reading only read the file: they are not recorded either.",
       "previewsHeading": "Previews, binary files and large files",
-      "previews": "Open preview (Ctrl+Shift+V), or open it to the side (Ctrl+K V), to see a file rendered: markdown, images, SVG and PDF; the eye button of the tab switches between the file and its preview. The preview of a markdown file follows what you type, before you save. Images and PDFs open as their preview; a PDF is drawn page by page by the viewer of this app, never the browser's own. A link to a file of this folder opens it in the editor; images on the internet are not loaded — they become links.",
+      "previews": "Open preview (Ctrl+Shift+V), or open it to the side (Ctrl+K V), to see a file rendered: markdown, images, SVG and PDF; the eye button of the tab switches between the file and its preview. The preview of a markdown file follows what you type, before you save. Images and PDFs open as their preview. A link to a file of this folder opens it in the editor; images on the internet are not loaded — they become links.",
       "previewsHtml": "HTML is never run in a preview — not in markdown, not an .html file, not a script inside an SVG. A page shown here would run with your session, inside this app; so markdown keeps its text and drops its tags, an .html file is shown as its source, and an SVG is drawn as a picture, which runs nothing.",
-      "paged": "A binary file opens in a hexadecimal view, and a text above the editing limit opens as pages of text; both are read-only and read a page at a time. If the file changes on disk while you read it, the view says so and starts over on the new version — it never mixes pages of two versions."
+      "paged": "A binary file opens in a hexadecimal view, and a text above the editing limit opens as pages of text; both are read-only and read a page at a time. If the file changes on disk while you read it, the view says so and starts over on the new version — it never mixes pages of two versions.",
+      "pdfReader": "A PDF opens in the reader of this app, never the browser's own: every page in one scroll, fitted to the width. Type a page number and press Enter to go to it; zoom with the buttons, the list or Ctrl+= and Ctrl+- (Ctrl+0 fits the width again, and Ctrl with the mouse wheel zooms too); select and copy its text. The side panel shows the outline of the PDF, when it has one, and the thumbnails of its pages; Ctrl+F, with the focus in the reader, finds text in it. Links to other places of the PDF move to them; links to the web open in a new tab, and any other kind is not followed. A PDF with a password asks for it, and the password stays in this page only. Nothing a PDF carries runs: no scripts, and its form fields are not filled in. The page, the zoom and the panel of each tab are kept while the page is open.",
+      "diagrams": "Tables wider than the preview scroll in their own box. A fenced block of code named mermaid is drawn as a diagram — here, in Claude's answers and in the plans to approve — once its closing fence is there; Show the code switches to its source, and an error says on which line it is. A diagram is drawn safely: nothing in it runs, its links follow the rules of every link here, and it never loads anything from the internet."
     },
     "load": {
       "failed": "The editor could not be loaded. Check the connection and try again — the rest of the tab keeps working."
@@ -1604,13 +1610,50 @@
       "sourceLabel": "Source of {{name}}",
       "pdfLoadFailed": "The PDF viewer did not load. Check the connection and try again.",
       "pdfBroken": "{{name}} could not be read as a PDF — it may be damaged.",
-      "pdfPages": "Pages of {{name}}",
-      "pdfPrevious": "Previous page",
-      "pdfNext": "Next page",
-      "pdfPage": "Page {{page}} of {{pages}}",
-      "pdfPageFailed": "Page {{page}} could not be drawn.",
-      "pdfCanvas": "Page {{page}} of {{name}}",
       "tooLarge": "{{path}} is past the download limit of {{limit}}, so it is not previewed. Open it in the hexadecimal view, which reads it a page at a time."
+    },
+    "pdf": {
+      "reader": "PDF reader of {{name}}",
+      "toolbar": "Tools of {{name}}",
+      "pages": "Pages of {{name}}",
+      "pageField": "Page",
+      "pageCount": "of {{pages}}",
+      "pageStatus": "Page {{page}} of {{pages}}",
+      "previous": "Previous page",
+      "next": "Next page",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "zoom": "Zoom",
+      "zoomAuto": "Automatic",
+      "zoomPageWidth": "Fit to width",
+      "zoomPageFit": "Fit to page",
+      "zoomPercent": "{{value}}%",
+      "pageLabel": "Page {{page}}",
+      "passwordTitle": "{{name}} is protected by a password",
+      "passwordNeeded": "Type its password to open it. The password stays in this page only: it is not saved, not logged and not sent to the server.",
+      "passwordIncorrect": "That password is not right. Type it again.",
+      "passwordField": "Password",
+      "passwordOpen": "Open",
+      "passwordCancel": "Cancel",
+      "protected": "{{name}} is protected by a password, and was not opened.",
+      "sidebarShow": "Show the outline and the thumbnails",
+      "sidebarHide": "Hide the side panel",
+      "sidebar": "Side panel of {{name}}",
+      "outline": "Outline",
+      "thumbnails": "Thumbnails",
+      "outlineTree": "Outline of {{name}}",
+      "noOutline": "This PDF has no outline. The thumbnails take you to any page.",
+      "thumbnailList": "Thumbnails of {{name}}",
+      "thumbnail": "Page {{page}}",
+      "findOpen": "Find in the PDF",
+      "find": "Find in {{name}}",
+      "findPrevious": "Previous match",
+      "findNext": "Next match",
+      "findClose": "Close the search",
+      "matchCase": "Match case",
+      "wholeWord": "Whole word",
+      "findCount": "{{current}} of {{total}}",
+      "findNone": "No results"
     }
   },
   "fileHistory": {
@@ -1704,6 +1747,20 @@
   "markdown": {
     "image": {
       "remote": "Remote image, not loaded: {{name}}"
+    },
+    "diagram": {
+      "label": "Diagram",
+      "showCode": "Show the code",
+      "showDiagram": "Show the diagram",
+      "copy": "Copy the diagram's source",
+      "copied": "Source copied",
+      "copyFailed": "The source could not be copied",
+      "drawing": "Drawing the diagram…",
+      "invalidLine": "This diagram has an error on line {{line}}, so it is shown as code.",
+      "invalid": "This diagram has an error, so it is shown as code.",
+      "tooLarge": "This diagram is too large to draw — {{size}} characters, past the limit of {{limit}} — so it is shown as code.",
+      "loadFailed": "The diagram renderer did not load. Check the connection and try again.",
+      "source": "Source of the diagram"
     }
   },
   "sessions": {

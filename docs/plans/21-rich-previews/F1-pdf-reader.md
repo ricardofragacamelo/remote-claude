@@ -15,7 +15,7 @@ zoom e ajustes, texto selecionável, links, PDF com senha, e a posição lembrad
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-05 — O leitor do pdf.js atrás de uma porta 🔲
+### B-05 — O leitor do pdf.js atrás de uma porta ✅
 
 A porta de [types/pdf.ts](../../../web/src/features/editor/types/pdf.ts) ganha o **leitor**: montar num
 contêiner, ir a uma página ou a um destino, mudar a escala (número, `page-width`, `page-fit`, `auto`), buscar,
@@ -27,13 +27,13 @@ como hoje. O `pdf_viewer.css` é importado pelo adapter, que só um `import()` a
 O `destroy` solta o leitor e o documento, e desliga os callbacks (S-07, S-30). O fake de jsdom implementa a
 mesma porta, e os testes de integração rodam dentro de `<StrictMode>` (R-05).
 
-### B-06 — Leitura corrida 🔲
+### B-06 — Leitura corrida ✅
 
 O `PdfReader` substitui o `Pages` de página única. A barra tem o campo da página ("*n* de *m*", editável, Enter
 vai), anterior e próxima. A rolagem é a do pdf.js. Home e End e as setas funcionam com o foco no leitor.
 "Ir para a página" fora do intervalo não vai e devolve o número atual (S-09).
 
-### B-07 — Zoom e ajustes 🔲
+### B-07 — Zoom e ajustes ✅
 
 Diminuir, aumentar e um seletor com "automático", "ajustar à largura", "ajustar à página" e os degraus da
 [D-09](decisions.md#f1--leitor-de-pdf). `Ctrl+=`, `Ctrl+-`, `Ctrl+0` (volta à largura) e `Ctrl`+roda, com o
@@ -41,14 +41,14 @@ foco ou o ponteiro no leitor, e com `preventDefault` para o navegador não dar z
 escolhido se recalcula quando a prévia muda de tamanho (`ResizeObserver`); um percentual fica fixo. Começa em
 "ajustar à largura" ([D-05](decisions.md#f1--leitor-de-pdf)).
 
-### B-08 — Texto e links 🔲
+### B-08 — Texto e links ✅
 
 A camada de texto do pdf.js deixa selecionar e copiar. Link interno navega pelo `PDFLinkService`. Link externo
 passa pela regra do `Markdown` ([D-08](decisions.md#f1--leitor-de-pdf)): o adapter estende o
 `addLinkAttributes` e reusa o `kindOfUrl` de `shared/components/markdown/safe-url.ts` (sem segunda regra, que
 o `lint:dup` pegaria). O que não passa fica sem `href`.
 
-### B-09 — PDF com senha 🔲
+### B-09 — PDF com senha ✅
 
 O `PdfEngine.open` aceita quem responde à senha. O `usePdf` traduz o `onPassword` do pdf.js num estado
 `password` (`needed` ou `incorrect`), e o `PdfPassword` pede a senha num campo `type="password"`. A senha vai
@@ -56,7 +56,7 @@ direto ao `updatePassword`, sem passar por store, log nem URL ([D-07](decisions.
 Cancelar mostra "protegido por senha", com "tentar de novo". Enviar fica desligado enquanto há tentativa em
 voo (S-24).
 
-### B-10 — O leitor lembra, por aba 🔲
+### B-10 — O leitor lembra, por aba ✅
 
 Página, escala (o modo ou o número) e painel lateral (aberto e qual aba) moram no store do editor, por id de
 aba, em memória ([D-06](decisions.md#f1--leitor-de-pdf)). Voltar à aba restaura depois do `pagesinit`.
