@@ -9,10 +9,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/config/app_config_provider.dart';
 import 'package:remote_claude/core/navigation/deep_link_controller.dart';
+import 'package:remote_claude/core/navigation/page_observer.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/features/auth/auth.dart';
 import 'package:remote_claude/features/connection/connection.dart';
 import 'package:remote_claude/features/diagnostics/diagnostics.dart';
+import 'package:remote_claude/features/files/files.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/features/transcript/transcript.dart';
@@ -57,10 +59,27 @@ String? redirectFor({
   return null;
 }
 
+/// A file of an open folder, stacked over the screen that opened it (plan 25, B-14) — the folder,
+/// the file and the session it was opened from in the query, as every folder of the app travels.
+GoRoute fileViewerPageRoute() => GoRoute(
+  path: fileViewerRoute,
+  name: 'file-viewer',
+  builder: (BuildContext context, GoRouterState state) {
+    final Map<String, String> query = state.uri.queryParameters;
+    return FileViewerPage(
+      folder: query[viewerFolderParameter] ?? '',
+      path: query[viewerPathParameter] ?? '',
+      sessionId: query[viewerSessionParameter],
+    );
+  },
+);
+
 /// Builds the router.
 GoRouter buildRouter(Ref ref) {
   final GoRouter router = GoRouter(
     initialLocation: sessionRoute,
+    // A page stacked over the session covers it: the platform hears that none is on screen (B-08).
+    observers: <NavigatorObserver>[pageObserver],
     redirect: (BuildContext context, GoRouterState state) => redirectFor(
       session: ref.read(authControllerProvider),
       location: state.matchedLocation,
@@ -161,6 +180,7 @@ GoRouter buildRouter(Ref ref) {
           ),
         ],
       ),
+      fileViewerPageRoute(),
       GoRoute(
         path: draftRoute,
         name: 'draft',

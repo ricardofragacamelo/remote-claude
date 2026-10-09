@@ -27,7 +27,7 @@ separa a correção da feature.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-05 — As normas 🔲
+### B-05 — As normas ✅
 
 - [mobile/04](../../architecture/mobile/04-ui.md): uma seção do **explorer somente leitura** — o painel
   à direita aberto pelo botão (nunca pelo deslizar), a navegação por nível, o leitor por tipo, a regra
@@ -44,7 +44,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 - Nenhuma mudança de contrato: os códigos de erro já estão no
   [catálogo](../../architecture/shared/04-errors-and-http.md).
 
-### B-06 — Os textos 🔲
+### B-06 — Os textos ✅
 
 As chaves novas do app em `app_en.arb` e `app_pt.arb`, com par no mapa compartilhado
 (`scripts/i18n-shared.json`) onde o web já tem o mesmo texto, e os códigos `FILE_*`,
@@ -53,7 +53,7 @@ As chaves novas do app em `app_en.arb` e `app_pt.arb`, com par no mapa compartil
 `i18n:check` a recusa: cada chave entra **com o código que a usa**, na fase dele. Esta task fecha com
 a lista de chaves desenhada (no `progress.md`) e as de erro, que o `failure_messages.dart` já usa.
 
-### B-07 — Somente leitura, por máquina 🔲
+### B-07 — Somente leitura, por máquina ✅
 
 - `analysis_options.yaml`: as regras de `import_lint` de `files` — `session` e `workspace` importam
   `features/files/files.dart`, nunca um caminho interno; `files` não importa `session` nem `workspace`.
@@ -63,14 +63,14 @@ a lista de chaves desenhada (no `progress.md`) e as de erro, que o `failure_mess
   `/files/upload` (S-12, S-13). É o princípio 2 da discovery: o servidor não distingue leitura de
   escrita por cliente, então a garantia é a ausência do código.
 
-### B-08 — A sessão encoberta 🔲
+### B-08 — A sessão encoberta ✅
 
 Um `RouteObserver` no `router.dart`, e a `SessionPage` como `RouteAware`: `didPushNext` diz ao nativo
 "nenhuma sessão na tela", `didPopNext` diz "esta sessão". O que já existe (o `initState`, o `dispose`
 e o fundo) continua, e voltar do fundo com uma rota por cima não reclama a tela (S-15). Vale para o
 histórico hoje e para o leitor depois. Testes de widget com o fake do canal de push.
 
-### B-32 — Aparelho aprovado para ler a pasta 🔲
+### B-32 — Aparelho aprovado para ler a pasta ✅
 
 A [D-12](decisions.md#f1--normas-e-a-sessão-encoberta) e a [D-24](decisions.md#f1--normas-e-a-sessão-encoberta),
 no backend. É a única mudança fora do app, e o web não muda.

@@ -51,6 +51,10 @@ mobile/
 │   │   ├── permission/                 ← a feature mais importante do app; pedido, escopo e regras
 │   │   ├── workspace/
 │   │   ├── transcript/
+│   │   ├── files/                      ← o explorer somente leitura (plano 25): nenhuma escrita
+│   │   │   ├── domain/ports/           DiagramEngine, FileSaver, TemporaryFiles, ByteReader — Dart puro
+│   │   │   ├── data/engines/           os adaptadores nativos: o WebView do Mermaid, o canal de salvar, o temporário
+│   │   │   └── presentation/engines/   PdfEngine — a porta que devolve um widget, e o adaptador `pdfrx`
 │   │   └── auth/
 │   │
 │   ├── core/                           sem regra de negócio
@@ -152,4 +156,5 @@ JSON Schema de `packages/contracts/`, e cai em `lib/core/network/contracts/`.
 | Tela | `features/<f>/presentation/pages/` |
 | Provider | `features/<f>/presentation/providers/` |
 | Widget reutilizável entre features | `core/widgets/` |
+| Motor nativo que o `flutter test` não roda (PDF, diagrama, "salvar como") | a porta em `domain/ports/` quando é Dart puro, ou em `presentation/engines/` quando devolve um widget; o adaptador em `data/engines/` (ou ao lado da porta de widget); o fake em `test/support/fakes/` ([25 · D-27](../../plans/25-mobile-file-browser/decisions.md#f4--markdown-e-mermaid)) |
 | Texto | `l10n/app_en.arb` **e** `app_pt.arb` |

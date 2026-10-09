@@ -25,7 +25,22 @@ import { runAttached } from './exec.mjs';
  * @property {string} [dir] directory to run in, relative to the repository root; the root itself
  *   when absent
  * @property {string} [needsScript] skip unless the workspace declares this npm script
+ * @property {number} [timeoutMs] how long the gate may run before it is stopped —
+ *   {@link GATE_TIMEOUT_MS} when absent
  */
+
+/** How long a gate may run before it is stopped, unless it says otherwise. */
+export const GATE_TIMEOUT_MS = 900_000;
+
+/**
+ * How long the repository's coverage gate may run.
+ *
+ * It runs the root, the backend, the web and the app, one after another and with coverage on — the
+ * longest of the fast gates, and the one that grows with every test written. At the fifteen
+ * minutes the others have, it was stopped at ~860 s with nothing wrong in the code (plan 25,
+ * D-28): a stopped gate says nothing about the code, and that is not what a gate is for.
+ */
+export const COVERAGE_GATE_TIMEOUT_MS = 1_800_000;
 
 /**
  * The gates for a workspace, as commands.
@@ -156,7 +171,7 @@ export function runGateList(rootDir, gates, report, isSkipped = () => false) {
     const startedAt = Date.now();
     const result = runAttached(gate.command, gate.args, {
       cwd: gate.dir === undefined ? rootDir : path.join(rootDir, gate.dir),
-      timeoutMs: 900_000,
+      timeoutMs: gate.timeoutMs ?? GATE_TIMEOUT_MS,
     });
 
     const outcome = /** @type {GateOutcome} */ ({
@@ -197,7 +212,13 @@ export function repositoryGates(full) {
     { number: 4, name: 'architecture', command: 'pnpm', args: ['run', 'lint:arch'] },
     { number: 5, name: 'duplication', command: 'pnpm', args: ['run', 'lint:dup'] },
     { number: 6, name: 'unit', command: 'pnpm', args: ['run', 'test:unit'] },
-    { number: 7, name: 'coverage', command: 'pnpm', args: ['run', 'test:coverage'] },
+    {
+      number: 7,
+      name: 'coverage',
+      command: 'pnpm',
+      args: ['run', 'test:coverage'],
+      timeoutMs: COVERAGE_GATE_TIMEOUT_MS,
+    },
   ];
 
   if (!full) {

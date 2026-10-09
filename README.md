@@ -235,6 +235,12 @@ ou malformada (todas de uma vez), stack que não responde (`pnpm dev`), `flutter
 primeira vez cria a AVD como descrito em [Testes](#testes). Argumentos depois de `--` vão para o
 `flutter run` — `pnpm dev:mobile -- --release`, por exemplo.
 
+O `pnpm dev:mobile`, o `pnpm mobile:install` e o `pnpm test:e2e:mobile` copiam antes o
+`mermaid.min.js` do `web/node_modules` para `mobile/assets/mermaid/` (fora do git): os diagramas do
+leitor de arquivos do app são o mesmo Mermaid do web, na mesma versão, e um web noutra versão para o
+build com o motivo ([plano 25 · D-20](docs/plans/25-mobile-file-browser/decisions.md#f4--markdown-e-mermaid)).
+Um `flutter run` direto, sem o arquivo, abre o app e mostra os diagramas como código.
+
 #### O app no celular, sem o cabo — `pnpm mobile:install`
 
 O `pnpm dev:mobile` só alcança a máquina enquanto o cabo e o `flutter run` estão de pé. Para usar o app
@@ -307,7 +313,7 @@ Isso não é entregar; é esconder.
 | `pnpm test:e2e:live` | a mesma stack contra o **Claude de verdade** — exige o Claude logado (ou `CLAUDE_CODE_OAUTH_TOKEN`, de `claude setup-token`), custa dinheiro, e não é portão |
 | `pnpm test:e2e:live:report` | o `test:e2e:live`, com a falha registrada: falhou, **abre issue** `smoke-live` (ou comenta na aberta); passou, não faz nada. Sob demanda, nunca agendado — não há credencial do Claude no CI. Exige o `gh` autenticado; sai ≠ 0 só quando a falha não pôde ser registrada |
 | `pnpm test:coverage` | mínimo **90 % em statements, branches, functions e lines — por arquivo** |
-| `node scripts/coverage-gaps.mjs <web\|backend> [trecho do caminho]` | lê o `coverage/lcov.info` que o último `test:coverage` do módulo deixou e diz, arquivo por arquivo, as linhas, as funções e as linhas com ramo que nenhum teste alcançou — o próximo teste a escrever, nomeado. Não roda nada |
+| `node scripts/coverage-gaps.mjs <web\|backend\|mobile> [trecho do caminho] [--from <dir>]` | lê o `coverage/lcov.info` que o último `test:coverage` do módulo deixou e diz, arquivo por arquivo, as linhas, as funções e as linhas com ramo que nenhum teste alcançou — o próximo teste a escrever, nomeado. No `mobile` só há linhas (o lcov do Dart não tem funções nem ramos) e o gerado fica de fora, como no portão; `--from` lê o relatório de uma cópia do módulo — a fase preparada fora da árvore enquanto o `pnpm verify` roda. Não roda nada |
 | `cd mobile && flutter test` | unit e widget do app |
 | `pnpm fixtures:record` | grava o stream do Agent SDK **real** como fixture — sob demanda, exige o Claude logado; `--history <cenário>` acrescenta o que o SDK relê daquela execução |
 | `pnpm transcript:follow-bench` | mede, no store de quem roda, o que o seguidor de conversas custa: `getSessionInfo`, a releitura do maior transcript e 4 conversas juntas — só tempo e heap, nunca conteúdo ([22 · B-19](docs/plans/22-live-history/F2-follower.md#b-19--a-medição-)) |

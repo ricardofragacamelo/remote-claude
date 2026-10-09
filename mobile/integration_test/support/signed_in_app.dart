@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/core/config/app_config.dart';
 import 'package:remote_claude/core/network/credentials_provider.dart';
@@ -57,14 +58,16 @@ class SignedInApp {
 
 /// Mounts the app, signs in, and waits for the installation to be registered and the socket up.
 ///
-/// A fresh secure store per test is a fresh installation: every test starts from a phone the
+/// [overrides] replace one more edge, as [e2eContainer] says. A fresh secure store per test is a
+/// fresh installation: every test starts from a phone the
 /// backend has never seen, pending, and approves it only when the scenario says so.
 Future<SignedInApp> signedInApp(
   WidgetTester tester,
   BuildConfig config,
-  E2eScenario scenario,
-) async {
-  final ProviderContainer container = e2eContainer(config, scenario);
+  E2eScenario scenario, {
+  List<Override> overrides = const <Override>[],
+}) async {
+  final ProviderContainer container = e2eContainer(config, scenario, overrides: overrides);
   disposedAfterTheTest(tester, container);
 
   await signedInOnThisDevice(tester, container);
@@ -98,9 +101,10 @@ Future<(BrowserSocket, List<String>)> aBrowserOf(BuildConfig config, SignedInApp
 Future<SignedInApp> anApprovedApp(
   WidgetTester tester,
   BuildConfig config,
-  E2eScenario scenario,
-) async {
-  final SignedInApp app = await signedInApp(tester, config, scenario);
+  E2eScenario scenario, {
+  List<Override> overrides = const <Override>[],
+}) async {
+  final SignedInApp app = await signedInApp(tester, config, scenario, overrides: overrides);
   await approvedFromTheBrowser(tester, app);
   return app;
 }

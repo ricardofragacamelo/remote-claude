@@ -1,0 +1,105 @@
+<!doctype html>
+<!--
+  The page the app draws Mermaid in, in a WebView that is never on screen (ADR-024, plan 25 · B-21).
+  No network (CSP), no navigation (refused by the app), one channel back: `Diagram`. The Mermaid
+  configuration is the web's (mermaid-engine.ts), with the app's ceiling on the code (50 000).
+  `mermaid.min.js` is copied next to this file from web/node_modules before every build of the app
+  (scripts/lib/mermaid-asset.mjs) — the same version as the web (D-20).
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src file: 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:"
+    />
+    <script src="mermaid.min.js"></script>
+  </head>
+  <body style="margin: 0; width: 1000px">
+    <div id="stage"></div>
+    <script>
+      const SECURE_KEYS = [
+        'secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering',
+        'maxEdges', 'theme', 'themeCSS', 'themeVariables', 'darkMode', 'fontFamily',
+        'altFontFamily', 'htmlLabels', 'dompurifyConfig',
+      ];
+
+      function config(theme) {
+        return {
+          startOnLoad: false,
+          securityLevel: 'strict',
+          maxTextSize: 50000,
+          suppressErrorRendering: true,
+          htmlLabels: false,
+          theme: theme === 'dark' ? 'dark' : 'default',
+          darkMode: theme === 'dark',
+          gantt: { useWidth: 800 },
+          secure: SECURE_KEYS,
+        };
+      }
+
+      function errorLine(error) {
+        const located = error && error.hash && error.hash.loc && error.hash.loc.first_line;
+        if (typeof located === 'number') return located;
+        const line = /line\s+(\d+)/i.exec(String(error));
+        return line ? Number(line[1]) : null;
+      }
+
+      // A `click … href` node comes wrapped in an `<a xlink:href>` whose namespace Mermaid does not
+      // declare, and such an SVG does not load as an image at all. The picture carries no links
+      // (ADR-024): each `<a>` becomes the `<g>` it is, in the same place, with no address.
+      function withoutLinks(svgText) {
+        return svgText
+          .replace(/<a\b([^>]*)>/g, (_, attributes) =>
+            '<g' + attributes.replace(/\s(?:xlink:)?href="[^"]*"/g, '') + '>')
+          .replace(/<\/a>/g, '</g>');
+      }
+
+      function toPng(svgText, width, density) {
+        return new Promise((resolve, reject) => {
+          const svg = new DOMParser()
+            .parseFromString(withoutLinks(svgText), 'image/svg+xml').documentElement;
+          const box = (svg.getAttribute('viewBox') || '0 0 300 150').split(/[\s,]+/).map(Number);
+          const w = box[2] > 0 ? box[2] : 300;
+          const h = box[3] > 0 ? box[3] : 150;
+          svg.setAttribute('width', w);
+          svg.setAttribute('height', h);
+          const scale = Math.min(width / w, 4) * density;
+          const image = new Image();
+          image.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.ceil(w * scale));
+            canvas.height = Math.max(1, Math.ceil(h * scale));
+            const context = canvas.getContext('2d');
+            context.scale(scale, scale);
+            context.drawImage(image, 0, 0, w, h);
+            try {
+              resolve(canvas.toDataURL('image/png').split(',')[1]);
+            } catch (error) {
+              reject(error);
+            }
+          };
+          image.onerror = () => reject(new Error('the svg did not load as an image'));
+          const xml = new XMLSerializer().serializeToString(svg);
+          image.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
+        });
+      }
+
+      async function draw(id, source, theme, width, density) {
+        const answer = (body) => Diagram.postMessage(JSON.stringify(Object.assign({ id }, body)));
+        try {
+          mermaid.initialize(config(theme));
+          const { svg } = await mermaid.render('d' + id, source);
+          answer({ png: await toPng(svg, width, density) });
+        } catch (error) {
+          answer({ invalid: true, line: errorLine(error) });
+        } finally {
+          const left = document.getElementById('dd' + id);
+          if (left) left.remove();
+        }
+      }
+
+      Diagram.postMessage(JSON.stringify({ ready: typeof mermaid !== 'undefined' }));
+    </script>
+  </body>
+</html>

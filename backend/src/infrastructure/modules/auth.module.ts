@@ -17,6 +17,7 @@ import {
   RegisterDeviceUseCase,
   RenewSessionUseCase,
   ResolveDeviceUseCase,
+  AuthorizeFolderReadUseCase,
   RevokeDeviceUseCase,
 } from '@application/auth';
 import type {
@@ -136,6 +137,13 @@ import { WebsocketModule } from './websocket.module';
       useFactory: (devices: DeviceRepository) => new ResolveDeviceUseCase(devices),
     },
     {
+      // Only the web's own client reads the folder without a device (plan 25, D-12, D-24).
+      provide: AuthorizeFolderReadUseCase,
+      inject: [ResolveDeviceUseCase, APP_CONFIG],
+      useFactory: (devices: ResolveDeviceUseCase, config: AppConfig) =>
+        new AuthorizeFolderReadUseCase(devices, config.oidc.webClientId),
+    },
+    {
       provide: ExpirePendingDevicesUseCase,
       inject: [DEVICE_CONTEXT],
       useFactory: (context: DeviceContext) => new ExpirePendingDevicesUseCase(context),
@@ -155,6 +163,8 @@ import { WebsocketModule } from './websocket.module';
   exports: [
     AuthenticateUseCase,
     ResolveDeviceUseCase,
+    // For `files`, whose every route asks it (plan 25, B-32).
+    AuthorizeFolderReadUseCase,
     ExpirePendingDevicesUseCase,
     // For `notification`, which asks `auth` a question rather than reading its table.
     ListApprovedDevicesUseCase,

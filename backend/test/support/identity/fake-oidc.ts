@@ -21,7 +21,16 @@ export interface TokenOverrides {
 
   /** `null` leaves the claim out of the token altogether. */
   readonly emailVerified?: boolean | null;
+
+  /**
+   * The `azp` — the client the token was issued to. The web's by default, which is who every suite
+   * but the device rule of the folder speaks as (plan 25, B-32); `null` leaves the claim out.
+   */
+  readonly clientId?: string | null;
 }
+
+/** The web's client, as the test application is configured with it. */
+export const WEB_CLIENT_ID = 'remote-claude-web';
 
 /** The address every fixture's user has, unless a test wants another. */
 export const EMAIL = 'dev@remote-claude.local';
@@ -158,9 +167,11 @@ export class FakeIdentityProvider {
 function claims(overrides: TokenOverrides): Record<string, unknown> {
   const email = overrides.email === undefined ? EMAIL : overrides.email;
   const verified = overrides.emailVerified === undefined ? true : overrides.emailVerified;
+  const client = overrides.clientId === undefined ? WEB_CLIENT_ID : overrides.clientId;
 
   return {
     ...(email === null ? {} : { email }),
     ...(verified === null ? {} : { email_verified: verified }),
+    ...(client === null ? {} : { azp: client }),
   };
 }

@@ -6,7 +6,7 @@ import { UnauthenticatedError } from '@domain/auth';
 
 const expiresAt = new Date('2026-09-13T12:15:00.000Z');
 const verifier: AccessTokenVerifier = {
-  verify: () => Promise.resolve({ subject: 'auth|42', expiresAt }),
+  verify: () => Promise.resolve({ subject: 'auth|42', expiresAt, clientId: null }),
 };
 
 const exchange = { code: 'c', codeVerifier: 'v', redirectUri: 'http://localhost:5173/callback' };

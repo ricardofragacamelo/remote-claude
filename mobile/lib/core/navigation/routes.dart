@@ -106,3 +106,28 @@ String conversationRouteFor(String conversationId, String workspacePath) => Uri(
   path: '$historyRoute/${Uri.encodeComponent(conversationId)}',
   queryParameters: <String, String>{workspacePathParameter: workspacePath},
 ).toString();
+
+/// One file of an open folder, in the viewer (plan 25, B-14). Stacked over the screen it opened
+/// from: "back" returns to it as it was.
+const String fileViewerRoute = '/files/view';
+
+/// The query parameter that names the open folder of the viewer.
+const String viewerFolderParameter = 'folder';
+
+/// The query parameter that names the file, relative to the folder.
+const String viewerPathParameter = 'path';
+
+/// The query parameter that names the session the viewer was opened from, if any — whose waiting
+/// questions the viewer says (D-11).
+const String viewerSessionParameter = 'session';
+
+/// The viewer of [path] in [folder] — both in the query, as every folder of this app travels, so a
+/// proxy that normalises `%2F` cannot change them (S-49).
+String viewerRouteFor(String folder, String path, {String? sessionId}) => Uri(
+  path: fileViewerRoute,
+  queryParameters: <String, String>{
+    viewerFolderParameter: folder,
+    viewerPathParameter: path,
+    viewerSessionParameter: ?sessionId,
+  },
+).toString();

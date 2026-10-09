@@ -3,6 +3,7 @@ import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
 
 import { AuthenticateUseCase } from '@application/auth';
+import type { FolderReader } from '@application/auth';
 import { UnauthenticatedError } from '@domain/auth';
 import type { UserId } from '@domain/auth';
 
@@ -11,7 +12,7 @@ const CALLER = Symbol('caller');
 
 /** A request the guard has already been through. */
 interface AuthenticatedRequest extends Request {
-  [CALLER]?: UserId;
+  [CALLER]?: FolderReader;
 }
 
 /**
@@ -37,7 +38,8 @@ export class BearerAuthGuard implements CanActivate {
       throw new UnauthenticatedError('no bearer credential on the request');
     }
 
-    request[CALLER] = (await this.authenticate.execute(token)).userId;
+    const { userId, clientId } = await this.authenticate.execute(token);
+    request[CALLER] = { userId, clientId };
 
     return true;
   }
@@ -49,8 +51,19 @@ export class BearerAuthGuard implements CanActivate {
  * A controller never reads the header itself. If it did, a route could forget to, and a route that
  * forgets to authenticate looks exactly like a route that does.
  */
-export const CurrentUser = createParamDecorator((_data: unknown, context: ExecutionContext) => {
-  const caller = context.switchToHttp().getRequest<AuthenticatedRequest>()[CALLER];
+export const CurrentUser = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): UserId =>
+    callerOf(context.switchToHttp().getRequest<Request>()).userId,
+);
+
+/**
+ * Who the guard found on [request], and the client their token was issued to — for a guard that
+ * runs after this one (plan 25, B-32).
+ *
+ * @throws {UnauthenticatedError} on a request this guard did not go through
+ */
+export function callerOf(request: Request): FolderReader {
+  const caller = (request as AuthenticatedRequest)[CALLER];
 
   if (caller === undefined) {
     // Reachable only by putting the decorator on a route without the guard — a wiring mistake,
@@ -59,4 +72,4 @@ export const CurrentUser = createParamDecorator((_data: unknown, context: Execut
   }
 
   return caller;
-});
+}

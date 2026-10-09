@@ -37,6 +37,11 @@ Três razões, e todas importam:
 Pacote: `flutter_appauth` ou `oauth2_client` — ambos falam OIDC padrão, sem conhecer o
 provedor.
 
+A proibição é de **login**. O único WebView do app é o motor dos diagramas Mermaid da prévia de
+markdown: fora da tela, sem rede, sem navegação, só o asset local, devolvendo uma imagem — delimitado
+pela [ADR-024](../shared/00-decisions.md#adr-024--o-app-desenha-mermaid-num-webview-fora-da-tela-sem-rede-e-sem-navegação).
+Nenhum WebView visível, nem que receba o que a pessoa digita.
+
 ### O issuer vem da origem escolhida
 
 O issuer não é um define próprio: é a origem que a pessoa escolheu na tela de endereço mais o caminho do

@@ -20,6 +20,8 @@ class AppScreen extends StatelessWidget {
     this.bottom,
     this.titleEnd,
     this.drawer,
+    this.endDrawer,
+    this.subtitle,
   });
 
   /// What the bar says, already translated.
@@ -30,6 +32,9 @@ class AppScreen extends StatelessWidget {
 
   /// What the bar offers, if anything.
   final List<Widget> actions;
+
+  /// A second line under the title — where a screen says which of many it is: the path of a file.
+  final String? subtitle;
 
   /// A strip under the bar — where a screen says where it stands.
   final PreferredSizeWidget? bottom;
@@ -45,6 +50,11 @@ class AppScreen extends StatelessWidget {
   /// D-26).
   final Widget? drawer;
 
+  /// A second side panel, on the right, with the same rule as [drawer]: opened by its control in
+  /// [actions], never by a swipe (plan 25, D-01). The side says which panel it is, and each keeps its
+  /// own state.
+  final Widget? endDrawer;
+
   @override
   Widget build(BuildContext context) {
     final Widget? end = titleEnd;
@@ -53,11 +63,15 @@ class AppScreen extends StatelessWidget {
 
     return Scaffold(
       drawer: drawer,
+      endDrawer: endDrawer,
+      // Both edges are the system's "back" on Android: a panel opens by its button only (D-26).
+      drawerEnableOpenDragGesture: false,
+      endDrawerEnableOpenDragGesture: false,
       appBar: AppBar(
         leading: drawer != null && canPop ? const BackButton() : null,
         automaticallyImplyLeading: drawer == null || canPop,
         title: end == null
-            ? Text(title)
+            ? _title(context)
             : Row(
                 children: <Widget>[
                   Flexible(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis)),
@@ -69,6 +83,28 @@ class AppScreen extends StatelessWidget {
         bottom: bottom,
       ),
       body: SafeArea(child: body),
+    );
+  }
+
+  /// The title — and, under it, the subtitle, both cut with an ellipsis rather than wrapped.
+  Widget _title(BuildContext context) {
+    final String? second = subtitle;
+    if (second == null) {
+      return Text(title);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(
+          second,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
     );
   }
 }

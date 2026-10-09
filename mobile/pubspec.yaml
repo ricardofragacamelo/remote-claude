@@ -42,6 +42,21 @@ dependencies:
   cupertino_icons: ^1.0.8
   local_auth: ^3.0.2
 
+  # The file browser (plan 25). Markdown preview, exact as the spike measured it (D-06); the parser
+  # is imported directly, for the app's own block syntaxes (HTML as code, the `mermaid` fence).
+  flutter_markdown_plus: 1.0.12
+  markdown: ^7.3.1
+  # Mermaid drawn by the web's own engine, in a WebView never on screen (ADR-024, D-10).
+  webview_flutter: 4.14.1
+  # PDF by PDFium, read by ranges through the app's own client (D-06, D-22). 2.4.8 is the last one
+  # for Flutter 3.44; 2.5 asks for 3.47.
+  pdfrx: 2.4.8
+  # A link of a file leaves the app only after the person confirms the address (B-20).
+  url_launcher: ^6.3.2
+  # Where a download is written before the system's "save as" (B-27) — it came through other
+  # packages; the app now calls it itself.
+  path_provider: ^2.1.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -67,6 +82,8 @@ dev_dependencies:
   # letting a transitive dependency decide what the test compiles against.
   flutter_appauth_platform_interface: ^12.0.1
   plugin_platform_interface: ^2.1.8
+  url_launcher_platform_interface: ^2.3.2
+  webview_flutter_platform_interface: ^2.14.0
   patrol: ^4.10.0
 
 flutter:
@@ -75,6 +92,11 @@ flutter:
   # Generates the type-safe accessors of lib/l10n/*.arb. A key that does not exist becomes a
   # compile error, which is the whole reason for ARB over string lookup.
   generate: true
+
+  # The page the app draws Mermaid in. `mermaid.min.js` beside it is copied from the web's
+  # node_modules before every build of the app, and is not in git (plan 25, D-20).
+  assets:
+    - assets/mermaid/
 
 # The real-push suite (plan 02, D-26), run by `node scripts/mobile.mjs test:e2e:push` through
 # `patrol`, which is what reaches the notification dialog, the home button and the tray.

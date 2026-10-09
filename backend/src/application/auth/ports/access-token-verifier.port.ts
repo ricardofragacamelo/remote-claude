@@ -5,6 +5,13 @@ export interface VerifiedAccessToken {
 
   /** When the credential stops being valid. The socket uses it to schedule its grace period. */
   readonly expiresAt: Date;
+
+  /**
+   * The client the token was issued to — the `azp` claim —, or `null` when it carries none. What
+   * tells the web from every other client where the rule depends on it: reading the folder
+   * ([25 · D-12](../../../../../docs/plans/25-mobile-file-browser/decisions.md#f1--normas-e-a-sessão-encoberta)).
+   */
+  readonly clientId: string | null;
 }
 
 /**

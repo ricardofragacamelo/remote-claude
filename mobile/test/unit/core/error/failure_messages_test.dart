@@ -47,6 +47,8 @@ void main() {
       'transcript.error.followLiveHere',
       'transcript.error.imageTypeUnsupported',
       'transcript.error.imageTooLarge',
+      // Plan 25, B-06: the refusals the file browser meets (S-10).
+      'files.error.invalidPath',
     ];
 
     for (final String key in keys) {
@@ -109,6 +111,14 @@ void main() {
             'image/svg+xml',
             <String, String>{'mediaType': 'image/svg+xml'},
           ),
+          // Plan 25, B-06: the refusals about a file of the folder name it (S-10).
+          'files.error.notFound': ('docs/a.md', <String, String>{'path': 'docs/a.md'}),
+          'files.error.notAFile': ('docs', <String, String>{'path': 'docs'}),
+          'files.error.rangeNotSatisfiable': ('a.pdf', <String, String>{'path': 'a.pdf'}),
+          'files.error.notText': ('a.bin', <String, String>{'path': 'a.bin'}),
+          'files.error.accessDenied': ('secret.txt', <String, String>{'path': 'secret.txt'}),
+          // Plan 25, B-27: the rest of a download asked of a version that is gone.
+          'files.error.changed': ('big.log', <String, String>{'path': 'big.log'}),
         };
 
     cases.forEach((String key, (String, Map<String, String>) expected) {
@@ -123,6 +133,36 @@ void main() {
       }
     });
   });
+
+  test(
+    'a file over the ceiling says the ceiling as a size, or as it came when it is no number',
+    () {
+      String tooLarge(AppLocalizations l10n, String limit) => translateFailure(
+        l10n,
+        ServerFailure(
+          code: 'FILE_TOO_LARGE',
+          messageKey: 'files.error.tooLarge',
+          traceId: 't',
+          params: <String, String>{'path': 'big.log', 'limit': limit},
+        ),
+      );
+
+      expect(tooLarge(en, '10485760'), contains('10.5 MB'));
+      expect(tooLarge(pt, '10485760'), contains('10,5 MB'));
+      expect(tooLarge(en, 'lots'), contains('lots'));
+      expect(
+        translateFailure(
+          en,
+          const ServerFailure(
+            code: 'FILE_TOO_LARGE',
+            messageKey: 'files.error.tooLarge',
+            traceId: 't',
+          ),
+        ),
+        isNot(en.commonErrorUnexpected),
+      );
+    },
+  );
 
   test('a history refusal has its own sentence, not the generic one', () {
     expect(

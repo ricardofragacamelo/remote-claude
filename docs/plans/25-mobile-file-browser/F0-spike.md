@@ -21,7 +21,7 @@ mínimo, descartável, no emulador API 35 (o mesmo do `run-e2e-local`).
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — PDF e markdown 🔲
+### B-01 — PDF e markdown ✅
 
 - **`pdfrx`:** abrir um PDF de 50 MB pelos dois caminhos da [D-22](decisions.md#f5--pdf) — da memória
   (os bytes do `ApiClient.bytes`) e por URI com `Authorization` no cabeçalho, contra um `/files/raw` de
@@ -34,7 +34,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
   sem carregar o PDFium (S-03).
 - O APK por ABI antes e depois dos dois pacotes.
 
-### B-02 — Mermaid: `merman` × WebView 🔲
+### B-02 — Mermaid: `merman` × WebView ✅
 
 Os mesmos oito diagramas — fluxograma, sequência, classe, estado, ER, Gantt, pizza e mindmap —, mais
 um inválido, um acima do teto e um que passa do *timeout*, desenhados:
@@ -48,13 +48,13 @@ Comparar lado a lado (capturas no `progress.md`), medir o primeiro desenho e o s
 ABI de cada motor. Conferir também se o SVG do Mermaid desenha no `flutter_svg` (o `<style>` com
 classes e o `<foreignObject>` dos rótulos), para saber se o caminho SVG existe ou se é sempre PNG.
 
-### B-03 — Texto grande 🔲
+### B-03 — Texto grande ✅
 
 Um leitor mínimo com linhas virtualizadas (`ListView.builder` por linha lógica), abrindo pelo
 `/files/content` texto de 1, 5 e 10 MB e uma linha única de 1 MB, com a quebra ligada e desligada.
 Medir o tempo de abertura e o pico de memória. É o que decide o teto do app ([D-09](decisions.md#f0--spike-dos-motores)).
 
-### B-04 — O registro 🔲
+### B-04 — O registro ✅
 
 - As D-06, D-09, D-10 e D-22 viram ✅ em [decisions.md](decisions.md), com o número que as decidiu.
 - A tabela de medidas (tempos, memória, APK, capturas dos diagramas) no [progress.md](progress.md).

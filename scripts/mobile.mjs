@@ -26,34 +26,16 @@ import {
   suiteProblem,
   suiteTargets,
 } from './lib/android.mjs';
-import { COVERAGE_THRESHOLDS } from './lib/coverage.mjs';
+import { COVERAGE_THRESHOLDS, MOBILE_COVERAGE_EXCLUSIONS } from './lib/coverage.mjs';
 import { complexityVerdict } from './lib/dart-metrics.mjs';
 import { commandExists, run, runAttached } from './lib/exec.mjs';
 import { parseViolations } from './lib/import-lint.mjs';
+import { prepareMermaid } from './lib/mermaid-asset.mjs';
 import { checkCoverage, readReport, reportPathOf } from './lib/lcov.mjs';
 import { ANDROID_PACKAGE, pubspecVersion } from './lib/mobile-local.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { dartDefines } from './lib/stack.mjs';
 import { bold, dim, fail, fatal, hint, info, line, ok, title } from './lib/ui.mjs';
-
-/**
- * Files the coverage bar does not apply to, each for a stated reason.
- *
- * Generated code is written by nobody, and `main.dart` is four calls into things that are
- * themselves covered — the same exception `main.ts` carries on the backend.
- */
-export const COVERAGE_EXCLUSIONS = [
-  '**/*.g.dart',
-  '**/*.freezed.dart',
-  'lib/l10n/generated/**',
-  'lib/main.dart',
-
-  // Fixtures the architecture test writes into `lib/` for the length of one test — `import_lint`
-  // only analyses `lib/`, so a deliberate violation has to live there. They hold one import and
-  // nothing else, and they are deleted in the same test; measuring them would make the number
-  // depend on which suite happened to be running.
-  'lib/**/_arch_*.dart',
-];
 
 const mobileDir = path.join(repoRoot, 'mobile');
 
@@ -256,7 +238,7 @@ function coverage() {
   // rather than papered over.
   const verdict = checkCoverage(report, {
     minimum: COVERAGE_THRESHOLDS.lines,
-    exclude: COVERAGE_EXCLUSIONS,
+    exclude: MOBILE_COVERAGE_EXCLUSIONS,
   });
 
   for (const entry of verdict.below) {
@@ -497,6 +479,11 @@ function endToEnd() {
 
   if (problem !== null) {
     fatal(problem);
+    return 1;
+  }
+
+  // The diagrams of the file viewer are the web's Mermaid, copied before every build (plan 25, D-20).
+  if (!prepareMermaid(repoRoot)) {
     return 1;
   }
 

@@ -39,6 +39,7 @@ import {
   usbDevices,
 } from './lib/mobile-install.mjs';
 import { localDefines, pubspecVersion } from './lib/mobile-local.mjs';
+import { prepareMermaid } from './lib/mermaid-asset.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { cleanupOnce, onTermination, runToExit } from './lib/proc.mjs';
 import { PUBLIC_ORIGIN_FILE, readRecordedOrigin } from './lib/public-url.mjs';
@@ -265,6 +266,11 @@ async function main() {
   if (!commandExists('flutter')) {
     fatal('flutter is not on PATH');
     hint('install Flutter (https://docs.flutter.dev/get-started/install), then run this again');
+    return 1;
+  }
+
+  // The diagrams of the file viewer are the web's Mermaid, copied before every build (plan 25, D-20).
+  if (!prepareMermaid(repoRoot)) {
     return 1;
   }
 

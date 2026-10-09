@@ -3680,6 +3680,450 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Waiting for the connection to start a session.'**
   String get folderNewSessionOffline;
+
+  /// The server answered FILE_NOT_FOUND
+  ///
+  /// In en, this message translates to:
+  /// **'{path} is not in the folder any more.'**
+  String filesErrorNotFound(String path);
+
+  /// The server refused the path itself
+  ///
+  /// In en, this message translates to:
+  /// **'That is not a usable path inside the open folder.'**
+  String get filesErrorInvalidPath;
+
+  /// The server answered FILE_NOT_A_FILE
+  ///
+  /// In en, this message translates to:
+  /// **'{path} is not a file.'**
+  String filesErrorNotAFile(String path);
+
+  /// The server answered RANGE_NOT_SATISFIABLE
+  ///
+  /// In en, this message translates to:
+  /// **'That part of {path} is past its end — the file changed, or is shorter.'**
+  String filesErrorRangeNotSatisfiable(String path);
+
+  /// The server answered FILE_TOO_LARGE; limit is already formatted
+  ///
+  /// In en, this message translates to:
+  /// **'{path} is too large to open on the phone ({limit} at most).'**
+  String filesErrorTooLarge(String path, String limit);
+
+  /// The server answered FILE_NOT_TEXT
+  ///
+  /// In en, this message translates to:
+  /// **'{path} is not text the phone can show.'**
+  String filesErrorNotText(String path);
+
+  /// The server answered FILE_ACCESS_DENIED
+  ///
+  /// In en, this message translates to:
+  /// **'This machine does not let remote-claude read {path}. Check its permissions.'**
+  String filesErrorAccessDenied(String path);
+
+  /// Tooltip of the bar button that opens the files panel
+  ///
+  /// In en, this message translates to:
+  /// **'Files of the folder'**
+  String get filesPanelOpen;
+
+  /// Heading of the files panel
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get filesPanelTitle;
+
+  /// Tooltip of the ⋮ menu of the files panel
+  ///
+  /// In en, this message translates to:
+  /// **'File options'**
+  String get filesPanelMenu;
+
+  /// Menu item that shows .git and the other hidden names
+  ///
+  /// In en, this message translates to:
+  /// **'Show hidden files'**
+  String get filesPanelShowHidden;
+
+  /// Menu item that reads the level again
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get filesPanelRefresh;
+
+  /// What the '..' row says to a screen reader
+  ///
+  /// In en, this message translates to:
+  /// **'Up one level'**
+  String get filesPanelUp;
+
+  /// A level with nothing to show
+  ///
+  /// In en, this message translates to:
+  /// **'This folder is empty.'**
+  String get filesPanelEmpty;
+
+  /// The level is being read
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the folder…'**
+  String get filesPanelLoading;
+
+  /// The server listed only part of the level
+  ///
+  /// In en, this message translates to:
+  /// **'Showing the first {count} items of this folder.'**
+  String filesPanelTruncated(String count);
+
+  /// Why a link outside the folder does not open
+  ///
+  /// In en, this message translates to:
+  /// **'A link that leads outside the open folder. It is never opened from here.'**
+  String get filesPanelOutsideLink;
+
+  /// Why a broken link does not open
+  ///
+  /// In en, this message translates to:
+  /// **'A broken link: what it leads to is not there.'**
+  String get filesPanelBrokenLink;
+
+  /// Why an entry whose name is not UTF-8 does not open
+  ///
+  /// In en, this message translates to:
+  /// **'Its name cannot be read, so it is not opened from here.'**
+  String get filesPanelUnreadableName;
+
+  /// Why a FIFO, socket or device does not open
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a file that can be opened.'**
+  String get filesPanelNotAFile;
+
+  /// The device is still pending: what to do
+  ///
+  /// In en, this message translates to:
+  /// **'Approve this phone in the browser to read the folder\'s files, then refresh.'**
+  String get filesPanelDevicePending;
+
+  /// The device was revoked
+  ///
+  /// In en, this message translates to:
+  /// **'This phone was revoked, so it no longer reads the folder\'s files.'**
+  String get filesPanelDeviceRevoked;
+
+  /// The level is gone: back to the root
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the folder'**
+  String get filesPanelBackToRoot;
+
+  /// Copies the path relative to the folder
+  ///
+  /// In en, this message translates to:
+  /// **'Copy path'**
+  String get filesEntryCopyPath;
+
+  /// Said once the path is on the clipboard
+  ///
+  /// In en, this message translates to:
+  /// **'Path copied'**
+  String get filesEntryPathCopied;
+
+  /// Tooltip of the ⋯ of the viewer
+  ///
+  /// In en, this message translates to:
+  /// **'File options'**
+  String get fileViewerMenu;
+
+  /// Menu item that wraps long lines, for every file
+  ///
+  /// In en, this message translates to:
+  /// **'Word wrap'**
+  String get fileViewerWrap;
+
+  /// Copies the whole file
+  ///
+  /// In en, this message translates to:
+  /// **'Copy all'**
+  String get fileViewerCopyAll;
+
+  /// Said once the file is on the clipboard
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get fileViewerCopied;
+
+  /// The file is being read
+  ///
+  /// In en, this message translates to:
+  /// **'Opening the file…'**
+  String get fileViewerLoading;
+
+  /// The file is past the light-mode line
+  ///
+  /// In en, this message translates to:
+  /// **'A large file ({size}): it may take a moment to scroll.'**
+  String fileViewerLarge(String size);
+
+  /// A file of zero bytes
+  ///
+  /// In en, this message translates to:
+  /// **'This file is empty.'**
+  String get fileViewerEmpty;
+
+  /// A read brought another version
+  ///
+  /// In en, this message translates to:
+  /// **'The file changed on disk — this is the new version.'**
+  String get fileViewerChanged;
+
+  /// A line cut with the wrap off
+  ///
+  /// In en, this message translates to:
+  /// **'… {count} more characters — turn on word wrap to read the whole line'**
+  String fileViewerLineCut(String count);
+
+  /// A binary, or a type the phone does not show
+  ///
+  /// In en, this message translates to:
+  /// **'This file has no preview on the phone.'**
+  String get fileViewerNoPreview;
+
+  /// FILE_NOT_TEXT for an encoding
+  ///
+  /// In en, this message translates to:
+  /// **'The encoding of this file was not recognized, so it is not shown.'**
+  String get fileViewerEncoding;
+
+  /// FILE_TOO_LARGE
+  ///
+  /// In en, this message translates to:
+  /// **'This file is too large to open on the phone ({size}).'**
+  String fileViewerTooLarge(String size);
+
+  /// FILE_NOT_FOUND
+  ///
+  /// In en, this message translates to:
+  /// **'This file is not in the folder any more.'**
+  String get fileViewerNotFound;
+
+  /// FILE_ACCESS_DENIED and the folder refusals
+  ///
+  /// In en, this message translates to:
+  /// **'Access to this file was denied.'**
+  String get fileViewerDenied;
+
+  /// Leaves the viewer of a file that is gone
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get fileViewerBack;
+
+  /// A question waits in the session the viewer was opened from
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Claude is waiting for your answer} other{Claude is waiting for {count} answers}}'**
+  String fileViewerClaudeWaiting(int count);
+
+  /// Goes to the card of the question
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the session'**
+  String get fileViewerBackToSession;
+
+  /// What a screen reader says of an image of the folder
+  ///
+  /// In en, this message translates to:
+  /// **'Image {name}'**
+  String fileViewerImage(String name);
+
+  /// Switches a markdown file back to its preview
+  ///
+  /// In en, this message translates to:
+  /// **'Show the preview'**
+  String get markdownPreview;
+
+  /// Switches a markdown file to its source
+  ///
+  /// In en, this message translates to:
+  /// **'Show the source'**
+  String get markdownSource;
+
+  /// A remote image is never loaded; its name and address stand in its place
+  ///
+  /// In en, this message translates to:
+  /// **'Remote image, not loaded: {name}'**
+  String markdownRemoteImage(String name);
+
+  /// A relative link that climbs out of the folder
+  ///
+  /// In en, this message translates to:
+  /// **'That link leads outside the open folder, so it is not opened.'**
+  String get markdownLinkOutside;
+
+  /// Asked before an http, https or mailto link leaves the app
+  ///
+  /// In en, this message translates to:
+  /// **'Open this address outside the app?'**
+  String get markdownLinkConfirm;
+
+  /// Confirms leaving the app for the address
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get markdownLinkOpen;
+
+  /// A javascript:, file:, data: or unknown link
+  ///
+  /// In en, this message translates to:
+  /// **'This kind of link is not opened from here.'**
+  String get markdownLinkRefused;
+
+  /// What a drawn Mermaid diagram is called
+  ///
+  /// In en, this message translates to:
+  /// **'Diagram'**
+  String get diagramLabel;
+
+  /// A diagram is being drawn
+  ///
+  /// In en, this message translates to:
+  /// **'Drawing the diagram…'**
+  String get diagramDrawing;
+
+  /// Mermaid refused the code, saying the line
+  ///
+  /// In en, this message translates to:
+  /// **'This diagram has an error on line {line}, so it is shown as code.'**
+  String diagramInvalidLine(int line);
+
+  /// Mermaid refused the code
+  ///
+  /// In en, this message translates to:
+  /// **'This diagram has an error, so it is shown as code.'**
+  String get diagramInvalid;
+
+  /// The code is past the ceiling
+  ///
+  /// In en, this message translates to:
+  /// **'This diagram is too large to draw — {size} characters, past the limit of {limit} — so it is shown as code.'**
+  String diagramTooLarge(String size, String limit);
+
+  /// The engine took too long, or did not start
+  ///
+  /// In en, this message translates to:
+  /// **'The diagram could not be drawn, so it is shown as code.'**
+  String get diagramUnavailable;
+
+  /// Where in the PDF the person is
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page} of {count}'**
+  String pdfPageOf(int page, int count);
+
+  /// Opens the question of a page number, and goes there
+  ///
+  /// In en, this message translates to:
+  /// **'Go to page'**
+  String get pdfGoTo;
+
+  /// The page typed is not one of the document
+  ///
+  /// In en, this message translates to:
+  /// **'Type a page from 1 to {count}.'**
+  String pdfGoToInvalid(int count);
+
+  /// Heading of the sheet that asks for the password
+  ///
+  /// In en, this message translates to:
+  /// **'This PDF is protected by a password'**
+  String get pdfPasswordTitle;
+
+  /// The field of the password of a PDF
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get pdfPasswordField;
+
+  /// The password typed is not the document's
+  ///
+  /// In en, this message translates to:
+  /// **'That password does not open this PDF. Try again.'**
+  String get pdfPasswordWrong;
+
+  /// Opens the PDF with the password typed
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get pdfUnlock;
+
+  /// The sheet of the password was cancelled
+  ///
+  /// In en, this message translates to:
+  /// **'This PDF is protected by a password.'**
+  String get pdfProtected;
+
+  /// Opens the sheet of the password again
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the password'**
+  String get pdfEnterPassword;
+
+  /// PDFium refused the bytes
+  ///
+  /// In en, this message translates to:
+  /// **'This PDF could not be read — it may be damaged.'**
+  String get pdfCorrupt;
+
+  /// Downloads a file of the folder to where the person chooses
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get filesDownload;
+
+  /// A download on its way, in the strip
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading {name}'**
+  String filesDownloading(String name);
+
+  /// Stops a download on its way
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel the download'**
+  String get filesDownloadCancel;
+
+  /// The file was saved where the person chose
+  ///
+  /// In en, this message translates to:
+  /// **'{name} downloaded.'**
+  String filesDownloaded(String name);
+
+  /// The file is larger than the server sends; limit is already formatted
+  ///
+  /// In en, this message translates to:
+  /// **'{path} passes the download limit of {limit}, so it was not downloaded.'**
+  String filesDownloadTooLarge(String path, String limit);
+
+  /// The server or the network refused the download; reason is the translated refusal
+  ///
+  /// In en, this message translates to:
+  /// **'{name} was not downloaded. {reason}'**
+  String filesDownloadRefused(String name, String reason);
+
+  /// The bytes arrived, and the system refused to save them there
+  ///
+  /// In en, this message translates to:
+  /// **'The phone could not save {name} where you chose.'**
+  String filesDownloadNotSaved(String name);
+
+  /// The server answered FILE_CHANGED: the rest of a download was asked of a version that is gone
+  ///
+  /// In en, this message translates to:
+  /// **'{path} changed while it was coming. Try again.'**
+  String filesErrorChanged(String path);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

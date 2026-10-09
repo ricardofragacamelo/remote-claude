@@ -44,6 +44,19 @@ describe('OidcTokenVerifier', () => {
     expect(verified.expiresAt.getTime()).toBeGreaterThan(Date.now());
   });
 
+  it.each([
+    ['remote-claude-mobile', 'remote-claude-mobile'],
+    [null, null],
+    ['', null],
+  ])(
+    'reads the client the token was issued to from %j as %j (plan 25, B-32)',
+    async (azp, clientId) => {
+      const verified = await verifier.verify(await provider.accessToken({ clientId: azp }));
+
+      expect(verified.clientId).toBe(clientId);
+    },
+  );
+
   it('refuses a token signed by a key the issuer never published', async () => {
     await expect(verifier.verify(await provider.forgedToken())).rejects.toThrow(
       UnauthenticatedError,

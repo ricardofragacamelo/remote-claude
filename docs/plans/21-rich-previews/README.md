@@ -64,7 +64,7 @@ Três escolhas dão forma ao plano:
 - **Anotar, assinar ou imprimir PDF.** Baixar já existe (07 · F7); imprimir é do navegador, pelo arquivo
   baixado.
 - **Destacar no índice a seção em que se está.** O pdf.js não dá isso pronto; fica para quando alguém pedir.
-- **O app Flutter.** O app não tem prévia de arquivo hoje; se ganhar, é outro plano.
+- **O app Flutter.** O app não tem prévia de arquivo hoje; se ganhar, é outro plano. *(Nota de 2026-10-09: ganhou — é o [plano 25](../25-mobile-file-browser/README.md), só leitura, com o mesmo `mermaid.js` deste plano, na mesma versão, desenhado fora da tela ([ADR-024](../../architecture/shared/00-decisions.md#adr-024--o-app-desenha-mermaid-num-webview-fora-da-tela-sem-rede-e-sem-navegação)).)*
 - **Editar o diagrama com prévia ao lado.** A prévia de markdown já segue o buffer (07 · S-312); o diagrama
   vem junto, sem tela própria.
 

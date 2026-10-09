@@ -100,6 +100,11 @@ class SessionScreen {
             path: folderRoute,
             builder: (BuildContext _, GoRouterState state) => destination(state),
           ),
+          // Where the files' panel leads (plan 25, F3).
+          GoRoute(
+            path: fileViewerRoute,
+            builder: (BuildContext _, GoRouterState state) => destination(state),
+          ),
         ],
         initialLocation: sessionRouteFor('session-1'),
         overrides: overrides,

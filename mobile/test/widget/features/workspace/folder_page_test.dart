@@ -13,6 +13,9 @@ import 'package:remote_claude/core/logging/logger_provider.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
+import 'package:remote_claude/features/files/domain/entities/file_entry.dart';
+import 'package:remote_claude/features/files/files_providers.dart';
+import 'package:remote_claude/features/files/presentation/providers/folder_tree_controller.dart';
 import 'package:remote_claude/features/session/domain/repositories/live_session_repository.dart';
 import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
@@ -22,6 +25,8 @@ import 'package:remote_claude/features/transcript/transcript_providers.dart';
 import 'package:remote_claude/features/workspace/workspace.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/builders/files.dart';
+import '../../../support/fakes/fake_files_repository.dart';
 import '../../../support/fakes/fake_transcript_repository.dart';
 import '../../../support/fakes/recording_writer.dart';
 import '../../../support/pump_app.dart';
@@ -77,6 +82,9 @@ void main() {
   late AppLocalizations l10n;
   late CountingLiveSessions live;
   late FakeTranscriptRepository history;
+  final FakeFilesRepository files = FakeFilesRepository()
+    ..levels[''] = <FileEntry>[aFolder('docs'), aFile('README.md')]
+    ..levels['docs'] = <FileEntry>[aFile('docs/a.md')];
 
   setUpAll(() async {
     l10n = await englishCatalogue();
@@ -120,6 +128,7 @@ void main() {
       overrides: <Override>[
         liveSessionRepositoryProvider.overrideWithValue(live as LiveSessionRepository),
         transcriptRepositoryProvider.overrideWithValue(history as TranscriptRepository),
+        filesRepositoryProvider.overrideWithValue(files),
         connectionStatusProvider.overrideWith(
           (Ref ref) => Stream<ConnectionStatus>.value(connection),
         ),
@@ -289,5 +298,41 @@ void main() {
 
     expect(find.text(l10n.workspaceErrorNotFound), findsOneWidget);
     expect(find.text(l10n.commonActionRetry), findsOneWidget);
+  });
+
+  group('the files of the folder, without a session — plan 25, B-13', () {
+    testWidgets('S-44 · the folder screen has the same button, which opens the same panel', (
+      WidgetTester tester,
+    ) async {
+      await pumpFolder(tester);
+
+      await tester.tap(find.byTooltip(l10n.filesPanelOpen));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Drawer), findsOneWidget);
+      expect(
+        find.descendant(of: find.byType(Drawer), matching: find.text('README.md')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'S-45 · the panel is the folder\'s: a level opened elsewhere is the one shown here',
+      (WidgetTester tester) async {
+        await pumpFolder(tester);
+        final ProviderContainer container = ProviderScope.containerOf(
+          tester.element(find.byType(FolderPage)),
+        );
+        await container.read(folderTreeControllerProvider(folder).notifier).open('docs');
+
+        await tester.tap(find.byTooltip(l10n.filesPanelOpen));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.descendant(of: find.byType(Drawer), matching: find.text('a.md')),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }

@@ -9,11 +9,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:remote_claude/core/error/failure.dart';
-import 'package:remote_claude/core/error/failure_messages.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/core/widgets/byte_size.dart';
-import 'package:remote_claude/core/widgets/loading_view.dart';
+import 'package:remote_claude/core/widgets/zoomable_image.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_content.dart';
 import 'package:remote_claude/features/session/presentation/providers/transcript_content_controllers.dart';
@@ -113,68 +111,18 @@ class PromptImageScreen extends ConsumerWidget {
             children: <Widget>[
               ListTile(title: Text(l10n.sessionImageDescription)),
               Expanded(
-                child: switch (image) {
-                  AsyncValue<PromptImageBytes>(:final PromptImageBytes value, isLoading: false) =>
-                    InteractiveViewer(
-                      child: Center(
-                        child: Image.memory(
-                          value.bytes,
-                          semanticLabel: l10n.sessionImageAlt,
-                          gaplessPlayback: true,
-                          errorBuilder: (BuildContext context, Object _, StackTrace? _) =>
-                              _Refusal(message: l10n.commonErrorUnexpected),
-                        ),
-                      ),
-                    ),
-                  AsyncValue<PromptImageBytes>(:final Object error, isLoading: false) => _Refusal(
-                    message: translateFailure(l10n, asFailure(error)),
-                    onRetry: _final.contains(asFailure(error).code)
-                        ? null
-                        : () => ref
-                              .read(promptImageControllerProvider(conversationId, blockId).notifier)
-                              .retry(),
-                  ),
-                  _ => LoadingView(label: l10n.sessionImageLoading),
-                },
+                child: ZoomableImage(
+                  image: image.whenData((PromptImageBytes value) => value.bytes),
+                  semanticLabel: l10n.sessionImageAlt,
+                  loadingLabel: l10n.sessionImageLoading,
+                  finalCodes: _final,
+                  onRetry: () => ref
+                      .read(promptImageControllerProvider(conversationId, blockId).notifier)
+                      .retry(),
+                ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Why the image is not shown, in words — and "try again" when that can change it.
-class _Refusal extends StatelessWidget {
-  const _Refusal({required this.message, this.onRetry});
-
-  final String message;
-  final VoidCallback? onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final VoidCallback? retry = onRetry;
-
-    return Semantics(
-      liveRegion: true,
-      child: Padding(
-        padding: const EdgeInsets.all(Tokens.spaceMd),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              message,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error),
-            ),
-            if (retry != null)
-              TextButton(
-                onPressed: retry,
-                child: Text(AppLocalizations.of(context).commonActionRetry),
-              ),
-          ],
         ),
       ),
     );

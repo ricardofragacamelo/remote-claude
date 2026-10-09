@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:remote_claude/core/navigation/page_observer.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
@@ -62,7 +63,12 @@ extension PumpApp on WidgetTester {
     Locale locale = const Locale('en'),
     bool pumpOnce = true,
   }) async {
-    final GoRouter router = GoRouter(initialLocation: initialLocation, routes: routes);
+    final GoRouter router = GoRouter(
+      initialLocation: initialLocation,
+      routes: routes,
+      // The app's own, so a screen that listens for what covers it hears it here too (B-08).
+      observers: <NavigatorObserver>[pageObserver],
+    );
     addTearDown(router.dispose);
 
     await pumpWidget(

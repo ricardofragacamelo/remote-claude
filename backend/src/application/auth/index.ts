@@ -1,5 +1,7 @@
 /** Public surface of the `auth` use cases. */
 export { AuthenticateUseCase } from './authenticate.use-case';
+export { AuthorizeFolderReadUseCase, NO_INSTALLATION } from './authorize-folder-read.use-case';
+export type { FolderReader } from './authorize-folder-read.use-case';
 export type { Authentication } from './authenticate.use-case';
 export { EstablishSessionUseCase } from './establish-session.use-case';
 export type { EstablishedSession } from './establish-session.use-case';

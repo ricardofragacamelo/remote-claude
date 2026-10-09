@@ -76,7 +76,9 @@ permissão —, e o editor aqui é construído no web sobre uma biblioteca
   editor que ela usa para `CLAUDE.md` e o segundo passo dos arquivos que mudam a permissão
   ([D-15](decisions.md#d-15--arquivos-que-mudam-a-permissão)).
 - **Explorer e editor no app Flutter** — o web é mobile-first e responde no celular; o app só recebe
-  os tipos gerados.
+  os tipos gerados. *(Nota de 2026-10-09: a metade **leitura** entrou no app pelo
+  [plano 25](../25-mobile-file-browser/README.md) — navegar, abrir e baixar, sobre as rotas deste plano;
+  o editor continua fora.)*
 - **Rascunho não salvo guardado no navegador** ("hot exit") — conteúdo de arquivo em claro na máquina
   de quem abriu ([D-14](decisions.md#d-14--rascunho-não-salvo-e-a-recarga)).
 - **Lixeira do sistema** — fica fora da allowlist ([D-06](decisions.md#d-06--apagar-definitivo-ou-lixeira));

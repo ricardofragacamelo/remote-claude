@@ -1,5 +1,5 @@
 {
-  "$comment": "Texts the web and the app both show, web key -> app key. `pnpm i18n:check` compares them text by text, in every language (plan 10, B-03, D-04). Add a pair when a screen of the app shows a text the web already shows; the verbs of the working indicator and the pending pill joined in plan 10, F4; the resume, the tool states and the refusals of following a conversation joined in plan 22, B-04 (D-04: the web's text wins); the thinking, the tool card and the image of a prompt joined in plan 22, F6; the question of Claude (`AskUserQuestion`) joined in plan 24, B-03.",
+  "$comment": "Texts the web and the app both show, web key -> app key. `pnpm i18n:check` compares them text by text, in every language (plan 10, B-03, D-04). Add a pair when a screen of the app shows a text the web already shows; the verbs of the working indicator and the pending pill joined in plan 10, F4; the resume, the tool states and the refusals of following a conversation joined in plan 22, B-04 (D-04: the web's text wins); the thinking, the tool card and the image of a prompt joined in plan 22, F6; the question of Claude (`AskUserQuestion`) joined in plan 24, B-03; the refusals about a file of the folder that read the same on a phone joined in plan 25, B-06 (the ones that speak of editing or changing stay the app's own); the panel, the viewer and the markdown preview joined in plan 25, F2…F4, and the download in F6.",
   "locales": [
     {
       "web": "en",
@@ -164,6 +164,21 @@
     "transcript.error.followLiveHere": "transcriptErrorFollowLiveHere",
     "transcript.error.imageTypeUnsupported": "transcriptErrorImageTypeUnsupported",
     "transcript.error.imageTooLarge": "transcriptErrorImageTooLarge",
+    "files.error.notFound": "filesErrorNotFound",
+    "files.error.invalidPath": "filesErrorInvalidPath",
+    "files.error.notAFile": "filesErrorNotAFile",
+    "files.error.rangeNotSatisfiable": "filesErrorRangeNotSatisfiable",
+    "explorer.tree.outsideLink": "filesPanelOutsideLink",
+    "explorer.action.copyPath": "filesEntryCopyPath",
+    "editor.settings.wordWrap": "fileViewerWrap",
+    "markdown.image.remote": "markdownRemoteImage",
+    "markdown.diagram.label": "diagramLabel",
+    "markdown.diagram.drawing": "diagramDrawing",
+    "markdown.diagram.invalidLine": "diagramInvalidLine",
+    "markdown.diagram.invalid": "diagramInvalid",
+    "markdown.diagram.tooLarge": "diagramTooLarge",
+    "explorer.action.download": "filesDownload",
+    "explorer.done.downloaded": "filesDownloaded",
     "history.follow.working": "historyFollowWorking",
     "history.follow.workingHelp": "historyFollowWorkingHelp",
     "history.screen.activeElsewhereNote": "historyActiveElsewhereNote",

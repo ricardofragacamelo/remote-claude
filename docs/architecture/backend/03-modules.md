@@ -382,6 +382,17 @@ observar são linguagem e invariantes próprias, e a primeira linha de defesa co
 Toda rota nomeia a **pasta da aba** (`folder`, absoluta, mesma regra das rotas do `workspace`) e um
 caminho **relativo** a ela; caminho viaja em search ou corpo, nunca como segmento. Bearer em todas.
 
+**Aparelho aprovado em todas** ([plano 25 · B-32](../../plans/25-mobile-file-browser/F1-norms.md#b-32--aparelho-aprovado-para-ler-a-pasta-)):
+depois do `BearerAuthGuard`, o `ApprovedDeviceGuard` pergunta ao `AuthorizeFolderReadUseCase` do
+`auth`. O token do cliente web (`azp` = `OIDC_CLIENT_ID_WEB`) passa como sempre; qualquer outro precisa
+do `x-install-id` de um aparelho aprovado do mesmo usuário — senão `403 DEVICE_NOT_REGISTERED`, ou
+`403 DEVICE_REVOKED`. A recusa sai em `debug` com o `installId` e a rota, nunca com o token. Por isso
+toda rota abaixo também recusa com esses dois códigos.
+
+**Quem consome:** o web, tudo; o **app**, só leitura — `tree`, `content`, `raw` (com `Range` e
+`download=true`) e `limits` ([plano 25](../../plans/25-mobile-file-browser/README.md)). A ausência de
+escrita no app é provada por teste de arquitetura, não pelo servidor.
+
 | Rota | Resposta | Recusas |
 |---|---|---|
 | `GET /files/tree?folder=&path=` | `{ folder, path, entries[{ name, path, kind, size, mtime, hidden, unreadableName, outside, targetKind }], truncated }` — um nível; pastas primeiro, depois nome sem caixa e com números em ordem natural; `kind` é `file`·`directory`·`symlink`·`other`; `hidden` **marca** o que a [D-10](../../plans/07-explorer-and-editor/decisions.md#d-10--exclusões-padrão-e-teto-da-árvore) esconde, não omite; `outside: true` no link que sai da pasta (e `targetKind: null`), `targetKind: missing` no quebrado | `400`, `401`, `403`, `404` `FILE_NOT_FOUND`/`WORKSPACE_NOT_FOUND`, `422` `WORKSPACE_NOT_A_DIRECTORY`/`WORKSPACE_DIRECTORY_UNREADABLE`/`FILE_OPERATION_INVALID` |

@@ -20,7 +20,7 @@ Leia antes: [mobile/04](../../architecture/mobile/04-ui.md) e
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-14 — A rota e a regra do leitor 🔲
+### B-14 — A rota e a regra do leitor ✅
 
 - `domain/services/viewer_for.dart`: a regra pura da [discovery §7.1](../../discovery/07-navegador-de-arquivos-no-app.md#71-qual-leitor-abre)
   — a extensão escolhe, o `Content-Type` do servidor confirma, e um `.pdf` que não é PDF nunca chega
@@ -33,7 +33,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 - `presentation/pages/file_viewer_page.dart`: barra com o nome, o caminho relativo no subtítulo e o
   `⋯` com as opções do tipo. Dois toques rápidos empilham uma rota só (S-52).
 
-### B-15 — O texto 🔲
+### B-15 — O texto ✅
 
 `widgets/viewers/text_viewer.dart`: monoespaçado, números de linha, **linhas virtualizadas** (um
 `Text` com o arquivo inteiro trava o celular), quebra ligável no `⋯` e lembrada para todos os
@@ -42,20 +42,20 @@ quebra desligada. "Copiar tudo" no `⋯` e seleção nativa onde a virtualizaç�
 `largeFile`; acima do teto da [D-09](decisions.md#f0--spike-dos-motores), "grande demais para abrir
 no celular".
 
-### B-16 — A pinça no texto 🔲
+### B-16 — A pinça no texto ✅
 
 A pinça muda o tamanho da fonte, de 50 % a 300 %, e as linhas se refazem — é o "zoom de texto" do
 navegador, e mantém a virtualização ([D-07](decisions.md#f3--leitor-de-texto-e-de-imagem)). O
 tamanho vale enquanto o leitor está aberto, não por arquivo.
 
-### B-17 — A imagem 🔲
+### B-17 — A imagem ✅
 
 O leitor de imagem da tela cheia do prompt (`session/.../image_marker.dart`) é extraído para
 `core/widgets/zoomable_image.dart` — `InteractiveViewer` sobre `Image.memory`, com carregando, erro e
 "tentar de novo" — e usado pelos dois. Extrair, e não copiar: o portão de duplicação reprova o
 contrário. Os bytes vêm por `/files/raw` com Bearer.
 
-### B-18 — Erros, recarga e a faixa da permissão 🔲
+### B-18 — Erros, recarga e a faixa da permissão ✅
 
 - `widgets/viewers/no_preview.dart`: "sem prévia" (`415` de binário), "codificação não reconhecida"
   (`415` de codificação), "grande demais" (`413`, com o tamanho), "não encontrado" (`404`) e "acesso

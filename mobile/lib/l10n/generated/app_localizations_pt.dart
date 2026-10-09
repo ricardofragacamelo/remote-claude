@@ -2091,4 +2091,284 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get folderNewSessionOffline => 'Esperando a conexão para começar uma sessão.';
+
+  @override
+  String filesErrorNotFound(String path) {
+    return '$path não está mais na pasta.';
+  }
+
+  @override
+  String get filesErrorInvalidPath => 'Esse não é um caminho válido dentro da pasta aberta.';
+
+  @override
+  String filesErrorNotAFile(String path) {
+    return '$path não é um arquivo.';
+  }
+
+  @override
+  String filesErrorRangeNotSatisfiable(String path) {
+    return 'Esse trecho de $path fica depois do fim — o arquivo mudou, ou é menor.';
+  }
+
+  @override
+  String filesErrorTooLarge(String path, String limit) {
+    return '$path é grande demais para abrir no celular (no máximo $limit).';
+  }
+
+  @override
+  String filesErrorNotText(String path) {
+    return '$path não é um texto que o celular consiga mostrar.';
+  }
+
+  @override
+  String filesErrorAccessDenied(String path) {
+    return 'Esta máquina não deixa o remote-claude ler $path. Verifique as permissões.';
+  }
+
+  @override
+  String get filesPanelOpen => 'Arquivos da pasta';
+
+  @override
+  String get filesPanelTitle => 'Arquivos';
+
+  @override
+  String get filesPanelMenu => 'Opções dos arquivos';
+
+  @override
+  String get filesPanelShowHidden => 'Mostrar arquivos ocultos';
+
+  @override
+  String get filesPanelRefresh => 'Atualizar';
+
+  @override
+  String get filesPanelUp => 'Subir um nível';
+
+  @override
+  String get filesPanelEmpty => 'Esta pasta está vazia.';
+
+  @override
+  String get filesPanelLoading => 'Lendo a pasta…';
+
+  @override
+  String filesPanelTruncated(String count) {
+    return 'Mostrando os primeiros $count itens desta pasta.';
+  }
+
+  @override
+  String get filesPanelOutsideLink =>
+      'Um link que leva para fora da pasta aberta. Ele nunca é aberto por aqui.';
+
+  @override
+  String get filesPanelBrokenLink => 'Um link quebrado: o que ele aponta não existe.';
+
+  @override
+  String get filesPanelUnreadableName =>
+      'O nome dele não pode ser lido, então ele não é aberto por aqui.';
+
+  @override
+  String get filesPanelNotAFile => 'Isto não é um arquivo que se possa abrir.';
+
+  @override
+  String get filesPanelDevicePending =>
+      'Aprove este celular no navegador para ler os arquivos da pasta, e então atualize.';
+
+  @override
+  String get filesPanelDeviceRevoked =>
+      'Este celular foi revogado, então ele não lê mais os arquivos da pasta.';
+
+  @override
+  String get filesPanelBackToRoot => 'Voltar à pasta';
+
+  @override
+  String get filesEntryCopyPath => 'Copiar caminho';
+
+  @override
+  String get filesEntryPathCopied => 'Caminho copiado';
+
+  @override
+  String get fileViewerMenu => 'Opções do arquivo';
+
+  @override
+  String get fileViewerWrap => 'Quebra de linha';
+
+  @override
+  String get fileViewerCopyAll => 'Copiar tudo';
+
+  @override
+  String get fileViewerCopied => 'Copiado';
+
+  @override
+  String get fileViewerLoading => 'Abrindo o arquivo…';
+
+  @override
+  String fileViewerLarge(String size) {
+    return 'Um arquivo grande ($size): pode demorar um pouco para rolar.';
+  }
+
+  @override
+  String get fileViewerEmpty => 'Este arquivo está vazio.';
+
+  @override
+  String get fileViewerChanged => 'O arquivo mudou no disco — esta é a versão nova.';
+
+  @override
+  String fileViewerLineCut(String count) {
+    return '… mais $count caracteres — ligue a quebra de linha para ler a linha inteira';
+  }
+
+  @override
+  String get fileViewerNoPreview => 'Este arquivo não tem prévia no celular.';
+
+  @override
+  String get fileViewerEncoding =>
+      'A codificação deste arquivo não foi reconhecida, então ele não é mostrado.';
+
+  @override
+  String fileViewerTooLarge(String size) {
+    return 'Este arquivo é grande demais para abrir no celular ($size).';
+  }
+
+  @override
+  String get fileViewerNotFound => 'Este arquivo não está mais na pasta.';
+
+  @override
+  String get fileViewerDenied => 'O acesso a este arquivo foi negado.';
+
+  @override
+  String get fileViewerBack => 'Voltar';
+
+  @override
+  String fileViewerClaudeWaiting(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'O Claude está esperando $count respostas',
+      one: 'O Claude está esperando sua resposta',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get fileViewerBackToSession => 'Voltar à sessão';
+
+  @override
+  String fileViewerImage(String name) {
+    return 'Imagem $name';
+  }
+
+  @override
+  String get markdownPreview => 'Ver a prévia';
+
+  @override
+  String get markdownSource => 'Ver a fonte';
+
+  @override
+  String markdownRemoteImage(String name) {
+    return 'Imagem remota, não carregada: $name';
+  }
+
+  @override
+  String get markdownLinkOutside => 'Esse link leva para fora da pasta aberta, então não é aberto.';
+
+  @override
+  String get markdownLinkConfirm => 'Abrir este endereço fora do app?';
+
+  @override
+  String get markdownLinkOpen => 'Abrir';
+
+  @override
+  String get markdownLinkRefused => 'Este tipo de link não é aberto por aqui.';
+
+  @override
+  String get diagramLabel => 'Diagrama';
+
+  @override
+  String get diagramDrawing => 'Desenhando o diagrama…';
+
+  @override
+  String diagramInvalidLine(int line) {
+    return 'Este diagrama tem um erro na linha $line, por isso aparece como código.';
+  }
+
+  @override
+  String get diagramInvalid => 'Este diagrama tem um erro, por isso aparece como código.';
+
+  @override
+  String diagramTooLarge(String size, String limit) {
+    return 'Este diagrama é grande demais para desenhar — $size caracteres, acima do limite de $limit — por isso aparece como código.';
+  }
+
+  @override
+  String get diagramUnavailable =>
+      'O diagrama não pôde ser desenhado, por isso aparece como código.';
+
+  @override
+  String pdfPageOf(int page, int count) {
+    return 'Página $page de $count';
+  }
+
+  @override
+  String get pdfGoTo => 'Ir para a página';
+
+  @override
+  String pdfGoToInvalid(int count) {
+    return 'Digite uma página de 1 a $count.';
+  }
+
+  @override
+  String get pdfPasswordTitle => 'Este PDF é protegido por senha';
+
+  @override
+  String get pdfPasswordField => 'Senha';
+
+  @override
+  String get pdfPasswordWrong => 'Essa senha não abre este PDF. Tente de novo.';
+
+  @override
+  String get pdfUnlock => 'Abrir';
+
+  @override
+  String get pdfProtected => 'Este PDF é protegido por senha.';
+
+  @override
+  String get pdfEnterPassword => 'Digitar a senha';
+
+  @override
+  String get pdfCorrupt => 'Este PDF não pôde ser lido — ele pode estar corrompido.';
+
+  @override
+  String get filesDownload => 'Baixar';
+
+  @override
+  String filesDownloading(String name) {
+    return 'Baixando $name';
+  }
+
+  @override
+  String get filesDownloadCancel => 'Cancelar o download';
+
+  @override
+  String filesDownloaded(String name) {
+    return '$name baixado.';
+  }
+
+  @override
+  String filesDownloadTooLarge(String path, String limit) {
+    return '$path passa do limite de download de $limit, por isso não foi baixado.';
+  }
+
+  @override
+  String filesDownloadRefused(String name, String reason) {
+    return '$name não foi baixado. $reason';
+  }
+
+  @override
+  String filesDownloadNotSaved(String name) {
+    return 'O celular não conseguiu salvar $name onde você escolheu.';
+  }
+
+  @override
+  String filesErrorChanged(String path) {
+    return '$path mudou enquanto chegava. Tente de novo.';
+  }
 }

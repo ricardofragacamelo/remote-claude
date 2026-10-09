@@ -84,10 +84,12 @@ void main() {
         find.descendant(of: bar, matching: find.text(l10n.sessionStandingConnected)),
         findsOneWidget,
       );
-      expect(find.byTooltip(l10n.sessionHistoryOpen), findsOneWidget);
       expect(find.byTooltip(l10n.sessionMenuOpen), findsOneWidget);
       expect(find.byTooltip(l10n.folderPanelOpen), findsOneWidget);
-      // The loose icons are gone: the folder panel, the history and the menu — and "back".
+      // Plan 25, D-02: the files' panel came in and the history went to the `⋯` — four icons left no
+      // room for the title and the chip at 360 dp (S-27).
+      expect(find.byTooltip(l10n.filesPanelOpen), findsOneWidget);
+      expect(find.byTooltip(l10n.sessionHistoryOpen), findsNothing);
       expect(find.descendant(of: bar, matching: find.byType(IconButton)), findsNWidgets(3));
       expect(find.byIcon(Icons.stop_circle_outlined), findsNothing);
       expect(find.byIcon(Icons.undo), findsNothing);
@@ -180,7 +182,8 @@ void main() {
       await screen.pump(tester, routed: true);
       await tester.enterText(find.byType(TextField), 'half a thought');
 
-      await tester.tap(find.byTooltip(l10n.sessionHistoryOpen));
+      await openMenu(tester);
+      await tester.tap(find.text(l10n.sessionHistoryOpen));
       await tester.pumpAndSettle();
 
       expect(find.text('at ${historyRouteFor('/tmp/work')}'), findsOneWidget);
@@ -191,15 +194,27 @@ void main() {
       expect(tester.widget<TextField>(find.byType(TextField)).controller?.text, 'half a thought');
     });
 
+    testWidgets('S-24 · the files button waits for the folder of the session, then appears', (
+      WidgetTester tester,
+    ) async {
+      await screen.pump(tester, opened: false);
+      expect(find.byTooltip(l10n.filesPanelOpen), findsNothing);
+
+      await emit(tester, sessionStarted(sessionId: 'session-1'));
+
+      expect(find.byTooltip(l10n.filesPanelOpen), findsOneWidget);
+    });
+
     testWidgets('the history is off until the folder of the session is known', (
       WidgetTester tester,
     ) async {
       await screen.pump(tester, opened: false);
+      await openMenu(tester);
 
-      expect(find.byTooltip(l10n.sessionHistoryUnknown), findsOneWidget);
+      expect(find.text(l10n.sessionHistoryUnknown), findsOneWidget);
       expect(
-        tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.history)).onPressed,
-        isNull,
+        tester.widget<ListTile>(find.widgetWithText(ListTile, l10n.sessionHistoryOpen)).enabled,
+        isFalse,
       );
     });
   });

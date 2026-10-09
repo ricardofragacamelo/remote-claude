@@ -74,6 +74,10 @@ abstract final class LogOp {
   /// what each frame of a subscription carried — ids, counts and states, never what an entry says
   /// (plan 22, B-24). The same `op` the backend logs the subscription with.
   static const String transcriptFollow = 'transcript.follow';
+
+  /// The system's "save as" of a download, over the app's own channel: the name and the type
+  /// asked, and what the person did with the dialog — never the file (plan 25, B-26).
+  static const String filesSave = 'files.save';
 }
 
 /// How many trailing characters of a push token may be logged.

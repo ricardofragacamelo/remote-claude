@@ -20,7 +20,7 @@ F4, F5 e F6 dependem só da F3, e podem correr em qualquer ordem entre si.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-19 — A prévia 🔲
+### B-19 — A prévia ✅
 
 `widgets/viewers/markdown_viewer.dart` sobre o motor da [D-06](decisions.md#f0--spike-dos-motores)
 (`flutter_markdown_plus`, se o spike confirmar). Alternador prévia ↔ fonte na barra; a fonte é o
@@ -28,7 +28,7 @@ leitor de texto da [B-15](F3-text-viewer.md#b-15--o-texto-). HTML embutido apare
 nenhum elemento sai dele. Tabela larga e bloco de código rolam na horizontal dentro da própria caixa.
 A pinça muda o `textScaler`, de 50 % a 300 %, e a prévia continua refluindo para a largura da tela.
 
-### B-20 — Links e imagens 🔲
+### B-20 — Links e imagens ✅
 
 - `domain/services/resolve_relative_link.dart`: resolve o link contra o diretório do arquivo atual
   (`../`, `./`, `%20`, `#âncora`), e recusa o que sai da pasta antes de perguntar ao servidor.
@@ -38,7 +38,7 @@ A pinça muda o `textScaler`, de 50 % a 300 %, e a prévia continua refluindo pa
 - Imagem relativa por `/files/raw` com Bearer. Imagem remota **não** é carregada (rastreio e rede): no
   lugar, o texto alternativo com o endereço.
 
-### B-21 — O motor de diagramas 🔲
+### B-21 — O motor de diagramas ✅
 
 - `data/ports/diagram_engine.dart`: a porta — código, tema, largura e densidade → imagem, ou falha
   (sintaxe com a linha, teto, tempo). O adaptador é o motor da [D-10](decisions.md#f0--spike-dos-motores),
@@ -52,7 +52,7 @@ A pinça muda o `textScaler`, de 50 % a 300 %, e a prévia continua refluindo pa
   `securityLevel: 'strict'` e navegação bloqueada; com o `merman`, não há rede a desligar. Provado no
   e2e (S-100).
 
-### B-22 — O bloco `mermaid` 🔲
+### B-22 — O bloco `mermaid` ✅
 
 `widgets/viewers/mermaid_block.dart`, ligado ao builder de código do markdown para a linguagem
 `mermaid`: espaço reservado enquanto desenha, a imagem ajustada à largura depois, com rótulo de

@@ -2086,4 +2086,282 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get folderNewSessionOffline => 'Waiting for the connection to start a session.';
+
+  @override
+  String filesErrorNotFound(String path) {
+    return '$path is not in the folder any more.';
+  }
+
+  @override
+  String get filesErrorInvalidPath => 'That is not a usable path inside the open folder.';
+
+  @override
+  String filesErrorNotAFile(String path) {
+    return '$path is not a file.';
+  }
+
+  @override
+  String filesErrorRangeNotSatisfiable(String path) {
+    return 'That part of $path is past its end — the file changed, or is shorter.';
+  }
+
+  @override
+  String filesErrorTooLarge(String path, String limit) {
+    return '$path is too large to open on the phone ($limit at most).';
+  }
+
+  @override
+  String filesErrorNotText(String path) {
+    return '$path is not text the phone can show.';
+  }
+
+  @override
+  String filesErrorAccessDenied(String path) {
+    return 'This machine does not let remote-claude read $path. Check its permissions.';
+  }
+
+  @override
+  String get filesPanelOpen => 'Files of the folder';
+
+  @override
+  String get filesPanelTitle => 'Files';
+
+  @override
+  String get filesPanelMenu => 'File options';
+
+  @override
+  String get filesPanelShowHidden => 'Show hidden files';
+
+  @override
+  String get filesPanelRefresh => 'Refresh';
+
+  @override
+  String get filesPanelUp => 'Up one level';
+
+  @override
+  String get filesPanelEmpty => 'This folder is empty.';
+
+  @override
+  String get filesPanelLoading => 'Reading the folder…';
+
+  @override
+  String filesPanelTruncated(String count) {
+    return 'Showing the first $count items of this folder.';
+  }
+
+  @override
+  String get filesPanelOutsideLink =>
+      'A link that leads outside the open folder. It is never opened from here.';
+
+  @override
+  String get filesPanelBrokenLink => 'A broken link: what it leads to is not there.';
+
+  @override
+  String get filesPanelUnreadableName => 'Its name cannot be read, so it is not opened from here.';
+
+  @override
+  String get filesPanelNotAFile => 'This is not a file that can be opened.';
+
+  @override
+  String get filesPanelDevicePending =>
+      'Approve this phone in the browser to read the folder\'s files, then refresh.';
+
+  @override
+  String get filesPanelDeviceRevoked =>
+      'This phone was revoked, so it no longer reads the folder\'s files.';
+
+  @override
+  String get filesPanelBackToRoot => 'Back to the folder';
+
+  @override
+  String get filesEntryCopyPath => 'Copy path';
+
+  @override
+  String get filesEntryPathCopied => 'Path copied';
+
+  @override
+  String get fileViewerMenu => 'File options';
+
+  @override
+  String get fileViewerWrap => 'Word wrap';
+
+  @override
+  String get fileViewerCopyAll => 'Copy all';
+
+  @override
+  String get fileViewerCopied => 'Copied';
+
+  @override
+  String get fileViewerLoading => 'Opening the file…';
+
+  @override
+  String fileViewerLarge(String size) {
+    return 'A large file ($size): it may take a moment to scroll.';
+  }
+
+  @override
+  String get fileViewerEmpty => 'This file is empty.';
+
+  @override
+  String get fileViewerChanged => 'The file changed on disk — this is the new version.';
+
+  @override
+  String fileViewerLineCut(String count) {
+    return '… $count more characters — turn on word wrap to read the whole line';
+  }
+
+  @override
+  String get fileViewerNoPreview => 'This file has no preview on the phone.';
+
+  @override
+  String get fileViewerEncoding =>
+      'The encoding of this file was not recognized, so it is not shown.';
+
+  @override
+  String fileViewerTooLarge(String size) {
+    return 'This file is too large to open on the phone ($size).';
+  }
+
+  @override
+  String get fileViewerNotFound => 'This file is not in the folder any more.';
+
+  @override
+  String get fileViewerDenied => 'Access to this file was denied.';
+
+  @override
+  String get fileViewerBack => 'Back';
+
+  @override
+  String fileViewerClaudeWaiting(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Claude is waiting for $count answers',
+      one: 'Claude is waiting for your answer',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get fileViewerBackToSession => 'Back to the session';
+
+  @override
+  String fileViewerImage(String name) {
+    return 'Image $name';
+  }
+
+  @override
+  String get markdownPreview => 'Show the preview';
+
+  @override
+  String get markdownSource => 'Show the source';
+
+  @override
+  String markdownRemoteImage(String name) {
+    return 'Remote image, not loaded: $name';
+  }
+
+  @override
+  String get markdownLinkOutside => 'That link leads outside the open folder, so it is not opened.';
+
+  @override
+  String get markdownLinkConfirm => 'Open this address outside the app?';
+
+  @override
+  String get markdownLinkOpen => 'Open';
+
+  @override
+  String get markdownLinkRefused => 'This kind of link is not opened from here.';
+
+  @override
+  String get diagramLabel => 'Diagram';
+
+  @override
+  String get diagramDrawing => 'Drawing the diagram…';
+
+  @override
+  String diagramInvalidLine(int line) {
+    return 'This diagram has an error on line $line, so it is shown as code.';
+  }
+
+  @override
+  String get diagramInvalid => 'This diagram has an error, so it is shown as code.';
+
+  @override
+  String diagramTooLarge(String size, String limit) {
+    return 'This diagram is too large to draw — $size characters, past the limit of $limit — so it is shown as code.';
+  }
+
+  @override
+  String get diagramUnavailable => 'The diagram could not be drawn, so it is shown as code.';
+
+  @override
+  String pdfPageOf(int page, int count) {
+    return 'Page $page of $count';
+  }
+
+  @override
+  String get pdfGoTo => 'Go to page';
+
+  @override
+  String pdfGoToInvalid(int count) {
+    return 'Type a page from 1 to $count.';
+  }
+
+  @override
+  String get pdfPasswordTitle => 'This PDF is protected by a password';
+
+  @override
+  String get pdfPasswordField => 'Password';
+
+  @override
+  String get pdfPasswordWrong => 'That password does not open this PDF. Try again.';
+
+  @override
+  String get pdfUnlock => 'Open';
+
+  @override
+  String get pdfProtected => 'This PDF is protected by a password.';
+
+  @override
+  String get pdfEnterPassword => 'Enter the password';
+
+  @override
+  String get pdfCorrupt => 'This PDF could not be read — it may be damaged.';
+
+  @override
+  String get filesDownload => 'Download';
+
+  @override
+  String filesDownloading(String name) {
+    return 'Downloading $name';
+  }
+
+  @override
+  String get filesDownloadCancel => 'Cancel the download';
+
+  @override
+  String filesDownloaded(String name) {
+    return '$name downloaded.';
+  }
+
+  @override
+  String filesDownloadTooLarge(String path, String limit) {
+    return '$path passes the download limit of $limit, so it was not downloaded.';
+  }
+
+  @override
+  String filesDownloadRefused(String name, String reason) {
+    return '$name was not downloaded. $reason';
+  }
+
+  @override
+  String filesDownloadNotSaved(String name) {
+    return 'The phone could not save $name where you chose.';
+  }
+
+  @override
+  String filesErrorChanged(String path) {
+    return '$path changed while it was coming. Try again.';
+  }
 }

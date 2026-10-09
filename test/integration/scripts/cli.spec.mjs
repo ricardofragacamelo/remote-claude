@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -231,6 +232,57 @@ describe('pdf-fixtures.mjs', () => {
     expect(result.code).toBe(0);
     for (const name of ['reader.pdf', 'scripted.pdf', 'locked.pdf']) {
       expect(result.stdout).toContain(`✓ ${name}`);
+    }
+  });
+});
+
+describe('coverage-gaps.mjs', () => {
+  it('reads the report of a copy of the app, and leaves out what the bar leaves out', () => {
+    const copy = fs.mkdtempSync(path.join(os.tmpdir(), 'gaps-'));
+    fs.mkdirSync(path.join(copy, 'coverage'));
+    fs.writeFileSync(
+      path.join(copy, 'coverage', 'lcov.info'),
+      [
+        'SF:lib/a.dart',
+        'DA:1,1',
+        'DA:2,0',
+        'DA:3,0',
+        'end_of_record',
+        'SF:lib/a.g.dart',
+        'DA:1,0',
+        'end_of_record',
+        '',
+      ].join('\n'),
+    );
+
+    try {
+      const result = runScript('coverage-gaps.mjs', ['mobile', 'lib/', '--from', copy]);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('lib/a.dart');
+      expect(result.stdout).toContain('lines     2-3');
+      expect(result.stdout).not.toContain('a.g.dart');
+    } finally {
+      fs.rmSync(copy, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a --from with no directory, and a module it does not know', () => {
+    expect(runScript('coverage-gaps.mjs', ['mobile', '--from']).code).toBe(2);
+    expect(runScript('coverage-gaps.mjs', ['flutter']).code).toBe(2);
+  });
+
+  it('says how to get a report when there is none', () => {
+    const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'gaps-'));
+
+    try {
+      const result = runScript('coverage-gaps.mjs', ['mobile', '--from', empty]);
+
+      expect(result.code).toBe(1);
+      expect(`${result.stdout}${result.stderr}`).toContain('no coverage report');
+      expect(result.stdout).toContain('flutter test --coverage');
+    } finally {
+      fs.rmSync(empty, { recursive: true, force: true });
     }
   });
 });

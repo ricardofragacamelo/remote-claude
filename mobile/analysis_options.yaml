@@ -105,6 +105,30 @@ import_lint:
       from: "package:remote_claude/features/transcript/**"
       except: []
 
+    # The file browser (plan 25) is opened from the session and from the folder screen, each through
+    # its barrel; and it reads the folder without knowing either of them — a screen it imported back
+    # would be the cycle these rules refuse.
+    no_cross_feature_internals_files_from_session:
+      target: "package:remote_claude/features/session/**"
+      from: "package:remote_claude/features/files/**"
+      except: ["package:remote_claude/features/files/files.dart"]
+    no_cross_feature_internals_files_from_workspace:
+      target: "package:remote_claude/features/workspace/**"
+      from: "package:remote_claude/features/files/**"
+      except: ["package:remote_claude/features/files/files.dart"]
+    files_never_imports_session:
+      target: "package:remote_claude/features/files/**"
+      from: "package:remote_claude/features/session/**"
+      except: []
+    files_never_imports_workspace:
+      target: "package:remote_claude/features/files/**"
+      from: "package:remote_claude/features/workspace/**"
+      except: []
+    no_cross_feature_internals_permission_from_files:
+      target: "package:remote_claude/features/files/**"
+      from: "package:remote_claude/features/permission/**"
+      except: ["package:remote_claude/features/permission/permission.dart"]
+
     # The arrow points at `core/`, always. `core/` knowing a feature is a cycle waiting to be
     # written.
     core_cannot_import_features:

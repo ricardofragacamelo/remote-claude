@@ -27,6 +27,7 @@ import type { UserId } from '@domain/auth';
 import { OmitFromLog } from '@shared/logging/omit-from-log.decorator';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
+import { ApprovedDeviceGuard } from './approved-device.guard';
 import { toKeptDeleteDto } from './file-history.dto';
 import type { KeptDeleteDto } from './file-history.dto';
 import {
@@ -70,7 +71,7 @@ import type {
  * See docs/architecture/backend/03-modules.md#files for every status.
  */
 @Controller('files')
-@UseGuards(BearerAuthGuard)
+@UseGuards(BearerAuthGuard, ApprovedDeviceGuard)
 export class FilesController {
   constructor(
     @Inject(ListTreeUseCase) private readonly tree: ListTreeUseCase,

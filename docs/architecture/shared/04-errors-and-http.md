@@ -119,8 +119,8 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 |---|---|---|---|
 | `UNAUTHENTICATED` | 401 | auth | Sem credencial válida |
 | `TOKEN_EXPIRED` | 401 | auth | Token expirou — cliente deve renovar |
-| `DEVICE_NOT_REGISTERED` | 403 | auth | Aparelho não aprovado |
-| `DEVICE_REVOKED` | 403 | auth | Aparelho revogado |
+| `DEVICE_NOT_REGISTERED` | 403 | auth | Aparelho não aprovado — ao decidir uma permissão e, desde o [plano 25](../../plans/25-mobile-file-browser/README.md), em todo `/files/*` com token que não é do web: sem `x-install-id`, desconhecido, de outro usuário ou pendente |
+| `DEVICE_REVOKED` | 403 | auth | Aparelho revogado — também em `/files/*` |
 | `INSUFFICIENT_SCOPE` | 403 | auth | Autenticado, sem o escopo necessário |
 | `WORKSPACE_NOT_ALLOWED` | 403 | workspace | Caminho fora da allowlist |
 | `WORKSPACE_NOT_FOUND` | 404 | workspace | Caminho não existe |

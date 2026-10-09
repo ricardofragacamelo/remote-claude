@@ -116,8 +116,13 @@ afirmam (R-01 do [plano 10](../../plans/10-mobile-chat-layout/README.md#riscos-e
   instalação) abrem sessões, pastas e respondem pedidos como o web faria;
 - **sessão aberta é encerrada no fim** (`endsAfterTheTest`): a stack tem teto de sessões, e um slot
   esquecido é a recusa do teste seguinte;
-- **pasta própria, criada pelo backend** (`makeFolder`, o `POST /files` do explorador), fechada e
-  removida no fim — o aparelho não alcança o disco da máquina, e a raiz é de todas as suítes;
+- **pasta própria, criada pelo backend** (`makeFolder`, o `POST /files` do explorador; arquivos pelo
+  `upload`, o `/files/upload`), fechada e removida no fim — o aparelho não alcança o disco da máquina,
+  e a raiz é de todas as suítes. O token da suíte é do cliente de *direct grant*, não do web, então as
+  rotas de `files` pedem aparelho aprovado: o `BackendAsBrowser` registra e aprova uma instalação só
+  dele (`e2e-browser-files`) para elas ([25 · D-31](../../plans/25-mobile-file-browser/decisions.md#f7--e2e));
+- **a fixture é código** — o teste roda no aparelho, onde o repositório não existe: textos literais e
+  bytes montados no teste (`integration_test/fixtures/`, [25 · D-32](../../plans/25-mobile-file-browser/decisions.md#f7--e2e));
 - **o container sai depois do app** (`disposedAfterTheTest`): desmontado primeiro, e o que as telas
   pediram é respondido antes de o cliente HTTP fechar — uma conexão cancelada no meio vira erro não
   tratado do `dart:io`, e o teste falha depois de passar;

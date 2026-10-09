@@ -7,6 +7,7 @@
 library;
 
 import 'package:remote_claude/core/error/failure.dart';
+import 'package:remote_claude/core/widgets/byte_size.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// The translated message for a failure.
@@ -105,7 +106,10 @@ String translateFailure(AppLocalizations l10n, Failure failure) {
 /// The words of a refusal that a group of its own translates — the folder's, the history's — or the
 /// generic one when no group knows the key.
 String _groupedMessage(AppLocalizations l10n, Failure failure) =>
-    _workspaceMessage(l10n, failure) ?? _followMessage(l10n, failure) ?? l10n.commonErrorUnexpected;
+    _workspaceMessage(l10n, failure) ??
+    _followMessage(l10n, failure) ??
+    _filesMessage(l10n, failure) ??
+    l10n.commonErrorUnexpected;
 
 /// The words of a refusal about a folder, or `null` when [failure] is not one — apart, so the switch
 /// above stays readable as the folder screens add theirs (plan 10, F7).
@@ -134,3 +138,27 @@ String? _followMessage(AppLocalizations l10n, Failure failure) => switch (failur
   'transcript.error.imageTooLarge' => l10n.transcriptErrorImageTooLarge,
   _ => null,
 };
+
+/// The words of a refusal about a file of the folder, or `null` when [failure] is not one — what the
+/// file browser meets (plan 25, B-06). The ceiling arrives in bytes and is said as a size.
+String? _filesMessage(AppLocalizations l10n, Failure failure) {
+  final String path = failure.params['path'] ?? '';
+
+  return switch (failure.messageKey) {
+    'files.error.notFound' => l10n.filesErrorNotFound(path),
+    'files.error.invalidPath' => l10n.filesErrorInvalidPath,
+    'files.error.notAFile' => l10n.filesErrorNotAFile(path),
+    'files.error.rangeNotSatisfiable' => l10n.filesErrorRangeNotSatisfiable(path),
+    'files.error.tooLarge' => l10n.filesErrorTooLarge(path, _size(l10n, failure.params['limit'])),
+    'files.error.notText' => l10n.filesErrorNotText(path),
+    'files.error.accessDenied' => l10n.filesErrorAccessDenied(path),
+    'files.error.changed' => l10n.filesErrorChanged(path),
+    _ => null,
+  };
+}
+
+/// [bytes] as a size in the catalogue's locale — or as it came, when it is not a number.
+String _size(AppLocalizations l10n, String? bytes) {
+  final int? count = int.tryParse(bytes ?? '');
+  return count == null ? bytes ?? '' : formatBytes(count, l10n.localeName);
+}

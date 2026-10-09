@@ -1,6 +1,7 @@
 /// The menu of the session — the `⋯` of the bar (plan 10, B-16): what is done to the whole session,
 /// and seldom. End it — its owner's alone, and asked first (09 · D-10) —, undo what it wrote, copy
-/// its id; and what is the screen's: the permission rules and the help. In the draft, there is no
+/// its id, the conversations of its folder — which left the bar for the files' panel (plan 25,
+/// D-02) —; and what is the screen's: the permission rules and the help. In the draft, there is no
 /// session yet, and only the screen's two are there (S-51).
 library;
 
@@ -47,9 +48,12 @@ Future<void> copySessionId(BuildContext context, String sessionId) async {
 
 /// The `⋯` of the bar. [sessionId] is `null` in the draft.
 class SessionMenuButton extends StatelessWidget {
-  const SessionMenuButton({super.key, this.sessionId});
+  const SessionMenuButton({super.key, this.sessionId, this.folder});
 
   final String? sessionId;
+
+  /// The folder the session runs in — `null` until it is known, and the history waits for it.
+  final String? folder;
 
   @override
   Widget build(BuildContext context) => IconButton(
@@ -58,7 +62,7 @@ class SessionMenuButton extends StatelessWidget {
     onPressed: () => unawaited(
       showSheet(
         context,
-        (BuildContext sheet) => SessionMenu(sessionId: sessionId, screen: context),
+        (BuildContext sheet) => SessionMenu(sessionId: sessionId, folder: folder, screen: context),
       ),
     ),
   );
@@ -66,10 +70,13 @@ class SessionMenuButton extends StatelessWidget {
 
 /// The items of the menu, in a sheet.
 class SessionMenu extends StatelessWidget {
-  const SessionMenu({required this.screen, super.key, this.sessionId});
+  const SessionMenu({required this.screen, super.key, this.sessionId, this.folder});
 
   /// The session on screen — `null` in the draft.
   final String? sessionId;
+
+  /// The folder of the session — `null` while it is not known.
+  final String? folder;
 
   /// The screen the menu opened over — where what an item opens goes, once the sheet is gone.
   final BuildContext screen;
@@ -103,6 +110,10 @@ class SessionMenu extends StatelessWidget {
               leading: const Icon(Icons.copy),
               title: Text(l10n.sessionMenuCopyId),
               onTap: after(() => unawaited(copySessionId(screen, session))),
+            ),
+            _HistoryItem(
+              folder: folder,
+              onOpen: (String at) => after(() => unawaited(screen.push(historyRouteFor(at))))(),
             ),
             const Divider(),
           ],
@@ -205,6 +216,29 @@ class EndDialog extends ConsumerWidget {
       keep: l10n.sessionCloseKeep,
       confirm: l10n.sessionCloseConfirm,
       destructive: true,
+    );
+  }
+}
+
+/// The conversations of the session's folder — pushed, not gone to: "back" returns to this
+/// conversation with its scroll and its box (S-48). Off, saying why, while the folder is not known.
+class _HistoryItem extends StatelessWidget {
+  const _HistoryItem({required this.folder, required this.onOpen});
+
+  final String? folder;
+  final void Function(String folder) onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String? at = folder;
+
+    return ListTile(
+      leading: const Icon(Icons.history),
+      title: Text(l10n.sessionHistoryOpen),
+      subtitle: at == null ? Text(l10n.sessionHistoryUnknown) : null,
+      enabled: at != null,
+      onTap: at == null ? null : () => onOpen(at),
     );
   }
 }

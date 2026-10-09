@@ -129,6 +129,8 @@ class ConfirmingLock implements ApprovalLock {
 /// The address is chosen as on a phone: none saved, so the internal one — and the login follows
 /// whichever address is chosen afterwards, as the real one does (plan 10, B-28).
 ///
+/// [overrides] replace one more edge for the test that needs it — the "save as" of a download.
+///
 /// [store] is the phone's secure storage: a fresh one is a fresh installation, and the same one
 /// handed to a second container is the same phone opened again — with [saved], the address it had
 /// stored, read before the first frame as `main.dart` reads it (plan 10, S-111).
@@ -137,6 +139,7 @@ ProviderContainer e2eContainer(
   E2eScenario scenario, {
   CredentialStore? store,
   ConnectionChoice? saved,
+  List<Override> overrides = const <Override>[],
 }) {
   final AppLogger logger = buildLogger(
     appVersion: build.appVersion,
@@ -157,6 +160,7 @@ ProviderContainer e2eContainer(
         ),
       ),
       approvalLockProvider.overrideWithValue(ConfirmingLock()),
+      ...overrides,
     ],
   );
 }
@@ -203,6 +207,12 @@ Future<void> signedInOnThisDevice(WidgetTester tester, ProviderContainer contain
 /// Approving a phone is refused **to a phone** (S-06): it goes out without the installation header,
 /// exactly as the web front sends it. Nothing here is the app's own code.
 class BackendAsBrowser {
+  /// The installation [_asFilesDevice] registers — one for every run, approved once.
+  static const String filesInstallId = 'e2e-browser-files';
+
+  /// The header an installation is named by.
+  static const String installIdHeader = 'x-install-id';
+
   BackendAsBrowser(BuildConfig build, String accessToken)
     : _dio = Dio(
         BaseOptions(
@@ -267,19 +277,95 @@ class BackendAsBrowser {
     await _dio.post<Object?>(
       '/files',
       data: <String, Object?>{'folder': root, 'path': name, 'kind': 'directory'},
+      options: await _asFilesDevice(),
     );
 
     return '$root/$name';
   }
 
+  /// Sends [files] — path in [folder] to bytes — as the browser's upload does: the manifest first,
+  /// then one part per file, in its order (plan 25, D-21). Parent folders are made first.
+  Future<void> upload(String folder, Map<String, Uint8List> files) async {
+    final Set<String> parents = <String>{
+      for (final String path in files.keys)
+        for (int end = path.indexOf('/'); end > 0; end = path.indexOf('/', end + 1))
+          path.substring(0, end),
+    };
+    for (final String parent in parents.toList()..sort()) {
+      await _dio.post<Object?>(
+        '/files',
+        data: <String, Object?>{'folder': folder, 'path': parent, 'kind': 'directory'},
+        options: await _asFilesDevice(),
+      );
+    }
+
+    final FormData form = FormData()
+      ..fields.addAll(<MapEntry<String, String>>[
+        MapEntry<String, String>('folder', folder),
+        MapEntry<String, String>(
+          'manifest',
+          jsonEncode(<Object?>[
+            for (final MapEntry<String, Uint8List> file in files.entries)
+              <String, Object?>{'path': file.key, 'size': file.value.length},
+          ]),
+        ),
+      ])
+      ..files.addAll(<MapEntry<String, MultipartFile>>[
+        for (final MapEntry<String, Uint8List> file in files.entries)
+          MapEntry<String, MultipartFile>(
+            'file',
+            MultipartFile.fromBytes(file.value, filename: file.key.split('/').last),
+          ),
+      ]);
+    await _dio.post<Object?>('/files/upload', data: form, options: await _asFilesDevice());
+  }
+
+  /// The `file.downloaded` facts of this account, the newest first, as the audit lists them.
+  Future<List<Map<String, Object?>>> downloads() async {
+    final Response<Map<String, Object?>> response = await _dio.get<Map<String, Object?>>(
+      '/audit-events',
+      queryParameters: <String, Object?>{'kind': 'file.downloaded', 'limit': 50},
+    );
+
+    return (response.data!['events']! as List<Object?>).cast<Map<String, Object?>>();
+  }
+
+  /// The installation the browser's side writes files through (plan 25, D-31).
+  ///
+  /// A token of this suite comes from the direct-grant client, not the web one, so the backend asks
+  /// it for an approved installation on every file route (B-32) — as it should: only the web
+  /// client is let off. The real browser of the Playwright suite needs none; this stand-in
+  /// registers one of its own, once, and approves it the way a browser approves a phone — without
+  /// naming an installation. The phone under test is never this one.
+  Future<Options> _asFilesDevice() => _filesDevice ??= () async {
+    final Response<Map<String, Object?>> device = await _dio.post<Map<String, Object?>>(
+      '/devices',
+      data: <String, Object?>{
+        'installId': filesInstallId,
+        'name': 'e2e browser files',
+        'platform': 'android',
+        'appVersion': 'e2e',
+      },
+    );
+    await _dio.post<Object?>(
+      '/devices/${device.data!['id']}/approval',
+      options: Options(validateStatus: (int? status) => status != null && status < 500),
+    );
+
+    return Options(headers: <String, Object?>{installIdHeader: filesInstallId});
+  }();
+
+  Future<Options>? _filesDevice;
+
   /// Removes the folder [name] of [root] that [makeFolder] made — with whatever a session left in
   /// it, saying back the count the server asks for, as the explorer's confirmation does.
   Future<void> removeFolder(String root, String name) async {
     final Map<String, Object?> where = <String, Object?>{'folder': root, 'path': name};
+    final Options device = await _asFilesDevice();
     final Response<Map<String, Object?>> first = await _dio.delete<Map<String, Object?>>(
       '/files',
       queryParameters: where,
-      options: Options(validateStatus: (int? status) => status == 204 || status == 409),
+      options: device.copyWith(validateStatus: (int? status) => status == 204 || status == 409),
     );
 
     if (first.statusCode == 409) {
@@ -292,6 +378,7 @@ class BackendAsBrowser {
           'recursive': 'true',
           'expectedEntries': '${params['entryCount']}',
         },
+        options: device,
       );
     }
   }

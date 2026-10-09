@@ -41,6 +41,15 @@ import 'package:remote_claude/features/auth/domain/usecases/sign_in.dart';
 import 'package:remote_claude/features/auth/domain/usecases/sign_out.dart';
 import 'package:remote_claude/features/device/data/datasources/device_api_data_source.dart';
 import 'package:remote_claude/features/device/device_providers.dart';
+import 'package:remote_claude/features/files/data/datasources/files_api_data_source.dart';
+import 'package:remote_claude/features/files/data/engines/app_temporary_files.dart';
+import 'package:remote_claude/features/files/data/engines/channel_file_saver.dart';
+import 'package:remote_claude/features/files/data/engines/webview_diagram_engine.dart';
+import 'package:remote_claude/features/files/domain/services/diagram_queue.dart';
+import 'package:remote_claude/features/files/domain/repositories/files_repository.dart';
+import 'package:remote_claude/features/files/domain/usecases/download_file.dart';
+import 'package:remote_claude/features/files/domain/usecases/read_folder.dart';
+import 'package:remote_claude/features/files/files_providers.dart';
 import 'package:remote_claude/features/device/domain/repositories/device_repository.dart';
 import 'package:remote_claude/features/device/domain/usecases/forget_push_token.dart';
 import 'package:remote_claude/features/device/domain/usecases/register_device.dart';
@@ -223,6 +232,18 @@ void main() {
     expect(container.read(signOutHooksProvider), same(container.read(signOutHooksProvider)));
   });
 
+  test('the file browser assembles end to end, one repository per origin', () {
+    expect(container.read(filesApiDataSourceProvider), isA<HttpFilesApiDataSource>());
+    expect(container.read(filesRepositoryProvider), isA<FilesRepository>());
+    expect(container.read(listLevelProvider), isA<ListLevel>());
+    expect(container.read(readFileLimitsProvider), isA<ReadFileLimits>());
+    expect(container.read(diagramEngineProvider), isA<WebViewDiagramEngine>());
+    expect(container.read(fileSaverProvider), isA<ChannelFileSaver>());
+    expect(container.read(temporaryFilesProvider), isA<AppTemporaryFiles>());
+    expect(container.read(downloadFileProvider), isA<DownloadFile>());
+    expect(container.read(diagramQueueProvider), isA<DiagramQueue>());
+  });
+
   test('the workspace feature assembles end to end', () {
     expect(container.read(workspaceApiDataSourceProvider), isA<WorkspaceApiDataSource>());
     expect(container.read(workspaceRepositoryProvider), isA<WorkspaceRepository>());
@@ -266,6 +287,7 @@ void main() {
       diagnosticsRoute,
       rulesRoute,
       historyRoute,
+      fileViewerRoute,
       draftRoute,
     ]);
 

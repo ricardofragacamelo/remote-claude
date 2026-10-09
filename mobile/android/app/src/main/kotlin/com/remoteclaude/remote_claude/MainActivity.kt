@@ -6,6 +6,7 @@ import com.remoteclaude.remote_claude.push.PushChannel
 import com.remoteclaude.remote_claude.push.PushEvents
 import com.remoteclaude.remote_claude.push.PushNotifications
 import com.remoteclaude.remote_claude.push.PushPayload
+import com.remoteclaude.remote_claude.save.SaveChannel
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -15,6 +16,7 @@ import io.flutter.plugin.common.MethodChannel
 // fragment, and the plugin that shows it refuses any other host (B-22).
 class MainActivity : FlutterFragmentActivity() {
     private var push: PushChannel? = null
+    private var save: SaveChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +36,11 @@ class MainActivity : FlutterFragmentActivity() {
         MethodChannel(messenger, "remote_claude/push").setMethodCallHandler(channel)
         EventChannel(messenger, "remote_claude/push/events").setStreamHandler(PushEvents)
         push = channel
+
+        // The system's "save as" of a download (plan 25, B-26).
+        val saver = SaveChannel(this)
+        MethodChannel(messenger, "remote_claude/save").setMethodCallHandler(saver)
+        save = saver
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -45,6 +52,13 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         push?.onPermissionResult(requestCode)
+    }
+
+    @Deprecated("the result API needs androidx.activity, which the app does not depend on")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        save?.onActivityResult(requestCode, resultCode, data)
     }
 
     /** A tap on a notification, whether this app or the supplier's library showed it. */

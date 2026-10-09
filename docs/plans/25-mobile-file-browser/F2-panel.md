@@ -18,7 +18,7 @@ Leia antes: [mobile/01](../../architecture/mobile/01-architecture.md),
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-09 — Os dados da árvore 🔲
+### B-09 — Os dados da árvore ✅
 
 - `domain/`: `FileEntry` (nome, `kind`, tamanho, `mtime`, `hidden`, `outside`, `targetKind`),
   `FileListing` (com `truncated`) e `visibleEntries`, que filtra os ocultos sem mudar a ordem do
@@ -31,7 +31,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 - Teste de integração contra um `HttpServer` local: Bearer no cabeçalho, nunca na URL; nome com
   acento, espaço, emoji e 255 bytes.
 
-### B-10 — O botão e a barra lateral 🔲
+### B-10 — O botão e a barra lateral ✅
 
 - `core/widgets/app_screen.dart`: o parâmetro `endDrawer` (pela [D-01](decisions.md#f2--painel-de-arquivos)),
   com a mesma regra do `drawer`: abre pelo botão, nunca pelo deslizar da borda, porque as duas bordas
@@ -43,7 +43,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
   [D-02](decisions.md#f2--painel-de-arquivos) fixar, e a captura de 360 dp com fonte em 200 % fica no
   `progress.md`.
 
-### B-11 — O painel 🔲
+### B-11 — O painel ✅
 
 `presentation/widgets/files_panel.dart`: título, `⋮` (mostrar ocultos, atualizar), migalha com cada
 trecho tocável, ".." fora da raiz, pastas primeiro, linha com ícone por tipo, nome e tamanho. Symlink
@@ -52,13 +52,13 @@ erro, o aparelho pendente e o revogado ([B-32](F1-norms.md#b-32--aparelho-aprova
 têm mensagem própria, que diz o que fazer. Puxar para atualizar. Largura de até 85 % da tela, no máximo 400 dp. Medido em 360×640 e 360×400 com fonte
 em 200 %, com os `meetsGuideline`.
 
-### B-12 — Ações do item 🔲
+### B-12 — Ações do item ✅
 
 Toque longo abre uma folha (`showSheet`) com **copiar caminho relativo**, e a mesma ação como ação de
 `Semantics` da linha ([mobile/04](../../architecture/mobile/04-ui.md)). A folha nasce aqui para
 receber **baixar** na [F6](F6-download.md).
 
-### B-13 — O painel na `FolderPage` 🔲
+### B-13 — O painel na `FolderPage` ✅
 
 O mesmo botão e o mesmo painel na `FolderPage` ([D-05](decisions.md#f2--painel-de-arquivos)), sem
 sessão aberta. O estado é o da pasta, então os dois lugares mostram o mesmo nível.

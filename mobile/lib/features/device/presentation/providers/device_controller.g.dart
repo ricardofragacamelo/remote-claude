@@ -33,7 +33,7 @@ final class DeviceControllerProvider
   DeviceController create() => DeviceController();
 }
 
-String _$deviceControllerHash() => r'0d0afff18da1f3db1f775ddd3e50bdba841aabcf';
+String _$deviceControllerHash() => r'e24fb1d59013ef2efa14cde0d789388f833a9cab';
 
 abstract class _$DeviceController extends $AsyncNotifier<RegisteredDevice?> {
   FutureOr<RegisteredDevice?> build();

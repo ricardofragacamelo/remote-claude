@@ -21,6 +21,7 @@ import {
 import type { UserId } from '@domain/auth';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
+import { ApprovedDeviceGuard } from './approved-device.guard';
 import {
   HISTORY_PAGE_SIZE,
   historyContentQuerySchema,
@@ -53,7 +54,7 @@ import type { FileContentDto } from './files.dto';
  * See docs/architecture/backend/03-modules.md#files for every status.
  */
 @Controller('files/history')
-@UseGuards(BearerAuthGuard)
+@UseGuards(BearerAuthGuard, ApprovedDeviceGuard)
 export class FileHistoryController {
   constructor(
     @Inject(ListHistoryUseCase) private readonly listing: ListHistoryUseCase,

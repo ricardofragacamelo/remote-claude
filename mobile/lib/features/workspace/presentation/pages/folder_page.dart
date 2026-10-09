@@ -19,6 +19,7 @@ import 'package:remote_claude/core/widgets/help_button.dart';
 import 'package:remote_claude/core/widgets/loaded_view.dart';
 import 'package:remote_claude/core/widgets/note_line.dart';
 import 'package:remote_claude/core/widgets/section_heading.dart';
+import 'package:remote_claude/features/files/files.dart';
 import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/features/transcript/transcript.dart';
 import 'package:remote_claude/features/workspace/domain/entities/folder.dart';
@@ -39,7 +40,12 @@ class FolderPage extends ConsumerWidget {
 
     return AppScreen(
       title: folderNameOf(workspacePath),
-      actions: <Widget>[HelpButton(tooltip: l10n.folderHelpOpen, body: l10n.folderHelpBody)],
+      // The folder's files, without a session open (plan 25, D-05): the same panel as the session's.
+      endDrawer: FilesPanel(folder: workspacePath),
+      actions: <Widget>[
+        FilesPanel.button(),
+        HelpButton(tooltip: l10n.folderHelpOpen, body: l10n.folderHelpBody),
+      ],
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(conversationListControllerProvider(workspacePath));

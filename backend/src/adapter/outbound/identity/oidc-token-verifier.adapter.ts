@@ -90,7 +90,11 @@ export class OidcTokenVerifier implements AccessTokenVerifier {
 
     requireVerifiedEmail(payload);
 
-    return { subject: payload.sub, expiresAt: new Date(payload.exp * 1_000) };
+    return {
+      subject: payload.sub,
+      expiresAt: new Date(payload.exp * 1_000),
+      clientId: typeof payload['azp'] === 'string' && payload['azp'] !== '' ? payload['azp'] : null,
+    };
   }
 
   private asDomainFailure(error: unknown): TokenExpiredError | UnauthenticatedError {

@@ -18,6 +18,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:remote_claude/core/navigation/page_observer.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/notifications/push_gateway.dart';
 import 'package:remote_claude/core/notifications/push_providers.dart';
@@ -26,6 +27,7 @@ import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/connection_line.dart';
 import 'package:remote_claude/features/device/device.dart';
+import 'package:remote_claude/features/files/files.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/presentation/providers/first_prompts.dart';
@@ -62,7 +64,8 @@ class SessionPage extends ConsumerStatefulWidget {
   ConsumerState<SessionPage> createState() => _SessionPageState();
 }
 
-class _SessionPageState extends ConsumerState<SessionPage> with BoxOwner<SessionPage> {
+class _SessionPageState extends ConsumerState<SessionPage>
+    with BoxOwner<SessionPage>, RouteAware, PageAware<SessionPage> {
   /// The box starts with a first prompt that could not leave for this session, when there is one.
   @override
   String? initialText() => ref.read(firstPromptsProvider.notifier).takeText(widget.sessionId);
@@ -87,10 +90,15 @@ class _SessionPageState extends ConsumerState<SessionPage> with BoxOwner<Session
   late final PushGateway _push = ref.read(pushGatewayProvider);
 
   /// Follows the app in and out of the foreground: a session behind another app is not on screen.
+  /// Back in front with a page still on top of it, it still is not (S-15).
   late final AppLifecycleListener _lifecycle = AppLifecycleListener(
-    onShow: () => _showing(_sessionId),
+    onShow: () => _showing(_covered ? null : _sessionId),
     onHide: () => _showing(null),
   );
+
+  /// A page is stacked on top — the history, the file viewer —, so this session is not on screen
+  /// and a question of it has to be notified (plan 25, B-08, D-11).
+  bool _covered = false;
 
   @override
   void initState() {
@@ -102,9 +110,24 @@ class _SessionPageState extends ConsumerState<SessionPage> with BoxOwner<Session
   @override
   void dispose() {
     _lifecycle.dispose();
-    _showing(null);
+    // Covered, the platform already heard that no session is on screen: nothing more is said (S-17).
+    if (!_covered) {
+      _showing(null);
+    }
     _questions.dispose();
     super.dispose();
+  }
+
+  @override
+  void didPushNext() {
+    _covered = true;
+    _showing(null);
+  }
+
+  @override
+  void didPopNext() {
+    _covered = false;
+    _showing(_sessionId);
   }
 
   /// Tells the platform that [sessionId] is the one on screen — or that none is — so a question of
@@ -129,15 +152,12 @@ class _SessionPageState extends ConsumerState<SessionPage> with BoxOwner<Session
       title: l10n.sessionTitle,
       titleEnd: StatusChip(sessionId: _sessionId, waiting: questions.pending.length),
       drawer: folder == null ? null : FolderSessionsPanel(folder: folder, current: _sessionId),
+      endDrawer: folder == null ? null : FilesPanel(folder: folder, sessionId: _sessionId),
       actions: <Widget>[
         if (folder != null) FolderSessionsPanel.button(folder: folder, current: _sessionId),
-        // Pushed, not gone to: "back" returns to this conversation with its scroll and its box.
-        IconButton(
-          icon: const Icon(Icons.history),
-          tooltip: folder == null ? l10n.sessionHistoryUnknown : l10n.sessionHistoryOpen,
-          onPressed: folder == null ? null : () => unawaited(context.push(historyRouteFor(folder))),
-        ),
-        SessionMenuButton(sessionId: _sessionId),
+        if (folder != null) FilesPanel.button(),
+        // The history went to the `⋯`: four icons left no room for the title and the chip (D-02).
+        SessionMenuButton(sessionId: _sessionId, folder: folder),
       ],
       body: SessionFrame(
         top: <Widget>[

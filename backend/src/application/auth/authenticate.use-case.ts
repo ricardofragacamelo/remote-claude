@@ -5,6 +5,9 @@ import type { AccessTokenVerifier } from './ports/access-token-verifier.port';
 export interface Authentication {
   readonly userId: UserId;
   readonly expiresAt: Date;
+
+  /** The client the token was issued to (`azp`), `null` when it names none. */
+  readonly clientId: string | null;
 }
 
 /**
@@ -19,6 +22,10 @@ export class AuthenticateUseCase {
   async execute(token: string): Promise<Authentication> {
     const verified = await this.verifier.verify(token);
 
-    return { userId: UserId.create(verified.subject), expiresAt: verified.expiresAt };
+    return {
+      userId: UserId.create(verified.subject),
+      expiresAt: verified.expiresAt,
+      clientId: verified.clientId,
+    };
   }
 }

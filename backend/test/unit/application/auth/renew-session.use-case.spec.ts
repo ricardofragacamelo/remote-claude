@@ -8,7 +8,11 @@ import { FixedClock } from '../../../support/fakes/fixed-clock';
 
 const verifier: AccessTokenVerifier = {
   verify: () =>
-    Promise.resolve({ subject: 'auth|42', expiresAt: new Date('2026-09-13T12:15:00.000Z') }),
+    Promise.resolve({
+      subject: 'auth|42',
+      expiresAt: new Date('2026-09-13T12:15:00.000Z'),
+      clientId: null,
+    }),
 };
 
 const clock = new FixedClock(new Date('2026-09-13T12:00:00.000Z'));

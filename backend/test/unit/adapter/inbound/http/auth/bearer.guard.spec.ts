@@ -13,7 +13,7 @@ const caller = UserId.create('auth|42');
 const authenticate = {
   execute: (token: string) =>
     token === 'good'
-      ? Promise.resolve({ userId: caller, expiresAt: new Date() })
+      ? Promise.resolve({ userId: caller, expiresAt: new Date(), clientId: 'remote-claude-web' })
       : Promise.reject(new UnauthenticatedError('bad token')),
 } as unknown as AuthenticateUseCase;
 

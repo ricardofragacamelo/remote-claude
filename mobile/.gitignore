@@ -46,3 +46,6 @@ app.*.map.json
 
 # Written by `patrol` on every run, next to the tests; a build artefact, never source.
 /patrol_test/test_bundle.dart
+
+# The web's mermaid.min.js, copied before every build of the app (plan 25, D-20).
+/assets/mermaid/mermaid.min.js

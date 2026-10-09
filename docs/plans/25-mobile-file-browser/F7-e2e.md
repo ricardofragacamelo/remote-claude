@@ -17,14 +17,23 @@ e [mobile/06](../../architecture/mobile/06-testing.md).
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-29 — A pasta de fixture 🔲
+### B-29 — A pasta de fixture ✅
 
 Em `mobile/integration_test/fixtures/`: um markdown com tabela larga, link relativo, os oito tipos de
 `mermaid` e um inválido; um texto longo; um PDF de várias páginas; uma imagem; um binário; um arquivo
 oculto. O helper do e2e (`e2e_environment.dart`) monta a pasta com `makeFolder` e envia os arquivos
 que não são texto pelo `/files/upload` ([D-21](decisions.md#f7--e2e)).
 
-### B-30 — O `files_test.dart` 🔲
+Como ficou: a fixture é **código** — `integration_test/fixtures/folder_fixture.dart`, porque o teste
+roda no aparelho, onde o repositório não existe ([D-32](decisions.md#f7--e2e)): o markdown com a tabela
+larga, o link relativo, os oito diagramas (o fluxograma com `click … href`) e o inválido; um texto de
+2 000 linhas com uma de 5 000 caracteres; PDFs de 1 e de 500 páginas montados à mão; uma imagem
+desenhada pelo `dart:ui`; um binário; o `Thumbs.db`, que o servidor marca oculto. O `BackendAsBrowser`
+ganhou o `upload` (que cria as pastas-mãe antes) e o `downloads` (a trilha), e escreve nas rotas de
+`files` por uma instalação própria, aprovada como um navegador aprova ([D-31](decisions.md#f7--e2e)) — o
+que também devolveu o `makeFolder` ao `folders_test`, recusado desde a B-32.
+
+### B-30 — O `files_test.dart` ✅
 
 `mobile/integration_test/files_test.dart`, com seletores num robô em `integration_test/support/`, como
 a tela de sessão:
@@ -41,7 +50,12 @@ a tela de sessão:
 - com o aparelho ainda pendente, o painel pede a aprovação; o helper aprova pelo navegador e a árvore
   aparece — é aqui que o `azp` do Keycloak de verdade é provado (S-153).
 
-### B-31 — Os portões completos 🔲
+Como ficou: três testes e o robô `integration_test/support/files_robot.dart` (com o `KeepingSaver`, o
+"salvar como" do teste). O e2e achou dois defeitos do app, corrigidos na fase: o painel ficava aberto
+por cima da conversa quando o leitor voltava ([D-33](decisions.md#f7--e2e)), e o diagrama com
+`click … href` não era desenhado ([D-34](decisions.md#f7--e2e)).
+
+### B-31 — Os portões completos ✅
 
 `pnpm verify:full` e `pnpm test:e2e:mobile` — o portão 9 do `verify:full` só roda o e2e do web. Antes,
 conferir se outra sessão está rodando validação na mesma árvore (R-13).

@@ -98,14 +98,14 @@ entre si.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Spike dos motores](F0-spike.md) | os motores medidos no emulador; D-06, D-09, D-10 e D-22 decididas com número | B-01…B-04 | 🔲 |
-| F1 | [Normas e a sessão encoberta](F1-norms.md) | normas emendadas; `import_lint` e teste de "nada de escrita"; a sessão deixa de se dizer na tela sob uma rota empilhada; `/files/*` só para aparelho aprovado | B-05…B-08, B-32 | 🔲 |
-| F2 | [Painel de arquivos](F2-panel.md) | dados da árvore, `endDrawer`, botão, navegação por nível, ocultos, symlink, `truncated`, `FolderPage` | B-09…B-13 | 🔲 |
-| F3 | [Leitor de texto e de imagem](F3-text-viewer.md) | rota e regra do leitor, texto virtualizado com quebra e pinça, imagem, estados de erro, recarga com `304` | B-14…B-18 | 🔲 |
-| F4 | [Markdown e Mermaid](F4-markdown.md) | prévia ↔ fonte, links, imagens relativas, tabela larga, `DiagramEngine` e diagramas sob demanda com tela cheia | B-19…B-22 | 🔲 |
-| F5 | [PDF](F5-pdf.md) | `PdfEngine` com `pdfrx`, leitor com zoom e páginas, links, senha | B-23…B-25 | 🔲 |
-| F6 | [Download](F6-download.md) | `FileSaver` nativo, download em stream com progresso e cancelar, as duas entradas | B-26…B-28 | 🔲 |
-| F7 | [E2E](F7-e2e.md) | a pasta de fixture, o `files_test.dart` no emulador, os portões completos | B-29…B-31 | 🔲 |
+| F0 | [Spike dos motores](F0-spike.md) | os motores medidos no emulador; D-06, D-09, D-10 e D-22 decididas com número | B-01…B-04 | ✅ |
+| F1 | [Normas e a sessão encoberta](F1-norms.md) | normas emendadas; `import_lint` e teste de "nada de escrita"; a sessão deixa de se dizer na tela sob uma rota empilhada; `/files/*` só para aparelho aprovado | B-05…B-08, B-32 | ✅ |
+| F2 | [Painel de arquivos](F2-panel.md) | dados da árvore, `endDrawer`, botão, navegação por nível, ocultos, symlink, `truncated`, `FolderPage` | B-09…B-13 | ✅ |
+| F3 | [Leitor de texto e de imagem](F3-text-viewer.md) | rota e regra do leitor, texto virtualizado com quebra e pinça, imagem, estados de erro, recarga com `304` | B-14…B-18 | ✅ |
+| F4 | [Markdown e Mermaid](F4-markdown.md) | prévia ↔ fonte, links, imagens relativas, tabela larga, `DiagramEngine` e diagramas sob demanda com tela cheia | B-19…B-22 | ✅ |
+| F5 | [PDF](F5-pdf.md) | `PdfEngine` com `pdfrx`, leitor com zoom e páginas, links, senha | B-23…B-25 | ✅ |
+| F6 | [Download](F6-download.md) | `FileSaver` nativo, download em stream com progresso e cancelar, as duas entradas | B-26…B-28 | ✅ |
+| F7 | [E2E](F7-e2e.md) | a pasta de fixture, o `files_test.dart` no emulador, os portões completos | B-29…B-31 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 

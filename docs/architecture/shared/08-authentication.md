@@ -179,6 +179,20 @@ login OIDC bem-sucedido
 Motivo: o token OIDC prova *quem* é. O registro de device prova *de onde*. Como a decisão
 autorizada executa comando na máquina, as duas coisas são necessárias.
 
+**O pendente assiste, não decide e não lê a pasta.** Assistir a uma sessão é permitido a um
+aparelho ainda pendente; responder a um pedido de permissão, não; e **ler os arquivos da pasta**
+também não ([plano 25 · D-12](../../plans/25-mobile-file-browser/decisions.md#f1--normas-e-a-sessão-encoberta)):
+ler a pasta é mais que assistir, e o celular pode ser perdido. Todo `/files/*` cujo token **não** foi
+emitido para o cliente web exige o `x-install-id` de um aparelho **aprovado** daquele usuário —
+sem cabeçalho, desconhecido, de outro usuário ou pendente, `403 DEVICE_NOT_REGISTERED`; revogado,
+`403 DEVICE_REVOKED`. A aprovação é lida a cada pedido: aprovar no navegador vale no pedido seguinte.
+
+**Como o backend reconhece o cliente:** pelo `azp` do access token, comparado ao
+`OIDC_CLIENT_ID_WEB` da configuração — nunca por um cabeçalho, que o cliente escolhe mandar ou não.
+Só o token do cliente web dispensa o aparelho; o do app, o de um cliente desconhecido e o que não traz
+`azp` exigem ([25 · D-24](../../plans/25-mobile-file-browser/decisions.md#f1--normas-e-a-sessão-encoberta)).
+Abrir para o `azp` ausente faria dele um jeito de contornar a regra.
+
 **A identidade do aparelho é o `installId`**, gerado pelo app na primeira execução e guardado no
 armazenamento seguro — não um identificador do SO. O identificador do SO é estável demais numa
 direção: persiste depois de desinstalar, o que é questão de privacidade. O `installId` some com o

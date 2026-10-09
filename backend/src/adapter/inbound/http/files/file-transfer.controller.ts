@@ -28,6 +28,7 @@ import { toValidationError } from '@shared/errors/zod';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
+import { ApprovedDeviceGuard } from './approved-device.guard';
 import { dispositionOf } from './content-disposition';
 import {
   archiveQuerySchema,
@@ -67,7 +68,7 @@ import { MultipartUpload } from './multipart-upload.reader';
  * See docs/architecture/backend/03-modules.md#files for every status.
  */
 @Controller('files')
-@UseGuards(BearerAuthGuard)
+@UseGuards(BearerAuthGuard, ApprovedDeviceGuard)
 export class FileTransferController {
   constructor(
     @Inject(ReadLimitsUseCase) private readonly limits: ReadLimitsUseCase,

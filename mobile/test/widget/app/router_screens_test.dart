@@ -11,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/features/files/files.dart';
+import 'package:remote_claude/features/files/files_providers.dart';
 import 'package:remote_claude/features/session/domain/repositories/insight_repository.dart';
 import 'package:remote_claude/app/app.dart';
 import 'package:remote_claude/core/config/app_config_provider.dart';
@@ -38,6 +40,7 @@ import 'package:remote_claude/features/workspace/workspace_providers.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
 
+import '../../support/fakes/fake_files_repository.dart';
 import '../../support/builders/config.dart';
 import '../../support/fakes/fake_insight_repository.dart';
 import '../../support/fakes/fake_auth_repository.dart';
@@ -102,6 +105,7 @@ void main() {
         workspaceRepositoryProvider.overrideWithValue(
           FakeWorkspaceRepository() as WorkspaceRepository,
         ),
+        filesRepositoryProvider.overrideWithValue(FakeFilesRepository()),
         appLoggerProvider.overrideWithValue(logger),
         deviceControllerAnswering(AsyncValue<RegisteredDevice?>.data(aRegisteredDevice())),
         pushControllerAnswering(AsyncValue<PushReach>.data(aReach())),
@@ -175,6 +179,22 @@ void main() {
     );
     // And the screen asked the server rather than trusting whoever sent it there (S-45).
     expect(permissions.lookedUp['request-8'], 1);
+  });
+
+  testWidgets('plan 25 · a file of a folder opens in the viewer, at an address that names both', (
+    WidgetTester tester,
+  ) async {
+    await pumpApp(tester);
+
+    container
+        .read(routerProvider)
+        .go(viewerRouteFor('/home/someone/my project', 'docs/a b.md', sessionId: 'session-3'));
+    await tester.pumpAndSettle();
+
+    final FileViewerPage viewer = tester.widget<FileViewerPage>(find.byType(FileViewerPage));
+    expect(viewer.folder, '/home/someone/my project');
+    expect(viewer.path, 'docs/a b.md');
+    expect(viewer.sessionId, 'session-3');
   });
 
   testWidgets('the history of a folder lives at an address that names the folder', (

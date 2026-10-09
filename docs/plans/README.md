@@ -40,7 +40,7 @@ Voltar para o [índice geral](../architecture/README.md).
 | 22 | [Histórico ao vivo](22-live-history/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 | 23 | [Permissões fluidas](23-fluid-permissions/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 | 24 | [Perguntas estruturadas](24-structured-questions/README.md) | ✅ concluído | `pnpm verify:full` sai com código 0 |
-| 25 | [Navegador de arquivos no app](25-mobile-file-browser/README.md) | 🔲 não iniciado | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
+| 25 | [Navegador de arquivos no app](25-mobile-file-browser/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 

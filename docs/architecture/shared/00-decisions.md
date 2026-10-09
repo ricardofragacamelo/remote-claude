@@ -810,3 +810,62 @@ o plano só está pronto no fim.
   aceito: a fase de E2E é a última, e é onde ela aparece.
 - Os e2e e o portão completo deixam de disputar a máquina a cada fase com outras sessões.
 
+
+---
+
+## ADR-024 — O app desenha Mermaid num WebView fora da tela, sem rede e sem navegação
+
+**Status:** aceita · 2026-10-09 · decorrência da [D-10 do plano 25](../../plans/25-mobile-file-browser/decisions.md#f0--spike-dos-motores),
+pelo critério que o usuário escolheu: o `merman` se a fidelidade passasse, senão o WebView. **Delimita**
+a regra "WebView é proibida" do [mobile/07](../mobile/07-auth.md#webview-é-proibida), que é sobre
+**login**, e não a revoga.
+
+**Contexto.** O app passa a mostrar a prévia de markdown da pasta, e um bloco `mermaid` vira diagrama
+([plano 25 · B-21](../../plans/25-mobile-file-browser/F4-markdown.md)). Não existe Mermaid nativo maduro
+em Flutter. O spike ([25 · F0](../../plans/25-mobile-file-browser/progress.md#medidas-do-spike-f0))
+mediu as duas saídas no emulador:
+
+- o **`merman`** (Rust por FFI) gera um SVG fiel ao `mermaid.js` 12.1 — com `theme: default` explícito,
+  os oito tipos saem praticamente iguais —, mas o pacote publicado só gera SVG (o PNG é de um build
+  próprio), e esse SVG estiliza os nós por `<style>` com classes, que o `flutter_svg` ignora: no
+  aparelho, fluxograma, estado, ER, Gantt e mindmap saem com os nós pretos. Desenhar fiel exigiria um
+  motor de CSS nosso, e ainda somaria 17,5 MB por ABI ao APK;
+- o **WebView com o `mermaid.min.js`** é o mesmo motor do web: os oito tipos saem iguais aos do
+  navegador, o PNG sai do `<canvas>` da própria página, e o custo é 1,6 MB de asset comprimido.
+
+**Decisão.** O app desenha Mermaid num **WebView que nunca entra na árvore de widgets**, e só a imagem
+que ele devolve aparece na tela. O WebView é delimitado assim, e cada item é verificado:
+
+1. **Fora da tela.** O `WebViewController` é criado sem `WebViewWidget`: ninguém toca, rola, digita ou
+   foca nele, e nenhum campo de texto existe na página.
+2. **Só o asset local.** A página e o `mermaid.min.js` são assets do app, carregados por
+   `loadFlutterAsset`. Toda navegação que não seja `file:///android_asset/` é recusada pelo
+   `NavigationDelegate`.
+3. **Sem rede.** CSP `default-src 'none'`, com `script-src` só para o arquivo local e o código inline da
+   página, `img-src data:` para o SVG virar imagem dentro dela. O app não pede nada a host nenhum por
+   causa de um diagrama.
+4. **O Mermaid como no web** ([ADR-020](#adr-020--diagrama-mermaid-é-svg-inline-sanitizado-em-três-camadas)):
+   `securityLevel: 'strict'`, rótulos em texto SVG (`htmlLabels: false`), `suppressErrorRendering` e as
+   chaves `secure` que um `%%{init}%%` do texto não troca. A versão é a do `web/` ([25 · D-20](../../plans/25-mobile-file-browser/decisions.md#f4--markdown-e-mermaid)).
+5. **Um canal só.** A página responde por um único `JavaScriptChannel`, com o id do pedido; o app não
+   expõe nenhum outro objeto ao JavaScript. Resposta de pedido que o app já deu por vencido é
+   descartada.
+6. **Imagem, não documento.** O diagrama chega ao Flutter como PNG e é mostrado por `Image.memory`:
+   nem script nem link do diagrama alcançam o app ([25 · D-18](../../plans/25-mobile-file-browser/decisions.md#f4--markdown-e-mermaid)).
+
+**O que a regra do login continua dizendo.** Login é sempre pela aba externa do sistema (Custom Tabs,
+`ASWebAuthenticationSession`). Um WebView visível, ou que receba o que a pessoa digita, continua
+proibido; esta ADR vale só para o motor de diagramas, nos seis itens acima.
+
+**Consequências.**
+
+- O Android usa **um processo de renderização por app** para todos os WebViews: um desenho que não
+  termina prende também um WebView novo. A UI do Flutter não trava (medido: 60 quadros por segundo com
+  o JavaScript em laço), mas o motor fica indisponível até o desenho terminar. Por isso o app aplica os
+  tetos do Mermaid antes de pedir (tamanho do código, `maxEdges`) e um *timeout* por pedido.
+- O primeiro diagrama paga a subida do WebView (~1,3 s no emulador); os seguintes, 35–350 ms.
+- O `flutter test` não roda WebView: o motor fica atrás da porta `DiagramEngine`, com fake, e o motor
+  real só roda no e2e.
+
+**O que a revoga.** Um motor nativo que desenhe os oito tipos fiel e sem WebView — o `merman` com PNG
+no pacote publicado, por exemplo. Aí esta ADR fica `Substituída`.

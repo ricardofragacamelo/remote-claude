@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { gatesFor, repositoryGates } from '../../../scripts/lib/gates.mjs';
+import {
+  COVERAGE_GATE_TIMEOUT_MS,
+  GATE_TIMEOUT_MS,
+  gatesFor,
+  repositoryGates,
+} from '../../../scripts/lib/gates.mjs';
 
 describe('repositoryGates', () => {
   // S-71 — cheapest first, and always in the same order.
@@ -33,6 +38,15 @@ describe('repositoryGates', () => {
 
   it('the short list is a prefix of the long one — the same gates, not similar ones', () => {
     expect(repositoryGates(true).slice(0, 7)).toEqual(repositoryGates(false));
+  });
+
+  // Plan 25, D-28 — the coverage of four modules in a row outgrew the fifteen minutes of the others.
+  it('gives the coverage gate a ceiling of its own, and every other gate the common one', () => {
+    for (const gate of repositoryGates(true)) {
+      const ceiling = gate.timeoutMs ?? GATE_TIMEOUT_MS;
+      expect(ceiling).toBe(gate.name === 'coverage' ? COVERAGE_GATE_TIMEOUT_MS : GATE_TIMEOUT_MS);
+    }
+    expect(COVERAGE_GATE_TIMEOUT_MS).toBeGreaterThan(GATE_TIMEOUT_MS);
   });
 
   it('every gate is an npm script, so a person runs exactly what CI runs', () => {

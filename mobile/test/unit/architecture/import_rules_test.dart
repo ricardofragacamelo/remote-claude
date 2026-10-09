@@ -35,6 +35,18 @@ const Map<String, String> violations = <String, String>{
       "import 'package:remote_claude/features/session/domain/entities/history_page.dart';\n",
   'lib/features/workspace/presentation/pages/_arch_workspace_reaches_transcript.dart':
       "import 'package:remote_claude/features/transcript/domain/entities/conversation_summary.dart';\n",
+  // Plan 25, B-07: the file browser, and an inside of it for the others to reach for (S-11).
+  'lib/features/files/domain/_arch_files_inside.dart': 'const int archInside = 0;\n',
+  'lib/features/session/presentation/pages/_arch_session_reaches_files.dart':
+      "import 'package:remote_claude/features/files/domain/_arch_files_inside.dart';\n",
+  'lib/features/workspace/presentation/pages/_arch_workspace_reaches_files.dart':
+      "import 'package:remote_claude/features/files/domain/_arch_files_inside.dart';\n",
+  'lib/features/files/presentation/_arch_files_knows_session.dart':
+      "import 'package:remote_claude/features/session/session.dart';\n",
+  'lib/features/files/presentation/_arch_files_knows_workspace.dart':
+      "import 'package:remote_claude/features/workspace/workspace.dart';\n",
+  'lib/features/files/presentation/_arch_files_reaches_permission.dart':
+      "import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';\n",
 };
 
 /// The rule each violation is expected to trip.
@@ -50,6 +62,12 @@ const Map<String, String> expectedRules = <String, String>{
   '_arch_session_knows_transcript.dart': 'session_never_imports_transcript',
   '_arch_transcript_reaches_session.dart': 'no_cross_feature_internals_session_from_transcript',
   '_arch_workspace_reaches_transcript.dart': 'no_cross_feature_internals_transcript',
+  // The file browser is reached through its barrel, and reaches neither screen it opens from.
+  '_arch_session_reaches_files.dart': 'no_cross_feature_internals_files_from_session',
+  '_arch_workspace_reaches_files.dart': 'no_cross_feature_internals_files_from_workspace',
+  '_arch_files_knows_session.dart': 'files_never_imports_session',
+  '_arch_files_knows_workspace.dart': 'files_never_imports_workspace',
+  '_arch_files_reaches_permission.dart': 'no_cross_feature_internals_permission_from_files',
 };
 
 Future<ProcessResult> runImportLint() =>

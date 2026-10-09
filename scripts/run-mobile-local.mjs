@@ -45,6 +45,7 @@ import {
   localDefines,
   pubspecVersion,
 } from './lib/mobile-local.mjs';
+import { prepareMermaid } from './lib/mermaid-asset.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { cleanupOnce, kill, onTermination, runToExit, startProc } from './lib/proc.mjs';
 import { HEALTH_PATH, loadDotEnv } from './lib/stack.mjs';
@@ -220,6 +221,12 @@ async function main() {
     if (!loaded) {
       hint('there is no .env: cp .env.example .env');
     }
+    return 1;
+  }
+
+  // The diagrams of the file viewer are the web's Mermaid, copied before the build — and a web on
+  // another Mermaid known before anything slow starts (plan 25, D-20).
+  if (!prepareMermaid(repoRoot)) {
     return 1;
   }
 

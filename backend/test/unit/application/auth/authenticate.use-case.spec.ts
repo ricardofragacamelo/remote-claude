@@ -7,7 +7,7 @@ import { InvalidUserIdError, TokenExpiredError } from '@domain/auth';
 const expiresAt = new Date('2026-09-13T12:15:00.000Z');
 
 const verifier = (subject: string): AccessTokenVerifier => ({
-  verify: () => Promise.resolve({ subject, expiresAt }),
+  verify: () => Promise.resolve({ subject, expiresAt, clientId: 'remote-claude-mobile' }),
 });
 
 describe('AuthenticateUseCase', () => {
@@ -16,6 +16,7 @@ describe('AuthenticateUseCase', () => {
 
     expect(authentication.userId.value).toBe('auth|42');
     expect(authentication.expiresAt).toEqual(expiresAt);
+    expect(authentication.clientId).toBe('remote-claude-mobile');
   });
 
   it('refuses a token whose subject claim is unusable', async () => {
