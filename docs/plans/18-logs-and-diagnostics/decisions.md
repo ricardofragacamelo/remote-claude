@@ -25,6 +25,7 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 | D-07 | Exportação: formato, teto, e se vai para a trilha | tamanho útil de um recorte; se exportar log de backend é fato de auditoria | B-04, B-14 | — | 🔲 |
 | D-08 | Logs e Saúde: uma entrada na navegação com duas sub-telas, ou duas entradas | como o plano 06 fecha a navegação | B-07 | — | 🔲 |
 | D-09 | Quem vê o quê na saúde | que item revela a máquina (caminhos, processo, outras pessoas) | B-05, B-28 | — | 🔲 |
+| D-17 | Ajuste às diretivas do plano 28: o que da saúde e dos logs é núcleo, e o que é da extensão do Claude | — (as normas estão no [plano 28](../28-agent-neutral-core/README.md) e na [discovery 10](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#9-planos-afetados)) | B-02, B-05, B-06, B-07, B-18, B-20, B-23, B-26, B-28, B-29, B-31 | 2026-10-10 · ajuste às diretivas do [plano 28](../28-agent-neutral-core/README.md) (isolamento, regras pelo dialeto, contrato canônico), pedido do usuário: os checks passivos e a sonda do Claude viram um `HealthCheck` registrado pela extensão `engines/claude/` no registro da [D-15](#d-15--a-fronteira-com-os-planos-07-12-e-13) (B-26); o núcleo ganha um item por motor pelo `describe()`, com os motivos neutros `HEALTH_AGENT_NOT_INSTALLED` e `HEALTH_AGENT_NOT_AUTHENTICATED` no lugar de `HEALTH_CLAUDE_CLI_MISSING` e `HEALTH_CLAUDE_NOT_LOGGED_IN` (B-06, B-26); a sonda sai de `POST /diagnostics/health/claude-probe` para `POST /engines/claude/diagnostics/probe`, e o kind `diagnostics.claudeProbed` vira `claude.diagnosticsProbed`, da extensão (B-05, B-06, B-26, B-28); a categoria "Claude" vira uma por motor de `GET /engines` (B-05, B-29); a camada "SDK" do rastreio vira "motor", e os filtros de `op` usam `engine.*` (B-18, B-20); textos com `{agent}` e `engines.claude.diagnostics.*` (B-02, B-07, B-23, B-29, B-31). 2026-10-10 (revisão dos gaps do 28): o usuário decidiu que nenhum kind de auditoria tem nome de motor ([28 · D-10](../28-agent-neutral-core/decisions.md#f6--extensões-isoladas)) — o da sonda é `engine.diagnosticsProbed`, com o motor no payload, e não `claude.diagnosticsProbed` (B-06, B-26, S-104); e que toda rota REST tem tipo gerado ([28 · D-09](../28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)) — as rotas novas deste plano, as do núcleo e a `POST /engines/claude/diagnostics/probe` da extensão, nascem em `packages/contracts/schema/http/` (B-04, B-05) | ✅ |
 
 ### D-01 — a fronteira com o plano 05 · F1
 
@@ -163,6 +164,30 @@ resposta — nunca a tela escondendo o que recebeu.
 
 ---
 
+### D-17 — ajuste às diretivas do plano 28
+
+O [plano 28](../28-agent-neutral-core/README.md) roda antes deste e muda **onde** e **em que forma**
+ele constrói, não **o que** ele entrega. A linha de corte:
+
+- **núcleo** (`diagnostics`, `/diagnostics/*`, `web/src/features/diagnostics/`): o executor, o
+  registro e a tela; um item por motor habilitado, lido do `describe()` da porta de motor (instalado,
+  versão, autenticado), com os motivos neutros `HEALTH_AGENT_*` e `params.engine`; a categoria é o
+  motor, pelo `displayName` do `GET /engines`; as linhas da borda do motor são `engine.*`, com
+  `engine` e `engineVersion`, e o rastreio chama a camada de "motor";
+- **extensão do Claude** (`*/engines/claude/`, `web/src/engines/claude/diagnostics/`, chaves
+  `engines.claude.diagnostics.*` e `engines.claude.health.*`): o `HealthCheck` com o que só o Claude
+  tem (versão do SDK, caminho do CLI, `CLAUDE_CONFIG_DIR`), o "o que fazer" de instalação e login, e
+  a sonda ativa com a sua rota (`POST /engines/claude/diagnostics/probe`), o seu `scope`
+  (`claudeProbe`) e o seu kind de trilha (`engine.diagnosticsProbed`, com o motor no payload — nenhum
+  kind leva nome de motor, [28 · D-10](../28-agent-neutral-core/decisions.md#f6--extensões-isoladas)).
+
+Toda rota nova, do núcleo ou da extensão, nasce com o tipo gerado em `packages/contracts/schema/http/`
+([28 · D-09](../28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)).
+
+A [D-15](#d-15--a-fronteira-com-os-planos-07-12-e-13) já desenhava o ponto de extensão certo: um
+registro de checks com múltiplos provedores. A extensão do Claude é mais um provedor, como os planos
+07, 12 e 13. A D-14 continua aberta — muda só o nome da rota e do kind.
+
 ## F1 — Backend dos logs
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
@@ -240,7 +265,8 @@ query efêmera responde versão e estado de login **sem** enviar prompt e sem cu
 `CLAUDE_CONFIG_DIR` resolvido — lembrando o defeito do vazio corrigido no plano 04 —, logado ou não);
 **sonda ativa** (um prompt mínimo de verdade) só por clique do operador, com aviso de que consome o
 plano do Claude, uma de cada vez (`409` se já há uma), com ritmo, e registrada na trilha
-(`diagnostics.claudeProbed`: resultado e duração, nunca o texto).
+(`engine.diagnosticsProbed`, kind da extensão, com o motor no payload — [D-17](#d-17--ajuste-às-diretivas-do-plano-28): resultado e duração,
+nunca o texto).
 
 ### D-15 — a fronteira com os planos 07, 12 e 13
 
@@ -252,7 +278,10 @@ watchers e o [12](../12-integrated-terminal/README.md) abre terminais.
 múltiplos provedores) e da tela; entrega os checks mínimos do Claude sem depender do 13. Cada plano
 registra o seu quando existir — o 13 substitui o check de login pelo dele e a tela dele aponta para
 cá; o 07 registra watchers abertos, o 12 terminais abertos, cada um com contagem e teto. Item de
-plano ausente não aparece (sem "desconhecido" que ninguém pode resolver).
+plano ausente não aparece (sem "desconhecido" que ninguém pode resolver). Com o
+[plano 28](../28-agent-neutral-core/README.md), as **extensões de motor** são provedores do mesmo
+registro: os checks do Claude são um `HealthCheck` registrado por `engines/claude/`
+([D-17](#d-17--ajuste-às-diretivas-do-plano-28)).
 
 ### D-16 — cache e frequência
 

@@ -22,19 +22,21 @@ O **registro de tipos** do web que a [B-06](F0-contract.md) contratou: por `kind
 | Tipo | Frase (exemplo) | Vínculo |
 |---|---|---|
 | `device.registered` / `approved` / `revoked` / `expired` | "O celular «Pixel 8» foi aprovado por você" | histórico do aparelho ([plano 17](../17-devices/README.md)) |
-| `permission.ruleGranted` / `ruleRevoked` | "Você deixou o Claude rodar `pnpm test:*` nesta pasta sem perguntar, até 12/10" | a regra, em qualquer estado ([03 · D-18](../03-rules-and-audit/decisions.md#d-18--a-regra-revogada-tem-endereço)) |
+| `permission.ruleGranted` / `ruleRevoked` | "Você deixou o `{agent}` rodar `pnpm test` e o que vier depois nesta pasta sem perguntar, até 12/10" — o alcance vem da descrição da regra na gramática canônica, montada pelo domínio no backend, nunca do padrão lido no cliente | a regra, em qualquer estado ([03 · D-18](../03-rules-and-audit/decisions.md#d-18--a-regra-revogada-tem-endereço)) |
 | `session.resumed` / `session.forked` | "Você continuou uma conversa desta pasta" · "…uma conversa começada fora, numa cópia nova" | a conversa |
 | `session.filesRewound` | "Você desfez o turno «…»: 3 arquivos restaurados, 1 preservado porque foi alterado à mão" | a lista de arquivos, com o que aconteceu a cada um |
 | `audit.exported` | "Você exportou 1 240 invocações (CSV)" | o filtro usado, reaplicável |
 
 Os `kind` que os planos 07, 11, 12, 13, 15 e 17 acrescentarem entram por eles, com a explicação na mesma
-entrega (regra da B-06). Tipo desconhecido: nome técnico e "esta versão não sabe explicar este tipo"
+entrega (regra da B-06); os de uma extensão de motor são `engine.*`, com o motor no payload, e a explicação
+que só um motor tem vem do registro de `web/src/engines/<motor>/`. Tipo desconhecido: nome técnico e "esta versão não sabe explicar este tipo"
 (S-116). Desfazer com muitos arquivos mostra os primeiros e "mais N" (S-117); regra revogada abre no
 estado dela (S-118).
 
 ### B-27 — Ir ao ponto exato da conversa 🔲
 
-Pela D-13. No backend, `GET /transcripts/:id/messages` ganha `aroundToolUseId` — a página de mensagens em
+Pela D-13. No backend, `GET /transcripts/:engine/:id/messages` (a rota da conversa como `{ engine, id }`,
+desde a F1 do [plano 28](../28-agent-neutral-core/F1-engine-port.md)) ganha `aroundToolUseId` — a página de mensagens em
 volta do bloco `tool_use` daquela invocação, pelo mesmo cache e coalescência do
 [plano 04](../04-transcript-and-resume/README.md), com `INVALID_INPUT` quando o bloco não está no
 transcript (S-121) e `NOT_FOUND` quando a conversa sumiu do disco (S-120); contrato atualizado em
@@ -45,16 +47,26 @@ não oferece o link e diz por quê (S-122).
 
 ### B-28 — O diff da invocação 🔲
 
-Para `Edit` e `MultiEdit`, o diff sai do **próprio input** (`old_string` → `new_string`, por edição) — uma
-função pura, sem ler disco, sem rota nova. `Write` não tem "antes" no input, e a tela diz isso; quando o
-plano 08 entregar o diff por tool (`GET /sessions/:id/tools/:toolUseId/diff`), "abrir diff completo"
-leva a ele (S-123). O diff nunca é gravado: é o input, mostrado de outro jeito.
+O diff é **do backend** ([D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28)): o web nunca lê
+`old_string`, `new_string` nem campo nenhum do input. `GET /audit/invocations/:id/diff` (B-03) responde
+na forma de `GET /sessions/:id/tools/:toolUseId/diff`, montado do input gravado pelo `FileChange` que o
+classificador do adapter extrai ([plano 28 · F2](../28-agent-neutral-core/F2-canonical-tools.md)) e pela
+mesma regra pura `toolDiffOf`, sem ler disco: uma edição (`file.edit`) sai com `scope: edit`; um
+`file.write` não tem "antes" no input, e sai com `before.state: unavailable`, que a tela explica. Com a
+sessão viva, "abrir diff completo" leva à rota da sessão, que tem o snapshot (S-123). O diff nunca é
+gravado: é o input, mostrado de outro jeito.
 
 ### B-29 — Comparar com a regra que respondeu 🔲
 
 Na invocação respondida por uma regra gravada: o padrão da regra (`GET /permission-rules/:id`, que já
-existe), o comando ou caminho do input, e **a parte que casou** destacada — "a regra `Bash(pnpm test:*)`
-respondeu porque o comando começa com `pnpm test`" (S-124). Regra de sessão, que nunca foi gravada, não
+existe; na gramática canônica, mostrado como está — `shell(pnpm test:*)`), o `subject` da invocação, e
+**a parte que casou** destacada — "a regra respondeu porque o comando começa com `pnpm test`" (S-124).
+Quem diz o que casou é o backend, pelo domínio de `permission`, que é dono do parser, do casamento e da
+descrição (`messageKey` + `params`) da gramática canônica
+([plano 28 · F5](../28-agent-neutral-core/F5-permission-dialect.md), o `reach` do
+[plano 15 · B-02](../15-rules-management/F0-contract.md)) — não o `RuleDialect`, que só traduz; o web
+não compara padrão com comando ([D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28)). A regra que a migração do 28 desligou, por não ter
+tradução inequívoca, não oferece a parte que casou: mostra o padrão antigo como texto e o motivo (S-152). Regra de sessão, que nunca foi gravada, não
 oferece comparação e diz por quê (S-125); regra que não existe é `PERMISSION_RULE_NOT_FOUND` (S-126).
 Quando o [plano 15](../15-rules-management/README.md) entregar o `evaluate`, a explicação passa a vir
 dele — a mesma precedência pura, sem uma segunda implementação no cliente.
@@ -78,8 +90,8 @@ agendada. O contrato de `GET /audit/export` em `backend/03` passa a citá-la (S-
   indisponível não exporta — `INTERNAL_ERROR` com `audit.error.unavailable` (S-129);
 - sai por streaming, página a página pelo mesmo leitor da lista — as mesmas invocações que a lista traria
   (S-127); cliente que aborta interrompe a leitura (S-132);
-- CSV com as células que começam com `=`, `+`, `-`, `@`, tab ou CR neutralizadas (S-130); `Read` só com
-  caminho e janela (S-131); filtro pela sessão de outra pessoa é `403` (S-134);
+- CSV com as células que começam com `=`, `+`, `-`, `@`, tab ou CR neutralizadas (S-130); `file.read` só
+  com o `subject` e a janela, pelo mesmo `disclosedInput` por `kind` da B-10 (S-131); filtro pela sessão de outra pessoa é `403` (S-134);
 - exportar duas vezes é dois fatos (S-133); log de I/O com filtro, formato, contagem e duração.
 
 ### B-32 — Exportar: a tela 🔲
@@ -100,7 +112,7 @@ trilha — responde `404` e a tela oferece "tentar de novo" (S-138).
 ### B-34 — Ajuda dos eventos, do diff, da regra e da exportação 🔲
 
 A gaveta de ajuda da B-25 ganha: cada tipo de evento em palavras; o que o diff mostra e o que não mostra
-(o `Write` sem "antes"); o que a comparação com a regra quer dizer; o que o arquivo exportado contém, por
+(o `file.write` sem "antes"); o que a comparação com a regra quer dizer; o que o arquivo exportado contém, por
 que o input vai inteiro, e por que a própria exportação fica na trilha (S-139). Tooltips e atalhos das ações
 novas na command palette, como na B-25.
 
@@ -108,7 +120,7 @@ novas na command palette, como na B-25.
 
 ## Cenários cobertos
 
-S-115…S-139.
+S-115…S-139, S-152.
 
 ---
 

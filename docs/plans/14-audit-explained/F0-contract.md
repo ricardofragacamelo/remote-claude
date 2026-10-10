@@ -3,8 +3,9 @@
 Plano: [14 — Auditoria explicada](README.md) · Cenários: [scenarios.md](scenarios.md) · Progresso: [progress.md](progress.md)
 
 **Depende de:** nada dentro do plano. Fora dele, do [plano 03](../03-rules-and-audit/README.md)
-concluído (a trilha consultável e a retenção) e da moldura de tela do
-[plano 06](../06-workbench/README.md) só a partir da F2.
+concluído (a trilha consultável e a retenção), do [plano 28](../28-agent-neutral-core/README.md)
+concluído (o contrato canônico e o anel `engines/claude/` — [D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28))
+e da moldura de tela do [plano 06](../06-workbench/README.md) só a partir da F2.
 **Entrega:** o desfecho medido contra o Claude de verdade, e o contrato inteiro escrito onde o resto
 do repositório lê — `backend/03`, `backend/05`, o catálogo de erros e o `web/03` — antes de uma linha
 de código.
@@ -49,20 +50,27 @@ O resultado vai para uma seção nova da [descoberta](../../discovery/01-descobe
 (o registro dos spikes) e alimenta a [D-01](decisions.md#d-01--onde-mora-o-desfecho). As fixtures
 gravadas entram no SDK falso: é delas que a F1 e a F4 tiram os cenários, em CI, sem o Claude real.
 
+O spike é **do adapter do Claude** ([D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28)): os hooks,
+o prefixo `Exit code N` e o `tool_use_id` são como **o Claude** entrega o desfecho, e quem os lê é
+`adapter/outbound/engines/claude/`. O núcleo só conhece o desfecho canônico que o adapter traduz
+(status, duração, código de saída), e é esse o contrato que a B-02 escreve.
+
 ### B-02 — `backend/03` e `backend/05`: o desfecho, o vínculo e a leitura nova 🔲
 
 Atualiza os dois documentos normativos, na mesma entrega, conforme as decisões D-01…D-07:
 
 - [backend/05 · a trilha](../../architecture/backend/05-persistence.md#a-trilha-de-auditoria): a linha de
-  desfecho (onde mora, que colunas, que `CHECK`), as colunas de vínculo (`workspace_path`,
-  `claude_session_id`, `prompt_id`, `tracks_outcome`), o `device_id` que deixa de ser sempre nulo, o
+  desfecho (onde mora, que colunas, que `CHECK`), as colunas de vínculo (`workspace_path`, `engine` e
+  `conversation_id` — a `ConversationRef` do [plano 28](../28-agent-neutral-core/README.md), no lugar de
+  um `claude_session_id` —, `prompt_id`, `tracks_outcome`), o `tool_kind` que a F5 do 28 pôs ao lado
+  do `tool_name`, o `device_id` que deixa de ser sempre nulo, o
   índice de busca — e, **escrito de novo e sem mudança**, que a trigger, o piso e a purga continuam
   valendo para as linhas novas. A seção "Auditoria — append-only" do mesmo documento ainda diz que o
   append-only é "garantido por permissão de role", o que a D-06 do plano 01 trocou por trigger, e
   que a escrita de auditoria acontece "na mesma transação da decisão", quando a linha de decisão é
   gravada depois, sem ser esperada (`RecordDecisionOnResolved`): a B-02 corrige as duas frases;
-- [backend/03 · audit](../../architecture/backend/03-modules.md#audit): o hook de desfecho (registra,
-  **nunca** recusa — a tool já rodou), a invocação como unidade, a linha do tempo com os eventos, as
+- [backend/03 · audit](../../architecture/backend/03-modules.md#audit): o desfecho canônico que o
+  adapter do motor entrega (registra, **nunca** recusa — a tool já rodou), a invocação como unidade, a linha do tempo com os eventos, as
   rotas novas, e as setas novas do diagrama de fronteiras — a leitura de `audit` passa a consultar
   `transcript` (título) e `session` (sessão viva, procedência). `audit` continua **write-only para os
   outros**: ninguém que escreve recebe como ler.
@@ -74,18 +82,26 @@ cada uma, no formato que `GET /audit-entries` já usa:
 
 | Rota | Para quê |
 |---|---|
-| `GET /audit/timeline` | a linha do tempo: invocações e eventos (D-03), filtros `types`, `sessionId`, `folder`, `toolName`, `decision`, `outcome`, `q`, `from`, `to`, `toolUseId`; `cursor` composto; `limit` 1…100 |
-| `GET /audit/invocations/:id` | uma invocação: a linha do tempo inteira e os vínculos |
+| `GET /audit/timeline` | a linha do tempo: invocações e eventos (D-03), filtros `types`, `sessionId`, `folder`, `kind` (o tipo canônico da ferramenta), `tool` (o nome nativo, opaco — o `origin.native`, só comparado por igualdade), `decision`, `outcome`, `q`, `from`, `to`, `toolUseId`; `cursor` composto; `limit` 1…100 |
+| `GET /audit/invocations/:id` | uma invocação: a linha do tempo inteira e os vínculos; cada uma com `kind`, `label` e `subject` canônicos e `origin { engine, native }` |
+| `GET /audit/invocations/:id/diff` | o diff de uma invocação `file.*`, na forma de `GET /sessions/:id/tools/:toolUseId/diff`, montado pelo backend do input gravado (B-28) |
 | `GET /audit/events/:id` | um evento de conta, com `details` e vínculos |
-| `GET /audit/summary` | as contagens do período para o cabeçalho: por decisão, desfecho, tool e pasta |
-| `GET /audit/facets` | o que os seletores oferecem: sessões (pasta, título, datas, contagem), tools vistas, pastas |
+| `GET /audit/summary` | as contagens do período para o cabeçalho: por decisão, desfecho, `kind` e pasta |
+| `GET /audit/facets` | o que os seletores oferecem: sessões (pasta, título, datas, contagem), os `kind` e as ferramentas nativas vistas (com `label`), pastas |
 | `GET /audit/export` | o recorte filtrado como arquivo — contrato escrito aqui, rota implementada na F3 depois da ADR |
 | `GET/POST/PATCH/DELETE /audit/views` | visões salvas, se a [D-10](decisions.md#d-10--visões-salvas) as puser no servidor |
 
 Toda rota responde `200` com página ou recurso; `400 INVALID_INPUT` para o que não se entende; `403
 FORBIDDEN` para o que é de outra pessoa ([03 · D-17](../03-rules-and-audit/decisions.md#d-17--a-trilha-de-outro-é-a-sessão-de-outro));
 `404`/`410` conforme a [D-07](decisions.md#d-07--a-invocação-que-passou-dos-90-dias). `GET /audit-entries`
-fica como está (S-70). Os endpoints novos entram nos limites de taxa do
+fica como está (S-70).
+
+Cada rota nova desta tabela — `GET /audit/invocations/:id/diff` inclusive — nasce com schema em
+`packages/contracts/schema/http/`, com o tipo gerado para TypeScript e Dart
+([28 · D-09](../28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)); a
+[B-48 do 28](../28-agent-neutral-core/F6-engine-extensions.md#b-48--o-resto-do-rest-no-pacote-contracts-)
+já pôs lá as de `/audit-entries`, e o `contracts:check` reprova a rota sem schema. O web lê as respostas
+pelos tipos gerados, nunca por tipo escrito à mão em `features/audit/types/`. Os endpoints novos entram nos limites de taxa do
 [plano 05](../05-hardening-operations/README.md) quando ele chegar.
 
 ### B-04 — Os códigos novos, no catálogo e nas duas línguas 🔲
@@ -132,6 +148,15 @@ entrega, a explicação dele no registro de tipos do web** (frase, ícone, vínc
 lista `AUDIT_EVENT_KINDS` do domínio com o registro do web e reprova o kind sem explicação (S-05). Tipo
 que a tela não conhece continua aparecendo, com o nome técnico e "esta versão não sabe explicar este
 tipo" (S-116) — nunca some.
+
+O registro é **neutro** ([D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28)): **nenhum** kind tem nome de motor
+([28 · D-10](../28-agent-neutral-core/decisions.md#f6--extensões-isoladas)), e a frase usa `{agent}` quando
+nomeia o agente. Os do núcleo seguem o módulo (`agentSettings.defaultsChanged`, `mcp.*`); os que uma
+extensão grava são `engine.*`, com o motor no payload (`engine.pluginAdded`, `engine.pluginUpdated`,
+`engine.pluginToggled`, `engine.pluginRemoved`, `engine.skillSourceToggled`, `engine.diagnosticsProbed`) —
+nunca `claude.*`. O registro do núcleo explica cada `engine.*` com o `{agent}` tirado do payload, e o que
+for de um motor só (o que é um plugin ou uma fonte de skill no Claude) é explicação a mais que
+`web/src/engines/claude/` registra; o teste da S-05 compara a lista do domínio com a soma dos dois.
 
 ---
 

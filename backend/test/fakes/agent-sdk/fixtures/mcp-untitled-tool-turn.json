@@ -1,0 +1,1058 @@
+{
+  "$comment": "Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. Do not edit by hand — re-record instead. See docs/plans/01-live-session/F2-session-runtime.md.",
+  "name": "mcp-untitled-tool-turn",
+  "why": "plan 26, B-02 — a tool of an MCP server called with no title: the name the CLI gives it, which the app labels `fixture · echo`",
+  "prompt": "Call the echo tool of the fixture MCP server with the text parity. Then reply with exactly what it returned, and nothing else.",
+  "options": {
+    "strictMcpConfig": true,
+    "mcpServers": {
+      "fixture": {
+        "type": "stdio",
+        "command": "node",
+        "args": [
+          "/home/user/projects/remote-claude/e2e/fixtures/mcp-server/fixture-mcp-server.mjs",
+          "--name",
+          "fixture"
+        ]
+      }
+    }
+  },
+  "recordedAt": "2026-10-10",
+  "sdkVersion": "0.3.277",
+  "counts": { "messages": 36, "preToolUse": 2, "canUseTool": 1 },
+  "preToolUse": [
+    { "toolName": "ToolSearch", "toolUseId": "toolu_01UfbMLyXmAwG77EamKBHyUb", "effort": "high" },
+    {
+      "toolName": "mcp__fixture__echo",
+      "toolUseId": "toolu_01WHRXm9tU1kjBAbB6KKEhMV",
+      "effort": "high"
+    }
+  ],
+  "canUseTool": [{ "toolName": "mcp__fixture__echo", "input": { "text": "parity" } }],
+  "stderr": [],
+  "history": [
+    {
+      "type": "user",
+      "uuid": "9473a264-f83d-48b0-a721-df13e7f49d1d",
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "message": {
+        "role": "user",
+        "content": "Call the echo tool of the fixture MCP server with the text parity. Then reply with exactly what it returned, and nothing else."
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-10T02:52:08.858Z"
+    },
+    {
+      "type": "assistant",
+      "uuid": "05c55729-2cd1-4aa8-8320-d594a3b21f3a",
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfsoHrEHzNKFuph1cuCHV",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01UfbMLyXmAwG77EamKBHyUb",
+            "name": "ToolSearch",
+            "input": { "query": "select:mcp__fixture__echo", "max_results": 1 },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3606,
+          "cache_read_input_tokens": 12060,
+          "output_tokens": 84,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+          "service_tier": "standard",
+          "cache_creation": { "ephemeral_1h_input_tokens": 3606, "ephemeral_5m_input_tokens": 0 },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 84,
+              "cache_read_input_tokens": 12060,
+              "cache_creation_input_tokens": 3606,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 3606
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-10T02:52:11.457Z"
+    },
+    {
+      "type": "user",
+      "uuid": "3a903a13-e293-4872-957d-67352b9684f1",
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "tool_use_id": "toolu_01UfbMLyXmAwG77EamKBHyUb",
+            "content": [{ "type": "tool_reference", "tool_name": "mcp__fixture__echo" }]
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-10T02:52:11.483Z"
+    },
+    {
+      "type": "assistant",
+      "uuid": "63228ce7-c704-4495-a157-7f5de4d50640",
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfsoHyKCXgtSjJxF9cdTy",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01WHRXm9tU1kjBAbB6KKEhMV",
+            "name": "mcp__fixture__echo",
+            "input": { "text": "parity" },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 210,
+          "cache_read_input_tokens": 15666,
+          "output_tokens": 55,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+          "service_tier": "standard",
+          "cache_creation": { "ephemeral_1h_input_tokens": 210, "ephemeral_5m_input_tokens": 0 },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 55,
+              "cache_read_input_tokens": 15666,
+              "cache_creation_input_tokens": 210,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 210
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-10T02:52:12.770Z"
+    },
+    {
+      "type": "user",
+      "uuid": "67321b7f-da50-4fd3-a25f-3ad818426982",
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_01WHRXm9tU1kjBAbB6KKEhMV",
+            "type": "tool_result",
+            "content": [{ "type": "text", "text": "parity" }]
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-10T02:52:12.796Z"
+    },
+    {
+      "type": "assistant",
+      "uuid": "1ced14db-3d23-488d-b15f-9cba41897ac6",
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfsoJ4SWs6cfqrpVPFY7Z",
+        "type": "message",
+        "role": "assistant",
+        "content": [{ "type": "text", "text": "parity" }],
+        "container": null,
+        "stop_reason": "end_turn",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 86,
+          "cache_read_input_tokens": 15876,
+          "output_tokens": 4,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+          "service_tier": "standard",
+          "cache_creation": { "ephemeral_1h_input_tokens": 86, "ephemeral_5m_input_tokens": 0 },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 4,
+              "cache_read_input_tokens": 15876,
+              "cache_creation_input_tokens": 86,
+              "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 86 },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-10T02:52:13.796Z"
+    }
+  ],
+  "messages": [
+    {
+      "type": "system",
+      "subtype": "init",
+      "cwd": "/workspace",
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "tools": [
+        "Task",
+        "AskUserQuestion",
+        "Bash",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DesignSync",
+        "Edit",
+        "EnterPlanMode",
+        "EnterWorktree",
+        "ExitPlanMode",
+        "ExitWorktree",
+        "ListAgents",
+        "Monitor",
+        "NotebookEdit",
+        "PushNotification",
+        "Read",
+        "RemoteTrigger",
+        "ReportFindings",
+        "ScheduleWakeup",
+        "SendMessage",
+        "ShareOnboardingGuide",
+        "Skill",
+        "TaskStop",
+        "ToolSearch",
+        "WebFetch",
+        "WebSearch",
+        "Workflow",
+        "Write",
+        "mcp__fixture__echo",
+        "mcp__fixture__env_names",
+        "mcp__fixture__peek",
+        "mcp__fixture__secret"
+      ],
+      "mcp_servers": [{ "name": "fixture", "status": "connected", "source": "dynamic" }],
+      "model": "claude-opus-5[1m]",
+      "permissionMode": "default",
+      "slash_commands": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator",
+        "advisor",
+        "agents",
+        "auto-mode-setup",
+        "autocompact",
+        "clear",
+        "color",
+        "compact",
+        "config",
+        "output-style",
+        "context",
+        "effort",
+        "fast",
+        "heapdump",
+        "init",
+        "mcp",
+        "import",
+        "model",
+        "__remote-workflow",
+        "workflow-launch-exec",
+        "reload-plugins",
+        "reload-skills",
+        "rename",
+        "security-review",
+        "usage-credits",
+        "extra-usage",
+        "usage",
+        "insights",
+        "recap",
+        "skill-doctor",
+        "goal",
+        "design-consent",
+        "design-revoke",
+        "list-agents",
+        "team-onboarding"
+      ],
+      "terminal_slash_commands": ["doctor", "color", "reload-plugins"],
+      "apiKeySource": "none",
+      "claude_code_version": "2.1.277",
+      "output_style": "default",
+      "agents": ["claude", "Explore", "general-purpose", "Plan", "statusline-setup"],
+      "skills": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator"
+      ],
+      "plugins": [{ "name": "agents-md", "path": "builtin", "source": "agents-md@builtin" }],
+      "capabilities": ["interrupt_receipt_v1", "interrupt_cancel_queued_v1", "msg_lifecycle_v1"],
+      "analytics_disabled": false,
+      "product_feedback_disabled": false,
+      "uuid": "78113b20-3cc5-47f7-a2ba-e39cf40800c4",
+      "memory_paths": { "auto": "/home/user/.claude/projects/-workspace/memory/" },
+      "messaging_socket_path": "/run/user/1000/cc-socks/32420.sock",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required"
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "uuid": "edba420f-7557-4671-b8ac-237a793d9420"
+    },
+    {
+      "type": "rate_limit_event",
+      "rate_limit_info": {
+        "status": "allowed",
+        "resetsAt": 1791617400,
+        "rateLimitType": "five_hour",
+        "overageStatus": "rejected",
+        "overageDisabledReason": "out_of_credits",
+        "isUsingOverage": false,
+        "unifiedWindows": {
+          "five_hour": { "utilization": 0.07, "resetsAt": 1791617400 },
+          "seven_day": { "utilization": 0.31, "resetsAt": 1792083600 }
+        }
+      },
+      "uuid": "c3f27cda-4f66-4038-9e28-0d378c456e76",
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011CfsoHrEHzNKFuph1cuCHV",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 3606,
+            "cache_read_input_tokens": 12060,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 3606 },
+            "output_tokens": 24,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "b3990b9c-ebb4-455d-a109-9bed69660c3f",
+      "ttft_ms": 1394
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01UfbMLyXmAwG77EamKBHyUb",
+          "name": "ToolSearch",
+          "input": {},
+          "caller": { "type": "direct" }
+        }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "51d9cf4f-03da-457e-b798-0455512a286b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "" }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "cc138ddb-0f90-40a7-897e-a760bf60ef56"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"query\": \"select:" }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "4a91a62b-22cc-409d-a640-df257e29b76e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "mcp__fixture__" }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "588e0951-641e-4ac3-b34c-1fdb16e31d7f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "echo" }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "4bdf5603-c879-4f53-8615-71bca0aa3417"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "\", \"max_results\": 1" }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "5c37235e-afdd-4e42-9c17-7d1662e43ec5"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "}" }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "22e5cf2b-09b2-4b02-ac16-cf75306bb74a"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfsoHrEHzNKFuph1cuCHV",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01UfbMLyXmAwG77EamKBHyUb",
+            "name": "ToolSearch",
+            "input": { "query": "select:mcp__fixture__echo", "max_results": 1 },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3606,
+          "cache_read_input_tokens": 12060,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 3606 },
+          "output_tokens": 24,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "uuid": "05c55729-2cd1-4aa8-8320-d594a3b21f3a",
+      "timestamp": "2026-10-10T02:52:11.457Z",
+      "request_id": "req_011CfsoHqux1EWpLxZ6Exk2H",
+      "wire_tool_inputs": {
+        "toolu_01UfbMLyXmAwG77EamKBHyUb": { "query": "select:mcp__fixture__echo", "max_results": 1 }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "d8c47dad-dd19-40f8-92c8-d90962fb3d25"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3606,
+          "cache_read_input_tokens": 12060,
+          "output_tokens": 84,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 84,
+              "cache_read_input_tokens": 12060,
+              "cache_creation_input_tokens": 3606,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 3606
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "f178724a-a55c-45c7-a934-d45e9e952d63"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "e00668bf-f549-47bd-aa0a-5f98f0785d50"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "tool_use_id": "toolu_01UfbMLyXmAwG77EamKBHyUb",
+            "content": [{ "type": "tool_reference", "tool_name": "mcp__fixture__echo" }]
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "uuid": "3a903a13-e293-4872-957d-67352b9684f1",
+      "timestamp": "2026-10-10T02:52:11.483Z",
+      "tool_use_result": {
+        "matches": ["mcp__fixture__echo"],
+        "query": "select:mcp__fixture__echo",
+        "total_deferred_tools": 20
+      }
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "uuid": "2066a51a-7b00-48e6-b5d6-6342806ae1ce"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011CfsoHyKCXgtSjJxF9cdTy",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 210,
+            "cache_read_input_tokens": 15666,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 210 },
+            "output_tokens": 24,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "5e7245c4-9267-4d3d-9626-6dbd79e9e0dd",
+      "ttft_ms": 1025
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01WHRXm9tU1kjBAbB6KKEhMV",
+          "name": "mcp__fixture__echo",
+          "input": {},
+          "caller": { "type": "direct" }
+        }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "28366bfc-1277-49a1-bca6-26de9c570501"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "" }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "59909e15-157e-4c9d-a776-9b357b9cb3b5"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"text\": \"parity" }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "d5e50cf8-12e3-42dd-8a4c-58d55b7eaba7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "e57b2a0c-fb11-40cc-92b9-73c21395dc9d"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfsoHyKCXgtSjJxF9cdTy",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01WHRXm9tU1kjBAbB6KKEhMV",
+            "name": "mcp__fixture__echo",
+            "input": { "text": "parity" },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 210,
+          "cache_read_input_tokens": 15666,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 210 },
+          "output_tokens": 24,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "uuid": "63228ce7-c704-4495-a157-7f5de4d50640",
+      "timestamp": "2026-10-10T02:52:12.770Z",
+      "request_id": "req_011CfsoHy166gQBQ1JxuGdCx",
+      "wire_tool_inputs": { "toolu_01WHRXm9tU1kjBAbB6KKEhMV": { "text": "parity" } },
+      "tool_use_meta": [
+        {
+          "id": "toolu_01WHRXm9tU1kjBAbB6KKEhMV",
+          "display_name": "Echo",
+          "server_display_name": "fixture"
+        }
+      ]
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "ae380721-253c-4b24-83c7-e27c821c0c9b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 210,
+          "cache_read_input_tokens": 15666,
+          "output_tokens": 55,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 55,
+              "cache_read_input_tokens": 15666,
+              "cache_creation_input_tokens": 210,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 210
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "5387b0f4-cf2e-4ecb-a977-dbb6fa1d9228"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "1e6b8990-3e1b-41b4-a8e5-f15b56911b22"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_01WHRXm9tU1kjBAbB6KKEhMV",
+            "type": "tool_result",
+            "content": [{ "type": "text", "text": "parity" }]
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "uuid": "67321b7f-da50-4fd3-a25f-3ad818426982",
+      "timestamp": "2026-10-10T02:52:12.796Z",
+      "tool_use_result": [{ "type": "text", "text": "parity" }]
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "uuid": "c6d1da59-ed35-42cd-80ec-156fdce2fc3c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011CfsoJ4SWs6cfqrpVPFY7Z",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 86,
+            "cache_read_input_tokens": 15876,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 86 },
+            "output_tokens": 4,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "8a731763-1bad-4d1f-b3e6-a7e77701c872",
+      "ttft_ms": 975
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": { "type": "text", "text": "" }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "766d6396-1d87-4624-83fc-6859e4480226"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "parity" }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "44815907-416a-4434-bf67-c4933a15f373"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CfsoJ4SWs6cfqrpVPFY7Z",
+        "type": "message",
+        "role": "assistant",
+        "content": [{ "type": "text", "text": "parity" }],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 86,
+          "cache_read_input_tokens": 15876,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 86 },
+          "output_tokens": 4,
+          "service_tier": "standard",
+          "inference_geo": "not_available"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "uuid": "1ced14db-3d23-488d-b15f-9cba41897ac6",
+      "timestamp": "2026-10-10T02:52:13.796Z",
+      "request_id": "req_011CfsoJ46RivkjR9Wykh1WD"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "07cb7ec2-dbe3-4eb4-9f7b-05beb209248a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 86,
+          "cache_read_input_tokens": 15876,
+          "output_tokens": 4,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 4,
+              "cache_read_input_tokens": 15876,
+              "cache_creation_input_tokens": 86,
+              "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 86 },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "db4b4400-7812-4f9b-bee8-58e30520d008"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "parent_tool_use_id": null,
+      "uuid": "936e1533-cd52-4e59-a439-48103e72b5f1"
+    },
+    {
+      "duration_api_ms": 5476,
+      "stop_reason": "end_turn",
+      "session_id": "b180869e-64ba-47c3-b764-31dc35c10f16",
+      "total_cost_usd": 0.065411,
+      "usage": {
+        "input_tokens": 6,
+        "cache_creation_input_tokens": 3902,
+        "cache_read_input_tokens": 43602,
+        "output_tokens": 143,
+        "output_tokens_details": { "thinking_tokens": 0 },
+        "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+        "service_tier": "standard",
+        "cache_creation": { "ephemeral_1h_input_tokens": 3902, "ephemeral_5m_input_tokens": 0 },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 4,
+            "cache_read_input_tokens": 15876,
+            "cache_creation_input_tokens": 86,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 86 },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "modelUsage": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 920,
+          "outputTokens": 13,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.000985,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-haiku-4-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 6,
+          "outputTokens": 143,
+          "cacheReadInputTokens": 43602,
+          "cacheCreationInputTokens": 3902,
+          "webSearchRequests": 0,
+          "costUSD": 0.064426,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 64000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-opus-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "permission_denials": [],
+      "terminal_reason": "completed",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required",
+      "subagent_stats": {
+        "spawned": 0,
+        "requested": { "background": 0, "foreground": 0, "unset": 0 },
+        "started_in_background": 0,
+        "max_depth": 0,
+        "spawned_by_subagents": 0,
+        "completed": 0,
+        "failed": 0,
+        "killed": { "parent": 0, "user": 0, "system": 0 },
+        "refused": { "depth_limit": 0, "concurrency_limit": 0, "budget": 0 },
+        "by_type": {}
+      },
+      "is_error": false,
+      "num_turns": 3,
+      "subtype": "success",
+      "api_error_status": null,
+      "result": "parity",
+      "ttft_ms": 2609,
+      "type": "result",
+      "duration_ms": 4991,
+      "uuid": "68861900-e579-42ac-be6a-535c79a291a9",
+      "ttft_stream_ms": 2033,
+      "time_to_request_ms": 638,
+      "first_content_frame_ms": 2034,
+      "queued_turn_count": 0,
+      "result_index": 0
+    }
+  ]
+}

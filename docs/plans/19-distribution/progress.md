@@ -11,8 +11,8 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-28
-**Bloqueios:** nenhum por decisão — D-01, D-04 e D-05 decididas em 2026-09-26 pelo usuário: Linux,
+**Última atualização:** 2026-10-10
+**Bloqueios:** o plano é o último, e espera os anteriores — entre eles o [28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md) concluído ([D-09](decisions.md#d-09--ajuste-às-diretivas-do-plano-28)). Nenhum por decisão — D-01, D-04 e D-05 decididas em 2026-09-26 pelo usuário: Linux,
 macOS e Windows suportados com teste só em Linux; a exposição e o certificado são da infraestrutura
 ([arquitetura](../../architecture/README.md#onde-o-produto-roda-e-como-é-alcançado)). A F1 precisa
 ser revista quando o plano começar — ver abaixo.
@@ -55,7 +55,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 8 | 5 | 0 | 3 | 0 |
+| [Decisões](decisions.md) | 9 | 5 | 0 | 4 | 0 |
 
 ---
 
@@ -77,7 +77,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-10-10 | [D-09](decisions.md#d-09--ajuste-às-diretivas-do-plano-28): pré-requisitos, credencial, portão de atualização do SDK e versões são por motor habilitado, lidos da descrição de cada motor; a credencial `~/.claude/.credentials.json` é o caso do Claude | pedido do usuário: ajustar os planos não executados às diretivas do [plano 28](../28-agent-neutral-core/README.md) (isolamento, regras pelo dialeto, contrato canônico) | [README](README.md), B-02, B-05, B-12, B-15; S-02, S-12, S-23, S-32, S-38 |
 
 ---
 

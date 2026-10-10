@@ -5,6 +5,12 @@ instalação, modelos e padrões, servidores MCP, plugins, skills e a configura�
 slash commands, subagents, output styles, hooks) — sem que nenhuma dessas portas abra um caminho que
 fure a permissão e a trilha.
 
+**Núcleo e extensão** ([D-33](decisions.md#d-33--ajuste-às-diretivas-do-plano-28)): o que só o Claude tem — conta,
+instalação, plugins, skills e a configuração de projeto do `.claude/` — mora na extensão `engines/claude/` de cada
+ponta, com as rotas `/engines/claude/*`; os padrões da sessão e os servidores MCP (a capacidade `mcp`) são **núcleo,
+por motor**, com as rotas `/engines/:engine/*`, como o [plano 28](../28-agent-neutral-core/README.md) divide o
+`claude-config`.
+
 **Critério de conclusão — é um comando, não uma opinião:**
 
 ```bash
@@ -18,11 +24,18 @@ editor de atalhos, seletor de pasta) e [08 — Painel do Claude](../08-claude-pa
 da sessão, onde o indicador de MCP entra); [07 — Explorer e editor](../07-explorer-and-editor/README.md)
 para criar e editar os arquivos de `.claude/`. Consome os planos 03 (regras), 04 (catálogo de comandos,
 retomada) e 01 (a ponte de permissão e a limpeza da marca de confiança). O
-[plano 14](../14-audit-explained/README.md) mostra os kinds `claude.*` na linha do tempo quando existir
+[plano 14](../14-audit-explained/README.md) mostra os kinds `mcp.*` e `engine.*` na linha do tempo quando existir
 — não depende dele. Uso e custo são do [plano 16](../16-usage-and-cost/README.md).
 A **F2 depende do [plano 26 — Paridade da conversa no app](../26-mobile-conversation-parity/README.md)**
 concluído ([D-31](decisions.md#decididas-durante-a-execução-b-01-2026-10-09)): o que este plano traz para a conversa — tool MCP,
 skill, subagent e hook do projeto, output style — tem de chegar ao app com o mesmo conteúdo e formato do web.
+E a **F2 depende do [plano 28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md)** concluído
+([D-33](decisions.md#d-33--ajuste-às-diretivas-do-plano-28)): a F2…F4 nascem na estrutura que ele deixa — isolamento
+em `engines/claude/`, regras na gramática canônica (o `RuleDialect` só traduz), contrato canônico, rotas com
+tipo gerado em `packages/contracts/schema/http/`. A ordem, decidida pelo usuário em 2026-10-10, é
+26 · F1 → 28 → 26 · F2…F7 → 13 · F2…F4 → 27. A F0 e a F1 daqui (módulo `claude-config`, rotas `/claude/*`, tabelas,
+tela) já estão feitas e são **movidas** pela [28 · F6](../28-agent-neutral-core/F6-engine-extensions.md), não por
+este plano.
 
 Arquivos irmãos: [matriz de cenários](scenarios.md) · [decisões em aberto](decisions.md) ·
 [progresso](progress.md).
@@ -64,8 +77,8 @@ catálogo da instalação; a regra "a nossa é a única autoridade" do plano 03 
 |---|---|
 | Spike das medições que mandam no desenho; ADR e emenda à ADR-011; módulo `claude-config`; contrato HTTP e WS; erros; tabelas e kinds `claude.*`; regras de máquina | F0 |
 | Catálogo da instalação (sessão viva ou sonda efêmera); conta; diagnóstico da instalação; teste de conexão com o modelo; modelos da instalação; padrões por usuário e por pasta (modelo, modo, esforço, thinking, output style, modelo reserva) aplicados no `session.start`; a tela e a ajuda | F1 |
-| Servidores MCP: store com segredo cifrado e só escrita, composição strict por sessão, subprocesso sem os segredos do backend, status vivo, ligar/desligar/reconectar na sessão e o indicador no painel, apertar-vale-já, aprovação do `.mcp.json` por digest, testar conexão, tool MCP pela aprovação, regras que caem com o servidor; plugins locais e de marketplace (baixados pelo backend, só de marketplace declarado, atualização explícita); telas e ajuda | F2 |
-| Configuração de projeto: memória (existe × carregada), slash commands, **skills** (projeto, usuário e sistema, com preferências e plugin sintético), subagents, output styles — listar, e criar/editar pelo editor do 07 a partir de modelo —; hooks, permissões e plugins do projeto só leitura e explicados; telas e ajuda | F3 |
+| Servidores MCP, no núcleo por motor (capacidade `mcp`): store com segredo cifrado e só escrita, composição strict por sessão, subprocesso sem os segredos do backend, status vivo, ligar/desligar/reconectar na sessão e o indicador no painel, apertar-vale-já, aprovação do `.mcp.json` por digest, testar conexão, tool MCP pela aprovação, regras `mcp(srv:…)` que caem com o servidor (casadas no núcleo); plugins, na extensão do Claude, locais e de marketplace (baixados pelo backend, só de marketplace declarado, atualização explícita); telas e ajuda | F2 |
+| Configuração de projeto, inteira na extensão do Claude: memória (existe × carregada), slash commands, **skills** (projeto, usuário e sistema, com preferências e plugin sintético), subagents, output styles — listar, e criar/editar pelo editor do 07 a partir de modelo —; hooks, permissões e plugins do projeto só leitura e explicados; telas e ajuda | F3 |
 | E2E pela porta do usuário, `smoke-live` contra o Claude real, e o app compatível | F4 |
 
 ### Não entra
@@ -77,8 +90,8 @@ Só o que é de outro plano ou o que a arquitetura proíbe:
   a fonte única de modelos.
 - **Uso, custo e orçamento**: [plano 16](../16-usage-and-cost/README.md). O teste de conexão diz o custo
   dele; o agregado é lá.
-- **Linha do tempo da trilha**: [plano 14](../14-audit-explained/README.md) mostra os kinds `claude.*`
-  que este plano grava.
+- **Linha do tempo da trilha**: [plano 14](../14-audit-explained/README.md) mostra os kinds `mcp.*` e
+  `claude.*` que este plano grava.
 - **Login do CLI pela UI remota.** O backend herda o login da máquina e não conhece a credencial
   ([backend/04](../../architecture/backend/04-claude-integration.md#autenticação--não-faça-nada)); a tela
   diz o estado e o que rodar na máquina.
@@ -159,28 +172,44 @@ Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 
 ## Árvore resultante
 
+A F0 e a F1 criaram tudo no `claude-config` e sob `/claude/*`; a
+[28 · F6](../28-agent-neutral-core/F6-engine-extensions.md) move isso para a forma abaixo, e a F2…F4 já nascem nela
+([D-33](decisions.md#d-33--ajuste-às-diretivas-do-plano-28)). Os nomes de pasta do núcleo são proposta, confirmada
+pela 28 · F6.
+
 ```
 packages/contracts/schema/
-├── commands/    session-toggle-mcp-server · session-reconnect-mcp-server
-└── events/      session-mcp-status-changed        (session-started ganha effort, outputStyle, defaultsFrom)
+├── commands/    session-toggle-mcp-server · session-reconnect-mcp-server        (canônicos, capacidade mcp)
+├── events/      session-mcp-status-changed        (session-started ganha effort, outputStyle, defaultsFrom)
+└── http/        as rotas novas de /engines/:engine/* e /engines/claude/* (28 · D-09)
 
 backend/src/
-├── domain/claude-config/          padrões · McpServer · aprovação por digest · preferências de skills
-├── application/claude-config/
-│   └── ports/                     store · segredo · sessões vivas · revogação de regra · catálogo
+├── domain/
+│   ├── <padrões>/                 F1, movido pela 28 · F6 — padrões da sessão, por motor (núcleo)
+│   ├── mcp/                       F2 — McpServer · aprovação por digest (núcleo, capacidade mcp)
+│   └── engines/claude/            F2, F3 — plugins · preferências de skills · configuração de projeto
+├── application/
+│   ├── mcp/ports/                 F2 — store · segredo · sessões vivas · revogação de regra · fonte do projeto
+│   └── engines/claude/            F2, F3 — casos de uso da extensão (+ catálogo da F1)
 ├── adapter/
-│   ├── inbound/http/claude-config/
-│   ├── outbound/claude/           installation-catalog · model-check · mcp-probe · skills-plugin-builder
-│   │                              · flag-settings (allowlist)
-│   ├── outbound/claude-config/    repositório Drizzle · cifra do segredo
-│   └── outbound/project-config/   leitura de .claude/ e .mcp.json dentro da allowlist
+│   ├── inbound/http/engines/      /engines/:engine/{defaults,models,mcp-servers,project-mcp-approvals}
+│   │   └── claude/                /engines/claude/{account,installation,diagnostics,plugins,skills,project-config}
+│   ├── outbound/engines/claude/   installation-catalog · model-check · mcp-probe · mcp-status · skills-plugin-builder
+│   │                              · flag-settings (allowlist) · nome nativo mcp__srv__tool → kind mcp · leitor de .claude/
+│   │                              e do .mcp.json dentro da allowlist
+│   └── outbound/mcp/              F2 — repositório Drizzle · cifra do segredo
 ├── infrastructure/
-│   ├── modules/claude-config.module.ts
-│   └── database/migrations/       tabelas novas · kinds claude.* no CHECK
-└── shared/                        ambiente do subprocesso sem os segredos do backend
+│   ├── modules/engines/claude.module.ts      a composição (28 · F1)
+│   └── database/migrations/       tabelas novas (com engine) · kinds mcp.* (núcleo) e engine.* (extensão) no CHECK
+└── shared/                        ambiente do subprocesso sem os segredos do backend (neutro)
 
-web/src/features/claude-settings/  seções Conta · Instalação · Modelos e padrões · Servidores MCP ·
-                                   Plugins · Skills · Projeto — e o indicador de MCP no painel do 08
+web/src/
+├── features/<padrões>/ · features/mcp/   seções do núcleo — Modelos e padrões · Servidores MCP — e o indicador de
+│                                          MCP no painel do 08, só com a capacidade mcp
+├── engines/claude/settings/       F2, F3 — seções da extensão: Conta · Instalação · Plugins · Skills · Projeto
+├── engines/claude/index.ts        registra seções, comandos e ajuda nos registros do núcleo
+└── app/engines.ts                 a composição: o único arquivo que importa engines/*
+mobile/lib/features/session/       F2 — o chip só de leitura de MCP, pelo evento canônico e pela capacidade
 e2e/
 ├── fixtures/                      servidor MCP stdio mínimo · .mcp.json · skill e subagent de fixture
 ├── specs/                         claude-settings
@@ -200,7 +229,7 @@ scripts/lib/agent-sdk-rules.mjs    strictMcpConfig · updateSettings · flag/man
 | R-04 | Shell inline (`!`) de skill e slash command pode rodar fora da aprovação e da trilha | **aberto** até a B-01 medir — [D-21](decisions.md#d-21--shell-inline-de-skills-e-slash-commands) bloqueia a B-35 |
 | R-05 | Superfície do SDK `0.3.x` muda sem aviso: `strictMcpConfig`, `initializationResult`, o layout dos plugins instalados, os métodos de MCP | **aberto** — só métodos públicos (B-08); `smoke-live` cobre (B-46), sob demanda |
 | R-06 | A sonda efêmera custa um subprocesso (~222 MB) e pode disputar a capacidade com as sessões | **aberto** — [D-05](decisions.md#d-05--catálogo-sem-sessão-viva): sessão viva primeiro, uma sonda por chave, conta na capacidade |
-| R-07 | Uma regra `allow` de `mcp__<nome>` autorizando um programa diferente do avaliado | **aberto** — [D-12](decisions.md#d-12--regra-de-tool-mcp-quando-o-servidor-muda): a troca revoga |
+| R-07 | Uma regra `allow` de `mcp(<nome>:…)` autorizando um programa diferente do avaliado | **aberto** — [D-12](decisions.md#d-12--regra-de-tool-mcp-quando-o-servidor-muda): a troca revoga |
 | R-08 | Hoje o subprocesso do CLI recebe o ambiente inteiro do backend — todo servidor stdio o herdaria | **aberto** — a B-20 corrige, com a lista vinda do schema de configuração; o plano 12 precisa da mesma função |
 | R-09 | Divergir dos planos 06 e 08 (seção "Claude" das Configurações, seletor de modelo, indicador de MCP) | **aberto** — [D-09](decisions.md#d-09--a-seção-claude-das-configurações-do-app), [D-14](decisions.md#d-14--quem-entrega-o-indicador-de-mcp-da-sessão); os dois são avisados por nota ao executar |
 | R-10 | O que este plano traz para a conversa (tool MCP, skill, subagent e hook do projeto, output style) chegar ao app sem conteúdo ou sem formato — hoje o app descarta texto de subagent, mostra markdown cru e o nome cru da tool MCP | **aberto** — [D-31](decisions.md#decididas-durante-a-execução-b-01-2026-10-09): a F2 espera o [plano 26](../26-mobile-conversation-parity/README.md), e a B-46 exige a paridade com as fixtures deste plano |

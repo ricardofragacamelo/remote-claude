@@ -12,6 +12,13 @@ pnpm dist:verify     # instala numa máquina limpa, sobe, faz o smoke, desinstal
 
 O segundo comando nasce neste plano (B-17).
 
+**Depende de:** os planos 05 a 18 — este é o último, e empacota o que eles entregam
+([índice](../README.md#ordem-de-execução)) —, e entre eles o
+[28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md) **concluído**: os pré-requisitos,
+a credencial, o portão de atualização e as versões passam a ser **por motor habilitado**, lidos da
+descrição de cada motor (`describe()`: instalado, versão, autenticado, capacidades), e não do Claude
+por nome ([D-09](decisions.md#d-09--ajuste-às-diretivas-do-plano-28)).
+
 Arquivos irmãos: [matriz de cenários](scenarios.md) · [decisões em aberto](decisions.md) ·
 [progresso](progress.md).
 
@@ -84,10 +91,10 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Configuração inválida impede a subida, dizendo o que falta | B-04 | [07-repository-layout](../../architecture/shared/07-repository-layout.md#configuração-e-segredo) | S-04…S-06 |
 | Migration aplicada na subida, uma vez só | B-03 | [backend/05-persistence](../../architecture/backend/05-persistence.md) | S-07, S-08 |
 | Desinstalar não leva os dados junto, e diz onde eles ficaram | B-06 | este plano | S-09, S-10 |
-| Pré-requisito ausente reprova antes de instalar | B-05 | [catálogo de scripts](../00-bootstrap/README.md#catálogo-de-scripts) | S-11, S-12 |
+| Pré-requisito ausente (inclusive o CLI e a credencial de cada motor habilitado) reprova antes de instalar | B-05 | [catálogo de scripts](../00-bootstrap/README.md#catálogo-de-scripts) | S-11, S-12 |
 | Loopback por default; expor exige TLS e decisão explícita | B-07, B-08, B-11 | [08-authentication](../../architecture/shared/08-authentication.md) | S-13…S-16, S-21 |
 | Só origem conhecida fala com a API e com o socket | B-09 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#handshake) | S-17…S-20, S-22 |
-| Atualizar o SDK tem portão, e o portão é o Claude real | B-12 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-23, S-24, S-27 |
+| Atualizar o SDK de um motor tem portão, e o portão é o `smoke-live` daquele motor (no Claude, o Claude real) | B-12 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-23, S-24, S-27 |
 | Atualização preserva dados; migration aplicada nunca é alterada | B-13 | [backend/05-persistence](../../architecture/backend/05-persistence.md) | S-25, S-26 |
 | Backup restaurável, e restauração coerente | B-14 | este plano | S-28…S-31 |
 | Versão de tudo é visível na UI e no log | B-15 | [03-logging](../../architecture/shared/03-logging.md) | S-32 |
@@ -122,7 +129,7 @@ e2e/scenarios/              o ciclo de instalação
 | # | Assunto | Estado |
 |---|---|---|
 | R-01 | **Como o usuário alcança o backend de fora de casa** — túnel, VPN ou porta com TLS | **decidido em 2026-09-26** ([D-04](decisions.md)): a exposição é da infraestrutura; o produto aceita a URL externa e o default continua loopback |
-| R-02 | Rodar como serviço do SO precisa herdar o login do Claude (`~/.claude/.credentials.json`) | serviço rodando como outro usuário **não** encontra a credencial — é o primeiro cenário a provar (S-02) |
+| R-02 | Rodar como serviço do SO precisa herdar o login do Claude (`~/.claude/.credentials.json`) — o caso do Claude de uma credencial **por motor** ([discovery 03 §6.9](../../discovery/03-multiplos-motores-de-agente.md#69-instalação-autenticação-e-diagnóstico)) | serviço rodando como outro usuário **não** encontra a credencial — é o primeiro cenário a provar (S-02), e vale para cada motor habilitado |
 | R-03 | Sistema operacional: systemd, launchd e Windows têm três mecanismos diferentes | **decidido em 2026-09-26** ([D-01](decisions.md)): os três são suportados, o teste é só em Linux — macOS e Windows sem verificação automatizada, risco aceito |
 | R-04 | Atualização que roda migration e dá errado no meio | backup obrigatório antes (B-14), e migration aplicada nunca é editada (S-26) |
 | R-05 | `dist:verify` precisa de uma máquina limpa de verdade | container descartável; o custo é assumido porque este é o único teste que prova o produto instalado |

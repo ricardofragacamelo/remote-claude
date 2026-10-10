@@ -21,8 +21,12 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 ### B-23 — Domínio do orçamento 🔲
 
 `Budget` em `domain/usage`: escopo (`user` ou `folder` com o `WorkspacePath`), período (`day`,
-`month`), limite (`UsdAmount`), limiares em porcentagem (padrão 50/80/100), modo (`notify` ou
-`block`), push (sim/não). Funções puras:
+`month`), unidade e limite — `usd` (`UsdAmount`), que conta só os turnos de motores que anunciam
+`cost: 'usd'`, ou `tokens`, para motor que só informa tokens
+([discovery 03 §6.8](../../discovery/03-multiplos-motores-de-agente.md#68-uso-e-custo)); motor com
+`cost: 'requests'` ou `'none'` fica fora do orçamento, e a ajuda diz isso. A tela só oferece a unidade
+que os motores habilitados anunciam — com o Claude, só USD —, limiares em porcentagem (padrão
+50/80/100), modo (`notify` ou `block`), push (sim/não). Funções puras:
 
 - período corrente e próximo no fuso da preferência, com a virada à meia-noite local e no dia 1
   (S-91);
@@ -66,7 +70,7 @@ conteúdo de conversa, um por cruzamento (S-108) — a regra de notificação se
 ### B-26 — Recusa de novos turnos 🔲
 
 Conforme [D-12](decisions.md#d-12--o-que-acontece-quando-o-orçamento-estoura): `session.prompt` e
-`session.start` perguntam à porta `TurnAdmission` antes de entregar o prompt ao SDK ou de subir o
+`session.start` perguntam à porta `TurnAdmission` antes de entregar o prompt ao motor ou de subir o
 subprocesso.
 
 - Orçamento bloqueante a 100 % → `USAGE_BUDGET_EXCEEDED` (`429`, `retryAfterSeconds` até a virada

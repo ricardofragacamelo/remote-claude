@@ -5,7 +5,9 @@ Plano: [18 — Logs e diagnóstico](README.md) · Cenários: [scenarios.md](scen
 **Depende de:** nada dentro do plano. Fora dele, da navegação e da moldura de tela do
 [plano 06](../06-workbench/README.md) — só para a B-07.
 **Entrega:** o módulo `diagnostics` e o papel de operador nos documentos normativos, os contratos HTTP de logs e de saúde, os códigos e motivos novos no catálogo,
-os kinds novos da trilha e as rotas web — tudo **antes** de existir código.
+os kinds novos da trilha e as rotas web — tudo **antes** de existir código. As rotas novas, do núcleo e da
+extensão, nascem com o tipo gerado em `packages/contracts/schema/http/`
+([28 · D-09](../28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa), [D-17](decisions.md#d-17--ajuste-às-diretivas-do-plano-28)).
 
 ---
 
@@ -47,7 +49,7 @@ Registrar a [D-02](decisions.md#d-02--quem-vê-log-de-backend-o-papel-de-operado
 [backend/03 — `auth`](../../architecture/backend/03-modules.md#auth):
 
 - o que é operador (quem opera a instalação: vê log de backend e os detalhes de máquina da saúde,
-  muda o nível do backend, dispara a sonda do Claude);
+  muda o nível do backend, dispara a sonda ativa de um motor — hoje, a da extensão do Claude);
 - de onde vem (configuração local, lida no boot, vazia por padrão — nunca claim do provedor);
 - como o cliente sabe (`GET /diagnostics/capabilities`, B-04);
 - o que recebe quem não é (`403` `FORBIDDEN` com `messageKey` própria de `diagnostics`).
@@ -112,12 +114,16 @@ Em `backend/03 — diagnostics`:
   pelo outro lado;
 - `POST /diagnostics/health/run { checks?: string[] }` → o relatório recém-executado; `429` com
   ritmo ([D-16](decisions.md#d-16--cache-e-frequência));
-- `POST /diagnostics/health/claude-probe` → só operador, `409` `CONFLICT` com outra em curso
-  ([D-14](decisions.md#d-14--a-sonda-do-claude-o-que-ela-faz-e-quem-a-dispara));
+- a sonda ativa do Claude **não** é rota do núcleo: é `POST /engines/claude/diagnostics/probe`, da
+  extensão do Claude, documentada na seção dela em `backend/03`, com o tipo em
+  `packages/contracts/schema/http/` como as do núcleo — só
+  operador, `409` `CONFLICT` com outra em curso
+  ([D-14](decisions.md#d-14--a-sonda-do-claude-o-que-ela-faz-e-quem-a-dispara), [D-17](decisions.md#d-17--ajuste-às-diretivas-do-plano-28));
 - `details` filtrado por papel no backend ([D-09](decisions.md#d-09--quem-vê-o-quê-na-saúde));
 - o **catálogo de checks** (id, categoria, o que mede, cada `reason`, prazo) e as portas
-  `HealthCheck` e `ResourceGauge` que os planos 07, 12 e 13 preenchem
-  ([D-15](decisions.md#d-15--a-fronteira-com-os-planos-07-12-e-13));
+  `HealthCheck` e `ResourceGauge` que os planos 07, 12 e 13 e as **extensões de motor** preenchem
+  ([D-15](decisions.md#d-15--a-fronteira-com-os-planos-07-12-e-13)); a categoria de um item de motor é
+  o próprio motor (`engine: { id, displayName }` do `GET /engines`), uma por motor habilitado;
 - `GET /health` público **não muda** — continua `{ status, database }`, e o doc diz por que o
   detalhado não mora nele.
 
@@ -128,18 +134,24 @@ e em `backend/src/shared/errors/error-catalogue.ts`, com `messageKey` em `en` e 
 
 - `FORBIDDEN`, `RATE_LIMITED`, `INVALID_INPUT` e `CONFLICT` ganham o módulo `diagnostics` e as
   `messageKey` próprias (`diagnostics.error.operatorRequired`, `…invalidCursor`, …) e os `scope`
-  novos (`logTail`, `health`, `claudeProbe`);
+  novos (`logTail`, `health`), e o `claudeProbe`, que é da extensão do Claude (o prefixo é o dela);
 - seção nova **"Motivos de check"** — não são status HTTP, são o `reason` de um item do relatório,
   cada um com `messageKey` e `fixKey`: `HEALTH_CHECK_TIMEOUT`, `HEALTH_CHECK_CRASHED`,
   `HEALTH_DATABASE_UNREACHABLE`, `HEALTH_MIGRATIONS_PENDING`, `HEALTH_MIGRATIONS_AHEAD`,
   `HEALTH_ALLOWLIST_INVALID`, `HEALTH_ALLOWLIST_ROOT_MISSING`, `HEALTH_SESSIONS_AT_LIMIT`,
   `HEALTH_PUSH_UNCONFIGURED`, `HEALTH_IDENTITY_UNREACHABLE`, `HEALTH_LOG_BUFFER_EVICTING`,
-  `HEALTH_DISK_LOW`, `HEALTH_CLAUDE_CLI_MISSING`, `HEALTH_CLAUDE_NOT_LOGGED_IN`. Todos novos.
+  `HEALTH_DISK_LOW`, e os neutros de motor, lidos do `describe()` e com `params.engine`:
+  `HEALTH_AGENT_NOT_INSTALLED` (o CLI não foi encontrado ou não executa) e
+  `HEALTH_AGENT_NOT_AUTHENTICATED` (sem login). Todos novos. O "o que fazer" de um motor (como
+  instalar, como logar) é texto da extensão dele (`fixKey` em `engines.claude.health.*`); motivo que só
+  o Claude tem, se aparecer, é `HEALTH_CLAUDE_*` e mora no catálogo da extensão.
 
 Na trilha ([backend/03 — `audit`](../../architecture/backend/03-modules.md#audit)): kinds
-`diagnostics.logLevelChanged`, `diagnostics.logsExported`, `diagnostics.claudeProbed`, por
+`diagnostics.logLevelChanged`, `diagnostics.logsExported` e, da extensão do Claude,
+`engine.diagnosticsProbed` (o prefixo `engine.` das extensões, com o motor no payload: nenhum kind leva
+nome de motor — [28 · D-10](../28-agent-neutral-core/decisions.md#f6--extensões-isoladas)), por
 **migration versionada nova** que recria o CHECK `audit_events_kind_known`; `details` sem linha de
-log nem texto do Claude.
+log nem texto do agente.
 
 ### B-07 — Rotas web e as duas sub-telas 🔲
 
@@ -150,7 +162,8 @@ plano 06 criou em `/diagnostics` ganha `/diagnostics/logs` e `/diagnostics/healt
 moldura de tela do 06 (título, propósito, ajuda), e `/diagnostics` abre a saúde. Os filtros da tela
 de logs são a **search** da URL, validados pelo router (valor inválido é descartado com aviso, não
 quebra a tela). Namespaces de i18n `diagnostics.logs.*`, `diagnostics.health.*` e
-`diagnostics.help.*`.
+`diagnostics.help.*` no núcleo, com o nome do agente como `{agent}`; o que é só do Claude (sonda,
+"o que fazer" de instalação e login) em `engines.claude.diagnostics.*`.
 
 ---
 

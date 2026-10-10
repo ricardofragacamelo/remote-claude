@@ -25,7 +25,7 @@ lista do que falta, e cada fase seguinte tira linhas dela. Na F6 a lista tem de 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-04 — O inventário: `render-parity.json` 🔲
+### B-04 — O inventário: `render-parity.json` ✅
 
 Em `scripts/render-parity.json`, ao lado do [i18n-shared.json](../../../scripts/i18n-shared.json) (local
 na [D-12](decisions.md#f1--mapa-de-paridade)). Cada entrada tem:
@@ -55,7 +55,7 @@ como `pending` da F4 (B-32). As mensagens que o backend descarta não chegam a n
 não entram no mapa: são da discovery das perdas do backend.
 Cenários S-09, S-10.
 
-### B-05 — `render:check` 🔲
+### B-05 — `render:check` ✅
 
 `scripts/render-check.mjs`, `pnpm render:check`, entra no portão 11 junto do `contracts` e do `i18n`
 (`check:contracts-i18n` passa a ser `check:contracts-i18n-render`; o nome final fica na D-12).
@@ -70,7 +70,7 @@ O script reprova quando:
 A saída lista o que falta, por fase, para o agente ler. Os testes do script ficam em
 `test/unit/scripts/render-check.spec.mjs`, com árvores falsas. Cenários S-11…S-15.
 
-### B-06 — A regra no normativo 🔲
+### B-06 — A regra no normativo ✅
 
 - [mobile/04-ui](../../architecture/mobile/04-ui.md): uma seção "A conversa é a mesma do web". Ela
   diz o princípio (conteúdo e formato; só o layout se adapta), aponta o mapa e o portão, e tira da

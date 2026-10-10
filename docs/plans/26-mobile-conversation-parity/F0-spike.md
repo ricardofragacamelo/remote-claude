@@ -31,7 +31,7 @@ resultado ruim não é falha do spike, é o que ele existe para achar.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — Spike: a forma das mensagens novas 🔲
+### B-01 — Spike: a forma das mensagens novas ✅
 
 O ambiente é o da B-01 do plano 13:
 
@@ -51,7 +51,7 @@ O resultado vai para a [descoberta do SDK](../../discovery/01-descoberta-claude-
 nova seção de spikes, com o "como reproduzir".
 Cenário S-05.
 
-### B-02 — Fixtures gravadas 🔲
+### B-02 — Fixtures gravadas ✅
 
 Pelo `scripts/record-agent-sdk-fixtures.mjs`, gravadas do Claude real e não escritas à mão. Vão para
 `backend/test/fakes/agent-sdk/fixtures/`:
@@ -67,7 +67,7 @@ Pelo `scripts/record-agent-sdk-fixtures.mjs`, gravadas do Claude real e não esc
 Cada fixture entra no catálogo do SDK roteirizado (`backend/test/fakes/agent-sdk/fixture.ts`) e serve
 às F3…F7. Cenário S-06.
 
-### B-03 — Spike do app: custo do markdown e motor de realce 🔲
+### B-03 — Spike do app: custo do markdown e motor de realce ✅
 
 No emulador do e2e do app e num perfil de aparelho modesto:
 

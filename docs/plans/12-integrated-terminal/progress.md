@@ -11,8 +11,8 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-28
-**Bloqueios:** nenhuma decisão em aberto (as 13 decididas em 2026-09-26 e 2026-09-28); o plano espera o 05 fechar ([06 · D-02](../06-workbench/decisions.md))
+**Última atualização:** 2026-10-10
+**Bloqueios:** nenhuma decisão em aberto (as 13 decididas em 2026-09-26 e 2026-09-28, e a D-14 em 2026-10-10); o plano espera o 05 fechar ([06 · D-02](../06-workbench/decisions.md)). **Não** depende do [plano 28](../28-agent-neutral-core/README.md): só nasce com os nomes neutros dele ([D-14](decisions.md#d-14--ajuste-às-diretivas-do-plano-28))
 
 ```
 F0 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
@@ -52,7 +52,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 13 | 0 | 0 | 13 | 0 |
+| [Decisões](decisions.md) | 14 | 0 | 0 | 14 | 0 |
 
 ---
 
@@ -74,6 +74,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
 | 2026-09-26 | A B-13 foi **antecipada**, com o plano ainda esperando o 05: o subprocesso do Claude passa a nascer sem a configuração do backend (`claudeEnvironment`), e o `realQueryFactory` recusa `env` ausente ou com variável do backend | o vazamento da senha do banco para qualquer `Bash` do Claude não podia esperar um plano travado por ordem; pedido do usuário | [D-10](decisions.md) ✅; [backend/04 · Ciclo de vida](../../architecture/backend/04-claude-integration.md#ciclo-de-vida-e-recursos); S-108, S-109 ✅; **S-110 pendente** (`smoke-live` não rodou) |
+| 2026-10-10 | [D-14](decisions.md#d-14--ajuste-às-diretivas-do-plano-28): o plano segue sem esperar o 28, com nomes neutros — `agentPolicy` (nota na B-13, em andamento), a aba Saída pelo `kind: 'shell'`, o contexto do agente com `{agent}` | pedido do usuário: ajustar os planos não executados às diretivas do [plano 28](../28-agent-neutral-core/README.md) (isolamento, regras pelo dialeto, contrato canônico) | [README](README.md), B-07, B-13 (nota), B-18, B-19; S-140, S-148 |
 
 ---
 

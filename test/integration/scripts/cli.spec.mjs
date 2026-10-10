@@ -286,3 +286,18 @@ describe('coverage-gaps.mjs', () => {
     }
   });
 });
+
+describe('render-check.mjs', () => {
+  it('passes the map of the repository, the same twice, writing nothing — plan 26, S-15', () => {
+    const map = path.join(repoRoot, 'scripts', 'render-parity.json');
+    const before = fs.statSync(map).mtimeMs;
+
+    const first = runScript('render-check.mjs');
+    const second = runScript('render-check.mjs');
+
+    expect(first.code).toBe(0);
+    expect(first.stdout).toContain('every element of the conversation has its pair');
+    expect(second.stdout).toBe(first.stdout);
+    expect(fs.statSync(map).mtimeMs).toBe(before);
+  });
+});

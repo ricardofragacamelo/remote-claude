@@ -42,6 +42,19 @@ import {
   planTurnProblems,
   questionTurnProblems,
 } from './lib/fixture-questions.mjs';
+import {
+  MCP_SERVER,
+  PROMPTS as SPIKE_PROMPTS,
+  repositoryFiles as subagentRepository,
+} from './lib/conversation-parity-spike.mjs';
+import {
+  askedAbout,
+  explanatoryProblems,
+  multiTextProblems,
+  RICH_MARKDOWN_PROMPT,
+  richMarkdownProblems,
+  subagentPermissionProblems,
+} from './lib/parity-fixtures.mjs';
 import { withoutParentSession } from './lib/parent-session.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { bold, dim, fail, info, ok, title, warn } from './lib/ui.mjs';
@@ -82,9 +95,11 @@ const TRANSCRIPT_POLL_MS = 250;
  * @property {boolean} [watchTranscript] measure how long the transcript goes unwritten
  * @property {number} [quietMs] how long to wait, once every prompt is in, for a result that may
  *   never come — longer than {@link QUIET_MS} for a turn that is slow by nature, like `/compact`
- * @property {(consulted: { toolName: string, input: unknown }[]) => string[]} [requires] what the
- *   recording has to hold for the tests built on it — a fixture missing any of it is not written,
- *   and the run fails, rather than proving less than those tests claim (plan 24, R-04)
+ * @property {(consulted: { toolName: string, input: unknown }[], messages: unknown[]) => string[]} [requires]
+ *   what the recording has to hold for the tests built on it — a fixture missing any of it is not
+ *   written, and the run fails, rather than proving less than those tests claim (plan 24, R-04)
+ * @property {boolean} [subagentHistory] read back, besides the conversation, what each of its
+ *   subagents said — the history a subagent's card loads (plan 26, B-20)
  */
 
 /**
@@ -349,6 +364,69 @@ const SCENARIOS = [
       'Run exactly this command with the Bash tool, in the foreground: seq 1 600. ' +
       'Then reply with exactly: done.',
     files: {},
+  },
+
+  // Plan 26, B-02 — the conversation the app draws as the web does: markdown, blocks in order, the
+  // label of an MCP tool, the insight blocks of a style, and a subagent nested with its permission.
+  {
+    name: 'markdown-rich-turn',
+    why: 'plan 26, B-02 — every node of markdown the web draws in an answer: headings, nested lists, a wide table, code in three languages, a quotation, a link, a remote image, raw HTML and a mermaid block',
+    prompt: RICH_MARKDOWN_PROMPT,
+    files: {},
+    requires: richMarkdownProblems,
+  },
+  {
+    name: 'multi-text-block-turn',
+    why: 'plan 26, B-02 — one answer of text, a tool and text again: the text blocks arrive apart, and the app keeps them apart and in order',
+    prompt: SPIKE_PROMPTS.blocks,
+    files: { 'notes.md': 'A file to list.\n' },
+    requires: multiTextProblems,
+  },
+  {
+    name: 'explanatory-style-turn',
+    why: 'plan 26, B-02 — an answer in the Explanatory output style, whose insight blocks are the formatting plan 13 makes common',
+    prompt:
+      'Read notes.md with the Read tool and use no other tool, then explain in two short ' +
+      'paragraphs what this project is for.',
+    files: { 'notes.md': 'Tally counts the words of a file, and prints the count.\n' },
+    options: { settings: { outputStyle: 'Explanatory' } },
+    requires: explanatoryProblems,
+  },
+  {
+    name: 'mcp-untitled-tool-turn',
+    why: 'plan 26, B-02 — a tool of an MCP server called with no title: the name the CLI gives it, which the app labels `fixture · echo`',
+    prompt: SPIKE_PROMPTS.mcp,
+    files: {},
+    options: {
+      strictMcpConfig: true,
+      mcpServers: {
+        [MCP_SERVER]: {
+          type: 'stdio',
+          command: 'node',
+          args: [
+            path.join(repoRoot, 'e2e', 'fixtures', 'mcp-server', 'fixture-mcp-server.mjs'),
+            '--name',
+            MCP_SERVER,
+          ],
+        },
+      },
+    },
+    requires: askedAbout(`mcp__${MCP_SERVER}__echo`),
+  },
+  {
+    name: 'subagent-permission-turn',
+    why: 'plan 26, B-02 — a subagent of the project that thinks, says, and writes a file asking for it: everything it emits carries parent_tool_use_id, and its history lives apart',
+    prompt: SPIKE_PROMPTS.subagent,
+    files: subagentRepository(),
+    // On `haiku`, as the spike measured it: the default model often delegates without thinking, and
+    // the fixture has to carry a subagent's thinking (S-66).
+    options: {
+      model: 'haiku',
+      forwardSubagentText: true,
+      thinking: { type: 'adaptive', display: 'summarized' },
+    },
+    requires: subagentPermissionProblems,
+    subagentHistory: true,
   },
 ];
 
@@ -929,16 +1007,52 @@ async function normaliseCommitted() {
  * @param {string} cwd the throwaway workspace, when the run is the one recording now
  */
 async function historyOf(sdk, messages, cwd) {
-  const named = /** @type {{ session_id?: string } | undefined} */ (
-    messages.find((m) => m !== null && typeof m === 'object' && 'session_id' in m)
-  );
+  const sessionId = sessionIdOf(messages);
 
-  if (named?.session_id === undefined) {
+  if (sessionId === null) {
     return null;
   }
 
-  const history = await sdk.getSessionMessages(named.session_id);
+  const history = await sdk.getSessionMessages(sessionId);
   return cwd === '' ? JSON.parse(anonymised(JSON.stringify(history))) : normalise(history, cwd);
+}
+
+/**
+ * What each subagent of a recorded run said, as the SDK files it apart from the conversation — by
+ * agent id, read the way the backend reads it (`listSubagents`, then `getSubagentMessages`) and
+ * anonymised like the rest (plan 26, B-20).
+ *
+ * @param {{ listSubagents(id: string): Promise<string[]>, getSubagentMessages(id: string, agentId: string): Promise<unknown[]> }} sdk
+ * @param {(typeof SCENARIOS)[number]} scenario — read only when it asks for it
+ * @param {readonly unknown[]} messages the run's stream, which names its session
+ * @param {string} cwd the throwaway workspace
+ */
+async function subagentsOf(sdk, scenario, messages, cwd) {
+  const sessionId = sessionIdOf(messages);
+
+  if (scenario.subagentHistory !== true || sessionId === null) {
+    return null;
+  }
+
+  /** @type {Record<string, unknown>} */
+  const filed = {};
+  for (const agentId of await sdk.listSubagents(sessionId)) {
+    filed[agentId] = normalise(await sdk.getSubagentMessages(sessionId, agentId), cwd);
+  }
+  return filed;
+}
+
+/**
+ * The session a run's stream names, or `null` when no message names one.
+ *
+ * @param {readonly unknown[]} messages
+ * @returns {string | null}
+ */
+function sessionIdOf(messages) {
+  const named = /** @type {{ session_id?: string } | undefined} */ (
+    messages.find((m) => m !== null && typeof m === 'object' && 'session_id' in m)
+  );
+  return named?.session_id ?? null;
 }
 
 /**
@@ -1106,6 +1220,8 @@ async function writeInitialization(query) {
  * @param {{
  *   query: (params: unknown) => AsyncIterable<unknown> & { close(): void },
  *   getSessionMessages(id: string): Promise<unknown[]>,
+ *   listSubagents(id: string): Promise<string[]>,
+ *   getSubagentMessages(id: string, agentId: string): Promise<unknown[]>,
  * }} sdk
  * @param {(typeof SCENARIOS)[number]} scenario
  */
@@ -1126,7 +1242,7 @@ async function recordScenario(sdk, scenario) {
     return;
   }
 
-  if (lacksWhatItRequires(scenario, result.canUseTool)) {
+  if (lacksWhatItRequires(scenario, result.canUseTool, result.messages)) {
     return;
   }
 
@@ -1137,6 +1253,7 @@ async function recordScenario(sdk, scenario) {
   );
   const cwd = String(init?.cwd ?? '');
   const history = await historyOf(sdk, result.messages, cwd);
+  const subagents = await subagentsOf(sdk, scenario, result.messages, cwd);
 
   const fixture = {
     $comment:
@@ -1145,7 +1262,8 @@ async function recordScenario(sdk, scenario) {
     name: scenario.name,
     why: scenario.why,
     prompt: stepsOf(scenario)[0]?.text ?? '(content blocks)',
-    ...declaredBy(scenario),
+    // Anonymised like the rest: an option may name a file of this machine — the MCP server's path.
+    .../** @type {object} */ (JSON.parse(anonymised(JSON.stringify(declaredBy(scenario))))),
     ...(result.transcript === null ? {} : { transcript: result.transcript }),
     recordedAt: new Date().toISOString().slice(0, 10),
     sdkVersion: sdkVersion(),
@@ -1158,6 +1276,7 @@ async function recordScenario(sdk, scenario) {
     canUseTool: normalise(result.canUseTool, cwd),
     stderr: result.stderr,
     ...(history === null ? {} : { history }),
+    ...(subagents === null ? {} : { subagents }),
     messages: normalise(result.messages, cwd),
   };
 
@@ -1177,9 +1296,10 @@ async function recordScenario(sdk, scenario) {
  *
  * @param {(typeof SCENARIOS)[number]} scenario
  * @param {{ toolName: string, input: unknown }[]} consulted
+ * @param {unknown[]} messages
  */
-function lacksWhatItRequires(scenario, consulted) {
-  const missing = scenario.requires?.(consulted) ?? [];
+function lacksWhatItRequires(scenario, consulted, messages) {
+  const missing = scenario.requires?.(consulted, messages) ?? [];
 
   if (missing.length > 0) {
     fail(`${scenario.name} was not written`, missing.join('; '));

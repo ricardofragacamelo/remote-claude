@@ -16,6 +16,9 @@ de pasta, command palette, moldura de tela com ajuda, Configurações). Os plano
 [07](../07-explorer-and-editor/README.md) (o editor, para os links de caminho e o "executar seleção
 no terminal") e [08](../08-claude-panel/README.md) (as sessões da aba de pasta, que dão conteúdo à
 aba Saída, e o `@terminal`) **enriquecem** o painel se já existirem; nada aqui espera por eles.
+**Não depende** do [plano 28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md): pode
+seguir, e só nasce com os nomes neutros dele — a política do subprocesso do agente é `agentPolicy`,
+a aba Saída lê as ferramentas de `kind: 'shell'`, e o texto fala do agente como `{agent}` ([D-14](decisions.md#d-14--ajuste-às-diretivas-do-plano-28)).
 
 > **Este plano pode ser encerrado na primeira task.** A [D-01](decisions.md#d-01--o-terminal-existe)
 > — o terminal existe? — bloqueia todas as fases. O usuário preferiu o terminal a "só tarefas" em
@@ -142,7 +145,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Estado por aba de pasta, e aba inativa não mata terminal | B-16 | [web/01](../../architecture/web/01-architecture.md) | S-123…S-128 |
 | O terminal no navegador: entrada, colagem segura, tamanho, tema, área de transferência, acessibilidade | B-17 | [web/03](../../architecture/web/03-ui-system.md#acessibilidade--não-é-opcional) | S-129…S-135 |
 | Vários terminais, divisão, aba Saída, e confirmação só para o destrutivo | B-18 | [web/03](../../architecture/web/03-ui-system.md#responsividade) | S-66, S-136…S-142, S-168 |
-| Busca no scrollback, links seguros, marcas de comando, contexto para o Claude | B-19 | [web/03](../../architecture/web/03-ui-system.md) | S-143…S-149, S-168 |
+| Busca no scrollback, links seguros, marcas de comando, contexto para o agente | B-19 | [web/03](../../architecture/web/03-ui-system.md) | S-143…S-149, S-168 |
 | Recusas, reautenticação e reconexão na tela, com texto que diz o que fazer | B-20 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md), [02-i18n](../../architecture/shared/02-i18n.md) | S-150…S-155, S-170, S-171 |
 | Configurações › Terminal e ajuda de verdade em toda tela | B-21, B-22 | [web/03](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre) | S-156…S-163, S-174 |
 | O ciclo e as recusas provados pela porta do usuário; o app verde | B-23…B-26 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-164…S-175 |
@@ -167,7 +170,7 @@ backend/src/
 ├── domain/
 │   ├── terminal/                   Terminal, TerminalPolicy, erros
 │   ├── auth/                       isRecentlyAuthenticated (step-up)
-│   └── shared/                     childEnvironment (terminal e Claude)
+│   └── shared/                     childEnvironment (terminal e agente)
 ├── application/terminal/ports/     PtyPort, …
 ├── adapter/
 │   ├── inbound/ws/terminal/        handlers terminal.*

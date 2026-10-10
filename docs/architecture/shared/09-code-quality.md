@@ -293,13 +293,32 @@ atualização de segurança em prioridade.
 
 ---
 
+## A conversa do app contra a do web
+
+"O app mostra o que o web mostra, no mesmo formato" é regra, então é verificada por máquina
+([plano 26](../../plans/26-mobile-conversation-parity/README.md), D-12): o `pnpm render:check` lê o
+[`scripts/render-parity.json`](../../../scripts/render-parity.json), ao lado do `i18n-shared.json`, e
+roda no **portão 11**, com o `contracts:check` e o `i18n:check` (`pnpm check:contracts-i18n`). Os testes
+dele rodam no portão 6. Reprova:
+
+- um `.tsx` da conversa do web (`components/conversation/`, `shared/components/markdown/`) ou um rótulo
+  de `tool-labels.ts` sem entrada no mapa;
+- uma entrada `ok` cujo widget, ou o teste que o desenha, o app não tem;
+- uma entrada `pending` cuja fase já está ✅ — e qualquer `pending`, depois que o plano 26 fechar;
+- uma entrada `excluded` cuja decisão não existe ou não está ✅.
+
+Uma exclusão que todo mundo marca para passar é o risco (R-06 do plano 26): por isso ela exige uma
+decisão registrada, nunca um comentário.
+
+---
+
 ## Onde cada portão roda
 
 | Momento | Roda | Por quê |
 |---|---|---|
 | **Pre-commit** (`husky` + `lint-staged`) | formatação, lint e `gitleaks` nos arquivos tocados | segundos, pega 80 % |
 | **Pre-push** | typecheck + unit + `jscpd` | evita CI vermelho por descuido |
-| **CI, todo push** | lint, typecheck, unit, cobertura, regras de arquitetura, i18n | |
+| **CI, todo push** | lint, typecheck, unit, cobertura, regras de arquitetura, i18n e a [paridade da conversa](#a-conversa-do-app-contra-a-do-web) | |
 | **CI, todo PR** | tudo acima + integração + e2e + segurança (SonarQube: ausente, [D-07](../../plans/05-hardening-operations/decisions.md)) | |
 | **Nightly** | `semgrep` completo | checagem cara, fora do caminho crítico — o `smoke-live` **não** entra: roda sob demanda, sem credencial do Claude no CI ([D-12 do plano 01](../../plans/01-live-session/decisions.md), mantida na [D-11 do plano 05](../../plans/05-hardening-operations/decisions.md#d-11--o-smoke-live-continua-sob-demanda)) |
 

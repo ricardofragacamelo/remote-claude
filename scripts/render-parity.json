@@ -1,0 +1,472 @@
+{
+  "$comment": "Every element the web draws in a message of the conversation, and its widget in the app — plan 26, B-04 (docs/plans/26-mobile-conversation-parity/F1-parity-map.md). `pnpm render:check` reads it: a component of the web roots or a label of the label sources with no entry fails; an `ok` entry names the widget (`path#Name`) and the widget test that draws it; a `pending` one names the phase that closes it, which must not be ✅ yet; an `excluded` one names a decision of plan 26 that is ✅. A component added to the web's conversation enters here in the same delivery (web/03-ui-system).",
+  "webRoots": [
+    "web/src/features/session/components/conversation",
+    "web/src/shared/components/markdown"
+  ],
+  "labelSources": ["web/src/features/session/lib/tool-labels.ts"],
+  "labelPattern": "'((?:sessions\\.tool|permission\\.question)\\.[A-Za-z]+)'",
+  "pendingAllowed": true,
+  "entries": [
+    {
+      "element": "block.text",
+      "web": "web/src/features/session/components/conversation/MessageItem.tsx#TextBlock",
+      "state": "pending",
+      "phase": "F3",
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_view.dart#MessageBubble"
+    },
+    {
+      "element": "block.thinking",
+      "web": "web/src/features/session/components/conversation/ThinkingBlock.tsx",
+      "app": "mobile/lib/features/session/presentation/widgets/thinking_line.dart#ThinkingLine",
+      "appTest": "mobile/test/widget/features/session/thinking_line_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "block.redactedThinking",
+      "web": "web/src/features/session/components/conversation/ThinkingBlock.tsx#redacted",
+      "app": "mobile/lib/features/session/presentation/widgets/thinking_line.dart#ThinkingLine",
+      "appTest": "mobile/test/widget/features/session/thinking_line_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "block.image",
+      "web": "web/src/features/session/components/conversation/ImageMarker.tsx",
+      "app": "mobile/lib/features/session/presentation/widgets/image_marker.dart#ImageMarker",
+      "appTest": "mobile/test/widget/features/session/image_marker_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "message.blocksInOrder",
+      "web": "web/src/features/session/components/conversation/MessageItem.tsx#MessageItem",
+      "state": "pending",
+      "phase": "F3"
+    },
+    {
+      "element": "message.author",
+      "web": "web/src/features/session/components/conversation/TimelineEntries.tsx#authorsOf",
+      "state": "pending",
+      "phase": "F3"
+    },
+    {
+      "element": "message.copy",
+      "web": "web/src/features/session/components/conversation/MessageItem.tsx#MessageHeader",
+      "state": "pending",
+      "phase": "F3"
+    },
+    {
+      "element": "message.selection",
+      "web": "web/src/features/session/components/conversation/MessageItem.tsx#ContextMenu",
+      "state": "pending",
+      "phase": "F3"
+    },
+    {
+      "element": "message.promptActions",
+      "web": "web/src/features/session/components/conversation/MessageActions.tsx",
+      "app": "mobile/lib/features/session/presentation/widgets/message_actions.dart#PromptHold",
+      "appTest": "mobile/test/widget/features/session/session_inline_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "message.markdown",
+      "web": "web/src/features/session/components/conversation/ChatMarkdown.tsx",
+      "state": "pending",
+      "phase": "F3"
+    },
+    {
+      "element": "message.fileLink",
+      "web": "web/src/features/session/components/conversation/ChatMarkdown.tsx#fileLinkOf",
+      "state": "pending",
+      "phase": "F3"
+    },
+    {
+      "element": "markdown.renderer",
+      "web": "web/src/shared/components/markdown/Markdown.tsx",
+      "state": "pending",
+      "phase": "F2",
+      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown"
+    },
+    {
+      "element": "markdown.heading",
+      "web": "web/src/shared/components/markdown/Markdown.tsx#h1-h6",
+      "state": "pending",
+      "phase": "F2"
+    },
+    {
+      "element": "markdown.emphasis",
+      "web": "web/src/shared/components/markdown/Markdown.tsx#strong-em",
+      "state": "pending",
+      "phase": "F2"
+    },
+    {
+      "element": "markdown.list",
+      "web": "web/src/shared/components/markdown/Markdown.tsx#ul-ol",
+      "state": "pending",
+      "phase": "F2"
+    },
+    {
+      "element": "markdown.table",
+      "web": "web/src/shared/components/markdown/Markdown.tsx#table",
+      "state": "pending",
+      "phase": "F2"
+    },
+    {
+      "element": "markdown.blockquote",
+      "web": "web/src/shared/components/markdown/Markdown.tsx#blockquote",
+      "state": "pending",
+      "phase": "F2"
+    },
+    {
+      "element": "markdown.inlineCode",
+      "web": "web/src/shared/components/markdown/Markdown.tsx#code",
+      "state": "pending",
+      "phase": "F2"
+    },
+    {
+      "element": "markdown.link",
+      "web": "web/src/shared/components/markdown/Markdown.tsx#a",
+      "state": "pending",
+      "phase": "F2"
+    },
+    {
+      "element": "markdown.remoteImage",
+      "web": "web/src/shared/components/markdown/Markdown.tsx#img",
+      "state": "pending",
+      "phase": "F2"
+    },
+    {
+      "element": "markdown.html",
+      "web": "web/src/shared/components/markdown/Markdown.tsx#html",
+      "state": "pending",
+      "phase": "F2"
+    },
+    {
+      "element": "markdown.mermaid",
+      "web": "web/src/shared/components/markdown/MermaidDiagram.tsx",
+      "state": "pending",
+      "phase": "F2",
+      "app": "mobile/lib/core/widgets/markdown/mermaid_block.dart#MermaidBlock"
+    },
+    {
+      "element": "code.block",
+      "web": "web/src/features/session/components/conversation/CodeBlock.tsx#CodeBlock",
+      "state": "pending",
+      "phase": "F2",
+      "app": "mobile/lib/core/widgets/markdown/code_block.dart#CodeBlock"
+    },
+    {
+      "element": "code.highlight",
+      "web": "web/src/features/session/components/conversation/CodeBlock.tsx#Coloured",
+      "state": "pending",
+      "phase": "F2"
+    },
+    {
+      "element": "code.copy",
+      "web": "web/src/features/session/components/conversation/CodeBlock.tsx#copy",
+      "state": "pending",
+      "phase": "F2"
+    },
+    {
+      "element": "code.insertIntoEditor",
+      "web": "web/src/features/session/components/conversation/CodeBlock.tsx#insertIntoEditor",
+      "state": "excluded",
+      "decision": "D-11"
+    },
+    {
+      "element": "tool.line",
+      "web": "web/src/features/session/components/conversation/ToolRow.tsx#ToolLine",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#ToolCard",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "tool.inOut",
+      "web": "web/src/features/session/components/conversation/ToolRow.tsx#ToolDetails",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#ToolCard",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "tool.wholeOutput",
+      "web": "web/src/features/session/components/conversation/ToolRow.tsx#ToolOutputView",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_output_view.dart#ToolOutputView",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "tool.decision",
+      "web": "web/src/features/permission/components/PermissionOutcomeLine.tsx",
+      "app": "mobile/lib/features/permission/presentation/widgets/permission_outcome_line.dart#PermissionOutcomeLine",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "tool.elapsed",
+      "web": "web/src/features/session/components/conversation/ToolRow.tsx#runningFor",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "tool.inputScroll",
+      "web": "web/src/features/session/components/conversation/ScrollingPre.tsx",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "tool.ansi",
+      "web": "web/src/features/session/components/conversation/AnsiText.tsx",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "tool.diff",
+      "web": "web/src/features/session/components/conversation/ToolDiffView.tsx",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "tool.trailLink",
+      "web": "web/src/features/session/components/conversation/ToolRow.tsx#trail",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "tool.subagentChildren",
+      "web": "web/src/features/session/components/conversation/SubagentChildren.tsx",
+      "state": "pending",
+      "phase": "F5"
+    },
+    {
+      "element": "tool.subagentPermission",
+      "web": "web/src/features/session/components/conversation/TimelineEntries.tsx#ToolEntry",
+      "state": "pending",
+      "phase": "F5"
+    },
+    {
+      "element": "question.inline",
+      "web": "web/src/features/session/components/conversation/InlinePermission.tsx",
+      "app": "mobile/lib/features/permission/presentation/widgets/permission_panel.dart#PermissionPanel",
+      "appTest": "mobile/test/widget/features/session/session_inline_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "question.plan",
+      "web": "web/src/features/permission/components/PlanApprovalCard.tsx",
+      "app": "mobile/lib/features/permission/presentation/widgets/plan_approval_card.dart#PlanApprovalCard",
+      "appTest": "mobile/test/widget/features/session/session_inline_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "question.answered",
+      "web": "web/src/features/permission/components/AnsweredQuestions.tsx",
+      "app": "mobile/lib/features/permission/presentation/widgets/answered_questions.dart#AnsweredQuestions",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "question.previewMarkdown",
+      "web": "web/src/features/permission/components/QuestionCard.tsx#preview",
+      "state": "pending",
+      "phase": "F3"
+    },
+    {
+      "element": "timeline",
+      "web": "web/src/features/session/components/conversation/TimelineEntries.tsx",
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_view.dart#ConversationView",
+      "appTest": "mobile/test/widget/features/session/conversation_view_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "turn.tokens",
+      "web": "web/src/features/session/components/conversation/TurnRow.tsx#TurnRow",
+      "state": "pending",
+      "phase": "F4",
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_lines.dart#TurnLine"
+    },
+    {
+      "element": "turn.compacted",
+      "web": "web/src/features/session/components/conversation/TurnRow.tsx#CompactedRow",
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_lines.dart#CompactedLine",
+      "appTest": "mobile/test/widget/features/session/conversation_view_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "turn.rewound",
+      "web": "web/src/features/session/components/conversation/TurnRow.tsx#RewoundRow",
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_lines.dart#RewoundRow",
+      "appTest": "mobile/test/widget/features/session/session_inline_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "turn.working",
+      "web": "web/src/features/session/components/conversation/WorkingIndicator.tsx",
+      "app": "mobile/lib/features/session/presentation/widgets/working_indicator.dart#WorkingIndicator",
+      "appTest": "mobile/test/unit/features/session/presentation/widgets/working_indicator_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "label.read",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.read",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.edit",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.edit",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.multiEdit",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.multiEdit",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.write",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.write",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.notebookEdit",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.notebookEdit",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.bash",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.bash",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.grep",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.grep",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.grepIn",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.grepIn",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.glob",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.glob",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.webFetch",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.webFetch",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.webSearch",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.webSearch",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.agent",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.agent",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.exitPlan",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.exitPlan",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.todoWrite",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.todoWrite",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.taskCreate",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.taskCreate",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.taskUpdate",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.taskUpdate",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.taskGet",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.taskGet",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.taskList",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.taskList",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.titled",
+      "web": "web/src/features/session/lib/tool-labels.ts#toolLabel",
+      "label": "sessions.tool.titled",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#toolLabel",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "label.other",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.other",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.mcp",
+      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "label": "sessions.tool.mcp",
+      "state": "pending",
+      "phase": "F4"
+    },
+    {
+      "element": "label.question.asked",
+      "web": "web/src/features/session/lib/tool-labels.ts#questionLabel",
+      "label": "permission.question.asked",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#questionLabel",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "label.question.askedMany",
+      "web": "web/src/features/session/lib/tool-labels.ts#questionLabel",
+      "label": "permission.question.askedMany",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#questionLabel",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "state": "ok"
+    }
+  ]
+}

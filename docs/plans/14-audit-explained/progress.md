@@ -11,8 +11,8 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-27
-**Bloqueios:** nenhum para planejar. Para **começar**: a F0 espera o plano 03 concluído e as decisões D-01…D-07 (a D-01 depende do spike da B-01); a F2 espera a moldura de tela e a navegação global do [plano 06](../06-workbench/README.md)
+**Última atualização:** 2026-10-10
+**Bloqueios:** nenhum para planejar. Para **começar**: o [plano 28](../28-agent-neutral-core/README.md) concluído (pela ordem de 2026-10-10, o 14 vem depois do 28, do 26 F2…F7, do 13 e do 27 — [D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28)); a F0 espera o plano 03 concluído e as decisões D-01…D-07 (a D-01 depende do spike da B-01); a F2 espera a moldura de tela e a navegação global do [plano 06](../06-workbench/README.md)
 
 ```
 F0 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
@@ -43,7 +43,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 151 | 151 | 0 | 0 | 0 |
+| [Matriz](scenarios.md) | 152 | 152 | 0 | 0 | 0 |
 
 ---
 
@@ -54,7 +54,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 14 | 14 | 0 | 0 | 0 |
+| [Decisões](decisions.md) | 15 | 14 | 0 | 1 | 0 |
 
 ---
 
@@ -75,7 +75,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-10-10 | O plano nasce sobre o núcleo neutro do [plano 28](../28-agent-neutral-core/README.md): o que é do Claude no adapter `engines/claude/`, a conversa como `engine` + `conversation_id`, a ferramenta pelo `kind`/`label`/`subject`, o diff e o alcance da regra pelo backend, `{agent}` no texto ([D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28)). 2026-10-10 (revisão dos gaps do 28): a regra é a da gramática canônica, e a parte que casou vem do domínio de `permission`, não do `RuleDialect`; os kinds de extensão são `engine.*`, com o motor no payload, nunca `claude.*`; as rotas novas nascem em `packages/contracts/schema/http/` | pedido do usuário: ajustar os planos não executados às diretivas de isolamento, de regras e de canonicidade do 28 | README (dependência, rastreio, árvore); B-01…B-03, B-06…B-10, B-12, B-16…B-21, B-25…B-29, B-31, B-34; D-04, D-08, D-09, D-13; S-21, S-41, S-52, S-65, S-72…S-75, S-112, S-123, S-124, S-131. Na revisão: [28 · D-09, D-10, D-11, D-18](../28-agent-neutral-core/decisions.md#f5--permissão-pelo-dialeto) contra a recomendação que o ajuste supôs; README (dependência, rastreio, árvore); B-03, B-06, B-26, B-29; D-15; S-124; nasce S-152 |
 
 ---
 

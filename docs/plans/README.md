@@ -41,7 +41,9 @@ Voltar para o [índice geral](../architecture/README.md).
 | 23 | [Permissões fluidas](23-fluid-permissions/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 | 24 | [Perguntas estruturadas](24-structured-questions/README.md) | ✅ concluído | `pnpm verify:full` sai com código 0 |
 | 25 | [Navegador de arquivos no app](25-mobile-file-browser/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
-| 26 | [Paridade da conversa no app](26-mobile-conversation-parity/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
+| 26 | [Paridade da conversa no app](26-mobile-conversation-parity/README.md) | 🔄 em andamento | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
+| 27 | [Perdas da conversa](27-conversation-losses/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
+| 28 | [Núcleo neutro de agente](28-agent-neutral-core/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -59,6 +61,39 @@ anteriores entregam, e foi movida para o fim em 2026-09-27, por decisão do usu�
 resolver antes de empacotar.
 Quanto já foi feito, em todos eles, está no
 [progresso geral](progress.md) — esta tabela é o índice, não o diário.
+
+O **28** ([Núcleo neutro de agente](28-agent-neutral-core/README.md)) entrou em 2026-10-10, por pedido do
+usuário, a partir da [discovery 10](../discovery/10-nucleo-canonico-e-agentes-isolados.md): prepara o
+produto para vários agentes de código, e por isso entra **antes** dos planos que ainda não rodaram e
+acoplariam a conversa ao Claude. A ordem que vale a partir dele está logo abaixo.
+
+### Ordem de execução
+
+**Decidida em 2026-10-10** ([28 · D-01](28-agent-neutral-core/decisions.md#f0--normas)). Ela vale até o
+último plano da lista fechar, e muda só por decisão registrada no `decisions.md` do plano que a
+provocar, com esta seção atualizada na mesma entrega. A ordem é dependência: um passo começa com o
+anterior concluído.
+
+| # | Plano · fases | Espera | Por quê |
+|---|---|---|---|
+| 1 | [26](26-mobile-conversation-parity/README.md) · F1 | — | as tasks estão escritas; falta o `pnpm verify` que fecha a fase. O mapa de paridade dela é o que o 28 reescreve pelo `kind` |
+| 2 | [28](28-agent-neutral-core/README.md) · F0…F7 | 1 | o núcleo neutro e a catraca: a partir da F0 dele, nenhum plano acopla algo novo ao Claude sem o portão 11 reprovar |
+| 3 | [26](26-mobile-conversation-parity/README.md) · F2…F7 | 2 | a paridade do app sobre o contrato canônico: a F4 desenha o `label` e chama a rota do diff ([26 · D-15](26-mobile-conversation-parity/decisions.md)) |
+| 4 | [13](13-claude-settings/README.md) · F2…F4 | 2, 3 | o MCP nasce no núcleo, por motor, e plugins, skills e `.claude/` na extensão `engines/claude/` |
+| 5 | [27](27-conversation-losses/README.md) · F0…F7 | 3, 4 | já canônico; o teste de vocabulário dele é o portão do 28 ([27 · D-14](27-conversation-losses/decisions.md)) |
+| 6 | [15](15-rules-management/README.md) · retoma a B-08 | 2 (F5) | a gramática de regra fica atrás do `RuleDialect` ([28 · D-12](28-agent-neutral-core/decisions.md#f5--permissão-pelo-dialeto)) |
+| 6 | [14](14-audit-explained/README.md), [16](16-usage-and-cost/README.md), [18](18-logs-and-diagnostics/README.md) | 2 | cada um pela sua dependência; nascem com `conversation { engine, id }`, `kind` e as extensões registradas pelo motor |
+| 7 | [discovery 03](../discovery/03-multiplos-motores-de-agente.md) — o segundo motor (M1 spike → M2 → M3 ACP → M4) | 2 | a porta, o contrato e o motor de teste do 28 são o que o motor real usa; vira plano quando o usuário pedir |
+| 8 | [19](19-distribution/README.md) | todos | empacota o que os outros entregam; os pré-requisitos e a credencial passam a ser por motor |
+
+**Fora da ordem**, porque não dependem do 28 nem ele deles: o [11](11-search/README.md), o
+[12](12-integrated-terminal/README.md) (só nasce com o nome neutro na política do subprocesso), o
+[17](17-devices/README.md) e o [20](20-dev-public/README.md). A [discovery 02](../discovery/02-workflow-de-sessoes.md)
+(workflow), quando virar plano, começa depois do passo 2, já sobre o núcleo canônico.
+
+Os passos com o mesmo número podem correr em qualquer ordem entre si. A dependência de cada plano
+também está no `README.md` dele (**Depende de**) e na coluna **Depende de** do
+[progresso geral](progress.md#onde-o-projeto-está).
 
 ---
 

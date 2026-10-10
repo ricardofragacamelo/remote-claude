@@ -875,6 +875,37 @@ Claude logado; as sondas `probe`, `strict` e `locations` não gastam cota.
 
 ---
 
+## 12 — Sexta rodada de spikes (2026-10-09)
+
+Feita para a F0 do [plano 26](../plans/26-mobile-conversation-parity/F0-spike.md) — a B-01: a forma das
+mensagens que a conversa do app passa a desenhar, medida antes das fixtures que a assumem. Mesmo
+ambiente do §11: `CLAUDE_CONFIG_DIR` isolado com a credencial copiada, repositório gerado por execução,
+o servidor MCP de fixture passado **direto** à sessão com `strictMcpConfig`. Toda sessão com as opções
+do produto que mudam o stream: `settingSources: ['project']`, o `PreToolUse`, o `canUseTool`,
+`includePartialMessages`, `includeHookEvents`, `forwardSubagentText`, `persistSession` e o thinking
+resumido. CLI **2.1.277**, SDK **0.3.277**, turnos em `haiku`.
+
+| # | Pergunta | Medido | Decide |
+|---|---|---|---|
+| 1 | subagent de projeto (`.claude/agents/writer.md`, `tools: Write, Read`) com `Write` que pede permissão — ao vivo | o `Agent` (`subagent_type: writer`) e **7** mensagens com `parent_tool_use_id` igual ao id dele: 5 `assistant` e 2 `user` — o prompt do subagent e o `tool_result` do `Write`. Blocos: 3 `text` (um é o prompt), 2 `thinking`, 1 `tool_use`, 1 `tool_result`. **Nenhum** `stream_event`: o subagent não tem delta, só a mensagem inteira (confirma o §10.6). O `Write` dele nunca aparece na cadeia principal. O `canUseTool` do `Write` veio com o `toolUseID` da chamada **do subagent** e com `agentID`. Nenhum `tool_progress` (o `Write` é rápido) | [26 · B-18](../plans/26-mobile-conversation-parity/F5-subagents.md): o app guarda o dono de cada frame; [B-21](../plans/26-mobile-conversation-parity/F5-subagents.md): a permissão é achada pelo `toolUseId` dentro do subagent |
+| 2 | o mesmo subagent pelo histórico | o `getSessionMessages` da conversa **não** tem nenhuma mensagem com `parent_tool_use_id`: o subagent mora fora dela. O `listSubagents` lista 1, e o `getSubagentMessages` dele devolve 7 mensagens, **todas** com o `parent_tool_use_id` do `Agent` — o que o backend usa para achá-lo (`transcript.adapter.ts`). Blocos: 2 `text`, 2 `thinking`, 1 `tool_use`, 1 `tool_result` (o prompt do subagent vem como texto puro, não como bloco) | [26 · B-20](../plans/26-mobile-conversation-parity/F5-subagents.md): o app lê a rota de subagents ao abrir o card, como o web |
+| 3 | nome de uma tool MCP chamada sem título | `mcp__fixture__echo`, com a entrada `{ text }` — **sem** `description`, então sem título no `tool.started`. O `canUseTool` foi chamado com o mesmo nome | [26 · B-13](../plans/26-mobile-conversation-parity/F4-tool-cards.md): o rótulo `fixture · echo`, nunca o nome cru |
+| 4 | texto, tool e texto numa resposta | 5 mensagens `assistant`, **um bloco cada**. Sob o primeiro `message.id`: `thinking`, `text`, `tool_use`; sob o segundo: `thinking`, `text`. Dois blocos de texto, cada um numa mensagem de API própria — o `message.completed` do backend leva um bloco por vez, e a mensagem do app tem de guardar a lista em ordem, não colar os textos | [26 · B-09](../plans/26-mobile-conversation-parity/F3-message-markdown.md) |
+
+**Consequências:** nenhuma surpresa contra o que o plano 26 assume. O subagent é a única perda de
+mensagem inteira do app, e as três vias que ele tem de cobrir são as medidas aqui: o stream com
+`parent_tool_use_id` (sem delta), o `canUseTool` com o id da chamada do subagent, e o histórico em
+arquivo próprio, achado pelo `parent_tool_use_id`. As fixtures da
+[B-02](../plans/26-mobile-conversation-parity/F0-spike.md) são gravadas nessa forma, e o `smoke-live`
+da [B-31](../plans/26-mobile-conversation-parity/F7-e2e.md) volta a conferi-la a cada versão do CLI.
+
+### Como reproduzir
+
+`pnpm spike:conversation-parity` — ou uma sonda pelo nome (`subagent`, `mcp`, `blocks`), e
+`--json <arquivo>` para os números crus. Exige o Claude logado; cada sonda gasta um turno pequeno.
+
+---
+
 ## Versões verificadas
 
 | Item | Versão |
@@ -884,7 +915,7 @@ Claude logado; as sondas `probe`, `strict` e `locations` não gastam cota.
 | Node | v24.16.0 |
 | npm | 11.13.0 |
 | Flutter / Dart | presentes em `~/middleware/flutter/flutter/bin` |
-| Data da descoberta | 2026-09-13 · terceira rodada de spikes em 2026-09-16 · quarta em 2026-10-01 · quinta em 2026-10-09 |
+| Data da descoberta | 2026-09-13 · terceira rodada de spikes em 2026-09-16 · quarta em 2026-10-01 · quinta e sexta em 2026-10-09 |
 
 Fontes: `sdk.d.ts` (9221 linhas) e `README.md` do pacote, inspecionados localmente.
 Doc oficial: <https://platform.claude.com/docs/en/agent-sdk/overview>

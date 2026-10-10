@@ -13,8 +13,14 @@ pnpm verify:full     # portões 1-11, sai com código 0
 **Depende de:** [plano 03](../03-rules-and-audit/README.md) (a trilha consultável e a retenção, que
 continuam valendo) · [plano 06](../06-workbench/README.md) (navegação global, moldura de tela com
 propósito e ajuda, command palette) · [plano 04](../04-transcript-and-resume/README.md) (o título e o
-ponto da conversa vêm do `transcript`). O [plano 07](../07-explorer-and-editor/README.md) e os seguintes
-acrescentam tipos de evento que esta tela mostra quando existirem — **não** depende deles. O
+ponto da conversa vêm do `transcript`) · [plano 28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md)
+**concluído** (a invocação chega com `kind`, `label`, `subject` e `origin`, a conversa é
+`{ engine, id }`, o diff e o alcance da regra vêm do backend — a regra na gramática canônica do domínio —,
+nenhum kind de auditoria tem nome de motor (os de extensão são `engine.*`), as rotas novas nascem com tipo
+gerado em `packages/contracts/schema/http/`, e o que é do Claude mora em
+`engines/claude/` — [D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28)). O
+[plano 07](../07-explorer-and-editor/README.md) e os seguintes acrescentam tipos de evento que esta
+tela mostra quando existirem — **não** depende deles. O
 [plano 08](../08-claude-panel/README.md) e o [plano 15](../15-rules-management/README.md) melhoram dois
 vínculos (diff completo, `evaluate`), e a tela funciona sem eles.
 
@@ -129,7 +135,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Toda invocação tem um endereço que sobrevive — e diz quando a retenção a levou | B-13, B-22 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#tabela-de-status-http) | S-56…S-62, S-94…S-97 |
 | Busca de texto em todo o input, com índice medido | B-14 | [backend/05](../../architecture/backend/05-persistence.md#convenções-de-schema) | S-63…S-67 |
 | Rotas novas logadas em `debug`, isoladas no lado de leitura, sem quebrar a rota antiga | B-15 | [03-logging](../../architecture/shared/03-logging.md#a-regra-do-io-em-debug) | S-68…S-71 |
-| Tools com nome de gente, ícone e o comando à vista — MCP inclusive | B-16 | [02-i18n](../../architecture/shared/02-i18n.md) | S-72…S-75 |
+| Ferramentas com nome de gente, ícone e o assunto à vista, pelo `kind` — MCP inclusive | B-16 | [02-i18n](../../architecture/shared/02-i18n.md) | S-72…S-75 |
 | A tela é um link: filtros, agrupamento e item aberto na URL | B-17 | [web/04](../../architecture/web/04-state-and-data.md#a-url-é-estado) | S-76…S-78, S-89 |
 | Cabeçalho com propósito, resumo que filtra, presets de período | B-18 | [web/03](../../architecture/web/03-ui-system.md#trilha-de-auditoria) | S-79, S-80 |
 | Lista densa, agrupável, de teclado, com menu de contexto e sem scroll horizontal | B-19 | [web/03](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre) | S-81…S-83, S-85, S-86, S-90 |
@@ -139,7 +145,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | A tela aberta fica sabendo das entradas novas sem perder o lugar | B-24 | [web/04](../../architecture/web/04-state-and-data.md) | S-106…S-108 |
 | Ajuda de verdade, tooltips, atalhos, estados vazios que ensinam, acessibilidade | B-25, B-34 | [web/03 · acessibilidade](../../architecture/web/03-ui-system.md#acessibilidade--não-é-opcional) | S-109…S-114, S-139 |
 | Da invocação ao ponto exato da conversa | B-27 | [backend/03 · transcript](../../architecture/backend/03-modules.md#transcript) | S-119…S-122 |
-| O diff e a regra que respondeu, a partir da invocação | B-28, B-29 | [backend/03 · permission](../../architecture/backend/03-modules.md#permission) | S-123…S-126 |
+| O diff e a regra que respondeu, a partir da invocação | B-28, B-29 | [backend/03 · permission](../../architecture/backend/03-modules.md#permission) | S-123…S-126, S-152 |
 | Exportar o recorte sob as regras da tela, com ADR, teto e a exportação na própria trilha | B-30…B-32 | [00-decisions](../../architecture/shared/00-decisions.md) | S-127…S-136 |
 | "Ver na trilha" a partir do workbench, das regras e dos aparelhos | B-33 | [web/04](../../architecture/web/04-state-and-data.md#a-url-é-estado) | S-137, S-138 |
 | O ciclo inteiro provado pela porta do usuário | B-35…B-38 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-140…S-151 |
@@ -160,17 +166,21 @@ backend/src/
 │                                     · ConversationTitleLookup · (AuditViewStore, se D-10 = servidor)
 ├── adapter/
 │   ├── inbound/http/audit/           /audit/timeline · invocations/:id · events/:id · summary
-│   │                                 · facets · export · views   (e /audit-entries, intacto)
+│   │                                 · facets · export · views · invocations/:id/diff
+│   │                                 (e /audit-entries, intacto)
 │   └── outbound/
-│       ├── claude/session-runner.ts  PostToolUse · PostToolUseFailure (· PermissionDenied)
+│       ├── engines/claude/session-runner.ts   PostToolUse · PostToolUseFailure (· PermissionDenied)
+│       │                             → o desfecho canônico (D-15)
 │       └── persistence/audit/        leitores novos
 └── infrastructure/database/migrations/   uma migration nova: desfecho, vínculo, audit.exported, índices
 
+packages/contracts/schema/http/       as rotas novas de /audit, com tipo gerado (28 · D-09)
+
 web/src/
-├── shared/tools/                     catálogo: nome amigável, ícone, campo principal
 ├── features/audit/{components,hooks,services,types}/
 │                                     resumo · lista · filtros · detalhe · história · visões · exportar
-│                                     · registro de tipos de evento
+│                                     · registro de tipos de evento · a ferramenta por kind (B-16)
+├── engines/claude/                   só a explicação a mais que é do Claude, se houver (D-15)
 └── app/                              /audit · /audit/invocations/$invocationId · /audit/events/$eventId
 
 e2e/{scenarios,specs}/                audit-outcomes · audit-screen · audit-events-export

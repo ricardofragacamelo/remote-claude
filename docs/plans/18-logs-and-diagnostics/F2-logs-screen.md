@@ -54,6 +54,8 @@ Barra de filtros no topo, tudo refletido na URL:
 
 - nível mínimo e seleção por nível;
 - módulo e `op` em seletores com busca e contagem vindas das facetas — ninguém digita nome técnico;
+  as operações da borda do motor são `engine.*` ([plano 28](../28-agent-neutral-core/README.md)), e o
+  campo `engine` filtra por motor;
 - período com atalhos (últimos 15 min, última hora, desde o reinício) e intervalo livre validado
   inline (`from` antes de `to`);
 - busca por termos com `!` para excluir, com dica do formato no próprio campo;
@@ -75,7 +77,8 @@ Botão "seguir" (e o atalho) liga o long-poll de `useLogTail` a partir do últim
 ### B-20 — A cadeia de um `traceId`, e o caminho até ela 🔲
 
 Clicar num `traceId` abre uma gaveta com a cadeia (`useTrace`): linha do tempo das linhas do trace
-agrupadas por camada (HTTP/WS → use case → banco → SDK), pares com duração em barras
+agrupadas por camada (HTTP/WS → use case → banco → motor — as linhas `engine.*`, com `engine` e
+`engineVersion`), pares com duração em barras
 proporcionais, a operação **pendurada** e os erros destacados, e "filtrar a lista por este trace".
 Quando o [plano 14](../14-audit-explained/README.md) oferecer a trilha por `traceId`, a gaveta
 ganha o link para ela.
@@ -111,10 +114,10 @@ quem opera. É o que finalmente dá destino ao `traceId` que o
 
 - **ajuda** na gaveta da moldura, escrita para quem nunca viu o produto, em `en` e `pt-BR`: o que é
   a tela; por que o log do web e do app não aparece nela (fica no console de cada um, e o `traceId`
-  liga os dois lados); os níveis e quando usar `debug`; o que é `traceId` e
-  como seguir uma falha do clique ao Claude; **o que a redação remove e que não volta**; o que o
-  buffer guarda (desde o reinício, com teto) e onde está o registro durável; **quem vê o quê** (só o
-  operador) e o que ele vê de outros usuários; os atalhos;
+  liga os dois lados); os níveis e quando usar `debug`; o que é `traceId` e como seguir uma falha do
+  clique ao agente (`{agent}`); **o que a redação remove e que não volta**; o que o buffer guarda
+  (desde o reinício, com teto) e onde está o registro durável; **quem vê o quê** (só o operador) e o
+  que ele vê de outros usuários; os atalhos;
 - tooltip em todo controle de ícone, com o atalho quando houver;
 - atalhos (`/` busca, `F` seguir, setas, `Enter` expandir, `Esc` fechar a gaveta), registrados na
   palette, com foco visível e ordem de tabulação coerente (S-82);

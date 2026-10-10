@@ -20,7 +20,10 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 
 O `render:check` passa a reprovar **qualquer** entrada `pending`. Depois desta fase, só existem `ok`
 e `excluded` com decisão ✅. Um componente novo da conversa no web exige o par no app na mesma
-entrega, ou uma decisão. Cenários S-77…S-79.
+entrega, ou uma decisão. As entradas de rótulo são as que a
+[F2 do plano 28](../28-agent-neutral-core/F2-canonical-tools.md) rechaveou pelo `kind`, quando o
+`tool-labels.ts` que a [B-05](F1-parity-map.md) lia do fonte deixou de existir: um `kind` novo sem par
+no app reprova como um componente novo. Cenários S-77…S-79.
 
 ### B-28 — A paridade de conteúdo por fixture 🔲
 
@@ -29,7 +32,15 @@ Em `packages/contracts/fixtures/conversation-parity/`, uma pasta por fixture da 
 - a sequência de eventos WS que o backend publica para ela, gerada pelo mapper real a partir da
   fixture do SDK e conferida pelo `contracts:check`;
 - o **conteúdo esperado**, um JSON neutro: por mensagem, o autor e os blocos em ordem; por tool, o
-  dono, o rótulo (chave e parâmetros), o status e a mídia; os avisos; o pensamento; os tokens do turno.
+  dono, o `kind`, o rótulo (chave e parâmetros), o status e a mídia; os avisos; o pensamento; os tokens
+  do turno.
+
+O JSON neutro **é** o modelo canônico do [plano 28](../28-agent-neutral-core/README.md)
+([discovery 10 §6](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#6-o-modelo-canônico-das-mensagens)):
+a tool pelo `kind` e pelo `label`, nunca pelo nome nativo nem pelo `rawInput`; o autor pelo papel
+(usuário ou agente), sem o nome do motor; os blocos com os nomes nossos (`redactedThinking`, `toolUse`,
+`toolResult`); os tokens pelo `usage` canônico, com o `costUsd` opcional. O `origin` não entra no
+esperado: é opaco, e um cliente que o usasse para desenhar já reprova no portão de neutralidade.
 
 Os dois lados conferem a mesma pasta:
 

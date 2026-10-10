@@ -39,6 +39,12 @@ const PANEL_TURNS = [
   'todo-write-turn',
   'task-tools-turn',
   'task-tools-listed-model-turn',
+  // Plan 26, B-02 — the conversation of the app (S-06).
+  'markdown-rich-turn',
+  'multi-text-block-turn',
+  'explanatory-style-turn',
+  'mcp-untitled-tool-turn',
+  'subagent-permission-turn',
 ];
 
 /** How many `tool_use` blocks the model emitted in a recording. */

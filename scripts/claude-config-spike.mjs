@@ -20,13 +20,10 @@
  * not a failure of the spike, it is what the spike exists to find.
  */
 
-import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import { pathToFileURL } from 'node:url';
 
 import {
   argvCarries,
@@ -50,16 +47,13 @@ import {
   unexpectedServers,
   userConfigFiles,
 } from './lib/claude-config-spike.mjs';
-import { withoutParentSession } from './lib/parent-session.mjs';
+import { copyCredential, runSpike, spikeSession } from './lib/spike-session.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { maskedSecret } from '../e2e/fixtures/mcp-server/masked-secret.mjs';
 import { fail, info, line, ok, title } from './lib/ui.mjs';
 
 const SERVER = path.join(repoRoot, 'e2e', 'fixtures', 'mcp-server', 'fixture-mcp-server.mjs');
 const NODE = process.execPath;
-
-/** How long one session may take before it is abandoned. */
-const SESSION_TIMEOUT_MS = 240_000;
 
 /** The model the turns run on: cheap, and enough to call a named tool. `SPIKE_MODEL` overrides. */
 const MODEL = process.env['SPIKE_MODEL'] ?? 'haiku';
@@ -103,8 +97,7 @@ function makeConfig(root) {
   const config = path.join(root, 'config');
   writeAll(config, userConfigFiles());
 
-  fs.copyFileSync(path.join(source, '.credentials.json'), path.join(config, '.credentials.json'));
-  fs.chmodSync(path.join(config, '.credentials.json'), 0o600);
+  copyCredential(source, config);
 
   const synced = path.join(source, 'skills', 'synced');
   if (fs.existsSync(synced)) {
@@ -199,131 +192,17 @@ function makeSyntheticPlugin(root, config) {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * @typedef {object} SessionSpec
- * @property {string} cwd
- * @property {string} config the `CLAUDE_CONFIG_DIR`
- * @property {Record<string, unknown>} [options] beyond the product's own
- * @property {string[]} [prompts] one turn each; none is an idle session
- * @property {(toolName: string) => boolean} [allows] what `canUseTool` answers — allow by default
- * @property {Record<string, string>} [env] added to the CLI's environment
- * @property {((hookInput: any) => unknown) | undefined} [hookAnswer] what the `PreToolUse` hook answers — let
- *   through by default
- * @property {(query: any, sessionId: string) => Promise<any>} [before] runs once the subprocess
- *   is up and before the first prompt — the control requests of an idle probe
- */
-
-/**
- * Opens a session the way the product does — `settingSources: ['project']`, the `PreToolUse` hook
- * and `canUseTool` — runs `before`, sends the prompts one turn at a time, and closes it.
+ * A session of this spike: the product's options, on the model of the spike.
  *
- * @param {any} sdk @param {SessionSpec} spec
+ * @param {any} sdk @param {Omit<import('./lib/spike-session.mjs').SessionSpec, 'model'>} spec
  */
-async function session(sdk, spec) {
-  const sessionId = randomUUID();
-  /** @type {{ preToolUse: { toolName: string, [key: string]: unknown }[], canUseTool: { toolName: string }[] }} */
-  const seen = { preToolUse: [], canUseTool: [] };
-  /** @type {any[]} */
-  const messages = [];
-  const prompts = spec.prompts ?? [];
-  const allows = spec.allows ?? (() => true);
-
-  /** @type {(value?: unknown) => void} */
-  let release = () => undefined;
-  const ready = new Promise((resolve) => (release = resolve));
-  /** @type {(value?: unknown) => void} */
-  let wake = () => undefined;
-
-  async function* input() {
-    await ready;
-    for (const text of prompts) {
-      const answered = new Promise((resolve) => (wake = resolve));
-      yield { type: 'user', message: { role: 'user', content: text }, parent_tool_use_id: null };
-      await answered;
-    }
-    await new Promise(() => undefined);
-  }
-
-  const abortController = new AbortController();
-  const deadline = setTimeout(() => abortController.abort(), SESSION_TIMEOUT_MS);
-
-  const query = sdk.query({
-    prompt: input(),
-    options: {
-      cwd: spec.cwd,
-      sessionId,
-      model: MODEL,
-      // The product's value, and the reason for the whole spike: omitting it loads the user's
-      // personal `allow` rules and skips `canUseTool` in silence.
-      settingSources: ['project'],
-      hooks: {
-        PreToolUse: [
-          {
-            hooks: [
-              /** @param {any} hookInput */
-              (hookInput) => {
-                seen.preToolUse.push({
-                  toolName: hookInput.tool_name ?? 'unknown',
-                  permissionMode: hookInput.permission_mode ?? null,
-                  agentType: hookInput.agent_type ?? null,
-                  agentId: hookInput.agent_id ?? null,
-                  effort: hookInput.effort?.level ?? null,
-                });
-                return Promise.resolve(spec.hookAnswer?.(hookInput) ?? { continue: true });
-              },
-            ],
-          },
-        ],
-      },
-      /** @param {string} toolName @param {Record<string, unknown>} toolInput */
-      canUseTool: (toolName, toolInput) => {
-        seen.canUseTool.push({ toolName });
-        return Promise.resolve(
-          allows(toolName)
-            ? { behavior: 'allow', updatedInput: toolInput }
-            : { behavior: 'deny', message: 'refused by the spike' },
-        );
-      },
-      allowDangerouslySkipPermissions: false,
-      maxTurns: 8,
-      maxBudgetUsd: 1,
-      abortController,
-      env: { ...withoutParentSession(process.env), CLAUDE_CONFIG_DIR: spec.config, ...spec.env },
-      stderr: () => undefined,
-      // Isolated unless a probe says otherwise: the product's own setting (ADR-018).
-      strictMcpConfig: true,
-      mcpServers: {},
-      ...spec.options,
-    },
-  });
-
-  try {
-    const extra = spec.before === undefined ? null : await spec.before(query, sessionId);
-    release();
-
-    let results = 0;
-    if (prompts.length > 0) {
-      for await (const message of query) {
-        messages.push(message);
-        if (message.type === 'result') {
-          results += 1;
-          wake();
-          if (results === prompts.length) break;
-        }
-      }
-    }
-
-    return { sessionId, seen, messages, extra };
-  } finally {
-    clearTimeout(deadline);
-    query.close();
-  }
-}
+const session = (sdk, spec) => spikeSession(sdk, { ...spec, model: MODEL });
 
 /**
  * A session in a fresh copy of the throwaway repository.
  *
  * @param {any} sdk @param {{ root: string, config: string }} world @param {string} name
- * @param {Omit<SessionSpec, 'cwd' | 'config'>} spec
+ * @param {Omit<import('./lib/spike-session.mjs').SessionSpec, 'cwd' | 'config' | 'model'>} spec
  */
 async function inRepository(sdk, world, name, spec) {
   const repository = makeRepository(world.root, name);
@@ -769,56 +648,19 @@ const RUNNERS = { strict, approval, secret, probe, project, shell, skills, flags
 
 // ---------------------------------------------------------------------------------------------
 
-async function main() {
-  const args = process.argv.slice(2);
-  const jsonAt = args.indexOf('--json');
-  const jsonFile = jsonAt === -1 ? null : args[jsonAt + 1];
-  const wanted = args.filter(
-    (arg, index) => !arg.startsWith('--') && (jsonAt === -1 || index !== jsonAt + 1),
-  );
-  const chosen = wanted.length === 0 ? PROBES : wanted;
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rc-claude-config-spike-'));
+const world = { root, config: makeConfig(root) };
 
-  const unknown = chosen.filter((name) => !PROBES.includes(name));
-  if (unknown.length > 0) {
-    fail(`no probe named ${unknown.join(', ')}`, `known: ${PROBES.join(', ')}`);
-    return 1;
-  }
-
-  title('Plan 13 · B-01 — the measurements behind "Configuração do Claude"');
-
-  const fromBackend = createRequire(path.join(repoRoot, 'backend', 'package.json'));
-  const sdk = await import(
-    pathToFileURL(fromBackend.resolve('@anthropic-ai/claude-agent-sdk')).href
-  );
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rc-claude-config-spike-'));
-  const world = { root, config: makeConfig(root) };
-  /** @type {Record<string, unknown>} */
-  const results = {};
-  let failed = 0;
-
-  try {
-    for (const name of chosen) {
-      info(`${name}…`);
-      const started = Date.now();
-      try {
-        results[name] = await RUNNERS[/** @type {keyof typeof RUNNERS} */ (name)](sdk, world);
-        ok(name, `${String(Date.now() - started)} ms`);
-      } catch (error) {
-        failed += 1;
-        results[name] = { error: String(error) };
-        fail(name, String(error));
-      }
-    }
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-
-  line(JSON.stringify(results, null, 2));
-  if (jsonFile !== null && jsonFile !== undefined) {
-    fs.writeFileSync(jsonFile, `${JSON.stringify(results, null, 2)}\n`);
-  }
-  line(reportTable(spikeRows(results)));
-  return failed === 0 ? 0 : 1;
+try {
+  process.exitCode = await runSpike({
+    args: process.argv.slice(2),
+    probes: PROBES,
+    heading: 'Plan 13 · B-01 — the measurements behind "Configuração do Claude"',
+    root: repoRoot,
+    probe: (sdk, name) => RUNNERS[/** @type {keyof typeof RUNNERS} */ (name)](sdk, world),
+    report: (results) => reportTable(spikeRows(results)),
+    say: { info, ok, fail, title, line },
+  });
+} finally {
+  fs.rmSync(root, { recursive: true, force: true });
 }
-
-process.exitCode = await main();

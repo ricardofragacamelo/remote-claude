@@ -272,6 +272,11 @@ Responde a uma pergunta só: **"o que foi executado na minha máquina sem me per
 - Renderize `message.delta` incrementalmente; nunca espere o turno completo.
 - Bloco de código com `syntax highlight` e botão de copiar.
 - Tool em execução mostra estado vivo, não congela em "aguarde".
+- **O app desenha a mesma conversa** ([plano 26](../../plans/26-mobile-conversation-parity/README.md)): um
+  componente novo em `features/session/components/conversation/` ou em `shared/components/markdown/`, ou
+  um rótulo novo de `tool-labels.ts`, entra no [`scripts/render-parity.json`](../../../scripts/render-parity.json)
+  **na mesma entrega** — com o widget do app que o desenha, ou com a decisão ✅ que o exclui. O
+  `pnpm render:check` (portão 11) reprova o que entrou sem par ([mobile/04](../mobile/04-ui.md#a-conversa-é-a-mesma-do-web)).
 
 O painel do Claude ([plano 08](../../plans/08-claude-panel/README.md)) é este stream dentro da aba de
 pasta, e acrescenta as regras abaixo. Elas vêm **antes** das telas (08 · B-05).

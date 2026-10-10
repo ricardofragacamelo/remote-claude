@@ -21,7 +21,7 @@ ver na tela:
 - a tabela, a lista, o código com realce e o Mermaid da `markdown-rich-turn`;
 - o texto do subagent aninhado da `subagent-permission-turn`, com a permissão respondida de dentro dele;
 - o rótulo `fixture · echo` da tool MCP;
-- o diff de um `Edit`;
+- o diff de uma edição (`file.edit`), lido pela rota do backend;
 - a saída colorida;
 - os tokens do turno;
 - o link da trilha abrindo a lista daquela tool;
@@ -35,7 +35,9 @@ abrir. Cenário S-84.
 No `pnpm test:e2e:live`, contra o Claude real, as sondas da B-01 que as fixtures deste plano assumem: o
 `parent_tool_use_id` em tudo o que o subagent emite, o nome da tool MCP sem título e os vários blocos de
 texto numa mensagem. Se uma versão nova do CLI muda a forma, o smoke reprova antes de o app perder a mensagem
-(R-04). Cenários S-86, S-87.
+(R-04). As sondas são do adapter do Claude (`engines/claude/` desde o
+[plano 28](../28-agent-neutral-core/README.md)), e o smoke confere também que o `kind` e o `label` que o
+classificador tira dessas mensagens são os que as fixtures assumem. Cenários S-86, S-87.
 
 ---
 

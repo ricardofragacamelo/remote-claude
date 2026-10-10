@@ -26,11 +26,15 @@ Puro, sem framework ([backend/01](../../architecture/backend/01-clean-architectu
 
 - `UsdAmount` sobre inteiro de nano-dólares ([D-03](decisions.md#d-03--representação-do-dinheiro)),
   com a conversão do float do SDK num lugar só, e formatação decimal para o fio;
-- `TokenCounts` (entrada, saída, leitura e escrita de cache, pensamento, buscas web) e
-  `CumulativeUsage` (por modelo);
-- `turnDelta(previous, current, outcome)` → delta por modelo e a base (`exact`, `reset`, `zeroed`,
-  `baselineUnknown`), com as regras de D-02. Campo ausente ou valor inválido do SDK vira `unknown`
-  ou o default documentado, nunca exceção (S-15);
+- `TokenCounts` nas categorias do `usage` canônico do [28](../28-agent-neutral-core/README.md)
+  (entrada, saída, leitura e escrita de cache, raciocínio e buscas web — estas duas dos opcionais
+  `reasoningTokens?` e `webSearches?`, [28 · D-17](../28-agent-neutral-core/decisions.md#f4--modos-esforço-uso-e-blocos)), cada uma opcional — categoria que o motor não informa
+  é ausente, nunca zero;
+- no anel do Claude (`domain/engines/claude/usage/`), porque a semântica de acumulado é do SDK dele:
+  `CumulativeUsage` (por modelo) e `turnDelta(previous, current, outcome)` → delta por modelo e a base
+  (`exact`, `reset`, `zeroed`, `baselineUnknown`), com as regras de D-02. Campo ausente ou valor
+  inválido do SDK vira `unknown` ou o default documentado, nunca exceção (S-15). O núcleo recebe só o
+  delta canônico;
 - `UsagePeriod`: início e fim de dia, semana e mês num fuso IANA, com DST e deslocamentos não
   inteiros (S-16…S-19).
 
@@ -39,20 +43,25 @@ Os testes de propriedade (S-09) geram sequências de acumulados em float e prova
 
 ### B-07 — Captura no `session`, e o `costUsd` do turno corrigido 🔲
 
-O mapper (`sdk-message.mapper.ts`) continua traduzindo o `result` para `turn.completed`, e passa a
-entregar também, fora do contrato, os números do `result` (`modelUsage`, `total_cost_usd`, `usage`,
-subtipo, durações). A sessão viva guarda o acumulado anterior e calcula o delta com `turnDelta`:
+O `modelUsage`, o `total_cost_usd` e o subtipo do `result` **não saem do adapter do Claude**
+(`adapter/outbound/engines/claude/`): o mapper guarda o acumulado anterior da `query()` viva, calcula
+o delta com `turnDelta` e emite o turno já canônico — `turn.completed.usage` nas categorias canônicas,
+`costUsd` do turno, `outcome` canônico do 27 — e, fora do contrato, o `TurnUsage` por modelo (tokens
+canônicos, custo, `price_basis`, `cost_basis`) e o `engine_baseline` opaco. A sessão não interpreta
+nada disso, só repassa:
 
 - `turn.completed.costUsd` publica o **delta** — hoje publica `total_cost_usd`, o acumulado (S-20);
-- a linha de base de uma retomada in-place vem da porta `UsageRecorder` (o último `cumulative`
-  gravado da conversa); fork de conversa externa começa sem base (S-21, S-22);
-- o turno vai para `UsageRecorder.record()` com ids, pasta, dono da sessão e delta. **Falha ao
+  motor sem `cost: 'usd'` não publica `costUsd`, e o turno é gravado só com tokens;
+- a linha de base de uma retomada in-place vem da porta `UsageRecorder` (o último `engine_baseline`
+  gravado da mesma `conversation { engine, id }`), entregue ao adapter ao retomar; fork de conversa
+  externa começa sem base (S-21, S-22);
+- o turno vai para `UsageRecorder.record()` com ids, `conversation`, pasta, dono da sessão e delta. **Falha ao
   gravar não derruba a sessão**: `turn.completed` sai, e o log registra `error` com `turnId` (S-25)
   — o uso não é a fronteira de segurança, a trilha é
   ([backend/03 · audit](../../architecture/backend/03-modules.md#audit)).
 
 Resultado de erro com custo real conta (S-23); turno sem `result` não grava (S-24). O log de I/O
-da borda leva ids, modelo, contagens e custo — nunca texto (S-26,
+da borda leva ids, `engine`, modelo, contagens e custo — nunca texto (S-26,
 [03-logging](../../architecture/shared/03-logging.md)). Web e app não mudam: passam a mostrar o
 número certo.
 
@@ -99,15 +108,19 @@ banco, RFC 4180, BOM, instantes ISO com deslocamento, neutralização de fórmul
 
 ### B-11 — Limites de uso da conta 🔲
 
-O `case 'rate_limit_event'` do mapper continua sem publicar nada no stream (S-59) e passa a entregar
-o evento à porta `RateLimitStore`, que guarda o estado mais recente **por janela** com o instante da
-observação — evento fora de ordem ou repetido não regride o estado (S-56, S-57); janela desconhecida
-vira `other` com o nome cru (S-55). `GET /usage/rate-limits` devolve as janelas (utilização, estado,
-`resetsAt`, overage) ou `applicable: false` quando a conta não tem limites de plano (S-58).
+As janelas de limite e o tipo de assinatura são da conta do Claude, então a task inteira mora na
+**extensão do Claude** (`domain/`, `application/` e `adapter/…/engines/claude/`), e o núcleo `usage`
+não a conhece. O `case 'rate_limit_event'` do mapper continua sem publicar nada no stream (S-59) e
+passa a entregar o evento à porta `RateLimitStore` da extensão, que guarda o estado mais recente
+**por janela** (tabela `claude_rate_limits`) com o instante da observação — evento fora de ordem ou
+repetido não regride o estado (S-56, S-57); janela desconhecida vira `other` com o nome cru (S-55).
+`GET /engines/claude/usage/rate-limits` devolve as janelas (utilização, estado, `resetsAt`, overage)
+ou `applicable: false` quando a conta não tem limites de plano (S-58).
 
 Conforme [D-09](decisions.md#d-09--limites-de-uso-da-conta-fonte-transporte-e-quem-vê): só a fonte
 estável, sem evento WS novo, visível a todo usuário autenticado como "limites da conta desta
-máquina". Quando o plano 13 existir, o tipo de conta vem do `GET /claude/account` dele; antes disso,
+máquina". Quando o plano 13 existir, o tipo de conta vem do `GET /engines/claude/account` dele (a rota
+que a F6 do 28 move de `/claude/*`); antes disso,
 "se aplica" é inferido de já ter chegado um evento. Nota ao plano 05 no progresso: a exposição que o
 ciclo 26 do plano 01 atribuiu a ele saiu daqui.
 

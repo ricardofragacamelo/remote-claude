@@ -19,11 +19,12 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-01 | De onde sai o custo de um turno, e com que precisão ele é mostrado | se a soma dos `costUSD` de `modelUsage` bate com `total_cost_usd` em sessões reais com subagente e compactação (medir) | B-02, B-06 | — | 🔲 |
-| D-02 | Linha de base da `query()` retomada ou bifurcada, e como tratar `/clear` e resultado zerado | se o primeiro `result` de uma retomada in-place carrega exatamente o último acumulado que gravamos; o que o fork de conversa externa carrega (medir) | B-07 | — | 🔲 |
+| D-01 | De onde sai o custo de um turno, e com que precisão ele é mostrado | se a soma dos `costUSD` de `modelUsage` bate com `total_cost_usd` em sessões reais com subagente e compactação (medir). Restrição do [28](../28-agent-neutral-core/README.md): o cálculo mora no adapter do Claude, que entrega o delta canônico, e a linha de base por conversa é chaveada por `conversation { engine, id }` | B-02, B-06 | — | 🔲 |
+| D-02 | Linha de base da `query()` retomada ou bifurcada, e como tratar `/clear` e resultado zerado | se o primeiro `result` de uma retomada in-place carrega exatamente o último acumulado que gravamos; o que o fork de conversa externa carrega (medir). Restrição do [28](../28-agent-neutral-core/README.md): a linha de base por conversa é chaveada por `conversation { engine, id }` (não pelo `claudeSessionId`), e o núcleo a guarda opaca (`engine_baseline`) | B-07 | — | 🔲 |
 | D-03 | Como o dinheiro é representado no domínio, no banco e no fio | resolução mínima que não perde turno de Haiku; custo de `numeric` nas agregações | B-04, B-06 | — | 🔲 |
 | D-04 | Moeda: só USD, ou conversão | se há demanda real de ver em real; de onde viria a taxa | B-13, B-15 | — | 🔲 |
 | D-05 | Fuso das agregações e dos períodos de orçamento, e a que dia pertence um turno | onde a preferência mora quando nenhum cliente está aberto (o orçamento vira à meia-noite sem navegador) | B-04, B-06, B-09, B-13 | — | 🔲 |
+| D-16 | Ajuste às diretivas do plano 28: o que é núcleo e o que é da extensão do Claude neste plano | — (as normas estão no [plano 28](../28-agent-neutral-core/README.md) e na [discovery 10](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#9-planos-afetados)) | B-02…B-07, B-11, B-15, B-19, B-21…B-23, B-26 | 2026-10-10 · ajuste às diretivas do [plano 28](../28-agent-neutral-core/README.md) (isolamento, regras pelo dialeto, contrato canônico), pedido do usuário: rotas por `conversation { engine, id }` (B-03, B-05); `engine` + `conversation_id` no lugar de `claude_session_id`, tokens nas categorias canônicas, `outcome` canônico do 27 em vez do subtipo do SDK, `cost_usd`/`price_basis` só com `cost: 'usd'`, `engine_baseline` opaco (B-04); `modelUsage`/`total_cost_usd` e o `turnDelta` ficam no adapter e no anel do Claude, que emitem o delta canônico (B-02, B-06, B-07); os limites da conta (`rate_limit_event`, `RateLimitStore`, `claude_rate_limits`, `/engines/claude/usage/rate-limits`, o painel e o aviso de assinatura) são da extensão `engines/claude/` (B-11, B-15, B-21, B-22); textos neutros com `{agent}` e `engines.claude.usage.*` (B-05, B-15, B-21, B-22); orçamento em US$ só para motor com `cost: 'usd'`, senão em tokens (B-23, B-26). 2026-10-10 (revisão dos gaps do 28): o usuário pôs `reasoningTokens?` e `webSearches?` no `usage` canônico ([28 · D-17](../28-agent-neutral-core/decisions.md#f4--modos-esforço-uso-e-blocos)), e o corte condicional de pensamento e buscas web **não vale** — viram as colunas anuláveis `reasoning_tokens` e `web_searches` (B-04) e categorias do `TokenCounts` (B-06), vindas do `usage` canônico; e decidiu que toda rota REST tem tipo gerado ([28 · D-09](../28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)) — as `/usage/*` e a `/engines/claude/usage/rate-limits` da extensão nascem em `packages/contracts/schema/http/` (B-03). Nenhum kind de auditoria deste plano tem nome de motor: são os `usage.budget*` | ✅ |
 
 ### D-01 — de onde sai o custo, e quão preciso ele é
 
@@ -56,7 +57,7 @@ sessão e que resultado de crash "pode vir zerado". Diferença ingênua cobraria
 anteriores a cada retomada.
 
 Opções: (a) linha de base por conversa, guardada por nós: retomada **in-place** (conversa nossa)
-parte do último acumulado gravado para aquele `claudeSessionId`; **fork** de conversa externa não tem
+parte do último acumulado gravado para aquela `conversation { engine, id }`; **fork** de conversa externa não tem
 base conhecida — o primeiro turno grava os tokens do `usage` do turno e custo desconhecido (base
 `baselineUnknown`), e os seguintes diferenciam dele; (b) perguntar o total antes do primeiro prompt
 com `usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET()` — o nome diz tudo; (c) aceitar
@@ -107,6 +108,32 @@ preferência como padrão; os períodos de orçamento usam só a preferência. O
 seu **fim** (`completed_at`), quando o custo passa a existir. Trocar o fuso vale para as consultas na
 hora e para os orçamentos a partir do próximo período — sem reemitir alerta do período corrente
 (S-64).
+
+### D-16 — ajuste às diretivas do plano 28
+
+O [plano 28](../28-agent-neutral-core/README.md) roda antes deste e muda **onde** e **em que forma**
+ele constrói, não **o que** ele entrega. A linha de corte:
+
+- **núcleo** (`usage`, `/usage/*`, `web/src/features/usage/`): tokens por turno e por modelo nas
+  categorias do `usage` canônico, custo quando o motor anuncia `cost: 'usd'`, agregações, export,
+  orçamentos, alertas; a conversa é sempre `conversation { engine, id }`; o desfecho é o `outcome`
+  canônico do [27](../27-conversation-losses/README.md); nenhum nome de motor, de campo do SDK nem
+  texto com "Claude" — o nome é `{agent}`;
+- **adapter do Claude** (`adapter/outbound/engines/claude/`, anel `domain/engines/claude/usage/`): a
+  semântica de `modelUsage`/`total_cost_usd`, o `turnDelta` com `reset`/`zeroed`/`baselineUnknown`, o
+  subtipo do `result` → `outcome`; a linha de base volta a ele como `engine_baseline` opaco;
+- **extensão do Claude** (`*/engines/claude/`, `/engines/claude/usage/rate-limits`,
+  `web/src/engines/claude/usage/`, chaves `engines.claude.usage.*`): as janelas de limite da conta, o
+  tipo de assinatura e as seções de ajuda que falam deles, registradas no slot da tela de uso e na
+  gaveta pelo `web/src/app/engines.ts`;
+- **orçamento**: em US$ só para motor com `cost: 'usd'`; para motor que só informa tokens, em tokens
+  ([discovery 03 §6.8](../../discovery/03-multiplos-motores-de-agente.md#68-uso-e-custo)). Com o Claude
+  como único motor, a tela só oferece US$.
+
+Pensamento e buscas web, que o Claude informa, só ficam no esquema se o `usage` canônico do 28 · F4 os
+tiver; senão saem do núcleo, registrado no [progresso](progress.md#escopo-reduzido-ou-adiado) — e
+têm: o [28 · D-17](../28-agent-neutral-core/decisions.md#f4--modos-esforço-uso-e-blocos) os pôs no `usage` canônico como `reasoningTokens?` e `webSearches?`, e o corte não vale. D-01 e
+D-02 continuam abertas — o ajuste só muda a chave da linha de base e onde o cálculo mora.
 
 ## F1 — Backend de uso
 
@@ -163,7 +190,8 @@ mentia que a sessão tinha parado (ciclo 26 do plano 01). As janelas completas s
 experimental. A conta é **da máquina**: todos os usuários do produto usam o mesmo login do CLI.
 
 Opções de fonte: (a) só o `rate_limit_event`; (b) também a API experimental. Transporte: (a) estado
-guardado no backend e lido por `GET /usage/rate-limits`; (b) evento WS novo. Visibilidade: (a) todo
+guardado no backend e lido por `GET /engines/claude/usage/rate-limits` (rota da extensão do Claude,
+[D-16](#d-16--ajuste-às-diretivas-do-plano-28)); (b) evento WS novo. Visibilidade: (a) todo
 usuário autenticado, rotulado como da conta da máquina; (b) só quem gerou o evento.
 
 **Recomendação:** fonte (a), transporte (a), visibilidade (a). O estado mais recente por janela é

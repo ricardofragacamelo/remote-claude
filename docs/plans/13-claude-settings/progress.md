@@ -10,9 +10,9 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F2 — parada em 2026-10-09 antes da primeira task, à espera do [plano 26](../26-mobile-conversation-parity/README.md) (F0 e F1 concluídas)
-**Última atualização:** 2026-10-09
-**Bloqueios:** a F2 só começa com o [plano 26 — Paridade da conversa no app](../26-mobile-conversation-parity/README.md) concluído ([D-31](decisions.md#decididas-durante-a-execução-b-01-2026-10-09)), decisão do usuário. Antes: nenhum. A B-01 mediu o que as decisões condicionais esperavam ([descoberta §11](../../discovery/01-descoberta-claude-agent-sdk.md#11--quinta-rodada-de-spikes-2026-10-09)), e a ADR-018 registra o resultado
+**Fase corrente:** F2 — parada em 2026-10-09 antes da primeira task, à espera do [plano 28](../28-agent-neutral-core/README.md) e do [plano 26](../26-mobile-conversation-parity/README.md) (F0 e F1 concluídas)
+**Última atualização:** 2026-10-10
+**Bloqueios:** a F2 só começa com o [plano 26 — Paridade da conversa no app](../26-mobile-conversation-parity/README.md) concluído ([D-31](decisions.md#decididas-durante-a-execução-b-01-2026-10-09)) **e** com o [plano 28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md) concluído ([D-33](decisions.md#d-33--ajuste-às-diretivas-do-plano-28)), decisões do usuário. A ordem é 26 · F1 → 28 → 26 · F2…F7 → 13 · F2…F4; a F0 e a F1 daqui são movidas pela [28 · F6](../28-agent-neutral-core/F6-engine-extensions.md). Antes: nenhum. A B-01 mediu o que as decisões condicionais esperavam ([descoberta §11](../../discovery/01-descoberta-claude-agent-sdk.md#11--quinta-rodada-de-spikes-2026-10-09)), e a ADR-018 registra o resultado
 
 ```
 F0 ████████████████████ 100%   ✅ concluída
@@ -54,7 +54,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 30 | 0 | 0 | 30 | 0 |
+| [Decisões](decisions.md) | 31 | 0 | 0 | 31 | 0 |
 
 ---
 
@@ -82,6 +82,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
+| 2026-10-10 | [D-33](decisions.md#d-33--ajuste-às-diretivas-do-plano-28): a F2…F4 esperam o [plano 28](../28-agent-neutral-core/README.md) e nascem na estrutura dele — MCP no núcleo, por motor (capacidade `mcp`, `/engines/:engine/mcp-servers…`, kinds `mcp.*`), plugins e configuração de projeto na extensão `engines/claude/` (`/engines/claude/*`, `claude.plugin*`, `engines.claude.*`), a gramática `mcp__srv__tool` no `RuleDialect`, a tool MCP pelo `kind`, `AGENT_*` no lugar de `CLAUDE_*`; a D-03 fica revista em parte pela D-06 do 28 | pedido do usuário: ajustar os planos não executados às diretivas de isolamento, de regras e de canonicidade do plano 28, na ordem que ele decidiu em 2026-10-10 | README (objetivo, Depende de, escopo, Não entra, árvore), F2 (Depende de; B-18…B-30, B-47), F3 (Depende de; B-31, B-34, B-35, B-37, B-39, B-40), F4 (Depende de; B-41…B-43, B-45, B-46), os critérios da F2, F3 e F4 com o `neutral:check`; S-64, S-66, S-79, S-88, S-91, S-93, S-104, S-114, S-116, S-117, S-119, S-122, S-141, S-195, S-215. 2026-10-10 (revisão dos gaps do 28): kinds da extensão `engine.plugin*` e `engine.skillSourceToggled` com o motor no payload (28 · D-10); regra MCP canônica `mcp(srv:tool)` casada no núcleo, a revogação da D-12 sem o dialeto (28 · D-11, D-18); rotas novas com tipo em `packages/contracts/schema/http/` (28 · D-09) — README (Depende de, escopo, árvore, R-07), D-33, F2 (cabeçalho, B-18, B-26, B-27, B-47), F3 (cabeçalho, B-34), S-64, S-117, S-119, S-127, S-164, S-209 |
 | 2026-10-09 | [D-23](decisions.md#d-23--modo-próprio-de-subagent-volta-a-perguntar): o hook `PreToolUse` da trilha responde `ask` quando a chamada roda num modo mais largo que o da sessão | a B-01 mediu o subagent de projeto com `permissionMode: acceptEdits` escrevendo sem o `canUseTool`; com o `ask`, a escrita volta a perguntar | `session-runner.ts`, `domain/session/services/mode-widening.ts`, ADR-018, backend/04; S-198 deixa de ser risco aberto |
 | 2026-10-09 | [D-24](decisions.md#d-24--shell-inline-desligado-pela-camada-de-flag): o shell inline é desligado pela camada de flag (`settings`), não por `managedSettings` | medido: `managedSettings` não segura o bloco `!`; a flag segura as três origens | B-08 (a allowlist do montador ganha `disableSkillShellExecution`, `managedSettings` vira proibido), B-35, ADR-011 (emenda) |
 | 2026-10-09 | [D-25](decisions.md#d-25--a-expansão-de-var-é-nossa): `${VAR}` é expandido pelo backend | medido: `setMcpServers()` entrega o literal | B-21, B-24 |
@@ -119,7 +120,7 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 | R-04 | Shell inline (`!`) de skill e slash command fora da aprovação | ✅ mitigado | medido: roda fora da aprovação com `allowed-tools`; desligado em toda sessão pela flag (D-24) |
 | R-05 | Superfície do SDK `0.3.x` mudando sem aviso | 🔲 aberto | `smoke-live` na B-46 |
 | R-06 | Sonda efêmera disputando a capacidade de sessões | 🔲 aberto | D-05 |
-| R-07 | Regra `allow` de `mcp__<nome>` autorizando outro programa | 🔲 aberto | D-12 |
+| R-07 | Regra `allow` de `mcp(<nome>:…)` autorizando outro programa | 🔲 aberto | D-12 |
 | R-08 | Subprocesso do CLI com o ambiente inteiro do backend | 🔲 aberto | B-20; mesma função que o plano 12 precisa |
 | R-09 | Divergir dos planos 06 e 08 | 🔲 aberto | D-09, D-14 |
 | R-10 | A conversa do app perdendo o que este plano traz para ela | 🔲 aberto | D-31: plano 26 antes da F2; paridade na B-46 |

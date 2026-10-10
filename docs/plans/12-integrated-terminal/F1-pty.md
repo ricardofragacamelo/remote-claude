@@ -48,8 +48,9 @@ infraestrutura). Duas políticas:
   `TZ`, `TMPDIR`, `XDG_*`, `SSH_AUTH_SOCK`; define `TERM=xterm-256color`, `COLORTERM=truecolor` e a
   marca do terminal; fallback de `LANG` e `HOME`. O shell é aberto como **shell de login**, que relê
   o perfil do usuário — é o que devolve a ele o próprio ambiente, sem devolver o do backend;
-- **Claude — lista de negação:** a da [D-10](decisions.md#d-10--o-ambiente-do-subprocesso-do-claude),
-  usada pela B-13.
+- **agente — lista de negação** (`agentPolicy`, nome neutro — [D-14](decisions.md#d-14--ajuste-às-diretivas-do-plano-28)): a da
+  [D-10](decisions.md#d-10--o-ambiente-do-subprocesso-do-claude), usada pela B-13 para o subprocesso
+  do Claude.
 
 O teste lê as chaves **do schema**: variável nova de configuração é testada sem ninguém lembrar.
 Regra de `semgrep` nova: spawn de PTY (e o `env` do `sdk-options.factory`) só com um valor que saiu
@@ -160,6 +161,10 @@ passa a dizer o que o subprocesso herda e o que não.
 
 A prova de que o CLI continua funcionando é o Claude real: `pnpm test:e2e:live` entra no critério
 desta fase e do plano.
+
+> **Nota (2026-10-10, [D-14](decisions.md#d-14--ajuste-às-diretivas-do-plano-28)):** a política do subprocesso do agente (`claudePolicy`) passa a ser
+> entregue pela extensão do motor no [plano 28](../28-agent-neutral-core/README.md) (F6); aqui ela nasce
+> com nome neutro (`agentPolicy`).
 
 ### B-14 — Perfis de shell 🔲
 

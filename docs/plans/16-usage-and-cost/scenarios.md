@@ -39,7 +39,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo na B-03: `USAGE_RANGE
 | S-12 | troca de modelo no meio da sessão (`session.setModel`) → o delta vai para o modelo novo; o antigo fica com delta zero e não aparece no turno | eq | unit | — | B-06 | ⬜ |
 | S-13 | modelo que aparece pela primeira vez no acumulado (subagente em Haiku) entra com delta igual ao seu acumulado | fron | unit | — | B-06 | ⬜ |
 | S-14 | custo com muitas casas (`0.1 + 0.2`, `1e-9`, `123.456789012`) vira `UsdAmount` sem erro acumulado de arredondamento | fron | unit | — | B-06 | ⬜ |
-| S-15 | `costUSD` negativo, `NaN`, `Infinity`, campo ausente (`costBasis`, `thinkingTokens`) → custo `unknown` ou default documentado (`list`), sem exceção | fron | unit | — | B-06 | ⬜ |
+| S-15 | `costUSD` negativo, `NaN`, `Infinity`, campo ausente (`costBasis`, `thinkingTokens`) no adapter do Claude → custo `unknown` ou default documentado (`list`), sem exceção; `costUsd` ausente no `usage` canônico (motor sem `cost: 'usd'`) → turno gravado só com tokens, custo `unknown` | fron | unit | — | B-06 | ⬜ |
 | S-16 | em `America/Sao_Paulo` o dia começa às 03:00Z: 23:59:59.999 local pertence ao dia, 00:00:00 local ao seguinte | fron | unit | — | B-06 | ⬜ |
 | S-17 | dia de mudança de horário (`America/New_York`: 23 h em março, 25 h em novembro) → um balde por dia local, sem dia duplicado nem faltando | fron | unit | — | B-06 | ⬜ |
 | S-18 | fusos com deslocamento não inteiro (`Asia/Kolkata` +05:30, `Asia/Kathmandu` +05:45) cortam o dia no lugar certo | fron | unit | — | B-06 | ⬜ |
@@ -47,7 +47,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo na B-03: `USAGE_RANGE
 | S-20 | o **segundo** turno da mesma sessão publica em `turn.completed.costUsd` só o custo dele — regressão do defeito em que o acumulado saía como custo do turno | eq | integração | — | B-07 | ⬜ |
 | S-21 | retomada in-place de conversa nossa: o primeiro turno desconta o acumulado já gravado para a conversa, sem cobrar de novo os turnos anteriores | est | integração | — | B-07 | ⬜ |
 | S-22 | fork de conversa externa: o primeiro turno é gravado com os tokens do `usage` do turno e custo desconhecido (base `baselineUnknown`); os seguintes são exatos | est | integração | — | B-07 | ⬜ |
-| S-23 | resultados `error_max_budget_usd`, `error_max_turns` e `error_during_execution` com custo real também são contabilizados, com o desfecho gravado | eq | integração | — | B-07 | ⬜ |
+| S-23 | turnos com `outcome` `budgetExceeded`, `limitReached` e `failed` (no Claude, `error_max_budget_usd`, `error_max_turns` e `error_during_execution`) com custo real também são contabilizados, com o `outcome` canônico gravado — nunca o subtipo do SDK | eq | integração | — | B-07 | ⬜ |
 | S-24 | turno interrompido que ainda emite `result` é contabilizado; subprocesso que morre sem `result` não grava nada e não corrompe a linha de base | est | integração | — | B-07 | ⬜ |
 | S-25 | falha ao gravar o uso não derruba a sessão: `turn.completed` sai, e o log registra `error` com `turnId` — o cliente não recebe erro | err | integração | `INTERNAL_ERROR` (só no log) | B-07 | ⬜ |
 | S-26 | o log da borda de uso carrega ids, modelo, contagens e custo — nunca texto de mensagem, prompt ou `result` | eq | integração | — | B-07 | ⬜ |
@@ -72,7 +72,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo na B-03: `USAGE_RANGE
 | S-40 | com dados de A e B no banco, nenhum endpoint agregado de B soma, lista ou faceta linha de A | eq | integração | — | B-09 | ⬜ |
 | S-41 | detalhe da sessão de outra pessoa → `FORBIDDEN`; sessão sem nenhum turno ou inexistente → `NOT_FOUND` | err | integração | `FORBIDDEN`, `NOT_FOUND` | B-10 | ⬜ |
 | S-42 | filtro por uma pasta que só outra pessoa usou devolve vazio — nunca o dado dela | eq | integração | — | B-09 | ⬜ |
-| S-43 | título da conversa vem do histórico; histórico indisponível ou conversa apagada → id curto, e a resposta sai assim mesmo | err | integração | `CLAUDE_UNAVAILABLE` (absorvido) | B-09 | ⬜ |
+| S-43 | título da conversa vem do histórico; histórico indisponível ou conversa apagada → id curto, e a resposta sai assim mesmo | err | integração | `AGENT_UNAVAILABLE` (absorvido) | B-09 | ⬜ |
 | S-44 | resumo, série e quebra usam os índices da migration sobre 1 M turnos sintéticos, abaixo do alvo de [D-06](decisions.md#d-06--agregar-na-leitura-ou-manter-um-acumulado) | fron | integração | — | B-09 | ⬜ |
 | S-45 | cache hit = leitura de cache ÷ (entrada + leitura de cache + escrita de cache); zero tokens → nulo, nunca divisão por zero | fron | unit | — | B-09 | ⬜ |
 | S-46 | turno de custo desconhecido fica fora do custo médio por turno e é contado à parte | fron | unit | — | B-09 | ⬜ |
@@ -88,7 +88,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo na B-03: `USAGE_RANGE
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-54 | `rate_limit_event` `allowed_warning`, `five_hour`, utilização 0,82 e `resetsAt` → estado gravado e devolvido por `GET /usage/rate-limits` com o instante da observação | eq | integração | — | B-11 | ⬜ |
+| S-54 | `rate_limit_event` `allowed_warning`, `five_hour`, utilização 0,82 e `resetsAt` → estado gravado pela extensão do Claude e devolvido por `GET /engines/claude/usage/rate-limits` com o instante da observação | eq | integração | — | B-11 | ⬜ |
 | S-55 | `rateLimitType` que o código não conhece é guardado como `other`, com o nome cru, sem quebrar | fron | unit | — | B-11 | ⬜ |
 | S-56 | dois eventos da mesma janela fora de ordem → vale o observado por último, nunca o mais antigo | conc | unit | — | B-11 | ⬜ |
 | S-57 | o mesmo evento recebido duas vezes não muda o estado nem o instante | idem | unit | — | B-11 | ⬜ |
@@ -114,7 +114,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo na B-03: `USAGE_RANGE
 | S-67 | um `turn.completed` observado invalida as consultas de uso; a tela aberta atualiza sem recarga | est | integração | — | B-14 | ⬜ |
 | S-68 | vários `turn.completed` em rajada produzem uma revalidação por consulta, não uma por evento | conc | integração | — | B-14 | ⬜ |
 | S-69 | cartão com período anterior zero mostra "novo", nunca porcentagem infinita ou `NaN` | fron | integração | — | B-15 | ⬜ |
-| S-70 | conta de assinatura: aviso de que o custo é equivalente a preço de lista e que o que limita são os limites de uso | eq | integração | — | B-15 | ⬜ |
+| S-70 | conta de assinatura: o aviso registrado pela extensão do Claude no slot da tela diz que o custo é equivalente a preço de lista e que o que limita são os limites de uso; sem a extensão, a tela não o mostra | eq | integração | — | B-15 | ⬜ |
 | S-71 | as cores dos modelos vêm de tokens definidos nos dois temas; trocar o tema recolore o gráfico sem cor literal | eq | integração | — | B-16 | ⬜ |
 | S-72 | gráfico navegável por teclado (foco em cada dia, valor e modelos anunciados) e "ver como tabela" com os mesmos números | eq | integração | — | B-16 | ⬜ |
 | S-73 | com `prefers-reduced-motion`, o gráfico não anima | fron | integração | — | B-16 | ⬜ |
@@ -127,7 +127,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo na B-03: `USAGE_RANGE
 | S-80 | painel de limites mostra as janelas com utilização, estado e reset relativo e absoluto no fuso; "não se aplica" explicado | eq | integração | — | B-21 | ⬜ |
 | S-81 | moeda por idioma (`US$ 1,23` em pt-BR, `$1.23` em en); gasto real abaixo de um centavo mostra "< US$ 0,01", nunca "US$ 0,00" | fron | unit | — | B-15 | ⬜ |
 | S-82 | literal apresentável nas telas novas → `lint` e `i18n:check` reprovam | eq | unit | — | B-22 | ⬜ |
-| S-83 | a gaveta de ajuda tem as seções (token, cache, estimativa, assinatura, o que não conta, fuso, retenção) em en e pt-BR, e cada "saiba mais" abre a seção certa | eq | integração | — | B-22 | ⬜ |
+| S-83 | a gaveta de ajuda tem as seções (token, cache, estimativa, o que não conta, fuso, retenção, e a de assinatura registrada pela extensão do Claude) em en e pt-BR, e cada "saiba mais" abre a seção certa | eq | integração | — | B-22 | ⬜ |
 | S-84 | todo controle de ícone tem tooltip e `aria-label` traduzidos | eq | integração | — | B-22 | ⬜ |
 | S-85 | os comandos da palette ("Uso: abrir", "Uso: exportar CSV", "Uso: novo orçamento") e o atalho da tela executam, e aparecem no editor de atalhos | eq | integração | — | B-22 | ⬜ |
 | S-86 | abaixo de `md`: cartões empilhados, gráfico sem scroll horizontal, tabelas viram lista com o essencial | fron | integração | — | B-17 | ⬜ |
@@ -141,7 +141,7 @@ Códigos **novos** deste plano, acrescentados ao catálogo na B-03: `USAGE_RANGE
 | S-89 | um turno que leva o gasto de 40 % para 110 % cruza 50 %, 80 % e 100 % — três alertas, na ordem | fron | unit | — | B-23 | ⬜ |
 | S-90 | orçamento de pasta casa por segmento: `/a` cobre `/a/b`, não cobre `/ab` | fron | unit | — | B-23 | ⬜ |
 | S-91 | orçamento diário recomeça à meia-noite do fuso do usuário; mensal, no dia 1 | est | unit | — | B-23 | ⬜ |
-| S-92 | orçamento só de aviso nunca recusa; bloqueante recusa só a partir de 100 % | eq | unit | — | B-23 | ⬜ |
+| S-92 | orçamento só de aviso nunca recusa; bloqueante recusa só a partir de 100 %; orçamento em US$ conta só turnos de motor com `cost: 'usd'` | eq | unit | — | B-23 | ⬜ |
 | S-93 | valor ≤ 0, acima do teto, com mais de 2 casas; limiares fora de 1–100 ou repetidos → todos em `details[]` | err | integração | `INVALID_INPUT` | B-24 | ⬜ |
 | S-94 | orçamento de pasta fora da allowlist ou inexistente | err | integração | `WORKSPACE_NOT_ALLOWED`, `WORKSPACE_NOT_FOUND` | B-24 | ⬜ |
 | S-95 | criar o mesmo orçamento duas vezes com os mesmos valores devolve o existente; com valores diferentes, conflito | idem | integração | `USAGE_BUDGET_CONFLICT` | B-24 | ⬜ |

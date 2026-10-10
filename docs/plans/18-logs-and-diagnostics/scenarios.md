@@ -82,7 +82,7 @@ pedido HTTP deu certo (`200`) e a falha é o conteúdo do relatório.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-39 | o rastreio junta as linhas do backend do mesmo `traceId` em ordem, casa os pares entrada/saída (`http.request`/`http.response`, `ws.inbound`/`ws.outbound`, `claude.input`/`claude.output`) com `durationMs`, e marca a entrada sem saída como pendurada | eq | unit | — | B-13 | ⬜ |
+| S-39 | o rastreio junta as linhas do backend do mesmo `traceId` em ordem, casa os pares entrada/saída (`http.request`/`http.response`, `ws.inbound`/`ws.outbound`, `engine.input`/`engine.output`) com `durationMs`, e marca a entrada sem saída como pendurada | eq | unit | — | B-13 | ⬜ |
 | S-40 | rastreio de um `traceId` que não existe, ou que já saiu do buffer → `200` com cadeia vazia, nunca `404` | fron | integração | — | B-13 | ⬜ |
 | S-41 | `limit` acima do teto é recusado; `limit=1` e o teto exato passam | fron | integração | `INVALID_INPUT` | B-14 | ⬜ |
 | S-42 | período invertido (`from` depois de `to`) | err | integração | `INVALID_INPUT` | B-14 | ⬜ |
@@ -177,8 +177,8 @@ pedido HTTP deu certo (`200`) e a falha é o conteúdo do relatório.
 | S-97 | discovery do provedor OIDC inalcançável → `fail` | err | integração | `HEALTH_IDENTITY_UNREACHABLE` | B-25 | ⬜ |
 | S-98 | buffer de logs descartando por teto acima do limiar → `warn` com a janela que ele guarda | fron | unit | `HEALTH_LOG_BUFFER_EVICTING` | B-25 | ⬜ |
 | S-99 | disco do store de checkpoint abaixo do mínimo → `warn`; abaixo do crítico → `fail` | fron | unit | `HEALTH_DISK_LOW` | B-25 | ⬜ |
-| S-100 | CLI do Claude não encontrado ou não executável → `fail` com como instalar | err | integração | `HEALTH_CLAUDE_CLI_MISSING` | B-26 | ⬜ |
-| S-101 | `CLAUDE_CONFIG_DIR` apontando para diretório sem login → `fail` "não logado", com o comando para logar | err | integração | `HEALTH_CLAUDE_NOT_LOGGED_IN` | B-26 | ⬜ |
+| S-100 | CLI do motor (o Claude) não encontrado ou não executável, lido do `describe()` → item do motor em `fail` com o "como instalar" da extensão | err | integração | `HEALTH_AGENT_NOT_INSTALLED` | B-26 | ⬜ |
+| S-101 | `CLAUDE_CONFIG_DIR` apontando para diretório sem login → item do motor em `fail` "não autenticado", com o comando para logar vindo da extensão do Claude | err | integração | `HEALTH_AGENT_NOT_AUTHENTICATED` | B-26 | ⬜ |
 
 ## Saúde — sonda do Claude, recursos e rotas — B-26…B-28
 
@@ -186,7 +186,7 @@ pedido HTTP deu certo (`200`) e a falha é o conteúdo do relatório.
 |---|---|---|---|---|---|---|
 | S-102 | sonda ativa do Claude pedida por não operador | err | integração | `FORBIDDEN` | B-26 | ⬜ |
 | S-103 | sonda ativa pedida com outra ainda em curso | conc | integração | `CONFLICT` | B-26 | ⬜ |
-| S-104 | a sonda ativa grava `diagnostics.claudeProbed` na trilha, com resultado e duração — nunca o texto trocado | eq | integração | — | B-26 | ⬜ |
+| S-104 | a sonda ativa (`POST /engines/claude/diagnostics/probe`) grava `engine.diagnosticsProbed` na trilha, com o motor no payload, resultado e duração — nunca o texto trocado | eq | integração | — | B-26 | ⬜ |
 | S-105 | recurso de plano ausente (watchers do 07, terminais do 12) não aparece; presente, mostra contagem e teto | eq | unit | — | B-27 | ⬜ |
 | S-106 | `GET /health` público continua devolvendo só `status` e `database` — `503` com `Retry-After` quando fora —, e nada do relatório detalhado vaza por ele | err | integração | `SERVICE_UNAVAILABLE` | B-28 | ⬜ |
 | S-107 | `GET /diagnostics/health` responde `200` com o relatório mesmo com itens em `fail` — a leitura deu certo, a falha é o conteúdo —, e `401` sem credencial | eq | integração | `UNAUTHENTICATED` | B-28 | ⬜ |
@@ -197,7 +197,7 @@ pedido HTTP deu certo (`200`) e a falha é o conteúdo do relatório.
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
 | S-109 | cada item em `fail` ou `warn` mostra a explicação e "o que fazer" traduzidos em `en` e `pt-BR` — um caso por motivo dos S-84…S-101 | err | integração | `HEALTH_*` | B-29 | ⬜ |
-| S-110 | resumo no topo ("tudo certo" ou "N problemas"), itens por categoria, os com problema primeiro | eq | integração | — | B-29 | ⬜ |
+| S-110 | resumo no topo ("tudo certo" ou "N problemas"), itens por categoria — uma por motor de `GET /engines` —, os com problema primeiro | eq | integração | — | B-29 | ⬜ |
 | S-111 | backend inalcançável: a tela diz, do lado do cliente, "o backend não responde", mostra a última verificação boa e tenta de novo com recuo | err | integração | `SERVICE_UNAVAILABLE` | B-29 | ⬜ |
 | S-112 | ping de ponta a ponta (`diag.ping`): ida e volta com tempo medido e histórico; com o socket caído, o botão explica por que está desabilitado | est | integração | — | B-29 | ⬜ |
 | S-113 | "Este navegador": versões do web e do backend, protocolo, conectado desde, reconexões, último `gap`, limites anunciados, diferença de relógio com o servidor | eq | integração | — | B-29 | ⬜ |

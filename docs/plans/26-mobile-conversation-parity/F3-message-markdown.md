@@ -57,9 +57,11 @@ Cenários S-31…S-40.
 
 ### B-11 — Autor, selecionar e copiar 🔲
 
-- **Autor:** "Você"/"Claude" no começo de cada sequência de mensagens do mesmo autor, pela regra
-  do web ([plano 22 · D-16](../22-live-history/decisions.md)). O par `sessions.message.author.*` ↔
-  `sessionMessageAuthor*` entra no `i18n-shared.json`.
+- **Autor:** "Você" e o nome do agente no começo de cada sequência de mensagens do mesmo autor, pela
+  regra do web ([plano 22 · D-16](../22-live-history/decisions.md)). O nome do agente entra como o
+  parâmetro `{agent}`, o `displayName` do motor da sessão no `GET /engines` do
+  [plano 28](../28-agent-neutral-core/README.md), e nunca nasce na chave nem no widget. O par
+  `sessions.message.author.*` ↔ `sessionMessageAuthor*`, neutro, entra no `i18n-shared.json`.
 - **Selecionar:** `SelectionArea` no balão.
 - **Copiar:** "Copiar mensagem" no toque longo, para **toda** mensagem (hoje só o prompt tem menu),
   e um botão no balão do Claude, como o web. Copia o markdown original. O retorno "copiado" é
@@ -69,7 +71,9 @@ Cenários S-41…S-44.
 
 ### B-12 — O preview da pergunta estruturada 🔲
 
-O preview de opção do `AskUserQuestion`, hoje em `SelectableText` monoespaçado por causa da
+O preview de opção da pergunta estruturada (a `interaction` do plano 24, que depois do
+[plano 28](../28-agent-neutral-core/README.md) é escolhida pelo `kind` `question`, e não pelo nome da
+tool), hoje em `SelectableText` monoespaçado por causa da
 [24 · D-21](../24-structured-questions/decisions.md#f4--mobile) ("sem dependência de markdown no app"),
 passa ao `SafeMarkdown`, como o web. A D-21 do plano 24 tinha um motivo que deixou de existir. A
 revisão é registrada lá, com uma nota no resultado, e em [mobile/04-ui](../../architecture/mobile/04-ui.md).

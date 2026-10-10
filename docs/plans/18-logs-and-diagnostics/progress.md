@@ -11,8 +11,8 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-27
-**Bloqueios:** as decisões da F0 (D-02…D-09; a D-01 foi descartada) estão abertas e impedem **começar** a F0 — ver [decisions.md](decisions.md)
+**Última atualização:** 2026-10-10
+**Bloqueios:** o plano espera o [28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md) concluído ([D-17](decisions.md#d-17--ajuste-às-diretivas-do-plano-28)); as decisões da F0 (D-02…D-09; a D-01 foi descartada) estão abertas e impedem **começar** a F0 — ver [decisions.md](decisions.md)
 
 ```
 F0 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
@@ -54,7 +54,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 16 | 14 | 0 | 2 | 0 |
+| [Decisões](decisions.md) | 17 | 14 | 0 | 3 | 0 |
 
 ---
 
@@ -77,6 +77,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 |---|---|---|---|
 | 2026-09-26 | O plano parte do código, não do roteiro: o plano 05 · F1 está **concluído**, a tela de diagnóstico dele é a do app (não há tela web a absorver), `diag` e `health` não estão no catálogo de módulos, e linha `debug` do cliente é descartada com o backend em `info` | verificado no planejamento, antes da primeira task | D-01, D-11, B-01, B-11 |
 | 2026-09-27 | **O visualizador mostra só as linhas do backend.** As linhas do web e do app saem do plano: D-01 e D-11 descartadas; D-02 fica só com o operador, sem a metade "log de cliente é do dono" — o visualizador inteiro é do operador, e quem não é recebe a explicação; a redação por forma de texto, que o 05 removeu, passa a ser trabalho declarado deste plano, na leitura (B-03, B-13); toda exportação vai para a trilha (D-07); o "ver nos logs" aparece só para o operador | decisão do usuário: o envio de log do cliente ao backend não é necessário e saiu do código e do [plano 05](../05-hardening-operations/progress.md#escopo-reduzido-ou-adiado); o log do cliente fica no cliente, e o `traceId` liga um erro na tela às linhas do backend ([03-logging](../../architecture/shared/03-logging.md#por-quê-o-mesmo-schema-nas-três-pontas)) | [README](README.md), [decisions.md](decisions.md), [matriz](scenarios.md), B-01, B-03, B-04, B-08, B-13, B-14, B-17, B-18, B-20, B-21, B-23, B-30, B-32 |
+| 2026-10-10 | [D-17](decisions.md#d-17--ajuste-às-diretivas-do-plano-28): o plano nasce sobre o núcleo neutro do 28 — um item de saúde por motor pelo `describe()` com `HEALTH_AGENT_*`, os checks e a sonda do Claude registrados pela extensão (`POST /engines/claude/diagnostics/probe`, `claude.diagnosticsProbed`), categoria por motor, `engine.*` nos logs e no rastreio | pedido do usuário: ajustar os planos não executados às diretivas do [plano 28](../28-agent-neutral-core/README.md) (isolamento, regras pelo dialeto, contrato canônico) | [README](README.md), B-02, B-05, B-06, B-07, B-18, B-20, B-23, B-26, B-28, B-29, B-31; D-14, D-15 (texto); S-39, S-100, S-101, S-104, S-110. 2026-10-10 (revisão dos gaps do 28): kind da sonda `engine.diagnosticsProbed` com o motor no payload (28 · D-10); rotas novas com tipo em `packages/contracts/schema/http/` (28 · D-09) — D-14, D-17, F0 (cabeçalho, B-05, B-06), F3 (B-26), S-104 |
 
 ---
 

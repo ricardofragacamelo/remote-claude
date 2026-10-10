@@ -29,14 +29,18 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 
 Em `/rules/new`, com o rascunho na search ([D-19](decisions.md#d-19--rota-própria-para-o-assistente)):
 
-1. **tool** — por nome amigável, com as mais usadas primeiro; o campo seguinte muda com a tool
-   (comando, caminho, URL); tool sem campo casável (MCP) só oferece a tool inteira, com o aviso de
-   largura (S-186);
+1. **tipo** — pelo `kind` da gramática canônica (comando, leitura e edição de arquivo, busca, rede,
+   MCP, subagente), com o nome traduzido e os mais usados primeiro; não há ferramenta do motor a
+   escolher: a regra vale, por padrão, em todo motor que tenha o `kind` (`engine` nulo), e restringi-la
+   a um motor registrado é uma opção do passo. O campo seguinte muda com o `kind` (comando, caminho,
+   domínio); `mcp` só oferece a ferramenta ou o servidor inteiro, com o aviso de largura (S-186). O web
+   não conhece nome de ferramenta do Claude ([D-20](decisions.md#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect));
 2. **padrão** — "exatamente este comando", "este comando e o que vier depois dele" (prefixo, só para
-   `Bash` — [D-08](decisions.md#d-08--prefixo-em-tool-de-caminho)) ou "qualquer uso da tool"; o
-   padrão gerado aparece em mono, editável, e a **prévia** do servidor (debounced) mostra na hora a
-   frase, a largura, os exemplos do que casa e não casa, e o erro de gramática traduzido antes de
-   enviar (S-185);
+   `shell` — [D-08](decisions.md#d-08--prefixo-em-tool-de-caminho)) ou "qualquer uso da ferramenta";
+   quem **escreve** o padrão é o domínio, na gramática canônica, pela **prévia** do servidor
+   (debounced), a partir de `{ kind, subject, form }`: o padrão aparece em mono, editável, e a prévia mostra na hora a frase, a
+   largura, os exemplos do que casa e não casa, e o erro de gramática traduzido antes de enviar
+   (S-185);
 3. **decisão** — Permitir sem perguntar / Bloquear sempre, com o que cada uma significa;
 4. **onde vale** — em todo lugar, ou numa pasta escolhida **pelo seletor do plano 06**; não existe
    campo de texto para a pasta, e o seletor só anda dentro das raízes do usuário (S-187). Quando a
@@ -57,18 +61,22 @@ mensagem traduzida no passo certo — a pasta que saiu da allowlist volta ao pas
 
 **Entradas**: o botão da tela, a paleta, o duplicar e os modelos (B-30), e **"criar regra a partir
 desta invocação"** na trilha — em `AuditTrail` hoje, na tela do [plano 14](../14-audit-explained/README.md)
-quando existir —, que preenche o padrão mais estreito daquela invocação (S-193).
+quando existir —, que preenche o padrão mais estreito daquela invocação (S-193); e o **Recriar** de uma
+regra desligada pela migração do plano 28 (B-21), que preenche decisão, escopo e pasta e mostra o padrão
+antigo só como referência (S-225).
 
 ### B-28 — Testar um comando 🔲
 
 Um painel (na tela, pela ação do cabeçalho e pela paleta; no assistente, dentro da revisão e ao lado
-do padrão): tool, o campo da tool, pasta pelo seletor, modo (`default`, `plan`, `acceptEdits`) e,
+do padrão): o tipo (`kind`), o campo dele, pasta pelo seletor, modo canônico (`ask`, `readOnly`,
+`acceptEdits`, com o nome traduzido) e,
 opcional, "nesta sessão" para uma sessão viva do usuário ([D-12](decisions.md#d-12--o-que-o-teste-de-comando-considera)).
 
 O resultado é um veredito grande e em palavras — "seria permitido sem perguntar, pela regra X", "seria
-bloqueado pela regra Y — ela vence a regra Z, que permitiria", "o Claude perguntaria a você: nenhuma
-regra casa", "perguntaria: no modo plan, regras que permitem não respondem" —, a lista de **todas** as
-regras que casam com link para cada uma, e as ressalvas do que o CLI decide antes (S-196, S-197). No
+bloqueado pela regra Y — ela vence a regra Z, que permitiria", "o `{agent}` perguntaria a você: nenhuma
+regra casa", "perguntaria: no modo somente leitura, regras que permitem não respondem" —, a lista de
+**todas** as regras que casam com link para cada uma, e as ressalvas do que o motor decide antes, que
+vêm do backend pelo adapter (S-196, S-197). No
 assistente, o teste inclui o rascunho (S-198). Pasta recusada mostra o erro traduzido (S-199).
 
 ### B-29 — Simular contra a trilha 🔲
@@ -97,7 +105,7 @@ Pela [D-15](decisions.md#d-15--quantas-invocações-a-simulação-lê-e-o-que-el
 ### B-31 — Exportar e importar 🔲
 
 - **Exportar** — da seleção ou do filtro atual, baixa `remote-claude-rules-AAAA-MM-DD.json` (S-205),
-  e a ajuda diz o que o arquivo contém (padrões e pastas — não segredo, mas o mapa do que o Claude
+  e a ajuda diz o que o arquivo contém (padrões e pastas — não segredo, mas o mapa do que o `{agent}`
   pode fazer aqui) e que a exportação fica na trilha;
 - **Importar** — escolher o arquivo abre a prévia em tabela: veredito por item (nova, já existe,
   inválida com o motivo traduzido), remapear pasta de outra máquina **pelo seletor** para os itens com
@@ -108,7 +116,8 @@ Pela [D-15](decisions.md#d-15--quantas-invocações-a-simulação-lê-e-o-que-el
 ### B-32 — Usabilidade e ajuda do assistente, do teste, da simulação e da importação 🔲
 
 - ajuda de cada passo na gaveta da moldura, com os exemplos do padrão e o "por que não posso
-  permitir `Bash` inteiro" — a explicação da largura escrita para quem não conhece shell;
+  permitir o shell inteiro" — a explicação da largura escrita para quem não conhece shell; os exemplos
+  são da gramática canônica (`shell` inteiro, `shell(git:*)`), ajuda do núcleo;
 - tooltip em todo controle de ícone; validação na linha antes de enviar; foco no primeiro campo com
   erro;
 - só com o teclado se completa o assistente, do primeiro passo ao criar (S-210);

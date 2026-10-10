@@ -14,7 +14,9 @@ pode trazer variante nova de `SDKMessage`, mudança no `canUseTool`, ou comporta
 de `settingSources`. Nada disso aparece nos testes com SDK fake — **por construção**.
 
 Por isso o portão da atualização é o `smoke-live`, que fala com o Claude real
-([F6 do plano 01](../01-live-session/F6-e2e.md)).
+([F6 do plano 01](../01-live-session/F6-e2e.md)). Com o [plano 28](../28-agent-neutral-core/README.md),
+isso vale **por motor**: cada motor habilitado tem o seu SDK ou CLI e o seu `smoke-live`, e a
+atualização de um não depende do portão de outro ([D-09](decisions.md#d-09--ajuste-às-diretivas-do-plano-28)).
 
 ---
 
@@ -24,9 +26,10 @@ Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅
 
 ### B-12 — Atualizar o SDK com portão 🔲
 
-Subir a versão do `@anthropic-ai/claude-agent-sdk` roda o `smoke-live`. Vermelho **interrompe**
-a atualização — e a saída diz qual variante ou comportamento mudou, porque o mapper já registra
-`warn` para o que não conhece.
+O portão é **por motor**: subir a versão do SDK de um motor (no Claude, o
+`@anthropic-ai/claude-agent-sdk`) roda o `smoke-live` **daquele** motor. Vermelho **interrompe**
+a atualização dele — e a saída diz qual variante ou comportamento mudou, porque o mapper do adapter
+já registra `warn` para o que não conhece. Os outros motores habilitados não são afetados.
 
 ### B-13 — Migration na atualização 🔲
 
@@ -45,7 +48,8 @@ Backup de versão mais nova em binário mais velho é **recusado**, não tentado
 
 ### B-15 — Versões visíveis 🔲
 
-Backend, web, app e SDK, na UI e no log. Quando alguém reportar um problema, a primeira
+Backend, web, app e, **por motor habilitado**, a versão do SDK e do CLI que a descrição dele
+informa (`GET /engines`), na UI e no log (`engine` e `engineVersion`). Quando alguém reportar um problema, a primeira
 pergunta é "qual versão" — e a resposta precisa estar à mão, não num arquivo de build.
 
 ---

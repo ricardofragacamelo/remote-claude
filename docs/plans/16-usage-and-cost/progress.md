@@ -11,8 +11,8 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — plano não iniciado
-**Última atualização:** 2026-09-27
-**Bloqueios:** nenhum para planejar; F0 começa depois de D-01, D-03 e D-05, e F2/F3 dependem do plano 06 entregue
+**Última atualização:** 2026-10-10
+**Bloqueios:** nenhum para planejar; o plano espera o [28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md) concluído e o `outcome` do [27](../27-conversation-losses/README.md) ([D-16](decisions.md#d-16--ajuste-às-diretivas-do-plano-28)); F0 começa depois de D-01, D-03 e D-05, e F2/F3 dependem do plano 06 entregue
 
 ```
 F0 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
@@ -54,7 +54,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 15 | 15 | 0 | 0 | 0 |
+| [Decisões](decisions.md) | 16 | 15 | 0 | 1 | 0 |
 
 ---
 
@@ -75,7 +75,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-10-10 | [D-16](decisions.md#d-16--ajuste-às-diretivas-do-plano-28): o plano nasce sobre o núcleo neutro do 28 — conversa `{ engine, id }`, `usage` canônico, `outcome` do 27, limites da conta e assinatura na extensão `engines/claude/`, orçamento em US$ só com `cost: 'usd'` | pedido do usuário: ajustar os planos não executados às diretivas do [plano 28](../28-agent-neutral-core/README.md) (isolamento, regras pelo dialeto, contrato canônico) | README (dependências, árvore), B-02…B-07, B-11, B-15, B-19, B-21…B-23, B-26; D-01, D-02, D-09 (texto); S-15, S-23, S-43, S-54, S-70, S-83, S-92. 2026-10-10 (revisão dos gaps do 28): `reasoningTokens?` e `webSearches?` no `usage` canônico (28 · D-17), o corte condicional não vale; rotas com tipo em `packages/contracts/schema/http/` (28 · D-09) — README (árvore), D-16, B-03, B-04, B-06 |
 
 ---
 
@@ -85,7 +85,7 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 
 | Data | O que saiu | Por quê | Para onde foi |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-10-10 | tokens de pensamento e buscas web por turno (condicional: só saem se o `usage` canônico do 28 · F4 não os tiver) | o núcleo grava só as categorias do `usage` canônico ([D-16](decisions.md#d-16--ajuste-às-diretivas-do-plano-28)) | voltam como colunas anuláveis quando o `usage` canônico ganhar a categoria. 2026-10-10: não vale — o 28 · D-17 pôs `reasoningTokens?` e `webSearches?` no `usage` canônico |
 
 ---
 

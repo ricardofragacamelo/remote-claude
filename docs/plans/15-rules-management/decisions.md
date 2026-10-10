@@ -29,12 +29,13 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 | D-05 | De onde vêm o uso por regra e a simulação: da trilha, de `permission_requests`, ou de um contador | se os números da tela precisam bater com os da trilha; custo da consulta; a retenção de 90 dias contra a validade de até 365 | B-11, B-16 | — | 🔲 |
 | D-06 | Revogar em lote é atômico ou por item | o que a tela faz com "revoguei 7 de 9" | B-13 | — | 🔲 |
 | D-07 | Comando composto e o prefixo: `allow Bash(git status:*)` hoje cobre `git status && curl … \| sh` | se endurecer o matcher do plano 03 quebra algum uso legítimo; o quanto o Claude realmente encadeia comandos | B-08 | 2026-09-26 · **a recomendação**, aplicada antes do plano a pedido do usuário: `allow` de prefixo em linha de shell só cobre comando único (operador, mesmo entre aspas, tira do alcance); `allow` exato casa a string idêntica; `deny` casa por segmento. Lista de operadores única em `shell-syntax.ts`, lida também pelo classificador de risco — que passou a separar no `&` simples | ✅ |
-| D-08 | Prefixo em tool de caminho: `Read(/a/src:*)` não cobre `/a/src/x.ts` | se vale oferecer caminho por prefixo, ou esperar uma gramática de caminho | B-08, B-27 | — | 🔲 |
-| D-09 | O que é "largo demais", e o que acontece com um padrão assim | a lista de interpretadores e lançadores; se a regra vale para toda porta de criação ou só para a tela | B-08, B-09 | — | 🔲 |
+| D-08 | Prefixo em tool de caminho: `Read(/a/src:*)` não cobre `/a/src/x.ts` | se vale oferecer caminho por prefixo, ou esperar uma gramática de caminho. Desde a [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect) (revisão de 2026-10-10), a decisão é sobre a gramática canônica do domínio (`file.read(/a/src:*)`), e a forma de caminho `file.edit(src/**)` vem da B-31 do [plano 28](../28-agent-neutral-core/F5-permission-dialect.md) **Atualização (2026-10-10):** a [28 · B-31](../28-agent-neutral-core/F5-permission-dialect.md) fixou a forma do caminho: glob relativo à pasta (`file.read(src/**)`), e o `:*` só existe no `shell` — a forma `file.read(/a/src:*)` deixa de existir, e a decisão restante é só se a tela oferece o glob por prefixo de pasta | B-08, B-27 | — | 🔲 |
+| D-09 | O que é "largo demais", e o que acontece com um padrão assim | a lista de interpretadores e lançadores; se a regra vale para toda porta de criação ou só para a tela. Desde a [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect) (revisão de 2026-10-10), a tabela é do domínio, por `kind` canônico | B-08, B-09 | — | 🔲 |
 | D-10 | `project` alcança as subpastas? | o plano 06 abre qualquer subpasta como pasta de trabalho; hoje o casamento de pasta é exato | B-09, B-14 | — | 🔲 |
 | D-11 | Desfazer a revogação, ou confirmar antes de revogar | se "restaurar" pode dispensar o segundo passo que conceder exige | B-13, B-24 | — | 🔲 |
-| D-12 | O que o teste de comando considera: só as regras persistidas, ou também as `session` e o modo da sessão viva | se o usuário testa "em geral" ou "nesta sessão" | B-14 | — | 🔲 |
+| D-12 | O que o teste de comando considera: só as regras persistidas, ou também as `session` e o modo da sessão viva | se o usuário testa "em geral" ou "nesta sessão". Desde a [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect), o modo é o canônico e as ressalvas vêm do adapter do motor | B-14 | — | 🔲 |
 | D-13 | A listagem pagina? | quantas regras um usuário real acumula — não medido | B-10 | — | 🔲 |
+| D-20 | O plano nasce sobre o núcleo neutro do [plano 28](../28-agent-neutral-core/README.md) e o `RuleDialect` da F5 de lá? | nenhum — as diretivas do 28 (isolamento, regras pelo dialeto, contrato canônico) valem para todo plano não executado, e a [28 · D-12](../28-agent-neutral-core/decisions.md) pausa a B-08 | B-01…B-03, B-06, B-07, B-08…B-18, B-20…B-22, B-26…B-28, B-31…B-33, B-35 | 2026-10-10 · ajuste às diretivas do [plano 28](../28-agent-neutral-core/README.md) (isolamento, regras pelo dialeto, contrato canônico), pedido do usuário: a B-08 (🔄) fica pausada até a [F5 do 28](../28-agent-neutral-core/F5-permission-dialect.md) e retoma escrita atrás do `RuleDialect`; a gramática do Claude (`Tool(x:*)`, `Bash` composto, largura, contenção, alcance, ressalvas) mora no dialeto do adapter, e a regra do núcleo é `{ engine, kind?, matcher }` (B-08, B-09, B-15); B-02 troca o `reach { toolName, kind: tool\|exact\|prefix… }` por `{ engine, kind canônico, form, content, excludesCompound, native? }` e o filtro `tool` por `engine` + `kind`; B-03 troca o `evaluate { toolName, input, permissionMode… }` por `{ engine, kind, subject, rawInput?, mode }`, com o modo canônico e as ressalvas vindas do adapter, e a prévia passa a escrever o padrão pelo dialeto; B-07 escreve no documento do dialeto (`backend/04-engine-integration.md` + o anexo `04a-claude.md`, da F1 do 28); B-14/B-16/B-28/B-35 usam `ask`/`readOnly` no lugar de `default`/`plan`; B-11/B-16 decidem os campos de leitura pelo `kind` `file.read`; B-17 e a D-16 são os modelos do dialeto do Claude, por motor; B-18 leva `engine` no arquivo; B-21/B-22/B-26/B-28/B-31 usam `{agent}`, e a ajuda que só vale para o Claude é da extensão `web/src/engines/claude/` (B-06, B-26, B-32); B-27 escolhe pelo `kind`. D-08, D-09, D-12, D-15, D-16 e D-17 anotadas no mesmo sentido. 2026-10-10 (revisão dos gaps do 28): três respostas do usuário no 28 foram contra a recomendação que o ajuste acima supôs, e o plano as segue. **Gramática canônica já** ([28 · D-11, D-18](../28-agent-neutral-core/decisions.md#f5--permissão-pelo-dialeto)): a regra é escrita por `kind` (`shell(git status:*)`, `file.read(src/**)`, `file.edit(src/**)`, `search(…)`, `web.fetch(domain:…)`, `mcp(srv:tool)`, `agent`), e o parser, o casamento (com o composto de `shell`), o alcance, a largura, a contenção, os achados e a descrição (`messageKey` + `params`) são do domínio; o `RuleDialect` só traduz (`toEngine`, `fromNative`, `translate`); `engine` é nulo na regra canônica e só nomeia o motor na restrita; a B-08 retoma sobre a gramática canônica; o `reach` é `{ engine?, kind, form, content, excludesCompound }` e o `evaluate` responde na gramática canônica (B-02, B-03); a D-09 e a D-08 são por `kind` canônico no domínio; os modelos da D-16 são canônicos e um catálogo só (B-17); o arquivo da D-17 leva o `pattern` canônico e `engine` opcional (B-18); B-07 escreve no `backend/03` (`permission`) e no ADR-025 do 28, e no `04a-claude.md` só a tradução; as regras que a migração do 28 desligou têm estado `disabled`, com o padrão antigo e o motivo, nunca voltam a valer por `PATCH` nem por restauração, e a tela as lista para recriar (B-02, B-10, B-12, B-13, B-21; S-01, S-224…S-226) — se a B-33 do 28 expuser o estado em outra forma, a B-02 adota a de lá. **Todo o REST no pacote** ([28 · D-09](../28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)): as rotas novas e as mudadas nascem em `packages/contracts/schema/http/`, e o web e o app as leem pelos tipos gerados (B-03, B-20). A D-10 do 28 (kinds de auditoria sem nome de motor) não muda este plano: os kinds dele já são `permission.*` | ✅ |
 
 ### D-01 — O que se edita numa regra
 
@@ -42,7 +43,7 @@ Três leituras:
 
 - **só a validade** — encurtar e estender. Padrão, escopo e decisão não se editam: mudar é revogar
   e criar;
-- **tudo** — um `PATCH` que troca o padrão de `Bash(git status)` para `Bash(git:*)` sob o mesmo id;
+- **tudo** — um `PATCH` que troca o padrão de `shell(git status)` para `shell(git:*)` sob o mesmo id;
 - **tudo menos a decisão** — trocar `allow` por `deny` é outra regra, o resto se edita.
 
 O argumento que decide é a trilha e o que aponta para a regra. `audit_entries.rule_id` e
@@ -173,11 +174,18 @@ gramática de caminho própria (padrões estilo gitignore), que o nosso matcher 
 Saídas: recusar `:*` em tool de caminho (muda a gramática aceita pelo plano 03); aceitar e explicar;
 implementar a gramática de caminho (outro plano, e outra superfície de ataque).
 
-**Recomendação:** aceitar e explicar, sem oferecer. O assistente só oferece `:*` para `Bash`; para
-tool de caminho, oferece o caminho exato ou a tool inteira (esta, `broad`). Um `:*` em tool de caminho
+**Recomendação:** aceitar e explicar, sem oferecer. O assistente só oferece `:*` para `shell`; para
+`file.*`, oferece o caminho exato ou o `kind` inteiro (este, `broad`). Um `:*` em `file.*`
 que chegar pela API ou pela importação é aceito e ganha o achado `pathPrefix`, que diz o que ele
 realmente casa (S-14, S-117). Gramática de caminho fica registrada como candidata a plano futuro no
 [progresso](progress.md#escopo-reduzido-ou-adiado).
+
+Tudo isto é da **gramática canônica**, no domínio ([D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect), revisão de 2026-10-10): a regra de
+caminho é `file.read(/a/src:*)`, a fronteira de token, o `:*` e o achado `pathPrefix` são do
+`domain/permission`, e o `RuleDialect` só traduz. Se a B-31 do
+[plano 28](../28-agent-neutral-core/F5-permission-dialect.md) trouxer a forma de caminho dos exemplos
+de lá (`file.edit(src/**)`), a recomendação passa a oferecer o caminho por ela, e o `pathPrefix` fica
+só para o `:*` em `file.*` que chegar pela API ou pela importação.
 
 ### D-09 — O que é "largo demais"
 
@@ -187,19 +195,25 @@ problema que o `settingSources: ['project']` resolveu. Hoje `POST /permission-ru
 
 **Recomendação:** uma função pura do domínio, `ruleBreadth(pattern)`, com três valores:
 
-| Largura | O que é | `allow` | `deny` |
+| Largura | O que é (na gramática canônica, por `kind`) | `allow` | `deny` |
 |---|---|---|---|
-| `unbounded` | `Bash` inteiro; prefixo cujo primeiro token é interpretador, lançador ou elevação (`sh`, `bash`, `zsh`, `fish`, `dash`, `env`, `sudo`, `su`, `doas`, `xargs`, `eval`, `exec`, `nohup`, `time`, `timeout`, `nice`, `python*`, `node`, `deno`, `bun`, `perl`, `ruby`, `php`, `npx`, `pnpx`, `bunx`, `pnpm dlx`, `npm exec`, `yarn dlx`); prefixo que contém operador | recusado, `422 PERMISSION_RULE_TOO_BROAD` | aceito |
-| `broad` | tool inteira que não seja `Bash` (inclusive MCP, cujo input não tem campo casável — a tool inteira é o único padrão possível); prefixo de **um** token em `Bash` (`git:*`); prefixo em tool de caminho | exige `acknowledgeBroad: true`, senão `422` com `params.breadth` | aceito |
-| `narrow` | exato; prefixo de dois ou mais tokens em `Bash` | aceito | aceito |
+| `unbounded` | `shell` inteiro; `shell(<x>:*)` cujo primeiro token é interpretador, lançador ou elevação (`sh`, `bash`, `zsh`, `fish`, `dash`, `env`, `sudo`, `su`, `doas`, `xargs`, `eval`, `exec`, `nohup`, `time`, `timeout`, `nice`, `python*`, `node`, `deno`, `bun`, `perl`, `ruby`, `php`, `npx`, `pnpx`, `bunx`, `pnpm dlx`, `npm exec`, `yarn dlx`); `shell` de prefixo que contém operador; `mcp` sem servidor (qualquer ferramenta de qualquer servidor) | recusado, `422 PERMISSION_RULE_TOO_BROAD` | aceito |
+| `broad` | `kind` inteiro que não seja `shell` (`file.read`, `file.edit`, `file.write`, `search`, `web.fetch`, `agent`); `mcp(srv:tool)` e `mcp(srv:*)` — o input de MCP não tem campo casável, e a ferramenta ou o servidor inteiro são os únicos padrões possíveis; prefixo de **um** token em `shell` (`shell(git:*)`); prefixo ou forma de caminho em `file.*` (`file.read(/a/src:*)`, `file.edit(src/**)`) | exige `acknowledgeBroad: true`, senão `422` com `params.breadth` | aceito |
+| `narrow` | exato (`shell(git status)`, `file.edit(src/a.ts)`); prefixo de dois ou mais tokens em `shell` (`shell(git status:*)`); um domínio em `web.fetch` (`web.fetch(domain:example.com)`) | aceito | aceito |
 
 A regra vale para **toda** porta de criação — `POST`, importação, restauração, modelo —, porque é o
 servidor que garante, não a tela. O card não muda: ele só grava o exato, que é `narrow` (S-34). Regra
 antiga que hoje seria recusada **continua valendo** (o `restore` do domínio não reconfere, como com o
 teto de validade) e ganha o achado `tooBroad`. A lista de interpretadores é dado do domínio, como a
 do `riskHint`; ela nunca é completa, e por isso o prefixo de um token só já é `broad` — quem esquece
-um nome na lista ainda passa pela confirmação. O teste de integração que concede `allow Write`
-passa a mandar `acknowledgeBroad` — é o contrato que mudou, não o teste que afrouxou.
+um nome na lista ainda passa pela confirmação. O teste de integração que concede `allow file.write`
+(o `allow Write` de antes da migração do plano 28) passa a mandar `acknowledgeBroad` — é o contrato que
+mudou, não o teste que afrouxou.
+
+A tabela acima é do **domínio**, por `kind` canônico ([D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect), revisão de 2026-10-10): `ruleBreadth` lê a
+regra na gramática canônica do [plano 28](../28-agent-neutral-core/F5-permission-dialect.md), e a lista de
+interpretadores mora em `domain/permission`, ao lado do casamento composto de `shell`. Ela vale para a regra
+de qualquer motor — `engine` nulo ou restrito —, e o `RuleDialect` não calcula largura: só traduz.
 
 ### D-10 — `project` alcança as subpastas?
 
@@ -241,10 +255,11 @@ ou perguntado — e por qual regra". As regras `session` vivem em memória e mor
 é da sessão.
 
 **Recomendação:** por padrão, as regras persistidas do chamador, a pasta e o modo informados (default
-`default`). Com `sessionId` de uma sessão **viva do chamador**, acrescenta as regras `session` dela e
+`ask`, o modo canônico que o Claude chama de `default` — [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect)). Com `sessionId` de uma sessão **viva do chamador**, acrescenta as regras `session` dela e
 usa o modo atual — o "por que isto não perguntou agora?" (S-108). A resposta sempre traz as
-**ressalvas** do que o CLI decide **antes** de nós e que nenhuma regra nossa alcança: o `deny` das
-settings do projeto, o `acceptEdits`, e as tools que ele aprova sozinho sem chamar o `canUseTool`
+**ressalvas** do que o motor decide **antes** de nós e que nenhuma regra nossa alcança — declaradas
+pelo adapter do motor; no Claude: o `deny` das settings do projeto, o `acceptEdits`, e as tools que ele
+aprova sozinho sem chamar o `canUseTool`
 ([plano 03 · D-11](../03-rules-and-audit/decisions.md#d-11--o-mais-restritivo-até-onde-o-canusetool-alcança)).
 Sem as ressalvas, "seria perguntado" vira uma promessa que o produto não cumpre.
 
@@ -258,6 +273,60 @@ no servidor. Regra não é trilha: a lista inteira cabe na tela de quem a revisa
 recortam, e a análise de redundância (B-15) precisa enxergar o conjunto. Se o teto aparecer em uso
 real, cursor sobre `(granted_at, id)` é acréscimo compatível — cenário S-50 cobra o sinal.
 
+### D-20 — O núcleo neutro do plano 28 e o `RuleDialect`
+
+Em 2026-10-10 o usuário decidiu a ordem — o [plano 28](../28-agent-neutral-core/README.md) inteiro antes
+do resto deste — e pediu que os planos não executados seguissem as diretivas dele
+([discovery 10 §9](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#9-planos-afetados)). Este é
+o plano mais tocado, porque a gramática de regra é exatamente o que a F5 do 28 tira do núcleo:
+
+- **a B-08 pausa** ([28 · D-12](../28-agent-neutral-core/decisions.md)): o casamento composto (✅,
+  antecipado em 2026-09-26) já está no código; `ruleBreadth`, `patternCovers` e `describeReach` só são
+  escritos depois da [F5 do 28](../28-agent-neutral-core/F5-permission-dialect.md), **dentro** do
+  `RuleDialect` do Claude, e não no `domain/permission`;
+- **a regra é `{ engine, kind?, matcher }`**: o domínio pergunta ao dialeto do motor da regra se ela
+  casa, quanto alcança, se uma cobre a outra e como se descreve; as regras que já existem são
+  `engine = claude`. Uma gramática canônica entre motores fica para o segundo motor
+  ([discovery 10 §13 · D-11](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#13-decisões-em-aberto));
+- **o contrato fala canônico**: o `reach` leva o `kind` canônico e a forma (`form`), o `evaluate` recebe
+  `engine`, `kind`, `subject` e o `rawInput` opaco, e o modo é `ask` · `acceptEdits` · `readOnly` ·
+  `allowAll`. As ressalvas do que o motor decide antes de nós vêm do adapter;
+- **o que é só do Claude mora no anel dele**: a tabela de largura da D-09, o `pathPrefix` da D-08, os
+  modelos da D-16 e a ajuda sobre a forma `Tool(x:*)` (no web, em `web/src/engines/claude/`); o texto do
+  núcleo nomeia o agente como `{agent}`;
+- **o documento** é o do dialeto: `backend/04-engine-integration.md` (a porta) e o anexo
+  `backend/04a-claude.md` (a gramática), que a F1 do 28 cria a partir do `backend/04` de hoje (B-07).
+
+Nada do que o plano **entrega** muda; muda onde e em que forma ele constrói.
+
+**Revisão de 2026-10-10 (os gaps do 28).** O usuário respondeu as decisões abertas do 28, e três foram
+contra a recomendação que os itens acima supuseram. Onde contradizem, vale esta revisão:
+
+- **a gramática é a canônica, já** ([28 · D-11, D-18](../28-agent-neutral-core/decisions.md#f5--permissão-pelo-dialeto)),
+  e não a do Claude atrás do dialeto. A regra é escrita por `kind` — `shell(git status:*)`,
+  `file.read(src/**)`, `file.edit(src/**)`, `file.write(…)`, `search(…)`, `web.fetch(domain:example.com)`,
+  `mcp(srv:tool)`, `mcp(srv:*)`, `agent` —, e o `domain/permission` é dono do parser, do casamento (com o
+  composto de `shell` da D-07), dos alcances exato, prefixo e tool do [plano 23](../23-fluid-permissions/README.md),
+  da largura, da contenção, dos achados e da descrição (`messageKey` + `params`), sobre `kind` e `subject`.
+  `ruleBreadth`, `patternCovers` e `describeReach` voltam a ser do domínio, como a B-08 os escreveu;
+- **o `RuleDialect` só traduz**: `toEngine(rule)` (no Claude, o `updatedPermissions` dos settings),
+  `fromNative(suggestion)` (a sugestão do motor vira canônica, ou é descartada com `warn`) e
+  `translate(nativePattern)`, só para a migração. Ele não casa, não mede e não descreve;
+- **a regra leva `engine` nulo** quando é canônica e vale em todo motor com o `kind`, e o nome do motor
+  só quando foi restrita a ele. As regras que já existem saem da migração do 28 canônicas, com o
+  `engine` que a [B-33 de lá](../28-agent-neutral-core/F5-permission-dialect.md#b-33--as-regras-migradas-e-engine-e-tool_kind-no-banco-) lhes der;
+- **toda regra gravada foi migrada**; a que não tinha tradução inequívoca está **desligada** — nunca
+  apagada —, com o padrão antigo e o motivo, e a tela de regras a lista para a pessoa recriar (B-21). Ela
+  não volta a valer por `PATCH` nem por restauração (S-226);
+- **o contrato fala a gramática canônica**: `pattern`, `reach`, os modelos, o `evaluate` e o arquivo de
+  exportação. O `reach` é `{ engine?, kind, form: any|exact|prefix, content, excludesCompound }`;
+- **o documento** da gramática é o [backend/03](../../architecture/backend/03-modules.md#permission)
+  (`permission`) e o ADR-025, que o 28 abre; o anexo `backend/04a-claude.md` só diz como a tradução é
+  feita (B-07);
+- **todo o REST no pacote** ([28 · D-09](../28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)):
+  cada rota nova ou mudada deste plano nasce com schema em `packages/contracts/schema/http/` e tipo
+  gerado para o web e o app, e o `contracts:check` reprova a rota sem schema (B-03, B-20).
+
 ---
 
 ## F1 — Rules backend
@@ -265,8 +334,8 @@ real, cursor sobre `(granted_at, id)` é acréscimo compatível — cenário S-5
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-14 | O teto da extensão conta de quando: da concessão ou de agora | se "estender" é renovar ou prolongar | B-12 | — | 🔲 |
-| D-15 | Quantas invocações a simulação lê, e o que ela conta | custo da consulta com a trilha cheia; o que o modo da sessão não gravado impede de afirmar | B-16 | — | 🔲 |
-| D-16 | Onde moram os modelos de regra, e quais entram | o que o usuário mais aprova — não medido | B-17 | — | 🔲 |
+| D-15 | Quantas invocações a simulação lê, e o que ela conta | custo da consulta com a trilha cheia; o que o modo da sessão não gravado impede de afirmar. O modo assumido é o canônico `ask` ([D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect)) | B-16 | — | 🔲 |
+| D-16 | Onde moram os modelos de regra, e quais entram | o que o usuário mais aprova — não medido. Desde a [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect) (revisão de 2026-10-10), os modelos são canônicos, com `engine` nulo, num catálogo só | B-17 | — | 🔲 |
 | D-17 | Formato da exportação, validade na importação, e se exportar é auditado | se o arquivo sai da máquina; se validade de outra instalação deve valer aqui | B-18 | — | 🔲 |
 | D-18 | Por onde o lembrete de expiração chega | se a preferência do usuário mora no servidor (decisão do plano 06); o que pode atravessar o push | B-19, B-25 | — | 🔲 |
 
@@ -294,7 +363,8 @@ diferente nas últimas N invocações?".
   [plano 14](../14-audit-explained/README.md) planeja — quem chegar primeiro o escreve no
   `AuditTrailReader`, o outro reusa); sessão anterior à `0011` não tem pasta, e fica em
   `withoutFolder` (S-125);
-- o modo da sessão **não** está na trilha: a simulação assume modo `default` e diz isso na resposta;
+- o modo da sessão **não** está na trilha: a simulação assume o modo canônico `ask` ([D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect)) e diz
+  isso na resposta;
 - as regras `session` já morreram e não entram;
 - a comparação é "antes" (o veredito gravado) × "depois" (`answeringRule` com as regras ativas agora,
   mais os rascunhos, menos as removidas), e só os itens que **mudam** voltam listados (até 100),
@@ -303,22 +373,26 @@ diferente nas últimas N invocações?".
 ### D-16 — Onde moram os modelos de regra, e quais entram
 
 **Recomendação:** catálogo versionado **no backend** (`GET /permission-rules/templates`), com nome e
-descrição como chaves de i18n — o catálogo passa pelo mesmo teste de gramática e largura das regras
-(S-133), o que uma lista no cliente não passaria. Aplicar um modelo é uma **importação** (mesma
-prévia, mesma aplicação, mesmo segundo passo), não um caminho novo. Conjunto inicial sugerido:
+descrição como chaves de i18n. Os modelos abaixo são **canônicos**
+([D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect), revisão de 2026-10-10): escritos na gramática
+do [plano 28](../28-agent-neutral-core/F5-permission-dialect.md), com `engine` nulo — valem em todo motor
+que tenha o `kind` —, e o catálogo é um só, no domínio da aplicação, não por motor. Ele passa pelo mesmo
+teste de gramática e largura das regras (S-133), o que uma lista no cliente não passaria. Aplicar um
+modelo é uma **importação** (mesma prévia, mesma aplicação, mesmo segundo passo), não um caminho novo.
+Conjunto inicial sugerido:
 
 | Modelo | Regras | Decisão |
 |---|---|---|
-| Rodar os testes | `Bash(pnpm test:*)`, `Bash(npm test:*)`, `Bash(yarn test:*)` | `allow` |
-| Git só leitura | `Bash(git status:*)`, `Bash(git diff:*)`, `Bash(git log:*)`, `Bash(git show:*)`, `Bash(git branch --list:*)` | `allow` |
-| Lint e formatação | `Bash(pnpm lint:*)`, `Bash(pnpm format:*)`, `Bash(pnpm typecheck:*)` | `allow` |
-| Bloquear rede | `WebFetch`, `WebSearch`, `Bash(curl:*)`, `Bash(wget:*)` | `deny` |
-| Bloquear git destrutivo | `Bash(git push --force:*)`, `Bash(git push -f:*)`, `Bash(git reset --hard:*)`, `Bash(git clean:*)` | `deny` |
-| Bloquear apagar em massa | `Bash(rm -rf:*)`, `Bash(rm -fr:*)` | `deny` |
+| Rodar os testes | `shell(pnpm test:*)`, `shell(npm test:*)`, `shell(yarn test:*)` | `allow` |
+| Git só leitura | `shell(git status:*)`, `shell(git diff:*)`, `shell(git log:*)`, `shell(git show:*)`, `shell(git branch --list:*)` | `allow` |
+| Lint e formatação | `shell(pnpm lint:*)`, `shell(pnpm format:*)`, `shell(pnpm typecheck:*)` | `allow` |
+| Bloquear rede | `web.fetch`, `web.search` (a busca na web; a forma da [28 · B-31](../28-agent-neutral-core/F5-permission-dialect.md)), `shell(curl:*)`, `shell(wget:*)` | `deny` |
+| Bloquear git destrutivo | `shell(git push --force:*)`, `shell(git push -f:*)`, `shell(git reset --hard:*)`, `shell(git clean:*)` | `deny` |
+| Bloquear apagar em massa | `shell(rm -rf:*)`, `shell(rm -fr:*)` | `deny` |
 
-"Leitura do repositório", pedida no briefing, **não** entra como modelo de `Read`: a gramática não
-limita o caminho à pasta (`Read` inteiro lê `~/.ssh`), e as leituras em geral nem chegam a nós — o
-CLI as aprova sozinho. O que cabe honestamente é o "git só leitura", e a ajuda explica o resto.
+"Leitura do repositório", pedida no briefing, **não** entra como modelo de `file.read`: a regra de
+`file.read` inteiro não limita o caminho à pasta (lê `~/.ssh`), e as leituras em geral nem chegam a nós —
+o CLI as aprova sozinho. O que cabe honestamente é o "git só leitura", e a ajuda explica o resto.
 Modelos sugeridos a partir dos scripts do `package.json` da pasta ficam para quando o
 [plano 12](../12-integrated-terminal/README.md) detectar tarefas.
 
@@ -326,9 +400,13 @@ Modelos sugeridos a partir dos scripts do `package.json` da pasta ficam para qua
 
 **Recomendação:**
 
-- **formato** `{ format: "remote-claude.permission-rules", version: 1, exportedAt, rules: [{ pattern,
-  decision, scope, projectPath, expiresAt }] }` — sem `id`, sem `userId`, sem origem. Importar lê
-  `pattern`, `decision`, `scope` e `projectPath`, e **ignora** qualquer outro campo (S-139);
+- **formato** `{ format: "remote-claude.permission-rules", version: 1, exportedAt, rules: [{ engine?,
+  pattern, decision, scope, projectPath, expiresAt }] }` — sem `id`, sem `userId`, sem origem, e o
+  `pattern` na **gramática canônica** ([D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect), revisão de 2026-10-10). Importar lê `engine` (ausente =
+  regra canônica, válida em todo motor com o `kind`; presente = restrita àquele motor), `pattern`,
+  `decision`, `scope` e `projectPath`, e **ignora** qualquer outro campo (S-139). Um `pattern` na gramática
+  antiga do Claude (`Bash(…)`) é item inválido, com o motivo — nunca traduzido em silêncio; a regra
+  desligada pela migração do 28 não é exportada;
 - **validade**: a do arquivo é informativa e **não** vale aqui. O lote ganha a default da decisão ou
   a escolhida na tela, com o teto de sempre (S-148) — validade decidida por outra instalação, com
   outro teto, não é decisão de ninguém aqui;
@@ -378,7 +456,7 @@ Modelos sugeridos a partir dos scripts do `package.json` da pasta ficam para qua
 
 Painel lateral sobre a lista é mais rápido de abrir; rota própria é um link.
 
-**Recomendação:** rota própria, `/rules/new`, com o rascunho na search (`?tool=&pattern=&decision=&
+**Recomendação:** rota própria, `/rules/new`, com o rascunho na search (`?kind=&pattern=&decision=&
 scope=&folder=&template=`) — é por onde a trilha ("criar regra a partir desta invocação"), o duplicar
 e os modelos chegam, e o link continua valendo depois do login, como os filtros de `/audit`. O ULID de
 uma regra nunca é `new`, então a rota estática não colide com `/rules/$ruleId`. A search é **dado não

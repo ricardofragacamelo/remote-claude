@@ -12,7 +12,7 @@ fica no cabeçalho de cada documento; o da implementação, no plano que a absor
 
 ## Panorama
 
-**Última atualização:** 2026-10-09
+**Última atualização:** 2026-10-10
 
 | # | Discovery | Criada em | Plano | Implementação |
 |---|---|---|---|---|
@@ -24,7 +24,8 @@ fica no cabeçalho de cada documento; o da implementação, no plano que a absor
 | 06 | [O remote-claude como app desktop (Tauri)](06-app-desktop-tauri.md) | 2026-10-08 | — | 🔲 discovery, sem plano |
 | 07 | [Navegar e ler os arquivos da pasta pelo app](07-navegador-de-arquivos-no-app.md) | 2026-10-08 | [25 — Navegador de arquivos no app](../plans/25-mobile-file-browser/README.md) | 🔲 plano criado, não iniciado |
 | 08 | [Paridade da conversa no app: o plano 13 e o markdown](08-paridade-da-conversa-no-app.md) | 2026-10-09 | [26 — Paridade da conversa no app](../plans/26-mobile-conversation-parity/README.md) | 🔲 plano criado, não iniciado |
-| 09 | [O que o backend perde da conversa, e a mensagem desconhecida na tela](09-perdas-do-backend-na-conversa.md) | 2026-10-09 | — | 🔲 discovery, sem plano |
+| 09 | [O que o backend perde da conversa, e a mensagem desconhecida na tela](09-perdas-do-backend-na-conversa.md) | 2026-10-09 | [27 — Perdas da conversa](../plans/27-conversation-losses/README.md) | 🔲 plano criado, não iniciado |
+| 10 | [Núcleo canônico e agentes de código isolados nas três pontas](10-nucleo-canonico-e-agentes-isolados.md) | 2026-10-10 | [28 — Núcleo neutro de agente](../plans/28-agent-neutral-core/README.md) | 🔲 plano criado, não iniciado |
 
 Legenda: 🔲 não implementada · 🔄 em andamento · ✅ implementada
 
@@ -97,7 +98,21 @@ plano 26, e a medição corrigiu as premissas dela (§2): 22 das 39 variantes do
 Acrescenta duas regras do usuário: a mensagem desconhecida aparece na conversa, não só no log (§7), e
 todo evento novo é canônico, para servir a outro motor de agente (§8.1). O plano 26 fica com a
 paridade do que já existe; esta vira um plano próprio, que complementa o que falta nas duas pontas (D-01).
-A ordem é 26 → 13 → o plano desta discovery.
+Virou o [plano 27 — Perdas da conversa](../plans/27-conversation-losses/README.md) em 2026-10-10, que
+roda depois do 26 e do 13; as decisões abertas daqui estão no `decisions.md` dele, com os mesmos IDs.
+
+### 10 — Núcleo canônico e agentes isolados
+
+Prepara o produto para vários agentes de código. Mede de novo o acoplamento ao Claude nas três
+pontas: o SDK está isolado, mas o vocabulário vazou para o domínio de permissão, para o contrato e
+para os dois clientes. Web e app interpretam ferramentas do Claude em 10 pares de lógica duplicada.
+A proposta leva a interpretação para o adapter, com mensagens canônicas no molde do plano 27
+(`kind`, `origin`, `messageKey`). O que é de um motor só fica num anel `engines/<motor>/` em cada
+ponta, conferido por lint e por um portão de neutralidade com catraca. Detalha o M0 da 03 e lista as
+mudanças de AGENTS, ADR e documentação (§8), o impacto nos planos (§9) e a ordem (§10). A
+recomendação era rodar entre a F1 e a F2 do 26, o que mudava a ordem 26 → 13 → 27. Virou o
+[plano 28](../plans/28-agent-neutral-core/README.md) em 2026-10-10, com a ordem decidida pelo usuário
+(D-01) e escrita no [índice dos planos](../plans/README.md#ordem-de-execução).
 
 ---
 

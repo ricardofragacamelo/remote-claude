@@ -2,7 +2,9 @@
 
 Plano: [26 — Paridade da conversa no app](README.md) · Cenários: [scenarios.md](scenarios.md) · Progresso: [progress.md](progress.md)
 
-**Depende de:** [F1](F1-parity-map.md); a [D-10](decisions.md#f0--spike) (motor de realce) decidida.
+**Depende de:** [F1](F1-parity-map.md); a [D-10](decisions.md#f0--spike) (motor de realce) decidida; o
+[plano 28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md) concluído, como as F3…F7
+([D-15](decisions.md#normas)).
 **Entrega:** o renderizador de markdown do app mora em `core/widgets/markdown/` e serve ao leitor de
 arquivos e à conversa. O bloco de código tem realce, copiar, rótulo da linguagem e rolagem própria.
 

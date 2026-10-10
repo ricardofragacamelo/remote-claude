@@ -17,7 +17,15 @@ parâmetro não muda (S-01, S-02).
 
 **Depende de:** [plano 03](../03-rules-and-audit/README.md) (concluído — é o que se gerencia aqui);
 [plano 06](../06-workbench/README.md) (navegação global, moldura de tela com ajuda, paleta, central
-de notificações, seletor de pasta). **Não** depende do [plano 14](../14-audit-explained/README.md):
+de notificações, seletor de pasta); [plano 28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md)
+**concluído** — a B-08, em andamento, está pausada até a
+[F5 de lá](../28-agent-neutral-core/F5-permission-dialect.md), que traz a gramática canônica de regra, e
+o resto do plano é escrito sobre ela: a regra é escrita por `kind` (`shell(git status:*)`,
+`file.edit(src/**)`, `web.fetch(domain:…)`, `mcp(srv:tool)`), o domínio a casa, mede e descreve, o
+`RuleDialect` de cada motor só a traduz, a regra leva `engine` só quando é restrita a um motor, o teste
+fala `kind` e `subject`, os modos são os canônicos, as rotas novas nascem com tipo gerado em
+`packages/contracts/schema/http/` e o texto do núcleo usa `{agent}` ([D-20](decisions.md#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect)).
+**Não** depende do [plano 14](../14-audit-explained/README.md):
 o uso sai das entradas de decisão de `audit_entries`, que já têm o `rule_id` desde a `0009`; o 14 só
 muda para onde o link "ver na trilha" aponta.
 
@@ -68,7 +76,7 @@ Nenhuma é reaberta; todas são provadas de novo, porque o código que as susten
 | Garantia | Onde é provada de novo |
 |---|---|
 | qualquer `deny` que case vence | S-19, S-95, S-112 |
-| em `plan`, nenhum `allow` responde | S-19, S-96, S-219 |
+| em `readOnly` (o `plan` do Claude), nenhum `allow` responde | S-19, S-96, S-219 |
 | escopo persistido pede segundo passo | S-34, S-188, S-220 |
 | toda regra expira, com teto, recusado e nunca truncado | S-37, S-66, S-90, S-148 |
 | revogar (e encurtar) vale na próxima invocação da sessão viva | S-76, S-86, S-215 |
@@ -102,6 +110,8 @@ Nenhuma é reaberta; todas são provadas de novo, porque o código que as susten
   A tela oferece o atalho (duplicar alterando, e revogar a original), não a edição.
 - **Gramática de caminho** (`Edit(src/**)`, estilo gitignore). É outra linguagem de padrão e outra
   superfície de ataque; registrada como candidata a plano futuro ([D-08](decisions.md#d-08--prefixo-em-tool-de-caminho)).
+  Desde 2026-10-10, a forma de caminho da regra (`file.edit(src/**)`) é da gramática canônica do
+  [plano 28](../28-agent-neutral-core/F5-permission-dialect.md) (B-31 de lá): este plano a usa, e não a define.
 - **Regras de sessão na tela.** A regra `session` vive em memória e morre com a sessão; ela aparece no
   teste de comando "nesta sessão", e a ajuda explica. Mostrá-la numa lista de gestão seria gerir o que
   some sozinho.
@@ -148,8 +158,8 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | O contrato é escrito antes do código, e o app Flutter não percebe a mudança | B-01…B-03 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) | S-01, S-02, S-06 |
 | Códigos novos com status que significa, nas três fontes | B-04 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio) | S-03 |
 | Os fatos novos vão para a trilha, sem conteúdo | B-05 | [backend/05-persistence](../../architecture/backend/05-persistence.md#a-trilha-de-auditoria) | S-04, S-05 |
-| A tela e a gramática estão nos documentos normativos | B-06, B-07 | [web/03-ui-system](../../architecture/web/03-ui-system.md#regras--onde-a-autorização-é-retirada), [backend/04](../../architecture/backend/04-claude-integration.md#a-regra-fala-a-gramática-do-claude-não-uma-nossa) | S-13, S-159, S-223 |
-| Um prefixo `allow` não autoriza comando encadeado; um `deny` pega o segmento | B-08 | [backend/04](../../architecture/backend/04-claude-integration.md#a-regra-fala-a-gramática-do-claude-não-uma-nossa) | S-07…S-12, S-20, S-21 |
+| A tela e a gramática estão nos documentos normativos | B-06, B-07 | [web/03-ui-system](../../architecture/web/03-ui-system.md#regras--onde-a-autorização-é-retirada), [backend/03-modules](../../architecture/backend/03-modules.md#permission) (a gramática canônica) | S-13, S-159, S-223 |
+| Um prefixo `allow` não autoriza comando encadeado; um `deny` pega o segmento | B-08 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) (a gramática canônica) | S-07…S-12, S-20, S-21 |
 | A largura do padrão é regra pura, e o que é largo demais é recusado por qualquer porta | B-08, B-09 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) | S-15, S-16, S-31…S-33, S-90, S-147, S-189, S-217 |
 | Regra de pasta só para pasta liberada e do próprio usuário, na forma que a sessão usa | B-09 | [backend/03-modules](../../architecture/backend/03-modules.md#workspace) | S-22…S-30, S-195 |
 | As garantias do plano 03 continuam de pé | B-08, B-09, B-12, B-13, B-36 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) | S-13, S-19, S-34, S-39…S-41, S-76, S-86, S-96, S-219, S-220 |
@@ -166,6 +176,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Exportar e importar com prévia e segundo passo | B-18, B-31 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) | S-136…S-149, S-205…S-208, S-216 |
 | Lembrar antes de a regra expirar, sem vazar padrão pelo push | B-19, B-25 | [backend/03-modules](../../architecture/backend/03-modules.md#notification) | S-150…S-155, S-178…S-180 |
 | A tela diz o que cada regra faz, em palavras | B-21, B-22 | [web/03-ui-system](../../architecture/web/03-ui-system.md#regras--onde-a-autorização-é-retirada), [02-i18n](../../architecture/shared/02-i18n.md) | S-159…S-168, S-222 |
+| As regras que a migração do [plano 28](../28-agent-neutral-core/F5-permission-dialect.md) desligou aparecem para a pessoa recriar, e nunca voltam a valer sozinhas | B-02, B-10, B-12, B-13, B-21 | [web/03-ui-system](../../architecture/web/03-ui-system.md#regras--onde-a-autorização-é-retirada) | S-01, S-224…S-226 |
 | Criar pela tela, vendo o alcance real antes de gravar | B-27 | [web/03-ui-system](../../architecture/web/03-ui-system.md#regras--onde-a-autorização-é-retirada) | S-185…S-195, S-211, S-212 |
 | Ajuda de verdade, atalhos, teclado e acessibilidade em toda tela nova | B-26, B-32 | [web/01-architecture](../../architecture/web/01-architecture.md), [02-i18n](../../architecture/shared/02-i18n.md) | S-181…S-184, S-209, S-210, S-221 |
 | O ciclo, a segurança e as regressões pela porta do usuário | B-33…B-36 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-211…S-222 |
@@ -178,24 +189,30 @@ Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 
 ```
 backend/src/
-├── domain/permission/services/        rule-pattern (casamento por decisão) · rule-breadth ·
-│                                      rule-coverage · rule-reach · rule-analysis
+├── domain/permission/services/        a gramática canônica (da F5 do plano 28): rule-pattern (casamento
+│                                      por decisão) · rule-breadth · rule-coverage · rule-reach ·
+│                                      rule-analysis · a regra { engine?, kind, matcher }
 ├── application/permission/
 │   ├── ports/                         rule-folder-resolver.port (→ workspace) · leitura da trilha
+│   │                                  · RuleDialect (só tradução, da F5 do plano 28, D-20)
 │   ├── change-permission-rule-expiry · revoke-permission-rules · restore-permission-rules
 │   ├── evaluate-permission · simulate-permission-rules · preview-permission-rule
 │   ├── rule-templates (catálogo) · export/import-permission-rules
 │   └── remind-expiring-rules (job)
 ├── application/audit/ports/           AuditTrailReader: uso, invocações e história por regra
 ├── adapter/inbound/http/permission-rules/   as rotas novas
+├── adapter/outbound/engines/claude/   o dialeto do Claude, só tradução (toEngine · fromNative ·
+│                                      translate) · as ressalvas do que o CLI decide antes
 ├── adapter/outbound/persistence/{permission,audit}/
 └── infrastructure/database/migrations/      origem da regra e marca de lembrete · índices ·
                                              kinds novos no CHECK de audit_events
 
+packages/contracts/schema/http/      as rotas novas de /permission-rules, com tipo gerado (28 · D-09)
+
 web/src/features/permission/
 ├── components/   RulesScreen · RuleTable · RuleCard · RuleDetailPanel · RuleExpiryDialog ·
 │                 RuleBulkBar · RuleWizard · CommandTester · RuleSimulation · RuleTemplates ·
-│                 RuleImportPreview · RulesHelp
+│                 RuleImportPreview · DisabledRulesList · RulesHelp
 ├── hooks/        useRules · useRule · useRuleMutations · useRuleEvaluation · useRuleSimulation ·
 │                 useRuleImport · useRuleTemplates
 └── services/     rule.service.ts
@@ -212,7 +229,7 @@ e2e/specs/        rule-authoring · rule-management · rule-authoring-security
 |---|---|---|
 | R-01 | **Criar pela tela facilita escrever regra larga** — o R-01 do plano 03, agora com um formulário na frente | **aberto** — mitigação em camadas: o servidor recusa `unbounded` e exige confirmação para `broad` por qualquer porta ([D-09](decisions.md#d-09--o-que-é-largo-demais)); prévia, teste e simulação mostram o alcance real antes; segundo passo sempre |
 | R-02 | **Endurecer o casamento muda o comportamento de regras que já existem** — um `allow` de prefixo passa a perguntar o comando encadeado | **aberto** — só na direção segura, provado por propriedade (S-20); a ajuda e o detalhe dizem o que o prefixo não cobre; o progresso registra a mudança na data em que ela entrar ([D-07](decisions.md#d-07--comando-composto-e-o-prefixo)) |
-| R-03 | **O teste de comando diz "seria perguntado" e o CLI decide antes** — `deny` do projeto, `acceptEdits`, leituras aprovadas pelo CLI | **aberto** — toda resposta traz as ressalvas (S-106), e a ajuda as explica; o teste responde pelo que **nós** decidimos, e diz isso |
+| R-03 | **O teste de comando diz "seria perguntado" e o CLI decide antes** — `deny` do projeto, `acceptEdits`, leituras aprovadas pelo CLI | **aberto** — toda resposta traz as ressalvas, que o adapter do motor declara (S-106, [D-20](decisions.md#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect)), e a ajuda as explica; o teste responde pelo que **nós** decidimos, e diz isso |
 | R-04 | **O uso é janelado pela retenção**: uma regra de 365 dias mostra só os últimos 90 | **aberto** — a tela diz "nos últimos 90 dias"; a trilha é a fonte porque o número precisa bater com ela ([D-05](decisions.md#d-05--a-fonte-do-uso-e-da-simulação)) |
 | R-05 | **Importar traz regras em massa de outra máquina ou de outra pessoa** | **aberto** — cada item passa pela rotina de concessão (pasta, largura, validade nova), prévia por item, segundo passo, dono sempre o chamador, trilha ([D-17](decisions.md#d-17--exportar-e-importar)) |
 | R-06 | **Corrida entre revogar e estender ressuscita uma regra** | **aberto** — a escrita da validade é condicional ao estado e à versão, e é ela que decide (S-74, S-75) |

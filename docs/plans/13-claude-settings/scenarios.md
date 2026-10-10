@@ -112,9 +112,9 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
 | S-63 | stdio com comando, args e env; http e sse com URL e headers — os três aceitos | eq | unit | — | B-18 | ⬜ |
-| S-64 | nome com `__`, fora de `[A-Za-z0-9_-]`, vazio ou com mais de 64 caracteres | fron | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ⬜ |
+| S-64 | nome fora de `[A-Za-z0-9_-]`, vazio, com mais de 64 caracteres, ou que o motor recusa (no Claude, com `__`, que torna ambíguo o nome nativo da tool) | fron | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ⬜ |
 | S-65 | URL fora de `http(s)` (`file:`, `javascript:`), stdio sem comando, campos de um transporte no outro | err | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ⬜ |
-| S-66 | env que sobrepõe variável sensível (`LD_PRELOAD`, `NODE_OPTIONS`, `CLAUDE_CONFIG_DIR`, `REMOTE_CLAUDE_*`) | err | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ⬜ |
+| S-66 | env que sobrepõe variável sensível (`LD_PRELOAD`, `NODE_OPTIONS`, `REMOTE_CLAUDE_*`) ou reservada pelo motor (no Claude, `CLAUDE_CONFIG_DIR`, declarada pelo adapter) | err | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ⬜ |
 | S-67 | tetos de args, env e headers: no teto passa, um acima recusa | fron | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ⬜ |
 | S-68 | a descrição por extenso (o que roda, com quais args, onde vale, nomes das variáveis) sai do domínio e é igual na prévia e na gravação | idem | unit | — | B-18 | ⬜ |
 | S-69 | nome repetido no mesmo escopo | err | integração | `MCP_SERVER_NAME_TAKEN` | B-19 | ⬜ |
@@ -127,7 +127,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-76 | servidor de outra pessoa: ler, alterar, ligar ou remover | err | integração | `FORBIDDEN` | B-19 | ⬜ |
 | S-77 | id inexistente | err | integração | `MCP_SERVER_NOT_FOUND` | B-19 | ⬜ |
 | S-78 | remover de novo responde `404` e não grava segundo evento | idem | integração | `MCP_SERVER_NOT_FOUND` | B-19 | ⬜ |
-| S-79 | adicionar, alterar, remover e ligar gravam `claude.mcpServer*` **antes** do efeito, com o comando/URL por extenso e só os nomes das variáveis; trilha indisponível não grava nada | err | integração | `INTERNAL_ERROR` | B-19 | ⬜ |
+| S-79 | adicionar, alterar, remover e ligar gravam `mcp.server*`, com o `engine`, **antes** do efeito, com o comando/URL por extenso e só os nomes das variáveis; trilha indisponível não grava nada | err | integração | `INTERNAL_ERROR` | B-19 | ⬜ |
 | S-80 | duas alterações simultâneas do mesmo servidor → uma vence por inteiro, e a trilha registra as duas na ordem do banco | conc | integração | — | B-19 | ⬜ |
 | S-81 | o subprocesso do CLI — e portanto todo servidor stdio — não recebe as variáveis de configuração do backend (banco, OIDC, push, chave de segredo) | err | integração | — | B-20 | ⬜ |
 | S-82 | chave nova no schema de configuração do backend entra na lista de remoção sem lista à mão — o teste falha se o schema ganhar chave não coberta | fron | unit | — | B-20 | ⬜ |
@@ -141,12 +141,12 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-85 | servidor de outro usuário nunca entra na sessão de alguém | err | unit | — | B-21 | ⬜ |
 | S-86 | o segredo chega ao servidor sem passar pelo argv do CLI, pela via que o spike escolheu | err | integração | — | B-21 | ⬜ |
 | S-87 | nome nosso igual ao de um servidor do `.mcp.json` → o nosso vale, e o do projeto aparece sombreado | fron | unit | — | B-21 | ⬜ |
-| S-88 | `session.toggleMcpServer` e `session.reconnectMcpServer` chamam o SDK, respondem `ack`, e o resultado chega em `session.mcpStatusChanged` com o `seq` da sessão | eq | integração | — | B-22 | ⬜ |
+| S-88 | `session.toggleMcpServer` e `session.reconnectMcpServer` chamam o motor pela porta, respondem `ack`, e o resultado chega em `session.mcpStatusChanged` com o `seq` da sessão | eq | integração | — | B-22 | ⬜ |
 | S-89 | comando de MCP em sessão de outra pessoa ou inexistente | err | integração | `FORBIDDEN`, `SESSION_NOT_FOUND` | B-22 | ⬜ |
 | S-90 | servidor que aquela sessão não tem | err | integração | `MCP_SERVER_NOT_FOUND` | B-22 | ⬜ |
-| S-91 | falha do SDK ao ligar ou reconectar | err | integração | `CLAUDE_UNAVAILABLE` | B-22 | ⬜ |
+| S-91 | falha do motor ao ligar ou reconectar | err | integração | `AGENT_UNAVAILABLE` | B-22 | ⬜ |
 | S-92 | ligar o que já está ligado → `ack`, sem segundo evento | idem | unit | — | B-22 | ⬜ |
-| S-93 | o status confia no `source`, não no nome: servidor `sdk` ou `plugin` de mesmo nome não se passa pelo nosso | err | unit | — | B-22 | ⬜ |
+| S-93 | o adapter lê o status pelo `source` do SDK, não pelo nome: servidor `sdk` ou `plugin` de mesmo nome não se passa pelo nosso | err | unit | — | B-22 | ⬜ |
 | S-94 | `needs-auth` aparece com explicação; nenhuma URL de OAuth trafega pelo produto | fron | integração | — | B-22 | ⬜ |
 | S-95 | depois de um `gap`, o cliente relê o status por HTTP e o indicador do painel volta coerente | est | integração | — | B-22 | ⬜ |
 | S-96 | a mensagem de erro que o servidor devolve é redigida antes de ir ao cliente (URL com token) | err | unit | — | B-22 | ⬜ |
@@ -162,7 +162,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-101 | aprovar grava (pasta, nome, digest), e a próxima sessão tem o servidor | est | integração | — | B-24 | ⬜ |
 | S-102 | o `.mcp.json` mudou entre mostrar e aprovar | conc | integração | `MCP_APPROVAL_STALE` | B-24 | ⬜ |
 | S-103 | entrada alterada depois de aprovada volta a "alterado" e não entra em sessão até nova aprovação | est | integração | — | B-24 | ⬜ |
-| S-104 | a aprovação do próprio CLI (`enabledMcpjsonServers`, `enableAllProjectMcpServers`) não conta | err | unit | — | B-24 | ⬜ |
+| S-104 | a aprovação do próprio motor (no Claude, `enabledMcpjsonServers`, `enableAllProjectMcpServers`, ignoradas pelo adapter) não conta | err | unit | — | B-24 | ⬜ |
 | S-105 | `${VAR}` aparece literal na aprovação, marcado; a expansão acontece no ambiente já sem os segredos do backend | err | integração | — | B-24 | ⬜ |
 | S-106 | `.mcp.json` malformado, acima do teto, ou symlink que sai da raiz → estado explicado, nada aprovável | err | integração | — | B-24 | ⬜ |
 | S-107 | aprovar de novo o mesmo digest não grava segundo evento | idem | integração | — | B-24 | ⬜ |
@@ -177,20 +177,20 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-111 | testar sobe só aquele servidor, devolve status e tools (com as annotations), e encerra a sonda | eq | integração | — | B-25 | ⬜ |
 | S-112 | servidor que não conecta no prazo → resultado `timeout` descrito, sonda encerrada | fron | integração | — | B-25 | ⬜ |
 | S-113 | dois testes do mesmo servidor ao mesmo tempo → um em voo | conc | unit | — | B-25 | ⬜ |
-| S-114 | testar grava `claude.mcpServerTested` — testar **executa** o comando | eq | integração | — | B-25 | ⬜ |
+| S-114 | testar grava `mcp.serverTested` — testar **executa** o comando | eq | integração | — | B-25 | ⬜ |
 | S-115 | capacidade cheia → teste recusado sem subprocesso | err | integração | `SESSION_LIMIT_REACHED` | B-25 | ⬜ |
 
 ## Tool MCP e permissão — B-26
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-116 | `mcp__srv__tool` pede permissão pelo `canUseTool` e é registrada pelo `PreToolUse`, como qualquer tool | eq | integração | — | B-26 | ⬜ |
-| S-117 | regra `mcp__srv__tool` e `mcp__srv` casam; `mcp__srv2` não; `mcp__srv` não cobre `mcp__srvx__t` | fron | unit | — | B-26 | ⬜ |
+| S-116 | a tool MCP chega canônica (`kind: 'mcp'`, `subject.server`, `subject.tool`, `origin.native` opaco) e, no Claude, `mcp__srv__tool` pede permissão pelo `canUseTool` e é registrada pelo `PreToolUse`, como qualquer tool | eq | integração | — | B-26 | ⬜ |
+| S-117 | no domínio de `permission` do núcleo, a regra canônica `mcp(srv:tool)` e `mcp(srv:*)` casam a tool `tool` do servidor `srv`; `mcp(srv2:*)` não; `mcp(srv:*)` não cobre o servidor `srvx` | fron | unit | — | B-26 | ⬜ |
 | S-118 | annotation `readOnly` não baixa o `riskHint`; `destructive` sobe; sem annotation → destrutiva | err | unit | — | B-26 | ⬜ |
-| S-119 | trocar comando, args, URL ou transporte, ou remover um servidor, revoga as `allow` de `mcp__<nome>` do usuário — o segundo passo as lista; `deny` fica | est | integração | — | B-26 | ⬜ |
+| S-119 | trocar comando, args, URL ou transporte, ou remover um servidor, revoga as `allow` do usuário que alcançam o servidor — as canônicas `mcp(<nome>:…)`, casadas no núcleo, sem o dialeto — o segundo passo as lista; `deny` fica | est | integração | — | B-26 | ⬜ |
 | S-120 | servidor novo com o nome de um removido não herda `allow` | err | integração | — | B-26 | ⬜ |
 | S-121 | a alteração e a revogação acontecem juntas: falha em uma não grava a outra | err | integração | `INTERNAL_ERROR` | B-26 | ⬜ |
-| S-122 | em `plan`, nenhuma `allow` auto-aprova tool MCP — a precedência do plano 03 vale | eq | unit | — | B-26 | ⬜ |
+| S-122 | em `readOnly` (o modo canônico), nenhuma `allow` auto-aprova tool MCP — a precedência do plano 03 vale | eq | unit | — | B-26 | ⬜ |
 
 ## Plugins locais — B-27
 
@@ -200,7 +200,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-124 | caminho fora da allowlist, ou diretório sem manifesto de plugin | err | integração | `WORKSPACE_NOT_ALLOWED`, `PLUGIN_PATH_INVALID` | B-27 | ⬜ |
 | S-125 | a prévia mostra os hooks, comandos, agents e servidores MCP que o plugin declara | eq | unit | — | B-27 | ⬜ |
 | S-126 | servidor MCP declarado pelo plugin só sobe se aprovado como servidor nosso | err | integração | — | B-27 | ⬜ |
-| S-127 | adicionar, ligar e remover plugin gravam `claude.plugin*` antes do efeito | eq | integração | — | B-27 | ⬜ |
+| S-127 | adicionar, ligar e remover plugin gravam `engine.pluginAdded`, `engine.pluginToggled` e `engine.pluginRemoved`, com o motor no payload, antes do efeito | eq | integração | — | B-27 | ⬜ |
 | S-128 | manifesto que muda depois de aprovado volta a pendente | est | integração | — | B-27 | ⬜ |
 | S-129 | plugin inexistente, ou de outra pessoa | err | integração | `PLUGIN_NOT_FOUND`, `FORBIDDEN` | B-27 | ⬜ |
 | S-130 | adicionar o mesmo diretório duas vezes devolve o existente | idem | integração | — | B-27 | ⬜ |
@@ -218,7 +218,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-206 | arquivo do diretório instalado alterado fora do fluxo diverge do digest e volta a pendente | est | integração | — | B-47 | ⬜ |
 | S-207 | instalar o mesmo plugin no mesmo commit duas vezes devolve o existente | idem | integração | — | B-47 | ⬜ |
 | S-208 | duas instalações simultâneas do mesmo plugin pelo mesmo usuário deixam um diretório e um registro | conc | integração | — | B-47 | ⬜ |
-| S-209 | instalar, atualizar e remover gravam `claude.plugin*` antes do efeito; remover apaga o diretório | eq | integração | — | B-47 | ⬜ |
+| S-209 | instalar, atualizar e remover gravam `engine.pluginAdded`, `engine.pluginUpdated` e `engine.pluginRemoved`, com o motor no payload, antes do efeito; remover apaga o diretório | eq | integração | — | B-47 | ⬜ |
 | S-210 | o plugin de marketplace de um usuário nunca entra na sessão de outro, nem é lido por ele | err | integração | `FORBIDDEN` | B-47 | ⬜ |
 | S-211 | baixar não executa código do plugin, não chama `claude plugin`, não escreve em `~/.claude`, e o subprocesso não recebe os segredos do backend | err | unit | — | B-47 | ⬜ |
 | S-212 | a seção de plugins navega os marketplaces declarados (busca, detalhe, instalar com prévia) e, sem nenhum, ensina a declarar no arquivo | eq | integração | — | B-29 | ⬜ |
@@ -243,7 +243,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-141 | `GET /claude/project-config` lista memória, comandos, agents, output styles, hooks, permissões e plugins do projeto | eq | integração | — | B-31 | ⬜ |
+| S-141 | `GET /engines/claude/project-config` lista memória, comandos, agents, output styles, hooks, permissões e plugins do projeto | eq | integração | — | B-31 | ⬜ |
 | S-142 | pasta fora da allowlist, de outra pessoa ou inexistente | err | integração | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`, `WORKSPACE_NOT_FOUND` | B-31 | ⬜ |
 | S-143 | `.claude/settings.json` malformado ou acima do teto → a parte é explicada, e o resto da tela funciona | err | integração | — | B-31 | ⬜ |
 | S-144 | arquivo de configuração que é symlink para fora da raiz não é lido | err | integração | — | B-31 | ⬜ |
@@ -266,7 +266,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-161 | preferência de skills de uma pasta de outra pessoa | err | integração | `FORBIDDEN` | B-34 | ⬜ |
 | S-162 | duas gravações de preferência de skills ao mesmo tempo → uma vence por inteiro | conc | integração | — | B-34 | ⬜ |
 | S-163 | a mesma preferência gravada duas vezes não muda nada nem grava segundo evento | idem | unit | — | B-34 | ⬜ |
-| S-164 | ligar a origem Usuário ou Sistema grava `claude.skillSourceToggled` antes do efeito; desligar skill não vai para a trilha | eq | integração | — | B-34 | ⬜ |
+| S-164 | ligar a origem Usuário ou Sistema grava `engine.skillSourceToggled`, com o motor no payload, antes do efeito; desligar skill não vai para a trilha | eq | integração | — | B-34 | ⬜ |
 | S-165 | uma skill de `~/.claude/skills` carrega pelo plugin sintético e aparece com o selo Usuário | eq | integração | — | B-35 | ⬜ |
 | S-166 | o plugin sintético expõe só `skills/`, com `skipMcpDiscovery: true` — nenhum hook, agent, comando ou servidor MCP | eq | unit | — | B-35 | ⬜ |
 | S-167 | skill de usuário que declara hook no frontmatter não é carregada, e aparece com o motivo — o hook nunca ativa | err | integração | — | B-35 | ⬜ |
@@ -302,13 +302,13 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-192 | criar slash command pelo modelo e usá-lo no menu do painel | eq | e2e | — | B-44 | ⬜ |
 | S-193 | pasta que saiu da allowlist mostra a recusa traduzida, com caminho de volta | err | e2e | `WORKSPACE_NOT_ALLOWED` | B-44 | ⬜ |
 | S-194 | uma skill de usuário aparece com o selo, e desligar a origem pela tela a tira do `/` do painel | est | e2e | — | B-44 | ⬜ |
-| S-195 | axe sem violação, teclado de ponta a ponta e viewport de celular sem scroll horizontal nas sete seções | eq | e2e | — | B-45 | ⬜ |
+| S-195 | axe sem violação, teclado de ponta a ponta e viewport de celular sem scroll horizontal nas sete seções; com o motor de teste do plano 28, sem `mcp` e sem extensão, só as seções do núcleo que ele anuncia aparecem | eq | e2e | — | B-45 | ⬜ |
 | S-196 | `smoke-live`: modelos e conta reais, servidor de fixture conectado, tool MCP real passando pelo `canUseTool` | eq | e2e | — | B-46 | ⬜ |
 | S-197 | `smoke-live`: skill de usuário real carrega pelo plugin sintético, a `allow` de `~/.claude/settings.json` continua sem dispensar o `canUseTool`, e a política de shell inline vale como a D-21 decidiu | err | e2e | — | B-46 | ⬜ |
 | S-198 | `smoke-live`: subagent de projeto com `permissionMode: acceptEdits` não escreve sem o `canUseTool` — ou o resultado medido vira aviso na tela e risco aberto | est | e2e | — | B-46 | ⬜ |
 | S-199 | `pnpm test:e2e:mobile` verde com os tipos Dart regenerados | eq | e2e | — | B-46 | ⬜ |
 | S-214 | as fixtures deste plano (tool MCP composta, skill de usuário, slash command e subagent de projeto, output style padrão) dão o mesmo conteúdo no web e no app pela paridade do plano 26, e o `render:check` sai verde sem `pending` (D-31) | eq | unit | — | B-46 | ⬜ |
-| S-215 | app: `session.mcpStatusChanged` vira o chip da sessão com o status agregado; ao tocar, a lista com status e erro redigido de cada servidor; nenhuma ação de ligar, desligar ou reconectar no app; a lista inteira substitui a anterior a cada evento (D-32) | eq | widget | — | B-22 | ⬜ |
+| S-215 | app: com a capacidade `mcp` no `session.started`, `session.mcpStatusChanged` vira o chip da sessão (sem ela, nenhum chip) com o status agregado; ao tocar, a lista com status e erro redigido de cada servidor; nenhuma ação de ligar, desligar ou reconectar no app; a lista inteira substitui a anterior a cada evento (D-32) | eq | widget | — | B-22 | ⬜ |
 
 ---
 

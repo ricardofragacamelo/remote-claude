@@ -247,7 +247,7 @@ que não sobe, ou um portão estático que reprova.
 | S-137 | dividir: dois terminais lado a lado, dois PTYs, cada um com o seu tamanho | eq | integração | — | B-18 | ⬜ |
 | S-138 | renomear, ícone e cor ficam com o terminal enquanto ele vive; o título segue o `terminal.titleChanged` até ser renomeado | est | integração | — | B-18 | ⬜ |
 | S-139 | fechar um terminal com programa em primeiro plano pede confirmação que o nomeia; shell ocioso fecha sem perguntar | est | integração | — | B-18 | ⬜ |
-| S-140 | a aba Saída mostra o `tool.progress` dos `Bash` das sessões que a aba de pasta observa; sem sessão, o estado vazio ensina onde ela aparece | eq | integração | — | B-18 | ⬜ |
+| S-140 | a aba Saída mostra o `tool.progress` das ferramentas de `kind: 'shell'` das sessões que a aba de pasta observa, nunca escolhidas pelo nome nativo; sem sessão, o estado vazio ensina onde ela aparece | eq | integração | — | B-18 | ⬜ |
 | S-141 | fechar a aba de pasta com terminais pede confirmação que diz que eles encerram na carência | est | integração | — | B-18 | ⬜ |
 | S-142 | abaixo de `md` o painel vira uma view, sem scroll horizontal da página; maximizar e restaurar o painel | fron | integração | — | B-18 | ⬜ |
 
@@ -260,7 +260,7 @@ que não sobe, ou um portão estático que reprova.
 | S-145 | URL `http`/`https` vira link que abre em nova aba com `noopener`; `javascript:`, `data:` e `file:` não viram link | err | unit | — | B-19 | ⬜ |
 | S-146 | caminho `src/x.ts:12:3` relativo ao `cwd` atual abre no editor do plano 07 na linha; caminho fora da pasta aberta não vira link | fron | integração | — | B-19 | ⬜ |
 | S-147 | marcas de comando (sucesso/falha) e navegar entre comandos por atalho, com a shell integration ligada; sem ela, os controles somem | eq | integração | — | B-19 | ⬜ |
-| S-148 | "enviar seleção ao Claude" (e o `@terminal` do plano 08) leva a seleção ou as últimas N linhas, nunca acima do teto | fron | unit | — | B-19 | ⬜ |
+| S-148 | "enviar seleção ao `{agent}`" (e o `@terminal` do plano 08) leva a seleção ou as últimas N linhas, nunca acima do teto | fron | unit | — | B-19 | ⬜ |
 | S-149 | "executar seleção no terminal" do editor manda o texto ao terminal ativo; sem terminal, abre um — sujeito ao step-up | est | integração | — | B-19 | ⬜ |
 
 ## Web: recusas, reautenticação e reconexão — B-20

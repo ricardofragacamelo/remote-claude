@@ -17,7 +17,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
 | S-01 | instalar numa máquina limpa sobe o serviço e o `/health` responde | eq | e2e | — | B-05 | ⬜ |
-| S-02 | o serviço roda como o usuário dono e **encontra** a credencial do Claude | eq | integração | — | B-02 | ⬜ |
+| S-02 | o serviço roda como o usuário dono e **encontra** a credencial de cada motor habilitado (a do Claude, `~/.claude/.credentials.json`) | eq | integração | — | B-02 | ⬜ |
 | S-03 | instalar duas vezes seguidas leva ao mesmo estado | idem | e2e | — | B-05 | ⬜ |
 | S-04 | configuração incompleta impede a subida, dizendo qual variável falta | err | unit | — | B-04 | ⬜ |
 | S-05 | allowlist de workspace não configurada impede a subida | err | unit | — | B-04 | ⬜ |
@@ -27,7 +27,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-09 | desinstalar remove o serviço, mantém os dados e diz onde estão | est | e2e | — | B-06 | ⬜ |
 | S-10 | desinstalar duas vezes é inofensivo | idem | e2e | — | B-06 | ⬜ |
 | S-11 | espaço em disco insuficiente falha **antes** de começar a instalar | fron | e2e | — | B-05 | ⬜ |
-| S-12 | pré-requisito ausente (Node, Docker, Claude) reprova antes de instalar | fron | e2e | — | B-05 | ⬜ |
+| S-12 | pré-requisito ausente (Node, Docker, o CLI de um motor habilitado — hoje o Claude) reprova antes de instalar | fron | e2e | — | B-05 | ⬜ |
 
 ## Exposição — B-07…B-11
 
@@ -48,7 +48,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-23 | atualizar o SDK com `smoke-live` verde conclui a atualização | eq | e2e | — | B-12 | ⬜ |
+| S-23 | atualizar o SDK de um motor com o `smoke-live` dele verde conclui a atualização | eq | e2e | — | B-12 | ⬜ |
 | S-24 | `smoke-live` vermelho **interrompe** a atualização e diz o que mudou | err | e2e | — | B-12 | ⬜ |
 | S-25 | atualizar aplica a migration nova e preserva os dados | est | e2e | — | B-13 | ⬜ |
 | S-26 | editar migration já aplicada reprova no portão | err | unit | — | B-13 | ⬜ |
@@ -57,7 +57,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-29 | restaurar devolve o sistema coerente, com a trilha intacta | est | e2e | — | B-14 | ⬜ |
 | S-30 | backup com o sistema no ar não corrompe nem bloqueia escrita | conc | e2e | — | B-14 | ⬜ |
 | S-31 | backup de versão mais nova em binário mais velho é recusado | fron | e2e | — | B-14 | ⬜ |
-| S-32 | versões de backend, web, app e SDK visíveis na UI e no log | eq | integração | — | B-15 | ⬜ |
+| S-32 | versões de backend, web, app e, por motor habilitado, do SDK e do CLI visíveis na UI e no log | eq | integração | — | B-15 | ⬜ |
 
 ## E2E de instalação — B-16…B-19
 
@@ -68,7 +68,7 @@ Plano: [README.md](README.md) · Progresso: [progress.md](progress.md)
 | S-35 | atualizar da versão anterior preserva sessões, regras e trilha | est | e2e | — | B-18 | ⬜ |
 | S-36 | restaurar backup depois da atualização mantém a coerência | est | e2e | — | B-19 | ⬜ |
 | S-37 | rodar `dist:verify` duas vezes seguidas dá o mesmo resultado | idem | e2e | — | B-17 | ⬜ |
-| S-38 | sem o Claude instalado na máquina, a instalação falha nomeando o pré-requisito | fron | e2e | — | B-16 | ⬜ |
+| S-38 | sem o CLI de um motor habilitado (o Claude) na máquina, a instalação falha nomeando o motor e o pré-requisito | fron | e2e | — | B-16 | ⬜ |
 
 ---
 

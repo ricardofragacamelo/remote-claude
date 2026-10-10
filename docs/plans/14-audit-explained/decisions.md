@@ -29,6 +29,7 @@ autorizou ([03 · D-15](../03-rules-and-audit/decisions.md#d-15--a-correlação-
 | D-05 | Como distinguir "anterior a esta versão", "em execução" e "não concluiu" numa invocação sem desfecho | nenhum técnico — é desenho | B-07, B-10 | — | 🔲 |
 | D-06 | O que a trilha diz sobre **quem** e **de onde** | se a resolução pelo celular sabe o aparelho no momento de gravar; se o IP vale o dado pessoal que é | B-09, B-21 | — | 🔲 |
 | D-07 | O que responde o endereço de uma invocação que a retenção removeu | se o ULID cunhado pelo domínio é confiável como momento da entrada | B-04, B-13 | — | 🔲 |
+| D-15 | O plano nasce sobre o núcleo neutro do [plano 28](../28-agent-neutral-core/README.md)? | nenhum — as diretivas do 28 (isolamento, regras pelo dialeto, contrato canônico) valem para todo plano não executado | B-01…B-03, B-06…B-10, B-12, B-16, B-18…B-21, B-25…B-29, B-31 | 2026-10-10 · ajuste às diretivas do [plano 28](../28-agent-neutral-core/README.md) (isolamento, regras pelo dialeto, contrato canônico), pedido do usuário: o spike B-01 e o hook de desfecho B-08 são do adapter `adapter/outbound/engines/claude/`, que entrega o desfecho canônico; B-02/B-07 gravam `engine` + `conversation_id` (e mantêm `prompt_id`, que é nosso) no lugar de `claude_session_id`; B-09 passa a `conversation`; B-10/B-31 decidem o `disclosedInput` pelo `kind` `file.read` e pelo `subject`; B-03/B-12/B-19/B-20 filtram e agrupam por `kind`; B-06/B-26 têm o registro de tipos neutro, com os kinds de extensão explicados por `web/src/engines/claude/`; B-16 deixa de ser um catálogo de ferramentas do Claude e explica por `kind`/`label`/`subject`; B-18/B-21/B-25 usam `{agent}`; B-27 usa `/transcripts/:engine/:id/messages`; B-28 tira o diff do backend (`GET /audit/invocations/:id/diff`); B-29 explica a regra pela descrição do `RuleDialect`. D-04, D-08, D-09 e D-13 reescritas no mesmo sentido. 2026-10-10 (revisão dos gaps do 28): três respostas do usuário no 28 foram contra a recomendação que o ajuste acima supôs. **Gramática canônica já** ([28 · D-11, D-18](../28-agent-neutral-core/decisions.md#f5--permissão-pelo-dialeto)): a B-29 mostra o padrão na gramática canônica (`shell(pnpm test:*)`) e a parte que casou vem do domínio de `permission` — parser, casamento e descrição —, não do `RuleDialect`, que só traduz; a regra desligada pela migração mostra o padrão antigo e o motivo (S-152); a frase de `permission.ruleGranted` na B-26 vem da mesma descrição. **Nenhum kind com nome de motor** ([28 · D-10](../28-agent-neutral-core/decisions.md#f6--extensões-isoladas)): a B-06 troca os `claude.*` de extensão por `engine.*` com o motor no payload (`engine.pluginAdded`, `engine.skillSourceToggled`, `engine.diagnosticsProbed`…), explicados pelo registro do núcleo com `{agent}` e, no que for de um motor só, por `web/src/engines/claude/`; as tabelas da extensão mantêm o prefixo `claude_`. **Todo o REST no pacote** ([28 · D-09](../28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)): as rotas novas da B-03, `GET /audit/invocations/:id/diff` inclusive, nascem em `packages/contracts/schema/http/`, e o web as lê pelos tipos gerados | ✅ |
 
 ### D-01 — onde mora o desfecho
 
@@ -109,8 +110,9 @@ viva da retomada não aparece nela. O evento `session.resumed` também não carr
 
 Opções:
 
-- **(a) gravar com a entrada**, em colunas novas e anuláveis — `workspace_path`, `claude_session_id`,
-  `prompt_id` —, preenchidas pelo runner, que sabe as três no momento do hook. É o mesmo princípio da
+- **(a) gravar com a entrada**, em colunas novas e anuláveis — `workspace_path`, `engine` e
+  `conversation_id` (a `ConversationRef` do [plano 28](../28-agent-neutral-core/README.md), pela
+  [D-15](#d-15--o-núcleo-neutro-do-plano-28)), `prompt_id` —, preenchidas pelo runner, que sabe as três no momento do hook. É o mesmo princípio da
   D-15 do plano 03: a entrada diz o que foi, sem depender de outra tabela;
 - **(b) juntar sempre na leitura**, com `session_origins` e o registro de sessões vivas. Perde as
   retomadas in-place e toda sessão encerrada antes da `0011`;
@@ -174,6 +176,46 @@ tem o status exato — `410`: "existiu, não existe mais, e não volta". O id é
 purgado daquela trilha, e `404 AUDIT_ENTRY_NOT_FOUND` quando não é (S-58, S-59). A resposta nunca diz
 **quantas** linhas a purga levou — `audit_purges` é da máquina inteira, de todos os usuários (S-55).
 
+### D-15 — o núcleo neutro do plano 28
+
+Em 2026-10-10 o usuário decidiu a ordem — o [plano 28](../28-agent-neutral-core/README.md) inteiro antes
+deste — e pediu que os planos não executados seguissem as diretivas dele
+([discovery 10 §9](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#9-planos-afetados)). Para a
+trilha, isso quer dizer:
+
+- **o que é do Claude mora no anel dele.** Os hooks (`PostToolUse`, `PostToolUseFailure`,
+  `PermissionDenied`), o prefixo `Exit code N` e o spike que os mede são do adapter
+  `adapter/outbound/engines/claude/`; o núcleo recebe o desfecho canônico (B-01, B-08);
+- **a conversa é `{ engine, id }`.** As colunas novas são `engine` + `conversation_id`, nunca
+  `claude_session_id`; o `prompt_id` fica, porque é o turno e é nosso (B-02, B-07, B-09); o transcript
+  é `/transcripts/:engine/:id/…` (B-27);
+- **a ferramenta é o `kind`.** O cliente desenha pelo `kind`, pelo `label` montado pelo backend e pelo
+  `subject`; nunca lê o nome nativo nem um campo do input cru (B-16, B-19, B-20, B-21). O que a trilha
+  esconde de uma leitura é decidido pelo `kind` `file.read`, não pelo nome `Read` (B-10, B-14, B-31);
+- **o diff e o alcance da regra vêm do backend** — o diff pelo `FileChange` do classificador (B-28), a
+  parte que casou pela descrição do `RuleDialect` (B-29);
+- **o texto do núcleo não nomeia o motor**: `{agent}` onde o nome aparece (B-18, B-21, B-25, B-26).
+
+Nada do que o plano **entrega** muda; muda onde e em que forma ele constrói.
+
+**Revisão de 2026-10-10 (os gaps do 28).** O usuário respondeu as decisões abertas do 28, e três foram
+contra a recomendação que os itens acima supuseram. Onde contradizem, vale esta revisão:
+
+- **a regra fala a gramática canônica** ([28 · D-11, D-18](../28-agent-neutral-core/decisions.md#f5--permissão-pelo-dialeto)):
+  o padrão é escrito por `kind` (`shell(pnpm test:*)`, `file.edit(src/**)`, `mcp(srv:tool)`), e o parser,
+  o casamento e a descrição são do domínio de `permission`. A parte que casou (B-29) e a frase de
+  `permission.ruleGranted` (B-26) vêm de lá; o `RuleDialect` só traduz para o motor e não descreve nada.
+  A regra que a migração do 28 desligou mostra o padrão antigo e o motivo, sem a parte que casou (S-152);
+- **nenhum kind de auditoria tem nome de motor** ([28 · D-10](../28-agent-neutral-core/decisions.md#f6--extensões-isoladas)):
+  os do núcleo seguem o módulo (`agentSettings.defaultsChanged`, `mcp.*`), e os de extensão são `engine.*`,
+  com o motor no payload (`engine.pluginAdded`, `engine.pluginUpdated`, `engine.pluginToggled`,
+  `engine.pluginRemoved`, `engine.skillSourceToggled`, `engine.diagnosticsProbed`). O registro de tipos
+  (B-06, B-26) os explica com `{agent}`; o que só um motor tem continua podendo ser registrado por
+  `web/src/engines/claude/`. As tabelas da extensão mantêm o prefixo `claude_`;
+- **todo o REST no pacote** ([28 · D-09](../28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)):
+  cada rota nova da B-03 — `GET /audit/invocations/:id/diff` inclusive — nasce com schema em
+  `packages/contracts/schema/http/` e tipo gerado para o web e o app.
+
 ---
 
 ## F1 — Backend da trilha
@@ -196,8 +238,8 @@ Opções:
 - **(c) `tsvector`** — busca por palavra, que erra justamente o que se procura aqui (`--force`,
   `/etc/hosts`, `rm -rf`).
 
-O texto buscado é o **mesmo** que a leitura mostraria: de um `Read` só os quatro campos da lista de
-permissão (S-65) — a busca não pode virar uma forma de descobrir o que a tela esconde.
+O texto buscado é o **mesmo** que a leitura mostraria: de um `file.read` só o `subject` e a janela da
+lista de permissão, decidida pelo `kind` ([D-15](#d-15--o-núcleo-neutro-do-plano-28), S-65) — a busca não pode virar uma forma de descobrir o que a tela esconde.
 
 **Recomendação:** (a), medido antes na B-14 com a fixture de 100 mil linhas e inputs de `Write`
 realistas; se o índice passar do tamanho da própria tabela, (b) com teto e aviso na tela. A extensão
@@ -225,12 +267,15 @@ Opções: mapa no backend (devolvido pela faceta); mapa no web, em i18n; mapa no
 principal de cada tool (o que se mostra "à vista": `command` do `Bash`, `file_path` do `Edit`, `pattern`
 do `Grep`, `url` do `WebFetch`…) e o ícone.
 
-**Recomendação:** um **catálogo de tools no web**, em `web/src/shared/tools/`, com chave de i18n, ícone
-lucide e extrator do campo principal por tool; MCP decomposto em "tool, do servidor MCP X"; desconhecida
-com nome técnico e ícone genérico. O backend devolve só o nome técnico — quem traduz é o cliente
-([02-i18n](../../architecture/shared/02-i18n.md)). É o mesmo catálogo que os cards de tool do
-[plano 08](../08-claude-panel/README.md) e o assistente de regra do [plano 15](../15-rules-management/README.md)
-vão usar: quem chegar primeiro cria, os outros estendem.
+**Recomendação** (reescrita em 2026-10-10 pela [D-15](#d-15--o-núcleo-neutro-do-plano-28)): **nenhum**
+catálogo de ferramentas do Claude no web. O backend já entrega, desde o
+[plano 28](../28-agent-neutral-core/README.md), o `kind` canônico, o `label` (`messageKey` + `params`)
+e o `subject` de cada invocação; o web tem só a tabela por `kind` (ícone e qual campo do `subject` fica
+à vista), e traduz o `label` ([02-i18n](../../architecture/shared/02-i18n.md)). MCP vira "tool, do
+servidor MCP X" pelo `subject.server` e `subject.tool`; `other` e o desconhecido caem na linha genérica,
+com o nome nativo só como texto. Explicação a mais que só o Claude tenha é registrada por
+`web/src/engines/claude/`. Os cards do [plano 08](../08-claude-panel/README.md) e o assistente do
+[plano 15](../15-rules-management/README.md) desenham pelo mesmo `kind`.
 
 ### D-10 — visões salvas
 
@@ -284,7 +329,8 @@ transcript, então o ponto é localizável.
 
 Opções: a tela de histórico que já existe (`/history/$conversationId`), com um parâmetro que rola até a
 mensagem; o painel de conversa do plano 08 no workbench, com a aba da pasta; ou os dois, conforme o que
-existir. Do lado do servidor, `GET /transcripts/:id/messages` ganha `aroundToolUseId` — página de
+existir. Do lado do servidor, `GET /transcripts/:engine/:id/messages` (a conversa como `{ engine, id }`, pela
+[D-15](#d-15--o-núcleo-neutro-do-plano-28)) ganha `aroundToolUseId` — página de
 mensagens em volta daquela, pelo mesmo cache do plano 04.
 
 **Recomendação:** os dois, nessa ordem de preferência — o painel do plano 08 quando ele existir, a tela

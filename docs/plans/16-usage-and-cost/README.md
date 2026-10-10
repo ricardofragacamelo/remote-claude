@@ -15,7 +15,13 @@ ajuda, centro de notificações, status bar, command palette). O
 [08 — Painel do Claude](../08-claude-panel/README.md) mostra o custo **da sessão aberta**; este plano
 é dono do **agregado** e da correção do custo por turno que os dois usam. O
 [13 — Configuração do Claude](../13-claude-settings/README.md) é dependência opcional: quando existir,
-o tipo de conta (assinatura ou chave de API) vem dele.
+o tipo de conta (assinatura ou chave de API) vem dele. E do
+[28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md) **concluído**: a conversa é
+`conversation { engine, id }`, o `turn.completed.usage` é canônico com `costUsd?` opcional, o motor
+anuncia `cost` (`usd` · `tokens` · `requests` · `none`) nas capacidades, e o que é da conta do Claude
+(janelas de limite, tipo de assinatura) mora na extensão `engines/claude/`. O desfecho do turno é o
+`turn.completed.outcome` do [27 — Perdas da conversa](../27-conversation-losses/README.md), que roda
+antes deste ([D-16](decisions.md#d-16--ajuste-às-diretivas-do-plano-28)).
 
 Arquivos irmãos: [matriz de cenários](scenarios.md) · [decisões em aberto](decisions.md) ·
 [progresso](progress.md).
@@ -63,7 +69,7 @@ Três escolhas definem o plano:
 | | |
 |---|---|
 | Módulo `usage` documentado, semântica do custo do SDK medida com fixtures reais, contrato HTTP, esquema, rotas web | F0 |
-| Custo do turno corrigido (diferença de acumulados), gravação por turno e por modelo, agregações no fuso do usuário, export CSV, limites de uso da conta, retenção, fuso e taxa de conversão manual | F1 |
+| Custo do turno corrigido (diferença de acumulados, no adapter do Claude), gravação por turno e por modelo, agregações no fuso do usuário, export CSV, limites de uso da conta (na extensão do Claude), retenção, fuso e taxa de conversão manual | F1 |
 | Tela "Uso e custo": cartões (hoje, 7 dias, mês), gráfico diário empilhado por modelo acessível e ciente do tema, tabelas por pasta/sessão/conversa/modelo, filtros na URL, detalhe de sessão e conversa com turnos, cache hit, custo médio, export, painel de limites, ajuda completa | F2 |
 | Orçamentos por usuário e por pasta (diário/mensal), limiares, alerta no centro de notificações e na status bar, push opcional, recusa de novos turnos opcional, trilha das mudanças, tela de orçamentos com ajuda | F3 |
 | E2E do ciclo, do orçamento, do isolamento entre usuários, do fuso e da acessibilidade | F4 |
@@ -83,7 +89,8 @@ Três escolhas definem o plano:
 - **Telas no app Flutter** — o web é mobile-first; o app só ganha a tradução do código de erro novo
   (B-26).
 - **Rate limit das nossas bordas** (frames, ingestão de log) — é do
-  [05](../05-hardening-operations/README.md); aqui são os limites **da conta do Claude**.
+  [05](../05-hardening-operations/README.md); aqui são os limites **da conta do Claude**, que moram na
+  extensão dele.
 
 ---
 
@@ -126,7 +133,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Agregações corretas, paginadas, sobre índice | B-09 | [backend/05-persistence](../../architecture/backend/05-persistence.md#convenções-de-schema) | S-32, S-34…S-39, S-44…S-47 |
 | Isolamento: ninguém vê o uso de outra pessoa | B-09, B-10, B-32 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#regras-de-tratamento) | S-40…S-43, S-48, S-87, S-119 |
 | Export CSV fiel aos filtros, seguro contra injeção, com teto | B-10, B-20 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#tabela-de-status-http) | S-49…S-53, S-79, S-121 |
-| Limites de uso da conta a partir do `rate_limit_event`, sem mentir o status da sessão | B-11, B-21 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#o-mapper--a-tradução-que-protege-o-contrato) | S-54…S-59, S-80 |
+| Limites de uso da conta a partir do `rate_limit_event`, na extensão do Claude, sem mentir o status da sessão | B-11, B-21 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#o-mapper--a-tradução-que-protege-o-contrato) | S-54…S-59, S-80 |
 | Retenção com purga explícita | B-12 | [backend/05-persistence](../../architecture/backend/05-persistence.md) | S-60…S-62 |
 | Fuso e taxa manual do usuário no servidor | B-13 | [backend/05-persistence](../../architecture/backend/05-persistence.md) | S-63…S-65 |
 | Tela com os quatro estados, cartões, tabelas, filtros, detalhe — atualizada pelo stream | B-14, B-15, B-17…B-19 | [web/03-ui-system](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre), [web/04-state-and-data](../../architecture/web/04-state-and-data.md#tanstack-query--dado-do-servidor) | S-66…S-70, S-75…S-78, S-86 |
@@ -149,26 +156,36 @@ Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 ## Árvore resultante
 
 ```
-packages/contracts/schema/          sem schema novo — `turn.completed.costUsd` passa a ser o do turno (B-07)
+packages/contracts/schema/          sem evento novo — o `usage` canônico (com `reasoningTokens?` e
+                                    `webSearches?`) e o `costUsd?` são do 28 · F4; aqui o `costUsd`
+                                    passa a ser o do turno (B-07)
+└── http/                           as rotas /usage/* e /engines/claude/usage/rate-limits (28 · D-09)
 
 backend/src/
-├── domain/usage/                   UsdAmount · TokenCounts · CumulativeUsage · turnDelta
-│                                   UsagePeriod · Budget · evaluateBudgets · RateLimitWindow
+├── domain/usage/                   UsdAmount · TokenCounts (categorias canônicas) · UsagePeriod
+│                                   Budget · evaluateBudgets                       (núcleo, neutro)
+├── domain/engines/claude/usage/    CumulativeUsage · turnDelta · RateLimitWindow  (só o Claude)
 ├── application/usage/              RecordTurnUsage · QueryUsage · ExportUsage · ManageBudgets
-│   │                               AdmitTurn · RateLimitState · UsageSettings
-│   └── ports/                      UsageRepository · BudgetRepository · RateLimitStore
-│                                   ConversationTitles · BudgetAlertNotifier · UsageAuditTrail
+│   │                               AdmitTurn · UsageSettings
+│   └── ports/                      UsageRepository · BudgetRepository · ConversationTitles
+│                                   BudgetAlertNotifier · UsageAuditTrail
+├── application/engines/claude/usage/   RateLimitState · ports/RateLimitStore
 ├── application/session/ports/      UsageRecorder · TurnAdmission       (session → usage, por porta)
 ├── adapter/
 │   ├── inbound/http/usage/         /usage/* (resumo, série, quebra, detalhe, facetas, export,
-│   │                               limites, configurações, orçamentos, alertas)
+│   │                               configurações, orçamentos, alertas)
+│   ├── inbound/http/engines/claude/usage/   /engines/claude/usage/rate-limits
+│   ├── outbound/engines/claude/    o mapper diferencia o acumulado e emite o uso canônico (B-07)
 │   └── outbound/persistence/usage/
 └── infrastructure/
-    ├── database/migrations/        migration versionada nova: usage_* e os kinds usage.budget*
+    ├── database/migrations/        migration versionada nova: usage_*, claude_rate_limits e os
+    │                               kinds usage.budget*
     ├── jobs/                       usage-purge.job
     └── modules/usage.module.ts
 
-web/src/features/usage/             components · hooks · services · types
+web/src/features/usage/             components · hooks · services · types — o slot de painéis da tela
+web/src/engines/claude/usage/       o painel de limites e o aviso de assinatura, registrados pelo
+                                    web/src/app/engines.ts no slot da tela de uso
 web/src/app/                        UsageRoute · UsageSessionRoute · BudgetsRoute
 web/src/shared/components/ui/       chart (se D-11 escolher o do shadcn)
 mobile/lib/l10n/                    só a chave de `USAGE_BUDGET_EXCEEDED`

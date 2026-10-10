@@ -19,23 +19,23 @@ para a mesma fixture. É conferida pelo teste do app contra a mesma fixture que 
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-05 | subagent com `Write` que pede permissão, com `parent_tool_use_id` em tudo | eq | spike | — | B-01 | ⬜ |
-| S-06 | cada fixture da B-02 carrega no SDK roteirizado e reproduz a sequência gravada | eq | unit | — | B-02 | ⬜ |
-| S-07 | balão com 20 KB de markdown, 3 diagramas e 10 blocos de código: tempo de construção e de primeiro quadro no perfil modesto, com e sem limite de frequência no streaming | fron | spike | — | B-03 | ⬜ |
-| S-08 | os dois motores de realce contra a lista `LANGUAGES` do web, o tamanho do APK e um bloco de 500 linhas | eq | spike | — | B-03 | ⬜ |
+| S-05 | subagent com `Write` que pede permissão, com `parent_tool_use_id` em tudo | eq | spike | — | B-01 | ✅ |
+| S-06 | cada fixture da B-02 carrega no SDK roteirizado e reproduz a sequência gravada | eq | unit | — | B-02 | ✅ |
+| S-07 | balão com 20 KB de markdown, 3 diagramas e 10 blocos de código: tempo de construção e de primeiro quadro no perfil modesto, com e sem limite de frequência no streaming | fron | spike | — | B-03 | ✅ |
+| S-08 | os dois motores de realce contra a lista `LANGUAGES` do web, o tamanho do APK e um bloco de 500 linhas | eq | spike | — | B-03 | ✅ |
 
 ## Mapa de paridade — B-04…B-06
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-09 | todo `.tsx` de `components/conversation/` e de `shared/components/markdown/` tem entrada no mapa | eq | unit | — | B-04 | ⬜ |
-| S-10 | os estados iniciais do mapa batem com a tabela da discovery §4: `ok` onde há paridade, `pending` com a fase onde não há | eq | unit | — | B-04 | ⬜ |
-| S-11 | componente novo no web sem entrada: o `render:check` reprova e o nomeia | err | unit | saída ≠ 0 com o caminho | B-05 | ⬜ |
-| S-12 | entrada que cita widget ou teste que não existe no app: reprova | err | unit | saída ≠ 0 | B-05 | ⬜ |
-| S-13 | `excluded` com decisão inexistente, ou que não está ✅: reprova | err | unit | saída ≠ 0 | B-05 | ⬜ |
-| S-14 | `pending` cuja fase já está ✅ no `progress.md`: reprova | est | unit | saída ≠ 0 | B-05 | ⬜ |
-| S-15 | duas execuções seguidas sobre a mesma árvore dão a mesma saída, e o script não escreve nada | idem | unit | — | B-05 | ⬜ |
-| S-16 | `docs:check` verde com as seções novas de mobile/04, web/03 e 09-code-quality, e a nota no plano 10 · D-01 | eq | unit | — | B-06 | ⬜ |
+| S-09 | todo `.tsx` de `components/conversation/` e de `shared/components/markdown/` tem entrada no mapa | eq | unit | — | B-04 | ✅ |
+| S-10 | os estados iniciais do mapa batem com a tabela da discovery §4: `ok` onde há paridade, `pending` com a fase onde não há | eq | unit | — | B-04 | ✅ |
+| S-11 | componente novo no web sem entrada: o `render:check` reprova e o nomeia | err | unit | saída ≠ 0 com o caminho | B-05 | ✅ |
+| S-12 | entrada que cita widget ou teste que não existe no app: reprova | err | unit | saída ≠ 0 | B-05 | ✅ |
+| S-13 | `excluded` com decisão inexistente, ou que não está ✅: reprova | err | unit | saída ≠ 0 | B-05 | ✅ |
+| S-14 | `pending` cuja fase já está ✅ no `progress.md`: reprova | est | unit | saída ≠ 0 | B-05 | ✅ |
+| S-15 | duas execuções seguidas sobre a mesma árvore dão a mesma saída, e o script não escreve nada | idem | unit | — | B-05 | ✅ |
+| S-16 | `docs:check` verde com as seções novas de mobile/04, web/03 e 09-code-quality, e a nota no plano 10 · D-01 | eq | unit | — | B-06 | ✅ |
 
 ## Markdown compartilhado — B-07, B-08
 
@@ -70,33 +70,33 @@ para a mesma fixture. É conferida pelo teste do app contra a mesma fixture que 
 | S-38 | caminho fora da pasta, ou com `..` que sai dela, não vira link | err | unit | — | B-10 | ⬜ |
 | S-39 | mensagem de texto vazio só com imagem: nenhum balão vazio (a S-121 do plano 22 continua) | fron | widget | — | B-10 | ⬜ |
 | S-40 | mensagem de 20 KB rola sem travar a lista, dentro do teto da B-03 | fron | widget | — | B-10 | ⬜ |
-| S-41 | "Você"/"Claude" no começo de cada sequência do mesmo autor, nunca repetido dentro dela | eq | widget | — | B-11 | ⬜ |
+| S-41 | "Você" e o nome do agente (`{agent}`, do `GET /engines`) no começo de cada sequência do mesmo autor, nunca repetido dentro dela | eq | widget | — | B-11 | ⬜ |
 | S-42 | "Copiar mensagem" do Claude e do usuário copia o markdown original, com os blocos separados | eq | widget | — | B-11 | ⬜ |
 | S-43 | o texto do balão pode ser selecionado | eq | widget | — | B-11 | ⬜ |
 | S-44 | as chaves de autor e de copiar estão no `i18n-shared.json`, en e pt-BR, e o `i18n:check` compara | eq | unit | — | B-11 | ⬜ |
-| S-45 | preview de opção do `AskUserQuestion` em markdown, como no web | eq | widget | — | B-12 | ⬜ |
+| S-45 | preview de opção da pergunta estruturada (`kind` `question`) em markdown, como no web | eq | widget | — | B-12 | ⬜ |
 
 ## Card da tool e linha do turno — B-13…B-17
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-46 | `Read`, `Write`, `Bash`, `Grep`, `Glob`, `WebFetch`, `WebSearch`, `Agent`, `TodoWrite`: o rótulo igual ao do web (paridade de chave e parâmetros) | eq | unit | — | B-13 | ⬜ |
-| S-47 | `Edit` e `MultiEdit` com +/− no rótulo | eq | unit | — | B-13 | ⬜ |
-| S-48 | `mcp-untitled-tool-turn`: `fixture · echo`, nunca `mcp__fixture__echo` | eq | unit | — | B-13 | ⬜ |
-| S-49 | nomes MCP de borda (`mcp__a__b__c`, `mcp__a`, `mcp____x`): o mesmo parse do web, pela tabela de casos compartilhada | fron | unit | — | B-13 | ⬜ |
-| S-50 | tool desconhecida: o nome, sem erro, como no web | err | unit | — | B-13 | ⬜ |
+| S-46 | `file.read`, `file.write`, `shell`, `search`, `web`, `agent`, `tasks`: o `label` do evento desenhado igual ao web (paridade de chave e parâmetros) | eq | unit | — | B-13 | ⬜ |
+| S-47 | `file.edit` (o `Edit` e o `MultiEdit` do Claude) com +/− no rótulo, pelos `params` do `label` | eq | unit | — | B-13 | ⬜ |
+| S-48 | `mcp-untitled-tool-turn`: `fixture · echo` (o `label` do `kind` `mcp`), nunca `mcp__fixture__echo` | eq | unit | — | B-13 | ⬜ |
+| S-49 | nomes MCP de borda (`mcp__a__b__c`, `mcp__a`, `mcp____x`): o app desenha o `label` e o `subject` que o adapter montou, igual ao web, sem parsear o nome | fron | unit | — | B-13 | ⬜ |
+| S-50 | tool que o classificador não conhece (`kind` `other`) ou `kind` que o app não conhece: o `label` do evento, sem erro, como no web | err | unit | — | B-13 | ⬜ |
 | S-51 | três `tool.progress` seguidos: a linha mostra o último tempo e o OUT não muda | est | unit | — | B-14 | ⬜ |
-| S-52 | Bash em andamento sem saída: o OUT não aparece; ao concluir, o resumo | est | widget | — | B-14 | ⬜ |
+| S-52 | `shell` em andamento sem saída: o OUT não aparece; ao concluir, o resumo | est | widget | — | B-14 | ⬜ |
 | S-53 | `tool.progress` que chega depois do `tool.completed` (replay fora de ordem) não reabre a tool | conc | unit | — | B-14 | ⬜ |
 | S-54 | saída com cores das 16 e das 256 e com negrito: desenhada com a paleta do `AnsiText` (paridade) | eq | widget | — | B-15 | ⬜ |
 | S-55 | sequência ANSI desconhecida ou cortada no meio: descartada, sem lixo no texto | err | unit | — | B-15 | ⬜ |
 | S-56 | copiar a saída colorida copia o texto sem as sequências | eq | widget | — | B-15 | ⬜ |
-| S-57 | `Edit` com uma troca: diff com a linha removida e a acrescentada (paridade com o `ToolDiffView`) | eq | widget | — | B-16 | ⬜ |
-| S-58 | `MultiEdit` com três trocas: os três trechos, na ordem | eq | widget | — | B-16 | ⬜ |
-| S-59 | `Write` de arquivo novo grande: tudo como acrescentado, com o teto do web e o aviso de corte | fron | widget | — | B-16 | ⬜ |
-| S-60 | entrada de `Edit` sem `old_string`: sem diff, a entrada como JSON, como o web | err | widget | — | B-16 | ⬜ |
+| S-57 | `file.edit` com uma troca: o diff da rota, com a linha removida e a acrescentada (paridade com o `ToolDiffView`) | eq | widget | — | B-16 | ⬜ |
+| S-58 | `file.edit` com três trocas (o `MultiEdit` do Claude): os três trechos, na ordem | eq | widget | — | B-16 | ⬜ |
+| S-59 | `file.write` de arquivo novo grande: tudo como acrescentado, com o teto do web e o aviso de corte | fron | widget | — | B-16 | ⬜ |
+| S-60 | a rota de diff responde que não se aplica, ou o arquivo não é texto: sem diff, a entrada exata (`rawInput`) como JSON, como o web | err | widget | `DIFF_NOT_APPLICABLE`, `FILE_NOT_TEXT` | B-16 | ⬜ |
 | S-61 | linha do turno com custo, segundos e tokens de entrada, saída e cache | eq | widget | — | B-17 | ⬜ |
-| S-62 | `usage` sem um campo, ou com campo que não é número: só os válidos aparecem | err | unit | — | B-17 | ⬜ |
+| S-62 | `usage` sem um campo, ou com campo que não é número, ou sem `costUsd`: só os válidos aparecem | err | unit | — | B-17 | ⬜ |
 
 ## Link para a trilha — B-32
 
@@ -111,12 +111,12 @@ para a mesma fixture. É conferida pelo teste do app contra a mesma fixture que 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
 | S-63 | `message.delta` e `message.completed` com `parentToolUseId` deixam de ser `UnreadEvent` e chegam ao subagent | eq | unit | — | B-18 | ⬜ |
-| S-64 | frame do subagent que chega antes do `tool.started` do `Agent` fica guardado e é anexado quando o card chega | conc | unit | — | B-18 | ⬜ |
+| S-64 | frame do subagent que chega antes do `tool.started` do subagent (`kind` `agent`) fica guardado e é anexado quando o card chega | conc | unit | — | B-18 | ⬜ |
 | S-65 | o `seq` avança por todo frame de subagent, e o replay do mesmo frame não duplica | idem | unit | — | B-18 | ⬜ |
-| S-66 | `subagent-permission-turn`: texto, pensamento e tools sob o card do `Agent`, no estado padrão do web | eq | widget | — | B-19 | ⬜ |
+| S-66 | `subagent-permission-turn`: texto, pensamento e tools sob o card do subagent, no estado padrão do web | eq | widget | — | B-19 | ⬜ |
 | S-67 | subagent de subagent: aninhado até a profundidade do web, e o resto como no web | fron | widget | — | B-19 | ⬜ |
 | S-68 | nenhuma tool de subagent aparece na lista principal | eq | unit | — | B-19 | ⬜ |
-| S-69 | no histórico, abrir o card do `Agent` lê a rota de subagents e mostra os filhos | eq | integração | — | B-20 | ⬜ |
+| S-69 | no histórico, abrir o card do subagent lê a rota de subagents pelo `engine` e `id` da conversa e mostra os filhos | eq | integração | — | B-20 | ⬜ |
 | S-70 | a rota de subagents falha ou devolve 404: estado de erro traduzido com tentar de novo, o resto da conversa intacto | err | widget | `NOT_FOUND` | B-20 | ⬜ |
 | S-71 | permissão de uma tool do subagent aparece dentro dele, com o nome do subagent no título | eq | widget | — | B-21 | ⬜ |
 

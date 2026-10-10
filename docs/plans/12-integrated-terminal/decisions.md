@@ -28,6 +28,7 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 | D-07 | O que a reconexão devolve (scrollback), e quantas connections veem o mesmo terminal | memória e CPU de um terminal "headless" no servidor sob enxurrada; tempo de serializar 1000 linhas | B-04, B-10 | 2026-09-28 · **(b) terminal headless no servidor** (`@xterm/headless` + `@xterm/addon-serialize`), 1000 linhas (teto configurável 10000), **medido antes de fechar**: se custar mais que o subprocesso que espelha, (a) com corte em fronteira segura e reset no início do replay. Uma connection vê; reanexar toma, com `terminal.detached { reason: 'attachedElsewhere' }` e `TERMINAL_LOCKED` na anterior. Decisão do usuário com a recomendação | ✅ |
 | D-08 | Onde mora o interruptor que liga o terminal, e para quem | se ligar o terminal deve exigir acesso ao disco da máquina, como a allowlist | B-02 | 2026-09-28 · **(b) seção `terminal: { users: [<sub>…] }` no arquivo da allowlist**, ausente é desligado; arquivo fora do schema derruba o boot; recarga que tira alguém encerra os terminais dele na hora; `pnpm allowlist add` não liga terminal. Decisão do usuário com a recomendação | ✅ |
 | D-09 | O que prova que o pedido vem do web e não do app | se o provedor põe `azp` (ou `client_id`) no access token dos dois clients | B-02 | 2026-09-28 · **(b) agora, (c) com o plano 19**: sem `installId` **e** `azp`/`client_id` igual a `OIDC_CLIENT_ID_WEB`; o `Origin` do upgrade entra quando o 19 · F1 entregar a origem conhecida. A ADR-017 diz o limite: client público, então não barra quem já tem as credenciais (R-09). Decisão do usuário com a recomendação | ✅ |
+| D-14 | Ajuste às diretivas do plano 28: com que nomes o terminal nasce, sem depender do 28 | — (as normas estão no [plano 28](../28-agent-neutral-core/README.md) e na [discovery 10](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#9-planos-afetados)) | B-07, B-13, B-18, B-19 | 2026-10-10 · ajuste às diretivas do [plano 28](../28-agent-neutral-core/README.md) (isolamento, regras pelo dialeto, contrato canônico), pedido do usuário: o plano **não depende** do 28 e pode seguir, só com nomes neutros — a política do subprocesso do agente nasce `agentPolicy`, e a extensão do motor a entrega na F6 do 28 (B-07; nota na B-13, que está em andamento e não foi reescrita); a aba Saída lê o `tool.progress` das ferramentas de `kind: 'shell'`, não dos `Bash` (B-18); "Contexto para o Claude" e o `@terminal` viram texto com `{agent}` (B-19) | ✅ |
 
 ### D-01 — o terminal existe?
 
@@ -188,6 +189,21 @@ add`) **não** liga terminal: acrescentar pasta e entregar shell são atos difer
 o limite: o client do web é **público** (PKCE, sem segredo), então quem tem as credenciais do
 usuário faz o fluxo do web num script. "Só do web" tira o terminal do alcance de um aparelho
 perdido; não é barreira contra quem já é o usuário.
+
+### D-14 — ajuste às diretivas do plano 28
+
+O [plano 28](../28-agent-neutral-core/README.md) não é pré-requisito deste: o terminal não lê o
+contrato da conversa, salvo a aba Saída e o contexto do `@terminal`. O ajuste é só de **nome e de
+fonte**, para que o 12 não acrescente acoplamento que o portão de neutralidade do 28 teria de
+remover:
+
+- a política do `childEnvironment` para o subprocesso do agente é `agentPolicy`; no 28 (F6), a
+  extensão do motor passa a entregá-la, e o núcleo deixa de saber que ela é do Claude;
+- a aba Saída escolhe as ferramentas pelo `kind: 'shell'` do contrato canônico, e não pelo nome
+  `Bash`;
+- todo texto que nomeia o agente usa `{agent}`, com o `displayName` do `GET /engines`.
+
+A B-13, já em andamento, não foi reescrita: recebeu uma nota com o nome neutro.
 
 ---
 

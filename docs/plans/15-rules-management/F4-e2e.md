@@ -31,7 +31,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 
 Spec nova `rule-authoring.spec.ts`:
 
-- testar `pnpm test` na pasta → "perguntaria"; criar pelo assistente `allow Bash(pnpm test:*)` na
+- testar `pnpm test` na pasta → "perguntaria"; criar pelo assistente `allow shell(pnpm test:*)` na
   pasta, passando pelo segundo passo; testar de novo → "permitido, pela regra" (S-212);
 - a sessão roteirizada pede `pnpm test --watch` → `permission.resolved` com `auto: true`, sem card;
   o uso da regra vai a 1 e as invocações dela mostram a linha; a trilha mostra a concessão com a origem
@@ -55,11 +55,12 @@ Spec nova `rule-management.spec.ts`:
 
 Spec nova `rule-authoring-security.spec.ts`:
 
-- digitar `Bash` inteiro com "permitir" → bloqueado no assistente, e o `POST` direto com a mesma
+- escolher `shell` inteiro com "permitir" → bloqueado no assistente, e o `POST` direto com a mesma
   sessão também é recusado; a pasta fora da allowlist nem aparece no seletor (S-217);
 - dois usuários: o segundo não vê as regras do primeiro na lista, e o teste de comando, a simulação e a
   exportação dele não refletem nada do primeiro (S-218);
-- **regressão**: sessão no modo `plan` com a regra `allow` criada pela tela → o card aparece (S-219).
+- **regressão**: sessão no modo `readOnly` (o `plan` do Claude) com a regra `allow` criada pela tela →
+  o card aparece (S-219).
 
 ### B-36 — Regressões do plano 03, acessibilidade e o deep link 🔲
 

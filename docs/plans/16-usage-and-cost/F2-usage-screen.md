@@ -16,9 +16,13 @@ Regras de tela que valem para todas as tasks e não se repetem abaixo: cadeia
 [quatro estados](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre), zero
 string literal ([02-i18n](../../architecture/shared/02-i18n.md)), token semântico em vez de cor
 ([web/03 · Tema](../../architecture/web/03-ui-system.md#tema)),
-[acessibilidade](../../architecture/web/03-ui-system.md#acessibilidade--não-é-opcional) e
-[responsividade](../../architecture/web/03-ui-system.md#responsividade). Cada task entrega unit
-(componentes e formatadores), integração (tela com MSW) e alimenta o e2e da F4.
+[acessibilidade](../../architecture/web/03-ui-system.md#acessibilidade--não-é-opcional),
+[responsividade](../../architecture/web/03-ui-system.md#responsividade) e o núcleo neutro do
+[28](../28-agent-neutral-core/README.md): `web/src/features/usage/` não conhece nome de motor; o que
+só o Claude tem (limites da conta, assinatura) mora em `web/src/engines/claude/usage/` e é registrado
+pelo `web/src/app/engines.ts` num slot de painéis da tela; o nome do agente é `{agent}`, do
+`displayName` do `GET /engines`; a unidade mostrada segue a capacidade `cost` do motor. Cada task
+entrega unit (componentes e formatadores), integração (tela com MSW) e alimenta o e2e da F4.
 
 ---
 
@@ -38,17 +42,19 @@ telas.
 
 ### B-15 — Cabeçalho e cartões 🔲
 
-A tela dentro da moldura do plano 06: título, uma linha de propósito ("quanto o Claude custou, onde
-e com o quê") e o botão da ajuda. Cartões **Hoje**, **Últimos 7 dias**, **Este mês**: custo,
+A tela dentro da moldura do plano 06: título, uma linha de propósito ("quanto custou, onde e com o
+quê", sem nome de motor) e o botão da ajuda. Cartões **Hoje**, **Últimos 7 dias**, **Este mês**: custo,
 tokens, turnos e a variação sobre o período anterior — anterior zero mostra "novo", nunca infinito
 (S-69). Rodapé do resumo com o recorte ("só sessões abertas por aqui", D-08) e o fuso em uso, com
 link para trocá-lo.
 
 Moeda formatada por `Intl.NumberFormat` no idioma ativo, USD sempre; gasto real abaixo de um centavo
 mostra "< US$ 0,01" (S-81); com taxa manual configurada, o valor aproximado aparece menor, ao lado,
-rotulado. Conta de assinatura (Pro/Max): aviso de que o custo é equivalente a preço de lista e que o
-que limita são os limites de uso, com link para o painel da B-21 (S-70). Skeleton com a forma dos
-cartões (S-66).
+rotulado. Motor que não anuncia `cost: 'usd'` aparece só com tokens, e o custo dele diz "não
+informado pelo motor", nunca US$ 0,00. Conta de assinatura (Pro/Max): aviso de que o custo é
+equivalente a preço de lista e que o que limita são os limites de uso, com link para o painel da
+B-21 — o aviso é da extensão do Claude, registrado no slot, com chaves `engines.claude.usage.*`
+(S-70). Skeleton com a forma dos cartões (S-66).
 
 ### B-16 — Gráfico diário empilhado por modelo, acessível e ciente do tema 🔲
 
@@ -101,8 +107,8 @@ topo, removíveis um a um.
 
 Painel lateral (rota própria, abre também por link): cabeçalho com pasta, conversa, modelo(s),
 início, fim e dono; totais, cache hit, custo médio; gráfico acumulado pequeno; lista de turnos
-(instante, duração, modelos com tokens por tipo, custo, desfecho — sucesso, erro, teto de orçamento
-do SDK, interrompido) com a **base** explicada em frase: "exato", "o acumulado recomeçou (`/clear`)",
+(instante, duração, modelos com tokens por tipo, custo, desfecho — o `outcome` canônico do 27:
+concluído, falhou, limite atingido, teto de orçamento, cancelado) com a **base** explicada em frase: "exato", "o acumulado recomeçou (`/clear`)",
 "resultado zerado pelo CLI", "custo desconhecido — primeiro turno depois de continuar uma conversa
 de fora" (S-78). Detalhe de outra pessoa ou inexistente → estado de erro traduzido com caminho de
 volta (S-87).
@@ -115,11 +121,13 @@ não bloqueia a tela; recusa `USAGE_EXPORT_TOO_LARGE` traduzida com a ação "ex
 
 ### B-21 — Painel de limites da conta 🔲
 
-Bloco próprio: cada janela (5 horas, 7 dias, 7 dias Opus/Sonnet, overage) com barra acessível de
+Painel da **extensão do Claude** (`web/src/engines/claude/usage/`), que consome
+`GET /engines/claude/usage/rate-limits` e se registra pelo `web/src/app/engines.ts` no slot de painéis
+da tela de uso; a tela não o importa, e sem a extensão habilitada ele não aparece. Bloco próprio: cada janela (5 horas, 7 dias, 7 dias Opus/Sonnet, overage) com barra acessível de
 utilização, estado (dentro, perto, bloqueado), reset relativo ("em 2 h 10 min") e absoluto no fuso,
 e "visto às HH:MM" — nunca finge tempo real (S-80). Conta sem limites de plano: explica que o limite
-não se aplica e por quê. Rótulo "conta do Claude desta máquina, compartilhada por quem usa o
-produto nela".
+não se aplica e por quê. Rótulo "conta do `{agent}` desta máquina, compartilhada por quem usa o
+produto nela", com chaves `engines.claude.usage.rateLimits.*`.
 
 ### B-22 — Usabilidade e ajuda da tela de uso 🔲
 
@@ -127,9 +135,10 @@ A task de usabilidade exigida pelos princípios do produto, com cenários própr
 
 - **Gaveta de ajuda** (moldura do 06), seções: o que é token; entrada, saída, leitura e escrita de
   cache — e por que cache lido custa menos; o que é "cache hit" e o que um número baixo sugere; o custo
-  é **estimativa do SDK** a preço de lista ou contratado, não fatura; conta de assinatura versus chave
-  de API; o que entra (sessões abertas por aqui, subagentes, compactação) e o que **não** entra
-  (conversas do VS Code ou do terminal, nenhum texto de mensagem é gravado); a que dia pertence um
+  é **estimativa do motor** a preço de lista ou contratado, não fatura, e só existe para motor que
+  informa custo; conta de assinatura versus chave de API e os limites da conta — seções da extensão do
+  Claude, registradas por ela na gaveta, com chaves `engines.claude.usage.*`; o que entra (sessões
+  abertas por aqui, subagentes, compactação) e o que **não** entra (conversas do VS Code ou do terminal, nenhum texto de mensagem é gravado); a que dia pertence um
   turno e o fuso; retenção; o que significa cada base de custo (S-83);
 - "saiba mais" em cada bloco abrindo a seção certa; **tooltip** e `aria-label` traduzidos em todo
   controle de ícone (S-84);

@@ -34,32 +34,38 @@ colunas, chips de estado.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-16 — Catálogo de tools no web 🔲
+### B-16 — A ferramenta explicada pelo `kind` 🔲
 
-Pela D-09: `web/src/shared/tools/` com, por tool, a chave de i18n do nome amigável, o ícone lucide e o
-extrator do **campo principal** — `command` do `Bash`, `file_path` do `Read`/`Write`/`Edit`, `pattern`
-(e `path`) do `Glob`/`Grep`, `url` do `WebFetch`, `query` do `WebSearch`, `description` do `Task`, a
-contagem do `TodoWrite`. Cobre todas as tools do Claude Code, não só as sete que o web traduz hoje. MCP
-(`mcp__<servidor>__<tool>`) vira "tool, do servidor MCP X"; desconhecida, "Usar X" com ícone genérico
-(S-72…S-75). Funções puras, testadas em unit; os cards do [plano 08](../08-claude-panel/README.md) e o
-assistente do [plano 15](../15-rules-management/README.md) usam o mesmo catálogo.
+Pela D-09, reescrita pela [D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28): **não** existe catálogo
+de ferramentas do Claude no web (nada de `web/src/shared/tools/` chaveado em `Bash`, `Read`, `Edit`…).
+A trilha já recebe do backend, desde a F2 do [plano 28](../28-agent-neutral-core/F2-canonical-tools.md),
+o `kind` canônico, o `label` (`messageKey` + `params`) e o `subject` normalizado de cada invocação. O
+web tem só uma tabela por `kind` — `file.read` · `file.edit` · `file.write` · `file.delete` · `file.move`
+· `search` · `shell` · `web` · `mcp` · `agent` · `question` · `plan` · `tasks` · `other` —, com o ícone
+lucide e o **assunto à vista** tirado do `subject` (`command`, `paths`, `pattern`, `url`, `query`,
+`description`); o nome da linha é o `label` traduzido. `mcp` vira "tool, do servidor MCP X" pelo
+`subject.server` e `subject.tool`, sem decompor `mcp__…` no cliente; `other` e o `kind` desconhecido
+caem na linha genérica, com o `label` e o nome nativo (`origin.native`) só como texto (S-72…S-75). Uma
+explicação a mais que só o Claude tenha é registrada por `web/src/engines/claude/`, nunca no núcleo.
+Funções puras, testadas em unit; os cards do [plano 08](../08-claude-panel/README.md) e o assistente do
+[plano 15](../15-rules-management/README.md) desenham pelo mesmo `kind`.
 
 ### B-17 — Service, hooks e a search da URL 🔲
 
 - `audit.service.ts` ganha as rotas da F1; hooks com TanStack Query — `useAuditTimeline` (infinita,
   cursor composto), `useAuditSummary`, `useAuditFacets`, `useAuditInvocation`, `useAuditEvent` —, chaves
   hierárquicas no lugar único ([web/04](../../architecture/web/04-state-and-data.md#chaves-hierárquicas-em-um-lugar-só));
-- a search de `/audit` passa a ter `q`, `session`, `folder`, `tool`, `decision`, `outcome`, `preset`,
-  `from`, `to`, `types`, `group`, `view` e `open` (o item aberto no painel): **o link colado reproduz a
-  tela inteira**, inclusive depois do login (S-76); o que vier malformado é descartado campo a campo,
-  como o `readAuditSearch` de hoje já faz (S-77);
+- a search de `/audit` passa a ter `q`, `session`, `folder`, `kind`, `tool` (o nome nativo, opaco),
+  `decision`, `outcome`, `preset`, `from`, `to`, `types`, `group`, `view` e `open` (o item aberto no
+  painel): **o link colado reproduz a tela inteira**, inclusive depois do login (S-76); o que vier
+  malformado é descartado campo a campo, como o `readAuditSearch` de hoje já faz (S-77);
 - filtro novo descarta a resposta do anterior que ainda chegava (S-78);
 - toda chave nova em `en` e `pt-BR`, e literal apresentável reprovado por `lint` e `i18n:check` (S-89).
 
 ### B-18 — Cabeçalho e o resumo do período 🔲
 
-Na moldura de tela do plano 06: título, **uma linha de propósito** ("tudo o que o Claude fez nesta
-máquina, e quem deixou"), ações à direita (exportar — F3 —, visões, ajuda).
+Na moldura de tela do plano 06: título, **uma linha de propósito** ("tudo o que o agente fez nesta
+máquina, e quem deixou" — sem nome de motor no texto do núcleo; quando o nome aparece, é `{agent}`), ações à direita (exportar — F3 —, visões, ajuda).
 
 Abaixo, **cartões de resumo** do período filtrado, do `GET /audit/summary`: invocações, sem pergunta,
 perguntadas, negadas, falharam, interrompidas, em execução agora. Cada cartão é um filtro: clicar aplica,
@@ -69,18 +75,19 @@ virada do horário de verão (S-80).
 
 ### B-19 — A lista: colunas, agrupamento, teclado e menu de contexto 🔲
 
-- **colunas:** ícone e nome amigável da tool · **o campo principal à vista** (o comando, o caminho),
+- **colunas:** ícone e rótulo pelo `kind` e pelo `label` (B-16) · **o assunto à vista** (o comando, o
+  caminho, do `subject`),
   em mono, cortado com reticências e inteiro no tooltip · pasta (nome curto, caminho no tooltip) ·
   sessão (título da conversa, ou data) · decisão (chip: sem pergunta · permitida por você · por regra ·
   negada · sem resposta) · desfecho (chip: concluiu · falhou · interrompida · em execução · não concluiu
   · não registrado) · duração · quando (relativo, absoluto no tooltip);
-- **agrupar** por sessão, turno (`prompt_id`), pasta ou tool, com cabeçalho de grupo e contagem; o grupo
+- **agrupar** por sessão, turno (`prompt_id`), pasta ou `kind`, com cabeçalho de grupo e contagem; o grupo
   que atravessa páginas continua o mesmo ao carregar mais (S-81). Ordem só por momento
   ([D-11](decisions.md#d-11--ordenar-por-outra-coisa)), com "ir para data";
 - **teclado:** ↑/↓ e `j`/`k` movem, `Enter` abre o detalhe, `Esc` fecha e devolve o foco à linha, `/`
   foca a busca (S-82) — padrão ARIA de grid, testado com o axe;
 - **menu de contexto** da linha e as mesmas ações na command palette: copiar input, copiar link permanente,
-  filtrar por esta sessão / tool / pasta, abrir a conversa, abrir a regra (S-83);
+  filtrar por esta sessão / tipo / ferramenta / pasta, abrir a conversa, abrir a regra (S-83);
 - "carregar mais" e rolagem infinita, com falha que **mantém** o que está na tela (S-85); quatro estados
   por região com skeleton que não mexe no layout (S-86); lista longa virtualizada;
 - abaixo de `md`, cada linha vira um cartão compacto com o mesmo conteúdo das colunas, sem scroll
@@ -91,7 +98,8 @@ virada do horário de verão (S-80).
 Nenhum filtro pede um id:
 
 - **sessão:** combobox com pasta + título da conversa + data, com busca por texto (S-84), das facetas;
-- **tool:** lista com nome amigável e contagem; **pasta:** lista das pastas vistas;
+- **tipo de ferramenta:** lista dos `kind` com o nome traduzido e a contagem, e dentro de cada um as
+  ferramentas nativas vistas, pelo `label`; **pasta:** lista das pastas vistas;
 - **decisão** e **desfecho:** chips multisseleção;
 - **período:** os presets da B-18 e o personalizado;
 - **busca no input:** caixa de texto com espera entre teclas (uma requisição, não uma por tecla), aviso
@@ -106,10 +114,12 @@ Painel lateral (em `md+`) com:
 - **a história**, montada por uma função pura a partir da linha do tempo da invocação: "Registrado às
   22:43:07 → perguntado → aprovado por você, no celular «Pixel 8», às 22:43:12 → executou em 1,2 s e
   saiu com código 1". Uma frase para cada combinação (S-91): por regra (e qual), por regra de sessão
-  (que acabou com a sessão), por você, por ninguém a tempo, sem pergunta (o Claude Code liberou sozinho,
-  com o porquê); concluiu, falhou, interrompida, com código de saída, em execução, não concluiu, desfecho
-  não registrado — anterior a esta versão; decisão anterior à `0009`, sem veredito (S-92);
-- **o input exato**, formatado, com copiar (S-93); o campo principal destacado no topo;
+  (que acabou com a sessão), por você, por ninguém a tempo, sem pergunta (o `{agent}` liberou sozinho,
+  com o porquê — o porquê que só vale para o Claude vem da extensão `web/src/engines/claude/`);
+  concluiu, falhou, interrompida, com código de saída, em execução, não concluiu, desfecho não
+  registrado — anterior a esta versão; decisão anterior à `0009`, sem veredito (S-92);
+- **o input exato** — o `rawInput` opaco, desenhado como JSON pelo único componente que o desenha, sem
+  ler campo nenhum —, com copiar (S-93); o `subject` destacado no topo;
 - **vínculos:** a conversa naquele ponto (F3), a regra (abre `/rules/$ruleId` em qualquer estado), a
   sessão (filtra), a pasta (filtra), o aparelho (histórico dele no [plano 17](../17-devices/README.md)),
   o `traceId` (copiar; e a tela de logs do [plano 18](../18-logs-and-diagnostics/README.md) quando existir);
@@ -152,7 +162,7 @@ A task que o usuário pediu com todas as letras ("ajuda, o que faz, explicação
 - tooltip e nome acessível em todo controle só de ícone (S-110);
 - atalhos registrados na command palette e no editor de atalhos do plano 06 (S-111);
 - **estado vazio que ensina**: sem filtro, "nada rodou ainda — abra uma pasta no workbench e peça algo ao
-  Claude"; com filtro, "nenhuma invocação com estes filtros" e "limpar filtros" como ação (S-112);
+  `{agent}`"; com filtro, "nenhuma invocação com estes filtros" e "limpar filtros" como ação (S-112);
 - texto de erro que diz o que fazer, para cada código que a tela pode receber (S-114);
 - axe sem violação, com detalhe e ajuda abertos, nos dois temas (S-113).
 

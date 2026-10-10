@@ -6,8 +6,8 @@ Plano: [26 — Paridade da conversa no app](README.md) · Cenários: [scenarios.
 **Entrega:**
 
 - nenhuma mensagem de subagent se perde no app;
-- o texto, o pensamento e as tools do subagent aparecem aninhados sob o card do `Agent`/`Task`, ao
-  vivo e no histórico, como no web;
+- o texto, o pensamento e as tools do subagent aparecem aninhados sob o card do subagent (a tool de
+  `kind` `agent`), ao vivo e no histórico, como no web;
 - a permissão de uma tool de subagent diz de quem é.
 
 ---
@@ -35,13 +35,15 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 `parentToolUseId` deixam de ser `UnreadEvent`. Os eventos de domínio ganham o `parentToolUseId`, e o
 `isSubagent` da tool passa a ser derivado dele.
 
-Um frame de subagent cujo `Agent`/`Task` ainda não chegou fica guardado e é anexado quando o card
-chegar, como faz o redutor do web. O `seq` continua avançando por todo frame. Cenários S-63…S-65.
+Um frame de subagent cujo card (`kind` `agent`) ainda não chegou fica guardado e é anexado quando o
+card chegar, como faz o redutor do web. O `seq` continua avançando por todo frame. Cenários S-63…S-65.
 
 ### B-19 — O aninhamento na conversa 🔲
 
-A `Conversation` guarda os filhos de cada `Agent`/`Task`: mensagens, pensamento e tools, na ordem.
-O card do `Agent`/`Task` desenha os filhos com o mesmo `EntryView`, recuados, com:
+A `Conversation` guarda os filhos de cada tool de `kind` `agent`: mensagens, pensamento e tools, na
+ordem. O que abre um subagent é o `kind`, que o [plano 28](../28-agent-neutral-core/F3-interactions.md)
+pôs no lugar do `opensSubagent` por nome (`Agent`/`Task`); nenhum ramo do app lê o nome da tool. O card
+do subagent desenha os filhos com o mesmo `EntryView`, recuados, com:
 
 - o mesmo estado padrão (dobrado ou aberto) e o mesmo limite de profundidade do `SubagentChildren`
   do web (R-05);
@@ -51,16 +53,19 @@ Uma tool de subagent nunca aparece solta na lista principal. Cenários S-66…S-
 
 ### B-20 — O subagent no histórico 🔲
 
-Ao abrir o card de um `Agent`/`Task` do histórico, o app lê
-`GET /transcripts/:id/subagents/:toolUseId/messages` ([04 · rotas](../../architecture/backend/03-modules.md)),
-como o `SubagentChildren` do web: sob demanda, com os quatro estados e tentar de novo. A resposta passa
-pelo `historyEventFrom` e entra como filhos do card. Cenários S-69, S-70.
+Ao abrir o card de um subagent (`kind` `agent`) do histórico, o app lê
+`GET /transcripts/:engine/:id/subagents/:toolUseId/messages` ([04 · rotas](../../architecture/backend/03-modules.md)),
+com o `conversation { engine, id }` da sessão, que o [plano 28](../28-agent-neutral-core/F1-engine-port.md)
+pôs no lugar do `claudeSessionId`. É como o `SubagentChildren` do web: sob demanda, com os quatro
+estados e tentar de novo. A resposta passa pelo `historyEventFrom` e entra como filhos do card.
+Cenários S-69, S-70.
 
 ### B-21 — A permissão com o dono 🔲
 
 O card de permissão inline de uma tool de subagent aparece **dentro** do subagent, como no web, e o
-título diz o subagent ("Subagent *writer* quer escrever `x`"). A notificação push não muda. O
-`permission.requested` já carrega o `toolUseId`, e o dono sai da conversa. Cenário S-71.
+título diz o subagent ("Subagent *writer* quer escrever `x`"); o resto do título é o `label` do
+`permission.requested` (B-13). A notificação push não muda. O `permission.requested` já carrega o
+`toolUseId`, e o dono sai da conversa. Cenário S-71.
 
 ---
 

@@ -19,6 +19,7 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 | D-02 | O web é servido pelo próprio backend, ou por um processo separado | se alguém vai querer servir o front de outro lugar | B-01 | — | 🔲 |
 | D-03 | O Postgres da instalação é container Docker ou serviço nativo | se exigir Docker na máquina do usuário é aceitável | B-01, B-03 | — | 🔲 |
 | D-08 | O binário do ripgrep (`@vscode/ripgrep`, 11 · D-01) é baixado na instalação ou empacotado no artefato | se a instalação do usuário tem rede; se o *postinstall* roda sob o `onlyBuiltDependencies` do artefato; o binário por sistema operacional da D-01 | B-01 | — | 🔲 |
+| D-09 | Ajuste às diretivas do plano 28: pré-requisito, credencial, portão de atualização e versão por motor | — (as normas estão no [plano 28](../28-agent-neutral-core/README.md) e na [discovery 10](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#9-planos-afetados)) | B-02, B-05, B-12, B-15 | 2026-10-10 · ajuste às diretivas do [plano 28](../28-agent-neutral-core/README.md) (isolamento, regras pelo dialeto, contrato canônico), pedido do usuário: o `install.mjs` confere os pré-requisitos de cada motor habilitado (CLI e local da credencial, pela descrição do motor) em vez do Claude por nome (B-05); a herança de `~/.claude/.credentials.json` é o caso do Claude de uma credencial por motor (B-02, R-02); o portão de atualização do SDK é por motor, com o `smoke-live` daquele motor (B-12); a versão aparece por motor (B-15); o plano continua o último, com o 28 entre os pré-requisitos | ✅ |
 
 ### D-01 — três mecanismos diferentes
 
@@ -42,6 +43,17 @@ a busca usa o `@vscode/ripgrep` com versão fixada, que baixa o binário da plat
 *postinstall*. No desenvolvimento, isso é uma entrada no `onlyBuiltDependencies`. Na instalação do
 usuário, sobram duas saídas: o artefato leva o binário de cada sistema operacional, ou a instalação
 precisa de rede. O `RC_RIPGREP_PATH` cobre quem já tem o `rg` instalado.
+
+---
+
+### D-09 — ajuste às diretivas do plano 28
+
+O [plano 28](../28-agent-neutral-core/README.md) roda antes deste. O que ele muda aqui é a forma, não
+a entrega: nenhum script de distribuição conhece o Claude por nome; o que um motor precisa
+(binário, versão mínima, onde mora a credencial, como se loga) vem da descrição dele, e o que é só do
+Claude — o `~/.claude/.credentials.json`, o `@anthropic-ai/claude-agent-sdk` — é o caso dele dessa
+regra. A D-01 continua igual: a instalação é por usuário **porque** cada motor herda a credencial
+do usuário dono.
 
 ---
 

@@ -57,7 +57,7 @@ Códigos novos, acrescentados ao catálogo pela [B-04](F0-contract.md): `AUDIT_E
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-21 | entrada nova carrega a pasta, a conversa (`claude_session_id`) e o turno (`prompt_id`) em que nasceu | eq | integração | — | B-09 | ⬜ |
+| S-21 | entrada nova carrega a pasta, a conversa (`engine` + `conversation_id`) e o turno (`prompt_id`) em que nasceu | eq | integração | — | B-09 | ⬜ |
 | S-22 | sessão retomada **in-place** grava pasta e conversa na entrada — o caso que `session_origins` não cobre, porque a retomada in-place não escreve linha lá | est | integração | — | B-09 | ⬜ |
 | S-23 | entrada anterior à migration: a pasta vem de `session_origins` quando há linha, e sai "não registrada" quando não há | fron | integração | — | B-09 | ⬜ |
 | S-24 | decisão respondida pelo celular grava o aparelho; pela web, grava a origem sem aparelho | eq | integração | — | B-09 | ⬜ |
@@ -82,7 +82,7 @@ Códigos novos, acrescentados ao catálogo pela [B-04](F0-contract.md): `AUDIT_E
 | S-38 | filtro pela sessão de outra pessoa | err | integração | `FORBIDDEN` | B-10 | ⬜ |
 | S-39 | cursor malformado, período que termina antes de começar, `limit` fora de 1…100, desfecho desconhecido | err | integração | `INVALID_INPUT` | B-10 | ⬜ |
 | S-40 | página que termina exatamente no último item devolve `nextCursor: null`, sem página vazia depois | fron | integração | — | B-10 | ⬜ |
-| S-41 | de uma invocação de `Read` saem só `file_path`, `offset`, `limit` e `pages` — a lista de permissão do plano 03 vale nas rotas novas | eq | integração | — | B-10 | ⬜ |
+| S-41 | de uma invocação `file.read` saem só o `subject` (o caminho) e a janela que o adapter normaliza — a lista de permissão do plano 03, decidida pelo `kind`, vale nas rotas novas | eq | integração | — | B-10 | ⬜ |
 
 ## Linha do tempo com os eventos — B-11
 
@@ -103,7 +103,7 @@ Códigos novos, acrescentados ao catálogo pela [B-04](F0-contract.md): `AUDIT_E
 | S-49 | o resumo conta por decisão, desfecho, tool e pasta — e cada contagem é igual ao número de itens que a lista devolve com o mesmo filtro | eq | integração | — | B-12 | ⬜ |
 | S-50 | período sem nada devolve contagens zero, não erro nem `404` | fron | integração | — | B-12 | ⬜ |
 | S-51 | facetas trazem as sessões do período com pasta, título da conversa e data, e as tools vistas com contagem | eq | integração | — | B-12 | ⬜ |
-| S-52 | SDK indisponível ao buscar títulos → as facetas saem sem título, com pasta e data; nada falha | err | integração | `CLAUDE_UNAVAILABLE` absorvido (só no log) | B-12 | ⬜ |
+| S-52 | motor indisponível ao buscar títulos → as facetas saem sem título, com pasta e data; nada falha | err | integração | `AGENT_UNAVAILABLE` (plano 28) absorvido (só no log) | B-12 | ⬜ |
 | S-53 | cem pedidos simultâneos de facetas fazem **uma** leitura do SDK por pasta — cache e coalescência do `transcript` reaproveitados | conc | unit | — | B-12 | ⬜ |
 | S-54 | período maior que a retenção devolve o que existe e diz a data mais antiga disponível | fron | integração | — | B-12 | ⬜ |
 | S-55 | o resumo não expõe contagem de purga (que é da máquina inteira, de todos) — só a data da última | eq | integração | — | B-12 | ⬜ |
@@ -126,7 +126,7 @@ Códigos novos, acrescentados ao catálogo pela [B-04](F0-contract.md): `AUDIT_E
 |---|---|---|---|---|---|---|
 | S-63 | a busca acha o texto em qualquer campo do input: comando, caminho, padrão, URL, conteúdo de um `Write` | eq | integração | — | B-14 | ⬜ |
 | S-64 | termo com menos de três caracteres | fron | integração | `INVALID_INPUT` | B-14 | ⬜ |
-| S-65 | a busca não acha nada que a leitura não mostraria — resultado de `Read` não é gravado, e campos fora da lista do `Read` não entram no texto buscado | eq | integração | — | B-14 | ⬜ |
+| S-65 | a busca não acha nada que a leitura não mostraria — resultado de `file.read` não é gravado, e o que fica fora do `subject` e da janela de um `file.read` não entra no texto buscado | eq | integração | — | B-14 | ⬜ |
 | S-66 | `%`, `_`, `\` e aspas no termo são literais, não curinga | fron | unit | — | B-14 | ⬜ |
 | S-67 | com a fixture grande, a busca usa o índice escolhido na D-08 (plano de execução verificado) e respeita o período | fron | integração | — | B-14 | ⬜ |
 
@@ -139,14 +139,14 @@ Códigos novos, acrescentados ao catálogo pela [B-04](F0-contract.md): `AUDIT_E
 | S-70 | `GET /audit-entries` continua respondendo exatamente como antes (compatibilidade com quem já o chama) | idem | integração | — | B-15 | ⬜ |
 | S-71 | nenhum módulo que **escreve** na trilha recebe os leitores novos → `lint:arch` reprova | err | unit | — | B-15 | ⬜ |
 
-## Catálogo de tools no web — B-16
+## A ferramenta pelo `kind` no web — B-16
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-72 | cada tool conhecida tem nome amigável, ícone e campo principal, em `en` e `pt-BR` | eq | unit | — | B-16 | ⬜ |
-| S-73 | `mcp__github__create_issue` vira "create_issue, do servidor MCP github", com ícone de MCP | eq | unit | — | B-16 | ⬜ |
-| S-74 | tool desconhecida vira "Usar X" com ícone genérico, sem quebrar a linha | err | unit | — | B-16 | ⬜ |
-| S-75 | nome MCP malformado (`mcp__`, `mcp__srv`) cai no desconhecido; campo principal ausente mostra o input resumido | fron | unit | — | B-16 | ⬜ |
+| S-72 | cada `kind` canônico tem ícone e o assunto à vista (do `subject`), e o `label` do backend é traduzido em `en` e `pt-BR` — nenhum nome de ferramenta do Claude no web | eq | unit | — | B-16 | ⬜ |
+| S-73 | `kind: mcp` com `subject { server: github, tool: create_issue }` vira "create_issue, do servidor MCP github", com ícone de MCP — o cliente não decompõe `mcp__…` | eq | unit | — | B-16 | ⬜ |
+| S-74 | `kind` `other` ou desconhecido cai na linha genérica — o `label` do evento, o nome nativo (`origin.native`) só como texto, ícone genérico —, sem quebrar a linha | err | unit | — | B-16 | ⬜ |
+| S-75 | `subject` parcial (`mcp` sem `server`) cai no genérico; `subject` vazio mostra a entrada resumida (o `rawInput` como JSON, sem ler campo) | fron | unit | — | B-16 | ⬜ |
 
 ## A tela: dados, cabeçalho, lista e filtros — B-17…B-20
 
@@ -208,7 +208,7 @@ Códigos novos, acrescentados ao catálogo pela [B-04](F0-contract.md): `AUDIT_E
 | S-109 | a gaveta de ajuda existe, traduzida em `en` e `pt-BR`, com glossário, o porquê do registro antes da decisão, a retenção de 90 dias e o que **não** é gravado | eq | integração | — | B-25 | ⬜ |
 | S-110 | todo controle só de ícone tem tooltip e nome acessível | eq | integração | — | B-25 | ⬜ |
 | S-111 | cada atalho da tela está na command palette e funciona pelo teclado | eq | integração | — | B-25 | ⬜ |
-| S-112 | estado vazio ensina o próximo passo: sem filtro, "abra uma pasta e peça algo ao Claude"; com filtro, "limpar filtros" como ação | fron | integração | — | B-25 | ⬜ |
+| S-112 | estado vazio ensina o próximo passo: sem filtro, "abra uma pasta e peça algo ao `{agent}`"; com filtro, "limpar filtros" como ação | fron | integração | — | B-25 | ⬜ |
 | S-113 | axe sem violação na tela, com o detalhe e a ajuda abertos, nos dois temas | eq | integração | — | B-25 | ⬜ |
 | S-114 | mensagem de erro de cada código novo diz o que fazer, não só o que falhou | err | unit | `AUDIT_ENTRY_PURGED`, `AUDIT_EXPORT_TOO_LARGE` | B-25 | ⬜ |
 
@@ -229,10 +229,11 @@ Códigos novos, acrescentados ao catálogo pela [B-04](F0-contract.md): `AUDIT_E
 | S-120 | conversa que o SDK não acha mais (transcript apagado do disco) | err | integração | `NOT_FOUND` | B-27 | ⬜ |
 | S-121 | `aroundToolUseId` que não está no transcript | err | integração | `INVALID_INPUT` | B-27 | ⬜ |
 | S-122 | invocação sem conversa registrada (anterior à versão) não oferece o link e diz por quê | fron | unit | — | B-27 | ⬜ |
-| S-123 | o diff de `Edit`/`MultiEdit` é montado do próprio input; `Write` sem "antes" diz isso e oferece o diff completo quando o plano 08 existir | eq | unit | — | B-28 | ⬜ |
-| S-124 | comparar com a regra mostra o padrão, o comando e a parte que casou | eq | unit | — | B-29 | ⬜ |
+| S-123 | o diff vem do backend (`GET /audit/invocations/:id/diff`), montado do input gravado: `file.edit` com `scope: edit`; `file.write` sem "antes" diz isso (`before.state: unavailable`) e, com a sessão viva, oferece o diff completo da rota da sessão; o web não lê campo do input | eq | unit | — | B-28 | ⬜ |
+| S-124 | comparar com a regra mostra o padrão na gramática canônica, o `subject` e a parte que casou, dita pelo backend pelo domínio de `permission` — o cliente não compara | eq | unit | — | B-29 | ⬜ |
 | S-125 | regra de sessão (nunca gravada) não oferece comparação, e diz por quê | fron | unit | — | B-29 | ⬜ |
 | S-126 | regra apontada que não existe | err | integração | `PERMISSION_RULE_NOT_FOUND` | B-29 | ⬜ |
+| S-152 | regra que a migração do plano 28 desligou: a comparação mostra o padrão antigo como texto e o motivo, sem a parte que casou, e diz por quê | fron | unit | — | B-29 | ⬜ |
 
 ## Exportação — B-30…B-32
 
@@ -242,7 +243,7 @@ Códigos novos, acrescentados ao catálogo pela [B-04](F0-contract.md): `AUDIT_E
 | S-128 | recorte acima do teto | fron | integração | `AUDIT_EXPORT_TOO_LARGE` (novo, 422) | B-31 | ⬜ |
 | S-129 | a exportação grava `audit.exported` **antes** do primeiro byte; trilha indisponível não exporta | err | integração | `INTERNAL_ERROR` (`audit.error.unavailable`) | B-31 | ⬜ |
 | S-130 | célula CSV que começa com `=`, `+`, `-`, `@`, tab ou CR é neutralizada | err | unit | — | B-31 | ⬜ |
-| S-131 | no arquivo exportado, um `Read` traz só caminho e janela — a mesma lista de permissão da tela | eq | integração | — | B-31 | ⬜ |
+| S-131 | no arquivo exportado, um `file.read` traz só o `subject` e a janela — a mesma lista de permissão da tela, pelo `kind` | eq | integração | — | B-31 | ⬜ |
 | S-132 | cliente que aborta o download no meio: o servidor para de ler, e o `audit.exported` já gravado diz o que foi pedido | conc | integração | — | B-31 | ⬜ |
 | S-133 | exportar o mesmo recorte duas vezes gera o mesmo conteúdo e **dois** `audit.exported` — cada exportação é um fato | idem | integração | — | B-31 | ⬜ |
 | S-134 | exportar com filtro pela sessão de outra pessoa | err | integração | `FORBIDDEN` | B-31 | ⬜ |
@@ -288,7 +289,7 @@ O protocolo exige justificar dimensão vazia, não omiti-la.
 | Detalhe (B-13) | `est`, `conc` | o detalhe é leitura de linhas imutáveis; a transição que existe (pendente → respondida → concluída) é a do item, provada em S-31…S-33 |
 | Busca no input (B-14) | `err`, `est`, `conc`, `idem` | a busca é um filtro a mais da mesma consulta: erro de entrada é a fronteira de tamanho (S-64), e corrida e repetição são as da paginação (S-34, S-35) |
 | Rotas e módulo (B-15) | `fron`, `est`, `conc` | as fronteiras são de cada leitor (B-10…B-14); a rota só valida e traduz |
-| Catálogo de tools (B-16) | `est`, `conc`, `idem` | função pura de nome para rótulo — sem estado, sem corrida, e repetir é, por definição, o mesmo resultado |
+| A ferramenta pelo `kind` (B-16) | `est`, `conc`, `idem` | função pura de `kind` e `subject` para rótulo — sem estado, sem corrida, e repetir é, por definição, o mesmo resultado |
 | A tela: dados, lista e filtros (B-17…B-20) | `idem` | aplicar o mesmo filtro duas vezes é a mesma URL, que o TanStack Query serve do cache; não há efeito a repetir |
 | Detalhe na tela (B-21, B-22) | `conc`, `idem` | o detalhe só lê; a corrida de filtro e resposta é a S-78, e copiar duas vezes não tem efeito a proteger |
 | Visões salvas (B-23) | `conc` | a única corrida que alcança um usuário é o duplo clique, tratado como idempotência (S-103); duas abas salvando nomes diferentes são duas visões legítimas |

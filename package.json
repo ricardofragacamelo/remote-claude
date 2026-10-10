@@ -25,6 +25,7 @@
     "fixtures:record": "node scripts/record-agent-sdk-fixtures.mjs",
     "transcript:follow-bench": "node scripts/transcript-follow-bench.mjs",
     "spike:claude-config": "node scripts/claude-config-spike.mjs",
+    "spike:conversation-parity": "node scripts/conversation-parity-spike.mjs",
     "i18n:check": "node scripts/i18n-check.mjs",
     "scan:secrets": "node scripts/secrets-scan.mjs",
     "scan:security": "node scripts/scan-security.mjs",
@@ -42,7 +43,8 @@
     "test:e2e:live": "node scripts/run-smoke-live.mjs",
     "test:e2e:live:report": "node scripts/report-smoke-live.mjs",
     "test:coverage": "vitest run --coverage && pnpm -r --workspace-concurrency=1 --if-present test:coverage && node scripts/mobile.mjs coverage",
-    "check:contracts-i18n": "node scripts/contracts.mjs --check && node scripts/i18n-check.mjs",
+    "check:contracts-i18n": "node scripts/contracts.mjs --check && node scripts/i18n-check.mjs && node scripts/render-check.mjs",
+    "render:check": "node scripts/render-check.mjs",
     "verify": "node scripts/verify.mjs",
     "verify:full": "node scripts/verify-full.mjs"
   },

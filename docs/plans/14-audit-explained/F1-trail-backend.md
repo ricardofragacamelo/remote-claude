@@ -31,7 +31,10 @@ topo, conforme D-01, D-04, D-05, D-08:
 - a linha de desfecho (pela recomendação da D-01: `decision` aceita `concluded`, colunas anuláveis
   `outcome`, `duration_ms`, `exit_code`), com `CHECK`: só `concluded` carrega `outcome` e tem input
   `'{}'`, e `concluded` não carrega veredito (S-20);
-- colunas anuláveis de vínculo: `workspace_path`, `claude_session_id`, `prompt_id`, `tracks_outcome`;
+- colunas anuláveis de vínculo: `workspace_path`, `engine` e `conversation_id` (a conversa como
+  `ConversationRef` do [plano 28](../28-agent-neutral-core/README.md), nunca um `claude_session_id` —
+  [D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28)), `prompt_id` (o turno, id nosso que o
+  adapter entrega), `tracks_outcome`. O `tool_kind` ao lado do `tool_name` já vem da F5 do 28;
 - o kind `audit.exported` no `CHECK` de `audit_events.kind` (usado na F3);
 - índices que a leitura precisa, cada um com a consulta que o justifica na mesma migration: `(user_id,
   at)` para resumo e facetas, `(user_id, workspace_path, seq DESC)` para o filtro de pasta, e o índice de
@@ -47,8 +50,10 @@ moram nas mesmas duas tabelas que ela já varre
 
 ### B-08 — O hook de desfecho 🔲
 
-No runner, junto do `PreToolUse` e **no mesmo lugar** onde `settingSources` e o `canUseTool` são
-passados:
+No runner do adapter do Claude (`adapter/outbound/engines/claude/`, onde a F1 do
+[plano 28](../28-agent-neutral-core/F1-engine-port.md) o pôs), junto do `PreToolUse` e **no mesmo lugar**
+onde `settingSources` e o `canUseTool` são passados. O adapter traduz os hooks do Claude para o
+desfecho canônico, e o núcleo nunca vê um hook ([D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28)):
 
 - `PostToolUse` passa a chamar também o registro de desfecho, além do journal do desfazer que já roda
   lá; `PostToolUseFailure` é registrado **só** para o desfecho (o journal continua sem ele, pelo motivo
@@ -58,6 +63,8 @@ passados:
 - **nunca recusa nada** e **nunca derruba a sessão**: a tool já rodou. Falha ao gravar loga `error` e o
   item aparece com "desfecho não registrado" (S-11). É o oposto do `PreToolUse`, e pelo mesmo motivo — o
   que protege a autorização é a intenção gravada antes; o desfecho é prestação de contas;
+- a leitura do código de saída (o prefixo `Exit code N` do `error`, se a B-01 confirmar) é do
+  adapter: o núcleo recebe só o número, ou `null`;
 - grava status, duração e código de saída (D-01). **Nunca** `tool_response` nem o texto de `error`: um
   teste planta um segredo nos dois e o procura no banco, no log e na resposta HTTP (S-10). O log de I/O
   da borda (`debug`) registra o fato — tool, `toolUseId`, status, duração —, sem saída;
@@ -71,7 +78,8 @@ que a B-01 mediu, na ordem medida — inclusive o desfecho que chega antes da li
 
 Conforme D-04 e D-06:
 
-- o runner passa `workspacePath`, `claudeSessionId` e o `prompt_id` do hook ao registro; as linhas
+- o runner passa `workspacePath`, a `conversation { engine, id }` e o `prompt_id` do hook ao registro
+  ([D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28)); as linhas
   `recorded` e `concluded` os gravam, e `tracks_outcome = true` na `recorded` (D-05);
 - a linha de decisão (`RecordDecisionOnResolved`) grava a pasta e a conversa da sessão, e o `device_id`
   do aparelho quando a resposta veio do celular — a coluna existe desde a `0003` e hoje é sempre `null`;
@@ -92,11 +100,14 @@ Porta nova de leitura (`AuditInvocationReader`), ligada só ao `AuditQueryModule
   concluída (com `outcome`) · não concluiu (sessão encerrada) · desfecho não registrado (anterior);
   "viva ou não" vem de uma porta para `session` (`LiveSessionLookup`), nunca de ler o registro de
   outro módulo por dentro;
-- filtros: sessão, pasta, tool, decisão, desfecho, período, `toolUseId` e a busca da B-14; filtro por
+- filtros: sessão, pasta, `kind`, ferramenta nativa (opaca), decisão, desfecho, período, `toolUseId` e a
+  busca da B-14; filtro por
   decisão e desfecho juntos exige as duas linhas (S-37);
 - sessão de outra pessoa → `403 FORBIDDEN`, pela mesma regra da
   [03 · D-17](../03-rules-and-audit/decisions.md#d-17--a-trilha-de-outro-é-a-sessão-de-outro) (S-38);
-- o input sai por `disclosedInput`: de um `Read`, só a lista de permissão (S-41);
+- o input sai por `disclosedInput`, decidido pelo `kind` e nunca pelo nome da ferramenta: de um
+  `file.read`, só o `subject` e a janela que o adapter normaliza — a lista de permissão do plano 03,
+  agora por `kind` (S-41, [D-15](decisions.md#d-15--o-núcleo-neutro-do-plano-28));
 - **plano de execução verificado** com uma fixture de 100 mil linhas, para cada combinação de filtro,
   como a B-14 do plano 03 fez: nenhuma varredura da tabela, e a página para depois de `limit + 1`
   âncoras (S-36).
@@ -116,13 +127,15 @@ composto guarda o menor `seq` consumido de cada tabela (S-42, S-43). Cursor adul
 
 ### B-12 — Resumo e facetas 🔲
 
-- `GET /audit/summary`: contagens do período e do filtro por decisão, desfecho, tool e pasta, **iguais**
+- `GET /audit/summary`: contagens do período e do filtro por decisão, desfecho, `kind` e pasta, **iguais**
   às que a lista devolveria (S-49); a data mais antiga disponível (retenção) e a data da última purga —
   **sem** contagem de purga, que é da máquina inteira (S-54, S-55);
 - `GET /audit/facets`: sessões do período com pasta, primeira e última atividade, contagem e **título
   da conversa** lido pela porta de `transcript` (`ConversationTitleLookup`), com o cache por
   `lastModified` e a coalescência que o plano 04 já tem (S-51, S-53); SDK fora → sem título, sem erro
-  (S-52); tools vistas com contagem; pastas.
+  (S-52); os `kind` e as ferramentas nativas vistas, com o `label` e a contagem; pastas. O título é
+  lido pela `ConversationRef` (`engine` + `conversation_id`), e o motor fora é o `AGENT_UNAVAILABLE` do
+  plano 28.
 
 ### B-13 — Detalhe e endereço permanente 🔲
 

@@ -1,6 +1,8 @@
 # Proposta: O que o backend perde da conversa, e a mensagem desconhecida na tela
 
-**Estado:** discovery, sem plano. Nenhum código escrito.
+**Estado:** virou o [plano 27 — Perdas da conversa](../plans/27-conversation-losses/README.md) em
+2026-10-10. Nenhum código escrito. Daqui em diante vale o plano; as decisões abertas estão no
+[decisions.md](../plans/27-conversation-losses/decisions.md) dele, com os mesmos IDs.
 **Criada em:** 2026-10-09. O usuário pediu: "criar uma discovery sobre as perdas do backend que
 estão no 26 F6, ver as perdas e tem que ter a mesma implementação no mobile". Durante o levantamento,
 acrescentou duas coisas. A primeira: "mensagens que são desconhecidas, tem que de alguma forma

@@ -58,20 +58,26 @@ Cada check é lido pela porta do módulo dono — nenhum importa o interior de o
 ([backend/03](../../architecture/backend/03-modules.md#fronteiras--quem-pode-falar-com-quem)).
 Integração com testcontainers para banco e migrations; unit com fakes para o resto.
 
-### B-26 — Os checks do Claude e a sonda ativa 🔲
+### B-26 — Os checks dos motores, e os do Claude com a sonda ativa 🔲
 
-Conforme a [D-14](decisions.md#d-14--a-sonda-do-claude-o-que-ela-faz-e-quem-a-dispara) e a
-[D-15](decisions.md#d-15--a-fronteira-com-os-planos-07-12-e-13):
+Conforme a [D-14](decisions.md#d-14--a-sonda-do-claude-o-que-ela-faz-e-quem-a-dispara), a
+[D-15](decisions.md#d-15--a-fronteira-com-os-planos-07-12-e-13) — cujo registro de checks é o ponto
+de extensão que o [plano 28](../28-agent-neutral-core/README.md) pede — e a
+[D-17](decisions.md#d-17--ajuste-às-diretivas-do-plano-28):
 
-- **passivos**, no relatório: versão do SDK; CLI encontrado e executável, com a versão
-  (`HEALTH_CLAUDE_CLI_MISSING`); `CLAUDE_CONFIG_DIR` resolvido — o vazio é tratado como ausente, como
-  o plano 04 corrigiu —; logado ou não (`HEALTH_CLAUDE_NOT_LOGGED_IN`), com cache por versão do CLI
-  como o `supportedCommands()` do plano 04 · F3;
-- **sonda ativa** (`POST /diagnostics/health/claude-probe`): um prompt mínimo de verdade, `query()`
-  com `settingSources: ['project']` e o hook `PreToolUse` como toda outra
+- **no núcleo, um item por motor habilitado**, lido do `describe()` da porta de motor (o mesmo estado
+  do `GET /engines`): instalado e executável, com a versão (`HEALTH_AGENT_NOT_INSTALLED`), e
+  autenticado (`HEALTH_AGENT_NOT_AUTHENTICATED`), com `params.engine` e cache por versão do binário.
+  O núcleo não sabe o que é `CLAUDE_CONFIG_DIR` nem o nome de nenhum CLI;
+- **um `HealthCheck` registrado pela extensão do Claude** (`*/engines/claude/`), com o que só ele tem
+  nos detalhes: versão do SDK; caminho do CLI; `CLAUDE_CONFIG_DIR` resolvido — o vazio é tratado como
+  ausente, como o plano 04 corrigiu —, com cache por versão do CLI como o `supportedCommands()` do
+  plano 04 · F3; o "o que fazer" de instalação e login (`engines.claude.health.*`);
+- **sonda ativa**, também da extensão (`POST /engines/claude/diagnostics/probe`): um prompt mínimo de
+  verdade, `query()` com `settingSources: ['project']` e o hook `PreToolUse` como toda outra
   ([ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse)),
   sem tool permitida; só operador (S-102), uma por vez (S-103), com ritmo, registrada em
-  `diagnostics.claudeProbed` com resultado e duração (S-104);
+  `engine.diagnosticsProbed`, com o motor no payload, resultado e duração (S-104);
 - quando o [plano 13](../13-claude-settings/README.md) existir, o check de login usa o dele pelo
   registro, e a tela de configuração do Claude aponta para cá.
 
@@ -85,8 +91,9 @@ Plano ausente, item ausente (S-105) — este plano não depende de nenhum deles.
 ### B-28 — As rotas da saúde, e o `GET /health` intacto 🔲
 
 Controller com as rotas da B-05: `GET /diagnostics/health` (`200` com o relatório, inclusive com
-itens em `fail`; `401` sem credencial — S-107), `POST …/run` (`429` com ritmo — S-88),
-`POST …/claude-probe`. `details` filtrado por papel na resposta (S-108).
+itens em `fail`; `401` sem credencial — S-107) e `POST …/run` (`429` com ritmo — S-88); a extensão do
+Claude tem o seu controller, com `POST /engines/claude/diagnostics/probe`. `details` filtrado por papel
+na resposta (S-108).
 
 O `GET /health` público continua exatamente como está — `{ status, database }`, `503` com
 `Retry-After` —, e um teste garante que nada do relatório detalhado passe a sair por ele (S-106).
@@ -96,8 +103,8 @@ O `GET /health` público continua exatamente como está — `{ status, database 
 `/diagnostics/health`, na moldura do plano 06:
 
 - **resumo** no topo — "tudo certo" ou "N problemas", com a hora da verificação e "verificar de
-  novo" —, e os itens por categoria (Servidor, Banco, Claude, Acesso, Celular, Recursos), os com
-  problema primeiro (S-110);
+  novo" —, e os itens por categoria (Servidor, Banco, uma por motor de `GET /engines` com o
+  `displayName` dele, Acesso, Celular, Recursos), os com problema primeiro (S-110);
 - cada item: chip de estado, uma frase do que ele mede, e em `warn`/`fail` **a explicação e "o que
   fazer"** traduzidas, com o comando ou a tela certa quando houver (S-109); detalhes recolhíveis;
   "verificar só este"; para o operador, "ver nos logs" com o `traceId` da execução;
@@ -107,7 +114,9 @@ O `GET /health` público continua exatamente como está — `{ status, database 
   das últimas, botão desabilitado com explicação quando o socket caiu (S-112);
 - **Este navegador**: versão do web e do backend, protocolo, conectado desde, reconexões, último
   `gap`, limites anunciados no `connection.ready`, diferença de relógio com o servidor, idioma (S-113);
-- **sonda do Claude** para o operador, com o aviso de custo antes do clique;
+- **sonda do Claude** para o operador, com o aviso de custo antes do clique — a ação é da extensão
+  (`web/src/engines/claude/diagnostics/`), registrada pelo `web/src/app/engines.ts` no item do motor;
+  a tela não a importa;
 - atualização automática a cada 60 s só com a tela visível (S-114).
 
 ### B-30 — O relatório de diagnóstico 🔲
@@ -121,7 +130,8 @@ ajuda, no lugar de uma captura de tela.
 
 - **ajuda** na gaveta da moldura, em `en` e `pt-BR`: o que é a tela; **cada item** — o que mede, por
   que importa, o que cada estado significa e o que fazer quando falha —; a diferença entre esta tela
-  e o `GET /health` público; que a sonda do Claude consome o plano; que o ambiente de
+  e o `GET /health` público; que a sonda do Claude consome o plano (seção da extensão, chaves
+  `engines.claude.diagnostics.*`); que o ambiente de
   desenvolvimento se verifica com `pnpm doctor`; o que não é mostrado a quem não é operador;
 - tooltip em todo ícone; atalhos para "verificar de novo" e para abrir a ajuda, na palette;
 - estado de carregamento que mantém a grade; axe sem violação nos dois temas; zero literal

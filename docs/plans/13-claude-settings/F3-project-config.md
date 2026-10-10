@@ -4,7 +4,23 @@ Plano: [13 — Configuração do Claude](README.md) · Cenários: [scenarios.md]
 
 **Depende de:** [F2](F2-mcp-servers.md) — o `.mcp.json` e os plugins habilitados pelo projeto já têm
 tratamento lá; aqui eles só aparecem. E do plano [07](../07-explorer-and-editor/README.md): criar e
-editar arquivo é a escrita dele.
+editar arquivo é a escrita dele. E do [plano 28](../28-agent-neutral-core/README.md) concluído, como a F2
+([D-33](decisions.md#d-33--ajuste-às-diretivas-do-plano-28)).
+**Onde nasce** ([D-33](decisions.md#d-33--ajuste-às-diretivas-do-plano-28)): a fase **inteira** é da extensão do
+Claude — memória (`CLAUDE.md`), slash commands, skills, subagents, output styles, hooks e o `.claude/` do projeto só
+existem no Claude. No backend, `domain/engines/claude/`, `application/engines/claude/`,
+`adapter/inbound/http/engines/claude/` e `adapter/outbound/engines/claude/` (a leitura de `.claude/` que a árvore
+punha em `adapter/outbound/project-config/`); as rotas sob `/engines/claude/*`, que nascem com o tipo gerado em
+`packages/contracts/schema/http/` ([28 · D-09](../28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa));
+a tabela `claude_skill_preferences` mantém o prefixo, que é o da extensão, e o kind é `engine.skillSourceToggled`,
+com o motor no payload — nenhum kind de auditoria leva nome de motor
+([28 · D-10](../28-agent-neutral-core/decisions.md#f6--extensões-isoladas)). No web, as seções Projeto e Skills
+moram em `web/src/engines/claude/settings/` e são registradas pela extensão nos registros do núcleo (seções,
+comandos, ajuda) por `web/src/app/engines.ts`; as chaves de i18n são `engines.claude.*`. Nada desta fase entra no
+núcleo, e o núcleo nunca importa `engines/` (o lint e o `pnpm neutral:check` conferem). O que ela põe na conversa
+(skill, subagent, hook, output style) chega aos clientes pelo `kind` canônico da
+[28 · F2](../28-agent-neutral-core/F2-canonical-tools.md) e da [28 · F3](../28-agent-neutral-core/F3-interactions.md),
+não pelo nome nativo.
 **Entrega:** a seção Projeto mostra, para a pasta escolhida, tudo o que o repositório injeta no Claude —
 memória, slash commands, skills, subagents, output styles, hooks, permissões e plugins —, diz o que
 de fato vale nas sessões deste produto, e cria ou edita os arquivos de `.claude/` pelo editor, a partir
@@ -33,9 +49,10 @@ escrita humana — allowlist, ETag, trilha `file.*` antes do disco
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-31 — `GET /claude/project-config` 🔲
+### B-31 — `GET /engines/claude/project-config` 🔲
 
-[D-16](decisions.md#d-16--como-ler-a-configuração-de-projeto): o que é **arquivo de formato
+Rota da extensão (ex-`/claude/project-config`, movida pela 28 · F6), com o leitor em
+`adapter/outbound/engines/claude/`. [D-16](decisions.md#d-16--como-ler-a-configuração-de-projeto): o que é **arquivo de formato
 documentado** do Claude Code (`.claude/settings.json`, frontmatter de `.claude/commands/`,
 `.claude/agents/`, `.claude/output-styles/`, `.mcp.json`) é lido por nós — dentro da allowlist,
 contenção no realpath, teto de tamanho, parse tolerante que explica o que não entendeu; o que o CLI
@@ -77,13 +94,14 @@ confirma que devolve só skills), cruzada com a origem: **Projeto** (`.claude/sk
 pasta), **Usuário** e **Sistema** (as do plugin sintético da B-35, qualificadas `plugin:<nome>`). A tela
 mostra o nome simples, o selo da origem, a descrição, o estado e o arquivo.
 
-Preferências por usuário e por pasta, com a mesma sobreposição dos padrões
+Rotas da extensão: `GET /engines/claude/skills?folder=` e `PUT /engines/claude/skills/preferences`
+(ex-`/claude/skills…`). Preferências por usuário e por pasta, com a mesma sobreposição dos padrões
 ([D-04](decisions.md#d-04--padrões-por-usuário-e-por-pasta)): ligar/desligar uma **origem** inteira ou uma
-skill. Viram a opção `skills` do `query()` — omitida quando nada está desligado (omitir é o padrão do
+skill. Viram, no adapter do Claude, a opção `skills` do `query()` — omitida quando nada está desligado (omitir é o padrão do
 CLI, não "desligado"), lista explícita quando algo está. Desligada, a skill some do `/` do painel e a tool
 `Skill` a recusa. A ajuda diz o que o próprio SDK diz: é **filtro de contexto, não sandbox** — o arquivo
 continua legível por `Read`/`Bash`, e segredo não mora em skill. Ligar as origens Usuário ou Sistema amplia
-o que entra na sessão e grava `claude.skillSourceToggled`; desligar skill não vai para a trilha (só
+o que entra na sessão e grava `engine.skillSourceToggled` (com o motor no payload); desligar skill não vai para a trilha (só
 restringe).
 
 Colisão de nome: a do projeto é a que `/nome` chama; a outra continua listada, com o selo, e alcançável
@@ -100,7 +118,7 @@ projeto, do usuário e do sistema, **sem** ampliar `settingSources` — o escopo
 `allow` e os hooks de `~/.claude/settings.json`, que furam o `canUseTool` e a trilha
 ([plano 01 · D-11](../01-live-session/decisions.md#d-11--o-furo-que-invalidaria-o-produto), ADR-011).
 O caminho é a opção `plugins` do SDK (`SdkPluginConfig`: `{ type: 'local', path, skipMcpDiscovery }`,
-verificado no `sdk.d.ts`): o backend monta, **por usuário**, um diretório de plugin local nosso que
+verificado no `sdk.d.ts`): o backend monta — no adapter `adapter/outbound/engines/claude/` —, **por usuário**, um diretório de plugin local nosso que
 expõe **só `skills/`**:
 
 - **fontes** — Usuário: `~/.claude/skills` do `CLAUDE_CONFIG_DIR` efetivo, incluindo `synced/` quando
@@ -133,8 +151,10 @@ como na B-33, em `.claude/agents/<nome>.md`. Cenários S-175, S-176.
 
 O atual e os disponíveis vêm de `initializationResult()` (`output_style`, `available_output_styles`),
 os do projeto com o arquivo de origem. "Novo output style" pelo modelo inicial em
-`.claude/output-styles/<nome>.md`; escolher um como padrão grava pelo store da F1 (B-14), para o usuário
-ou para a pasta — aplicado pela camada de flag, com allowlist ([D-06](decisions.md#d-06--o-que-entra-como-padrão)).
+`.claude/output-styles/<nome>.md`; escolher um como padrão grava pelo store de padrões da F1 (B-14) — que a
+28 · F6 torna núcleo, por motor (`PUT /engines/:engine/defaults`, com o motor `claude`) —, para o
+usuário ou para a pasta, no campo que a extensão declara: o núcleo guarda o valor sem interpretá-lo, e quem o
+aplica pela camada de flag, com allowlist, é o adapter do Claude ([D-06](decisions.md#d-06--o-que-entra-como-padrão)).
 Cenários S-177, S-178.
 
 ### B-38 — Hooks, permissões e plugins do projeto: só leitura, explicados 🔲
@@ -157,9 +177,13 @@ um editor estruturado atrás de segundo passo está registrada na D-17. Cenário
 
 ### B-39 — Tela: projeto e skills 🔲
 
+As duas seções são da extensão (`web/src/engines/claude/settings/`), registradas no registro de seções do
+núcleo e visíveis só quando o motor é o Claude — o núcleo da tela não sabe que elas existem. Os services falam com
+`/engines/claude/*`, e as chaves são `engines.claude.*`.
+
 Seção "Projeto" com o seletor de pasta (abas abertas e recentes do 06; pasta na URL), um cartão por
 assunto — Memória, Slash commands e skills, Subagents, Output styles, Hooks, Permissões, Plugins e
-`.mcp.json` (este levando à seção MCP) —, cada item com a origem, o estado "carregado/não carregado aqui"
+`.mcp.json` (este levando à seção MCP do núcleo, pelo link de seção que o registro dá) —, cada item com a origem, o estado "carregado/não carregado aqui"
 e as ações (abrir no editor, novo a partir do modelo, definir como padrão). Busca nas listas longas de
 comandos e agents. Os quatro estados.
 
@@ -178,8 +202,9 @@ mudar o que ele pode fazer, o que é um output style, o
 que é um hook — **código que roda na máquina** —, por que as permissões do projeto não valem aqui e
 valem no terminal, e o que este produto não carrega (escopo `user`). Estado vazio que ensina (criar o
 `CLAUDE.md` pelo `/init`, o primeiro comando pelo modelo); tooltip em todo ícone; "Claude: abrir
-CLAUDE.md", "Claude: novo slash command", "Claude: novo subagent" na palette; teclado; axe.
-Cenários S-183, S-184.
+CLAUDE.md", "Claude: novo slash command", "Claude: novo subagent" na palette — comandos **da extensão**,
+registrados por ela no registro de comandos do núcleo, com o rótulo em `engines.claude.*`; a ajuda também é da
+extensão, pendurada na gaveta de ajuda do núcleo; teclado; axe. Cenários S-183, S-184.
 
 ---
 
@@ -194,4 +219,5 @@ S-141…S-184.
 ```bash
 pnpm verify
 pnpm test:integration
+pnpm neutral:check     # o portão de neutralidade do plano 28: nada novo no baseline do núcleo
 ```

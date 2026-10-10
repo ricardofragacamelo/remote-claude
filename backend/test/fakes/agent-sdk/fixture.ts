@@ -32,6 +32,8 @@ export interface AgentSdkFixture {
   readonly stderr: readonly string[];
   /** What `getSessionMessages` read back of the run — present on the recordings that kept it. */
   readonly history?: readonly SessionMessage[];
+  /** What each subagent of the run said, by agent id, as the SDK files it apart (plan 26, B-02). */
+  readonly subagents?: Readonly<Record<string, readonly SessionMessage[]>>;
   readonly messages: readonly SDKMessage[];
 }
 

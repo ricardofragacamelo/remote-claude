@@ -12,7 +12,11 @@ pnpm verify:full     # portões 1-11, sai com código 0
 ```
 
 **Depende de:** [plano 06](../06-workbench/README.md) (a navegação global, a moldura de tela com
-ajuda e a rota `/diagnostics`, que nasce lá com o ping). Não depende dos planos 07, 12 e 13: o que
+ajuda e a rota `/diagnostics`, que nasce lá com o ping), e do
+[plano 28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md) **concluído**: o estado de
+cada motor vem do `describe()` da porta de motor e do `GET /engines`, os logs da borda do motor são
+`engine.*`, e o que é só do Claude (os checks dele e a sonda ativa) é um `HealthCheck` registrado pela
+extensão `engines/claude/` ([D-17](decisions.md#d-17--ajuste-às-diretivas-do-plano-28)). Não depende dos planos 07, 12 e 13: o que
 eles acrescentam à saúde entra por registro, quando existir ([D-15](decisions.md#d-15--a-fronteira-com-os-planos-07-12-e-13)).
 
 Arquivos irmãos: [matriz de cenários](scenarios.md) · [decisões em aberto](decisions.md) ·
@@ -65,7 +69,7 @@ Três escolhas dão a forma do plano:
 | Módulo `diagnostics` documentado (e os `diag`/`health` que o catálogo omite), papel de operador, contratos HTTP de logs e saúde, trilha e rotas | F0 |
 | Buffer de logs em memória alimentado pelo `pino` sem laço, consulta com redação na leitura e só para o operador, rastreio por `traceId`, exportação, nível do backend mudado em execução com prazo | F1 |
 | Tela de logs: lista densa virtualizada, JSON expansível, filtros na URL, seguir ao vivo, cadeia do `traceId`, "ver nos logs" a partir de todo erro do app, nível do backend e `debug` neste navegador, exportar, menu de contexto, palette, ajuda | F2 |
-| Saúde: executor de checks com prazo e cache, checks do núcleo (processo, banco e migrations, allowlist, sessões e memória, push, identidade, gateway, buffer de logs, disco, trilha), checks do Claude e sonda ativa, recursos de outros planos por registro, tela com explicação e "o que fazer" por item, ping, "Este navegador", relatório de diagnóstico, ajuda | F3 |
+| Saúde: executor de checks com prazo e cache, checks do núcleo (processo, banco e migrations, allowlist, sessões e memória, push, identidade, gateway, buffer de logs, disco, trilha), um item por motor pelo `describe()`, os checks do Claude e a sonda ativa registrados pela extensão dele, recursos de outros planos por registro, tela com explicação e "o que fazer" por item, ping, "Este navegador", relatório de diagnóstico, ajuda | F3 |
 | E2E: redação e isolamento pela porta do usuário, tail sob carga, rastreio, nível com prazo, checks falhando um a um traduzidos, celular e axe | F4 |
 
 ### Não entra
@@ -86,8 +90,8 @@ Três escolhas dão a forma do plano:
   ReDoS à espera de acontecer; a busca é por termos, com exclusão, como o filtro do painel Output do
   VS Code ([D-05](decisions.md#d-05--busca-termos-literais-ou-regex)).
 - **Diagnóstico completo da instalação do Claude** (conta, plano, modelos). É do
-  [plano 13](../13-claude-settings/README.md); a saúde mostra o mínimo e usa o dele quando existir
-  ([D-15](decisions.md#d-15--a-fronteira-com-os-planos-07-12-e-13)).
+  [plano 13](../13-claude-settings/README.md), na extensão `engines/claude/`; a saúde mostra o mínimo
+  e usa o dele quando existir ([D-15](decisions.md#d-15--a-fronteira-com-os-planos-07-12-e-13)).
 - **Editor de atalhos.** Saiu do roteiro por decisão do usuário; os atalhos desta tela entram na
   command palette do [plano 06](../06-workbench/README.md).
 
@@ -104,7 +108,7 @@ verde.
 | F0 | [Contrato](F0-contract.md) | módulo, operador, contratos HTTP, trilha e rotas documentados | B-01…B-07 | 🔲 |
 | F1 | [Backend dos logs](F1-log-backend.md) | buffer, tee sem laço, consulta redigida e só do operador, rastreio, exportação, nível em execução | B-08…B-10, B-12…B-15 | 🔲 |
 | F2 | [Tela de logs](F2-logs-screen.md) | visualizador, filtros, tail, cadeia do trace, níveis, exportar, ajuda | B-16…B-23 | 🔲 |
-| F3 | [Tela de saúde](F3-health-screen.md) | checks com prazo e cache, sonda do Claude, tela explicada, ping, relatório, ajuda | B-24…B-31 | 🔲 |
+| F3 | [Tela de saúde](F3-health-screen.md) | checks com prazo e cache, um item por motor, sonda do Claude pela extensão, tela explicada, ping, relatório, ajuda | B-24…B-31 | 🔲 |
 | F4 | [E2E](F4-e2e.md) | redação, isolamento, carga e saúde pela porta do usuário | B-32…B-35 | 🔲 |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
@@ -136,7 +140,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Ajuda, atalhos, foco e axe na tela de logs | B-23 | [web/03-ui-system](../../architecture/web/03-ui-system.md#acessibilidade--não-é-opcional) | S-80…S-83 |
 | Checks com prazo, sem travar uns aos outros, com cache e ritmo | B-24, B-28 | [backend/03-modules](../../architecture/backend/03-modules.md) | S-84…S-89 |
 | **Checks falhando um a um, com explicação traduzida e o que fazer** | B-25, B-26, B-29 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) | S-90…S-101, S-109, S-121 |
-| A sonda ativa do Claude custa, e por isso é do operador, única e auditada | B-26 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) | S-102…S-104 |
+| O estado de cada motor vem do `describe()`; a sonda ativa do Claude, registrada pela extensão, custa, e por isso é do operador, única e auditada | B-26 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) | S-102…S-104 |
 | Recursos de outros planos aparecem só quando existem | B-27 | [backend/03-modules](../../architecture/backend/03-modules.md) | S-105 |
 | O `GET /health` público não vaza o relatório; o detalhado é autenticado e filtrado por papel | B-28 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#tabela-de-status-http) | S-106…S-108 |
 | A tela de saúde explica, resume, mede o ping e sobrevive ao backend fora | B-29, B-30, B-31 | [web/03-ui-system](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre) | S-81, S-109…S-116, S-122, S-123 |
@@ -148,6 +152,8 @@ Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 ## Árvore resultante
 
 ```
+packages/contracts/schema/http/    as rotas novas de /diagnostics/* e a da sonda (28 · D-09)
+
 backend/src/
 ├── domain/diagnostics/            LogRecord · LogFilter (níveis, termos, período) · LogCursor (época + seq)
 │                                  HealthResult · HealthStatus · agregação
@@ -159,17 +165,20 @@ backend/src/
 │   └── run-health-checks.use-case executor: paralelo, prazo por check, cache, execução única
 ├── adapter/
 │   ├── inbound/http/diagnostics/  GET /diagnostics/logs · /facets · /traces/:id · /export · /capabilities
-│   │                              GET|PUT|DELETE /diagnostics/log-level · GET /diagnostics/health · POST …/run · POST …/claude-probe
+│   │                              GET|PUT|DELETE /diagnostics/log-level · GET /diagnostics/health · POST …/run
+│   ├── inbound/http/engines/claude/diagnostics/   POST /engines/claude/diagnostics/probe (a sonda da extensão)
 │   └── outbound/
 │       ├── logging/               in-memory-log-store (ring + reserva warn+) · pino-log-level-control
-│       └── health/                um adapter por check do núcleo e do Claude
+│       ├── health/                um adapter por check do núcleo, e o check "motores" sobre o EngineRegistry
+│       └── engines/claude/health/ o HealthCheck do Claude e a sonda, registrados pela extensão
 ├── infrastructure/logging/        o tee: stdout + store, no destino do pino
-└── infrastructure/database/migrations/   kinds `diagnostics.*` em audit_events (migration versionada nova)
+└── infrastructure/database/migrations/   kinds `diagnostics.*` e `engine.diagnosticsProbed` em audit_events (migration nova)
 
 web/src/features/diagnostics/
 ├── services/ · hooks/             logs, tail, facetas, rastreio, nível, capacidades, saúde, ping
 └── components/                    LogsScreen · LogList · LogLine · LogFilters · TraceDrawer · LogLevelControl
                                    HealthScreen · HealthCheckCard · BrowserPanel · PingCheck · DiagnosticReport
+web/src/engines/claude/diagnostics/   a ação da sonda e a ajuda própria, registradas pelo web/src/app/engines.ts
 web/src/shared/components/         TraceLink (o "ver nos logs" de todo estado de erro)
 web/src/shared/logging/            nível do navegador em execução
 

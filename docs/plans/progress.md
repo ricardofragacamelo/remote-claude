@@ -14,7 +14,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 
 ## Panorama
 
-**Última atualização:** 2026-10-09
+**Última atualização:** 2026-10-10
 
 ```
 00-bootstrap                  ████████████████████ 100%   ✅ concluído
@@ -43,7 +43,9 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 23-fluid-permissions          ████████████████████ 100%   ✅ concluído
 24-structured-questions       ████████████████████ 100%   ✅ concluído
 25-mobile-file-browser        ████████████████████ 100%   ✅ concluído
-26-mobile-conversation-parity ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+26-mobile-conversation-parity █████░░░░░░░░░░░░░░░  23%   🔄 em andamento
+27-conversation-losses        ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+28-agent-neutral-core         ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 ```
 
 ---
@@ -66,22 +68,24 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [09 — Layout do chat](09-chat-layout/README.md) | 6/6 | 32/32 | 92/92 | 19/19 | ✅ |
 | [10 — Layout do chat no app](10-mobile-chat-layout/README.md) | 11/11 | 48/48 | 177/178 | 30/31 | ✅ |
 | [11 — Busca](11-search/README.md) | 0/4 | 0/25 | 0/174 | 8/8 | 🔲 |
-| [12 — Terminal integrado](12-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 13/13 | 🔄 |
-| [13 — Configuração do Claude](13-claude-settings/README.md) | 2/5 | 17/47 | 63/215 | 30/30 | 🔄 |
-| [14 — Auditoria explicada](14-audit-explained/README.md) | 0/5 | 0/38 | 0/151 | 0/14 | 🔲 |
-| [15 — Gestão de regras](15-rules-management/README.md) | 0/5 | 0/36 | 8/223 | 1/19 | 🔄 |
-| [16 — Uso e custo](16-usage-and-cost/README.md) | 0/5 | 0/33 | 0/123 | 0/15 | 🔲 |
+| [12 — Terminal integrado](12-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 14/14 | 🔄 |
+| [13 — Configuração do Claude](13-claude-settings/README.md) | 2/5 | 17/47 | 63/215 | 31/31 | 🔄 |
+| [14 — Auditoria explicada](14-audit-explained/README.md) | 0/5 | 0/38 | 0/152 | 1/15 | 🔲 |
+| [15 — Gestão de regras](15-rules-management/README.md) | 0/5 | 0/36 | 8/226 | 2/20 | 🔄 |
+| [16 — Uso e custo](16-usage-and-cost/README.md) | 0/5 | 0/33 | 0/123 | 1/16 | 🔲 |
 | [17 — Dispositivos](17-devices/README.md) | 1/5 | 3/32 | 13/132 | 4/16 | 🔄 |
-| [18 — Logs e diagnóstico](18-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 2/16 | 🔲 |
-| [19 — Distribuição](19-distribution/README.md) | 0/4 | 0/19 | 0/38 | 3/8 | 🔲 |
+| [18 — Logs e diagnóstico](18-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 3/17 | 🔲 |
+| [19 — Distribuição](19-distribution/README.md) | 0/4 | 0/19 | 0/38 | 4/9 | 🔲 |
 | [20 — Dev public](20-dev-public/README.md) | 0/1 | 6/7 | 38/41 | 8/8 | 🔄 |
 | [21 — Rich previews](21-rich-previews/README.md) | 5/5 | 23/23 | 74/74 | 17/17 | ✅ |
 | [22 — Histórico ao vivo](22-live-history/README.md) | 8/8 | 37/37 | 130/130 | 18/18 | ✅ |
 | [23 — Permissões fluidas](23-fluid-permissions/README.md) | 6/6 | 19/19 | 100/100 | 14/14 | ✅ |
 | [24 — Perguntas estruturadas](24-structured-questions/README.md) | 7/7 | 25/25 | 110/111 | 39/39 | ✅ |
 | [25 — Navegador de arquivos no app](25-mobile-file-browser/README.md) | 8/8 | 32/32 | 153/153 | 34/34 | ✅ |
-| [26 — Paridade da conversa no app](26-mobile-conversation-parity/README.md) | 0/8 | 0/26 | 0/78 | 12/13 | 🔲 |
-| **Total** | **113/161** | **604/901** | **2376/3722** | **426/508** | 🔄 |
+| [26 — Paridade da conversa no app](26-mobile-conversation-parity/README.md) | 2/8 | 6/26 | 12/78 | 15/15 | 🔄 |
+| [27 — Perdas da conversa](27-conversation-losses/README.md) | 0/8 | 0/28 | 0/107 | 3/14 | 🔲 |
+| [28 — Agent neutral core](28-agent-neutral-core/README.md) | 0/8 | 0/48 | 0/136 | 18/18 | 🔲 |
+| **Total** | **115/177** | **610/977** | **2388/3969** | **457/549** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -284,20 +288,22 @@ empacota o que todos eles entregam, e por isso é o último:
 | [10 — Layout do chat no app](10-mobile-chat-layout/README.md) | conversar com o Claude pelo celular no mesmo molde: a conversa na ordem real, o composer acima do teclado com modo, modelo e esforço, o thinking, o processamento, a permissão e o plano inline, a fila e as ações da mensagem | 09 |
 | [11 — Busca](11-search/README.md) | achar e substituir em qualquer arquivo da pasta | 07 |
 | [12 — Terminal integrado](12-integrated-terminal/README.md) | um terminal na pasta aberta, desligado por padrão | 06 |
-| [13 — Configuração do Claude](13-claude-settings/README.md) | ver e mudar modelos, padrões, MCPs, skills e a configuração de projeto numa tela própria | 06, 07, 08 |
-| [14 — Auditoria explicada](14-audit-explained/README.md) | ler cada invocação inteira — pedido, decisão, desfecho — com ajuda | 06 |
-| [15 — Gestão de regras](15-rules-management/README.md) | criar, testar, simular, ajustar e revogar regras numa tela própria | 06 |
-| [16 — Uso e custo](16-usage-and-cost/README.md) | saber quanto se gasta, onde e com o quê, com orçamento | 06 |
+| [13 — Configuração do Claude](13-claude-settings/README.md) | ver e mudar modelos, padrões, MCPs, skills e a configuração de projeto numa tela própria | 06, 07, 08; F2…F4 depois do 26 e do 28 |
+| [14 — Auditoria explicada](14-audit-explained/README.md) | ler cada invocação inteira — pedido, decisão, desfecho — com ajuda | 06, 28 |
+| [15 — Gestão de regras](15-rules-management/README.md) | criar, testar, simular, ajustar e revogar regras numa tela própria | 06, 28 (a B-08 espera a F5 do 28) |
+| [16 — Uso e custo](16-usage-and-cost/README.md) | saber quanto se gasta, onde e com o quê, com orçamento | 06, 28 |
 | [17 — Dispositivos](17-devices/README.md) | gerir os aparelhos que respondem permissão | 06 |
-| [18 — Logs e diagnóstico](18-logs-and-diagnostics/README.md) | ler os logs por `traceId` e ver a saúde da instalação | 06 |
-| [19 — Distribuição](19-distribution/README.md) | instalar e atualizar na máquina de quem usa | 05…17 |
+| [18 — Logs e diagnóstico](18-logs-and-diagnostics/README.md) | ler os logs por `traceId` e ver a saúde da instalação | 06, 28 |
+| [19 — Distribuição](19-distribution/README.md) | instalar e atualizar na máquina de quem usa | 05…18, 26…28 — o último |
 | [20 — Dev public](20-dev-public/README.md) | abrir o `pnpm dev` atrás de um túnel HTTPS, num domínio só, e usar o web e o app de fora desta máquina | 05 |
 | [21 — Rich previews](21-rich-previews/README.md) | ler PDF como num leitor de verdade, e markdown com tabelas largas e diagramas `mermaid` | 07 |
 | [22 — Histórico ao vivo](22-live-history/README.md) | ver ao vivo, no web e no app, a conversa conduzida em outro cliente, como o Claude Code a mostra | 04 |
 | [23 — Permissões fluidas](23-fluid-permissions/README.md) | parar de responder a mesma pergunta: Permitir tudo no chip da sessão, e regras que alcançam mais do que o comando exato | 03, 09, 10 |
 | [24 — Perguntas estruturadas](24-structured-questions/README.md) | responder, no web e no app, as perguntas que o Claude faz com `AskUserQuestion` — escolha única, múltipla e "Outro" —, e o Claude receber as respostas | 03, 09, 10, 22, 23 |
 | [25 — Navegador de arquivos no app](25-mobile-file-browser/README.md) | navegar pela pasta aberta pelo app, também de dentro de uma sessão, e ler os arquivos sem editar — texto com quebra ligável, markdown com diagramas `mermaid`, PDF e imagem, com zoom —, e baixá-los, sem enviar | 07, 10, 22 |
-| [26 — Paridade da conversa no app](26-mobile-conversation-parity/README.md) | ver no app cada mensagem da conversa com o mesmo conteúdo e formato do web — markdown, código com realce, subagent aninhado, rótulo, diff e saída colorida da tool, tokens, o link da trilha —, conferido por máquina; roda antes da F2 do plano 13 | 10, 22, 25 |
+| [26 — Paridade da conversa no app](26-mobile-conversation-parity/README.md) | ver no app cada mensagem da conversa com o mesmo conteúdo e formato do web — markdown, código com realce, subagent aninhado, rótulo, diff e saída colorida da tool, tokens, o link da trilha —, conferido por máquina; roda antes da F2 do plano 13 | 10, 22, 25; F2…F7 depois do 28 |
+| [27 — Perdas da conversa](27-conversation-losses/README.md) | ver no web e no app o que o backend hoje descarta — saída de comando, avisos de hook, de modelo e de erro, a imagem no resultado de tool, a compactação no histórico, sem balão "Você" fantasma —, e na conversa toda mensagem que nenhuma ponta conhece, por eventos canônicos; roda depois do 26 e do 13 | 13, 26, 28 |
+| [28 — Núcleo neutro de agente](28-agent-neutral-core/README.md) | preparar o produto para vários agentes de código: toda mensagem que o web e o app consomem é canônica (`kind`, `label`, `origin`, `conversation { engine, id }`), quem interpreta o agente é o adapter dele, e o que é de um motor só mora em `engines/<motor>/` nas três pontas, conferido pelo lint e pelo `neutral:check`; roda entre a F1 e a F2 do 26 ([ordem](README.md#ordem-de-execução)) | 26 · F1 |
 
 ---
 
@@ -326,7 +332,7 @@ O que está em aberto **hoje** é a tabela gerada abaixo — uma linha por plano
 | [17-devices](17-devices/decisions.md) | D-01…D-12 | 12 |
 | [18-logs-and-diagnostics](18-logs-and-diagnostics/decisions.md) | D-02…D-10, D-12…D-16 | 14 |
 | [19-distribution](19-distribution/decisions.md) | D-02, D-03, D-06…D-08 | 5 |
-| [26-mobile-conversation-parity](26-mobile-conversation-parity/decisions.md) | D-10 | 1 |
+| [27-conversation-losses](27-conversation-losses/decisions.md) | D-02…D-10, D-12, D-13 | 11 |
 <!-- open-decisions:end -->
 
 Este é o recorte do que **trava** trabalho. A lista inteira, por fase e com o gap de
@@ -377,6 +383,7 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-10-10 | **Plano 28 — Núcleo neutro de agente criado; a ordem dos planos muda** | a partir da [discovery 10](../discovery/10-nucleo-canonico-e-agentes-isolados.md), por pedido do usuário: preparar para vários agentes de código, com as mensagens do web e do app canônicas, o código de um agente só isolado nas três pontas e nada no núcleo de visualização dependente de um agente. 8 fases e 47 tarefas, com 130 cenários. A ordem passa a ser 26 · F1 → 28 → 26 · F2…F7 → 13 · F2…F4 → 27 → 15, 14, 16, 18 → 19 ([índice](README.md#ordem-de-execução), 28 · D-01). Os planos 12, 13, 14, 15, 16, 18, 19, 26 e 27 tiveram as tasks ainda não executadas ajustadas às diretivas na mesma data, cada um com a sua decisão ✅; a B-08 do 15 fica pausada até a F5 do 28 |
 | 2026-10-09 | **Plano 25 — Navegador de arquivos no app concluído** (F0…F7) | 32/32 tarefas e 153 de 153 cenários. O app ganhou o painel de arquivos à direita (na sessão e na tela da pasta) e um leitor **somente leitura**: texto virtualizado com quebra e pinça, markdown com tabela larga, links pela regra do web e `mermaid` desenhado pelo próprio Mermaid do web num WebView fora da tela ([ADR-024](../architecture/shared/00-decisions.md#adr-024--o-app-desenha-mermaid-num-webview-fora-da-tela-sem-rede-e-sem-navegação)), PDF pelo PDFium (lido por intervalo pelo cliente do app, com senha só em memória) e imagem com zoom; e o download em stream para o "salvar como" do sistema, com progresso, cancelar e uma retomada do mesmo `ETag`. No backend, as rotas de `files` passaram a pedir aparelho aprovado a todo token que não é do web (B-32). O e2e achou e corrigiu dois defeitos (o painel por cima da conversa ao voltar, e o diagrama com link) e devolveu o `makeFolder` ao `folders_test`. `pnpm verify:full` com os onze portões verdes e `pnpm test:e2e:mobile` com 38 de 38 |
 | 2026-10-09 | **Plano 21 — Rich previews concluído** (F0…F4) | 23/23 tarefas e 74 de 74 cenários. A prévia de PDF virou o leitor do pdf.js: rolagem corrida, zoom e ajustes (também por `Ctrl+=`/`-`/`0` e `Ctrl`+roda), texto selecionável, links pela regra do `Markdown`, PDF com senha só em memória, painel com índice e miniaturas, busca com `Ctrl+F` no leitor, e a posição lembrada por aba. O `Markdown` — prévia, resposta do Claude e plano para aprovar — desenha tabela larga numa caixa que rola e bloco `mermaid` fechado como SVG sanitizado em três camadas ([ADR-020](../architecture/shared/00-decisions.md#adr-020--diagrama-mermaid-é-svg-inline-sanitizado-em-três-camadas)). `pnpm verify:full` com os onze portões verdes; o app Flutter não é tocado pelo plano, e o `test:e2e:mobile` não foi rodado |
 | 2026-10-08 | **Plano 24 — Perguntas estruturadas concluído** (F0…F6) | 25/25 tarefas e 110 de 111 cenários. O `AskUserQuestion` deixou de ser uma permissão genérica com o JSON: o backend normaliza a pergunta (`interaction`), valida e entrega as respostas por id ao SDK, com prazo próprio, push e trilha; o web e o app respondem por um card feito para isso — escolha única, múltipla e "Outro", em passos no app, "Não responder" com motivo —, e a linha da tool mostra o que foi respondido, ao vivo e ao reabrir o histórico (também no seguidor do plano 22). `pnpm verify:full` com os onze portões verdes; `pnpm test:e2e:mobile` 34/35: o 05·S-79 (a renovação recusada no meio de um turno escapando como erro não tratado) falha nas corridas completas sem instrumentação e passa com qualquer sonda — a causa não foi achada em cinco ciclos, e o usuário decidiu fechar e abri-lo como pendência própria ([D-39](24-structured-questions/decisions.md#f6--e2e)) |

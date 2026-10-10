@@ -6,7 +6,7 @@ Plano: [12 — Terminal integrado](README.md) · Cenários: [scenarios.md](scena
 abas de pasta, a command palette, a moldura de tela com ajuda e as Configurações).
 **Entrega:** o terminal no painel inferior do workbench, como no VS Code — vários terminais, divisão
 lado a lado, perfis, busca no scrollback, links clicáveis, marcas de comando —, a aba Saída com a
-saída dos `Bash` do Claude, as recusas e a reautenticação na tela, a seção Configurações › Terminal
+saída dos comandos de shell do agente, as recusas e a reautenticação na tela, a seção Configurações › Terminal
 e a ajuda de tudo isso.
 
 ---
@@ -58,10 +58,13 @@ porta (`TerminalView`), carregado sob demanda, com a medição do bundle registr
 - **Dividir**: dois (ou mais) terminais lado a lado no mesmo grupo, cada um o seu PTY e o seu
   tamanho; fechar um devolve o espaço ao outro.
 - Limpar, matar, selecionar tudo, maximizar e restaurar o painel; ``Ctrl+` `` alterna o painel.
-- **Aba Saída:** o `tool.progress` dos `Bash` das sessões que a aba de pasta observa, com ANSI,
-  seguir ao vivo, copiar e limpar. A fonte são os eventos `tool.*` do contrato atual; quem anexa as
-  sessões à aba é o [plano 08](../08-claude-panel/README.md) — sem sessão, o estado vazio ensina
-  onde ela aparece.
+- **Aba Saída:** o `tool.progress` das ferramentas de `kind: 'shell'` das sessões que a aba de pasta
+  observa, com ANSI, seguir ao vivo, copiar e limpar. A fonte são os eventos `tool.*` do contrato
+  canônico ([plano 28](../28-agent-neutral-core/README.md) · F2), escolhidos pelo `kind` e nunca
+  pelo nome nativo `Bash` — o portão de neutralidade reprova o `if` sobre o nome no web. Se esta task
+  vier antes da F2 do 28, a aba Saída espera o `kind` e o resto da B-18 não; quem anexa as sessões à
+  aba é o [plano 08](../08-claude-panel/README.md) — sem sessão, o estado vazio ensina onde ela
+  aparece ([D-14](decisions.md#d-14--ajuste-às-diretivas-do-plano-28)).
 - Fechar a aba de pasta com terminais pede confirmação que diz que eles encerram na carência.
 - Abaixo de `md`, o painel vira uma view da barra de abas do 06, sem scroll horizontal
   ([responsividade](../../architecture/web/03-ui-system.md#responsividade)).
@@ -80,8 +83,9 @@ Tudo sobre o buffer local do xterm; o backend não participa.
 - **Marcas de comando** (com a shell integration, [D-12](decisions.md#d-12--shell-integration)):
   sucesso/falha na margem, ir para o comando anterior/próximo, selecionar a saída de um comando,
   copiar o comando. Sem integração, os controles somem em vez de falhar.
-- **Contexto para o Claude:** "enviar seleção ao Claude" e a fonte do `@terminal` do plano 08 —
-  a seleção, ou as últimas N linhas, com teto. É o humano escolhendo o que vai ao prompt.
+- **Contexto para o agente:** "enviar seleção ao `{agent}`" (o nome vem do `displayName` do
+  `GET /engines`, nunca do texto) e a fonte do `@terminal` do plano 08 — a seleção, ou as últimas N
+  linhas, com teto. É o humano escolhendo o que vai ao prompt.
 - **"Executar seleção no terminal"** no menu do editor do 08: manda o texto ao terminal ativo; sem
   terminal, abre um — sujeito ao step-up.
 

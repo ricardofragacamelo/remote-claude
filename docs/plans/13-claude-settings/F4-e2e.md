@@ -2,7 +2,10 @@
 
 Plano: [13 — Configuração do Claude](README.md) · Cenários: [scenarios.md](scenarios.md) · Progresso: [progress.md](progress.md)
 
-**Depende de:** [F3](F3-project-config.md).
+**Depende de:** [F3](F3-project-config.md) — e, por ela, do [plano 28](../28-agent-neutral-core/README.md) concluído
+([D-33](decisions.md#d-33--ajuste-às-diretivas-do-plano-28)): os e2e daqui exercitam o MCP do núcleo e a extensão do
+Claude na estrutura que ele deixa, e o [motor de teste da 28 · F7](../28-agent-neutral-core/F7-e2e.md) prova o lado
+de quem não é o Claude.
 **Entrega:** o plano provado pela porta do usuário — padrão que chega à sessão, servidor MCP pelo
 segundo passo até a trilha, segredo que não volta, `.mcp.json` aprovado por conteúdo, tool MCP pedindo
 permissão, arquivo de `.claude/` criado pelo modelo — e, contra o Claude real, que o CLI faz o que a
@@ -18,14 +21,15 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 ### B-41 — E2E: padrões e diagnóstico 🔲
 
 Playwright com o SDK roteirizado ([06-testing-strategy](../../architecture/shared/06-testing-strategy.md#e2e--o-sistema-inteiro-pela-porta-do-usuário)):
-trocar o modelo e o modo padrão pela tela, abrir uma sessão pelo painel e ver `session.started` e o
+trocar o modelo e o modo padrão pela tela (o modo canônico — `ask`, `acceptEdits`, `readOnly`, `allowAll` —, pela
+seção de padrões do núcleo e `/engines/:engine/defaults`), abrir uma sessão pelo painel e ver `session.started` e o
 indicador do painel com o padrão; sobreposição da pasta vencendo a do usuário; o diagnóstico da
 instalação e o teste de conexão, com o resultado descrito. Cenários S-185, S-186.
 
 ### B-42 — E2E: o ciclo do servidor MCP 🔲
 
 Adicionar um servidor stdio de fixture ([D-19](decisions.md#d-19--servidor-mcp-de-fixture)) com um
-segredo em env, pelo segundo passo; ver o `claude.mcpServerAdded` na trilha (`/audit`, ou a linha do
+segredo em env, pelo segundo passo; ver o `mcp.serverAdded` na trilha (`/audit`, ou a linha do
 tempo do [plano 14](../14-audit-explained/README.md) se já existir); conferir na rede e na tela, e depois
 de recarregar, que o valor do segredo nunca volta; abrir sessão, desligar o servidor pela tela e ver o
 indicador da sessão mudar. Cenários S-187…S-189.
@@ -34,8 +38,9 @@ indicador da sessão mudar. Cenários S-187…S-189.
 
 Pasta com `.mcp.json` de fixture: aparece pendente; aprovar; a sessão nova tem o servidor; alterar o
 arquivo põe a entrada em "alterado" e a sessão seguinte não o tem. O SDK roteirizado emite um
-`tool_use` `mcp__fixture__echo`: o card de permissão aparece com o risco destrutivo; negar → a tool não
-roda, e a trilha tem o registro e a negação. Cenários S-190, S-191.
+`tool_use` `mcp__fixture__echo` (o nome nativo, só na fixture): o card de permissão aparece pelo `kind` `mcp`, com o
+`label` que o backend montou (`fixture · echo`) e o risco destrutivo, sem que o web leia o nome nativo; negar → a
+tool não roda, e a trilha tem o registro e a negação. Cenários S-190, S-191.
 
 ### B-44 — E2E: configuração de projeto 🔲
 
@@ -47,9 +52,11 @@ Cenários S-192…S-194.
 
 ### B-45 — E2E: usabilidade e acessibilidade 🔲
 
-axe sem violação nas sete seções; o fluxo de adicionar servidor inteiro pelo teclado; viewport de
+axe sem violação nas sete seções (as do núcleo — modelos e padrões, MCP — e as da extensão do Claude); o fluxo de adicionar servidor inteiro pelo teclado; viewport de
 celular sem scroll horizontal, com a navegação de seções virando seletor; a gaveta de ajuda abre, está
-traduzida nos dois idiomas, e o "saiba mais" de um campo leva à seção certa. Cenário S-195.
+traduzida nos dois idiomas, e o "saiba mais" de um campo leva à seção certa. Com o motor de teste da
+[28 · F7](../28-agent-neutral-core/F7-e2e.md), que não anuncia `mcp` nem tem extensão, a tela mostra só as seções
+do núcleo que ele anuncia, e nem o indicador de MCP nem as seções do Claude aparecem. Cenário S-195.
 
 ### B-46 — `smoke-live` e compatibilidade do app 🔲
 
@@ -64,7 +71,9 @@ fica aberto. E, pelas skills: uma skill de usuário real carregando pelo plugin 
 (regressão da D-11); e a política de shell inline valendo como a D-21 decidir. É o que avisa quando uma versão nova do CLI muda o que a F0 mediu.
 
 `pnpm test:e2e:mobile` verde com os tipos Dart regenerados: o app não ganha tela nova, mas não pode
-quebrar com os campos e o evento novos (mobile fora do escopo, exceto compatibilidade de contrato).
+quebrar com os campos e o evento novos (mobile fora do escopo, exceto compatibilidade de contrato), e o chip de
+MCP só aparece com a capacidade `mcp`. E o `pnpm neutral:check` sem entrada nova no baseline: nada que este plano
+construiu na F2…F4 pôs nome de motor, de tool ou de modo do Claude fora de `engines/` nas três pontas.
 
 E a **conversa** do app em paridade com a do web ([D-31](decisions.md#decididas-durante-a-execução-b-01-2026-10-09)):
 as fixtures que só este plano consegue gravar, pela via real e não pelo spike do 26, entram na paridade de
@@ -91,7 +100,7 @@ S-185…S-199, S-214.
 ## Critério de conclusão
 
 ```bash
-pnpm verify:full       # o portão 11 roda o render:check do plano 26
+pnpm verify:full       # o portão 11 roda o render:check do plano 26 e o neutral:check do plano 28
 pnpm test:e2e:mobile
 pnpm test:e2e:live
 ```

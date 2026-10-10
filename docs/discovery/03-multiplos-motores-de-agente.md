@@ -1,6 +1,8 @@
 # Proposta — Múltiplos motores de agente de codificação
 
-**Estado:** rascunho, em discussão. Nenhum código escrito.
+**Estado:** rascunho, em discussão. Nenhum código escrito. O M0 (§17) foi medido de novo e detalhado
+pela [discovery 10 — Núcleo canônico e agentes isolados](10-nucleo-canonico-e-agentes-isolados.md), de
+2026-10-10, que vale onde as duas divergem; o inventário do §4.2 daqui é anterior aos planos 13 e 21…27.
 **Criada em:** 2026-10-03, a partir de uma conversa com o usuário: "hoje usamos o Claude como base;
 se eu quisesse outra ferramenta, tipo Copilot, ou outra de mercado, o que precisaria mudar? E para
 suportar vários motores?"

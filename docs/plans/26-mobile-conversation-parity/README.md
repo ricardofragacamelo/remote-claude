@@ -22,6 +22,16 @@ pnpm test:e2e:live       # a forma das mensagens novas contra o Claude real (F0 
 
 Os três estão concluídos.
 
+E, **para as F2…F7**, do [plano 28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md)
+concluído ([D-15](decisions.md#normas)). A ordem decidida pelo usuário em 2026-10-10 é
+26 · F1 → 28 → 26 · F2…F7 → 13 · F2…F4 → 27. A F1 daqui fecha com o `pnpm verify` **antes** de o
+plano 28 começar, porque o `render-parity.json` que ela entrega é o que a
+[F2 de lá](../28-agent-neutral-core/F2-canonical-tools.md) rechaveia pelo `kind`. Depois do 28, as
+F2…F7 desenham o evento canônico: o card da tool pelo `kind` e pelo `label` que o backend monta, o diff
+pela rota do backend, o subagent pelo `kind` `agent`, os tokens pelo `usage` canônico e o autor pelo
+`{agent}`, sem nenhum nome do Claude no app
+([discovery 10 §9](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#9-planos-afetados)).
+
 **Bloqueia:** a [F2 do plano 13](../13-claude-settings/F2-mcp-servers.md), parada em 2026-10-09 por
 decisão do usuário para este plano rodar antes ([D-01](decisions.md#normas)). O plano 13 traz para
 a conversa tools MCP, skills, subagents do projeto, hooks e output styles, e cada um cai num ponto em
@@ -78,8 +88,8 @@ Três escolhas dão forma ao plano:
 | O mapa de paridade de formato (`render-parity.json`) com o inventário dos componentes da conversa do web, e o `render:check` com as pendências declaradas por fase | F1 |
 | O renderizador de markdown movido para `core/widgets/markdown/`, e o bloco de código com realce, copiar e rolagem própria | F2 |
 | Markdown no balão do Claude e do usuário, blocos e ordem preservados, rótulo de autor, selecionar e copiar, nome de arquivo como link para o leitor | F3 |
-| Card da tool e linha do turno: rótulo por tool, `tool.progress` corrigido, cores ANSI, diff de `Edit`/`MultiEdit`/`Write`, tokens do turno, e o link para a trilha com a lista filtrada só de leitura | F4 |
-| Subagent aninhado no app, ao vivo e no histórico, e o card de permissão com o dono | F5 |
+| Card da tool e linha do turno: o rótulo que o evento traz, `tool.progress` corrigido, cores ANSI, o diff das tools de arquivo pela rota do backend, os tokens do turno pelo `usage` canônico, e o link para a trilha com a lista filtrada só de leitura | F4 |
+| Subagent aninhado no app pelo `kind` `agent`, ao vivo e no histórico, e o card de permissão com o dono | F5 |
 | O portão: `render:check` sem pendência, e a paridade de conteúdo por fixture nas duas pontas | F6 |
 | E2E do app e o `smoke-live` da forma das mensagens | F7 |
 
@@ -109,11 +119,11 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Spike](F0-spike.md) | a forma medida das mensagens novas, as fixtures gravadas, o custo do markdown e o motor de realce | B-01…B-03 | 🔲 |
-| F1 | [Mapa de paridade](F1-parity-map.md) | o `render-parity.json`, o `render:check` com as pendências por fase, e o normativo | B-04…B-06 | 🔲 |
+| F0 | [Spike](F0-spike.md) | a forma medida das mensagens novas, as fixtures gravadas, o custo do markdown e o motor de realce | B-01…B-03 | ✅ |
+| F1 | [Mapa de paridade](F1-parity-map.md) | o `render-parity.json`, o `render:check` com as pendências por fase, e o normativo | B-04…B-06 | ✅ |
 | F2 | [Markdown compartilhado](F2-shared-markdown.md) | o renderizador em `core/widgets/markdown/` e o bloco de código com realce | B-07, B-08 | 🔲 |
 | F3 | [Markdown na mensagem](F3-message-markdown.md) | o balão com markdown, blocos em ordem, autor, selecionar e copiar | B-09…B-12 | 🔲 |
-| F4 | [Card da tool e linha do turno](F4-tool-cards.md) | rótulo por tool, `tool.progress`, ANSI, diff, tokens, trilha | B-13…B-17, B-32 | 🔲 |
+| F4 | [Card da tool e linha do turno](F4-tool-cards.md) | o rótulo do evento, `tool.progress`, ANSI, diff, tokens, trilha | B-13…B-17, B-32 | 🔲 |
 | F5 | [Subagents](F5-subagents.md) | o subagent aninhado, ao vivo e no histórico, e a permissão com o dono | B-18…B-21 | 🔲 |
 | F6 | [Portão de paridade](F6-parity-gate.md) | `render:check` sem pendência e a paridade de conteúdo por fixture | B-27, B-28 | 🔲 |
 | F7 | [E2E](F7-e2e.md) | a conversa pela porta do usuário no app, e a forma das mensagens contra o Claude real | B-29, B-31 | 🔲 |
